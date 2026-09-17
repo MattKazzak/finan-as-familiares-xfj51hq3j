@@ -75,6 +75,28 @@ export async function createTransaction(payload: {
   return data as Transaction
 }
 
+export async function createTransactionsBatch(
+  payloads: Array<{
+    family_id: string
+    member_id: string
+    category_id?: string | null
+    type: 'income' | 'expense'
+    amount_cents: number
+    description: string
+    transaction_date: string
+  }>,
+) {
+  if (payloads.length === 0) return []
+  const { data, error } = await (supabase as any).from('transactions').insert(payloads).select(`
+      *,
+      member:family_members(*),
+      category:transaction_categories(*)
+    `)
+
+  if (error) throw error
+  return (data || []) as Transaction[]
+}
+
 export async function updateTransaction(
   id: string,
   payload: Partial<{

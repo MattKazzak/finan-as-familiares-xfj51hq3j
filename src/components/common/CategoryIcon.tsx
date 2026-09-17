@@ -17,6 +17,13 @@ import {
   Plane,
   Gift,
   HelpCircle,
+  Sparkles,
+  Smartphone,
+  ShieldCheck,
+  CreditCard,
+  Building,
+  PiggyBank,
+  PawPrint,
   LucideIcon,
 } from 'lucide-react'
 
@@ -36,6 +43,14 @@ const iconMap: Record<string, LucideIcon> = {
   Coffee,
   Plane,
   Gift,
+  Sparkles,
+  Smartphone,
+  ShieldCheck,
+  CreditCard,
+  Building,
+  PiggyBank,
+  PawPrint,
+  Dog: PawPrint,
 }
 
 interface CategoryIconProps {
@@ -51,18 +66,23 @@ export const CategoryIcon: React.FC<CategoryIconProps> = ({ name, className = 'w
 
 export const AVAILABLE_ICONS = [
   'Utensils',
+  'ShoppingBag',
   'Car',
   'Home',
-  'Film',
   'HeartPulse',
   'GraduationCap',
+  'Film',
+  'Smartphone',
+  'Plane',
+  'PawPrint',
   'Shirt',
-  'Tag',
   'Briefcase',
   'TrendingUp',
-  'ShoppingBag',
+  'PiggyBank',
+  'Sparkles',
+  'CreditCard',
+  'Tag',
   'Zap',
   'Coffee',
-  'Plane',
   'Gift',
 ]

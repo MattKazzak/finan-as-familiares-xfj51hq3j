@@ -21,7 +21,7 @@ import { createTransaction, updateTransaction } from '@/services/transactions'
 import { parseBRLToCents, formatNumberBRL } from '@/lib/formatters'
 import { useToast } from '@/hooks/use-toast'
 import type { Transaction } from '@/types/finance'
-import { ArrowDownRight, ArrowUpRight, Loader2 } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight, Loader2, UploadCloud } from 'lucide-react'
 
 interface NewTransactionDialogProps {
   open: boolean
@@ -36,7 +36,14 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
   editingTransaction,
   onSuccess,
 }) => {
-  const { family, members, categories, newTransactionDefaultType, triggerRefresh } = useFamily()
+  const {
+    family,
+    members,
+    categories,
+    newTransactionDefaultType,
+    triggerRefresh,
+    openImportStatement,
+  } = useFamily()
   const { toast } = useToast()
 
   const [type, setType] = useState<'income' | 'expense'>(newTransactionDefaultType)
@@ -137,9 +144,24 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md w-[95vw] rounded-2xl p-6 sm:p-7">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-slate-900">
-            {editingTransaction ? 'Editar Transação' : 'Nova Transação'}
-          </DialogTitle>
+          <div className="flex items-center justify-between pr-6">
+            <DialogTitle className="text-xl font-bold text-slate-900">
+              {editingTransaction ? 'Editar Transação' : 'Nova Transação'}
+            </DialogTitle>
+            {!editingTransaction && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={openImportStatement}
+                className="text-xs text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 font-semibold gap-1.5 h-8 px-2.5 rounded-xl"
+              >
+                <UploadCloud className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Importar extrato</span>
+                <span className="sm:hidden">Extrato</span>
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         {/* Alternador Despesa / Receita */}

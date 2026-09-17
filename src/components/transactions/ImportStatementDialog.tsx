@@ -1,0 +1,923 @@
+// Componente completo de Importação de Extrato Bancário (CSV, OFX, PDF)
+// Inclui: upload drag&drop, detecção automática, categorização inteligente,
+// tela de revisão inline, detecção de possíveis duplicadas e criação ágil de categorias.
+
+import React, { useState, useRef, useMemo } from 'react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { useFamily } from '@/hooks/use-family'
+import { useToast } from '@/hooks/use-toast'
+import { CategoryIcon, AVAILABLE_ICONS } from '@/components/common/CategoryIcon'
+import { formatBRL, parseBRLToCents, formatNumberBRL } from '@/lib/formatters'
+import { parseStatementFile, type ParsedRawTransaction } from '@/services/import/statement-parser'
+import { predictCategory } from '@/services/import/categorization'
+import { createTransactionsBatch, fetchTransactions } from '@/services/transactions'
+import type { Transaction, TransactionCategory, TransactionType } from '@/types/finance'
+import {
+  UploadCloud,
+  FileSpreadsheet,
+  FileText,
+  AlertCircle,
+  CheckCircle2,
+  Trash2,
+  Plus,
+  ArrowDownRight,
+  ArrowUpRight,
+  Loader2,
+  Sparkles,
+  Copy,
+  Info,
+} from 'lucide-react'
+
+export interface ReviewItem {
+  id: string
+  date: string
+  description: string
+  amount_cents: number
+  type: TransactionType
+  member_id: string
+  category_id: string | null
+  isDuplicate: boolean
+  duplicateReason?: string
+  selected: boolean
+}
+
+interface ImportStatementDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess?: () => void
+}
+
+const CATEGORY_COLORS = [
+  '#F59E0B',
+  '#3B82F6',
+  '#6366F1',
+  '#EC4899',
+  '#EF4444',
+  '#8B5CF6',
+  '#14B8A6',
+  '#10B981',
+  '#059669',
+  '#64748B',
+  '#84CC16',
+  '#F97316',
+]
+
+export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
+  open,
+  onOpenChange,
+  onSuccess,
+}) => {
+  const { family, members, categories, addNewCategory, triggerRefresh } = useFamily()
+  const { toast } = useToast()
+
+  // Estados do fluxo
+  const [step, setStep] = useState<'upload' | 'review'>('upload')
+  const [parsing, setParsing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [fileInfo, setFileInfo] = useState<{ name: string; size: number; format: string } | null>(
+    null,
+  )
+
+  // Itens em revisão
+  const [items, setItems] = useState<ReviewItem[]>([])
+  const [defaultMemberId, setDefaultMemberId] = useState<string>('')
+
+  // Estado para criar categoria rápida inline
+  const [isQuickCatOpen, setIsQuickCatOpen] = useState(false)
+  const [quickCatTargetItemId, setQuickCatTargetItemId] = useState<string | null>(null)
+  const [quickCatName, setQuickCatName] = useState('')
+  const [quickCatType, setQuickCatType] = useState<TransactionType>('expense')
+  const [quickCatColor, setQuickCatColor] = useState('#3B82F6')
+  const [quickCatIcon, setQuickCatIcon] = useState('Tag')
+  const [quickCatSaving, setQuickCatSaving] = useState(false)
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  // Membro padrão inicial
+  React.useEffect(() => {
+    if (members.length > 0 && !defaultMemberId) {
+      const admin = members.find((m) => m.is_admin) || members[0]
+      setDefaultMemberId(admin.id)
+    }
+  }, [members, defaultMemberId])
+
+  // Resetar ao fechar
+  const handleDialogChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      setStep('upload')
+      setItems([])
+      setErrorMessage(null)
+      setFileInfo(null)
+      setIsQuickCatOpen(false)
+    }
+    onOpenChange(isOpen)
+  }
+
+  // Processamento do arquivo enviado
+  const handleProcessFile = async (file: File) => {
+    if (!family) {
+      setErrorMessage('Nenhuma família ativa identificada.')
+      return
+    }
+
+    setParsing(true)
+    setErrorMessage(null)
+
+    try {
+      // 1. Parser do arquivo
+      const result = await parseStatementFile(file)
+      if (!result.success || result.transactions.length === 0) {
+        setErrorMessage(
+          result.error ||
+            'Não foram encontradas transações válidas no arquivo. Verifique se o formato é CSV, OFX ou PDF de extrato bancário.',
+        )
+        setParsing(false)
+        return
+      }
+
+      setFileInfo({
+        name: file.name,
+        size: file.size,
+        format: result.format.toUpperCase(),
+      })
+
+      // 2. Buscar transações existentes para verificação inteligente de duplicadas
+      const dates = result.transactions.map((t) => t.date)
+      const minDate = dates.reduce((a, b) => (a < b ? a : b))
+      const maxDate = dates.reduce((a, b) => (a > b ? a : b))
+
+      let existingTxs: Transaction[] = []
+      try {
+        existingTxs = await fetchTransactions({
+          familyId: family.id,
+        })
+      } catch (fetchErr) {
+        console.warn('Não foi possível carregar transações anteriores para checagem:', fetchErr)
+      }
+
+      // Função de similaridade simples para descrição
+      const isSimilar = (a: string, b: string) => {
+        const normA = (a || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+        const normB = (b || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+        if (normA === normB) return true
+        if (normA.includes(normB) || normB.includes(normA)) return true
+        return false
+      }
+
+      // 3. Montar itens para a tela de revisão aplicando categorização automática
+      const activeMemberId = defaultMemberId || members[0]?.id || ''
+      const reviewList: ReviewItem[] = result.transactions.map((tx: ParsedRawTransaction) => {
+        // Encontrar categoria recomendada
+        const predicted = predictCategory(tx.description, tx.type, categories)
+
+        // Checar duplicata
+        const dupMatch = existingTxs.find((ex) => {
+          return (
+            ex.transaction_date === tx.date &&
+            ex.amount_cents === tx.amount_cents &&
+            isSimilar(ex.description, tx.description)
+          )
+        })
+
+        return {
+          id: tx.id,
+          date: tx.date,
+          description: tx.description,
+          amount_cents: tx.amount_cents,
+          type: tx.type,
+          member_id: activeMemberId,
+          category_id: predicted ? predicted.id : null,
+          isDuplicate: !!dupMatch,
+          duplicateReason: dupMatch
+            ? `Transação idêntica já cadastrada em ${dupMatch.transaction_date}`
+            : undefined,
+          // Se for duplicada, desmarcar por padrão para segurança do usuário
+          selected: !dupMatch,
+        }
+      })
+
+      setItems(reviewList)
+      setStep('review')
+    } catch (err: any) {
+      console.error('Erro na importação:', err)
+      setErrorMessage(err?.message || 'Erro inesperado ao ler o extrato. Tente outro formato.')
+    } finally {
+      setParsing(false)
+    }
+  }
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      handleProcessFile(file)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    const file = e.dataTransfer.files?.[0]
+    if (file) {
+      handleProcessFile(file)
+    }
+  }
+
+  // Ações na revisão
+  const handleToggleSelectAll = (checked: boolean) => {
+    setItems((prev) => prev.map((item) => ({ ...item, selected: checked })))
+  }
+
+  const handleToggleItem = (id: string) => {
+    setItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, selected: !item.selected } : item)),
+    )
+  }
+
+  const handleRemoveItem = (id: string) => {
+    setItems((prev) => prev.filter((item) => item.id !== id))
+  }
+
+  const handleUpdateItemField = (id: string, field: keyof ReviewItem, value: any) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item
+        return { ...item, [field]: value }
+      }),
+    )
+  }
+
+  const handleApplyMemberToAll = (newMemberId: string) => {
+    setDefaultMemberId(newMemberId)
+    setItems((prev) => prev.map((i) => ({ ...i, member_id: newMemberId })))
+  }
+
+  // Modal rápido de nova categoria
+  const openQuickCategoryModal = (itemId?: string) => {
+    setQuickCatTargetItemId(itemId || null)
+    setQuickCatName('')
+    setQuickCatType('expense')
+    setQuickCatColor('#3B82F6')
+    setQuickCatIcon('Tag')
+    setIsQuickCatOpen(true)
+  }
+
+  const handleCreateQuickCategory = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!quickCatName.trim()) return
+
+    try {
+      setQuickCatSaving(true)
+      const created = await addNewCategory(
+        quickCatName.trim(),
+        quickCatType,
+        quickCatColor,
+        quickCatIcon,
+      )
+
+      // Se foi aberto a partir de uma linha específica, já vincula a ela
+      if (quickCatTargetItemId) {
+        handleUpdateItemField(quickCatTargetItemId, 'category_id', created.id)
+      }
+
+      setIsQuickCatOpen(false)
+      triggerRefresh()
+    } catch {
+      toast({
+        title: 'Erro ao criar categoria',
+        description: 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setQuickCatSaving(false)
+    }
+  }
+
+  // Estatísticas da revisão
+  const selectedCount = useMemo(() => items.filter((i) => i.selected).length, [items])
+  const duplicateCount = useMemo(() => items.filter((i) => i.isDuplicate).length, [items])
+  const totalAmountSelected = useMemo(() => {
+    let inc = 0
+    let exp = 0
+    items
+      .filter((i) => i.selected)
+      .forEach((i) => {
+        if (i.type === 'income') inc += i.amount_cents
+        else exp += i.amount_cents
+      })
+    return { inc, exp }
+  }, [items])
+
+  // Salvar no banco
+  const handleSaveImported = async () => {
+    if (!family) return
+    const selectedItems = items.filter((i) => i.selected)
+
+    if (selectedItems.length === 0) {
+      toast({
+        title: 'Nenhuma transação selecionada',
+        description: 'Marque ao menos uma transação para importar.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    try {
+      setSaving(true)
+      const payloads = selectedItems.map((item) => ({
+        family_id: family.id,
+        member_id: item.member_id || members[0]?.id,
+        category_id: item.category_id,
+        type: item.type,
+        amount_cents: item.amount_cents,
+        description: item.description.trim() || 'Transação importada',
+        transaction_date: item.date,
+      }))
+
+      await createTransactionsBatch(payloads)
+
+      toast({
+        title: 'Extrato importado com sucesso! 🎉',
+        description: `${selectedItems.length} transações foram adicionadas à carteira da família.`,
+      })
+
+      triggerRefresh()
+      if (onSuccess) onSuccess()
+      handleDialogChange(false)
+    } catch (err: any) {
+      console.error('Erro ao salvar lote:', err)
+      toast({
+        title: 'Falha ao salvar transações',
+        description: err?.message || 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={handleDialogChange}>
+        <DialogContent className="max-w-4xl w-[96vw] max-h-[92vh] flex flex-col p-4 sm:p-6 rounded-2xl overflow-hidden">
+          <DialogHeader className="shrink-0 pb-2 border-b border-slate-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                  📥
+                </div>
+                <div>
+                  <DialogTitle className="text-base sm:text-lg font-bold text-slate-900">
+                    Importar Extrato Bancário
+                  </DialogTitle>
+                  <p className="text-xs text-slate-500">
+                    {step === 'upload'
+                      ? 'Formatos aceitos: CSV, OFX e PDF de qualquer banco brasileiro'
+                      : `Revisão de lançamentos: ${fileInfo?.name} (${fileInfo?.format})`}
+                  </p>
+                </div>
+              </div>
+
+              {step === 'review' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setStep('upload')}
+                  className="text-xs h-8 rounded-xl"
+                >
+                  Trocar arquivo
+                </Button>
+              )}
+            </div>
+          </DialogHeader>
+
+          {/* ================= ETAPA 1: UPLOAD ================= */}
+          {step === 'upload' && (
+            <div className="flex-1 overflow-y-auto py-6 space-y-5">
+              {errorMessage && (
+                <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="block font-semibold">Aviso de leitura:</strong>
+                    <span>{errorMessage}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Zona Drag & Drop */}
+              <div
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-3xl p-8 sm:p-12 text-center cursor-pointer transition-all ${
+                  parsing
+                    ? 'border-emerald-500 bg-emerald-50/50 cursor-wait'
+                    : 'border-slate-300 hover:border-emerald-600 hover:bg-slate-50/80 bg-white'
+                }`}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv,.ofx,.pdf"
+                  onChange={handleFileInputChange}
+                  className="hidden"
+                />
+
+                <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto mb-4 shadow-sm">
+                  {parsing ? (
+                    <Loader2 className="w-8 h-8 animate-spin" />
+                  ) : (
+                    <UploadCloud className="w-8 h-8 stroke-[1.8]" />
+                  )}
+                </div>
+
+                <h3 className="font-bold text-base text-slate-800">
+                  {parsing ? 'Processando e categorizando extrato...' : 'Arraste seu extrato aqui'}
+                </h3>
+                <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 mb-4">
+                  {parsing
+                    ? 'Lendo transações, identificando valores e aplicando inteligência de categorias...'
+                    : 'Ou clique para selecionar um arquivo do seu computador ou celular'}
+                </p>
+
+                {/* Badges de Formato */}
+                <div className="flex items-center justify-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1 rounded-lg">
+                    <FileSpreadsheet className="w-3.5 h-3.5" /> CSV (Nubank, Inter, Itaú...)
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                    <FileText className="w-3.5 h-3.5" /> OFX (Padrão Bancário)
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-1 rounded-lg">
+                    <FileText className="w-3.5 h-3.5" /> PDF (Extrato de Conta)
+                  </span>
+                </div>
+              </div>
+
+              {/* Informações e Dicas de Bancos */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-800 mb-1">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                    Categorias Automáticas
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    O sistema reconhece termos como iFood, Uber, Mercado, Farmácia e Salário
+                    automaticamente.
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-800 mb-1">
+                    <Copy className="w-3.5 h-3.5 text-blue-600" />
+                    Anti-Duplicidade
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Transações com mesma data e valor já registradas são identificadas para evitar
+                    lançamentos repetidos.
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-800 mb-1">
+                    <Info className="w-3.5 h-3.5 text-purple-600" />
+                    Revisão Completa
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Você pode alterar categorias, mudar quem gastou, desmarcar itens ou adicionar
+                    novas categorias antes de salvar.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ================= ETAPA 2: REVISÃO ANTES DE SALVAR ================= */}
+          {step === 'review' && (
+            <div className="flex-1 flex flex-col min-h-0 pt-2 space-y-3">
+              {/* Barra de Ações Rápidas no Topo */}
+              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
+                <div className="flex items-center gap-3 flex-wrap">
+                  {/* Selecionar / Desmarcar Todos */}
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedCount === items.length && items.length > 0}
+                      onChange={(e) => handleToggleSelectAll(e.target.checked)}
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span>
+                      Selecionar todos ({selectedCount}/{items.length})
+                    </span>
+                  </label>
+
+                  {/* Alerta de duplicatas */}
+                  {duplicateCount > 0 && (
+                    <span className="text-[11px] font-semibold text-amber-700 bg-amber-100/80 border border-amber-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {duplicateCount} duplicata(s) detectada(s)
+                    </span>
+                  )}
+                </div>
+
+                {/* Membro em lote & Criar Categoria */}
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                    <span className="hidden sm:inline">Atribuir a:</span>
+                    <Select value={defaultMemberId} onValueChange={handleApplyMemberToAll}>
+                      <SelectTrigger className="h-8 text-xs bg-white w-32 rounded-xl">
+                        <SelectValue placeholder="Membro" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {members.map((m) => (
+                          <SelectItem key={m.id} value={m.id} className="text-xs">
+                            {m.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openQuickCategoryModal()}
+                    className="h-8 text-xs rounded-xl text-emerald-700 border-emerald-300 hover:bg-emerald-50 gap-1 font-semibold"
+                  >
+                    <Plus className="w-3.5 h-3.5" />+ Categoria
+                  </Button>
+                </div>
+              </div>
+
+              {/* Lista Scrollável de Transações */}
+              <div className="flex-1 overflow-y-auto space-y-2 pr-1 divide-y divide-slate-100 border border-slate-200/80 rounded-2xl bg-white p-2">
+                {items.map((item) => {
+                  const isIncome = item.type === 'income'
+                  const currentCategory = categories.find((c) => c.id === item.category_id)
+                  const filteredCategories = categories.filter((c) => c.type === item.type)
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={`pt-2.5 pb-2.5 px-2 rounded-xl transition-colors ${
+                        item.isDuplicate
+                          ? 'bg-amber-50/40'
+                          : item.selected
+                            ? 'hover:bg-slate-50'
+                            : 'opacity-60 bg-slate-50/50'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                        {/* Checkbox + Descrição + Data */}
+                        <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={item.selected}
+                            onChange={() => handleToggleItem(item.id)}
+                            className="mt-1 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 shrink-0"
+                          />
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <Input
+                                value={item.description}
+                                onChange={(e) =>
+                                  handleUpdateItemField(item.id, 'description', e.target.value)
+                                }
+                                className="h-7 text-xs font-semibold text-slate-800 bg-transparent border-transparent hover:border-slate-300 focus:border-emerald-500 focus:bg-white px-1.5 py-0 rounded max-w-md w-full sm:w-auto"
+                              />
+
+                              {item.isDuplicate && (
+                                <span
+                                  title={item.duplicateReason}
+                                  className="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded flex items-center gap-1"
+                                >
+                                  <AlertCircle className="w-3 h-3 text-amber-600" />
+                                  Possível Duplicada
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2 mt-1">
+                              <input
+                                type="date"
+                                value={item.date}
+                                onChange={(e) =>
+                                  handleUpdateItemField(item.id, 'date', e.target.value)
+                                }
+                                className="text-[11px] text-slate-500 bg-transparent border border-slate-200 rounded px-1.5 py-0.5"
+                              />
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleUpdateItemField(
+                                    item.id,
+                                    'type',
+                                    isIncome ? 'expense' : 'income',
+                                  )
+                                }
+                                className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 transition-colors ${
+                                  isIncome
+                                    ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                                    : 'bg-red-100 text-red-700 hover:bg-red-200'
+                                }`}
+                                title="Alternar entre receita e despesa"
+                              >
+                                {isIncome ? (
+                                  <>
+                                    <ArrowUpRight className="w-3 h-3" /> Receita
+                                  </>
+                                ) : (
+                                  <>
+                                    <ArrowDownRight className="w-3 h-3" /> Despesa
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Valor + Seletor de Categoria + Membro + Excluir */}
+                        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end pl-6 sm:pl-0">
+                          {/* Membro */}
+                          <Select
+                            value={item.member_id}
+                            onValueChange={(val) =>
+                              handleUpdateItemField(item.id, 'member_id', val)
+                            }
+                          >
+                            <SelectTrigger className="h-7 text-xs w-24 sm:w-28 rounded-lg bg-white border-slate-200">
+                              <SelectValue placeholder="Membro" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {members.map((m) => (
+                                <SelectItem key={m.id} value={m.id} className="text-xs">
+                                  {m.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+
+                          {/* Categoria */}
+                          <div className="relative">
+                            <Select
+                              value={item.category_id || 'none'}
+                              onValueChange={(val) => {
+                                if (val === 'CREATE_NEW') {
+                                  openQuickCategoryModal(item.id)
+                                } else {
+                                  handleUpdateItemField(
+                                    item.id,
+                                    'category_id',
+                                    val === 'none' ? null : val,
+                                  )
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-7 text-xs w-36 sm:w-40 rounded-lg bg-white border-slate-200">
+                                <SelectValue placeholder="Sem categoria">
+                                  {currentCategory ? (
+                                    <span className="flex items-center gap-1.5 truncate">
+                                      <CategoryIcon
+                                        name={currentCategory.icon}
+                                        className="w-3.5 h-3.5"
+                                      />
+                                      <span className="truncate">{currentCategory.name}</span>
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-400">Sem categoria</span>
+                                  )}
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none" className="text-xs text-slate-500">
+                                  Sem categoria
+                                </SelectItem>
+                                {filteredCategories.map((c) => (
+                                  <SelectItem key={c.id} value={c.id} className="text-xs">
+                                    <span className="flex items-center gap-1.5">
+                                      <CategoryIcon name={c.icon} className="w-3.5 h-3.5" />
+                                      {c.name}
+                                    </span>
+                                  </SelectItem>
+                                ))}
+                                <SelectItem
+                                  value="CREATE_NEW"
+                                  className="text-xs font-semibold text-emerald-700 border-t mt-1"
+                                >
+                                  + Criar nova categoria
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Valor editável */}
+                          <div className="text-right min-w-[90px]">
+                            <span
+                              className={`font-bold text-xs sm:text-sm tabular-nums ${
+                                isIncome ? 'text-emerald-700' : 'text-red-600'
+                              }`}
+                            >
+                              {isIncome ? '+' : '−'} {formatBRL(item.amount_cents)}
+                            </span>
+                          </div>
+
+                          {/* Remover da lista */}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveItem(item.id)}
+                            className="p-1 text-slate-400 hover:text-red-500 transition-colors"
+                            title="Remover linha"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Totalizador Rodapé */}
+              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/80 flex items-center justify-between text-xs shrink-0">
+                <span className="text-slate-500 font-medium">
+                  {selectedCount} de {items.length} transações prontas para importar
+                </span>
+                <div className="flex items-center gap-3">
+                  {totalAmountSelected.inc > 0 && (
+                    <span className="font-bold text-emerald-700">
+                      Entradas: +{formatBRL(totalAmountSelected.inc)}
+                    </span>
+                  )}
+                  {totalAmountSelected.exp > 0 && (
+                    <span className="font-bold text-red-600">
+                      Saídas: −{formatBRL(totalAmountSelected.exp)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Footer do Diálogo */}
+          <DialogFooter className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0">
+            {step === 'upload' ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleDialogChange(false)}
+                className="w-full sm:w-auto text-xs"
+              >
+                Cancelar
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setStep('upload')}
+                  disabled={saving}
+                  className="w-full sm:w-auto text-xs"
+                >
+                  Voltar
+                </Button>
+
+                <Button
+                  type="button"
+                  onClick={handleSaveImported}
+                  disabled={saving || selectedCount === 0}
+                  className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                      Importando...
+                    </>
+                  ) : (
+                    `Importar ${selectedCount} ${selectedCount === 1 ? 'Transação' : 'Transações'}`
+                  )}
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL SECUNDÁRIO: CRIAÇÃO RÁPIDA DE NOVA CATEGORIA */}
+      <Dialog open={isQuickCatOpen} onOpenChange={setIsQuickCatOpen}>
+        <DialogContent className="max-w-sm w-[90vw] rounded-2xl p-5">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900">Nova Categoria</DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateQuickCategory} className="space-y-3 pt-1">
+            <div>
+              <Label className="text-xs font-semibold text-slate-700">Nome da categoria</Label>
+              <Input
+                type="text"
+                placeholder="Ex.: Padaria, Farmácia Pet, Streaming"
+                value={quickCatName}
+                onChange={(e) => setQuickCatName(e.target.value)}
+                className="mt-1 text-xs"
+                autoFocus
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Tipo</Label>
+                <Select
+                  value={quickCatType}
+                  onValueChange={(v) => setQuickCatType(v as TransactionType)}
+                >
+                  <SelectTrigger className="mt-1 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="expense">Despesa</SelectItem>
+                    <SelectItem value="income">Receita</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Ícone</Label>
+                <Select value={quickCatIcon} onValueChange={setQuickCatIcon}>
+                  <SelectTrigger className="mt-1 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-48">
+                    {AVAILABLE_ICONS.map((icon) => (
+                      <SelectItem key={icon} value={icon} className="text-xs">
+                        <span className="flex items-center gap-1.5">
+                          <CategoryIcon name={icon} className="w-3.5 h-3.5" />
+                          {icon}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-xs font-semibold text-slate-700">Cor</Label>
+              <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                {CATEGORY_COLORS.map((c) => (
+                  <button
+                    type="button"
+                    key={c}
+                    onClick={() => setQuickCatColor(c)}
+                    className={`w-5 h-5 rounded-full transition-transform ${
+                      quickCatColor === c ? 'ring-2 ring-slate-900 scale-110' : ''
+                    }`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsQuickCatOpen(false)}
+                disabled={quickCatSaving}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={quickCatSaving}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+              >
+                {quickCatSaving && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+                Salvar Categoria
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}

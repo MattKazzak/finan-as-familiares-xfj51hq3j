@@ -9,7 +9,286 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      budgets: {
+        Row: {
+          amount_cents: number
+          category_id: string
+          created_at: string
+          family_id: string
+          id: string
+          month: string
+        }
+        Insert: {
+          amount_cents: number
+          category_id: string
+          created_at?: string
+          family_id: string
+          id?: string
+          month: string
+        }
+        Update: {
+          amount_cents?: number
+          category_id?: string
+          created_at?: string
+          family_id?: string
+          id?: string
+          month?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'budgets_category_id_fkey'
+            columns: ['category_id']
+            isOneToOne: false
+            referencedRelation: 'transaction_categories'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'budgets_family_id_fkey'
+            columns: ['family_id']
+            isOneToOne: false
+            referencedRelation: 'families'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      families: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      family_members: {
+        Row: {
+          created_at: string
+          family_id: string
+          id: string
+          is_admin: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          family_id: string
+          id?: string
+          is_admin?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          family_id?: string
+          id?: string
+          is_admin?: boolean
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'family_members_family_id_fkey'
+            columns: ['family_id']
+            isOneToOne: false
+            referencedRelation: 'families'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      goals: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          deadline: string
+          family_id: string
+          id: string
+          name: string
+          target_amount_cents: number
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          deadline: string
+          family_id: string
+          id?: string
+          name: string
+          target_amount_cents: number
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          deadline?: string
+          family_id?: string
+          id?: string
+          name?: string
+          target_amount_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'goals_category_id_fkey'
+            columns: ['category_id']
+            isOneToOne: false
+            referencedRelation: 'transaction_categories'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'goals_family_id_fkey'
+            columns: ['family_id']
+            isOneToOne: false
+            referencedRelation: 'families'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      investments: {
+        Row: {
+          asset_type: Database['public']['Enums']['asset_type']
+          avg_price_cents: number
+          created_at: string
+          current_price_cents: number
+          family_id: string
+          id: string
+          name: string
+          quantity: number
+          ticker: string | null
+        }
+        Insert: {
+          asset_type?: Database['public']['Enums']['asset_type']
+          avg_price_cents?: number
+          created_at?: string
+          current_price_cents?: number
+          family_id: string
+          id?: string
+          name: string
+          quantity?: number
+          ticker?: string | null
+        }
+        Update: {
+          asset_type?: Database['public']['Enums']['asset_type']
+          avg_price_cents?: number
+          created_at?: string
+          current_price_cents?: number
+          family_id?: string
+          id?: string
+          name?: string
+          quantity?: number
+          ticker?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'investments_family_id_fkey'
+            columns: ['family_id']
+            isOneToOne: false
+            referencedRelation: 'families'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      transaction_categories: {
+        Row: {
+          color: string | null
+          created_at: string
+          family_id: string | null
+          icon: string | null
+          id: string
+          name: string
+          type: Database['public']['Enums']['transaction_type']
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          family_id?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          type?: Database['public']['Enums']['transaction_type']
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          family_id?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          type?: Database['public']['Enums']['transaction_type']
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'transaction_categories_family_id_fkey'
+            columns: ['family_id']
+            isOneToOne: false
+            referencedRelation: 'families'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          amount_cents: number
+          category_id: string | null
+          created_at: string
+          description: string | null
+          family_id: string
+          id: string
+          member_id: string
+          transaction_date: string
+          type: Database['public']['Enums']['transaction_type']
+        }
+        Insert: {
+          amount_cents: number
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          family_id: string
+          id?: string
+          member_id: string
+          transaction_date?: string
+          type: Database['public']['Enums']['transaction_type']
+        }
+        Update: {
+          amount_cents?: number
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          family_id?: string
+          id?: string
+          member_id?: string
+          transaction_date?: string
+          type?: Database['public']['Enums']['transaction_type']
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'transactions_category_id_fkey'
+            columns: ['category_id']
+            isOneToOne: false
+            referencedRelation: 'transaction_categories'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'transactions_family_id_fkey'
+            columns: ['family_id']
+            isOneToOne: false
+            referencedRelation: 'families'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'transactions_member_id_fkey'
+            columns: ['member_id']
+            isOneToOne: false
+            referencedRelation: 'family_members'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +297,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      asset_type: 'stock' | 'fii' | 'fixed_income' | 'crypto' | 'treasury' | 'other'
+      transaction_type: 'income' | 'expense'
     }
     CompositeTypes: {
       [_ in never]: never
@@ -143,6 +423,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      asset_type: ['stock', 'fii', 'fixed_income', 'crypto', 'treasury', 'other'],
+      transaction_type: ['income', 'expense'],
+    },
   },
 } as const

@@ -34,6 +34,9 @@ interface FamilyContextType {
   setIsNewTransactionOpen: (open: boolean) => void
   newTransactionDefaultType: 'income' | 'expense'
   openNewTransaction: (type?: 'income' | 'expense') => void
+  isImportStatementOpen: boolean
+  setIsImportStatementOpen: (open: boolean) => void
+  openImportStatement: () => void
   refreshTrigger: number
   triggerRefresh: () => void
 }
@@ -55,6 +58,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null) // null = 'Todos'
   const [loading, setLoading] = useState<boolean>(true)
   const [isNewTransactionOpen, setIsNewTransactionOpen] = useState(false)
+  const [isImportStatementOpen, setIsImportStatementOpen] = useState(false)
   const [newTransactionDefaultType, setNewTransactionDefaultType] = useState<'income' | 'expense'>(
     'expense',
   )
@@ -141,6 +145,11 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     setIsNewTransactionOpen(true)
   }
 
+  const openImportStatement = () => {
+    setIsNewTransactionOpen(false)
+    setIsImportStatementOpen(true)
+  }
+
   const currentMember = members.find((m) => m.is_admin) || members[0] || null
 
   return (
@@ -163,6 +172,9 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         setIsNewTransactionOpen,
         newTransactionDefaultType,
         openNewTransaction,
+        isImportStatementOpen,
+        setIsImportStatementOpen,
+        openImportStatement,
         refreshTrigger,
         triggerRefresh,
       }}

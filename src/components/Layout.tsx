@@ -3,6 +3,7 @@ import { Home, Wallet, Plus, Target, User, TrendingUp, LogOut, ChevronRight } fr
 import { useAuth } from '@/hooks/use-auth'
 import { useFamily } from '@/hooks/use-family'
 import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
+import { ImportStatementDialog } from '@/components/transactions/ImportStatementDialog'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 
@@ -14,6 +15,8 @@ export default function Layout() {
     isNewTransactionOpen,
     setIsNewTransactionOpen,
     openNewTransaction,
+    isImportStatementOpen,
+    setIsImportStatementOpen,
   } = useFamily()
   const location = useLocation()
   const navigate = useNavigate()
@@ -239,6 +242,9 @@ export default function Layout() {
 
       {/* DIÁLOGO GLOBAL DE NOVA TRANSAÇÃO */}
       <NewTransactionDialog open={isNewTransactionOpen} onOpenChange={setIsNewTransactionOpen} />
+
+      {/* DIÁLOGO GLOBAL DE IMPORTAÇÃO DE EXTRATO */}
+      <ImportStatementDialog open={isImportStatementOpen} onOpenChange={setIsImportStatementOpen} />
     </div>
   )
 }
