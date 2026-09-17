@@ -1,0 +1,244 @@
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { Home, Wallet, Plus, Target, User, TrendingUp, LogOut, ChevronRight } from 'lucide-react'
+import { useAuth } from '@/hooks/use-auth'
+import { useFamily } from '@/hooks/use-family'
+import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+
+export default function Layout() {
+  const { signOut } = useAuth()
+  const {
+    family,
+    currentMember,
+    isNewTransactionOpen,
+    setIsNewTransactionOpen,
+    openNewTransaction,
+  } = useFamily()
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  // Mapeamento de títulos para o header condicional
+  const getHeaderTitle = () => {
+    switch (location.pathname) {
+      case '/inicio':
+        return 'Visão Geral'
+      case '/carteira':
+        return 'Carteira & Orçamentos'
+      case '/metas':
+        return 'Planejamento de Metas'
+      case '/investimentos':
+        return 'Carteira de Investimentos'
+      case '/perfil':
+        return 'Família & Configurações'
+      default:
+        return 'Finanças da Família'
+    }
+  }
+
+  const navItems = [
+    { to: '/inicio', label: 'Início', icon: Home },
+    { to: '/carteira', label: 'Carteira', icon: Wallet },
+    // FAB no centro no mobile
+    { to: '/metas', label: 'Metas', icon: Target },
+    { to: '/investimentos', label: 'Investimentos', icon: TrendingUp },
+    { to: '/perfil', label: 'Perfil', icon: User },
+  ]
+
+  const handleSignOut = async () => {
+    await signOut()
+    navigate('/')
+  }
+
+  const userInitial = currentMember?.name?.charAt(0).toUpperCase() || 'F'
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row text-slate-900 font-sans antialiased">
+      {/* SIDEBAR DESKTOP (>= 768px) */}
+      <aside className="hidden md:flex md:w-60 flex-col bg-white border-r border-slate-200/80 fixed inset-y-0 left-0 z-40">
+        {/* Logo & Marca */}
+        <div className="p-5 border-b border-slate-100 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center text-white font-bold shadow-md shadow-emerald-900/10">
+            <span className="text-lg">💰</span>
+          </div>
+          <div className="overflow-hidden">
+            <h1 className="font-bold text-sm text-slate-900 truncate">Finanças da Família</h1>
+            <p className="text-xs text-slate-500 truncate">
+              {family ? `Família ${family.name}` : 'Controle Conjunto'}
+            </p>
+          </div>
+        </div>
+
+        {/* Botão Nova Transação Desktop */}
+        <div className="p-4">
+          <Button
+            onClick={() => openNewTransaction('expense')}
+            className="w-full bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-semibold py-2.5 shadow-md shadow-emerald-700/20 rounded-xl flex items-center justify-center gap-2 transition-all transform active:scale-95"
+          >
+            <Plus className="w-5 h-5" />
+            Nova Transação
+          </Button>
+        </div>
+
+        {/* Links de navegação */}
+        <nav className="flex-1 px-3 py-2 space-y-1">
+          {navItems.map((item) => {
+            const Icon = item.icon
+            const isActive = location.pathname === item.to
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  isActive
+                    ? 'bg-emerald-50 text-emerald-800 font-semibold'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                }`}
+              >
+                <Icon
+                  className={`w-5 h-5 ${
+                    isActive ? 'text-emerald-700' : 'text-slate-400 group-hover:text-slate-600'
+                  }`}
+                />
+                <span className="flex-1">{item.label}</span>
+                {isActive && <ChevronRight className="w-4 h-4 text-emerald-600" />}
+              </NavLink>
+            )
+          })}
+        </nav>
+
+        {/* Rodapé do Perfil Desktop */}
+        <div className="p-4 border-t border-slate-100 flex items-center justify-between">
+          <div
+            onClick={() => navigate('/perfil')}
+            className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition-opacity overflow-hidden"
+          >
+            <Avatar className="w-8 h-8 border border-emerald-200">
+              <AvatarFallback className="bg-emerald-100 text-emerald-800 font-bold text-xs">
+                {userInitial}
+              </AvatarFallback>
+            </Avatar>
+            <div className="overflow-hidden">
+              <p className="text-xs font-semibold text-slate-800 truncate">
+                {currentMember?.name || 'Família'}
+              </p>
+              <p className="text-[10px] text-slate-400 truncate">Login Compartilhado</p>
+            </div>
+          </div>
+          <button
+            onClick={handleSignOut}
+            title="Sair da conta"
+            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+      </aside>
+
+      {/* ÁREA PRINCIPAL COM SCROLL */}
+      <div className="flex-1 md:ml-60 flex flex-col min-h-screen">
+        {/* HEADER TOP (visível em desktop e mobile) */}
+        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200/60 px-4 py-3 sm:px-6 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">
+              {getHeaderTitle()}
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div
+              onClick={() => navigate('/perfil')}
+              className="flex items-center gap-2 cursor-pointer group"
+            >
+              <span className="hidden sm:inline text-xs font-medium text-slate-600 group-hover:text-emerald-700 transition-colors">
+                {currentMember?.name}
+              </span>
+              <Avatar className="w-8 h-8 border border-emerald-200 shadow-sm group-hover:ring-2 group-hover:ring-emerald-400 transition-all">
+                <AvatarFallback className="bg-gradient-to-tr from-emerald-600 to-teal-700 text-white font-bold text-xs">
+                  {userInitial}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+          </div>
+        </header>
+
+        {/* CONTEÚDO PRINCIPAL (max-width 1200px centralizado) */}
+        <main className="flex-1 w-full max-w-[1200px] mx-auto p-4 sm:p-6 pb-28 md:pb-8">
+          <Outlet />
+        </main>
+
+        {/* BOTTOM NAVIGATION (MOBILE APENAS < 768px) */}
+        <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200/80 z-40 px-2 py-1 shadow-lg shadow-slate-900/5">
+          <div className="relative flex items-center justify-around h-14">
+            {/* 1. Início */}
+            <NavLink
+              to="/inicio"
+              className={({ isActive }) =>
+                `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
+                  isActive ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-slate-600'
+                }`
+              }
+            >
+              <Home className="w-5 h-5 mb-0.5" />
+              <span className="text-[10px]">Início</span>
+            </NavLink>
+
+            {/* 2. Carteira */}
+            <NavLink
+              to="/carteira"
+              className={({ isActive }) =>
+                `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
+                  isActive ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-slate-600'
+                }`
+              }
+            >
+              <Wallet className="w-5 h-5 mb-0.5" />
+              <span className="text-[10px]">Carteira</span>
+            </NavLink>
+
+            {/* 3. FAB CENTRAL ELEVADO COM GRADIENTE */}
+            <div className="flex-1 flex justify-center -translate-y-5">
+              <button
+                type="button"
+                onClick={() => openNewTransaction('expense')}
+                className="w-13 h-13 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-lg shadow-emerald-900/30 ring-4 ring-white active:scale-95 transition-transform"
+                aria-label="Nova Transação"
+              >
+                <Plus className="w-7 h-7 stroke-[2.5]" />
+              </button>
+            </div>
+
+            {/* 4. Metas */}
+            <NavLink
+              to="/metas"
+              className={({ isActive }) =>
+                `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
+                  isActive ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-slate-600'
+                }`
+              }
+            >
+              <Target className="w-5 h-5 mb-0.5" />
+              <span className="text-[10px]">Metas</span>
+            </NavLink>
+
+            {/* 5. Perfil */}
+            <NavLink
+              to="/perfil"
+              className={({ isActive }) =>
+                `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
+                  isActive ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-slate-600'
+                }`
+              }
+            >
+              <User className="w-5 h-5 mb-0.5" />
+              <span className="text-[10px]">Perfil</span>
+            </NavLink>
+          </div>
+        </nav>
+      </div>
+
+      {/* DIÁLOGO GLOBAL DE NOVA TRANSAÇÃO */}
+      <NewTransactionDialog open={isNewTransactionOpen} onOpenChange={setIsNewTransactionOpen} />
+    </div>
+  )
+}
