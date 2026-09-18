@@ -967,17 +967,17 @@ export default function WalletPage() {
                               )}
                             </div>
 
-                            <p className="text-xs text-slate-500 tabular-nums mt-0.5">
+                            <p className="text-xs text-slate-500 tabular-nums mt-0.5 flex items-center gap-1">
                               <span>{formatBRL(item.spentCents)}</span>
-                              <span> de </span>
+                              <span>de</span>
                               <span className="font-medium text-slate-700">
                                 {item.limitCents > 0 ? formatBRL(item.limitCents) : 'Sem teto'}
                               </span>
-                              {item.defaultLimitCents > 0 && item.hasOverride && (
-                                <span className="text-[10px] text-slate-400 ml-1">
+                              {item.defaultLimitCents > 0 && item.hasOverride ? (
+                                <span className="text-[10px] text-slate-400">
                                   (padrão: {formatBRL(item.defaultLimitCents)})
                                 </span>
-                              )}
+                              ) : null}
                             </p>
                           </div>
                         </div>
@@ -1038,12 +1038,12 @@ export default function WalletPage() {
                       {/* Linhas Aninhadas: Subcategorias com Recuo e Visual Suave */}
                       {hasSubcats && isExpanded && (
                         <div
-                          key={`subcats-${item.category.id}`}
+                          key={`budget-subcats-${item.category.id}`}
                           className="bg-slate-50/60 border-t border-slate-100 divide-y divide-slate-100/80 pl-4 sm:pl-7 pr-3 py-1"
                         >
                           {item.subcategories.map((subItem) => (
                             <div
-                              key={subItem.subcategory.id}
+                              key={`budget-sub-${subItem.subcategory.id}`}
                               onClick={(e) => {
                                 e.stopPropagation()
                                 openBudgetEditor(
@@ -1072,9 +1072,9 @@ export default function WalletPage() {
                                       <AlertTriangle className="w-3 h-3 text-red-500" />
                                     )}
                                   </div>
-                                  <p className="text-[11px] text-slate-400 tabular-nums">
+                                  <p className="text-[11px] text-slate-400 tabular-nums flex items-center gap-1">
                                     <span>{formatBRL(subItem.spentCents)}</span>
-                                    <span> de </span>
+                                    <span>de</span>
                                     <span>
                                       {subItem.limitCents > 0
                                         ? formatBRL(subItem.limitCents)
@@ -1514,15 +1514,17 @@ export default function WalletPage() {
       />
 
       {/* DIÁLOGO DE EDIÇÃO DE TRANSAÇÃO */}
-      <NewTransactionDialog
-        open={isEditTxOpen}
-        onOpenChange={(open) => {
-          setIsEditTxOpen(open)
-          if (!open) setEditingTx(null)
-        }}
-        editingTransaction={editingTx}
-        onSuccess={() => loadMonthData()}
-      />
+      {isEditTxOpen && (
+        <NewTransactionDialog
+          open={isEditTxOpen}
+          onOpenChange={(open) => {
+            setIsEditTxOpen(open)
+            if (!open) setEditingTx(null)
+          }}
+          editingTransaction={editingTx}
+          onSuccess={() => loadMonthData()}
+        />
+      )}
 
       {/* CONFIRMAÇÃO DE EXCLUSÃO DE TRANSAÇÃO */}
       <AlertDialog open={!!txToDelete} onOpenChange={(open) => !open && setTxToDelete(null)}>
