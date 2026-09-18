@@ -33,6 +33,7 @@ export default function Home() {
   const {
     family,
     members,
+    categories,
     currentMember,
     openWhoIsUsing,
     selectedMemberId,

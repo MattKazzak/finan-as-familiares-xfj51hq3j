@@ -337,11 +337,6 @@ export default function WalletPage() {
       const catDefault = defCatBudgetMap[cat.id]
       const hasOverride = !!catOverride
 
-      // Orçamento direto da categoria pai
-      const catOverride = overrideCatBudgetMap[cat.id]
-      const catDefault = defCatBudgetMap[cat.id]
-      const hasOverride = !!catOverride
-
       const explicitLimitCents = catOverride
         ? catOverride.amount_cents
         : catDefault
@@ -970,7 +965,7 @@ export default function WalletPage() {
                           {item.limitCents > 0 ? (
                             <div className="flex items-center gap-2">
                               <span
-                                className={`text-xs font-bold tabular-nums min-w-[36px] text-right ${
+                                className={`text-[11px] font-bold tabular-nums min-w-[38px] text-right ${
                                   item.isOver
                                     ? 'text-red-600'
                                     : item.percent >= 75
@@ -1072,7 +1067,7 @@ export default function WalletPage() {
                                 {subItem.limitCents > 0 ? (
                                   <div className="flex items-center gap-2">
                                     <span
-                                      className={`text-[11px] font-bold tabular-nums min-w-[34px] text-right ${
+                                      className={`text-[11px] font-bold tabular-nums min-w-[38px] text-right ${
                                         subItem.isOver
                                           ? 'text-red-600'
                                           : subItem.percent >= 75
