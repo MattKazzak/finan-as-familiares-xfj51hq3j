@@ -17,6 +17,16 @@ export interface IgnoredLineInfo {
   reason: string
 }
 
+export interface ParseDiagnostics {
+  totalLines: number
+  linesWithDate: number
+  linesWithValue: number
+  linesWithBoth: number
+  rejectionReasons: Record<string, number>
+  sampleLines?: string[]
+  suggestion?: string
+}
+
 export interface ParseResult {
   success: boolean
   transactions: ParsedRawTransaction[]
@@ -25,6 +35,7 @@ export interface ParseResult {
   warnings?: string[]
   ignoredCount?: number
   ignoredLines?: IgnoredLineInfo[]
+  diagnostics?: ParseDiagnostics
 }
 
 /**
@@ -476,44 +487,195 @@ export function parseCSV(content: string): ParseResult {
     }
   }
 
-  // Se não identificou cabeçalho clássico, heurística posicional
-  if (headerIndex === -1) {
-    headerIndex = 0
-    dateIdx = 0
-    descIdx = 1
-    amountIdx = 2
+  // Se não identificou cabeçalho por palavras-chave conhecidas (ou arquivo sem cabeçalho):
+  // Fazer detecção automática por amostragem dos dados (amostra até 30 linhas)
+  if (
+    headerIndex === -1 ||
+    dateIdx === -1 ||
+    (amountIdx === -1 && (creditIdx === -1 || debitIdx === -1))
+  ) {
+    // Determinar se a primeira linha (ou linha 0) é um cabeçalho ou já dados
+    const sampleRows: { lineIdx: number; row: string[] }[] = []
+    for (let i = 0; i < Math.min(rawLines.length, 35); i++) {
+      const row = splitLine(rawLines[i])
+      if (row.length >= 2) {
+        sampleRows.push({ lineIdx: i, row })
+      }
+    }
+
+    const maxCols = Math.max(...sampleRows.map((s) => s.row.length), 0)
+    const dateScores = new Array(maxCols).fill(0)
+    const amountScores = new Array(maxCols).fill(0)
+    const textScores = new Array(maxCols).fill(0)
+
+    for (const sample of sampleRows) {
+      sample.row.forEach((colVal, colI) => {
+        if (!colVal) return
+        if (parseDate(colVal)) {
+          dateScores[colI]++
+        }
+        if (parseAmount(colVal)) {
+          amountScores[colI]++
+        }
+        if (colVal.length >= 3 && !parseDate(colVal) && !parseAmount(colVal)) {
+          textScores[colI]++
+        }
+      })
+    }
+
+    // A coluna com mais datas
+    let bestDateCol = -1
+    let maxDateCount = 0
+    dateScores.forEach((cnt, colI) => {
+      if (cnt > maxDateCount) {
+        maxDateCount = cnt
+        bestDateCol = colI
+      }
+    })
+
+    // Colunas candidatas a valor (excluindo a coluna de data)
+    const amountCandidates: { col: number; score: number }[] = []
+    amountScores.forEach((cnt, colI) => {
+      if (colI !== bestDateCol && cnt > 0) {
+        amountCandidates.push({ col: colI, score: cnt })
+      }
+    })
+    amountCandidates.sort((a, b) => b.score - a.score)
+
+    if (bestDateCol !== -1 && amountCandidates.length > 0) {
+      dateIdx = bestDateCol
+
+      // Se temos pelo menos 2 colunas fortes de valor, checar se podem ser Débito e Crédito
+      if (
+        creditIdx === -1 &&
+        debitIdx === -1 &&
+        amountCandidates.length >= 2 &&
+        amountCandidates[1].score >= Math.max(1, Math.floor(sampleRows.length * 0.15))
+      ) {
+        // Possível débito e crédito separados
+        // Tentar manter o que foi achado ou associar
+        debitIdx = amountCandidates[0].col
+        creditIdx = amountCandidates[1].col
+        amountIdx = -1
+      } else {
+        amountIdx = amountCandidates[0].col
+      }
+
+      // Descrição: melhor coluna de texto que não seja data nem valor
+      let bestDescCol = -1
+      let maxTextCount = -1
+      textScores.forEach((cnt, colI) => {
+        if (
+          colI !== dateIdx &&
+          colI !== amountIdx &&
+          colI !== creditIdx &&
+          colI !== debitIdx &&
+          cnt > maxTextCount
+        ) {
+          maxTextCount = cnt
+          bestDescCol = colI
+        }
+      })
+      if (bestDescCol !== -1) {
+        descIdx = bestDescCol
+      }
+
+      // Se a linha 0 não tem data nem valor válidos na coluna de data/valor, é cabeçalho
+      const firstRow = sampleRows[0]?.row
+      const firstRowHasDate = firstRow && parseDate(firstRow[dateIdx])
+      if (firstRowHasDate) {
+        headerIndex = -1 // Começa a ler da linha 0
+      } else {
+        headerIndex = 0
+      }
+    } else {
+      // Fallback clássico se nem a amostragem encontrou
+      if (headerIndex === -1) headerIndex = 0
+      if (dateIdx === -1) dateIdx = 0
+      if (descIdx === -1) descIdx = 1
+      if (amountIdx === -1) amountIdx = 2
+    }
   }
 
   const rawTransactions: ParsedRawTransaction[] = []
+  const rejectionReasons: Record<string, number> = {}
+  let linesWithDate = 0
+  let linesWithValue = 0
+  let linesWithBoth = 0
+  const sampleLines: string[] = []
 
-  for (let i = headerIndex + 1; i < rawLines.length; i++) {
+  const startLine = headerIndex >= 0 ? headerIndex + 1 : 0
+
+  for (let i = startLine; i < rawLines.length; i++) {
     const line = rawLines[i].trim()
     if (!line) continue
+
+    if (sampleLines.length < 5) {
+      sampleLines.push(line.length > 80 ? line.slice(0, 80) + '...' : line)
+    }
 
     // Checar se a linha é ruído de extrato (ex: SALDO ANTERIOR, TOTAL, telefones)
     const noise = isNoiseLine(line)
     if (noise.isNoise) {
+      const reason = noise.reason || 'Ruído detectado'
+      rejectionReasons[reason] = (rejectionReasons[reason] || 0) + 1
       ignoredLines.push({
         lineNumber: i + 1,
         text: line,
-        reason: noise.reason || 'Ruído detectado',
+        reason,
       })
       continue
     }
 
     const row = splitLine(line)
     if (row.length < 2) {
-      ignoredLines.push({ lineNumber: i + 1, text: line, reason: 'Colunas insuficientes' })
+      const reason = 'Colunas insuficientes'
+      rejectionReasons[reason] = (rejectionReasons[reason] || 0) + 1
+      ignoredLines.push({ lineNumber: i + 1, text: line, reason })
       continue
     }
 
-    const rawDate = row[dateIdx]
+    const rawDate = dateIdx >= 0 && dateIdx < row.length ? row[dateIdx] : ''
     const parsedDate = parseDate(rawDate)
+
+    // Checar valor
+    let hasVal = false
+    let amountCents = 0
+    let type: TransactionType = 'expense'
+
+    if (creditIdx !== -1 && debitIdx !== -1 && creditIdx < row.length && debitIdx < row.length) {
+      const creditVal = parseAmount(row[creditIdx])
+      const debitVal = parseAmount(row[debitIdx])
+
+      if (creditVal && creditVal.amountCents > 0) {
+        amountCents = creditVal.amountCents
+        type = 'income'
+        hasVal = true
+      } else if (debitVal && debitVal.amountCents > 0) {
+        amountCents = debitVal.amountCents
+        type = 'expense'
+        hasVal = true
+      }
+    } else if (amountIdx !== -1 && amountIdx < row.length && row[amountIdx]) {
+      const parsedAmount = parseAmount(row[amountIdx])
+      if (parsedAmount && parsedAmount.amountCents > 0) {
+        amountCents = parsedAmount.amountCents
+        type = parsedAmount.type
+        hasVal = true
+      }
+    }
+
+    if (parsedDate) linesWithDate++
+    if (hasVal) linesWithValue++
+    if (parsedDate && hasVal) linesWithBoth++
+
     if (!parsedDate) {
+      const reason = rawDate ? `Data não reconhecida (${rawDate})` : 'Linha sem campo de data'
+      rejectionReasons[reason] = (rejectionReasons[reason] || 0) + 1
       ignoredLines.push({
         lineNumber: i + 1,
         text: line,
-        reason: 'Data inválida ou fora do intervalo aceito',
+        reason,
       })
       continue
     }
@@ -521,35 +683,32 @@ export function parseCSV(content: string): ParseResult {
     let description =
       descIdx !== -1 && row[descIdx] ? row[descIdx].replace(/^["']|["']$/g, '').trim() : ''
 
+    // Se a coluna de descrição escolhida estiver vazia, procurar na linha a primeira coluna textual válida
+    if (!description) {
+      for (let c = 0; c < row.length; c++) {
+        if (c !== dateIdx && c !== amountIdx && c !== creditIdx && c !== debitIdx) {
+          const cand = row[c]?.replace(/^["']|["']$/g, '').trim()
+          if (cand && isValidDescription(cand)) {
+            description = cand
+            break
+          }
+        }
+      }
+    }
+
     if (!isValidDescription(description)) {
-      ignoredLines.push({ lineNumber: i + 1, text: line, reason: 'Descrição inválida ou vazia' })
+      const reason = description
+        ? `Descrição inválida (${description.slice(0, 30)})`
+        : 'Descrição vazia ou inexistente'
+      rejectionReasons[reason] = (rejectionReasons[reason] || 0) + 1
+      ignoredLines.push({ lineNumber: i + 1, text: line, reason })
       continue
     }
 
-    let amountCents = 0
-    let type: TransactionType = 'expense'
-
-    if (creditIdx !== -1 && debitIdx !== -1) {
-      const creditVal = parseAmount(row[creditIdx])
-      const debitVal = parseAmount(row[debitIdx])
-
-      if (creditVal && creditVal.amountCents > 0) {
-        amountCents = creditVal.amountCents
-        type = 'income'
-      } else if (debitVal && debitVal.amountCents > 0) {
-        amountCents = debitVal.amountCents
-        type = 'expense'
-      }
-    } else if (amountIdx !== -1 && row[amountIdx]) {
-      const parsedAmount = parseAmount(row[amountIdx])
-      if (parsedAmount) {
-        amountCents = parsedAmount.amountCents
-        type = parsedAmount.type
-      }
-    }
-
     if (amountCents <= 0) {
-      ignoredLines.push({ lineNumber: i + 1, text: line, reason: 'Valor zerado ou inválido' })
+      const reason = 'Valor zerado ou não identificado na linha'
+      rejectionReasons[reason] = (rejectionReasons[reason] || 0) + 1
+      ignoredLines.push({ lineNumber: i + 1, text: line, reason })
       continue
     }
 
@@ -570,16 +729,36 @@ export function parseCSV(content: string): ParseResult {
     warnings.push(`${duplicatesRemoved} lançamento(s) duplicado(s) descartado(s) automaticamente.`)
   }
 
+  const totalLines = rawLines.filter((l) => l.trim().length > 0).length
+
   if (unique.length === 0) {
+    let suggestion =
+      'Verifique se o arquivo possui colunas com data (ex.: DD/MM/AAAA) e valores numéricos válidos.'
+    if (linesWithDate > 0 && linesWithValue === 0) {
+      suggestion = `Identificamos ${linesWithDate} linha(s) com data, mas nenhuma coluna com valor legível. Certifique-se de que a coluna de valor não contém caracteres adicionais ou exporte novamente do seu banco.`
+    } else if (linesWithValue > 0 && linesWithDate === 0) {
+      suggestion = `Identificamos ${linesWithValue} linha(s) com valores monetários, mas nenhuma data válida brasileira (dd/mm/aaaa ou yyyy-mm-dd).`
+    } else if (linesWithBoth > 0) {
+      suggestion = `${linesWithBoth} linha(s) continham data e valor, mas foram rejeitadas pelo filtro de ruído ou descrição inválida.`
+    }
+
     return {
       success: false,
       transactions: [],
       format: 'csv',
-      error:
-        'Não encontramos lançamentos válidos neste arquivo CSV — verifique se as colunas possuem data e valor.',
+      error: `Não encontramos lançamentos válidos neste arquivo CSV (${linesWithDate} linha(s) com data e ${linesWithValue} com valor encontradas).`,
       ignoredLines,
       ignoredCount: ignoredLines.length,
       warnings,
+      diagnostics: {
+        totalLines,
+        linesWithDate,
+        linesWithValue,
+        linesWithBoth,
+        rejectionReasons,
+        sampleLines,
+        suggestion,
+      },
     }
   }
 
@@ -590,6 +769,13 @@ export function parseCSV(content: string): ParseResult {
     ignoredLines,
     ignoredCount: ignoredLines.length,
     warnings,
+    diagnostics: {
+      totalLines,
+      linesWithDate,
+      linesWithValue,
+      linesWithBoth,
+      rejectionReasons,
+    },
   }
 }
 
@@ -709,6 +895,76 @@ export function parseOFX(content: string): ParseResult {
 // 3. PARSER PDF (Extração de texto e linhas de extrato / fatura)
 // ==========================================
 
+/**
+ * Item posicionado extraído do PDF com coordenadas geométricas
+ */
+export interface PDFTextItemPositioned {
+  str: string
+  x: number
+  y: number
+  width?: number
+  height?: number
+}
+
+/**
+ * Agrupa itens de texto extraídos de uma página PDF por proximidade no eixo Y (mesma linha visual)
+ * e ordena os itens de cada linha da esquerda para a direita pelo eixo X.
+ * Tolerância típica: ~3 a 5 pontos verticais para acomodar fontes ligeiramente desalinhadas.
+ */
+export function reconstructLinesFromPositionedItems(
+  items: PDFTextItemPositioned[],
+  yTolerance: number = 4,
+): string[] {
+  if (!items || items.length === 0) return []
+
+  // Filtrar itens vazios
+  const validItems = items.filter(
+    (it) => it && typeof it.str === 'string' && it.str.trim().length > 0,
+  )
+  if (validItems.length === 0) return []
+
+  // Agrupar por Y aproximado
+  // Observação: no PDF coordinate space, Y normalmente cresce de baixo para cima (bottom-left origin).
+  // Agrupamos itens cujo Y esteja dentro de yTolerance.
+  interface LineGroup {
+    y: number
+    items: PDFTextItemPositioned[]
+  }
+
+  const groups: LineGroup[] = []
+
+  for (const item of validItems) {
+    const matchedGroup = groups.find((g) => Math.abs(g.y - item.y) <= yTolerance)
+    if (matchedGroup) {
+      matchedGroup.items.push(item)
+      // Ajusta Y médio do grupo para estabilidade
+      matchedGroup.y =
+        (matchedGroup.y * (matchedGroup.items.length - 1) + item.y) / matchedGroup.items.length
+    } else {
+      groups.push({
+        y: item.y,
+        items: [item],
+      })
+    }
+  }
+
+  // Ordenar grupos verticais: do topo da página para o final
+  // No PDF.js padrão, Y maior significa mais alto na página.
+  groups.sort((a, b) => b.y - a.y)
+
+  // Em cada grupo, ordenar da esquerda para a direita (X crescente)
+  const lines: string[] = []
+  for (const group of groups) {
+    group.items.sort((a, b) => a.x - b.x)
+    const lineText = group.items.map((it) => it.str.trim()).join(' ')
+    if (lineText.trim()) {
+      lines.push(lineText.trim())
+    }
+  }
+
+  return lines
+}
+
 export async function extractTextFromPDF(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer()
 
@@ -738,16 +994,50 @@ export async function extractTextFromPDF(file: File): Promise<string> {
   const pdfjs = await getPdfJs()
   const loadingTask = pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) })
   const doc = await loadingTask.promise
-  let fullText = ''
+  const pageLinesAccumulator: string[] = []
 
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i)
     const textContent = await page.getTextContent()
-    const pageText = textContent.items.map((item: any) => item.str).join(' ')
-    fullText += pageText + '\n'
+
+    // Extrair itens com coordenadas transform: [scaleX, skewY, skewX, scaleY, transX, transY]
+    const positionedItems: PDFTextItemPositioned[] = []
+
+    for (const item of textContent.items) {
+      if (!item || typeof item.str !== 'string') continue
+      const str = item.str
+      // transform[4] = x, transform[5] = y
+      if (Array.isArray(item.transform) && item.transform.length >= 6) {
+        const x = item.transform[4]
+        const y = item.transform[5]
+        positionedItems.push({
+          str,
+          x,
+          y,
+          width: item.width,
+          height: item.height,
+        })
+      } else {
+        // Fallback caso não tenha transform
+        positionedItems.push({
+          str,
+          x: 0,
+          y: 0,
+        })
+      }
+    }
+
+    const reconstructed = reconstructLinesFromPositionedItems(positionedItems)
+    if (reconstructed.length > 0) {
+      pageLinesAccumulator.push(...reconstructed)
+    } else {
+      // Fallback para caso nenhum item seja posicionado
+      const rawFallback = textContent.items.map((item: any) => item.str).join(' ')
+      if (rawFallback.trim()) pageLinesAccumulator.push(rawFallback)
+    }
   }
 
-  return fullText
+  return pageLinesAccumulator.join('\n')
 }
 
 /**
@@ -787,25 +1077,37 @@ export function parsePDFText(text: string): ParseResult {
   // Quebrar por quebras de linha
   const lines = text.split(/\r?\n/)
 
-  // Regex para data válida no padrão brasileiro (DD/MM/YYYY ou DD/MM)
-  const dateRegex = /\b(\d{2}\/\d{2}(?:\/\d{4})?)\b/
-  // Regex para valor monetário BR: "1.234,56", "1234,56", "R$ 148,00", "-50,00"
-  const amountRegex = /([+-]?\s*(?:R\$\s*)?\d{1,3}(?:\.\d{3})*,\d{2}\b)/g
+  // Regex para data válida no padrão brasileiro (DD/MM/YYYY, DD/MM/YY ou DD/MM) ou ISO (YYYY-MM-DD)
+  const dateRegex = /\b(?:\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}(?:\/\d{2,4})?|\d{2}-\d{2}-\d{4})\b/
+  // Regex para valor monetário BR: "1.234,56", "1234,56", "R$ 148,00", "-50,00", "45,00 D"
+  const amountRegex =
+    /([+-]?\s*(?:R\$\s*)?\d{1,3}(?:\.\d{3})*,\d{2}\b(?:\s*[DC])?|[+-]?\s*(?:R\$\s*)?\d+,\d{2}\b(?:\s*[DC])?)/g
 
   let lineCount = 0
+  const rejectionReasons: Record<string, number> = {}
+  let linesWithDate = 0
+  let linesWithValue = 0
+  let linesWithBoth = 0
+  const sampleLines: string[] = []
 
   for (const rawLine of lines) {
     lineCount++
     const line = rawLine.trim()
     if (!line) continue
 
+    if (sampleLines.length < 5) {
+      sampleLines.push(line.length > 80 ? line.slice(0, 80) + '...' : line)
+    }
+
     // 1. Filtrar ruído (cabeçalho, rodapé, telefones, canais de atendimento, URLs)
     const noiseCheck = isNoiseLine(line)
     if (noiseCheck.isNoise) {
+      const reason = noiseCheck.reason || 'Linha de cabeçalho ou rodapé ignorada'
+      rejectionReasons[reason] = (rejectionReasons[reason] || 0) + 1
       ignoredLines.push({
         lineNumber: lineCount,
         text: line.length > 90 ? line.slice(0, 90) + '...' : line,
-        reason: noiseCheck.reason || 'Linha de cabeçalho ou rodapé ignorada',
+        reason,
       })
       continue
     }
@@ -814,39 +1116,44 @@ export function parsePDFText(text: string): ParseResult {
     const dateMatch = line.match(dateRegex)
     const amountMatches = line.match(amountRegex)
 
-    if (!dateMatch || !amountMatches || amountMatches.length === 0) {
+    // Validar se a data e o valor encontrados são de fato válidos pelo parser
+    const rawDateCand = dateMatch ? dateMatch[0] : ''
+    const fullDateStr =
+      rawDateCand.length === 5 ? `${rawDateCand}/${new Date().getFullYear()}` : rawDateCand
+    const parsedDateCand = rawDateCand ? parseDate(fullDateStr) : null
+
+    const lastAmtMatch =
+      amountMatches && amountMatches.length > 0 ? amountMatches[amountMatches.length - 1] : ''
+    const parsedAmtCand = lastAmtMatch ? parseAmount(lastAmtMatch) : null
+
+    if (parsedDateCand) linesWithDate++
+    if (parsedAmtCand && parsedAmtCand.amountCents > 0) linesWithValue++
+    if (parsedDateCand && parsedAmtCand && parsedAmtCand.amountCents > 0) linesWithBoth++
+
+    if (!parsedDateCand || !parsedAmtCand || parsedAmtCand.amountCents <= 0) {
+      let reason = 'Linha sem estrutura de data e valor'
+      if (!parsedDateCand && (!parsedAmtCand || parsedAmtCand.amountCents <= 0)) {
+        reason = 'Sem data e sem valor na linha'
+      } else if (!parsedDateCand) {
+        reason = rawDateCand
+          ? `Data inválida ou fora do intervalo (${rawDateCand})`
+          : 'Não possui data na linha'
+      } else {
+        reason = lastAmtMatch
+          ? `Valor monetário zerado ou inválido (${lastAmtMatch})`
+          : 'Não possui valor monetário na linha'
+      }
+      rejectionReasons[reason] = (rejectionReasons[reason] || 0) + 1
       ignoredLines.push({
         lineNumber: lineCount,
         text: line.length > 90 ? line.slice(0, 90) + '...' : line,
-        reason: 'Não possui estrutura válida de transação (data + valor monetário)',
+        reason,
       })
       continue
     }
 
-    // 3. Validação da data
-    const rawDate = dateMatch[1]
-    const fullDateStr = rawDate.length === 5 ? `${rawDate}/${new Date().getFullYear()}` : rawDate
-    const parsedDate = parseDate(fullDateStr)
-    if (!parsedDate) {
-      ignoredLines.push({
-        lineNumber: lineCount,
-        text: line,
-        reason: `Data inválida ou fora do intervalo aceito: ${rawDate}`,
-      })
-      continue
-    }
-
-    // 4. Validação do valor (pega o último valor monetário na linha, que é o montante da transação)
-    const lastAmtMatch = amountMatches[amountMatches.length - 1]
-    const parsedAmt = parseAmount(lastAmtMatch)
-    if (!parsedAmt || parsedAmt.amountCents <= 0) {
-      ignoredLines.push({
-        lineNumber: lineCount,
-        text: line,
-        reason: 'Valor monetário zerado ou inválido',
-      })
-      continue
-    }
+    const parsedDate = parsedDateCand
+    const parsedAmt = parsedAmtCand
 
     // 5. Descrição: extrair o texto limpo da linha, removendo a data, o valor e prefixos monetários
     let desc = line
@@ -858,10 +1165,12 @@ export function parsePDFText(text: string): ParseResult {
 
     // Se sobrou apenas caracteres soltos ou a descrição for ruído disfarçado
     if (!isValidDescription(desc)) {
+      const reason = `Descrição inválida ou insuficiente: "${desc.slice(0, 30)}"`
+      rejectionReasons[reason] = (rejectionReasons[reason] || 0) + 1
       ignoredLines.push({
         lineNumber: lineCount,
         text: line,
-        reason: `Descrição inválida ou insuficiente: "${desc}"`,
+        reason,
       })
       continue
     }
@@ -869,10 +1178,12 @@ export function parsePDFText(text: string): ParseResult {
     // Checar novamente se a própria descrição residual contém termos proibidos
     const descNoise = isNoiseLine(desc)
     if (descNoise.isNoise) {
+      const reason = descNoise.reason || 'Descrição contém termos de rodapé/cabeçalho'
+      rejectionReasons[reason] = (rejectionReasons[reason] || 0) + 1
       ignoredLines.push({
         lineNumber: lineCount,
         text: line,
-        reason: descNoise.reason || 'Descrição contém termos de rodapé/cabeçalho',
+        reason,
       })
       continue
     }
@@ -913,16 +1224,36 @@ export function parsePDFText(text: string): ParseResult {
     )
   }
 
+  const totalLines = lines.filter((l) => l.trim().length > 0).length
+
   if (unique.length === 0) {
+    let suggestion =
+      'Verifique se o PDF contém o texto dos lançamentos ou se é uma imagem escaneada.'
+    if (linesWithDate > 0 && linesWithValue === 0) {
+      suggestion = `Encontramos ${linesWithDate} linha(s) com data, mas nenhuma com valor legível. Pode haver formatação gráfica ou colunas separadas.`
+    } else if (linesWithValue > 0 && linesWithDate === 0) {
+      suggestion = `Encontramos ${linesWithValue} linha(s) com valor, mas nenhuma data no padrão brasileiro (DD/MM/AAAA ou DD/MM).`
+    } else if (linesWithBoth > 0) {
+      suggestion = `${linesWithBoth} linha(s) continham data e valor, mas foram filtradas como ruído bancário ou descrição inválida.`
+    }
+
     return {
       success: false,
       transactions: [],
       format: 'pdf',
-      error:
-        'Não encontramos lançamentos válidos neste arquivo — verifique se o PDF é o extrato ou fatura completa.',
+      error: `Não encontramos lançamentos válidos neste PDF (${linesWithDate} linha(s) com data e ${linesWithValue} com valor encontradas).`,
       ignoredLines,
       ignoredCount: ignoredLines.length,
       warnings,
+      diagnostics: {
+        totalLines,
+        linesWithDate,
+        linesWithValue,
+        linesWithBoth,
+        rejectionReasons,
+        sampleLines,
+        suggestion,
+      },
     }
   }
 
@@ -933,6 +1264,13 @@ export function parsePDFText(text: string): ParseResult {
     ignoredLines,
     ignoredCount: ignoredLines.length,
     warnings,
+    diagnostics: {
+      totalLines,
+      linesWithDate,
+      linesWithValue,
+      linesWithBoth,
+      rejectionReasons,
+    },
   }
 }
 

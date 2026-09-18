@@ -9,6 +9,7 @@ import {
   parsePDFText,
   parseCSV,
   parseOFX,
+  reconstructLinesFromPositionedItems,
 } from '@/services/import/statement-parser'
 import { predictCategory } from '@/services/import/categorization'
 import type { TransactionCategory } from '@/types/finance'
@@ -165,6 +166,28 @@ Acesse www.rico.com.vc
       expect(result.transactions[2].type).toBe('income')
     })
 
+    it('faz o parsing de CSV do Banco Inter (cabeçalho com nomes variados e formato monetário BR)', () => {
+      // Formato típico de exportação de extrato do Banco Inter:
+      // Data Lançamento;Histórico;Valor;Saldo
+      const interCsv = `Data Lancamento;Historico;Valor;Saldo
+10/03/2026;PIX ENVIADO MERCADO LIVRE;-189,90;1.200,50
+12/03/2026;PIX RECEBIDO JOAO SILVA;350,00;1.550,50
+14/03/2026;PAGAMENTO CONTA ENERGIA;-210,40;1.340,10
+`
+      const result = parseCSV(interCsv)
+      expect(result.success).toBe(true)
+      expect(result.transactions.length).toBe(3)
+
+      expect(result.transactions[0].description).toContain('PIX ENVIADO MERCADO LIVRE')
+      expect(result.transactions[0].amount_cents).toBe(18990)
+      expect(result.transactions[0].type).toBe('expense')
+      expect(result.transactions[0].date).toBe('2026-03-10')
+
+      expect(result.transactions[1].description).toContain('PIX RECEBIDO JOAO SILVA')
+      expect(result.transactions[1].amount_cents).toBe(35000)
+      expect(result.transactions[1].type).toBe('income')
+    })
+
     it('faz o parsing de CSV com colunas separadas de Débito e Crédito (ex: Itaú/Bradesco)', () => {
       const csvContent = `Data;Historico;Debito;Credito
 30/09/2026;Agua Sabesp;148,00;
@@ -188,6 +211,81 @@ Acesse www.rico.com.vc
       // Linha de SALDO ANTERIOR deve ter sido ignorada
       const saldoTx = result.transactions.find((t) => t.description.includes('SALDO'))
       expect(saldoTx).toBeUndefined()
+    })
+
+    it('faz detecção por amostragem quando o CSV NÃO possui cabeçalho', () => {
+      const rawRowsCsv = `10/03/2026;Farmacia Droga Raia;-65,40
+12/03/2026;Supermercado Pao de Acucar;-320,10
+15/03/2026;Prestacao Servicos Consultoria;2.500,00
+`
+      const result = parseCSV(rawRowsCsv)
+      expect(result.success).toBe(true)
+      expect(result.transactions.length).toBe(3)
+      expect(result.transactions[0].amount_cents).toBe(6540)
+      expect(result.transactions[0].type).toBe('expense')
+      expect(result.transactions[2].amount_cents).toBe(250000)
+      expect(result.transactions[2].type).toBe('income')
+    })
+
+    it('fornece diagnósticos completos e sugestão quando nenhum lançamento é reconhecido', () => {
+      const badCsv = `Linha aleatoria de texto sem data e sem valor
+Outra linha qualquer de informacoes
+Apenas texto sem numeros de transacoes
+`
+      const result = parseCSV(badCsv)
+      expect(result.success).toBe(false)
+      expect(result.diagnostics).toBeDefined()
+      expect(result.diagnostics?.totalLines).toBe(3)
+      expect(result.diagnostics?.linesWithDate).toBe(0)
+      expect(result.diagnostics?.linesWithValue).toBe(0)
+      expect(result.diagnostics?.suggestion).toBeDefined()
+    })
+  })
+
+  describe('reconstructLinesFromPositionedItems (Reconstrução de Linhas de PDF)', () => {
+    it('agrupa palavras com mesmo Y em uma única linha ordenada por X da esquerda para a direita', () => {
+      // Simula a saída de uma página com múltiplos lançamentos no PDF
+      // Em PDF: Y decresce de cima para baixo na leitura visual
+      const items = [
+        // Linha 1 (topo - Y=500): "30/09/2026" (x=50), "Salário Posto Vereda" (x=150), "3.488,48" (x=400)
+        { str: 'Salário Posto Vereda', x: 150, y: 500 },
+        { str: '30/09/2026', x: 50, y: 500 },
+        { str: '3.488,48', x: 400, y: 500 },
+
+        // Linha 2 (meio - Y=480): "30/09/2026" (x=50), "Água" (x=150), "148,00" (x=400)
+        { str: '148,00', x: 400, y: 480 },
+        { str: '30/09/2026', x: 50, y: 480 },
+        { str: 'Água Sabesp', x: 150, y: 480 },
+
+        // Linha 3 (rodapé - Y=100): "Acesse www.bancointer.com.br"
+        { str: 'Acesse', x: 50, y: 100 },
+        { str: 'www.bancointer.com.br', x: 120, y: 100 },
+      ]
+
+      const lines = reconstructLinesFromPositionedItems(items)
+      expect(lines.length).toBe(3)
+      expect(lines[0]).toBe('30/09/2026 Salário Posto Vereda 3.488,48')
+      expect(lines[1]).toBe('30/09/2026 Água Sabesp 148,00')
+      expect(lines[2]).toBe('Acesse www.bancointer.com.br')
+
+      // Quando passa pelo parsePDFText, o ruído é filtrado e os lançamentos são extraídos
+      const fullText = lines.join('\n')
+      const parseResult = parsePDFText(fullText)
+      expect(parseResult.success).toBe(true)
+      expect(parseResult.transactions.length).toBe(2)
+      expect(parseResult.transactions[0].description).toBe('Salário Posto Vereda')
+      expect(parseResult.transactions[1].description).toBe('Água Sabesp')
+    })
+
+    it('acomoda pequenas variações de alinhamento vertical dentro da tolerância Y', () => {
+      const items = [
+        { str: '15/03/2026', x: 50, y: 350.2 },
+        { str: 'Restaurante Sabor', x: 180, y: 351.0 }, // 0.8pt de diferença
+        { str: '89,90', x: 420, y: 349.5 }, // 0.7pt de diferença
+      ]
+      const lines = reconstructLinesFromPositionedItems(items, 4)
+      expect(lines.length).toBe(1)
+      expect(lines[0]).toBe('15/03/2026 Restaurante Sabor 89,90')
     })
   })
 

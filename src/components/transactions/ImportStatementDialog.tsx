@@ -28,6 +28,7 @@ import {
   parseStatementFile,
   type ParsedRawTransaction,
   type IgnoredLineInfo,
+  type ParseDiagnostics,
 } from '@/services/import/statement-parser'
 import { predictCategory } from '@/services/import/categorization'
 import { createTransactionsBatch, fetchTransactions } from '@/services/transactions'
@@ -100,6 +101,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
   const [parsing, setParsing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [diagnostics, setDiagnostics] = useState<ParseDiagnostics | null>(null)
   const [fileInfo, setFileInfo] = useState<{ name: string; size: number; format: string } | null>(
     null,
   )
@@ -136,6 +138,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
       setStep('upload')
       setItems([])
       setErrorMessage(null)
+      setDiagnostics(null)
       setFileInfo(null)
       setIgnoredLines([])
       setShowIgnoredLines(false)
@@ -154,6 +157,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 
     setParsing(true)
     setErrorMessage(null)
+    setDiagnostics(null)
 
     try {
       // 1. Parser do arquivo
@@ -163,6 +167,9 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           result.error ||
             'Não foram encontradas transações válidas no arquivo. Verifique se o formato é CSV, OFX ou PDF de extrato bancário.',
         )
+        if (result.diagnostics) {
+          setDiagnostics(result.diagnostics)
+        }
         setParsing(false)
         return
       }
@@ -427,12 +434,92 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           {step === 'upload' ? (
             <div className="flex-1 overflow-y-auto py-6 space-y-5">
               {errorMessage ? (
-                <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs">
-                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="block font-semibold">Aviso de leitura:</strong>
-                    <span>{errorMessage}</span>
+                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 text-xs space-y-3">
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <strong className="block font-bold text-amber-900 text-sm">
+                        Não foi possível identificar lançamentos no arquivo
+                      </strong>
+                      <span className="text-amber-800/90 mt-0.5 block">{errorMessage}</span>
+                    </div>
                   </div>
+
+                  {diagnostics ? (
+                    <div className="bg-white/80 rounded-xl p-3 border border-amber-200/60 space-y-2 text-xs">
+                      <div className="font-semibold text-slate-800 flex items-center gap-1.5">
+                        <Info className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Diagnóstico da Leitura:</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-center font-mono">
+                        <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
+                          <span className="text-[10px] text-slate-500 font-sans block">
+                            Linhas analisadas
+                          </span>
+                          <span className="font-bold text-slate-800 text-sm">
+                            {diagnostics.totalLines}
+                          </span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
+                          <span className="text-[10px] text-slate-500 font-sans block">
+                            Com data válida
+                          </span>
+                          <span
+                            className={`font-bold text-sm ${diagnostics.linesWithDate > 0 ? 'text-emerald-700' : 'text-slate-400'}`}
+                          >
+                            {diagnostics.linesWithDate}
+                          </span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
+                          <span className="text-[10px] text-slate-500 font-sans block">
+                            Com valor legível
+                          </span>
+                          <span
+                            className={`font-bold text-sm ${diagnostics.linesWithValue > 0 ? 'text-emerald-700' : 'text-slate-400'}`}
+                          >
+                            {diagnostics.linesWithValue}
+                          </span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
+                          <span className="text-[10px] text-slate-500 font-sans block">
+                            Data + Valor
+                          </span>
+                          <span
+                            className={`font-bold text-sm ${diagnostics.linesWithBoth > 0 ? 'text-amber-700' : 'text-slate-400'}`}
+                          >
+                            {diagnostics.linesWithBoth}
+                          </span>
+                        </div>
+                      </div>
+
+                      {diagnostics.suggestion ? (
+                        <div className="p-2.5 rounded-lg bg-blue-50/70 border border-blue-100 text-blue-900 text-[11px] leading-relaxed">
+                          <strong className="font-semibold">Orientação: </strong>
+                          {diagnostics.suggestion}
+                        </div>
+                      ) : null}
+
+                      {diagnostics.rejectionReasons &&
+                      Object.keys(diagnostics.rejectionReasons).length > 0 ? (
+                        <div className="pt-1">
+                          <span className="text-[11px] font-semibold text-slate-700 block mb-1">
+                            Motivos das rejeições:
+                          </span>
+                          <ul className="space-y-0.5 text-[11px] text-slate-600 pl-3 list-disc">
+                            {Object.entries(diagnostics.rejectionReasons)
+                              .slice(0, 4)
+                              .map(([reason, count]) => (
+                                <li key={reason}>
+                                  <span className="font-medium text-slate-800">{count}x</span>{' '}
+                                  {reason}
+                                </li>
+                              ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 
