@@ -1,4 +1,5 @@
-// Parsers unificados para importação de extrato bancário (CSV, OFX e PDF)
+// Motor de parsing profissional de extratos e faturas brasileiras (PDF, OFX e CSV)
+// Suporta bancos e fintechs como Nubank, Rico, Inter, Itaú, Bradesco, Santander, BTG, XP, C6, Caixa, etc.
 import type { TransactionType } from '@/types/finance'
 
 export interface ParsedRawTransaction {
@@ -10,45 +11,63 @@ export interface ParsedRawTransaction {
   rawLine?: string
 }
 
+export interface IgnoredLineInfo {
+  lineNumber?: number
+  text: string
+  reason: string
+}
+
 export interface ParseResult {
   success: boolean
   transactions: ParsedRawTransaction[]
   format: 'csv' | 'ofx' | 'pdf' | 'unknown'
   error?: string
   warnings?: string[]
+  ignoredCount?: number
+  ignoredLines?: IgnoredLineInfo[]
 }
 
 /**
- * Converte strings de valor variadas (ex: "-1.234,56", "1234.56", "R$ 45,90", "(50,00)", "45.00-")
- * em centavos positivos e tipo (income | expense)
+ * Converte strings de valor variadas em centavos positivos e tipo (income | expense)
+ * Exemplos aceitos:
+ *  - "1.234,56", "-1.234,56", "1234,56", "-1234.56"
+ *  - "R$ 4.178,98", "(148,00)", "45,00 D", "45,00 C", "45,00-"
  */
 export function parseAmount(valStr: string): { amountCents: number; type: TransactionType } | null {
   if (!valStr) return null
 
   let clean = valStr.trim()
-  // Tratar parenteses financeiros (ex: (120,50) = negativo)
+  if (!clean) return null
+
   let isNegative = false
+
+  // Notações com D (débito/saída) ou C (crédito/entrada) no final ou início
+  if (/\b(D|DEB|DEBITO)\b/i.test(clean) || clean.endsWith('-') || clean.startsWith('-')) {
+    isNegative = true
+  }
+
+  // Tratar parenteses contábeis (ex: (120,50) = negativo)
   if (clean.startsWith('(') && clean.endsWith(')')) {
     isNegative = true
     clean = clean.slice(1, -1)
   }
 
-  // Sinais de menos ou mais
+  // Se tem sinal de menos
   if (clean.includes('-')) {
     isNegative = true
     clean = clean.replace(/-/g, '')
   }
+
+  // Remove caracteres comuns de moeda e formatação
   clean = clean
     .replace(/\+/g, '')
     .replace(/[R$\s]/g, '')
+    .replace(/\b(D|C|DEB|CRED)\b/gi, '')
     .trim()
 
   if (!clean) return null
 
-  // Identificar se usa vírgula como separador decimal (formato brasileiro comum: 1.250,50 ou 250,50)
-  // ou ponto como decimal (1250.50 ou 1,250.50)
-  let numericVal = 0
-
+  // Identificar se usa vírgula como separador decimal (1.234,56) ou ponto (1,234.56)
   if (clean.includes(',') && clean.includes('.')) {
     const lastComma = clean.lastIndexOf(',')
     const lastDot = clean.lastIndexOf('.')
@@ -60,14 +79,16 @@ export function parseAmount(valStr: string): { amountCents: number; type: Transa
       clean = clean.replace(/,/g, '')
     }
   } else if (clean.includes(',')) {
-    // Apenas vírgula: "123,45"
+    // 1234,56 -> 1234.56
     clean = clean.replace(',', '.')
   }
 
-  numericVal = parseFloat(clean)
-  if (isNaN(numericVal)) return null
+  const numericVal = parseFloat(clean)
+  if (isNaN(numericVal) || !isFinite(numericVal)) return null
 
   const cents = Math.round(Math.abs(numericVal) * 100)
+  if (cents <= 0) return null
+
   return {
     amountCents: cents,
     type: isNegative ? 'expense' : 'income',
@@ -75,80 +96,317 @@ export function parseAmount(valStr: string): { amountCents: number; type: Transa
 }
 
 /**
- * Converte vários formatos de data (DD/MM/YYYY, YYYY-MM-DD, DD-MM-YYYY, YYYYMMDD) em YYYY-MM-DD
+ * Converte strings de data para YYYY-MM-DD com validação estrita de calendário e ano plausível (2000 até anoAtual + 1)
  */
 export function parseDate(dateStr: string): string | null {
   if (!dateStr) return null
   const clean = dateStr.trim().slice(0, 10)
 
+  const currentYear = new Date().getFullYear()
+  const minYear = 2000
+  const maxYear = currentYear + 1
+
+  const validateYMD = (y: number, m: number, d: number): string | null => {
+    if (isNaN(y) || isNaN(m) || isNaN(d)) return null
+    if (y < minYear || y > maxYear) return null
+    if (m < 1 || m > 12) return null
+    if (d < 1 || d > 31) return null
+
+    // Validar dias por mês
+    const daysInMonth = new Date(y, m, 0).getDate()
+    if (d > daysInMonth) return null
+
+    const yStr = String(y)
+    const mStr = String(m).padStart(2, '0')
+    const dStr = String(d).padStart(2, '0')
+    return `${yStr}-${mStr}-${dStr}`
+  }
+
   // 1. Formato YYYYMMDD (comum em OFX)
   if (/^\d{8}$/.test(clean)) {
-    const y = clean.slice(0, 4)
-    const m = clean.slice(4, 6)
-    const d = clean.slice(6, 8)
-    return `${y}-${m}-${d}`
+    const y = parseInt(clean.slice(0, 4), 10)
+    const m = parseInt(clean.slice(4, 6), 10)
+    const d = parseInt(clean.slice(6, 8), 10)
+    return validateYMD(y, m, d)
   }
 
   // 2. Formato YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
-    return clean
+    const [y, m, d] = clean.split('-').map((v) => parseInt(v, 10))
+    return validateYMD(y, m, d)
   }
 
   // 3. Formato DD/MM/YYYY ou DD/MM/YY
   const slashParts = clean.split('/')
   if (slashParts.length === 3) {
-    let day = slashParts[0].padStart(2, '0')
-    let month = slashParts[1].padStart(2, '0')
-    let year = slashParts[2]
-    if (year.length === 2) year = `20${year}`
-    if (year.length === 4) {
-      // Caso a data esteja invertida YYYY/MM/DD
-      if (parseInt(day) > 1000) {
-        return `${day}-${month.padStart(2, '0')}-${year.padStart(2, '0')}`
-      }
-      return `${year}-${month}-${day}`
+    let day = parseInt(slashParts[0], 10)
+    let month = parseInt(slashParts[1], 10)
+    let year = parseInt(slashParts[2], 10)
+    if (slashParts[2].length === 2) {
+      year = 2000 + year
     }
+    // Caso esteja invertido YYYY/MM/DD
+    if (day > 1000) {
+      return validateYMD(day, month, year)
+    }
+    return validateYMD(year, month, day)
   }
 
   // 4. Formato DD-MM-YYYY
   const dashParts = clean.split('-')
   if (dashParts.length === 3 && dashParts[0].length === 2 && dashParts[2].length === 4) {
-    return `${dashParts[2]}-${dashParts[1].padStart(2, '0')}-${dashParts[0].padStart(2, '0')}`
+    const day = parseInt(dashParts[0], 10)
+    const month = parseInt(dashParts[1], 10)
+    const year = parseInt(dashParts[2], 10)
+    return validateYMD(year, month, day)
+  }
+
+  // 5. Formato DD/MM (assume ano corrente)
+  if (slashParts.length === 2 && slashParts[0].length === 2 && slashParts[1].length === 2) {
+    const day = parseInt(slashParts[0], 10)
+    const month = parseInt(slashParts[1], 10)
+    return validateYMD(currentYear, month, day)
   }
 
   return null
+}
+
+// =========================================================================
+// FILTROS DE RUÍDO: Cabeçalhos, Rodapés, Telefones, Resumos e Faturas BR
+// =========================================================================
+
+// Termos que NUNCA pertencem a uma transação individual e indicam cabeçalho/rodapé/resumo bancário
+const NOISE_KEYWORDS: string[] = [
+  // Telefones / SAC / Ouvidoria / Atendimento
+  'AUTO ATENDIMENTO',
+  'AUTOATENDIMENTO',
+  'WHATSAPP',
+  'CENTRAL DE ATENDIMENTO',
+  'SAC',
+  'OUVIDORIA',
+  'CAPITAIS E REGIOES',
+  'DEMAIS LOCALIDADES',
+  'DEFICIENTES AUDITIVOS',
+  'FALE CONOSCO',
+  'CONSULTORIA DE INVESTIMENTOS',
+  'DEFICIENCIA AUDITIVA',
+  'CANAL DE DENUNCIA',
+
+  // Cabeçalhos de fatura de cartão / dados do titular / endereço
+  'TITULAR',
+  'ENDERECO',
+  'ENDEREÇO',
+  'VENCIMENTO',
+  'RESUMO DA SUA FATURA',
+  'RESUMO DA FATURA',
+  'TOTAL DA FATURA',
+  'FATURA ANTERIOR',
+  'PAGAMENTO MINIMO',
+  'PAGAMENTO MÍNIMO',
+  'LIMITE TOTAL',
+  'LIMITE DISPONIVEL',
+  'LIMITE UTILIZADO',
+  'PONTOS DO CARTAO',
+  'TOTAL DESTA FATURA',
+  'SUA FATURA',
+  'CARTAO RICO',
+  'CARTÃO RICO',
+  'RICO VISA INFINITE',
+  'VISA INFINITE',
+  'MASTERCARD BLACK',
+  'ELO NANQUIM',
+  'NUMERO DA CONTA',
+  'AGENCIA/CONTA',
+  'AGENCIA',
+  'AGÊNCIA',
+  'CONTA CORRENTE',
+  'EXTRATO MENSAL',
+  'EXTRATO DE CONTA',
+  'EXTRATO DE CONTA CORRENTE',
+  'DEMONSTRATIVO',
+  'PERIODO DE',
+  'PERÍODO DE',
+
+  // Totais e Saldos
+  'SALDO ANTERIOR',
+  'SALDO ATUAL',
+  'SALDO DISPONIVEL',
+  'SALDO DO DIA',
+  'SALDO FINAL',
+  'SALDO BLOQUEADO',
+  'TOTAL DE CREDITOS',
+  'TOTAL DE DEBITOS',
+  'TOTAL GERAL',
+  'SUBTOTAL',
+  'ENCARGOS TOTAIS',
+  'CET ANUAL',
+  'JUROS DE MORA',
+
+  // Dados legais e cadastrais
+  'CNPJ',
+  'CPF',
+  'INSCRICAO ESTADUAL',
+  'INSCRIÇÃO ESTADUAL',
+  'BANCO XP S.A',
+  'BANCO RICO',
+  'BANCO DO BRASIL S.A',
+  'BANCO BRADESCO S.A',
+  'BANCO ITAU S.A',
+  'BANCO SANTANDER',
+  'WWW.',
+  'HTTP://',
+  'HTTPS://',
+  '.COM.BR',
+]
+
+/**
+ * Normaliza string removendo acentos para checagens case-insensitive
+ */
+function cleanForNoiseCheck(text: string): string {
+  return (text || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+}
+
+/**
+ * Identifica se uma linha de texto é ruído (cabeçalho, rodapé, atendimento, totais, URLs)
+ */
+export function isNoiseLine(line: string): { isNoise: boolean; reason?: string } {
+  if (!line || line.trim().length === 0) {
+    return { isNoise: true, reason: 'Linha vazia' }
+  }
+
+  const clean = cleanForNoiseCheck(line)
+
+  // 1. Telefones e padrões de contato BR: "+55", "(11)", "0800", "3003", "4004"
+  if (
+    /\+55\b/.test(clean) ||
+    /\b0800\s*\d{3}\s*\d{4}\b/.test(clean) ||
+    /\b(3003|4004|4003|4935|3004)[-\s]?\d{4}\b/.test(clean) ||
+    /\(\d{2}\)\s*\d{4,5}[-\s]?\d{4}/.test(clean)
+  ) {
+    return { isNoise: true, reason: 'Contém número de telefone ou canal de atendimento' }
+  }
+
+  // 2. URLs e links
+  if (/https?:\/\/|www\.|\.com\.br|\.com\b/i.test(line)) {
+    return { isNoise: true, reason: 'Contém endereço de site ou URL' }
+  }
+
+  // 3. Palavras-chave de cabeçalho e rodapé
+  for (const kw of NOISE_KEYWORDS) {
+    if (clean.includes(kw)) {
+      return { isNoise: true, reason: `Contém palavra-chave de rodapé/cabeçalho: "${kw}"` }
+    }
+  }
+
+  // 4. CEP
+  if (/\bCEP\s*:?\s*\d{5}[-\s]?\d{3}\b/i.test(line)) {
+    return { isNoise: true, reason: 'Contém CEP de endereço' }
+  }
+
+  return { isNoise: false }
+}
+
+/**
+ * Validação semântica da descrição:
+ * Rejeita descrições gigantes (>200 chars), curtas demais (<2 chars), ou compostas apenas de dígitos/símbolos.
+ */
+export function isValidDescription(desc: string): boolean {
+  if (!desc) return false
+  const trimmed = desc.trim()
+  if (trimmed.length < 2 || trimmed.length > 200) return false
+
+  // Se for apenas números, barras, traços ou pontuações
+  const letters = trimmed.replace(/[^a-zA-ZÀ-ÿ]/g, '')
+  if (letters.length < 2) return false
+
+  return true
+}
+
+/**
+ * Classificação inteligente para cartão de crédito:
+ * Em faturas de cartão de crédito, compras e lançamentos são DESPESAS (expense).
+ * Só são income se contiverem palavras claras de reembolso, estorno, pagamento de fatura recebido ou crédito de volta.
+ */
+export function resolveCreditCardTransactionType(
+  rawType: TransactionType,
+  description: string,
+): TransactionType {
+  const norm = cleanForNoiseCheck(description)
+
+  // Palavras claras de crédito/estorno/reembolso
+  const isCreditWord =
+    norm.includes('ESTORNO') ||
+    norm.includes('REEMBOLSO') ||
+    norm.includes('CASHBACK') ||
+    norm.includes('CREDITO CONCEDIDO') ||
+    norm.includes('PAGAMENTO RECEBIDO') ||
+    norm.includes('SALARIO') ||
+    norm.includes('SALÁRIO')
+
+  if (isCreditWord) {
+    return 'income'
+  }
+
+  // Por padrão de fatura, qualquer lançamento de compra é despesa
+  return 'expense'
+}
+
+/**
+ * Deduplica transações com mesma data + descrição + valor dentro do lote do mesmo arquivo
+ */
+export function deduplicateTransactions(transactions: ParsedRawTransaction[]): {
+  unique: ParsedRawTransaction[]
+  duplicatesRemoved: number
+} {
+  const seen = new Set<string>()
+  const unique: ParsedRawTransaction[] = []
+  let duplicatesRemoved = 0
+
+  for (const tx of transactions) {
+    const key = `${tx.date}|${tx.amount_cents}|${tx.description.toLowerCase().trim()}|${tx.type}`
+    if (seen.has(key)) {
+      duplicatesRemoved++
+      continue
+    }
+    seen.add(key)
+    unique.push(tx)
+  }
+
+  return { unique, duplicatesRemoved }
 }
 
 // ==========================================
 // 1. PARSER CSV (Bancos BR: Nubank, Inter, Itaú, Bradesco, etc.)
 // ==========================================
 export function parseCSV(content: string): ParseResult {
-  const lines = content
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0)
+  const rawLines = content.split(/\r?\n/)
+  const ignoredLines: IgnoredLineInfo[] = []
 
-  if (lines.length < 2) {
+  if (rawLines.length < 2) {
     return {
       success: false,
       transactions: [],
       format: 'csv',
       error: 'O arquivo CSV está vazio ou possui apenas cabeçalho.',
+      ignoredLines: [],
+      ignoredCount: 0,
     }
   }
 
   // Detectar delimitador (; ou , ou \t)
-  const headerLine = lines[0]
-  const semicolonCount = (headerLine.match(/;/g) || []).length
-  const commaCount = (headerLine.match(/,/g) || []).length
-  const tabCount = (headerLine.match(/\t/g) || []).length
+  const headerCandidate = rawLines.find((l) => l.trim().length > 0) || rawLines[0]
+  const semicolonCount = (headerCandidate.match(/;/g) || []).length
+  const commaCount = (headerCandidate.match(/,/g) || []).length
+  const tabCount = (headerCandidate.match(/\t/g) || []).length
 
   let delimiter = ','
   if (semicolonCount > commaCount && semicolonCount > tabCount) delimiter = ';'
   else if (tabCount > commaCount && tabCount > semicolonCount) delimiter = '\t'
 
   const splitLine = (line: string): string[] => {
-    // Regex tolerante para campos com aspas e delimitador
     const pattern = new RegExp(
       `(?:^|${delimiter})(?:"([^"]*(?:""[^"]*)*)"|([^"${delimiter}]*))`,
       'g',
@@ -162,61 +420,111 @@ export function parseCSV(content: string): ParseResult {
     return matches
   }
 
-  const rawHeaders = splitLine(headerLine).map((h) =>
-    h
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim(),
-  )
+  // Encontrar a primeira linha que parece ser cabeçalho de colunas
+  let headerIndex = -1
+  let dateIdx = -1
+  let descIdx = -1
+  let amountIdx = -1
+  let creditIdx = -1
+  let debitIdx = -1
 
-  // Encontrar índices de colunas
-  let dateIdx = rawHeaders.findIndex((h) =>
-    ['data', 'date', 'data lancamento', 'data movimento', 'dt'].some((k) => h.includes(k)),
-  )
-  let descIdx = rawHeaders.findIndex((h) =>
-    ['descricao', 'description', 'historico', 'estabelecimento', 'titulo', 'detalhe', 'memo'].some(
-      (k) => h.includes(k),
-    ),
-  )
-  let amountIdx = rawHeaders.findIndex((h) =>
-    ['valor', 'amount', 'valor (r$)', 'quantia', 'valor r$'].some((k) => h === k || h.includes(k)),
-  )
+  for (let i = 0; i < Math.min(rawLines.length, 10); i++) {
+    const cols = splitLine(rawLines[i]).map((h) =>
+      h
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim(),
+    )
 
-  // Colunas específicas de crédito/débito separadas (ex: Itaú / Bradesco)
-  const creditIdx = rawHeaders.findIndex((h) =>
-    ['credito', 'entrada', 'receita', 'credito (r$)'].some((k) => h.includes(k)),
-  )
-  const debitIdx = rawHeaders.findIndex((h) =>
-    ['debito', 'saida', 'despesa', 'debito (r$)'].some((k) => h.includes(k)),
-  )
+    const dIdx = cols.findIndex((h) =>
+      ['data', 'date', 'data lancamento', 'data movimento', 'dt'].some(
+        (k) => h === k || h.includes(k),
+      ),
+    )
+    const dsIdx = cols.findIndex((h) =>
+      [
+        'descricao',
+        'description',
+        'historico',
+        'estabelecimento',
+        'titulo',
+        'detalhe',
+        'memo',
+      ].some((k) => h === k || h.includes(k)),
+    )
+    const aIdx = cols.findIndex((h) =>
+      ['valor', 'amount', 'valor (r$)', 'quantia', 'valor r$'].some(
+        (k) => h === k || h.includes(k),
+      ),
+    )
+    const cIdx = cols.findIndex((h) =>
+      ['credito', 'entrada', 'receita', 'credito (r$)'].some((k) => h === k || h.includes(k)),
+    )
+    const debIdx = cols.findIndex((h) =>
+      ['debito', 'saida', 'despesa', 'debito (r$)'].some((k) => h === k || h.includes(k)),
+    )
 
-  // Se não identificou cabeçalho clássico, tenta adivinhar posicionalmente
-  const hasNamedHeader =
-    dateIdx !== -1 && (amountIdx !== -1 || (creditIdx !== -1 && debitIdx !== -1))
-  const startIndex = hasNamedHeader ? 1 : 0
+    if (dIdx !== -1 && (aIdx !== -1 || (cIdx !== -1 && debIdx !== -1))) {
+      headerIndex = i
+      dateIdx = dIdx
+      descIdx = dsIdx
+      amountIdx = aIdx
+      creditIdx = cIdx
+      debitIdx = debIdx
+      break
+    }
+  }
 
-  if (!hasNamedHeader) {
-    // Heurística posicional: linha 0 ou 1 tem data na col 0, descrição na col 1, valor na última
+  // Se não identificou cabeçalho clássico, heurística posicional
+  if (headerIndex === -1) {
+    headerIndex = 0
     dateIdx = 0
     descIdx = 1
     amountIdx = 2
   }
 
-  const transactions: ParsedRawTransaction[] = []
+  const rawTransactions: ParsedRawTransaction[] = []
 
-  for (let i = startIndex; i < lines.length; i++) {
-    const row = splitLine(lines[i])
-    if (row.length < 2) continue
+  for (let i = headerIndex + 1; i < rawLines.length; i++) {
+    const line = rawLines[i].trim()
+    if (!line) continue
+
+    // Checar se a linha é ruído de extrato (ex: SALDO ANTERIOR, TOTAL, telefones)
+    const noise = isNoiseLine(line)
+    if (noise.isNoise) {
+      ignoredLines.push({
+        lineNumber: i + 1,
+        text: line,
+        reason: noise.reason || 'Ruído detectado',
+      })
+      continue
+    }
+
+    const row = splitLine(line)
+    if (row.length < 2) {
+      ignoredLines.push({ lineNumber: i + 1, text: line, reason: 'Colunas insuficientes' })
+      continue
+    }
 
     const rawDate = row[dateIdx]
     const parsedDate = parseDate(rawDate)
-    if (!parsedDate) continue // pula linhas que não contêm data válida
+    if (!parsedDate) {
+      ignoredLines.push({
+        lineNumber: i + 1,
+        text: line,
+        reason: 'Data inválida ou fora do intervalo aceito',
+      })
+      continue
+    }
 
-    const description =
-      descIdx !== -1 && row[descIdx]
-        ? row[descIdx].replace(/^["']|["']$/g, '').trim()
-        : 'Transação sem descrição'
+    let description =
+      descIdx !== -1 && row[descIdx] ? row[descIdx].replace(/^["']|["']$/g, '').trim() : ''
+
+    if (!isValidDescription(description)) {
+      ignoredLines.push({ lineNumber: i + 1, text: line, reason: 'Descrição inválida ou vazia' })
+      continue
+    }
 
     let amountCents = 0
     let type: TransactionType = 'expense'
@@ -236,38 +544,52 @@ export function parseCSV(content: string): ParseResult {
       const parsedAmount = parseAmount(row[amountIdx])
       if (parsedAmount) {
         amountCents = parsedAmount.amountCents
-        // Em CSV de extrato de conta corrente, negativo = saída/despesa, positivo = entrada/receita.
-        // Em CSV de fatura de cartão (ex: Nubank), despesas costumam vir como valor positivo.
-        // Verificamos a descrição e convenções:
         type = parsedAmount.type
       }
     }
 
-    if (amountCents > 0) {
-      transactions.push({
-        id: `csv-${i}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        date: parsedDate,
-        description,
-        amount_cents: amountCents,
-        type,
-        rawLine: lines[i],
-      })
+    if (amountCents <= 0) {
+      ignoredLines.push({ lineNumber: i + 1, text: line, reason: 'Valor zerado ou inválido' })
+      continue
     }
+
+    rawTransactions.push({
+      id: `csv-${i}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      date: parsedDate,
+      description,
+      amount_cents: amountCents,
+      type,
+      rawLine: line,
+    })
   }
 
-  if (transactions.length === 0) {
+  // Deduplicação interna
+  const { unique, duplicatesRemoved } = deduplicateTransactions(rawTransactions)
+  const warnings: string[] = []
+  if (duplicatesRemoved > 0) {
+    warnings.push(`${duplicatesRemoved} lançamento(s) duplicado(s) descartado(s) automaticamente.`)
+  }
+
+  if (unique.length === 0) {
     return {
       success: false,
       transactions: [],
       format: 'csv',
-      error: 'Não foi possível identificar transações válidas nas linhas do arquivo CSV.',
+      error:
+        'Não encontramos lançamentos válidos neste arquivo CSV — verifique se as colunas possuem data e valor.',
+      ignoredLines,
+      ignoredCount: ignoredLines.length,
+      warnings,
     }
   }
 
   return {
     success: true,
-    transactions,
+    transactions: unique,
     format: 'csv',
+    ignoredLines,
+    ignoredCount: ignoredLines.length,
+    warnings,
   }
 }
 
@@ -275,27 +597,25 @@ export function parseCSV(content: string): ParseResult {
 // 2. PARSER OFX (Open Financial Exchange - SGML / XML)
 // ==========================================
 export function parseOFX(content: string): ParseResult {
-  if (!content || !content.includes('<STMTTRN>')) {
-    // Tentativa case-insensitive
-    if (!content || !/<STMTTRN>/i.test(content)) {
-      return {
-        success: false,
-        transactions: [],
-        format: 'ofx',
-        error: 'O arquivo não possui o bloco de transações padrão <STMTTRN> do formato OFX.',
-      }
+  const ignoredLines: IgnoredLineInfo[] = []
+
+  if (!content || !/<STMTTRN>/i.test(content)) {
+    return {
+      success: false,
+      transactions: [],
+      format: 'ofx',
+      error: 'O arquivo não possui o bloco de transações padrão <STMTTRN> do formato OFX.',
+      ignoredLines: [],
+      ignoredCount: 0,
     }
   }
 
   const transactions: ParsedRawTransaction[] = []
-
-  // Regex para capturar cada bloco <STMTTRN>...</STMTTRN>
   const trnRegex = /<STMTTRN>([\s\S]*?)<\/STMTTRN>/gi
   let match: RegExpExecArray | null
   let count = 0
 
   const getTagValue = (block: string, tag: string): string => {
-    // OFX 1.x pode não fechar tags: <TAG>VALOR ou <TAG>VALOR</TAG>
     const regex = new RegExp(`<${tag}>([^<\\r\\n]+)`, 'i')
     const m = regex.exec(block)
     return m ? m[1].trim() : ''
@@ -305,61 +625,93 @@ export function parseOFX(content: string): ParseResult {
     count++
     const block = match[1]
 
-    const trntype = getTagValue(block, 'TRNTYPE').toUpperCase() // DEBIT, CREDIT, PAYMENT, CASH, OTHER
+    const trntype = getTagValue(block, 'TRNTYPE').toUpperCase()
     const dtposted = getTagValue(block, 'DTPOSTED')
     const trnamt = getTagValue(block, 'TRNAMT')
     const memo = getTagValue(block, 'MEMO')
     const name = getTagValue(block, 'NAME')
 
-    const date = parseDate(dtposted) || new Date().toISOString().slice(0, 10)
-    const description = memo || name || 'Transação OFX'
+    const date = parseDate(dtposted)
+    if (!date) {
+      ignoredLines.push({
+        lineNumber: count,
+        text: block.slice(0, 100),
+        reason: 'Data DTPOSTED inválida',
+      })
+      continue
+    }
+
+    const description = memo || name || ''
+    if (!isValidDescription(description)) {
+      ignoredLines.push({
+        lineNumber: count,
+        text: block.slice(0, 100),
+        reason: 'Descrição MEMO/NAME inválida ou vazia',
+      })
+      continue
+    }
 
     const parsedAmt = parseAmount(trnamt)
-    if (parsedAmt && parsedAmt.amountCents > 0) {
-      let finalType: TransactionType = parsedAmt.type
-      if (trntype === 'CREDIT' || trntype === 'DEP') {
-        finalType = 'income'
-      } else if (trntype === 'DEBIT' || trntype === 'PAYMENT' || trntype === 'FEE') {
-        finalType = 'expense'
-      }
-
-      transactions.push({
-        id: `ofx-${count}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        date,
-        description,
-        amount_cents: parsedAmt.amountCents,
-        type: finalType,
+    if (!parsedAmt || parsedAmt.amountCents <= 0) {
+      ignoredLines.push({
+        lineNumber: count,
+        text: block.slice(0, 100),
+        reason: 'Valor TRNAMT inválido ou zero',
       })
+      continue
     }
+
+    let finalType: TransactionType = parsedAmt.type
+    if (trntype === 'CREDIT' || trntype === 'DEP') {
+      finalType = 'income'
+    } else if (trntype === 'DEBIT' || trntype === 'PAYMENT' || trntype === 'FEE') {
+      finalType = 'expense'
+    }
+
+    transactions.push({
+      id: `ofx-${count}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      date,
+      description,
+      amount_cents: parsedAmt.amountCents,
+      type: finalType,
+    })
   }
 
-  if (transactions.length === 0) {
+  const { unique, duplicatesRemoved } = deduplicateTransactions(transactions)
+  const warnings: string[] = []
+  if (duplicatesRemoved > 0) {
+    warnings.push(`${duplicatesRemoved} lançamento(s) duplicado(s) descartado(s) do OFX.`)
+  }
+
+  if (unique.length === 0) {
     return {
       success: false,
       transactions: [],
       format: 'ofx',
-      error: 'Nenhuma transação financeira foi extraída do arquivo OFX.',
+      error: 'Não encontramos lançamentos válidos neste arquivo OFX.',
+      ignoredLines,
+      ignoredCount: ignoredLines.length,
+      warnings,
     }
   }
 
   return {
     success: true,
-    transactions,
+    transactions: unique,
     format: 'ofx',
+    ignoredLines,
+    ignoredCount: ignoredLines.length,
+    warnings,
   }
 }
 
 // ==========================================
-// 3. PARSER PDF (Extração de texto e linhas de extrato)
+// 3. PARSER PDF (Extração de texto e linhas de extrato / fatura)
 // ==========================================
-/**
- * Extrai texto de um arquivo PDF no navegador usando a biblioteca oficial Mozilla pdf.js
- * carregada sob demanda via CDN segura, com fallback tolerante.
- */
+
 export async function extractTextFromPDF(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer()
 
-  // Tenta carregar o pdfjsLib da window se já existir ou injetar
   const getPdfJs = async (): Promise<any> => {
     if ((window as any).pdfjsLib) {
       return (window as any).pdfjsLib
@@ -399,7 +751,13 @@ export async function extractTextFromPDF(file: File): Promise<string> {
 }
 
 /**
- * Parser tolerante para texto extraído de extratos PDF bancários (Nubank, Itaú, Bradesco, Inter, Santander)
+ * Parser robusto de nível profissional para texto extraído de extrato ou fatura de cartão em PDF.
+ * Detecta se é fatura de cartão (ex: Cartão Rico, Nubank, Itaú Cartões) e aplica as regras estruturais estritas:
+ *  - Ignora ruído de cabeçalho, rodapé e telefones de atendimento.
+ *  - Só aceita linha que contenha uma data válida E um valor monetário brasileiro.
+ *  - Descrição é o texto entre a data e o valor, devidamente sanitizado.
+ *  - Linhas de fatura de cartão são despesas (expense) por padrão, a não ser que indiquem estorno/salário.
+ *  - Deduplicação no arquivo.
  */
 export function parsePDFText(text: string): ParseResult {
   if (!text || text.trim().length === 0) {
@@ -408,72 +766,173 @@ export function parsePDFText(text: string): ParseResult {
       transactions: [],
       format: 'pdf',
       error: 'Não foi possível extrair texto do arquivo PDF.',
+      ignoredLines: [],
+      ignoredCount: 0,
     }
   }
 
-  const transactions: ParsedRawTransaction[] = []
+  const ignoredLines: IgnoredLineInfo[] = []
+  const rawTransactions: ParsedRawTransaction[] = []
 
-  // Quebrar por quebras de linha ou sequências de espaços
-  const lines = text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.length > 5)
+  // Detecta se o documento é uma fatura de cartão de crédito (ex.: "Cartão Rico", "fatura", "Visa Infinite")
+  const normFullText = cleanForNoiseCheck(text)
+  const isCreditCardInvoice =
+    normFullText.includes('FATURA') ||
+    normFullText.includes('CARTAO RICO') ||
+    normFullText.includes('CARTÃO RICO') ||
+    normFullText.includes('VISA INFINITE') ||
+    normFullText.includes('MASTERCARD') ||
+    normFullText.includes('RESUMO DA SUA FATURA')
 
-  // Regex para data (DD/MM/YYYY ou DD/MM) no início ou meio da linha + valor monetário (R$ 0,00 ou 0,00)
-  // Ex: "15/03/2026 Uber do Brasil -35,90" ou "12/03 Supermercado Pao de Acucar 154,20"
-  const dateRegex = /(\b\d{2}\/\d{2}(?:\/\d{4})?\b)/
+  // Quebrar por quebras de linha
+  const lines = text.split(/\r?\n/)
+
+  // Regex para data válida no padrão brasileiro (DD/MM/YYYY ou DD/MM)
+  const dateRegex = /\b(\d{2}\/\d{2}(?:\/\d{4})?)\b/
+  // Regex para valor monetário BR: "1.234,56", "1234,56", "R$ 148,00", "-50,00"
   const amountRegex = /([+-]?\s*(?:R\$\s*)?\d{1,3}(?:\.\d{3})*,\d{2}\b)/g
 
-  let lineId = 0
-  for (const line of lines) {
+  let lineCount = 0
+
+  for (const rawLine of lines) {
+    lineCount++
+    const line = rawLine.trim()
+    if (!line) continue
+
+    // 1. Filtrar ruído (cabeçalho, rodapé, telefones, canais de atendimento, URLs)
+    const noiseCheck = isNoiseLine(line)
+    if (noiseCheck.isNoise) {
+      ignoredLines.push({
+        lineNumber: lineCount,
+        text: line.length > 90 ? line.slice(0, 90) + '...' : line,
+        reason: noiseCheck.reason || 'Linha de cabeçalho ou rodapé ignorada',
+      })
+      continue
+    }
+
+    // 2. Validação estrutural: precisa de data E valor monetário
     const dateMatch = line.match(dateRegex)
     const amountMatches = line.match(amountRegex)
 
-    if (dateMatch && amountMatches && amountMatches.length > 0) {
-      lineId++
-      const rawDate = dateMatch[1]
-      // Se não tem ano, assume o ano atual
-      const fullDateStr = rawDate.length === 5 ? `${rawDate}/${new Date().getFullYear()}` : rawDate
-      const parsedDate = parseDate(fullDateStr)
-      if (!parsedDate) continue
-
-      // Pega o último valor numérico encontrado na linha (normalmente o valor do lançamento)
-      const lastAmtMatch = amountMatches[amountMatches.length - 1]
-      const parsedAmt = parseAmount(lastAmtMatch)
-      if (!parsedAmt || parsedAmt.amountCents === 0) continue
-
-      // Limpa a descrição removendo a data e os valores monetários
-      let desc = line.replace(dateRegex, '').replace(amountRegex, '').replace(/R\$/g, '').trim()
-
-      if (desc.length < 2) {
-        desc = 'Transação extraída de extrato PDF'
-      }
-
-      transactions.push({
-        id: `pdf-${lineId}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        date: parsedDate,
-        description: desc,
-        amount_cents: parsedAmt.amountCents,
-        type: parsedAmt.type,
-        rawLine: line,
+    if (!dateMatch || !amountMatches || amountMatches.length === 0) {
+      ignoredLines.push({
+        lineNumber: lineCount,
+        text: line.length > 90 ? line.slice(0, 90) + '...' : line,
+        reason: 'Não possui estrutura válida de transação (data + valor monetário)',
       })
+      continue
     }
+
+    // 3. Validação da data
+    const rawDate = dateMatch[1]
+    const fullDateStr = rawDate.length === 5 ? `${rawDate}/${new Date().getFullYear()}` : rawDate
+    const parsedDate = parseDate(fullDateStr)
+    if (!parsedDate) {
+      ignoredLines.push({
+        lineNumber: lineCount,
+        text: line,
+        reason: `Data inválida ou fora do intervalo aceito: ${rawDate}`,
+      })
+      continue
+    }
+
+    // 4. Validação do valor (pega o último valor monetário na linha, que é o montante da transação)
+    const lastAmtMatch = amountMatches[amountMatches.length - 1]
+    const parsedAmt = parseAmount(lastAmtMatch)
+    if (!parsedAmt || parsedAmt.amountCents <= 0) {
+      ignoredLines.push({
+        lineNumber: lineCount,
+        text: line,
+        reason: 'Valor monetário zerado ou inválido',
+      })
+      continue
+    }
+
+    // 5. Descrição: extrair o texto limpo da linha, removendo a data, o valor e prefixos monetários
+    let desc = line
+      .replace(dateRegex, ' ')
+      .replace(amountRegex, ' ')
+      .replace(/R\$/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+
+    // Se sobrou apenas caracteres soltos ou a descrição for ruído disfarçado
+    if (!isValidDescription(desc)) {
+      ignoredLines.push({
+        lineNumber: lineCount,
+        text: line,
+        reason: `Descrição inválida ou insuficiente: "${desc}"`,
+      })
+      continue
+    }
+
+    // Checar novamente se a própria descrição residual contém termos proibidos
+    const descNoise = isNoiseLine(desc)
+    if (descNoise.isNoise) {
+      ignoredLines.push({
+        lineNumber: lineCount,
+        text: line,
+        reason: descNoise.reason || 'Descrição contém termos de rodapé/cabeçalho',
+      })
+      continue
+    }
+
+    // 6. Resolução do tipo de transação (income vs expense)
+    let finalType: TransactionType = parsedAmt.type
+    if (isCreditCardInvoice) {
+      // Em faturas de cartão de crédito, compras são sempre DESPESA, a não ser estornos/reembolsos
+      finalType = resolveCreditCardTransactionType(parsedAmt.type, desc)
+    } else {
+      // Se a descrição for claramente de salário ou remuneração, é income mesmo que não venha com sinal explícito
+      const normDesc = cleanForNoiseCheck(desc)
+      if (
+        normDesc.includes('SALARIO') ||
+        normDesc.includes('SALÁRIO') ||
+        normDesc.includes('REMUNERACAO')
+      ) {
+        finalType = 'income'
+      }
+    }
+
+    rawTransactions.push({
+      id: `pdf-${lineCount}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      date: parsedDate,
+      description: desc,
+      amount_cents: parsedAmt.amountCents,
+      type: finalType,
+      rawLine: line,
+    })
   }
 
-  if (transactions.length === 0) {
+  // Deduplicação interna
+  const { unique, duplicatesRemoved } = deduplicateTransactions(rawTransactions)
+  const warnings: string[] = []
+  if (duplicatesRemoved > 0) {
+    warnings.push(
+      `${duplicatesRemoved} lançamento(s) duplicado(s) no mesmo extrato PDF foram descartados.`,
+    )
+  }
+
+  if (unique.length === 0) {
     return {
       success: false,
       transactions: [],
       format: 'pdf',
       error:
-        'Não foram reconhecidas linhas no padrão data + descrição + valor neste PDF. Recomendamos exportar o extrato no formato CSV ou OFX diretamente no internet banking do seu banco.',
+        'Não encontramos lançamentos válidos neste arquivo — verifique se o PDF é o extrato ou fatura completa.',
+      ignoredLines,
+      ignoredCount: ignoredLines.length,
+      warnings,
     }
   }
 
   return {
     success: true,
-    transactions,
+    transactions: unique,
     format: 'pdf',
+    ignoredLines,
+    ignoredCount: ignoredLines.length,
+    warnings,
   }
 }
 
@@ -500,7 +959,7 @@ export async function parseStatementFile(file: File): Promise<ParseResult> {
           transactions: [],
           format: 'pdf',
           error:
-            'Não foi possível ler o conteúdo textual deste PDF (pode ser uma imagem escaneada). Dica: gere o arquivo CSV ou OFX no aplicativo do seu banco para uma leitura 100% precisa.',
+            'Não foi possível extrair o conteúdo textual deste PDF (pode ser uma imagem escaneada). Dica: gere o arquivo CSV ou OFX no aplicativo do seu banco para uma leitura 100% precisa.',
         }
       }
     }
@@ -523,8 +982,7 @@ export async function parseStatementFile(file: File): Promise<ParseResult> {
 }
 
 /**
- * Lê o arquivo em texto lidando com UTF-8 e fallback para ISO-8859-1 (Latin-1),
- * muito comum em arquivos exportados por bancos brasileiros antigos.
+ * Lê o arquivo em texto lidando com UTF-8 e fallback para ISO-8859-1 (Latin-1)
  */
 export async function readFileAsText(file: File): Promise<string> {
   const buffer = await file.arrayBuffer()

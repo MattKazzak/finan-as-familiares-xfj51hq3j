@@ -162,8 +162,13 @@ export const AUTO_CATEGORIZATION_RULES: KeywordRule[] = [
       '99TAXI',
       'CABIFY',
       'INDRIVE',
-      'POSTO',
+      'POSTO DE COMBUSTIVEL',
+      'POSTO IPIRANGA',
+      'POSTO SHELL',
+      'POSTO BR',
       'GASOLINA',
+      'ETANOL',
+      'DIESEL',
       'COMBUSTIVEL',
       'COMBUSTÍVEL',
       'IPIRANGA',
@@ -529,14 +534,29 @@ export function predictCategory(
     catByNameMap.set(normalizeText(cat.name), cat)
   })
 
-  // 1. Procura nas regras pré-configuradas de mercado
+  // 1. Se a descrição contiver "SALARIO", prioriza Salário com máxima precedência
+  if (
+    normDesc.includes('SALARIO') ||
+    normDesc.includes('REMUNERACAO') ||
+    normDesc.includes('FOLHA DE PAGAMENTO')
+  ) {
+    const salaryCat = catByNameMap.get(normalizeText('Salário'))
+    if (salaryCat) return salaryCat
+  }
+
+  // 2. Procura nas regras pré-configuradas de mercado
   for (const rule of AUTO_CATEGORIZATION_RULES) {
     if (rule.type && rule.type !== type) continue
 
     // Verifica se alguma palavra-chave bate com a descrição
+    // Para palavras curtas como 'POSTO', exigimos limite de palavra se não for composto
     const matched = rule.keywords.some((kw) => {
       const normKw = normalizeText(kw)
-      // Correspondência por palavra inteira ou substring relevante
+      if (!normKw) return false
+      // Se for apenas "POSTO", não bate em "POSTO VEREDA" se for receita ou acompanhado de Salário
+      if (normKw === 'POSTO' && (normDesc.includes('SALARIO') || normDesc.includes('PAGAMENTO'))) {
+        return false
+      }
       return normDesc.includes(normKw)
     })
 

@@ -24,7 +24,11 @@ import { useFamily } from '@/hooks/use-family'
 import { useToast } from '@/hooks/use-toast'
 import { CategoryIcon, AVAILABLE_ICONS } from '@/components/common/CategoryIcon'
 import { formatBRL, parseBRLToCents, formatNumberBRL } from '@/lib/formatters'
-import { parseStatementFile, type ParsedRawTransaction } from '@/services/import/statement-parser'
+import {
+  parseStatementFile,
+  type ParsedRawTransaction,
+  type IgnoredLineInfo,
+} from '@/services/import/statement-parser'
 import { predictCategory } from '@/services/import/categorization'
 import { createTransactionsBatch, fetchTransactions } from '@/services/transactions'
 import type { Transaction, TransactionCategory, TransactionType } from '@/types/finance'
@@ -43,6 +47,9 @@ import {
   Sparkles,
   Copy,
   Info,
+  ChevronDown,
+  ChevronUp,
+  ShieldCheck,
 } from 'lucide-react'
 
 export interface ReviewItem {
@@ -53,6 +60,7 @@ export interface ReviewItem {
   type: TransactionType
   member_id: string
   category_id: string | null
+  subcategory_id?: string | null
   isDuplicate: boolean
   duplicateReason?: string
   selected: boolean
@@ -95,6 +103,9 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
   const [fileInfo, setFileInfo] = useState<{ name: string; size: number; format: string } | null>(
     null,
   )
+  const [ignoredLines, setIgnoredLines] = useState<IgnoredLineInfo[]>([])
+  const [showIgnoredLines, setShowIgnoredLines] = useState(false)
+  const [fileWarnings, setFileWarnings] = useState<string[]>([])
 
   // Itens em revisão
   const [items, setItems] = useState<ReviewItem[]>([])
@@ -126,6 +137,9 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
       setItems([])
       setErrorMessage(null)
       setFileInfo(null)
+      setIgnoredLines([])
+      setShowIgnoredLines(false)
+      setFileWarnings([])
       setIsQuickCatOpen(false)
     }
     onOpenChange(isOpen)
@@ -158,6 +172,8 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
         size: file.size,
         format: result.format.toUpperCase(),
       })
+      setIgnoredLines(result.ignoredLines || [])
+      setFileWarnings(result.warnings || [])
 
       // 2. Buscar transações existentes para verificação inteligente de duplicadas
       const dates = result.transactions.map((t) => t.date)
@@ -344,12 +360,12 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
         family_id: family.id,
         member_id: item.member_id || members[0]?.id,
         category_id: item.category_id,
+        subcategory_id: item.subcategory_id || null,
         type: item.type,
         amount_cents: item.amount_cents,
         description: item.description.trim() || 'Transação importada',
         transaction_date: item.date,
       }))
-
       await createTransactionsBatch(payloads)
 
       toast({
@@ -530,6 +546,12 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                     </span>
                   </label>
 
+                  {/* Badge de lançamentos válidos */}
+                  <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-100/80 border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    {items.length} lançamentos válidos detectados
+                  </span>
+
                   {/* Alerta de duplicatas */}
                   {duplicateCount > 0 && (
                     <span className="text-[11px] font-semibold text-amber-700 bg-amber-100/80 border border-amber-200 px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -569,12 +591,62 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 </div>
               </div>
 
+              {/* Avisos e Filtro de Ruído Expansível */}
+              {ignoredLines.length > 0 && (
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-2.5 text-xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-slate-700 font-medium">
+                      <Info className="w-3.5 h-3.5 text-slate-500" />
+                      <span>
+                        <strong className="font-semibold text-slate-800">
+                          {ignoredLines.length}
+                        </strong>{' '}
+                        {ignoredLines.length === 1 ? 'linha ignorada' : 'linhas ignoradas'} pelo
+                        filtro de segurança (cabeçalho, rodapé ou sem data/valor)
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowIgnoredLines((prev) => !prev)}
+                      className="text-[11px] font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1 hover:underline"
+                    >
+                      <span>{showIgnoredLines ? 'Ocultar detalhes' : 'Ver linhas ignoradas'}</span>
+                      {showIgnoredLines ? (
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      ) : (
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
+
+                  {showIgnoredLines && (
+                    <div className="mt-2.5 pt-2 border-t border-slate-200/70 max-h-36 overflow-y-auto space-y-1 pr-1 font-mono text-[11px]">
+                      {ignoredLines.map((ign, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-start justify-between gap-2 p-1 rounded bg-white/70 text-slate-600"
+                        >
+                          <span className="truncate flex-1" title={ign.text}>
+                            {ign.lineNumber ? `L${ign.lineNumber}: ` : ''}
+                            {ign.text}
+                          </span>
+                          <span className="shrink-0 text-[10px] text-amber-700 font-sans bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                            {ign.reason}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Lista Scrollável de Transações */}
               <div className="flex-1 overflow-y-auto space-y-2 pr-1 divide-y divide-slate-100 border border-slate-200/80 rounded-2xl bg-white p-2">
                 {items.map((item) => {
                   const isIncome = item.type === 'income'
                   const currentCategory = categories.find((c) => c.id === item.category_id)
                   const filteredCategories = categories.filter((c) => c.type === item.type)
+                  const availableSubcategories = currentCategory?.subcategories || []
 
                   return (
                     <div
@@ -730,6 +802,34 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                               </SelectContent>
                             </Select>
                           </div>
+
+                          {/* Subcategoria (se disponível) */}
+                          {availableSubcategories.length > 0 ? (
+                            <Select
+                              value={item.subcategory_id || 'none'}
+                              onValueChange={(val) =>
+                                handleUpdateItemField(
+                                  item.id,
+                                  'subcategory_id',
+                                  val === 'none' ? null : val,
+                                )
+                              }
+                            >
+                              <SelectTrigger className="h-7 text-xs w-28 sm:w-32 rounded-lg bg-white border-slate-200">
+                                <SelectValue placeholder="Subcategoria" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none" className="text-xs text-slate-500">
+                                  Sem subcat.
+                                </SelectItem>
+                                {availableSubcategories.map((sub) => (
+                                  <SelectItem key={sub.id} value={sub.id} className="text-xs">
+                                    {sub.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : null}
 
                           {/* Valor editável */}
                           <div className="text-right min-w-[90px]">
