@@ -664,7 +664,7 @@ export default function WalletPage() {
                   }`}
                 >
                   <Filter className="w-3.5 h-3.5" />
-                  Filtrar
+                  <span>Filtrar</span>
                   {activeFiltersCount > 0 && (
                     <span className="w-4 h-4 rounded-full bg-emerald-600 text-white text-[10px] flex items-center justify-center font-bold">
                       {activeFiltersCount}
@@ -687,8 +687,7 @@ export default function WalletPage() {
               </div>
 
               <span className="text-xs text-slate-400 font-medium">
-                {filteredTransactions.length}{' '}
-                {filteredTransactions.length === 1 ? 'transação' : 'transações'}
+                {`${filteredTransactions.length} ${filteredTransactions.length === 1 ? 'transação' : 'transações'}`}
               </span>
             </div>
 
@@ -739,8 +738,9 @@ export default function WalletPage() {
                         {formatDayGroupHeader(dateKey)}
                       </span>
                       <span className="text-[11px] text-slate-400">
-                        <span>{dayTxs.length}</span>{' '}
-                        <span>{dayTxs.length === 1 ? 'item' : 'itens'}</span>
+                        <span>
+                          {dayTxs.length} {dayTxs.length === 1 ? 'item' : 'itens'}
+                        </span>
                       </span>
                     </div>
 
@@ -796,8 +796,9 @@ export default function WalletPage() {
                                   isIncome ? 'text-emerald-600' : 'text-red-600'
                                 }`}
                               >
-                                <span>{isIncome ? '+' : '−'}</span>{' '}
-                                <span>{formatBRL(tx.amount_cents)}</span>
+                                <span>
+                                  {isIncome ? '+' : '−'} {formatBRL(tx.amount_cents)}
+                                </span>
                               </span>
 
                               {/* Botões de Ação Rápida (visíveis no hover apenas em telas sm+) */}
@@ -869,9 +870,11 @@ export default function WalletPage() {
 
               <div className="flex items-baseline justify-between mb-3">
                 <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 tabular-nums">
-                  <span>{formatBRL(categoryBudgetData.totalSpent)}</span>{' '}
-                  <span className="text-sm font-medium text-slate-400">
-                    / {formatBRL(categoryBudgetData.totalBudget)}
+                  <span>
+                    {formatBRL(categoryBudgetData.totalSpent)}{' '}
+                    <span className="text-sm font-medium text-slate-400">
+                      / {formatBRL(categoryBudgetData.totalBudget)}
+                    </span>
                   </span>
                 </span>
                 <span className="text-sm font-bold text-slate-600 tabular-nums">
@@ -962,59 +965,63 @@ export default function WalletPage() {
 
                         {/* Progresso / Barra de Cor da Categoria Pai com Percentual Visível */}
                         <div className="flex items-center gap-2 text-right shrink-0">
-                          {item.limitCents > 0 ? (
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`text-[11px] font-bold tabular-nums min-w-[38px] text-right ${
-                                  item.isOver
-                                    ? 'text-red-600'
-                                    : item.percent >= 75
-                                      ? 'text-amber-600'
-                                      : 'text-emerald-600'
-                                }`}
-                              >
-                                <span>{item.percent}%</span>
-                              </span>
-                              <div className="w-16 sm:w-20 bg-slate-100 h-2 rounded-full overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full transition-all ${
+                          <div className="flex items-center">
+                            {item.limitCents > 0 ? (
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`text-[11px] font-bold tabular-nums min-w-[38px] text-right ${
                                     item.isOver
-                                      ? 'bg-red-500'
+                                      ? 'text-red-600'
                                       : item.percent >= 75
-                                        ? 'bg-amber-500'
-                                        : 'bg-emerald-600'
+                                        ? 'text-amber-600'
+                                        : 'text-emerald-600'
                                   }`}
-                                  style={{ width: `${Math.min(item.percent, 100)}%` }}
-                                />
+                                >
+                                  <span>{item.percent}%</span>
+                                </span>
+                                <div className="w-16 sm:w-20 bg-slate-100 h-2 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full transition-all ${
+                                      item.isOver
+                                        ? 'bg-red-500'
+                                        : item.percent >= 75
+                                          ? 'bg-amber-500'
+                                          : 'bg-emerald-600'
+                                    }`}
+                                    style={{ width: `${Math.min(item.percent, 100)}%` }}
+                                  />
+                                </div>
                               </div>
-                            </div>
-                          ) : (
-                            <span className="text-xs font-semibold text-emerald-700 group-hover:underline">
-                              + Definir teto
-                            </span>
-                          )}
+                            ) : (
+                              <span className="text-xs font-semibold text-emerald-700 group-hover:underline">
+                                + Definir teto
+                              </span>
+                            )}
+                          </div>
 
-                          {hasSubcats && (
-                            <button
-                              type="button"
-                              onClick={(e) => toggleCatBudgetExpand(item.category.id, e)}
-                              className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg ml-0.5 transition-colors"
-                              title={
-                                isExpanded ? 'Recolher subcategorias' : 'Expandir subcategorias'
-                              }
-                            >
-                              <ChevronDown
-                                className={`w-4 h-4 transition-transform duration-200 ${
-                                  isExpanded ? 'rotate-180' : ''
-                                }`}
-                              />
-                            </button>
-                          )}
+                          <div className="flex items-center">
+                            {hasSubcats && (
+                              <button
+                                type="button"
+                                onClick={(e) => toggleCatBudgetExpand(item.category.id, e)}
+                                className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg ml-0.5 transition-colors"
+                                title={
+                                  isExpanded ? 'Recolher subcategorias' : 'Expandir subcategorias'
+                                }
+                              >
+                                <ChevronDown
+                                  className={`w-4 h-4 transition-transform duration-200 ${
+                                    isExpanded ? 'rotate-180' : ''
+                                  }`}
+                                />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
 
                       {/* Linhas Aninhadas: Subcategorias com Recuo e Visual Suave */}
-                      {hasSubcats && isExpanded && (
+                      {Boolean(hasSubcats && isExpanded) && (
                         <div
                           key={`budget-subcats-${item.category.id}`}
                           className="bg-slate-50/60 border-t border-slate-100 divide-y divide-slate-100/80 pl-4 sm:pl-7 pr-3 py-1"

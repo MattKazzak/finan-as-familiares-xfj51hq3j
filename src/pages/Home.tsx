@@ -511,7 +511,7 @@ export default function Home() {
                           {tx.member?.name || 'Membro'}
                         </span>
                         {tx.category && (
-                          <>
+                          <span className="inline-flex items-center gap-2">
                             <span className="text-[11px] text-slate-400">•</span>
                             <span className="text-[11px] text-slate-500 font-medium truncate">
                               {tx.category.name}
@@ -521,7 +521,7 @@ export default function Home() {
                                 </span>
                               )}
                             </span>
-                          </>
+                          </span>
                         )}
                         <span className="text-[11px] text-slate-400">•</span>
                         <span className="text-[11px] text-slate-400 capitalize shrink-0">
