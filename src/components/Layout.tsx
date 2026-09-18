@@ -166,7 +166,7 @@ export default function Layout() {
                 </AvatarFallback>
               </Avatar>
               <span className="text-xs font-medium text-slate-700 group-hover:text-emerald-800 transition-colors flex items-center gap-1">
-                <span>{currentMember?.name}</span>
+                <span>{currentMember?.name || 'Família'}</span>
                 <span className="text-[10px] text-slate-400">▾</span>
               </span>
             </div>

@@ -57,24 +57,28 @@ export function WhoIsUsingDialog({ open, onOpenChange }: WhoIsUsingDialogProps) 
                   </Avatar>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm text-slate-900">{member.name}</span>
-                      {member.is_admin && (
+                      <span className="font-bold text-sm text-slate-900">
+                        <span>{member.name}</span>
+                      </span>
+                      {member.is_admin ? (
                         <span className="text-[10px] bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded-full">
-                          Admin
+                          <span>Admin</span>
                         </span>
-                      )}
+                      ) : null}
                     </div>
                     <span className="text-[11px] text-slate-500">
-                      {isSelected ? 'Perfil ativo neste aparelho' : 'Toque para selecionar'}
+                      <span>
+                        {isSelected ? 'Perfil ativo neste aparelho' : 'Toque para selecionar'}
+                      </span>
                     </span>
                   </div>
                 </div>
 
-                {isSelected && (
+                {isSelected ? (
                   <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-sm">
                     <Check className="w-3.5 h-3.5 stroke-[3]" />
                   </div>
-                )}
+                ) : null}
               </button>
             )
           })}

@@ -611,7 +611,7 @@ export default function WalletPage() {
         </div>
 
         {/* ================= TAB 1: TRANSAÇÕES ================= */}
-        {activeTab === 'transacoes' && (
+        {activeTab === 'transacoes' ? (
           <div className="space-y-5 mt-0 animate-in fade-in-50 duration-200">
             {/* Summary Strip (3 Mini Cards) */}
             <div className="grid grid-cols-3 gap-3">
@@ -837,10 +837,10 @@ export default function WalletPage() {
               </div>
             )}
           </div>
-        )}
+        ) : null}
 
         {/* ================= TAB 2: ORÇAMENTOS ================= */}
-        {activeTab === 'orcamentos' && (
+        {activeTab === 'orcamentos' ? (
           <div className="space-y-5 mt-0 animate-in fade-in-50 duration-200">
             {/* Card Geral de Orçamento Recorrente */}
             <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm">
@@ -1021,7 +1021,7 @@ export default function WalletPage() {
                       </div>
 
                       {/* Linhas Aninhadas: Subcategorias com Recuo e Visual Suave */}
-                      {Boolean(hasSubcats && isExpanded) && (
+                      {Boolean(hasSubcats && isExpanded) ? (
                         <div
                           key={`budget-subcats-${item.category.id}`}
                           className="bg-slate-50/60 border-t border-slate-100 divide-y divide-slate-100/80 pl-4 sm:pl-7 pr-3 py-1"
@@ -1046,24 +1046,24 @@ export default function WalletPage() {
                                 <div>
                                   <div className="flex items-center gap-1.5">
                                     <span className="text-xs font-semibold text-slate-700 group-hover/sub:text-emerald-700 transition-colors">
-                                      {subItem.subcategory.name}
+                                      <span>{subItem.subcategory.name}</span>
                                     </span>
-                                    {subItem.hasOverride && (
+                                    {subItem.hasOverride ? (
                                       <span className="text-[11px] font-semibold bg-amber-100/80 text-amber-900 border border-amber-200/80 px-2 py-0.5 rounded-full leading-tight">
-                                        ajustado
+                                        <span>ajustado</span>
                                       </span>
-                                    )}
-                                    {subItem.isOver && (
+                                    ) : null}
+                                    {subItem.isOver ? (
                                       <AlertTriangle className="w-3 h-3 text-red-500" />
-                                    )}
+                                    ) : null}
                                   </div>
                                   <p className="text-[11px] text-slate-400 tabular-nums flex items-center gap-1">
                                     <span>{formatBRL(subItem.spentCents)}</span>
                                     <span>de</span>
                                     <span>
                                       {subItem.limitCents > 0
-                                        ? formatBRL(subItem.limitCents)
-                                        : 'Não definido'}
+                                        ? <span>{formatBRL(subItem.limitCents)}</span>
+                                        : <span>Não definido</span>}
                                     </span>
                                   </p>
                                 </div>
@@ -1099,21 +1099,21 @@ export default function WalletPage() {
                                   </div>
                                 ) : (
                                   <span className="text-[11px] font-medium text-emerald-700 opacity-80 group-hover/sub:opacity-100 group-hover/sub:underline">
-                                    + Definir
+                                    <span>+ Definir</span>
                                   </span>
                                 )}
                               </div>
                             </div>
                           ))}
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   )
                 })}
               </div>
             </div>
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* DIÁLOGO DE FILTRO DE TRANSAÇÕES */}
@@ -1227,7 +1227,7 @@ export default function WalletPage() {
             </div>
 
             {/* Subcategorias disponíveis (se categorias estiverem selecionadas) */}
-            {filterCategoryIds.length > 0 && (
+            {filterCategoryIds.length > 0 ? (
               <div>
                 <Label className="text-xs font-semibold text-slate-700">Subcategorias</Label>
                 <div className="flex flex-wrap gap-1.5 mt-2 max-h-32 overflow-y-auto">
@@ -1253,13 +1253,13 @@ export default function WalletPage() {
                               : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                           }`}
                         >
-                          {s.name}
+                          <span>{s.name}</span>
                         </button>
                       )
                     })}
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
@@ -1317,11 +1317,12 @@ export default function WalletPage() {
                     </span>
                     <p className="font-bold text-slate-900 text-sm truncate">
                       {currentCat?.name}
-                      {currentSub && (
+                      {currentSub ? (
                         <span className="text-emerald-700 font-semibold ml-1">
-                          ▸ {currentSub.name}
+                          <span>▸ </span>
+                          <span>{currentSub.name}</span>
                         </span>
-                      )}
+                      ) : null}
                     </p>
                   </div>
                 </div>
@@ -1338,7 +1339,7 @@ export default function WalletPage() {
                     }`}
                   >
                     <Layers className="w-3.5 h-3.5" />
-                    Padrão Recorrente
+                    <span>Padrão Recorrente</span>
                   </button>
                   <button
                     type="button"
@@ -1355,12 +1356,12 @@ export default function WalletPage() {
                     }`}
                   >
                     <Calendar className="w-3.5 h-3.5" />
-                    Só {formatMonthYear(currentDate)}
+                    <span>Só {formatMonthYear(currentDate)}</span>
                   </button>
                 </div>
 
                 {/* 1. Modo: Padrão Recorrente */}
-                {!isEditingOnlyThisMonth && (
+                {!isEditingOnlyThisMonth ? (
                   <div className="space-y-2 bg-emerald-50/50 border border-emerald-200/60 p-4 rounded-2xl">
                     <div className="flex items-center justify-between">
                       <Label
@@ -1395,10 +1396,10 @@ export default function WalletPage() {
                       necessidade de recriar.
                     </p>
                   </div>
-                )}
+                ) : null}
 
                 {/* 2. Modo: Ajuste pontual deste mês */}
-                {isEditingOnlyThisMonth && (
+                {isEditingOnlyThisMonth ? (
                   <div className="space-y-3 bg-amber-50/40 border border-amber-200/70 p-4 rounded-2xl">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="bg-month-amount" className="text-xs font-bold text-slate-800">
@@ -1426,17 +1427,17 @@ export default function WalletPage() {
                       />
                     </div>
 
-                    {defaultAmountStr && (
+                    {defaultAmountStr ? (
                       <p className="text-[11px] text-slate-500">
-                        Valor padrão configurado:{' '}
-                        <strong className="text-slate-700">R$ {defaultAmountStr}</strong>. Os demais
-                        meses continuam com o teto padrão.
+                        <span>Valor padrão configurado: </span>
+                        <strong className="text-slate-700">R$ {defaultAmountStr}</strong>
+                        <span>. Os demais meses continuam com o teto padrão.</span>
                       </p>
-                    )}
+                    ) : null}
 
                     {/* Botão de Ação: Voltar ao padrão ou Replicar para o ano todo */}
                     <div className="flex items-center gap-2 pt-1 flex-wrap">
-                      {hasMonthOverride && (
+                      {hasMonthOverride ? (
                         <button
                           type="button"
                           onClick={handleResetToDefault}
@@ -1444,9 +1445,9 @@ export default function WalletPage() {
                           className="text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-2xs hover:bg-slate-50"
                         >
                           <RotateCcw className="w-3.5 h-3.5" />
-                          Voltar ao padrão
+                          <span>Voltar ao padrão</span>
                         </button>
-                      )}
+                      ) : null}
 
                       <button
                         type="button"
@@ -1455,11 +1456,11 @@ export default function WalletPage() {
                         className="text-xs font-semibold text-emerald-800 hover:text-emerald-900 bg-emerald-100/70 hover:bg-emerald-100 border border-emerald-300/60 px-3 py-1.5 rounded-xl flex items-center gap-1.5"
                       >
                         <Sparkles className="w-3.5 h-3.5" />
-                        Tornar padrão de todos os meses
+                        <span>Tornar padrão de todos os meses</span>
                       </button>
                     </div>
                   </div>
-                )}
+                ) : null}
 
                 <DialogFooter className="gap-2 sm:gap-0 pt-2">
                   <Button
@@ -1476,8 +1477,10 @@ export default function WalletPage() {
                     disabled={savingBudget}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs shadow-sm"
                   >
-                    {savingBudget && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    {isEditingOnlyThisMonth ? 'Salvar Ajuste do Mês' : 'Salvar Orçamento Padrão'}
+                    <span className="flex items-center gap-2">
+                      {savingBudget ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                      <span>{isEditingOnlyThisMonth ? 'Salvar Ajuste do Mês' : 'Salvar Orçamento Padrão'}</span>
+                    </span>
                   </Button>
                 </DialogFooter>
               </form>
@@ -1499,20 +1502,18 @@ export default function WalletPage() {
       />
 
       {/* DIÁLOGO DE EDIÇÃO DE TRANSAÇÃO */}
-      {isEditTxOpen && (
-        <NewTransactionDialog
-          open={isEditTxOpen}
-          onOpenChange={(open) => {
-            setIsEditTxOpen(open)
-            if (!open) setEditingTx(null)
-          }}
-          editingTransaction={editingTx}
-          onSuccess={() => loadMonthData()}
-        />
-      )}
+      <NewTransactionDialog
+        open={isEditTxOpen}
+        onOpenChange={(open) => {
+          setIsEditTxOpen(open)
+          if (!open) setEditingTx(null)
+        }}
+        editingTransaction={editingTx}
+        onSuccess={() => loadMonthData()}
+      />
 
       {/* CONFIRMAÇÃO DE EXCLUSÃO DE TRANSAÇÃO */}
-      <AlertDialog open={!!txToDelete} onOpenChange={(open) => !open && setTxToDelete(null)}>
+      <AlertDialog open={Boolean(txToDelete)} onOpenChange={(open) => !open && setTxToDelete(null)}>
         <AlertDialogContent className="rounded-2xl max-w-sm">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-base font-bold text-slate-900">

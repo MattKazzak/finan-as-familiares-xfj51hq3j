@@ -161,9 +161,9 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
         <DialogHeader>
           <div className="flex items-center justify-between pr-6">
             <DialogTitle className="text-xl font-bold text-slate-900">
-              {editingTransaction ? 'Editar Transação' : 'Nova Transação'}
+              <span>{editingTransaction ? 'Editar Transação' : 'Nova Transação'}</span>
             </DialogTitle>
-            {!editingTransaction && (
+            {!editingTransaction ? (
               <Button
                 type="button"
                 variant="ghost"
@@ -175,7 +175,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                 <span className="hidden sm:inline">Importar extrato</span>
                 <span className="sm:hidden">Extrato</span>
               </Button>
-            )}
+            ) : null}
           </div>
         </DialogHeader>
 
@@ -191,7 +191,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
             }`}
           >
             <ArrowDownRight className="w-4 h-4" />
-            Despesa
+            <span>Despesa</span>
           </button>
           <button
             type="button"
@@ -203,16 +203,16 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
             }`}
           >
             <ArrowUpRight className="w-4 h-4" />
-            Receita
-          </button>
+            <span>Receita</span>
+          </button>{' '}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-          {errorMsg && (
+          {errorMsg ? (
             <div className="p-3 text-xs bg-red-50 border border-red-200 text-red-700 rounded-lg">
-              {errorMsg}
+              <span>{errorMsg}</span>
             </div>
-          )}
+          ) : null}
 
           {/* Valor */}
           <div>
@@ -262,7 +262,10 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                 <SelectContent>
                   {members.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
-                      {m.name} {m.is_admin ? '(Admin)' : ''}
+                      <span>
+                        {m.name}
+                        {m.is_admin ? ' (Admin)' : ''}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -277,10 +280,12 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Sem categoria</SelectItem>
+                  <SelectItem value="none">
+                    <span>Sem categoria</span>
+                  </SelectItem>
                   {filteredCategories.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.name}
+                      <span>{c.name}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -289,38 +294,40 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           </div>
 
           {/* Subcategoria (aparece quando categoria estiver selecionada) */}
-          {categoryId !== 'none' && availableSubcategories.length > 0 && (
+          {categoryId !== 'none' && availableSubcategories.length > 0 ? (
             <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200/80">
               <div className="flex items-center justify-between mb-1.5">
                 <Label className="text-xs font-semibold text-slate-700">
-                  Subcategoria{' '}
+                  <span>Subcategoria </span>
                   <span className="text-[10px] text-slate-400 font-normal">(Opcional)</span>
                 </Label>
-                {subcategoryId !== 'none' && (
+                {subcategoryId !== 'none' ? (
                   <button
                     type="button"
                     onClick={() => setSubcategoryId('none')}
                     className="text-[11px] text-slate-400 hover:text-slate-600"
                   >
-                    Limpar
+                    <span>Limpar</span>
                   </button>
-                )}
+                ) : null}
               </div>
               <Select value={subcategoryId} onValueChange={setSubcategoryId}>
                 <SelectTrigger className="bg-white">
                   <SelectValue placeholder="Nenhuma (categoria geral)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Nenhuma</SelectItem>
+                  <SelectItem value="none">
+                    <span>Nenhuma</span>
+                  </SelectItem>
                   {availableSubcategories.map((sub) => (
                     <SelectItem key={sub.id} value={sub.id}>
-                      {sub.name}
+                      <span>{sub.name}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-          )}
+          ) : null}
 
           {/* Data */}
           <div>
@@ -351,8 +358,10 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
               disabled={loading}
               className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
             >
-              {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {editingTransaction ? 'Salvar Alterações' : 'Confirmar'}
+              <span className="flex items-center gap-2">
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                <span>{editingTransaction ? 'Salvar Alterações' : 'Confirmar'}</span>
+              </span>
             </Button>
           </DialogFooter>
         </form>
