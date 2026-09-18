@@ -30,6 +30,7 @@ export default function Home() {
     family,
     members,
     currentMember,
+    openWhoIsUsing,
     selectedMemberId,
     setSelectedMemberId,
     openNewTransaction,
@@ -182,10 +183,21 @@ export default function Home() {
       {/* 1. Header Saudação + Pull-to-refresh */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-            Olá, {currentMember?.name || 'Família'}! 👋
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 capitalize">
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              Olá, {currentMember?.name || 'Família'}! 👋
+            </h1>
+            <button
+              type="button"
+              onClick={openWhoIsUsing}
+              className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-full transition-colors flex items-center gap-1 border border-emerald-200/60"
+              title="Trocar quem está usando"
+            >
+              <span>Trocar</span>
+              <span className="text-[9px]">▾</span>
+            </button>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-500 capitalize mt-0.5">
             {formatFullDate(new Date())} •{' '}
             <span className="font-semibold text-emerald-800">
               Família {family?.name || 'Silva'}

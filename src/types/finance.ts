@@ -7,6 +7,7 @@ export type AssetType = 'stock' | 'fii' | 'fixed_income' | 'crypto' | 'treasury'
 export interface Family {
   id: string
   name: string
+  avatar_url?: string | null
   created_by: string | null
   created_at: string
 }

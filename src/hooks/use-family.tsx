@@ -7,6 +7,8 @@ import {
   deleteFamilyMember,
   addCategory,
   deleteCategory,
+  updateFamilyDetails,
+  uploadFamilyAvatarFile,
 } from '@/services/family'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
@@ -17,9 +19,16 @@ interface FamilyContextType {
   categories: TransactionCategory[]
   selectedMemberId: string | null // null = 'Todos'
   setSelectedMemberId: (id: string | null) => void
+  activeMemberId: string | null
+  setActiveMemberId: (id: string) => void
   currentMember: FamilyMember | null
+  isWhoIsUsingOpen: boolean
+  setIsWhoIsUsingOpen: (open: boolean) => void
+  openWhoIsUsing: () => void
   loading: boolean
   reloadFamily: () => Promise<void>
+  updateFamily: (updates: { name?: string; avatar_url?: string | null }) => Promise<Family>
+  uploadFamilyAvatar: (file: File) => Promise<string>
   addMember: (name: string) => Promise<FamilyMember>
   editMember: (id: string, name: string) => Promise<FamilyMember>
   removeMember: (id: string) => Promise<void>
@@ -59,10 +68,33 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState<boolean>(true)
   const [isNewTransactionOpen, setIsNewTransactionOpen] = useState(false)
   const [isImportStatementOpen, setIsImportStatementOpen] = useState(false)
+  const [isWhoIsUsingOpen, setIsWhoIsUsingOpen] = useState(false)
   const [newTransactionDefaultType, setNewTransactionDefaultType] = useState<'income' | 'expense'>(
     'expense',
   )
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+
+  // Membro ativo salvo localmente por dispositivo
+  const [activeMemberId, setActiveMemberIdState] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('financas_familiares_active_member_id')
+    } catch {
+      return null
+    }
+  })
+
+  const setActiveMemberId = useCallback((id: string) => {
+    setActiveMemberIdState(id)
+    try {
+      localStorage.setItem('financas_familiares_active_member_id', id)
+    } catch {
+      // Ignora erro de local storage desativado
+    }
+  }, [])
+
+  const openWhoIsUsing = useCallback(() => {
+    setIsWhoIsUsingOpen(true)
+  }, [])
 
   const triggerRefresh = useCallback(() => {
     setRefreshTrigger((prev) => prev + 1)
@@ -98,6 +130,34 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     reloadFamily()
   }, [reloadFamily])
+
+  // Se houver membros carregados e nenhum membro ativo estiver configurado no localStorage,
+  // abre o modal "Quem está usando?" na primeira utilização do dispositivo.
+  useEffect(() => {
+    if (!loading && members.length > 0) {
+      const stored = localStorage.getItem('financas_familiares_active_member_id')
+      if (!stored || !members.some((m) => m.id === stored)) {
+        setIsWhoIsUsingOpen(true)
+      }
+    }
+  }, [loading, members])
+
+  const updateFamily = async (updates: { name?: string; avatar_url?: string | null }) => {
+    if (!family) throw new Error('Família não carregada')
+    const updated = await updateFamilyDetails(family.id, updates)
+    setFamily(updated)
+    toast({ title: 'Sucesso', description: 'Informações da família atualizadas.' })
+    return updated
+  }
+
+  const uploadFamilyAvatar = async (file: File) => {
+    if (!family) throw new Error('Família não carregada')
+    const url = await uploadFamilyAvatarFile(family.id, file)
+    const updated = await updateFamilyDetails(family.id, { avatar_url: url })
+    setFamily(updated)
+    toast({ title: 'Foto atualizada', description: 'O avatar da família foi salvo com sucesso.' })
+    return url
+  }
 
   const addMember = async (name: string) => {
     if (!family) throw new Error('Família não carregada')
@@ -150,7 +210,13 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     setIsImportStatementOpen(true)
   }
 
-  const currentMember = members.find((m) => m.is_admin) || members[0] || null
+  // Se o activeMemberId apontar para um membro existente, ele é o currentMember do dispositivo;
+  // senão faz fallback para o admin ou primeiro membro
+  const currentMember =
+    (activeMemberId ? members.find((m) => m.id === activeMemberId) : null) ||
+    members.find((m) => m.is_admin) ||
+    members[0] ||
+    null
 
   return (
     <FamilyContext.Provider
@@ -160,9 +226,16 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         categories,
         selectedMemberId,
         setSelectedMemberId,
+        activeMemberId,
+        setActiveMemberId,
         currentMember,
+        isWhoIsUsingOpen,
+        setIsWhoIsUsingOpen,
+        openWhoIsUsing,
         loading,
         reloadFamily,
+        updateFamily,
+        uploadFamilyAvatar,
         addMember,
         editMember,
         removeMember,

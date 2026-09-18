@@ -4,7 +4,8 @@ import { useAuth } from '@/hooks/use-auth'
 import { useFamily } from '@/hooks/use-family'
 import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
 import { ImportStatementDialog } from '@/components/transactions/ImportStatementDialog'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { WhoIsUsingDialog } from '@/components/common/WhoIsUsingDialog'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 
 export default function Layout() {
@@ -12,6 +13,9 @@ export default function Layout() {
   const {
     family,
     currentMember,
+    openWhoIsUsing,
+    isWhoIsUsingOpen,
+    setIsWhoIsUsingOpen,
     isNewTransactionOpen,
     setIsNewTransactionOpen,
     openNewTransaction,
@@ -112,11 +116,13 @@ export default function Layout() {
 
         {/* Rodapé do Perfil Desktop */}
         <div className="p-4 border-t border-slate-100 flex items-center justify-between">
-          <div
-            onClick={() => navigate('/perfil')}
-            className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition-opacity overflow-hidden"
+          <button
+            type="button"
+            onClick={openWhoIsUsing}
+            title="Trocar quem está usando"
+            className="flex items-center gap-2.5 text-left hover:bg-slate-50 p-1.5 rounded-xl transition-colors overflow-hidden flex-1 mr-1"
           >
-            <Avatar className="w-8 h-8 border border-emerald-200">
+            <Avatar className="w-8 h-8 border border-emerald-200 shrink-0">
               <AvatarFallback className="bg-emerald-100 text-emerald-800 font-bold text-xs">
                 {userInitial}
               </AvatarFallback>
@@ -125,13 +131,13 @@ export default function Layout() {
               <p className="text-xs font-semibold text-slate-800 truncate">
                 {currentMember?.name || 'Família'}
               </p>
-              <p className="text-[10px] text-slate-400 truncate">Login Compartilhado</p>
+              <p className="text-[10px] text-emerald-600 truncate font-medium">Trocar usuário ▾</p>
             </div>
-          </div>
+          </button>
           <button
             onClick={handleSignOut}
             title="Sair da conta"
-            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0"
           >
             <LogOut className="w-4 h-4" />
           </button>
@@ -150,17 +156,19 @@ export default function Layout() {
 
           <div className="flex items-center gap-3">
             <div
-              onClick={() => navigate('/perfil')}
-              className="flex items-center gap-2 cursor-pointer group"
+              onClick={openWhoIsUsing}
+              title="Toque para trocar quem está usando"
+              className="flex items-center gap-2 cursor-pointer group bg-slate-50 hover:bg-emerald-50 px-2.5 py-1 rounded-full border border-slate-200/80 transition-all"
             >
-              <span className="hidden sm:inline text-xs font-medium text-slate-600 group-hover:text-emerald-700 transition-colors">
-                {currentMember?.name}
-              </span>
-              <Avatar className="w-8 h-8 border border-emerald-200 shadow-sm group-hover:ring-2 group-hover:ring-emerald-400 transition-all">
+              <Avatar className="w-7 h-7 border border-emerald-200 shadow-sm group-hover:ring-2 group-hover:ring-emerald-400 transition-all">
                 <AvatarFallback className="bg-gradient-to-tr from-emerald-600 to-teal-700 text-white font-bold text-xs">
                   {userInitial}
                 </AvatarFallback>
               </Avatar>
+              <span className="text-xs font-medium text-slate-700 group-hover:text-emerald-800 transition-colors flex items-center gap-1">
+                <span>{currentMember?.name}</span>
+                <span className="text-[10px] text-slate-400">▾</span>
+              </span>
             </div>
           </div>
         </header>
@@ -245,6 +253,9 @@ export default function Layout() {
 
       {/* DIÁLOGO GLOBAL DE IMPORTAÇÃO DE EXTRATO */}
       <ImportStatementDialog open={isImportStatementOpen} onOpenChange={setIsImportStatementOpen} />
+
+      {/* DIÁLOGO GLOBAL QUEM ESTÁ USANDO */}
+      <WhoIsUsingDialog open={isWhoIsUsingOpen} onOpenChange={setIsWhoIsUsingOpen} />
     </div>
   )
 }
