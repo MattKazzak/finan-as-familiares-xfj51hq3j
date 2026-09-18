@@ -72,30 +72,48 @@ export default function Home() {
       ])
       setTransactions(allTx)
 
-      // Calcular o teto orçamentário efetivo somando padrões recorrentes e overrides do mês (sem duplicar categorias)
+      // Calcular o teto orçamentário efetivo respeitando a agregação por categoria/subcategorias
+      // 1. Mapear overrides e padrões tanto de categoria quanto de subcategoria
       const overrideCatMap = new Map<string, number>()
+      const overrideSubMap = new Map<string, number>()
       overrides.forEach((o) => {
-        if (!o.subcategory_id) {
+        if (o.subcategory_id) {
+          overrideSubMap.set(o.subcategory_id, o.amount_cents)
+        } else {
           overrideCatMap.set(o.category_id, o.amount_cents)
         }
       })
 
       const defCatMap = new Map<string, number>()
+      const defSubMap = new Map<string, number>()
       defBgs.forEach((d) => {
-        if (!d.subcategory_id) {
+        if (d.subcategory_id) {
+          defSubMap.set(d.subcategory_id, d.amount_cents)
+        } else {
           defCatMap.set(d.category_id, d.amount_cents)
         }
       })
 
-      // Une categorias com teto
-      const allCatIds = new Set([...overrideCatMap.keys(), ...defCatMap.keys()])
+      // 2. Para cada categoria de despesa, se houver tetos em subcategorias usa a soma delas; senão usa o teto do pai
       let sumLimits = 0
-      allCatIds.forEach((catId) => {
-        if (overrideCatMap.has(catId)) {
-          sumLimits += overrideCatMap.get(catId)!
-        } else if (defCatMap.has(catId)) {
-          sumLimits += defCatMap.get(catId)!
-        }
+      const expenseCats = categories.filter((c) => c.type === 'expense')
+      expenseCats.forEach((cat) => {
+        let subcatsLimitSum = 0
+        const subcats = cat.subcategories || []
+        subcats.forEach((sub) => {
+          if (overrideSubMap.has(sub.id)) {
+            subcatsLimitSum += overrideSubMap.get(sub.id)!
+          } else if (defSubMap.has(sub.id)) {
+            subcatsLimitSum += defSubMap.get(sub.id)!
+          }
+        })
+
+        const explicitLimitCents = overrideCatMap.has(cat.id)
+          ? overrideCatMap.get(cat.id)!
+          : defCatMap.get(cat.id) || 0
+
+        const catLimit = subcatsLimitSum > 0 ? subcatsLimitSum : explicitLimitCents
+        sumLimits += catLimit
       })
       setTotalBudgetLimit(sumLimits)
     } catch (err: any) {

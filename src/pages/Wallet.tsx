@@ -337,16 +337,23 @@ export default function WalletPage() {
       const catDefault = defCatBudgetMap[cat.id]
       const hasOverride = !!catOverride
 
-      // Se a categoria pai tiver teto explícito, usa ele; se não tiver, mas as subcategorias tiverem, usa a soma das subcategorias
-      let explicitLimitCents = catOverride
+      // Orçamento direto da categoria pai
+      const catOverride = overrideCatBudgetMap[cat.id]
+      const catDefault = defCatBudgetMap[cat.id]
+      const hasOverride = !!catOverride
+
+      const explicitLimitCents = catOverride
         ? catOverride.amount_cents
         : catDefault
           ? catDefault.amount_cents
           : 0
       const defaultLimitCents = catDefault ? catDefault.amount_cents : 0
 
-      // Teto efetivo da categoria pai
-      const limitCents = explicitLimitCents > 0 ? explicitLimitCents : subcatsLimitSum
+      // Regra de agregação padrão de mercado:
+      // Quando a categoria possui tetos definidos nas subcategorias, o teto exibido da categoria pai
+      // é a soma das subcategorias. Caso não haja tetos em subcategorias, usa o teto definido no próprio pai.
+      const hasSubcatLimits = subcatsLimitSum > 0
+      const limitCents = hasSubcatLimits ? subcatsLimitSum : explicitLimitCents
 
       const spentCents = catSpentMap[cat.id] || 0
       if (limitCents > 0) {
@@ -366,6 +373,7 @@ export default function WalletPage() {
         explicitLimitCents,
         defaultLimitCents,
         subcatsLimitSum,
+        hasSubcatLimits,
         spentCents,
         percent,
         isOver,
@@ -957,20 +965,33 @@ export default function WalletPage() {
                           </div>
                         </div>
 
-                        {/* Progresso / Barra de Cor da Categoria Pai */}
+                        {/* Progresso / Barra de Cor da Categoria Pai com Percentual Visível */}
                         <div className="flex items-center gap-2 text-right shrink-0">
                           {item.limitCents > 0 ? (
-                            <div className="w-16 sm:w-20 bg-slate-100 h-2 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full transition-all ${
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`text-xs font-bold tabular-nums min-w-[36px] text-right ${
                                   item.isOver
-                                    ? 'bg-red-500'
+                                    ? 'text-red-600'
                                     : item.percent >= 75
-                                      ? 'bg-amber-500'
-                                      : 'bg-emerald-600'
+                                      ? 'text-amber-600'
+                                      : 'text-emerald-600'
                                 }`}
-                                style={{ width: `${Math.min(item.percent, 100)}%` }}
-                              />
+                              >
+                                <span>{item.percent}%</span>
+                              </span>
+                              <div className="w-16 sm:w-20 bg-slate-100 h-2 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all ${
+                                    item.isOver
+                                      ? 'bg-red-500'
+                                      : item.percent >= 75
+                                        ? 'bg-amber-500'
+                                        : 'bg-emerald-600'
+                                  }`}
+                                  style={{ width: `${Math.min(item.percent, 100)}%` }}
+                                />
+                              </div>
                             </div>
                           ) : (
                             <span className="text-xs font-semibold text-emerald-700 group-hover:underline">
@@ -1047,11 +1068,11 @@ export default function WalletPage() {
                               </div>
 
                               {/* Progresso Subcategoria */}
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 shrink-0">
                                 {subItem.limitCents > 0 ? (
-                                  <div className="text-right">
+                                  <div className="flex items-center gap-2">
                                     <span
-                                      className={`text-[11px] font-bold tabular-nums ${
+                                      className={`text-[11px] font-bold tabular-nums min-w-[34px] text-right ${
                                         subItem.isOver
                                           ? 'text-red-600'
                                           : subItem.percent >= 75
@@ -1059,9 +1080,9 @@ export default function WalletPage() {
                                             : 'text-emerald-600'
                                       }`}
                                     >
-                                      {subItem.percent}%
+                                      <span>{subItem.percent}%</span>
                                     </span>
-                                    <div className="w-14 bg-slate-200/80 h-1.5 rounded-full overflow-hidden mt-0.5">
+                                    <div className="w-14 sm:w-16 bg-slate-200/80 h-1.5 rounded-full overflow-hidden">
                                       <div
                                         className={`h-full rounded-full ${
                                           subItem.isOver
