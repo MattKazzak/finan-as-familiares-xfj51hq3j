@@ -51,6 +51,10 @@ import {
   ChevronDown,
   ChevronUp,
   ShieldCheck,
+  Check,
+  Building2,
+  Star,
+  ExternalLink,
 } from 'lucide-react'
 
 export interface ReviewItem {
@@ -108,6 +112,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
   const [ignoredLines, setIgnoredLines] = useState<IgnoredLineInfo[]>([])
   const [showIgnoredLines, setShowIgnoredLines] = useState(false)
   const [fileWarnings, setFileWarnings] = useState<string[]>([])
+  const [showBankGuide, setShowBankGuide] = useState(false)
 
   // Itens em revisão
   const [items, setItems] = useState<ReviewItem[]>([])
@@ -132,6 +137,55 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
     }
   }, [members, defaultMemberId])
 
+  // Lista de bancos para o mini-guia "Onde exportar o OFX"
+  const BANK_GUIDES = [
+    {
+      name: 'Banco Inter',
+      step: 'Extrato → Filtrar período → Exportar → Escolher "OFX"',
+      badge: 'Conta / Fatura',
+    },
+    {
+      name: 'Nubank',
+      step: 'Faturas → Resumo da Fatura → Exportar Fatura → Escolher formato "OFX"',
+      badge: 'Cartão / Conta',
+    },
+    {
+      name: 'Itaú',
+      step: 'Conta Corrente → Ver Extrato → Salvar em outros formatos → OFX',
+      badge: 'Internet Banking',
+    },
+    {
+      name: 'Bradesco',
+      step: 'Saldos e Extratos → Extrato Mensal/Periódico → Salvar como OFX / Money',
+      badge: 'Internet Banking',
+    },
+    {
+      name: 'Santander',
+      step: 'Conta Corrente → Extrato → Exportar extrato → Selecionar OFX',
+      badge: 'Internet Banking',
+    },
+    {
+      name: 'Banco do Brasil',
+      step: 'Extrato de Conta Corrente → Salvar extrato → Formato OFX / Money 2000+',
+      badge: 'App / Web',
+    },
+    {
+      name: 'Caixa Econômica',
+      step: 'Minha Conta → Extrato por período → Exportar para Money/OFX',
+      badge: 'Internet Banking',
+    },
+    {
+      name: 'Sicredi',
+      step: 'Conta Corrente → Extratos → Exportar → Arquivo OFX',
+      badge: 'App / Web',
+    },
+    {
+      name: 'C6 Bank',
+      step: 'Extrato da Conta → Ícone de compartilhar/exportar → Escolher OFX',
+      badge: 'App C6',
+    },
+  ]
+
   // Resetar ao fechar
   const handleDialogChange = (isOpen: boolean) => {
     if (!isOpen) {
@@ -144,6 +198,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
       setShowIgnoredLines(false)
       setFileWarnings([])
       setIsQuickCatOpen(false)
+      setShowBankGuide(false)
     }
     onOpenChange(isOpen)
   }
@@ -411,7 +466,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                   </DialogTitle>
                   <p className="text-xs text-slate-500">
                     {step === 'upload'
-                      ? 'Formatos aceitos: CSV, OFX e PDF de qualquer banco brasileiro'
+                      ? 'Recomendado: OFX (100% de precisão bancária). Também aceita CSV e PDF.'
                       : `Revisão de lançamentos: ${fileInfo?.name} (${fileInfo?.format})`}
                   </p>
                 </div>
@@ -559,29 +614,101 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                     : 'Ou clique para selecionar um arquivo do seu computador ou celular'}
                 </p>
 
-                {/* Badges de Formato */}
+                {/* Badges de Formato com Destaque para OFX */}
                 <div className="flex items-center justify-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-emerald-600 text-white shadow-sm px-3 py-1 rounded-xl">
+                    <Star className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
+                    <span>OFX (Recomendado • 100% Preciso)</span>
+                  </span>
                   <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1 rounded-lg">
                     <FileSpreadsheet className="w-3.5 h-3.5" />
-                    <span>CSV (Nubank, Inter, Itaú...)</span>
+                    <span>CSV (Alternativa confiável)</span>
                   </span>
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200 px-2.5 py-1 rounded-lg">
                     <FileText className="w-3.5 h-3.5" />
-                    <span>OFX (Padrão Bancário)</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-1 rounded-lg">
-                    <FileText className="w-3.5 h-3.5" />
-                    <span>PDF (Extrato de Conta)</span>
+                    <span>PDF (Melhor esforço)</span>
                   </span>
                 </div>
               </div>
 
-              {/* Informações e Dicas de Bancos */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+              {/* Box Informativo: Por que preferir OFX & Mini-guia expansível */}
+              <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/70 to-teal-50/40 p-3.5 sm:p-4 text-xs space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 mt-0.5">
+                      <Star className="w-4 h-4 text-emerald-700 fill-emerald-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-xs sm:text-sm">
+                        OFX é o formato oficial e recomendado
+                      </h4>
+                      <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                        Ao exportar em <strong>OFX</strong> no seu banco, os dados chegam sem falhas
+                        de layout, com datas e valores exatos. O <strong>CSV</strong> também é uma
+                        ótima alternativa. Já arquivos em <strong>PDF</strong> funcionam por
+                        aproximação visual e podem falhar dependendo da formatação gráfica do banco.
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowBankGuide((prev) => !prev)}
+                    className="h-8 text-xs rounded-xl bg-white/90 border-emerald-300 text-emerald-800 hover:bg-emerald-100/60 shrink-0 font-semibold gap-1"
+                  >
+                    <Building2 className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>{showBankGuide ? 'Ocultar guia' : 'Como exportar nos bancos'}</span>
+                    {showBankGuide ? (
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    )}
+                  </Button>
+                </div>
+
+                {/* Lista de Bancos Expansível */}
+                {showBankGuide && (
+                  <div className="pt-2 border-t border-emerald-200/80">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-800 mb-2">
+                      <Building2 className="w-3.5 h-3.5 text-emerald-700" />
+                      <span>Passo a passo nos principais bancos brasileiros:</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                      {BANK_GUIDES.map((b) => (
+                        <div
+                          key={b.name}
+                          className="p-2.5 rounded-xl bg-white/95 border border-emerald-100 shadow-[0_1px_2px_rgba(0,0,0,0.03)] text-[11px] space-y-1"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-slate-900">{b.name}</span>
+                            <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                              {b.badge}
+                            </span>
+                          </div>
+                          <p className="text-slate-600 leading-snug">{b.step}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <p className="text-[10px] text-slate-500 mt-2 italic">
+                      Dica: No Internet Banking ou no app, procure o botão de
+                      download/compartilhamento no extrato ou fatura e escolha a opção{' '}
+                      <strong>OFX</strong> (às vezes chamada de "Money", "MS Money" ou "Outros
+                      formatos").
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Informações e Recursos de Apoio */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                 <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-800 mb-1">
                     <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                    Categorias Automáticas
+                    <span>Categorias Inteligentes</span>
                   </div>
                   <p className="text-[11px] text-slate-500">
                     O sistema reconhece termos como iFood, Uber, Mercado, Farmácia e Salário
@@ -592,7 +719,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-800 mb-1">
                     <Copy className="w-3.5 h-3.5 text-blue-600" />
-                    Anti-Duplicidade
+                    <span>Anti-Duplicidade</span>
                   </div>
                   <p className="text-[11px] text-slate-500">
                     Transações com mesma data e valor já registradas são identificadas para evitar
@@ -603,11 +730,11 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-800 mb-1">
                     <Info className="w-3.5 h-3.5 text-purple-600" />
-                    Revisão Completa
+                    <span>Revisão Completa</span>
                   </div>
                   <p className="text-[11px] text-slate-500">
-                    Você pode alterar categorias, mudar quem gastou, desmarcar itens ou adicionar
-                    novas categorias antes de salvar.
+                    Você pode alterar categorias, atribuir membros, desmarcar itens ou criar novas
+                    categorias antes de salvar.
                   </p>
                 </div>
               </div>

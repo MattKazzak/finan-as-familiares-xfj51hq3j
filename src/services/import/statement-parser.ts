@@ -133,8 +133,8 @@ export function parseDate(dateStr: string): string | null {
     return `${yStr}-${mStr}-${dStr}`
   }
 
-  // 1. Formato YYYYMMDD (comum em OFX)
-  if (/^\d{8}$/.test(clean)) {
+  // 1. Formato YYYYMMDD ou YYYYMMDDHHMMSS (comum em OFX com ou sem fuso horario)
+  if (/^\d{8}/.test(clean)) {
     const y = parseInt(clean.slice(0, 4), 10)
     const m = parseInt(clean.slice(4, 6), 10)
     const d = parseInt(clean.slice(6, 8), 10)
@@ -780,78 +780,209 @@ export function parseCSV(content: string): ParseResult {
 }
 
 // ==========================================
-// 2. PARSER OFX (Open Financial Exchange - SGML / XML)
+// 2. PARSER OFX (Open Financial Exchange - SGML 1.x / XML 2.x)
 // ==========================================
+
+/**
+ * Decodifica entidades HTML/XML comuns presentes em descrições de arquivos OFX
+ */
+function decodeOFXEntities(text: string): string {
+  if (!text) return ''
+  return text
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&apos;/gi, "'")
+}
+
+/**
+ * Extrai o valor de uma tag OFX dentro de um bloco de transação.
+ * Suporta XML (<TAG>valor</TAG> ou <TAG val="..."/>) e SGML (<TAG>valor\n sem tag de fechamento).
+ */
+function extractOFXTagValue(block: string, tagName: string): string {
+  if (!block || !tagName) return ''
+
+  // 1. Tag fechada clássica XML: <TAG>valor</TAG>
+  const closedRegex = new RegExp(`<${tagName}>([\\s\\S]*?)<\\/${tagName}>`, 'i')
+  const closedMatch = closedRegex.exec(block)
+  if (closedMatch && closedMatch[1] !== undefined) {
+    return decodeOFXEntities(closedMatch[1].trim())
+  }
+
+  // 2. Tag SGML sem fechamento (padrão bancos brasileiros como Inter, Itaú, Nubank):
+  // <TAG>valor seguido por quebra de linha ou pela abertura da próxima tag <
+  const sgmlRegex = new RegExp(`<${tagName}>([^<\\r\\n]+)`, 'i')
+  const sgmlMatch = sgmlRegex.exec(block)
+  if (sgmlMatch && sgmlMatch[1] !== undefined) {
+    return decodeOFXEntities(sgmlMatch[1].trim())
+  }
+
+  return ''
+}
+
+/**
+ * Divide o conteúdo OFX em blocos de transação <STMTTRN>.
+ * Trata tanto XML 2.x (com </STMTTRN>) quanto SGML 1.x (sem </STMTTRN>, onde cada <STMTTRN>
+ * vai até o próximo <STMTTRN> ou tag delimitadora final como </BANKTRANLIST>, </CCSTMTRS>, etc.)
+ */
+function extractOFXTransactionBlocks(content: string): string[] {
+  const blocks: string[] = []
+
+  // Testar se tem </STMTTRN> (XML ou SGML bem comportado)
+  if (/<\/STMTTRN>/i.test(content)) {
+    const xmlRegex = /<STMTTRN>([\s\S]*?)<\/STMTTRN>/gi
+    let match: RegExpExecArray | null
+    while ((match = xmlRegex.exec(content)) !== null) {
+      if (match[1] && match[1].trim()) {
+        blocks.push(match[1])
+      }
+    }
+    if (blocks.length > 0) return blocks
+  }
+
+  // Se não tem </STMTTRN> (SGML padrão bancos BR como Banco Inter, Caixa, BB):
+  // Dividir o texto por <STMTTRN> e processar cada fatia
+  const parts = content.split(/<STMTTRN>/i)
+  // A primeira parte (parts[0]) é o cabeçalho antes do primeiro <STMTTRN>
+  for (let i = 1; i < parts.length; i++) {
+    let part = parts[i]
+    // Cortar se encontrar o fechamento de listas ou tags de fechamento do bloco pai
+    const closingIdx = part.search(
+      /<\/(?:BANKTRANLIST|CCDATA|CCSTMTRS|STMTRS|BANKMSGSRSV1|CREDITCARDMSGSRSV1|OFX)>/i,
+    )
+    if (closingIdx !== -1) {
+      part = part.substring(0, closingIdx)
+    }
+    if (part.trim()) {
+      blocks.push(part)
+    }
+  }
+
+  return blocks
+}
+
 export function parseOFX(content: string): ParseResult {
   const ignoredLines: IgnoredLineInfo[] = []
 
-  if (!content || !/<STMTTRN>/i.test(content)) {
+  if (!content || !content.trim()) {
     return {
       success: false,
       transactions: [],
       format: 'ofx',
-      error: 'O arquivo não possui o bloco de transações padrão <STMTTRN> do formato OFX.',
+      error: 'O arquivo OFX selecionado está vazio.',
       ignoredLines: [],
       ignoredCount: 0,
     }
   }
 
-  const transactions: ParsedRawTransaction[] = []
-  const trnRegex = /<STMTTRN>([\s\S]*?)<\/STMTTRN>/gi
-  let match: RegExpExecArray | null
-  let count = 0
-
-  const getTagValue = (block: string, tag: string): string => {
-    const regex = new RegExp(`<${tag}>([^<\\r\\n]+)`, 'i')
-    const m = regex.exec(block)
-    return m ? m[1].trim() : ''
+  // Diagnóstico amigável e claro caso não pareça um OFX válido
+  if (!/<STMTTRN/i.test(content)) {
+    return {
+      success: false,
+      transactions: [],
+      format: 'ofx',
+      error:
+        'Isto não parece um extrato OFX válido (nenhum bloco de transações <STMTTRN> foi encontrado). Tem certeza de que exportou no formato OFX no seu banco?',
+      ignoredLines: [],
+      ignoredCount: 0,
+    }
   }
 
-  while ((match = trnRegex.exec(content)) !== null) {
+  // Detectar se o arquivo trata de fatura de cartão de crédito (<CCSTMTRS>, <CCDATA>, <CREDITCARDMSGSRSV1>)
+  const isCreditCardOFX =
+    /<CCSTMTRS>/i.test(content) ||
+    /<CREDITCARDMSGSRSV1>/i.test(content) ||
+    /<CCDATA>/i.test(content)
+
+  const rawBlocks = extractOFXTransactionBlocks(content)
+  const transactions: ParsedRawTransaction[] = []
+  let count = 0
+
+  for (const block of rawBlocks) {
     count++
-    const block = match[1]
 
-    const trntype = getTagValue(block, 'TRNTYPE').toUpperCase()
-    const dtposted = getTagValue(block, 'DTPOSTED')
-    const trnamt = getTagValue(block, 'TRNAMT')
-    const memo = getTagValue(block, 'MEMO')
-    const name = getTagValue(block, 'NAME')
+    const trntype = extractOFXTagValue(block, 'TRNTYPE').toUpperCase()
+    const dtpostedRaw = extractOFXTagValue(block, 'DTPOSTED')
+    const trnamtRaw = extractOFXTagValue(block, 'TRNAMT')
+    const memo = extractOFXTagValue(block, 'MEMO')
+    const name = extractOFXTagValue(block, 'NAME')
 
-    const date = parseDate(dtposted)
+    // Data: DTPOSTED pode vir no formato YYYYMMDD, YYYYMMDDHHMMSS ou com fuso horario
+    const date = parseDate(dtpostedRaw)
     if (!date) {
       ignoredLines.push({
         lineNumber: count,
-        text: block.slice(0, 100),
-        reason: 'Data DTPOSTED inválida',
+        text: block.replace(/\s+/g, ' ').trim().slice(0, 100),
+        reason: dtpostedRaw ? `Data DTPOSTED inválida (${dtpostedRaw})` : 'Transação sem DTPOSTED',
       })
       continue
     }
 
-    const description = memo || name || ''
+    // Descrição: preferir MEMO, depois NAME. Se ambos existirem e forem diferentes, usar o mais detalhado
+    let description = memo || name || ''
+    if (memo && name && memo !== name) {
+      // Se MEMO é mais longo/rico que NAME (ou vice-versa)
+      description = memo.length >= name.length ? memo : name
+    }
+
+    // Limpar descrição de espaços excessivos e aspas
+    description = description.replace(/^["']|["']$/g, '').trim()
+
     if (!isValidDescription(description)) {
       ignoredLines.push({
         lineNumber: count,
-        text: block.slice(0, 100),
-        reason: 'Descrição MEMO/NAME inválida ou vazia',
+        text: block.replace(/\s+/g, ' ').trim().slice(0, 100),
+        reason: description
+          ? `Descrição MEMO/NAME inválida (${description.slice(0, 30)})`
+          : 'Transação sem descrição (MEMO/NAME vazios)',
       })
       continue
     }
 
-    const parsedAmt = parseAmount(trnamt)
+    // Valor: TRNAMT pode vir com ponto (-250.00), com vírgula (-250,00) ou formato brasileiro (1.234,56)
+    const parsedAmt = parseAmount(trnamtRaw)
     if (!parsedAmt || parsedAmt.amountCents <= 0) {
       ignoredLines.push({
         lineNumber: count,
-        text: block.slice(0, 100),
-        reason: 'Valor TRNAMT inválido ou zero',
+        text: block.replace(/\s+/g, ' ').trim().slice(0, 100),
+        reason: trnamtRaw ? `Valor TRNAMT inválido (${trnamtRaw})` : 'Transação sem valor TRNAMT',
       })
       continue
     }
 
+    // Resolução do tipo (income vs expense)
     let finalType: TransactionType = parsedAmt.type
-    if (trntype === 'CREDIT' || trntype === 'DEP') {
-      finalType = 'income'
-    } else if (trntype === 'DEBIT' || trntype === 'PAYMENT' || trntype === 'FEE') {
-      finalType = 'expense'
+
+    if (isCreditCardOFX) {
+      // Em faturas de cartão de crédito (CCSTMTRS), a imensa maioria dos lançamentos são despesas
+      // Exceções: estornos, cashback, pagamentos recebidos
+      finalType = resolveCreditCardTransactionType(parsedAmt.type, description)
+    } else {
+      // Em conta corrente (STMTTRS):
+      // TRNTYPE dá pistas fortes:
+      if (
+        trntype === 'CREDIT' ||
+        trntype === 'DEP' ||
+        trntype === 'INT' ||
+        trntype === 'DIV' ||
+        trntype === 'DIRECTDEP'
+      ) {
+        finalType = 'income'
+      } else if (
+        trntype === 'DEBIT' ||
+        trntype === 'PAYMENT' ||
+        trntype === 'FEE' ||
+        trntype === 'SRVCHG' ||
+        trntype === 'POS' ||
+        trntype === 'ATM' ||
+        trntype === 'CHECK'
+      ) {
+        finalType = 'expense'
+      } else {
+        // Se TRNTYPE for OTHER ou não mapeado, respeita o sinal numérico do TRNAMT
+        finalType = parsedAmt.type
+      }
     }
 
     transactions.push({
@@ -874,7 +1005,8 @@ export function parseOFX(content: string): ParseResult {
       success: false,
       transactions: [],
       format: 'ofx',
-      error: 'Não encontramos lançamentos válidos neste arquivo OFX.',
+      error:
+        'Não encontramos lançamentos válidos neste arquivo OFX. Verifique se o extrato possui transações no período selecionado.',
       ignoredLines,
       ignoredCount: ignoredLines.length,
       warnings,

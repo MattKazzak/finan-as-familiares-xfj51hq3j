@@ -290,7 +290,7 @@ Apenas texto sem numeros de transacoes
   })
 
   describe('parseOFX', () => {
-    it('faz o parsing de blocos <STMTTRN> padrão bancário', () => {
+    it('faz o parsing de blocos <STMTTRN> padrão bancário com fechamento XML', () => {
       const ofxContent = `
 OFXHEADER:100
 <OFX>
@@ -322,6 +322,160 @@ OFXHEADER:100
       expect(result.transactions[1].description).toBe('Salario Posto Vereda')
       expect(result.transactions[1].amount_cents).toBe(348848)
       expect(result.transactions[1].type).toBe('income')
+    })
+
+    it('faz o parsing de OFX SGML 1.x real do Banco Inter (sem tags de fechamento </STMTTRN>, </DTPOSTED>, etc.)', () => {
+      // Formato típico de exportação de extrato SGML do Banco Inter:
+      const interOfxSGML = `OFXHEADER:100
+DATA:OFXSGML
+VERSION:102
+SECURITY:NONE
+ENCODING:USASCII
+CHARSET:1252
+COMPRESSION:NONE
+OLDFILESPEC:NONE
+NEWFILESPEC:NONE
+
+<OFX>
+<SIGNONMSGSRSV1>
+<SONRS>
+<STATUS>
+<CODE>0
+<SEVERITY>INFO
+</STATUS>
+<DTSERVER>20260315120000
+<LANGUAGE>POR
+</SONRS>
+</SIGNONMSGSRSV1>
+<BANKMSGSRSV1>
+<STMTTRNRS>
+<TRNUID>1
+<STATUS>
+<CODE>0
+<SEVERITY>INFO
+</STATUS>
+<STMTRS>
+<CURDEF>BRL
+<BANKACCTFROM>
+<BANKID>077
+<ACCTID>1234567-8
+<ACCTTYPE>CHECKING
+</BANKACCTFROM>
+<BANKTRANLIST>
+<DTSTART>20260301
+<DTEND>20260315
+<STMTTRN>
+<TRNTYPE>DEBIT
+<DTPOSTED>20260310100000[-03:EST]
+<TRNAMT>-189.90
+<FITID>20260310001
+<MEMO>PIX ENVIADO MERCADO LIVRE
+<STMTTRN>
+<TRNTYPE>CREDIT
+<DTPOSTED>20260312
+<TRNAMT>350.00
+<FITID>20260312002
+<MEMO>PIX RECEBIDO JOAO SILVA
+<STMTTRN>
+<TRNTYPE>DEBIT
+<DTPOSTED>20260314143000
+<TRNAMT>-210.40
+<FITID>20260314003
+<NAME>PAGAMENTO CONTA ENERGIA
+</BANKTRANLIST>
+<LEDGERBAL>
+<BALAMT>1340.10
+<DTASOF>20260315
+</LEDGERBAL>
+</STMTRS>
+</STMTTRNRS>
+</BANKMSGSRSV1>
+</OFX>`
+
+      const result = parseOFX(interOfxSGML)
+      expect(result.success).toBe(true)
+      expect(result.transactions.length).toBe(3)
+
+      expect(result.transactions[0].description).toBe('PIX ENVIADO MERCADO LIVRE')
+      expect(result.transactions[0].amount_cents).toBe(18990)
+      expect(result.transactions[0].type).toBe('expense')
+      expect(result.transactions[0].date).toBe('2026-03-10')
+
+      expect(result.transactions[1].description).toBe('PIX RECEBIDO JOAO SILVA')
+      expect(result.transactions[1].amount_cents).toBe(35000)
+      expect(result.transactions[1].type).toBe('income')
+      expect(result.transactions[1].date).toBe('2026-03-12')
+
+      expect(result.transactions[2].description).toBe('PAGAMENTO CONTA ENERGIA')
+      expect(result.transactions[2].amount_cents).toBe(21040)
+      expect(result.transactions[2].type).toBe('expense')
+      expect(result.transactions[2].date).toBe('2026-03-14')
+    })
+
+    it('faz parsing de fatura de cartão de crédito em OFX (<CCSTMTRS>) com valores com vírgula e estorno', () => {
+      const creditCardOfx = `OFXHEADER:100
+DATA:OFXSGML
+<OFX>
+<CREDITCARDMSGSRSV1>
+<CCSTMTTRNRS>
+<CCSTMTRS>
+<CURDEF>BRL
+<CCACCTFROM>
+<ACCTID>**** **** **** 1234
+</CCACCTFROM>
+<BANKTRANLIST>
+<STMTTRN>
+<TRNTYPE>DEBIT
+<DTPOSTED>20260305120000
+<TRNAMT>-1.234,56
+<MEMO>Compra Supermercado Pão de Açúcar
+<STMTTRN>
+<TRNTYPE>DEBIT
+<DTPOSTED>20260307120000
+<TRNAMT>-89,90
+<MEMO>Restaurante Italiano
+<STMTTRN>
+<TRNTYPE>CREDIT
+<DTPOSTED>20260308120000
+<TRNAMT>50,00
+<MEMO>ESTORNO COMPRA CANCELADA
+</BANKTRANLIST>
+</CCSTMTRS>
+</CCSTMTTRNRS>
+</CREDITCARDMSGSRSV1>
+</OFX>`
+
+      const result = parseOFX(creditCardOfx)
+      expect(result.success).toBe(true)
+      expect(result.transactions.length).toBe(3)
+
+      // 1. Compra de R$ 1.234,56 classificada como despesa
+      expect(result.transactions[0].description).toBe('Compra Supermercado Pão de Açúcar')
+      expect(result.transactions[0].amount_cents).toBe(123456)
+      expect(result.transactions[0].type).toBe('expense')
+
+      // 2. Restaurante R$ 89,90 classificado como despesa
+      expect(result.transactions[1].description).toBe('Restaurante Italiano')
+      expect(result.transactions[1].amount_cents).toBe(8990)
+      expect(result.transactions[1].type).toBe('expense')
+
+      // 3. Estorno classificado como income
+      expect(result.transactions[2].description).toBe('ESTORNO COMPRA CANCELADA')
+      expect(result.transactions[2].amount_cents).toBe(5000)
+      expect(result.transactions[2].type).toBe('income')
+    })
+
+    it('retorna mensagem de diagnóstico clara para arquivo sem transações ou que não é OFX', () => {
+      const notAnOfx = `Isto e um arquivo de texto qualquer que nao contem tags financeiras.`
+      const result = parseOFX(notAnOfx)
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Isto não parece um extrato OFX válido')
+      expect(result.error).toContain('<STMTTRN>')
+
+      const emptyOfx = `   `
+      const emptyResult = parseOFX(emptyOfx)
+      expect(emptyResult.success).toBe(false)
+      expect(emptyResult.error).toContain('O arquivo OFX selecionado está vazio')
     })
   })
 
