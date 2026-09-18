@@ -1021,7 +1021,7 @@ export default function WalletPage() {
                       </div>
 
                       {/* Linhas Aninhadas: Subcategorias com Recuo e Visual Suave */}
-                      {Boolean(hasSubcats && isExpanded) ? (
+                      {hasSubcats && isExpanded ? (
                         <div
                           key={`budget-subcats-${item.category.id}`}
                           className="bg-slate-50/60 border-t border-slate-100 divide-y divide-slate-100/80 pl-4 sm:pl-7 pr-3 py-1"
@@ -1061,9 +1061,11 @@ export default function WalletPage() {
                                     <span>{formatBRL(subItem.spentCents)}</span>
                                     <span>de</span>
                                     <span>
-                                      {subItem.limitCents > 0
-                                        ? <span>{formatBRL(subItem.limitCents)}</span>
-                                        : <span>Não definido</span>}
+                                      {subItem.limitCents > 0 ? (
+                                        <span>{formatBRL(subItem.limitCents)}</span>
+                                      ) : (
+                                        <span>Não definido</span>
+                                      )}
                                     </span>
                                   </p>
                                 </div>
@@ -1479,7 +1481,11 @@ export default function WalletPage() {
                   >
                     <span className="flex items-center gap-2">
                       {savingBudget ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                      <span>{isEditingOnlyThisMonth ? 'Salvar Ajuste do Mês' : 'Salvar Orçamento Padrão'}</span>
+                      <span>
+                        {isEditingOnlyThisMonth
+                          ? 'Salvar Ajuste do Mês'
+                          : 'Salvar Orçamento Padrão'}
+                      </span>
                     </span>
                   </Button>
                 </DialogFooter>
