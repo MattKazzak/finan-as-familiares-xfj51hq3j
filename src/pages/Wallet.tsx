@@ -19,7 +19,6 @@ import {
 import { CategoryIcon } from '@/components/common/CategoryIcon'
 import { TransactionDetailDialog } from '@/components/transactions/TransactionDetailDialog'
 import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
-import { ImportStatementDialog } from '@/components/transactions/ImportStatementDialog'
 import { useToast } from '@/hooks/use-toast'
 import type {
   Transaction,
@@ -78,6 +77,7 @@ export default function WalletPage() {
     refreshTrigger,
     triggerRefresh,
     openNewTransaction,
+    openImportStatement,
   } = useFamily()
   const { toast } = useToast()
 
@@ -111,7 +111,6 @@ export default function WalletPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [editingTx, setEditingTx] = useState<Transaction | null>(null)
   const [isEditTxOpen, setIsEditTxOpen] = useState(false)
-  const [isImportOpen, setIsImportOpen] = useState(false)
   const [txToDelete, setTxToDelete] = useState<Transaction | null>(null)
 
   // Ações de orçamento
@@ -577,7 +576,7 @@ export default function WalletPage() {
           {/* Seletor de Mês Compartilhado & Botão de Importação Proeminente */}
           <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
             <Button
-              onClick={() => setIsImportOpen(true)}
+              onClick={openImportStatement}
               variant="outline"
               size="sm"
               className="rounded-2xl border-emerald-600/30 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 hover:border-emerald-600 font-bold text-xs gap-1.5 shadow-sm transition-all"
@@ -708,7 +707,7 @@ export default function WalletPage() {
                 </p>
                 <div className="flex items-center justify-center gap-2 flex-wrap">
                   <Button
-                    onClick={() => setIsImportOpen(true)}
+                    onClick={openImportStatement}
                     variant="outline"
                     className="border-emerald-600 text-emerald-800 hover:bg-emerald-50 text-xs rounded-xl"
                   >
@@ -969,7 +968,8 @@ export default function WalletPage() {
                             </div>
 
                             <p className="text-xs text-slate-500 tabular-nums mt-0.5">
-                              {formatBRL(item.spentCents)} de{' '}
+                              <span>{formatBRL(item.spentCents)}</span>
+                              <span> de </span>
                               <span className="font-medium text-slate-700">
                                 {item.limitCents > 0 ? formatBRL(item.limitCents) : 'Sem teto'}
                               </span>
@@ -1037,7 +1037,10 @@ export default function WalletPage() {
 
                       {/* Linhas Aninhadas: Subcategorias com Recuo e Visual Suave */}
                       {hasSubcats && isExpanded && (
-                        <div className="bg-slate-50/60 border-t border-slate-100 divide-y divide-slate-100/80 pl-4 sm:pl-7 pr-3 py-1">
+                        <div
+                          key={`subcats-${item.category.id}`}
+                          className="bg-slate-50/60 border-t border-slate-100 divide-y divide-slate-100/80 pl-4 sm:pl-7 pr-3 py-1"
+                        >
                           {item.subcategories.map((subItem) => (
                             <div
                               key={subItem.subcategory.id}
@@ -1070,10 +1073,13 @@ export default function WalletPage() {
                                     )}
                                   </div>
                                   <p className="text-[11px] text-slate-400 tabular-nums">
-                                    {formatBRL(subItem.spentCents)} de{' '}
-                                    {subItem.limitCents > 0
-                                      ? formatBRL(subItem.limitCents)
-                                      : 'Não definido'}
+                                    <span>{formatBRL(subItem.spentCents)}</span>
+                                    <span> de </span>
+                                    <span>
+                                      {subItem.limitCents > 0
+                                        ? formatBRL(subItem.limitCents)
+                                        : 'Não definido'}
+                                    </span>
                                   </p>
                                 </div>
                               </div>
@@ -1510,14 +1516,11 @@ export default function WalletPage() {
       {/* DIÁLOGO DE EDIÇÃO DE TRANSAÇÃO */}
       <NewTransactionDialog
         open={isEditTxOpen}
-        onOpenChange={setIsEditTxOpen}
+        onOpenChange={(open) => {
+          setIsEditTxOpen(open)
+          if (!open) setEditingTx(null)
+        }}
         editingTransaction={editingTx}
-      />
-
-      {/* DIÁLOGO DE IMPORTAÇÃO DE EXTRATO BANCÁRIO (CSV, OFX, PDF) */}
-      <ImportStatementDialog
-        open={isImportOpen}
-        onOpenChange={setIsImportOpen}
         onSuccess={() => loadMonthData()}
       />
 

@@ -17,6 +17,7 @@ export type Database = {
           family_id: string
           id: string
           month: string
+          subcategory_id: string | null
         }
         Insert: {
           amount_cents: number
@@ -25,6 +26,7 @@ export type Database = {
           family_id: string
           id?: string
           month: string
+          subcategory_id?: string | null
         }
         Update: {
           amount_cents?: number
@@ -33,6 +35,7 @@ export type Database = {
           family_id?: string
           id?: string
           month?: string
+          subcategory_id?: string | null
         }
         Relationships: [
           {
@@ -47,6 +50,62 @@ export type Database = {
             columns: ['family_id']
             isOneToOne: false
             referencedRelation: 'families'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'budgets_subcategory_id_fkey'
+            columns: ['subcategory_id']
+            isOneToOne: false
+            referencedRelation: 'transaction_subcategories'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      default_budgets: {
+        Row: {
+          amount_cents: number
+          category_id: string
+          created_at: string
+          family_id: string
+          id: string
+          subcategory_id: string | null
+        }
+        Insert: {
+          amount_cents: number
+          category_id: string
+          created_at?: string
+          family_id: string
+          id?: string
+          subcategory_id?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          category_id?: string
+          created_at?: string
+          family_id?: string
+          id?: string
+          subcategory_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'default_budgets_category_id_fkey'
+            columns: ['category_id']
+            isOneToOne: false
+            referencedRelation: 'transaction_categories'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'default_budgets_family_id_fkey'
+            columns: ['family_id']
+            isOneToOne: false
+            referencedRelation: 'families'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'default_budgets_subcategory_id_fkey'
+            columns: ['subcategory_id']
+            isOneToOne: false
+            referencedRelation: 'transaction_subcategories'
             referencedColumns: ['id']
           },
         ]
@@ -234,6 +293,54 @@ export type Database = {
           },
         ]
       }
+      transaction_subcategories: {
+        Row: {
+          category_id: string
+          color: string | null
+          created_at: string
+          family_id: string | null
+          icon: string | null
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          category_id: string
+          color?: string | null
+          created_at?: string
+          family_id?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          category_id?: string
+          color?: string | null
+          created_at?: string
+          family_id?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'transaction_subcategories_category_id_fkey'
+            columns: ['category_id']
+            isOneToOne: false
+            referencedRelation: 'transaction_categories'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'transaction_subcategories_family_id_fkey'
+            columns: ['family_id']
+            isOneToOne: false
+            referencedRelation: 'families'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       transactions: {
         Row: {
           amount_cents: number
@@ -243,6 +350,7 @@ export type Database = {
           family_id: string
           id: string
           member_id: string
+          subcategory_id: string | null
           transaction_date: string
           type: Database['public']['Enums']['transaction_type']
         }
@@ -254,6 +362,7 @@ export type Database = {
           family_id: string
           id?: string
           member_id: string
+          subcategory_id?: string | null
           transaction_date?: string
           type: Database['public']['Enums']['transaction_type']
         }
@@ -265,6 +374,7 @@ export type Database = {
           family_id?: string
           id?: string
           member_id?: string
+          subcategory_id?: string | null
           transaction_date?: string
           type?: Database['public']['Enums']['transaction_type']
         }
@@ -288,6 +398,13 @@ export type Database = {
             columns: ['member_id']
             isOneToOne: false
             referencedRelation: 'family_members'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'transactions_subcategory_id_fkey'
+            columns: ['subcategory_id']
+            isOneToOne: false
+            referencedRelation: 'transaction_subcategories'
             referencedColumns: ['id']
           },
         ]
