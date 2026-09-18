@@ -1,11 +1,12 @@
 // Serviço de Transações e Orçamentos
 import { supabase } from '@/lib/supabase/client'
-import type { Transaction, Budget } from '@/types/finance'
+import type { Transaction, Budget, DefaultBudget } from '@/types/finance'
 
 export interface TransactionFilter {
   familyId: string
   memberId?: string | null
   categoryId?: string | null
+  subcategoryId?: string | null
   type?: 'income' | 'expense' | null
   month?: string // YYYY-MM
   limit?: number
@@ -17,7 +18,8 @@ export async function fetchTransactions(filter: TransactionFilter) {
     .select(`
       *,
       member:family_members(*),
-      category:transaction_categories(*)
+      category:transaction_categories(*),
+      subcategory:transaction_subcategories(*)
     `)
     .eq('family_id', filter.familyId)
     .order('transaction_date', { ascending: false })
@@ -29,6 +31,10 @@ export async function fetchTransactions(filter: TransactionFilter) {
 
   if (filter.categoryId) {
     query = query.eq('category_id', filter.categoryId)
+  }
+
+  if (filter.subcategoryId) {
+    query = query.eq('subcategory_id', filter.subcategoryId)
   }
 
   if (filter.type) {
@@ -56,6 +62,7 @@ export async function createTransaction(payload: {
   family_id: string
   member_id: string
   category_id?: string | null
+  subcategory_id?: string | null
   type: 'income' | 'expense'
   amount_cents: number
   description: string
@@ -67,7 +74,8 @@ export async function createTransaction(payload: {
     .select(`
       *,
       member:family_members(*),
-      category:transaction_categories(*)
+      category:transaction_categories(*),
+      subcategory:transaction_subcategories(*)
     `)
     .single()
 
@@ -80,6 +88,7 @@ export async function createTransactionsBatch(
     family_id: string
     member_id: string
     category_id?: string | null
+    subcategory_id?: string | null
     type: 'income' | 'expense'
     amount_cents: number
     description: string
@@ -90,7 +99,8 @@ export async function createTransactionsBatch(
   const { data, error } = await (supabase as any).from('transactions').insert(payloads).select(`
       *,
       member:family_members(*),
-      category:transaction_categories(*)
+      category:transaction_categories(*),
+      subcategory:transaction_subcategories(*)
     `)
 
   if (error) throw error
@@ -102,6 +112,7 @@ export async function updateTransaction(
   payload: Partial<{
     member_id: string
     category_id: string | null
+    subcategory_id: string | null
     type: 'income' | 'expense'
     amount_cents: number
     description: string
@@ -115,7 +126,8 @@ export async function updateTransaction(
     .select(`
       *,
       member:family_members(*),
-      category:transaction_categories(*)
+      category:transaction_categories(*),
+      subcategory:transaction_subcategories(*)
     `)
     .single()
 
@@ -130,13 +142,31 @@ export async function deleteTransaction(id: string) {
 }
 
 // Orçamentos
-export async function fetchBudgets(familyId: string, monthStr: string) {
+
+// 1. Buscar Orçamentos Padrão Recorrentes (válidos para todos os meses)
+export async function fetchDefaultBudgets(familyId: string) {
+  const { data, error } = await (supabase as any)
+    .from('default_budgets')
+    .select(`
+      *,
+      category:transaction_categories(*),
+      subcategory:transaction_subcategories(*)
+    `)
+    .eq('family_id', familyId)
+
+  if (error) throw error
+  return (data || []) as DefaultBudget[]
+}
+
+// 2. Buscar Ajustes/Overrides de um mês específico
+export async function fetchMonthBudgetOverrides(familyId: string, monthStr: string) {
   const monthDate = `${monthStr}-01`
   const { data, error } = await (supabase as any)
     .from('budgets')
     .select(`
       *,
-      category:transaction_categories(*)
+      category:transaction_categories(*),
+      subcategory:transaction_subcategories(*)
     `)
     .eq('family_id', familyId)
     .eq('month', monthDate)
@@ -145,36 +175,167 @@ export async function fetchBudgets(familyId: string, monthStr: string) {
   return (data || []) as Budget[]
 }
 
+// 3. Salvar ou atualizar Orçamento Padrão Recorrente (aplica-se a todos os meses)
+export async function upsertDefaultBudget(
+  familyId: string,
+  categoryId: string,
+  amountCents: number,
+  subcategoryId?: string | null,
+) {
+  // Como subcategory_id pode ser null, primeiro verificamos se já existe registro
+  let query = (supabase as any)
+    .from('default_budgets')
+    .select('id')
+    .eq('family_id', familyId)
+    .eq('category_id', categoryId)
+
+  if (subcategoryId) {
+    query = query.eq('subcategory_id', subcategoryId)
+  } else {
+    query = query.is('subcategory_id', null)
+  }
+
+  const { data: existing } = await query.maybeSingle()
+
+  if (existing?.id) {
+    const { data, error } = await (supabase as any)
+      .from('default_budgets')
+      .update({ amount_cents: amountCents })
+      .eq('id', existing.id)
+      .select(`
+        *,
+        category:transaction_categories(*),
+        subcategory:transaction_subcategories(*)
+      `)
+      .single()
+    if (error) throw error
+    return data as DefaultBudget
+  } else {
+    const { data, error } = await (supabase as any)
+      .from('default_budgets')
+      .insert({
+        family_id: familyId,
+        category_id: categoryId,
+        subcategory_id: subcategoryId || null,
+        amount_cents: amountCents,
+      })
+      .select(`
+        *,
+        category:transaction_categories(*),
+        subcategory:transaction_subcategories(*)
+      `)
+      .single()
+    if (error) throw error
+    return data as DefaultBudget
+  }
+}
+
+// 4. Salvar ou atualizar Ajuste Pontual de um Mês Específico (Override)
+export async function upsertMonthBudgetOverride(
+  familyId: string,
+  categoryId: string,
+  monthStr: string,
+  amountCents: number,
+  subcategoryId?: string | null,
+) {
+  const monthDate = `${monthStr}-01`
+  let query = (supabase as any)
+    .from('budgets')
+    .select('id')
+    .eq('family_id', familyId)
+    .eq('category_id', categoryId)
+    .eq('month', monthDate)
+
+  if (subcategoryId) {
+    query = query.eq('subcategory_id', subcategoryId)
+  } else {
+    query = query.is('subcategory_id', null)
+  }
+
+  const { data: existing } = await query.maybeSingle()
+
+  if (existing?.id) {
+    const { data, error } = await (supabase as any)
+      .from('budgets')
+      .update({ amount_cents: amountCents })
+      .eq('id', existing.id)
+      .select(`
+        *,
+        category:transaction_categories(*),
+        subcategory:transaction_subcategories(*)
+      `)
+      .single()
+    if (error) throw error
+    return data as Budget
+  } else {
+    const { data, error } = await (supabase as any)
+      .from('budgets')
+      .insert({
+        family_id: familyId,
+        category_id: categoryId,
+        subcategory_id: subcategoryId || null,
+        month: monthDate,
+        amount_cents: amountCents,
+      })
+      .select(`
+        *,
+        category:transaction_categories(*),
+        subcategory:transaction_subcategories(*)
+      `)
+      .single()
+    if (error) throw error
+    return data as Budget
+  }
+}
+
+// 5. Remover ajuste pontual (voltar ao padrão do mês)
+export async function resetMonthBudgetToDefault(
+  familyId: string,
+  categoryId: string,
+  monthStr: string,
+  subcategoryId?: string | null,
+) {
+  const monthDate = `${monthStr}-01`
+  let query = (supabase as any)
+    .from('budgets')
+    .delete()
+    .eq('family_id', familyId)
+    .eq('category_id', categoryId)
+    .eq('month', monthDate)
+
+  if (subcategoryId) {
+    query = query.eq('subcategory_id', subcategoryId)
+  } else {
+    query = query.is('subcategory_id', null)
+  }
+
+  const { error } = await query
+  if (error) throw error
+}
+
+// 6. Remover completamente o orçamento padrão recorrente
+export async function deleteDefaultBudget(id: string) {
+  const { error } = await (supabase as any).from('default_budgets').delete().eq('id', id)
+
+  if (error) throw error
+}
+
+// Compatibilidade legada mantida para evitar quebras
+export async function fetchBudgets(familyId: string, monthStr: string) {
+  return fetchMonthBudgetOverrides(familyId, monthStr)
+}
+
 export async function upsertBudget(
   familyId: string,
   categoryId: string,
   monthStr: string,
   amountCents: number,
+  subcategoryId?: string | null,
 ) {
-  const monthDate = `${monthStr}-01`
-  const { data, error } = await (supabase as any)
-    .from('budgets')
-    .upsert(
-      {
-        family_id: familyId,
-        category_id: categoryId,
-        month: monthDate,
-        amount_cents: amountCents,
-      },
-      { onConflict: 'family_id,category_id,month' },
-    )
-    .select(`
-      *,
-      category:transaction_categories(*)
-    `)
-    .single()
-
-  if (error) throw error
-  return data as Budget
+  return upsertMonthBudgetOverride(familyId, categoryId, monthStr, amountCents, subcategoryId)
 }
 
 export async function deleteBudget(id: string) {
   const { error } = await (supabase as any).from('budgets').delete().eq('id', id)
-
   if (error) throw error
 }

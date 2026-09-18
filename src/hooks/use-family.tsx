@@ -1,5 +1,10 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react'
-import type { Family, FamilyMember, TransactionCategory } from '@/types/finance'
+import type {
+  Family,
+  FamilyMember,
+  TransactionCategory,
+  TransactionSubcategory,
+} from '@/types/finance'
 import {
   fetchFamilyData,
   addFamilyMember,
@@ -7,6 +12,8 @@ import {
   deleteFamilyMember,
   addCategory,
   deleteCategory,
+  addSubcategory,
+  deleteSubcategory,
   updateFamilyDetails,
   uploadFamilyAvatarFile,
 } from '@/services/family'
@@ -39,6 +46,13 @@ interface FamilyContextType {
     icon?: string,
   ) => Promise<TransactionCategory>
   removeCategory: (id: string) => Promise<void>
+  addNewSubcategory: (
+    categoryId: string,
+    name: string,
+    icon?: string,
+    color?: string,
+  ) => Promise<TransactionSubcategory>
+  removeSubcategory: (id: string) => Promise<void>
   isNewTransactionOpen: boolean
   setIsNewTransactionOpen: (open: boolean) => void
   newTransactionDefaultType: 'income' | 'expense'
@@ -200,6 +214,40 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: 'Sucesso', description: 'Categoria removida.' })
   }
 
+  const addNewSubcategory = async (
+    categoryId: string,
+    name: string,
+    icon?: string,
+    color?: string,
+  ) => {
+    if (!family) throw new Error('Família não carregada')
+    const created = await addSubcategory(categoryId, family.id, name, icon, color)
+    setCategories((prev) =>
+      prev.map((c) => {
+        if (c.id === categoryId) {
+          return {
+            ...c,
+            subcategories: [...(c.subcategories || []), created],
+          }
+        }
+        return c
+      }),
+    )
+    toast({ title: 'Sucesso', description: `Subcategoria "${name}" criada.` })
+    return created
+  }
+
+  const removeSubcategory = async (id: string) => {
+    await deleteSubcategory(id)
+    setCategories((prev) =>
+      prev.map((c) => ({
+        ...c,
+        subcategories: (c.subcategories || []).filter((s) => s.id !== id),
+      })),
+    )
+    toast({ title: 'Sucesso', description: 'Subcategoria removida.' })
+  }
+
   const openNewTransaction = (type: 'income' | 'expense' = 'expense') => {
     setNewTransactionDefaultType(type)
     setIsNewTransactionOpen(true)
@@ -241,6 +289,8 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         removeMember,
         addNewCategory,
         removeCategory,
+        addNewSubcategory,
+        removeSubcategory,
         isNewTransactionOpen,
         setIsNewTransactionOpen,
         newTransactionDefaultType,

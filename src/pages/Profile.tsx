@@ -81,6 +81,8 @@ export default function ProfilePage() {
     uploadFamilyAvatar,
     addNewCategory,
     removeCategory,
+    addNewSubcategory,
+    removeSubcategory,
     triggerRefresh,
   } = useFamily()
   const { toast } = useToast()
@@ -107,6 +109,11 @@ export default function ProfilePage() {
   const [newCatColor, setNewCatColor] = useState('#3B82F6')
   const [newCatIcon, setNewCatIcon] = useState('Tag')
   const [savingCat, setSavingCat] = useState(false)
+
+  // Subcategorias no Profile
+  const [expandedCatForSub, setExpandedCatForSub] = useState<string | null>(null)
+  const [newSubName, setNewSubName] = useState('')
+  const [savingSub, setSavingSub] = useState(false)
 
   const openEditFamilyDialog = () => {
     setFamilyNameInput(family?.name || '')
@@ -238,6 +245,25 @@ export default function ProfilePage() {
       })
     } finally {
       setSavingCat(false)
+    }
+  }
+
+  const handleAddSubcategory = async (e: React.FormEvent, categoryId: string) => {
+    e.preventDefault()
+    if (!newSubName.trim()) return
+    try {
+      setSavingSub(true)
+      await addNewSubcategory(categoryId, newSubName.trim())
+      setNewSubName('')
+      triggerRefresh()
+    } catch {
+      toast({
+        title: 'Erro ao criar subcategoria',
+        description: 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSavingSub(false)
     }
   }
 
@@ -478,36 +504,110 @@ export default function ProfilePage() {
 
         {isCategoriesExpanded && (
           <div className="p-5 sm:p-6 pt-0 border-t border-slate-100 space-y-4">
-            {/* Lista Atual de Categorias */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-1">
+            {/* Lista Atual de Categorias com Subcategorias */}
+            <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
               {categories.map((cat) => (
                 <div
                   key={cat.id}
-                  className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50/60"
+                  className="p-3 rounded-2xl border border-slate-200/80 bg-slate-50/50 space-y-2"
                 >
-                  <div className="flex items-center gap-2 overflow-hidden">
-                    <div
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-white shrink-0"
-                      style={{ backgroundColor: cat.color || '#64748B' }}
-                    >
-                      <CategoryIcon name={cat.icon} className="w-3.5 h-3.5" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5 overflow-hidden">
+                      <div
+                        className="w-8 h-8 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs"
+                        style={{ backgroundColor: cat.color || '#64748B' }}
+                      >
+                        <CategoryIcon name={cat.icon} className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-slate-800">{cat.name}</span>
+                        <span className="text-[10px] text-slate-400 ml-1.5">
+                          ({cat.type === 'income' ? 'Receita' : 'Despesa'})
+                        </span>
+                        {cat.subcategories && cat.subcategories.length > 0 && (
+                          <span className="text-[10px] bg-slate-200/70 text-slate-600 px-1.5 py-0.5 rounded-full ml-1.5">
+                            {cat.subcategories.length} subcategorias
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-xs font-semibold text-slate-800 truncate">
-                      {cat.name}
-                    </span>
-                    <span className="text-[9px] text-slate-400">
-                      ({cat.type === 'income' ? 'R' : 'D'})
-                    </span>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedCatForSub(expandedCatForSub === cat.id ? null : cat.id)
+                        }
+                        className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 px-2 py-1 rounded-lg hover:bg-emerald-50 transition-colors"
+                      >
+                        {expandedCatForSub === cat.id ? 'Fechar' : '+ Subcategorias'}
+                      </button>
+                      {cat.family_id && (
+                        <button
+                          type="button"
+                          onClick={() => removeCategory(cat.id)}
+                          className="text-slate-400 hover:text-red-500 p-1.5 transition-colors"
+                          title="Excluir categoria"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
-                  {cat.family_id && (
-                    <button
-                      onClick={() => removeCategory(cat.id)}
-                      className="text-slate-400 hover:text-red-500 p-1 transition-colors"
-                      title="Excluir categoria"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                  {/* Subcategorias aninhadas */}
+                  {expandedCatForSub === cat.id && (
+                    <div className="mt-2 pl-4 border-l-2 border-emerald-500/30 space-y-2 pt-1 animate-in fade-in-50">
+                      <div className="flex flex-wrap gap-1.5">
+                        {(!cat.subcategories || cat.subcategories.length === 0) && (
+                          <p className="text-[11px] text-slate-400 py-1">
+                            Nenhuma subcategoria cadastrada ainda.
+                          </p>
+                        )}
+                        {cat.subcategories?.map((sub) => (
+                          <div
+                            key={sub.id}
+                            className="inline-flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1 rounded-xl text-xs text-slate-700 shadow-2xs"
+                          >
+                            <span>{sub.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeSubcategory(sub.id)}
+                              className="text-slate-400 hover:text-red-600 transition-colors ml-0.5"
+                              title="Remover subcategoria"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Formulário para adicionar subcategoria */}
+                      <form
+                        onSubmit={(e) => handleAddSubcategory(e, cat.id)}
+                        className="flex items-center gap-2 pt-1"
+                      >
+                        <Input
+                          type="text"
+                          placeholder={`Nova subcategoria em ${cat.name}...`}
+                          value={newSubName}
+                          onChange={(e) => setNewSubName(e.target.value)}
+                          className="h-8 text-xs bg-white rounded-xl"
+                        />
+                        <Button
+                          type="submit"
+                          size="sm"
+                          disabled={savingSub || !newSubName.trim()}
+                          className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded-xl px-3"
+                        >
+                          {savingSub ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            'Adicionar'
+                          )}
+                        </Button>
+                      </form>
+                    </div>
                   )}
                 </div>
               ))}

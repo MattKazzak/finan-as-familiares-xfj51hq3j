@@ -15,29 +15,53 @@ export async function fetchFamilyData() {
     return { family: null, members: [], categories: [] }
   }
 
-  const [{ data: members, error: memErr }, { data: categories, error: catErr }] = await Promise.all(
-    [
-      (supabase as any)
-        .from('family_members')
-        .select('*')
-        .eq('family_id', family.id)
-        .order('is_admin', { ascending: false })
-        .order('name', { ascending: true }),
-      (supabase as any)
-        .from('transaction_categories')
-        .select('*')
-        .or(`family_id.eq.${family.id},family_id.is.null`)
-        .order('name', { ascending: true }),
-    ],
-  )
+  const [
+    { data: members, error: memErr },
+    { data: categories, error: catErr },
+    { data: subcategories, error: subErr },
+  ] = await Promise.all([
+    (supabase as any)
+      .from('family_members')
+      .select('*')
+      .eq('family_id', family.id)
+      .order('is_admin', { ascending: false })
+      .order('name', { ascending: true }),
+    (supabase as any)
+      .from('transaction_categories')
+      .select('*')
+      .or(`family_id.eq.${family.id},family_id.is.null`)
+      .order('name', { ascending: true }),
+    (supabase as any)
+      .from('transaction_subcategories')
+      .select('*')
+      .or(`family_id.eq.${family.id},family_id.is.null`)
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true }),
+  ])
 
   if (memErr) throw memErr
   if (catErr) throw catErr
+  if (subErr) throw subErr
+
+  // Associar subcategorias às categorias correspondentes
+  const subMap: Record<string, any[]> = {}
+  ;(subcategories || []).forEach((sub: any) => {
+    if (!subMap[sub.category_id]) {
+      subMap[sub.category_id] = []
+    }
+    subMap[sub.category_id].push(sub)
+  })
+
+  const enrichedCategories = (categories || []).map((cat: any) => ({
+    ...cat,
+    subcategories: subMap[cat.id] || [],
+  }))
 
   return {
     family,
     members: (members || []) as FamilyMember[],
-    categories: (categories || []) as TransactionCategory[],
+    categories: enrichedCategories as TransactionCategory[],
+    subcategories: (subcategories || []) as any[],
   }
 }
 
@@ -150,6 +174,35 @@ export async function addCategory(
 
 export async function deleteCategory(id: string) {
   const { error } = await (supabase as any).from('transaction_categories').delete().eq('id', id)
+
+  if (error) throw error
+}
+
+export async function addSubcategory(
+  categoryId: string,
+  familyId: string,
+  name: string,
+  icon?: string,
+  color?: string,
+) {
+  const { data, error } = await (supabase as any)
+    .from('transaction_subcategories')
+    .insert({
+      category_id: categoryId,
+      family_id: familyId,
+      name: name.trim(),
+      icon: icon || null,
+      color: color || null,
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function deleteSubcategory(id: string) {
+  const { error } = await (supabase as any).from('transaction_subcategories').delete().eq('id', id)
 
   if (error) throw error
 }

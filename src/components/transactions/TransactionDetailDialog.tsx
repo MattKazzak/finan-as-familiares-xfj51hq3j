@@ -48,9 +48,19 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
               <DialogTitle className="text-lg font-bold text-slate-900 leading-tight">
                 {transaction.description || 'Transação'}
               </DialogTitle>
-              <p className="text-xs text-slate-500 mt-0.5">
-                {transaction.category?.name || 'Sem categoria'}
-              </p>
+              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                <span className="text-xs font-semibold text-slate-600">
+                  {transaction.category?.name || 'Sem categoria'}
+                </span>
+                {transaction.subcategory && (
+                  <>
+                    <span className="text-xs text-slate-300">·</span>
+                    <span className="text-xs font-medium text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/50">
+                      {transaction.subcategory.name}
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </DialogHeader>

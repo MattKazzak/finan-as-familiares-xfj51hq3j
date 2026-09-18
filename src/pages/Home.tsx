@@ -1,7 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFamily } from '@/hooks/use-family'
-import { fetchTransactions, fetchBudgets } from '@/services/transactions'
+import {
+  fetchTransactions,
+  fetchDefaultBudgets,
+  fetchMonthBudgetOverrides,
+} from '@/services/transactions'
 import { formatBRL, formatFullDate, formatRelativeDate } from '@/lib/formatters'
 import { CountUp } from '@/components/common/CountUp'
 import { CategoryIcon } from '@/components/common/CategoryIcon'
@@ -43,7 +47,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [budgets, setBudgets] = useState<Budget[]>([])
+  const [totalBudgetLimit, setTotalBudgetLimit] = useState<number>(0)
 
   // Diálogo de detalhe e edição
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null)
@@ -58,15 +62,42 @@ export default function Home() {
     if (!family) return
     try {
       setLoading(true)
-      const [allTx, monthBudgets] = await Promise.all([
+      const [allTx, defBgs, overrides] = await Promise.all([
         fetchTransactions({
           familyId: family.id,
           memberId: selectedMemberId,
         }),
-        fetchBudgets(family.id, currentMonthStr),
+        fetchDefaultBudgets(family.id),
+        fetchMonthBudgetOverrides(family.id, currentMonthStr),
       ])
       setTransactions(allTx)
-      setBudgets(monthBudgets)
+
+      // Calcular o teto orçamentário efetivo somando padrões recorrentes e overrides do mês (sem duplicar categorias)
+      const overrideCatMap = new Map<string, number>()
+      overrides.forEach((o) => {
+        if (!o.subcategory_id) {
+          overrideCatMap.set(o.category_id, o.amount_cents)
+        }
+      })
+
+      const defCatMap = new Map<string, number>()
+      defBgs.forEach((d) => {
+        if (!d.subcategory_id) {
+          defCatMap.set(d.category_id, d.amount_cents)
+        }
+      })
+
+      // Une categorias com teto
+      const allCatIds = new Set([...overrideCatMap.keys(), ...defCatMap.keys()])
+      let sumLimits = 0
+      allCatIds.forEach((catId) => {
+        if (overrideCatMap.has(catId)) {
+          sumLimits += overrideCatMap.get(catId)!
+        } else if (defCatMap.has(catId)) {
+          sumLimits += defCatMap.get(catId)!
+        }
+      })
+      setTotalBudgetLimit(sumLimits)
     } catch (err: any) {
       console.error('Erro ao carregar dados do início:', err)
       toast({
@@ -135,21 +166,14 @@ export default function Home() {
 
   // Cálculo do orçamento total do mês
   const { totalBudgetSpentCents, totalBudgetLimitCents, budgetPercent } = useMemo(() => {
-    // Total de despesas deste mês das categorias orçadas
-    const budgetedCatIds = new Set(budgets.map((b) => b.category_id))
     let spent = 0
     transactions.forEach((tx) => {
-      if (
-        tx.type === 'expense' &&
-        tx.transaction_date.slice(0, 7) === currentMonthStr &&
-        tx.category_id &&
-        budgetedCatIds.has(tx.category_id)
-      ) {
+      if (tx.type === 'expense' && tx.transaction_date.slice(0, 7) === currentMonthStr) {
         spent += tx.amount_cents
       }
     })
 
-    const limit = budgets.reduce((acc, b) => acc + b.amount_cents, 0)
+    const limit = totalBudgetLimit
     const pct = limit > 0 ? Math.min(Math.round((spent / limit) * 100), 100) : 0
 
     return {
@@ -157,7 +181,7 @@ export default function Home() {
       totalBudgetLimitCents: limit,
       budgetPercent: pct,
     }
-  }, [budgets, transactions, currentMonthStr])
+  }, [totalBudgetLimit, transactions, currentMonthStr])
 
   // Últimas 5-7 transações para a seção recente
   const recentTransactions = useMemo(() => {
@@ -467,8 +491,21 @@ export default function Home() {
                           </span>
                           {tx.member?.name || 'Membro'}
                         </span>
+                        {tx.category && (
+                          <>
+                            <span className="text-[11px] text-slate-400">•</span>
+                            <span className="text-[11px] text-slate-500 font-medium truncate">
+                              {tx.category.name}
+                              {tx.subcategory && (
+                                <span className="text-emerald-700 font-semibold ml-1">
+                                  · {tx.subcategory.name}
+                                </span>
+                              )}
+                            </span>
+                          </>
+                        )}
                         <span className="text-[11px] text-slate-400">•</span>
-                        <span className="text-[11px] text-slate-400 capitalize">
+                        <span className="text-[11px] text-slate-400 capitalize shrink-0">
                           {formatRelativeDate(tx.transaction_date)}
                         </span>
                       </div>

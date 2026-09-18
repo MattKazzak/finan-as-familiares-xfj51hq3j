@@ -51,6 +51,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
   const [amountStr, setAmountStr] = useState('')
   const [memberId, setMemberId] = useState('')
   const [categoryId, setCategoryId] = useState<string>('none')
+  const [subcategoryId, setSubcategoryId] = useState<string>('none')
   const [transactionDate, setTransactionDate] = useState(new Date().toISOString().slice(0, 10))
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -62,6 +63,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
       setAmountStr(formatNumberBRL(editingTransaction.amount_cents))
       setMemberId(editingTransaction.member_id)
       setCategoryId(editingTransaction.category_id || 'none')
+      setSubcategoryId(editingTransaction.subcategory_id || 'none')
       setTransactionDate(editingTransaction.transaction_date)
     } else {
       setType(newTransactionDefaultType)
@@ -72,10 +74,21 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
         setMemberId(members[0].id)
       }
       setCategoryId('none')
+      setSubcategoryId('none')
       setTransactionDate(new Date().toISOString().slice(0, 10))
     }
     setErrorMsg(null)
   }, [editingTransaction, newTransactionDefaultType, open, members])
+
+  // Subcategorias disponíveis para a categoria selecionada
+  const selectedCategoryObj = categories.find((c) => c.id === categoryId)
+  const availableSubcategories = selectedCategoryObj?.subcategories || []
+
+  // Ao alterar a categoria pai, limpa a subcategoria selecionada
+  const handleCategoryChange = (newCatId: string) => {
+    setCategoryId(newCatId)
+    setSubcategoryId('none')
+  }
 
   const filteredCategories = categories.filter((c) => c.type === type)
 
@@ -110,6 +123,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
         await updateTransaction(editingTransaction.id, {
           member_id: memberId,
           category_id: categoryId === 'none' ? null : categoryId,
+          subcategory_id: subcategoryId === 'none' || categoryId === 'none' ? null : subcategoryId,
           type,
           amount_cents: cents,
           description: description.trim(),
@@ -121,6 +135,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           family_id: family.id,
           member_id: memberId,
           category_id: categoryId === 'none' ? null : categoryId,
+          subcategory_id: subcategoryId === 'none' || categoryId === 'none' ? null : subcategoryId,
           type,
           amount_cents: cents,
           description: description.trim(),
@@ -257,7 +272,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
             {/* Categoria */}
             <div>
               <Label className="text-xs font-semibold text-slate-700">Categoria</Label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
+              <Select value={categoryId} onValueChange={handleCategoryChange}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
@@ -272,6 +287,40 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
               </Select>
             </div>
           </div>
+
+          {/* Subcategoria (aparece quando categoria estiver selecionada) */}
+          {categoryId !== 'none' && availableSubcategories.length > 0 && (
+            <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200/80">
+              <div className="flex items-center justify-between mb-1.5">
+                <Label className="text-xs font-semibold text-slate-700">
+                  Subcategoria{' '}
+                  <span className="text-[10px] text-slate-400 font-normal">(Opcional)</span>
+                </Label>
+                {subcategoryId !== 'none' && (
+                  <button
+                    type="button"
+                    onClick={() => setSubcategoryId('none')}
+                    className="text-[11px] text-slate-400 hover:text-slate-600"
+                  >
+                    Limpar
+                  </button>
+                )}
+              </div>
+              <Select value={subcategoryId} onValueChange={setSubcategoryId}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Nenhuma (categoria geral)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma</SelectItem>
+                  {availableSubcategories.map((sub) => (
+                    <SelectItem key={sub.id} value={sub.id}>
+                      {sub.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Data */}
           <div>

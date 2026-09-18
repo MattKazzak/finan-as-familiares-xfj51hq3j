@@ -2,9 +2,11 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useFamily } from '@/hooks/use-family'
 import {
   fetchTransactions,
-  fetchBudgets,
-  upsertBudget,
-  deleteBudget,
+  fetchDefaultBudgets,
+  fetchMonthBudgetOverrides,
+  upsertDefaultBudget,
+  upsertMonthBudgetOverride,
+  resetMonthBudgetToDefault,
   deleteTransaction,
 } from '@/services/transactions'
 import {
@@ -19,7 +21,13 @@ import { TransactionDetailDialog } from '@/components/transactions/TransactionDe
 import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
 import { ImportStatementDialog } from '@/components/transactions/ImportStatementDialog'
 import { useToast } from '@/hooks/use-toast'
-import type { Transaction, Budget } from '@/types/finance'
+import type {
+  Transaction,
+  Budget,
+  DefaultBudget,
+  TransactionCategory,
+  TransactionSubcategory,
+} from '@/types/finance'
 import {
   ChevronLeft,
   ChevronRight,
@@ -34,6 +42,11 @@ import {
   X,
   Loader2,
   UploadCloud,
+  ChevronDown,
+  RotateCcw,
+  Sparkles,
+  Calendar,
+  Layers,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -77,13 +90,20 @@ export default function WalletPage() {
   }, [currentDate])
 
   const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [budgets, setBudgets] = useState<Budget[]>([])
+  const [defaultBudgets, setDefaultBudgets] = useState<DefaultBudget[]>([])
+  const [monthOverrides, setMonthOverrides] = useState<Budget[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Categorias expandidas na aba de Orçamentos para visualização das subcategorias
+  const [expandedBudgetCategories, setExpandedBudgetCategories] = useState<Record<string, boolean>>(
+    {},
+  )
 
   // Filtros de transação
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false)
   const [filterMemberIds, setFilterMemberIds] = useState<string[]>([])
   const [filterCategoryIds, setFilterCategoryIds] = useState<string[]>([])
+  const [filterSubcategoryIds, setFilterSubcategoryIds] = useState<string[]>([])
   const [filterType, setFilterType] = useState<'income' | 'expense' | null>(null)
 
   // Ações de transação
@@ -96,9 +116,12 @@ export default function WalletPage() {
 
   // Ações de orçamento
   const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false)
-  const [selectedBudgetCategory, setSelectedBudgetCategory] = useState<string>('')
-  const [budgetAmountStr, setBudgetAmountStr] = useState('')
-  const [budgetMode, setBudgetMode] = useState<'month' | 'year'>('month')
+  const [editingBudgetCatId, setEditingBudgetCatId] = useState<string>('')
+  const [editingBudgetSubcatId, setEditingBudgetSubcatId] = useState<string | null>(null)
+  const [defaultAmountStr, setDefaultAmountStr] = useState('')
+  const [monthAmountStr, setMonthAmountStr] = useState('')
+  const [isEditingOnlyThisMonth, setIsEditingOnlyThisMonth] = useState(false)
+  const [hasMonthOverride, setHasMonthOverride] = useState(false)
   const [savingBudget, setSavingBudget] = useState(false)
 
   // Navegação de mês
@@ -122,15 +145,17 @@ export default function WalletPage() {
     if (!family) return
     try {
       setLoading(true)
-      const [txs, bgs] = await Promise.all([
+      const [txs, defBgs, overrides] = await Promise.all([
         fetchTransactions({
           familyId: family.id,
           month: monthKey,
         }),
-        fetchBudgets(family.id, monthKey),
+        fetchDefaultBudgets(family.id),
+        fetchMonthBudgetOverrides(family.id, monthKey),
       ])
       setTransactions(txs)
-      setBudgets(bgs)
+      setDefaultBudgets(defBgs)
+      setMonthOverrides(overrides)
     } catch (err: any) {
       console.error('Erro ao carregar dados da carteira:', err)
       toast({
@@ -152,9 +177,10 @@ export default function WalletPage() {
     let count = 0
     if (filterMemberIds.length > 0) count += 1
     if (filterCategoryIds.length > 0) count += 1
+    if (filterSubcategoryIds.length > 0) count += 1
     if (filterType !== null) count += 1
     return count
-  }, [filterMemberIds, filterCategoryIds, filterType])
+  }, [filterMemberIds, filterCategoryIds, filterSubcategoryIds, filterType])
 
   // Transações filtradas
   const filteredTransactions = useMemo(() => {
@@ -168,12 +194,18 @@ export default function WalletPage() {
       ) {
         return false
       }
+      if (
+        filterSubcategoryIds.length > 0 &&
+        (!tx.subcategory_id || !filterSubcategoryIds.includes(tx.subcategory_id))
+      ) {
+        return false
+      }
       if (filterType && tx.type !== filterType) {
         return false
       }
       return true
     })
-  }, [transactions, filterMemberIds, filterCategoryIds, filterType])
+  }, [transactions, filterMemberIds, filterCategoryIds, filterSubcategoryIds, filterType])
 
   // Resumo do mês (Receitas, Despesas, Saldo)
   const { monthIncomeCents, monthExpenseCents, monthNetCents } = useMemo(() => {
@@ -222,50 +254,136 @@ export default function WalletPage() {
     }
   }
 
-  // Cálculos de orçamentos por categoria
+  // Cálculos de orçamentos por categoria e subcategoria com modelo recorrente + overrides
   const categoryBudgetData = useMemo(() => {
     const expenseCategories = categories.filter((c) => c.type === 'expense')
-    // Mapa de gastos por categoria no mês
-    const spentMap: Record<string, number> = {}
+
+    // 1. Gastos por categoria e por subcategoria
+    const catSpentMap: Record<string, number> = {}
+    const subSpentMap: Record<string, number> = {}
+
     transactions.forEach((tx) => {
       if (tx.type === 'expense' && tx.category_id) {
-        spentMap[tx.category_id] = (spentMap[tx.category_id] || 0) + tx.amount_cents
+        catSpentMap[tx.category_id] = (catSpentMap[tx.category_id] || 0) + tx.amount_cents
+        if (tx.subcategory_id) {
+          subSpentMap[tx.subcategory_id] = (subSpentMap[tx.subcategory_id] || 0) + tx.amount_cents
+        }
       }
     })
 
-    // Mapa de orçamentos existentes
-    const budgetMap: Record<string, Budget> = {}
-    budgets.forEach((b) => {
-      budgetMap[b.category_id] = b
+    // 2. Mapas de orçamentos padrão e overrides
+    const defCatBudgetMap: Record<string, DefaultBudget> = {}
+    const defSubBudgetMap: Record<string, DefaultBudget> = {}
+
+    defaultBudgets.forEach((b) => {
+      if (b.subcategory_id) {
+        defSubBudgetMap[b.subcategory_id] = b
+      } else {
+        defCatBudgetMap[b.category_id] = b
+      }
+    })
+
+    const overrideCatBudgetMap: Record<string, Budget> = {}
+    const overrideSubBudgetMap: Record<string, Budget> = {}
+
+    monthOverrides.forEach((b) => {
+      if (b.subcategory_id) {
+        overrideSubBudgetMap[b.subcategory_id] = b
+      } else {
+        overrideCatBudgetMap[b.category_id] = b
+      }
     })
 
     let totalBudget = 0
     let totalSpent = 0
 
+    // 3. Montar estrutura hierárquica
     const list = expenseCategories.map((cat) => {
-      const budget = budgetMap[cat.id]
-      const limitCents = budget ? budget.amount_cents : 0
-      const spentCents = spentMap[cat.id] || 0
+      // Subcategorias da categoria
+      const subcats = cat.subcategories || []
+      const subcategoryItems = subcats.map((sub) => {
+        const subSpent = subSpentMap[sub.id] || 0
+        const subOverride = overrideSubBudgetMap[sub.id]
+        const subDefault = defSubBudgetMap[sub.id]
+
+        const hasOverride = !!subOverride
+        const limitCents = subOverride
+          ? subOverride.amount_cents
+          : subDefault
+            ? subDefault.amount_cents
+            : 0
+        const defaultLimitCents = subDefault ? subDefault.amount_cents : 0
+
+        const percent = limitCents > 0 ? Math.round((subSpent / limitCents) * 100) : 0
+        const isOver = subSpent > limitCents && limitCents > 0
+
+        return {
+          subcategory: sub,
+          limitCents,
+          defaultLimitCents,
+          spentCents: subSpent,
+          percent,
+          isOver,
+          hasOverride,
+          overrideBudget: subOverride,
+          defaultBudget: subDefault,
+        }
+      })
+
+      // Soma de tetos definidos nas subcategorias
+      const subcatsLimitSum = subcategoryItems.reduce((acc, s) => acc + s.limitCents, 0)
+
+      // Orçamento direto da categoria pai
+      const catOverride = overrideCatBudgetMap[cat.id]
+      const catDefault = defCatBudgetMap[cat.id]
+      const hasOverride = !!catOverride
+
+      // Se a categoria pai tiver teto explícito, usa ele; se não tiver, mas as subcategorias tiverem, usa a soma das subcategorias
+      let explicitLimitCents = catOverride
+        ? catOverride.amount_cents
+        : catDefault
+          ? catDefault.amount_cents
+          : 0
+      const defaultLimitCents = catDefault ? catDefault.amount_cents : 0
+
+      // Teto efetivo da categoria pai
+      const limitCents = explicitLimitCents > 0 ? explicitLimitCents : subcatsLimitSum
+
+      const spentCents = catSpentMap[cat.id] || 0
       if (limitCents > 0) {
         totalBudget += limitCents
         totalSpent += spentCents
       }
+
       const percent = limitCents > 0 ? Math.round((spentCents / limitCents) * 100) : 0
       const isOver = spentCents > limitCents && limitCents > 0
+
+      // Verificar se alguma subcategoria tem override
+      const hasAnySubOverride = subcategoryItems.some((s) => s.hasOverride)
+
       return {
         category: cat,
-        budget,
         limitCents,
+        explicitLimitCents,
+        defaultLimitCents,
+        subcatsLimitSum,
         spentCents,
         percent,
         isOver,
+        hasOverride,
+        hasAnySubOverride,
+        overrideBudget: catOverride,
+        defaultBudget: catDefault,
+        subcategories: subcategoryItems,
       }
     })
 
-    // Ordenar: primeiro com orçamento, depois estourados
+    // Ordenar: categorias com orçamento definido ou estouradas primeiro
     list.sort((a, b) => {
       if (a.isOver && !b.isOver) return -1
       if (!a.isOver && b.isOver) return 1
+      if (a.limitCents > 0 && b.limitCents === 0) return -1
+      if (a.limitCents === 0 && b.limitCents > 0) return 1
       return b.limitCents - a.limitCents
     })
 
@@ -278,25 +396,141 @@ export default function WalletPage() {
         totalBudget > 0 ? Math.min(Math.round((totalSpent / totalBudget) * 100), 100) : 0,
       isTotalOver: totalSpent > totalBudget && totalBudget > 0,
     }
-  }, [categories, transactions, budgets])
+  }, [categories, transactions, defaultBudgets, monthOverrides])
 
-  const openBudgetEditor = (catId: string, currentBudgetAmount?: number) => {
-    setSelectedBudgetCategory(catId)
-    setBudgetAmountStr(currentBudgetAmount ? formatNumberBRL(currentBudgetAmount) : '')
-    setBudgetMode('month')
+  // Abrir modal de edição de orçamento (para categoria pai ou subcategoria)
+  const openBudgetEditor = (
+    catId: string,
+    subcatId: string | null = null,
+    currentDefault?: number,
+    currentMonthVal?: number,
+    isOverridden: boolean = false,
+  ) => {
+    setEditingBudgetCatId(catId)
+    setEditingBudgetSubcatId(subcatId)
+    setDefaultAmountStr(currentDefault && currentDefault > 0 ? formatNumberBRL(currentDefault) : '')
+    setMonthAmountStr(
+      currentMonthVal && currentMonthVal > 0 ? formatNumberBRL(currentMonthVal) : '',
+    )
+    setIsEditingOnlyThisMonth(isOverridden)
+    setHasMonthOverride(isOverridden)
     setIsBudgetDialogOpen(true)
   }
 
-  const handleSaveBudget = async (e: React.FormEvent) => {
+  // Toggle expansão da categoria na lista de orçamentos
+  const toggleCatBudgetExpand = (catId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setExpandedBudgetCategories((prev) => ({
+      ...prev,
+      [catId]: !prev[catId],
+    }))
+  }
+
+  // Salvar Orçamento (Padrão recorrente ou Ajuste pontual deste mês)
+  const handleSaveBudgetForm = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!family || !selectedBudgetCategory) return
-    const cents = parseBRLToCents(budgetAmountStr)
+    if (!family || !editingBudgetCatId) return
 
     try {
       setSavingBudget(true)
-      const adjustedCents = budgetMode === 'year' ? Math.round(cents / 12) : cents
-      await upsertBudget(family.id, selectedBudgetCategory, monthKey, adjustedCents)
-      toast({ title: 'Sucesso', description: 'Orçamento atualizado!' })
+
+      if (isEditingOnlyThisMonth) {
+        // Ajuste pontual para o mês selecionado
+        const monthCents = parseBRLToCents(monthAmountStr)
+        await upsertMonthBudgetOverride(
+          family.id,
+          editingBudgetCatId,
+          monthKey,
+          monthCents,
+          editingBudgetSubcatId,
+        )
+        toast({
+          title: 'Ajuste pontual salvo',
+          description: `Orçamento exclusivo para ${formatMonthYear(currentDate)} atualizado.`,
+        })
+      } else {
+        // Orçamento padrão recorrente (todos os meses)
+        const defCents = parseBRLToCents(defaultAmountStr)
+        await upsertDefaultBudget(family.id, editingBudgetCatId, defCents, editingBudgetSubcatId)
+
+        // Se o usuário estiver alterando o padrão e existia um override, opcionalmente remove o override para alinhar
+        if (hasMonthOverride) {
+          await resetMonthBudgetToDefault(
+            family.id,
+            editingBudgetCatId,
+            monthKey,
+            editingBudgetSubcatId,
+          )
+        }
+
+        toast({
+          title: 'Orçamento padrão atualizado',
+          description: 'Este valor recorrente é aplicado automaticamente a todos os meses.',
+        })
+      }
+
+      setIsBudgetDialogOpen(false)
+      loadMonthData()
+    } catch (err) {
+      console.error(err)
+      toast({
+        title: 'Erro ao salvar orçamento',
+        description: 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSavingBudget(false)
+    }
+  }
+
+  // Reverter ajuste deste mês e voltar ao padrão
+  const handleResetToDefault = async () => {
+    if (!family || !editingBudgetCatId) return
+    try {
+      setSavingBudget(true)
+      await resetMonthBudgetToDefault(
+        family.id,
+        editingBudgetCatId,
+        monthKey,
+        editingBudgetSubcatId,
+      )
+      toast({
+        title: 'Voltou ao padrão',
+        description: `O orçamento deste mês agora segue o valor padrão recorrente.`,
+      })
+      setIsBudgetDialogOpen(false)
+      loadMonthData()
+    } catch {
+      toast({
+        title: 'Erro ao resetar',
+        description: 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSavingBudget(false)
+    }
+  }
+
+  // Tornar o valor deste mês como novo padrão do ano todo
+  const handleMakeThisMonthDefault = async () => {
+    if (!family || !editingBudgetCatId) return
+    const monthCents = parseBRLToCents(monthAmountStr)
+    if (monthCents <= 0) return
+
+    try {
+      setSavingBudget(true)
+      await upsertDefaultBudget(family.id, editingBudgetCatId, monthCents, editingBudgetSubcatId)
+      // Remove o override pois agora é o próprio padrão
+      await resetMonthBudgetToDefault(
+        family.id,
+        editingBudgetCatId,
+        monthKey,
+        editingBudgetSubcatId,
+      )
+      toast({
+        title: 'Definido como padrão',
+        description: 'Este valor agora é o teto padrão para todos os meses.',
+      })
       setIsBudgetDialogOpen(false)
       loadMonthData()
     } catch {
@@ -542,8 +776,13 @@ export default function WalletPage() {
                                     {tx.member?.name || 'Família'}
                                   </span>
                                   {tx.category && (
-                                    <span className="text-[11px] text-slate-400">
+                                    <span className="text-[11px] text-slate-500 font-medium">
                                       {tx.category.name}
+                                      {tx.subcategory && (
+                                        <span className="text-emerald-700 font-semibold ml-1">
+                                          · {tx.subcategory.name}
+                                        </span>
+                                      )}
                                     </span>
                                   )}
                                 </div>
@@ -594,22 +833,29 @@ export default function WalletPage() {
         {/* ================= TAB 2: ORÇAMENTOS ================= */}
         {activeTab === 'orcamentos' && (
           <div className="space-y-5 mt-0 animate-in fade-in-50 duration-200">
-            {/* Card Geral de Orçamento */}
+            {/* Card Geral de Orçamento Recorrente */}
             <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs uppercase font-bold tracking-wider text-slate-500">
-                  Orçamento Total do Mês
-                </span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs uppercase font-bold tracking-wider text-slate-500">
+                    Teto Orçamentário de {formatMonthYear(currentDate)}
+                  </span>
+                  <span className="text-[10px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full border border-emerald-200/60">
+                    Padrão Recorrente Mensal
+                  </span>
+                </div>
                 <span
-                  className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                  className={`text-xs font-bold px-2.5 py-1 rounded-full self-start sm:self-auto ${
                     categoryBudgetData.isTotalOver
                       ? 'bg-red-100 text-red-700'
-                      : 'bg-emerald-100 text-emerald-800'
+                      : categoryBudgetData.totalPercent >= 75
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-emerald-100 text-emerald-800'
                   }`}
                 >
                   {categoryBudgetData.isTotalOver
                     ? `Excedeu ${formatBRL(Math.abs(categoryBudgetData.totalRemaining))}`
-                    : `Resta ${formatBRL(categoryBudgetData.totalRemaining)}`}
+                    : `Disponível ${formatBRL(categoryBudgetData.totalRemaining)}`}
                 </span>
               </div>
 
@@ -625,97 +871,254 @@ export default function WalletPage() {
                 </span>
               </div>
 
-              {/* Barra de Progresso com Transição de Cores */}
+              {/* Barra de Progresso com Limites YNAB/Mobills: <75% Verde, 75-100% Âmbar, >100% Vermelho */}
               <div className="w-full bg-slate-100 h-3.5 rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-700 ${
                     categoryBudgetData.isTotalOver
                       ? 'bg-red-500'
-                      : categoryBudgetData.totalPercent > 80
+                      : categoryBudgetData.totalPercent >= 75
                         ? 'bg-amber-500'
                         : 'bg-emerald-600'
                   }`}
                   style={{ width: `${Math.min(categoryBudgetData.totalPercent, 100)}%` }}
                 />
               </div>
+
+              <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> &lt;75%
+                  Normal
+                  <span className="w-2 h-2 rounded-full bg-amber-500 inline-block ml-2" /> 75–100%
+                  Atenção
+                  <span className="w-2 h-2 rounded-full bg-red-500 inline-block ml-2" /> &gt;100%
+                  Excedido
+                </span>
+                <span>Os tetos repetem-se automaticamente a cada mês</span>
+              </div>
             </div>
 
-            {/* Lista de Orçamentos por Categoria */}
+            {/* Lista de Orçamentos com Hierarquia Categoria Pai -> Subcategorias */}
             <div className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-bold text-base text-slate-900">Categorias</h3>
+                  <h3 className="font-bold text-base text-slate-900">Categorias e Subcategorias</h3>
                   <p className="text-xs text-slate-500">
-                    Clique para definir o teto mensal ou anual de cada categoria
+                    Defina tetos por categoria ou detalhe por subcategoria. Valores ajustados
+                    exclusivamente neste mês recebem destaque.
                   </p>
                 </div>
               </div>
 
-              <div className="divide-y divide-slate-100">
-                {categoryBudgetData.list.map((item) => (
-                  <div
-                    key={item.category.id}
-                    onClick={() => openBudgetEditor(item.category.id, item.limitCents)}
-                    className="py-3.5 flex items-center justify-between hover:bg-slate-50/80 rounded-2xl px-2 cursor-pointer transition-colors group"
-                  >
-                    <div className="flex items-center gap-3">
+              <div className="space-y-3">
+                {categoryBudgetData.list.map((item) => {
+                  const isExpanded =
+                    expandedBudgetCategories[item.category.id] ??
+                    (item.limitCents > 0 || item.spentCents > 0)
+                  const hasSubcats = item.subcategories.length > 0
+
+                  return (
+                    <div
+                      key={item.category.id}
+                      className="border border-slate-200/80 rounded-2xl overflow-hidden bg-white shadow-2xs transition-all"
+                    >
+                      {/* Bloco da Categoria Pai */}
                       <div
-                        className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-sm shrink-0"
-                        style={{ backgroundColor: item.category.color || '#64748B' }}
+                        onClick={() =>
+                          openBudgetEditor(
+                            item.category.id,
+                            null,
+                            item.defaultLimitCents,
+                            item.limitCents,
+                            item.hasOverride,
+                          )
+                        }
+                        className="p-3.5 flex items-center justify-between hover:bg-slate-50/80 cursor-pointer transition-colors group"
                       >
-                        <CategoryIcon name={item.category.icon} className="w-5 h-5" />
-                      </div>
-
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-semibold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors">
-                            {item.category.name}
-                          </span>
-                          {item.isOver && (
-                            <span title="Orçamento excedido!">
-                              <AlertTriangle className="w-4 h-4 text-red-500" />
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-slate-500 tabular-nums mt-0.5">
-                          {formatBRL(item.spentCents)} de{' '}
-                          {item.limitCents > 0 ? formatBRL(item.limitCents) : 'Não definido'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Progresso / Porcentagem */}
-                    <div className="flex items-center gap-3 text-right">
-                      {item.limitCents > 0 ? (
-                        <div>
-                          <span
-                            className={`text-xs font-bold tabular-nums ${
-                              item.isOver
-                                ? 'text-red-600'
-                                : item.percent > 80
-                                  ? 'text-amber-600'
-                                  : 'text-emerald-600'
-                            }`}
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-xs shrink-0"
+                            style={{ backgroundColor: item.category.color || '#64748B' }}
                           >
-                            {item.percent}%
-                          </span>
-                          <div className="w-16 bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1">
-                            <div
-                              className={`h-full rounded-full ${
-                                item.isOver ? 'bg-red-500' : 'bg-emerald-600'
-                              }`}
-                              style={{ width: `${Math.min(item.percent, 100)}%` }}
-                            />
+                            <CategoryIcon name={item.category.icon} className="w-5 h-5" />
+                          </div>
+
+                          <div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors">
+                                {item.category.name}
+                              </span>
+
+                              {/* Badge de Override pontual deste mês */}
+                              {item.hasOverride && (
+                                <span className="text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/70 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                  <Sparkles className="w-3 h-3" />
+                                  Ajustado este mês
+                                </span>
+                              )}
+
+                              {item.isOver && (
+                                <span
+                                  title="Orçamento excedido!"
+                                  className="flex items-center gap-0.5 text-[10px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-md"
+                                >
+                                  <AlertTriangle className="w-3.5 h-3.5" />
+                                  Excedido
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="text-xs text-slate-500 tabular-nums mt-0.5">
+                              {formatBRL(item.spentCents)} de{' '}
+                              <span className="font-medium text-slate-700">
+                                {item.limitCents > 0 ? formatBRL(item.limitCents) : 'Sem teto'}
+                              </span>
+                              {item.defaultLimitCents > 0 && item.hasOverride && (
+                                <span className="text-[10px] text-slate-400 ml-1">
+                                  (padrão: {formatBRL(item.defaultLimitCents)})
+                                </span>
+                              )}
+                            </p>
                           </div>
                         </div>
-                      ) : (
-                        <span className="text-xs font-semibold text-emerald-700 group-hover:underline">
-                          + Definir
-                        </span>
+
+                        {/* Progresso / Barra de Cor da Categoria Pai */}
+                        <div className="flex items-center gap-2 text-right">
+                          {item.limitCents > 0 ? (
+                            <div className="text-right">
+                              <span
+                                className={`text-xs font-bold tabular-nums ${
+                                  item.isOver
+                                    ? 'text-red-600'
+                                    : item.percent >= 75
+                                      ? 'text-amber-600'
+                                      : 'text-emerald-600'
+                                }`}
+                              >
+                                {item.percent}%
+                              </span>
+                              <div className="w-20 bg-slate-100 h-2 rounded-full overflow-hidden mt-1">
+                                <div
+                                  className={`h-full rounded-full transition-all ${
+                                    item.isOver
+                                      ? 'bg-red-500'
+                                      : item.percent >= 75
+                                        ? 'bg-amber-500'
+                                        : 'bg-emerald-600'
+                                  }`}
+                                  style={{ width: `${Math.min(item.percent, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs font-semibold text-emerald-700 group-hover:underline">
+                              + Definir teto
+                            </span>
+                          )}
+
+                          {hasSubcats && (
+                            <button
+                              type="button"
+                              onClick={(e) => toggleCatBudgetExpand(item.category.id, e)}
+                              className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg ml-1 transition-colors"
+                              title={
+                                isExpanded ? 'Recolher subcategorias' : 'Expandir subcategorias'
+                              }
+                            >
+                              <ChevronDown
+                                className={`w-4 h-4 transition-transform duration-200 ${
+                                  isExpanded ? 'rotate-180' : ''
+                                }`}
+                              />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Linhas Aninhadas: Subcategorias com Recuo e Visual Suave */}
+                      {hasSubcats && isExpanded && (
+                        <div className="bg-slate-50/60 border-t border-slate-100 divide-y divide-slate-100/80 pl-4 sm:pl-7 pr-3 py-1">
+                          {item.subcategories.map((subItem) => (
+                            <div
+                              key={subItem.subcategory.id}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openBudgetEditor(
+                                  item.category.id,
+                                  subItem.subcategory.id,
+                                  subItem.defaultLimitCents,
+                                  subItem.limitCents,
+                                  subItem.hasOverride,
+                                )
+                              }}
+                              className="py-2.5 flex items-center justify-between hover:bg-white rounded-xl px-2 cursor-pointer transition-colors group/sub"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover/sub:bg-emerald-500 transition-colors" />
+                                <div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-xs font-semibold text-slate-700 group-hover/sub:text-emerald-700 transition-colors">
+                                      {subItem.subcategory.name}
+                                    </span>
+                                    {subItem.hasOverride && (
+                                      <span className="text-[9px] font-semibold bg-amber-100/70 text-amber-800 px-1.5 py-0.2 rounded-full">
+                                        ajustado
+                                      </span>
+                                    )}
+                                    {subItem.isOver && (
+                                      <AlertTriangle className="w-3 h-3 text-red-500" />
+                                    )}
+                                  </div>
+                                  <p className="text-[11px] text-slate-400 tabular-nums">
+                                    {formatBRL(subItem.spentCents)} de{' '}
+                                    {subItem.limitCents > 0
+                                      ? formatBRL(subItem.limitCents)
+                                      : 'Não definido'}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Progresso Subcategoria */}
+                              <div className="flex items-center gap-2">
+                                {subItem.limitCents > 0 ? (
+                                  <div className="text-right">
+                                    <span
+                                      className={`text-[11px] font-bold tabular-nums ${
+                                        subItem.isOver
+                                          ? 'text-red-600'
+                                          : subItem.percent >= 75
+                                            ? 'text-amber-600'
+                                            : 'text-emerald-600'
+                                      }`}
+                                    >
+                                      {subItem.percent}%
+                                    </span>
+                                    <div className="w-14 bg-slate-200/80 h-1.5 rounded-full overflow-hidden mt-0.5">
+                                      <div
+                                        className={`h-full rounded-full ${
+                                          subItem.isOver
+                                            ? 'bg-red-500'
+                                            : subItem.percent >= 75
+                                              ? 'bg-amber-500'
+                                              : 'bg-emerald-600'
+                                        }`}
+                                        style={{ width: `${Math.min(subItem.percent, 100)}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span className="text-[11px] font-medium text-emerald-700 opacity-80 group-hover/sub:opacity-100 group-hover/sub:underline">
+                                    + Definir
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -802,7 +1205,7 @@ export default function WalletPage() {
               </div>
             </div>
 
-            {/* Categorias (Chips) */}
+            {/* Categorias e Subcategorias */}
             <div>
               <Label className="text-xs font-semibold text-slate-700">Categorias</Label>
               <div className="flex flex-wrap gap-1.5 mt-2 max-h-36 overflow-y-auto">
@@ -831,6 +1234,41 @@ export default function WalletPage() {
                 })}
               </div>
             </div>
+
+            {/* Subcategorias disponíveis (se categorias estiverem selecionadas) */}
+            {filterCategoryIds.length > 0 && (
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Subcategorias</Label>
+                <div className="flex flex-wrap gap-1.5 mt-2 max-h-32 overflow-y-auto">
+                  {categories
+                    .filter((c) => filterCategoryIds.includes(c.id))
+                    .flatMap((c) => c.subcategories || [])
+                    .map((s) => {
+                      const selected = filterSubcategoryIds.includes(s.id)
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => {
+                            if (selected) {
+                              setFilterSubcategoryIds((prev) => prev.filter((id) => id !== s.id))
+                            } else {
+                              setFilterSubcategoryIds((prev) => [...prev, s.id])
+                            }
+                          }}
+                          className={`text-[11px] px-2 py-0.5 rounded-full border transition-all ${
+                            selected
+                              ? 'bg-emerald-700 text-white border-emerald-700 font-semibold'
+                              : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          {s.name}
+                        </button>
+                      )
+                    })}
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
@@ -839,6 +1277,7 @@ export default function WalletPage() {
               onClick={() => {
                 setFilterMemberIds([])
                 setFilterCategoryIds([])
+                setFilterSubcategoryIds([])
                 setFilterType(null)
                 setIsFilterSheetOpen(false)
               }}
@@ -856,90 +1295,203 @@ export default function WalletPage() {
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGO DE EDIÇÃO DE ORÇAMENTO */}
+      {/* DIÁLOGO PROFISSIONAL DE ORÇAMENTO RECORRENTE & AJUSTE PONTUAL */}
       <Dialog open={isBudgetDialogOpen} onOpenChange={setIsBudgetDialogOpen}>
-        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-6">
+        <DialogContent className="max-w-md w-[95vw] rounded-3xl p-6 sm:p-7">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-slate-900">
-              Definir Orçamento
+              Orçamento Recorrente e Ajustes
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSaveBudget} className="space-y-4">
-            {/* Toggle Mês vs Ano */}
-            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
-              <button
-                type="button"
-                onClick={() => setBudgetMode('month')}
-                className={`py-2 text-xs font-semibold rounded-lg transition-all ${
-                  budgetMode === 'month' ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-600'
-                }`}
-              >
-                Orçamento do Mês
-              </button>
-              <button
-                type="button"
-                onClick={() => setBudgetMode('year')}
-                className={`py-2 text-xs font-semibold rounded-lg transition-all ${
-                  budgetMode === 'year' ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-600'
-                }`}
-              >
-                Meta do Ano (÷12)
-              </button>
-            </div>
+          {(() => {
+            const currentCat = categories.find((c) => c.id === editingBudgetCatId)
+            const currentSub = currentCat?.subcategories?.find(
+              (s) => s.id === editingBudgetSubcatId,
+            )
 
-            <div>
-              <Label className="text-xs font-semibold text-slate-700">Categoria</Label>
-              <div className="p-3 bg-slate-50 rounded-xl mt-1 text-sm font-semibold text-slate-800">
-                {categories.find((c) => c.id === selectedBudgetCategory)?.name || 'Categoria'}
-              </div>
-            </div>
+            return (
+              <form onSubmit={handleSaveBudgetForm} className="space-y-4">
+                {/* Identificação Categoria/Subcategoria */}
+                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs"
+                    style={{ backgroundColor: currentCat?.color || '#64748B' }}
+                  >
+                    <CategoryIcon name={currentCat?.icon} className="w-5 h-5" />
+                  </div>
+                  <div className="overflow-hidden">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+                      {currentSub ? 'Subcategoria' : 'Categoria Principal'}
+                    </span>
+                    <p className="font-bold text-slate-900 text-sm truncate">
+                      {currentCat?.name}
+                      {currentSub && (
+                        <span className="text-emerald-700 font-semibold ml-1">
+                          ▸ {currentSub.name}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
 
-            <div>
-              <Label htmlFor="bg-amount" className="text-xs font-semibold text-slate-700">
-                {budgetMode === 'month' ? 'Teto Mensal (R$)' : 'Teto Anual Total (R$)'}
-              </Label>
-              <div className="relative mt-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">
-                  R$
-                </span>
-                <Input
-                  id="bg-amount"
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="0,00"
-                  value={budgetAmountStr}
-                  onChange={(e) => setBudgetAmountStr(e.target.value)}
-                  className="pl-10 text-base font-bold tabular-nums"
-                  required
-                />
-              </div>
-              {budgetMode === 'year' && (
-                <p className="text-[11px] text-slate-400 mt-1">
-                  O valor anual será dividido igualmente por 12 meses.
-                </p>
-              )}
-            </div>
+                {/* Alternador de Escopo: Padrão Recorrente vs Ajuste Deste Mês */}
+                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingOnlyThisMonth(false)}
+                    className={`flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold rounded-xl transition-all ${
+                      !isEditingOnlyThisMonth
+                        ? 'bg-white text-emerald-800 shadow-xs font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    Padrão Recorrente
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditingOnlyThisMonth(true)
+                      if (!monthAmountStr && defaultAmountStr) {
+                        setMonthAmountStr(defaultAmountStr)
+                      }
+                    }}
+                    className={`flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold rounded-xl transition-all ${
+                      isEditingOnlyThisMonth
+                        ? 'bg-white text-emerald-800 shadow-xs font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Calendar className="w-3.5 h-3.5" />
+                    Só {formatMonthYear(currentDate)}
+                  </button>
+                </div>
 
-            <DialogFooter className="gap-2 sm:gap-0 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsBudgetDialogOpen(false)}
-                disabled={savingBudget}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={savingBudget}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
-              >
-                {savingBudget && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Salvar Orçamento
-              </Button>
-            </DialogFooter>
-          </form>
+                {/* 1. Modo: Padrão Recorrente */}
+                {!isEditingOnlyThisMonth && (
+                  <div className="space-y-2 bg-emerald-50/50 border border-emerald-200/60 p-4 rounded-2xl">
+                    <div className="flex items-center justify-between">
+                      <Label
+                        htmlFor="bg-default-amount"
+                        className="text-xs font-bold text-slate-800"
+                      >
+                        Teto Padrão Mensal (R$)
+                      </Label>
+                      <span className="text-[10px] text-emerald-700 font-medium">
+                        Repete em todos os meses
+                      </span>
+                    </div>
+
+                    <div className="relative mt-1">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
+                        R$
+                      </span>
+                      <Input
+                        id="bg-default-amount"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0,00"
+                        value={defaultAmountStr}
+                        onChange={(e) => setDefaultAmountStr(e.target.value)}
+                        className="pl-10 text-lg font-bold tabular-nums bg-white"
+                        autoFocus
+                        required
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Este teto serve como base automática para todos os meses futuros sem
+                      necessidade de recriar.
+                    </p>
+                  </div>
+                )}
+
+                {/* 2. Modo: Ajuste pontual deste mês */}
+                {isEditingOnlyThisMonth && (
+                  <div className="space-y-3 bg-amber-50/40 border border-amber-200/70 p-4 rounded-2xl">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="bg-month-amount" className="text-xs font-bold text-slate-800">
+                        Teto Específico para {formatMonthYear(currentDate)} (R$)
+                      </Label>
+                      <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+                        Apenas este mês
+                      </span>
+                    </div>
+
+                    <div className="relative mt-1">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
+                        R$
+                      </span>
+                      <Input
+                        id="bg-month-amount"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0,00"
+                        value={monthAmountStr}
+                        onChange={(e) => setMonthAmountStr(e.target.value)}
+                        className="pl-10 text-lg font-bold tabular-nums bg-white"
+                        autoFocus
+                        required
+                      />
+                    </div>
+
+                    {defaultAmountStr && (
+                      <p className="text-[11px] text-slate-500">
+                        Valor padrão configurado:{' '}
+                        <strong className="text-slate-700">R$ {defaultAmountStr}</strong>. Os demais
+                        meses continuam com o teto padrão.
+                      </p>
+                    )}
+
+                    {/* Botão de Ação: Voltar ao padrão ou Replicar para o ano todo */}
+                    <div className="flex items-center gap-2 pt-1 flex-wrap">
+                      {hasMonthOverride && (
+                        <button
+                          type="button"
+                          onClick={handleResetToDefault}
+                          disabled={savingBudget}
+                          className="text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-2xs hover:bg-slate-50"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          Voltar ao padrão
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={handleMakeThisMonthDefault}
+                        disabled={savingBudget || !monthAmountStr}
+                        className="text-xs font-semibold text-emerald-800 hover:text-emerald-900 bg-emerald-100/70 hover:bg-emerald-100 border border-emerald-300/60 px-3 py-1.5 rounded-xl flex items-center gap-1.5"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        Tornar padrão de todos os meses
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <DialogFooter className="gap-2 sm:gap-0 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsBudgetDialogOpen(false)}
+                    disabled={savingBudget}
+                    className="rounded-xl text-xs"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={savingBudget}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs shadow-sm"
+                  >
+                    {savingBudget && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    {isEditingOnlyThisMonth ? 'Salvar Ajuste do Mês' : 'Salvar Orçamento Padrão'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            )
+          })()}
         </DialogContent>
       </Dialog>
 
