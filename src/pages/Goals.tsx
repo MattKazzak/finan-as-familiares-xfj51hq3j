@@ -202,7 +202,7 @@ export default function GoalsPage() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Header com botão "+ Adicionar" */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
@@ -213,13 +213,15 @@ export default function GoalsPage() {
           </p>
         </div>
 
-        <Button
-          onClick={openCreateDialog}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-sm gap-1.5"
-        >
-          <Plus className="w-4 h-4" />
-          <span>+ Adicionar</span>
-        </Button>
+        {goals.length > 0 && (
+          <Button
+            onClick={openCreateDialog}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-sm gap-1.5"
+          >
+            <Plus className="w-4 h-4" />
+            <span>+ Nova meta</span>
+          </Button>
+        )}
       </div>
 
       {/* Lista de Metas */}
