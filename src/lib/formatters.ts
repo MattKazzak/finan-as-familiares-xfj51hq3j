@@ -64,6 +64,32 @@ export function formatRelativeDate(dateStr: string): string {
 }
 
 /**
+ * Formata cabeçalho de grupo de dia em formato pt-BR amigável:
+ * "Hoje, 17 de janeiro", "Ontem, 16 de janeiro", ou "14 de jan." / "14 de jan. de 2025"
+ */
+export function formatDayGroupHeader(dateStr: string): string {
+  if (!dateStr) return ''
+  try {
+    const d = parseISO(dateStr.slice(0, 10))
+    const now = new Date()
+    const isSameYear = d.getFullYear() === now.getFullYear()
+
+    if (isToday(d)) {
+      return `Hoje, ${format(d, "d 'de' MMMM", { locale: ptBR })}`
+    }
+    if (isYesterday(d)) {
+      return `Ontem, ${format(d, "d 'de' MMMM", { locale: ptBR })}`
+    }
+    if (isSameYear) {
+      return format(d, "d 'de' MMM.", { locale: ptBR })
+    }
+    return format(d, "d 'de' MMM. 'de' yyyy", { locale: ptBR })
+  } catch {
+    return dateStr
+  }
+}
+
+/**
  * Formata data completa: "17 de março de 2026"
  */
 export function formatFullDate(date: Date | string = new Date()): string {

@@ -11,7 +11,7 @@ import {
 } from '@/services/transactions'
 import {
   formatBRL,
-  formatRelativeDate,
+  formatDayGroupHeader,
   formatMonthYear,
   parseBRLToCents,
   formatNumberBRL,
@@ -732,11 +732,12 @@ export default function WalletPage() {
                   >
                     {/* Cabeçalho do dia */}
                     <div className="bg-slate-50/80 px-4 py-2 border-b border-slate-100 flex items-center justify-between">
-                      <span className="font-bold text-xs text-slate-700 capitalize">
-                        {formatRelativeDate(dateKey)} ({dateKey})
+                      <span className="font-bold text-xs text-slate-700">
+                        {formatDayGroupHeader(dateKey)}
                       </span>
                       <span className="text-[11px] text-slate-400">
-                        {dayTxs.length} {dayTxs.length === 1 ? 'item' : 'itens'}
+                        <span>{dayTxs.length}</span>{' '}
+                        <span>{dayTxs.length === 1 ? 'item' : 'itens'}</span>
                       </span>
                     </div>
 
@@ -747,15 +748,13 @@ export default function WalletPage() {
                         return (
                           <div
                             key={tx.id}
-                            className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group"
+                            onClick={() => {
+                              setSelectedTx(tx)
+                              setIsDetailOpen(true)
+                            }}
+                            className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group cursor-pointer"
                           >
-                            <div
-                              onClick={() => {
-                                setSelectedTx(tx)
-                                setIsDetailOpen(true)
-                              }}
-                              className="flex items-center gap-3 cursor-pointer flex-1 overflow-hidden"
-                            >
+                            <div className="flex items-center gap-3 flex-1 overflow-hidden">
                               <div
                                 className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-sm shrink-0"
                                 style={{
@@ -776,7 +775,7 @@ export default function WalletPage() {
                                   </span>
                                   {tx.category && (
                                     <span className="text-[11px] text-slate-500 font-medium">
-                                      {tx.category.name}
+                                      <span>{tx.category.name}</span>
                                       {tx.subcategory && (
                                         <span className="text-emerald-700 font-semibold ml-1">
                                           · {tx.subcategory.name}
@@ -788,19 +787,22 @@ export default function WalletPage() {
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                               <span
                                 className={`font-bold text-sm sm:text-base tabular-nums ${
                                   isIncome ? 'text-emerald-600' : 'text-red-600'
                                 }`}
                               >
-                                {isIncome ? '+' : '−'} {formatBRL(tx.amount_cents)}
+                                <span>{isIncome ? '+' : '−'}</span>{' '}
+                                <span>{formatBRL(tx.amount_cents)}</span>
                               </span>
 
-                              {/* Botões de Ação Rápida (Editar e Excluir) */}
-                              <div className="flex items-center gap-1 opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                              {/* Botões de Ação Rápida (visíveis no hover apenas em telas sm+) */}
+                              <div className="hidden sm:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button
-                                  onClick={() => {
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
                                     setEditingTx(tx)
                                     setIsEditTxOpen(true)
                                   }}
@@ -810,7 +812,11 @@ export default function WalletPage() {
                                   <Edit3 className="w-4 h-4" />
                                 </button>
                                 <button
-                                  onClick={() => setTxToDelete(tx)}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setTxToDelete(tx)
+                                  }}
                                   className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                   title="Excluir"
                                 >
@@ -835,13 +841,11 @@ export default function WalletPage() {
             {/* Card Geral de Orçamento Recorrente */}
             <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs uppercase font-bold tracking-wider text-slate-500">
-                    Teto Orçamentário de {formatMonthYear(currentDate)}
+                    <span>Teto Orçamentário de</span> <span>{formatMonthYear(currentDate)}</span>
                   </span>
-                  <span className="text-[10px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full border border-emerald-200/60">
-                    Padrão Recorrente Mensal
-                  </span>
+                  <span className="text-[11px] text-slate-400 font-medium">· Padrão mensal</span>
                 </div>
                 <span
                   className={`text-xs font-bold px-2.5 py-1 rounded-full self-start sm:self-auto ${
@@ -852,25 +856,27 @@ export default function WalletPage() {
                         : 'bg-emerald-100 text-emerald-800'
                   }`}
                 >
-                  {categoryBudgetData.isTotalOver
-                    ? `Excedeu ${formatBRL(Math.abs(categoryBudgetData.totalRemaining))}`
-                    : `Disponível ${formatBRL(categoryBudgetData.totalRemaining)}`}
+                  <span>
+                    {categoryBudgetData.isTotalOver
+                      ? `Excedeu ${formatBRL(Math.abs(categoryBudgetData.totalRemaining))}`
+                      : `Disponível ${formatBRL(categoryBudgetData.totalRemaining)}`}
+                  </span>
                 </span>
               </div>
 
               <div className="flex items-baseline justify-between mb-3">
                 <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 tabular-nums">
-                  {formatBRL(categoryBudgetData.totalSpent)}{' '}
+                  <span>{formatBRL(categoryBudgetData.totalSpent)}</span>{' '}
                   <span className="text-sm font-medium text-slate-400">
                     / {formatBRL(categoryBudgetData.totalBudget)}
                   </span>
                 </span>
                 <span className="text-sm font-bold text-slate-600 tabular-nums">
-                  {categoryBudgetData.totalPercent}%
+                  <span>{categoryBudgetData.totalPercent}%</span>
                 </span>
               </div>
 
-              {/* Barra de Progresso com Limites YNAB/Mobills: <75% Verde, 75-100% Âmbar, >100% Vermelho */}
+              {/* Barra de Progresso com Limites: <75% Verde, 75-100% Âmbar, >100% Vermelho */}
               <div className="w-full bg-slate-100 h-3.5 rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-700 ${
@@ -884,16 +890,8 @@ export default function WalletPage() {
                 />
               </div>
 
-              <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> &lt;75%
-                  Normal
-                  <span className="w-2 h-2 rounded-full bg-amber-500 inline-block ml-2" /> 75–100%
-                  Atenção
-                  <span className="w-2 h-2 rounded-full bg-red-500 inline-block ml-2" /> &gt;100%
-                  Excedido
-                </span>
-                <span>Os tetos repetem-se automaticamente a cada mês</span>
+              <div className="text-[11px] text-slate-400 mt-2 text-right">
+                <span>Tetos recorrentes mensais</span>
               </div>
             </div>
 
@@ -932,9 +930,9 @@ export default function WalletPage() {
                             item.hasOverride,
                           )
                         }
-                        className="p-3.5 flex items-center justify-between hover:bg-slate-50/80 cursor-pointer transition-colors group"
+                        className="p-3.5 flex items-center justify-between hover:bg-slate-50/80 cursor-pointer transition-colors group gap-2"
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
                           <div
                             className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-xs shrink-0"
                             style={{ backgroundColor: item.category.color || '#64748B' }}
@@ -942,73 +940,37 @@ export default function WalletPage() {
                             <CategoryIcon name={item.category.icon} className="w-5 h-5" />
                           </div>
 
-                          <div>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-bold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors truncate">
                                 {item.category.name}
                               </span>
-
-                              {/* Badge de Override pontual deste mês */}
-                              {item.hasOverride && (
-                                <span className="text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/70 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                  <Sparkles className="w-3 h-3" />
-                                  Ajustado este mês
-                                </span>
-                              )}
-
-                              {item.isOver && (
-                                <span
-                                  title="Orçamento excedido!"
-                                  className="flex items-center gap-0.5 text-[10px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-md"
-                                >
-                                  <AlertTriangle className="w-3.5 h-3.5" />
-                                  Excedido
-                                </span>
-                              )}
                             </div>
 
-                            <p className="text-xs text-slate-500 tabular-nums mt-0.5 flex items-center gap-1">
+                            <p className="text-xs text-slate-500 tabular-nums mt-0.5 flex items-center gap-1 truncate">
                               <span>{formatBRL(item.spentCents)}</span>
                               <span>de</span>
                               <span className="font-medium text-slate-700">
                                 {item.limitCents > 0 ? formatBRL(item.limitCents) : 'Sem teto'}
                               </span>
-                              {item.defaultLimitCents > 0 && item.hasOverride ? (
-                                <span className="text-[10px] text-slate-400">
-                                  (padrão: {formatBRL(item.defaultLimitCents)})
-                                </span>
-                              ) : null}
                             </p>
                           </div>
                         </div>
 
                         {/* Progresso / Barra de Cor da Categoria Pai */}
-                        <div className="flex items-center gap-2 text-right">
+                        <div className="flex items-center gap-2 text-right shrink-0">
                           {item.limitCents > 0 ? (
-                            <div className="text-right">
-                              <span
-                                className={`text-xs font-bold tabular-nums ${
+                            <div className="w-16 sm:w-20 bg-slate-100 h-2 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${
                                   item.isOver
-                                    ? 'text-red-600'
+                                    ? 'bg-red-500'
                                     : item.percent >= 75
-                                      ? 'text-amber-600'
-                                      : 'text-emerald-600'
+                                      ? 'bg-amber-500'
+                                      : 'bg-emerald-600'
                                 }`}
-                              >
-                                {item.percent}%
-                              </span>
-                              <div className="w-20 bg-slate-100 h-2 rounded-full overflow-hidden mt-1">
-                                <div
-                                  className={`h-full rounded-full transition-all ${
-                                    item.isOver
-                                      ? 'bg-red-500'
-                                      : item.percent >= 75
-                                        ? 'bg-amber-500'
-                                        : 'bg-emerald-600'
-                                  }`}
-                                  style={{ width: `${Math.min(item.percent, 100)}%` }}
-                                />
-                              </div>
+                                style={{ width: `${Math.min(item.percent, 100)}%` }}
+                              />
                             </div>
                           ) : (
                             <span className="text-xs font-semibold text-emerald-700 group-hover:underline">
@@ -1020,7 +982,7 @@ export default function WalletPage() {
                             <button
                               type="button"
                               onClick={(e) => toggleCatBudgetExpand(item.category.id, e)}
-                              className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg ml-1 transition-colors"
+                              className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg ml-0.5 transition-colors"
                               title={
                                 isExpanded ? 'Recolher subcategorias' : 'Expandir subcategorias'
                               }
@@ -1064,7 +1026,7 @@ export default function WalletPage() {
                                       {subItem.subcategory.name}
                                     </span>
                                     {subItem.hasOverride && (
-                                      <span className="text-[9px] font-semibold bg-amber-100/70 text-amber-800 px-1.5 py-0.2 rounded-full">
+                                      <span className="text-[11px] font-semibold bg-amber-100/80 text-amber-900 border border-amber-200/80 px-2 py-0.5 rounded-full leading-tight">
                                         ajustado
                                       </span>
                                     )}
