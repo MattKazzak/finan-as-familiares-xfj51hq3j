@@ -1145,16 +1145,6 @@ export default function WalletPage() {
                   <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Aplicar modelo sugerido</span>
                 </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsRecurringIncomesOpen(true)}
-                  className="rounded-xl text-xs font-semibold gap-1.5 border-slate-200 text-slate-700 hover:bg-slate-50 h-8"
-                >
-                  <Briefcase className="w-3.5 h-3.5 text-emerald-700" />
-                  <span>Receitas fixas</span>
-                </Button>
               </div>
             </div>
 
