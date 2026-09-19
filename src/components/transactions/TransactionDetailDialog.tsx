@@ -45,9 +45,16 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
               <CategoryIcon name={transaction.category?.icon} className="w-6 h-6" />
             </div>
             <div>
-              <DialogTitle className="text-lg font-bold text-slate-900 leading-tight">
-                <span>{transaction.description || 'Transação'}</span>
-              </DialogTitle>
+              <div className="flex items-center gap-2 flex-wrap">
+                <DialogTitle className="text-lg font-bold text-slate-900 leading-tight">
+                  <span>{transaction.description || 'Transação'}</span>
+                </DialogTitle>
+                {transaction.is_recurring ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300/70 px-2 py-0.5 rounded-full">
+                    <span>Lançamento fixo mensal</span>
+                  </span>
+                ) : null}
+              </div>
               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                 <span className="text-xs font-semibold text-slate-600">
                   <span>{transaction.category?.name || 'Sem categoria'}</span>

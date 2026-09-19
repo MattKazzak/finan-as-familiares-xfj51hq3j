@@ -6,6 +6,12 @@ import {
   fetchDefaultBudgets,
   fetchMonthBudgetOverrides,
 } from '@/services/transactions'
+import {
+  fetchRecurringIncomes,
+  fetchRecurringIncomeOverrides,
+  processAutoRecurringIncomes,
+} from '@/services/recurring-incomes'
+import type { RecurringIncome, RecurringIncomeOverride } from '@/types/finance'
 import { formatBRL, formatFullDate, formatRelativeDate } from '@/lib/formatters'
 import { CountUp } from '@/components/common/CountUp'
 import { CategoryIcon } from '@/components/common/CategoryIcon'
@@ -49,6 +55,8 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [totalBudgetLimit, setTotalBudgetLimit] = useState<number>(0)
+  const [recurringIncomes, setRecurringIncomes] = useState<RecurringIncome[]>([])
+  const [recurringOverrides, setRecurringOverrides] = useState<RecurringIncomeOverride[]>([])
 
   // Diálogo de detalhe e edição
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null)
@@ -63,15 +71,30 @@ export default function Home() {
     if (!family) return
     try {
       setLoading(true)
-      const [allTx, defBgs, overrides] = await Promise.all([
+
+      // Auto-lançamento de receitas fixas do mês corrente ao abrir o app
+      try {
+        await processAutoRecurringIncomes({
+          familyId: family.id,
+          targetMonthStr: currentMonthStr,
+        })
+      } catch (autoErr) {
+        console.warn('Erro ao auto-lançar receitas fixas no Início:', autoErr)
+      }
+
+      const [allTx, defBgs, overrides, recIncomes, recOverrides] = await Promise.all([
         fetchTransactions({
           familyId: family.id,
           memberId: selectedMemberId,
         }),
         fetchDefaultBudgets(family.id),
         fetchMonthBudgetOverrides(family.id, currentMonthStr),
+        fetchRecurringIncomes(family.id),
+        fetchRecurringIncomeOverrides(family.id, currentMonthStr),
       ])
       setTransactions(allTx)
+      setRecurringIncomes(recIncomes)
+      setRecurringOverrides(recOverrides)
 
       // Calcular o teto orçamentário efetivo respeitando a agregação por categoria/subcategorias
       // 1. Mapear overrides e padrões tanto de categoria quanto de subcategoria
@@ -202,6 +225,27 @@ export default function Home() {
     }
   }, [totalBudgetLimit, transactions, currentMonthStr])
 
+  // Previsão de Custo de Vida (Receitas Fixas Recorrentes vs Tetos de Gastos)
+  const homeForecast = useMemo(() => {
+    const overrideMap = new Map<string, number>()
+    recurringOverrides.forEach((o) => overrideMap.set(o.recurring_income_id, o.amount_cents))
+
+    let totalPlannedIncomeCents = 0
+    recurringIncomes.forEach((rec) => {
+      if (rec.active) {
+        const amt = overrideMap.has(rec.id) ? overrideMap.get(rec.id)! : rec.amount_cents
+        totalPlannedIncomeCents += amt
+      }
+    })
+
+    const netForecast = totalPlannedIncomeCents - totalBudgetLimitCents
+    return {
+      totalPlannedIncomeCents,
+      netForecast,
+      count: recurringIncomes.filter((r) => r.active).length,
+    }
+  }, [recurringIncomes, recurringOverrides, totalBudgetLimitCents])
+
   // Últimas 5-7 transações para a seção recente
   const recentTransactions = useMemo(() => {
     return transactions.slice(0, 7)
@@ -293,6 +337,74 @@ export default function Home() {
           )
         })}
       </div>
+
+      {/* PREVISÃO DE CUSTO DE VIDA (RECEITA FIXA VS TETOS COMPROMETIDOS) */}
+      {homeForecast.totalPlannedIncomeCents > 0 || totalBudgetLimitCents > 0 ? (
+        <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 text-white rounded-3xl p-5 sm:p-6 border border-slate-800 shadow-md">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-xs uppercase font-bold tracking-wider text-slate-300">
+                Previsão Mensal da Família · Custo de Vida
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/carteira')}
+              className="text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold underline self-start sm:self-auto transition-colors"
+            >
+              Ver na Carteira →
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-300 block">
+                Receita Fixa Prevista
+              </span>
+              <span className="text-base sm:text-lg font-bold text-white tabular-nums mt-0.5 block">
+                {formatBRL(homeForecast.totalPlannedIncomeCents)}
+              </span>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">
+                {homeForecast.count} receita(s) fixa(s)
+              </span>
+            </div>
+
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-amber-300 block">
+                Tetos Comprometidos
+              </span>
+              <span className="text-base sm:text-lg font-bold text-white tabular-nums mt-0.5 block">
+                {formatBRL(totalBudgetLimitCents)}
+              </span>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Orçamento de despesas</span>
+            </div>
+
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-300 block">
+                O Que Sobra (Previsão)
+              </span>
+              {(() => {
+                const isPositive = homeForecast.netForecast >= 0
+                return (
+                  <>
+                    <span
+                      className={`text-base sm:text-lg font-extrabold tabular-nums mt-0.5 block ${
+                        isPositive ? 'text-emerald-400' : 'text-red-400'
+                      }`}
+                    >
+                      {isPositive ? '+' : '−'} {formatBRL(Math.abs(homeForecast.netForecast))}
+                    </span>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      {isPositive ? 'Margem livre do mês' : 'Tetos acima da receita'}
+                    </span>
+                  </>
+                )
+              })()}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* 3. Grid Principal (Card Hero de Saldo + Card Orçamento) */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
@@ -499,9 +611,16 @@ export default function Home() {
                     </div>
 
                     <div className="overflow-hidden">
-                      <p className="font-semibold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors truncate">
-                        {tx.description || tx.category?.name || 'Sem descrição'}
-                      </p>
+                      <div className="flex items-center gap-1.5 overflow-hidden">
+                        <p className="font-semibold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors truncate">
+                          {tx.description || tx.category?.name || 'Sem descrição'}
+                        </p>
+                        {tx.is_recurring ? (
+                          <span className="inline-flex items-center gap-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300/60 px-1.5 py-0.2 rounded-md shrink-0">
+                            <span>Fixa</span>
+                          </span>
+                        ) : null}
+                      </div>
                       <div className="flex items-center gap-2 mt-0.5">
                         {/* Avatar do membro */}
                         <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">

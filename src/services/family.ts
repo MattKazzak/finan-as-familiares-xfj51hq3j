@@ -172,7 +172,34 @@ export async function addCategory(
   return data as TransactionCategory
 }
 
-export async function deleteCategory(id: string) {
+export async function getCategoryUsageCount(categoryId: string): Promise<number> {
+  const { count, error } = await (supabase as any)
+    .from('transactions')
+    .select('id', { count: 'exact', head: true })
+    .eq('category_id', categoryId)
+
+  if (error) throw error
+  return count || 0
+}
+
+export async function getSubcategoryUsageCount(subcategoryId: string): Promise<number> {
+  const { count, error } = await (supabase as any)
+    .from('transactions')
+    .select('id', { count: 'exact', head: true })
+    .eq('subcategory_id', subcategoryId)
+
+  if (error) throw error
+  return count || 0
+}
+
+export async function deleteCategory(id: string, reassignOrClearTxs: boolean = true) {
+  if (reassignOrClearTxs) {
+    // Desassocia as transações para evitar violações de chave ou manter integridade do histórico
+    await (supabase as any)
+      .from('transactions')
+      .update({ category_id: null, subcategory_id: null })
+      .eq('category_id', id)
+  }
   const { error } = await (supabase as any).from('transaction_categories').delete().eq('id', id)
 
   if (error) throw error
@@ -201,7 +228,14 @@ export async function addSubcategory(
   return data
 }
 
-export async function deleteSubcategory(id: string) {
+export async function deleteSubcategory(id: string, clearTxs: boolean = true) {
+  if (clearTxs) {
+    // Desassocia as transações da subcategoria
+    await (supabase as any)
+      .from('transactions')
+      .update({ subcategory_id: null })
+      .eq('subcategory_id', id)
+  }
   const { error } = await (supabase as any).from('transaction_subcategories').delete().eq('id', id)
 
   if (error) throw error

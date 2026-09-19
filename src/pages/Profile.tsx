@@ -2,18 +2,14 @@ import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { useFamily } from '@/hooks/use-family'
-import { CategoryIcon, AVAILABLE_ICONS } from '@/components/common/CategoryIcon'
 import { useToast } from '@/hooks/use-toast'
 import type { FamilyMember } from '@/types/finance'
 import {
-  User,
   Users,
   Plus,
   Edit3,
   Trash2,
   LogOut,
-  ChevronDown,
-  ChevronUp,
   Loader2,
   DollarSign,
   Camera,
@@ -43,27 +39,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-
-const CATEGORY_COLORS = [
-  '#F59E0B',
-  '#3B82F6',
-  '#6366F1',
-  '#EC4899',
-  '#EF4444',
-  '#8B5CF6',
-  '#14B8A6',
-  '#10B981',
-  '#059669',
-  '#64748B',
-]
-
 export default function ProfilePage() {
   const { user, signOut } = useAuth()
   const {
@@ -79,10 +54,6 @@ export default function ProfilePage() {
     removeMember,
     updateFamily,
     uploadFamilyAvatar,
-    addNewCategory,
-    removeCategory,
-    addNewSubcategory,
-    removeSubcategory,
     triggerRefresh,
   } = useFamily()
   const { toast } = useToast()
@@ -101,19 +72,6 @@ export default function ProfilePage() {
   const [memberName, setMemberName] = useState('')
   const [savingMember, setSavingMember] = useState(false)
   const [memberToDelete, setMemberToDelete] = useState<FamilyMember | null>(null)
-
-  // Expansão de Categorias
-  const [isCategoriesExpanded, setIsCategoriesExpanded] = useState(false)
-  const [newCatName, setNewCatName] = useState('')
-  const [newCatType, setNewCatType] = useState<'income' | 'expense'>('expense')
-  const [newCatColor, setNewCatColor] = useState('#3B82F6')
-  const [newCatIcon, setNewCatIcon] = useState('Tag')
-  const [savingCat, setSavingCat] = useState(false)
-
-  // Subcategorias no Profile
-  const [expandedCatForSub, setExpandedCatForSub] = useState<string | null>(null)
-  const [newSubName, setNewSubName] = useState('')
-  const [savingSub, setSavingSub] = useState(false)
 
   const openEditFamilyDialog = () => {
     setFamilyNameInput(family?.name || '')
@@ -226,44 +184,6 @@ export default function ProfilePage() {
       })
     } finally {
       setMemberToDelete(null)
-    }
-  }
-
-  const handleAddCategory = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newCatName.trim()) return
-    try {
-      setSavingCat(true)
-      await addNewCategory(newCatName, newCatType, newCatColor, newCatIcon)
-      setNewCatName('')
-      triggerRefresh()
-    } catch {
-      toast({
-        title: 'Erro ao criar categoria',
-        description: 'Tente novamente.',
-        variant: 'destructive',
-      })
-    } finally {
-      setSavingCat(false)
-    }
-  }
-
-  const handleAddSubcategory = async (e: React.FormEvent, categoryId: string) => {
-    e.preventDefault()
-    if (!newSubName.trim()) return
-    try {
-      setSavingSub(true)
-      await addNewSubcategory(categoryId, newSubName.trim())
-      setNewSubName('')
-      triggerRefresh()
-    } catch {
-      toast({
-        title: 'Erro ao criar subcategoria',
-        description: 'Tente novamente.',
-        variant: 'destructive',
-      })
-    } finally {
-      setSavingSub(false)
     }
   }
 
@@ -478,219 +398,6 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* 4. Configurações: Categorias */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-        <button
-          onClick={() => setIsCategoriesExpanded(!isCategoriesExpanded)}
-          className="w-full p-5 sm:p-6 flex items-center justify-between text-left hover:bg-slate-50/50 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
-              🏷️
-            </div>
-            <div>
-              <h4 className="font-bold text-sm text-slate-900">Cadastrar / Editar Categorias</h4>
-              <p className="text-xs text-slate-500">
-                Gerencie as opções de classificação de despesas e receitas
-              </p>
-            </div>
-          </div>
-          {isCategoriesExpanded ? (
-            <ChevronUp className="w-5 h-5 text-slate-400" />
-          ) : (
-            <ChevronDown className="w-5 h-5 text-slate-400" />
-          )}
-        </button>
-
-        {isCategoriesExpanded && (
-          <div className="p-5 sm:p-6 pt-0 border-t border-slate-100 space-y-4">
-            {/* Lista Atual de Categorias com Subcategorias */}
-            <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
-              {categories.map((cat) => (
-                <div
-                  key={cat.id}
-                  className="p-3 rounded-2xl border border-slate-200/80 bg-slate-50/50 space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5 overflow-hidden">
-                      <div
-                        className="w-8 h-8 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs"
-                        style={{ backgroundColor: cat.color || '#64748B' }}
-                      >
-                        <CategoryIcon name={cat.icon} className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <span className="text-xs font-bold text-slate-800">{cat.name}</span>
-                        <span className="text-[10px] text-slate-400 ml-1.5">
-                          ({cat.type === 'income' ? 'Receita' : 'Despesa'})
-                        </span>
-                        {cat.subcategories && cat.subcategories.length > 0 && (
-                          <span className="text-[10px] bg-slate-200/70 text-slate-600 px-1.5 py-0.5 rounded-full ml-1.5">
-                            {cat.subcategories.length} subcategorias
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setExpandedCatForSub(expandedCatForSub === cat.id ? null : cat.id)
-                        }
-                        className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 px-2 py-1 rounded-lg hover:bg-emerald-50 transition-colors"
-                      >
-                        {expandedCatForSub === cat.id ? 'Fechar' : '+ Subcategorias'}
-                      </button>
-                      {cat.family_id && (
-                        <button
-                          type="button"
-                          onClick={() => removeCategory(cat.id)}
-                          className="text-slate-400 hover:text-red-500 p-1.5 transition-colors"
-                          title="Excluir categoria"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Subcategorias aninhadas */}
-                  {expandedCatForSub === cat.id && (
-                    <div className="mt-2 pl-4 border-l-2 border-emerald-500/30 space-y-2 pt-1 animate-in fade-in-50">
-                      <div className="flex flex-wrap gap-1.5">
-                        {(!cat.subcategories || cat.subcategories.length === 0) && (
-                          <p className="text-[11px] text-slate-400 py-1">
-                            Nenhuma subcategoria cadastrada ainda.
-                          </p>
-                        )}
-                        {cat.subcategories?.map((sub) => (
-                          <div
-                            key={sub.id}
-                            className="inline-flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1 rounded-xl text-xs text-slate-700 shadow-2xs"
-                          >
-                            <span>{sub.name}</span>
-                            <button
-                              type="button"
-                              onClick={() => removeSubcategory(sub.id)}
-                              className="text-slate-400 hover:text-red-600 transition-colors ml-0.5"
-                              title="Remover subcategoria"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Formulário para adicionar subcategoria */}
-                      <form
-                        onSubmit={(e) => handleAddSubcategory(e, cat.id)}
-                        className="flex items-center gap-2 pt-1"
-                      >
-                        <Input
-                          type="text"
-                          placeholder={`Nova subcategoria em ${cat.name}...`}
-                          value={newSubName}
-                          onChange={(e) => setNewSubName(e.target.value)}
-                          className="h-8 text-xs bg-white rounded-xl"
-                        />
-                        <Button
-                          type="submit"
-                          size="sm"
-                          disabled={savingSub || !newSubName.trim()}
-                          className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded-xl px-3"
-                        >
-                          {savingSub ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            'Adicionar'
-                          )}
-                        </Button>
-                      </form>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Formulário Inline para Nova Categoria */}
-            <form
-              onSubmit={handleAddCategory}
-              className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3"
-            >
-              <h5 className="font-bold text-xs text-slate-800">Adicionar Nova Categoria</h5>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <Input
-                  type="text"
-                  placeholder="Nome da categoria"
-                  value={newCatName}
-                  onChange={(e) => setNewCatName(e.target.value)}
-                  className="bg-white text-xs"
-                  required
-                />
-
-                <Select
-                  value={newCatType}
-                  onValueChange={(v) => setNewCatType(v as 'income' | 'expense')}
-                >
-                  <SelectTrigger className="bg-white text-xs">
-                    <SelectValue placeholder="Tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="expense">Despesa</SelectItem>
-                    <SelectItem value="income">Receita</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={newCatIcon} onValueChange={setNewCatIcon}>
-                  <SelectTrigger className="bg-white text-xs">
-                    <SelectValue placeholder="Ícone" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AVAILABLE_ICONS.map((icon) => (
-                      <SelectItem key={icon} value={icon}>
-                        {icon}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Seletor de Cores */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500 font-medium">Cor:</span>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {CATEGORY_COLORS.map((c) => (
-                    <button
-                      type="button"
-                      key={c}
-                      onClick={() => setNewCatColor(c)}
-                      className={`w-5 h-5 rounded-full transition-transform ${
-                        newCatColor === c ? 'ring-2 ring-slate-900 scale-110' : ''
-                      }`}
-                      style={{ backgroundColor: c }}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex justify-end">
-                <Button
-                  type="submit"
-                  disabled={savingCat}
-                  size="sm"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
-                >
-                  {savingCat && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
-                  Salvar Categoria
-                </Button>
-              </div>
-            </form>
-          </div>
-        )}
-      </div>
-
       {/* 5. Configurações do Sistema */}
       <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm space-y-4">
         <h4 className="font-bold text-sm text-slate-900 mb-2">Preferências</h4>
@@ -896,6 +603,13 @@ export default function ProfilePage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Rodapé de Versão */}
+      <div className="text-center pt-2 pb-4">
+        <span className="text-[11px] text-slate-400 font-medium">
+          Versão 0.0.17 • Finanças Familiares
+        </span>
+      </div>
 
       {/* CONFIRMAÇÃO DE EXCLUSÃO DE MEMBRO */}
       <AlertDialog

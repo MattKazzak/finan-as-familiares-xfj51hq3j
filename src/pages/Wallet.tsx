@@ -17,6 +17,14 @@ import {
   formatNumberBRL,
 } from '@/lib/formatters'
 import { CategoryIcon } from '@/components/common/CategoryIcon'
+import { RecurringIncomesDialog } from '@/components/wallet/RecurringIncomesDialog'
+import { CategoryManagementDialog } from '@/components/categories/CategoryManagementDialog'
+import {
+  fetchRecurringIncomes,
+  fetchRecurringIncomeOverrides,
+  processAutoRecurringIncomes,
+} from '@/services/recurring-incomes'
+import type { RecurringIncome, RecurringIncomeOverride } from '@/types/finance'
 import { TransactionDetailDialog } from '@/components/transactions/TransactionDetailDialog'
 import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
 import { useToast } from '@/hooks/use-toast'
@@ -46,6 +54,8 @@ import {
   Sparkles,
   Calendar,
   Layers,
+  Tag,
+  Briefcase,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -92,7 +102,13 @@ export default function WalletPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [defaultBudgets, setDefaultBudgets] = useState<DefaultBudget[]>([])
   const [monthOverrides, setMonthOverrides] = useState<Budget[]>([])
+  const [recurringIncomes, setRecurringIncomes] = useState<RecurringIncome[]>([])
+  const [recurringOverrides, setRecurringOverrides] = useState<RecurringIncomeOverride[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Diálogos de Gestão de Categorias e Receitas Fixas
+  const [isCategoryManageOpen, setIsCategoryManageOpen] = useState(false)
+  const [isRecurringIncomesOpen, setIsRecurringIncomesOpen] = useState(false)
 
   // Categorias expandidas na aba de Orçamentos para visualização das subcategorias
   const [expandedBudgetCategories, setExpandedBudgetCategories] = useState<Record<string, boolean>>(
@@ -144,17 +160,32 @@ export default function WalletPage() {
     if (!family) return
     try {
       setLoading(true)
-      const [txs, defBgs, overrides] = await Promise.all([
+
+      // Auto-lançamento de receitas fixas idempotente para o mês selecionado
+      try {
+        await processAutoRecurringIncomes({
+          familyId: family.id,
+          targetMonthStr: monthKey,
+        })
+      } catch (autoErr) {
+        console.warn('Erro ao processar auto-lançamento:', autoErr)
+      }
+
+      const [txs, defBgs, overrides, recIncomes, recOverrides] = await Promise.all([
         fetchTransactions({
           familyId: family.id,
           month: monthKey,
         }),
         fetchDefaultBudgets(family.id),
         fetchMonthBudgetOverrides(family.id, monthKey),
+        fetchRecurringIncomes(family.id),
+        fetchRecurringIncomeOverrides(family.id, monthKey),
       ])
       setTransactions(txs)
       setDefaultBudgets(defBgs)
       setMonthOverrides(overrides)
+      setRecurringIncomes(recIncomes)
+      setRecurringOverrides(recOverrides)
     } catch (err: any) {
       console.error('Erro ao carregar dados da carteira:', err)
       toast({
@@ -220,6 +251,26 @@ export default function WalletPage() {
       monthNetCents: income - expense,
     }
   }, [filteredTransactions])
+
+  // Previsão do Mês: Receitas Fixas Recorrentes vs Tetos de Despesa Orçados
+  const forecastData = useMemo(() => {
+    const overrideMap = new Map<string, number>()
+    recurringOverrides.forEach((o) => overrideMap.set(o.recurring_income_id, o.amount_cents))
+
+    // Soma das receitas fixas ativas (usando override deste mês se houver)
+    let totalPlannedIncomeCents = 0
+    recurringIncomes.forEach((rec) => {
+      if (rec.active) {
+        const amt = overrideMap.has(rec.id) ? overrideMap.get(rec.id)! : rec.amount_cents
+        totalPlannedIncomeCents += amt
+      }
+    })
+
+    return {
+      totalPlannedIncomeCents,
+      totalRecurringCount: recurringIncomes.filter((r) => r.active).length,
+    }
+  }, [recurringIncomes, recurringOverrides])
 
   // Agrupamento por dia ("Hoje", "Ontem", "17 de março")
   const groupedTransactions = useMemo(() => {
@@ -650,8 +701,8 @@ export default function WalletPage() {
               </div>
             </div>
 
-            {/* Barra de Filtro e Contagem */}
-            <div className="flex items-center justify-between">
+            {/* Barra de Filtro, Atalho de Receitas Fixas e Contagem */}
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
@@ -670,6 +721,21 @@ export default function WalletPage() {
                       {activeFiltersCount}
                     </span>
                   )}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsRecurringIncomesOpen(true)}
+                  className="rounded-xl text-xs font-semibold gap-1.5 border-emerald-600/30 text-emerald-800 bg-emerald-50/50 hover:bg-emerald-100/70"
+                >
+                  <Briefcase className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Receitas fixas</span>
+                  {forecastData.totalRecurringCount > 0 ? (
+                    <span className="w-4 h-4 rounded-full bg-emerald-700 text-white text-[10px] flex items-center justify-center font-bold">
+                      {forecastData.totalRecurringCount}
+                    </span>
+                  ) : null}
                 </Button>
 
                 {activeFiltersCount > 0 && (
@@ -769,15 +835,23 @@ export default function WalletPage() {
                               </div>
 
                               <div className="overflow-hidden pr-2">
-                                <p className="font-semibold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors truncate">
-                                  {tx.description || tx.category?.name || 'Sem descrição'}
-                                </p>
+                                <div className="flex items-center gap-1.5 overflow-hidden">
+                                  <p className="font-semibold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors truncate">
+                                    {tx.description || tx.category?.name || 'Sem descrição'}
+                                  </p>
+                                  {tx.is_recurring ? (
+                                    <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300/70 px-1.5 py-0.2 rounded-md shrink-0">
+                                      <Sparkles className="w-2.5 h-2.5" />
+                                      <span>Fixa</span>
+                                    </span>
+                                  ) : null}
+                                </div>
                                 <div className="flex items-center gap-2 mt-0.5">
                                   <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
                                     {tx.member?.name || 'Família'}
                                   </span>
                                   {tx.category && (
-                                    <span className="text-[11px] text-slate-500 font-medium">
+                                    <span className="text-[11px] text-slate-500 font-medium truncate">
                                       <span>{tx.category.name}</span>
                                       {tx.subcategory && (
                                         <span className="text-emerald-700 font-semibold ml-1">
@@ -842,6 +916,116 @@ export default function WalletPage() {
         {/* ================= TAB 2: ORÇAMENTOS ================= */}
         {activeTab === 'orcamentos' ? (
           <div className="space-y-5 mt-0 animate-in fade-in-50 duration-200">
+            {/* Cabeçalho da Aba Orçamentos: Ações de Gestão de Categorias e Receitas Fixas */}
+            <div className="flex items-center justify-between gap-2 flex-wrap bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+                  🎯
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900 leading-tight">
+                    Planejamento & Categorias
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Controle de tetos de gastos e estrutura de classificação
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsRecurringIncomesOpen(true)}
+                  className="rounded-xl text-xs font-semibold gap-1.5 border-slate-200 text-slate-700 hover:bg-slate-50 h-8"
+                >
+                  <Briefcase className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Receitas fixas</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsCategoryManageOpen(true)}
+                  className="rounded-xl text-xs font-semibold gap-1.5 border-emerald-600/30 text-emerald-800 bg-emerald-50/70 hover:bg-emerald-100/70 h-8"
+                >
+                  <Tag className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Gerenciar categorias</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* CARD DE PREVISÃO DE CUSTO DE VIDA (RECEITAS FIXAS VS TETOS COMPROMETIDOS) */}
+            {forecastData.totalPlannedIncomeCents > 0 || categoryBudgetData.totalBudget > 0 ? (
+              <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-md border border-slate-800 relative overflow-hidden">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-xs uppercase font-bold tracking-wider text-slate-300">
+                      Previsão de Custo de Vida · {formatMonthYear(currentDate)}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsRecurringIncomesOpen(true)}
+                    className="text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold underline self-start sm:self-auto transition-colors"
+                  >
+                    Editar receitas fixas ({forecastData.totalRecurringCount})
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
+                    <span className="text-[11px] uppercase tracking-wider text-emerald-300 font-bold block">
+                      Receita Fixa Prevista
+                    </span>
+                    <span className="text-lg sm:text-xl font-bold tabular-nums text-white mt-0.5 block">
+                      {formatBRL(forecastData.totalPlannedIncomeCents)}
+                    </span>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      {forecastData.totalRecurringCount} receita(s) recorrente(s)
+                    </span>
+                  </div>
+
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
+                    <span className="text-[11px] uppercase tracking-wider text-amber-300 font-bold block">
+                      Despesas Comprometidas
+                    </span>
+                    <span className="text-lg sm:text-xl font-bold tabular-nums text-white mt-0.5 block">
+                      {formatBRL(categoryBudgetData.totalBudget)}
+                    </span>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      Soma dos tetos de gastos
+                    </span>
+                  </div>
+
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
+                    <span className="text-[11px] uppercase tracking-wider text-slate-300 font-bold block">
+                      Previsão do que Sobra
+                    </span>
+                    {(() => {
+                      const netForecast =
+                        forecastData.totalPlannedIncomeCents - categoryBudgetData.totalBudget
+                      const isPositive = netForecast >= 0
+                      return (
+                        <>
+                          <span
+                            className={`text-lg sm:text-xl font-extrabold tabular-nums mt-0.5 block ${
+                              isPositive ? 'text-emerald-400' : 'text-red-400'
+                            }`}
+                          >
+                            {isPositive ? '+' : '−'} {formatBRL(Math.abs(netForecast))}
+                          </span>
+                          <span className="text-[10px] text-slate-400 mt-0.5 block">
+                            {isPositive ? 'Margem livre projetada' : 'Orçamento excede receitas'}
+                          </span>
+                        </>
+                      )
+                    })()}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
             {/* Card Geral de Orçamento Recorrente */}
             <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
@@ -1494,6 +1678,22 @@ export default function WalletPage() {
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* DIÁLOGO DE GERENCIAR CATEGORIAS */}
+      <CategoryManagementDialog
+        open={isCategoryManageOpen}
+        onOpenChange={setIsCategoryManageOpen}
+      />
+
+      {/* DIÁLOGO DE RECEITAS FIXAS RECORRENTES */}
+      <RecurringIncomesDialog
+        open={isRecurringIncomesOpen}
+        onOpenChange={setIsRecurringIncomesOpen}
+        currentMonthDate={currentDate}
+        recurringIncomes={recurringIncomes}
+        recurringOverrides={recurringOverrides}
+        onSuccess={() => loadMonthData()}
+      />
 
       {/* DIÁLOGO DE DETALHE DA TRANSAÇÃO */}
       <TransactionDetailDialog

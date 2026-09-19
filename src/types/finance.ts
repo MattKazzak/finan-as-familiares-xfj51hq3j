@@ -42,6 +42,43 @@ export interface TransactionSubcategory {
   created_at: string
 }
 
+export interface RecurringIncome {
+  id: string
+  family_id: string
+  member_id: string
+  category_id: string | null
+  subcategory_id?: string | null
+  name: string
+  amount_cents: number
+  day_of_month: number // 1..31
+  active: boolean
+  created_at: string
+  // Relações resolvidas
+  member?: FamilyMember
+  category?: TransactionCategory
+  subcategory?: TransactionSubcategory
+}
+
+export interface RecurringIncomeOverride {
+  id: string
+  recurring_income_id: string
+  family_id: string
+  month: string // YYYY-MM-01
+  amount_cents: number
+  created_at: string
+}
+
+export interface EffectiveRecurringIncome {
+  recurringIncome: RecurringIncome
+  effectiveAmountCents: number
+  defaultAmountCents: number
+  isOverridden: boolean
+  overrideId?: string
+  hasGeneratedThisMonth: boolean
+  generatedTransactionId?: string
+  scheduledDate: string // YYYY-MM-DD
+}
+
 export interface Transaction {
   id: string
   family_id: string
@@ -53,10 +90,14 @@ export interface Transaction {
   description: string | null
   transaction_date: string // YYYY-MM-DD
   created_at: string
+  recurring_income_id?: string | null
+  is_recurring?: boolean
+  recurring_month?: string | null
   // Relações resolvidas
   member?: FamilyMember
   category?: TransactionCategory
   subcategory?: TransactionSubcategory
+  recurring_income?: RecurringIncome
 }
 
 export interface DefaultBudget {

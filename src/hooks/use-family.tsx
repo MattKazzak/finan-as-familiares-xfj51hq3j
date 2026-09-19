@@ -14,6 +14,8 @@ import {
   deleteCategory,
   addSubcategory,
   deleteSubcategory,
+  getCategoryUsageCount,
+  getSubcategoryUsageCount,
   updateFamilyDetails,
   uploadFamilyAvatarFile,
 } from '@/services/family'
@@ -46,6 +48,7 @@ interface FamilyContextType {
     icon?: string,
   ) => Promise<TransactionCategory>
   removeCategory: (id: string) => Promise<void>
+  checkCategoryUsage: (id: string) => Promise<number>
   addNewSubcategory: (
     categoryId: string,
     name: string,
@@ -53,6 +56,7 @@ interface FamilyContextType {
     color?: string,
   ) => Promise<TransactionSubcategory>
   removeSubcategory: (id: string) => Promise<void>
+  checkSubcategoryUsage: (id: string) => Promise<number>
   isNewTransactionOpen: boolean
   setIsNewTransactionOpen: (open: boolean) => void
   newTransactionDefaultType: 'income' | 'expense'
@@ -211,7 +215,15 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   const removeCategory = async (id: string) => {
     await deleteCategory(id)
     setCategories((prev) => prev.filter((c) => c.id !== id))
-    toast({ title: 'Sucesso', description: 'Categoria removida.' })
+    toast({ title: 'Sucesso', description: 'Categoria removida e lançamentos desassociados.' })
+  }
+
+  const checkCategoryUsage = async (id: string) => {
+    return await getCategoryUsageCount(id)
+  }
+
+  const checkSubcategoryUsage = async (id: string) => {
+    return await getSubcategoryUsageCount(id)
   }
 
   const addNewSubcategory = async (
@@ -289,8 +301,10 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         removeMember,
         addNewCategory,
         removeCategory,
+        checkCategoryUsage,
         addNewSubcategory,
         removeSubcategory,
+        checkSubcategoryUsage,
         isNewTransactionOpen,
         setIsNewTransactionOpen,
         newTransactionDefaultType,

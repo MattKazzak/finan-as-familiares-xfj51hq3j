@@ -19,12 +19,12 @@ export async function fetchTransactions(filter: TransactionFilter) {
       *,
       member:family_members(*),
       category:transaction_categories(*),
-      subcategory:transaction_subcategories(*)
+      subcategory:transaction_subcategories(*),
+      recurring_income:recurring_incomes(*)
     `)
     .eq('family_id', filter.familyId)
     .order('transaction_date', { ascending: false })
     .order('created_at', { ascending: false })
-
   if (filter.memberId) {
     query = query.eq('member_id', filter.memberId)
   }
@@ -67,6 +67,9 @@ export async function createTransaction(payload: {
   amount_cents: number
   description: string
   transaction_date: string
+  recurring_income_id?: string | null
+  is_recurring?: boolean
+  recurring_month?: string | null
 }) {
   const { data, error } = await (supabase as any)
     .from('transactions')
@@ -75,7 +78,8 @@ export async function createTransaction(payload: {
       *,
       member:family_members(*),
       category:transaction_categories(*),
-      subcategory:transaction_subcategories(*)
+      subcategory:transaction_subcategories(*),
+      recurring_income:recurring_incomes(*)
     `)
     .single()
 
@@ -93,6 +97,9 @@ export async function createTransactionsBatch(
     amount_cents: number
     description: string
     transaction_date: string
+    recurring_income_id?: string | null
+    is_recurring?: boolean
+    recurring_month?: string | null
   }>,
 ) {
   if (payloads.length === 0) return []
@@ -100,7 +107,8 @@ export async function createTransactionsBatch(
       *,
       member:family_members(*),
       category:transaction_categories(*),
-      subcategory:transaction_subcategories(*)
+      subcategory:transaction_subcategories(*),
+      recurring_income:recurring_incomes(*)
     `)
 
   if (error) throw error
@@ -117,6 +125,9 @@ export async function updateTransaction(
     amount_cents: number
     description: string
     transaction_date: string
+    recurring_income_id: string | null
+    is_recurring: boolean
+    recurring_month: string | null
   }>,
 ) {
   const { data, error } = await (supabase as any)
@@ -127,7 +138,8 @@ export async function updateTransaction(
       *,
       member:family_members(*),
       category:transaction_categories(*),
-      subcategory:transaction_subcategories(*)
+      subcategory:transaction_subcategories(*),
+      recurring_income:recurring_incomes(*)
     `)
     .single()
 
