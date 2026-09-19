@@ -1474,192 +1474,267 @@ export default function WalletPage() {
 
                           {/* Chevron de Expandir / Recolher Subcategorias */}
                           <div className="flex items-center">
-                            {hasSubcats ? (
-                              <button
-                                type="button"
-                                onClick={(e) => toggleCatBudgetExpand(item.category.id, e)}
-                                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-                                title={
-                                  isExpanded ? 'Recolher subcategorias' : 'Expandir subcategorias'
-                                }
-                                aria-label={
-                                  isExpanded ? 'Recolher subcategorias' : 'Expandir subcategorias'
-                                }
-                              >
-                                <ChevronDown
-                                  className={`w-4 h-4 transition-transform duration-200 ${
-                                    isExpanded ? 'rotate-180' : ''
-                                  }`}
-                                />
-                              </button>
-                            ) : null}
+                            <button
+                              type="button"
+                              onClick={(e) => toggleCatBudgetExpand(item.category.id, e)}
+                              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                              title={
+                                isExpanded ? 'Recolher subcategorias' : 'Expandir subcategorias'
+                              }
+                              aria-label={
+                                isExpanded ? 'Recolher subcategorias' : 'Expandir subcategorias'
+                              }
+                            >
+                              <ChevronDown
+                                className={`w-4 h-4 transition-transform duration-200 ${
+                                  isExpanded ? 'rotate-180' : ''
+                                }`}
+                              />
+                            </button>
                           </div>
                         </div>
                       </div>
 
-                      {/* Linhas Aninhadas: Subcategorias com Recuo e Visual Suave */}
-                      {hasSubcats && isExpanded ? (
+                      {/* Linhas Aninhadas: Subcategorias com Recuo e Visual Suave OU Mensagem Vazia */}
+                      {isExpanded ? (
                         <div
                           key={`budget-subcats-${item.category.id}`}
                           className="bg-slate-50/60 border-t border-slate-100 divide-y divide-slate-100/80 pl-4 sm:pl-7 pr-3 py-1"
                         >
-                          {item.subcategories.map((subItem) => (
-                            <div
-                              key={`budget-sub-${subItem.subcategory.id}`}
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                openBudgetEditor(
-                                  item.category.id,
-                                  subItem.subcategory.id,
-                                  subItem.defaultLimitCents,
-                                  subItem.limitCents,
-                                  subItem.hasOverride,
-                                )
-                              }}
-                              className="py-2 flex items-center justify-between hover:bg-white rounded-xl px-2.5 cursor-pointer transition-colors group/sub gap-2"
-                            >
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover/sub:bg-emerald-500 transition-colors shrink-0" />
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-xs font-semibold text-slate-700 group-hover/sub:text-emerald-700 transition-colors truncate">
-                                      {subItem.subcategory.name}
-                                    </span>
-                                    {subItem.hasOverride ? (
-                                      <span className="text-[10px] font-semibold bg-amber-100/80 text-amber-900 border border-amber-200/80 px-1.5 py-0.2 rounded-full leading-tight shrink-0">
-                                        <span>ajustado</span>
-                                      </span>
-                                    ) : null}
-                                    {subItem.isOver ? (
-                                      <AlertTriangle className="w-3 h-3 text-red-500 shrink-0" />
-                                    ) : null}
-                                  </div>
-                                  <p className="text-[11px] text-slate-400 tabular-nums flex items-center gap-1 truncate">
-                                    <span>{formatBRL(subItem.spentCents)}</span>
-                                    <span>de</span>
-                                    <span>
-                                      {subItem.limitCents > 0 ? (
-                                        <span>{formatBRL(subItem.limitCents)}</span>
-                                      ) : (
-                                        <span>Não definido</span>
-                                      )}
-                                    </span>
-                                  </p>
-                                </div>
-                              </div>
-
-                              {/* Lado Direito da Subcategoria: Ações Inline (Lápis e Lixeira) + Progresso */}
-                              <div className="flex items-center gap-2 shrink-0">
-                                {/* ÍCONES DE GESTÃO INLINE NA SUBCATEGORIA */}
-                                <div
-                                  className="flex items-center gap-0.5"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  {/* Lápis: Renomear subcategoria E definir/editar teto orçamentário */}
-                                  <SubcategoryEditorPopover
-                                    subcategory={subItem.subcategory}
-                                    parentCategoryName={item.category.name}
-                                    showBudgetFields={true}
-                                    initialDefaultLimitCents={subItem.defaultLimitCents}
-                                    initialMonthLimitCents={subItem.limitCents}
-                                    hasMonthOverride={subItem.hasOverride}
-                                    currentMonthLabel={formatMonthYear(currentDate)}
-                                    trigger={
-                                      <button
-                                        type="button"
-                                        className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-all"
-                                        title="Editar subcategoria e teto"
-                                        aria-label={`Editar subcategoria ${subItem.subcategory.name} e teto`}
+                          {hasSubcats ? (
+                            item.subcategories.map((subItem) => (
+                              <div
+                                key={`budget-sub-${subItem.subcategory.id}`}
+                                onClick={() =>
+                                  openBudgetEditor(
+                                    item.category.id,
+                                    subItem.subcategory.id,
+                                    subItem.defaultLimitCents,
+                                    subItem.limitCents,
+                                    subItem.hasOverride,
+                                  )
+                                }
+                                className="py-2.5 flex items-center justify-between hover:bg-white rounded-xl px-2.5 cursor-pointer transition-colors group/sub gap-2.5 sm:gap-3"
+                              >
+                                {/* Identificação da Subcategoria */}
+                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover/sub:bg-emerald-500 transition-colors shrink-0" />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-1.5">
+                                      <span
+                                        className="text-xs font-semibold text-slate-700 group-hover/sub:text-emerald-700 transition-colors break-words leading-snug"
+                                        title={subItem.subcategory.name}
                                       >
-                                        <Edit3 className="w-3 h-3" />
-                                      </button>
-                                    }
-                                    onSave={async (data) => {
-                                      // 1. Atualiza nome se alterado
-                                      if (data.name && data.name !== subItem.subcategory.name) {
-                                        await editSubcategory(subItem.subcategory.id, {
-                                          name: data.name,
-                                        })
-                                      }
+                                        <span>{subItem.subcategory.name}</span>
+                                      </span>
+                                      {subItem.hasOverride ? (
+                                        <span className="text-[10px] font-semibold bg-amber-100/80 text-amber-900 border border-amber-200/80 px-1.5 py-0.2 rounded-full leading-tight shrink-0">
+                                          <span>ajustado</span>
+                                        </span>
+                                      ) : null}
+                                      {subItem.isOver ? (
+                                        <AlertTriangle className="w-3 h-3 text-red-500 shrink-0" />
+                                      ) : null}
+                                    </div>
+                                    <p className="text-[11px] text-slate-400 tabular-nums mt-0.5 flex items-center gap-1 flex-wrap">
+                                      <span>{formatBRL(subItem.spentCents)}</span>
+                                      <span className="text-slate-400">de</span>
+                                      <span className="font-medium text-slate-600">
+                                        {subItem.limitCents > 0 ? (
+                                          <span>{formatBRL(subItem.limitCents)}</span>
+                                        ) : (
+                                          <span>Sem teto</span>
+                                        )}
+                                      </span>
+                                    </p>
+                                  </div>
+                                </div>
 
-                                      // 2. Atualiza teto se fornecido
-                                      if (family) {
-                                        if (data.isEditingOnlyThisMonth) {
-                                          const monthCents = data.monthLimitCents || 0
-                                          await upsertMonthBudgetOverride(
-                                            family.id,
-                                            item.category.id,
-                                            monthKey,
-                                            monthCents,
-                                            subItem.subcategory.id,
-                                          )
-                                        } else {
-                                          const defCents = data.defaultLimitCents || 0
-                                          await upsertDefaultBudget(
-                                            family.id,
-                                            item.category.id,
-                                            defCents,
-                                            subItem.subcategory.id,
-                                          )
-                                          // Se havia override pontual e salvou novo padrão, alinha o mês corrente
-                                          if (subItem.hasOverride) {
-                                            await resetMonthBudgetToDefault(
+                                {/* Lado Direito da Subcategoria: Progresso / Teto + Ações Inline (Lápis e Lixeira) + Espaçador da setinha */}
+                                <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+                                  {/* Progresso / Percentual da Subcategoria (alinhado com a categoria pai) */}
+                                  <div className="flex items-center">
+                                    {subItem.limitCents > 0 ? (
+                                      <div className="flex items-center gap-1.5 sm:gap-2">
+                                        <span
+                                          className={`text-[11px] font-bold tabular-nums min-w-[34px] sm:min-w-[38px] text-right ${
+                                            subItem.isOver
+                                              ? 'text-red-600'
+                                              : subItem.percent >= 75
+                                                ? 'text-amber-600'
+                                                : 'text-emerald-600'
+                                          }`}
+                                        >
+                                          <span>{subItem.percent}%</span>
+                                        </span>
+                                        <div className="hidden xs:block w-12 sm:w-20 bg-slate-200/60 h-1.5 rounded-full overflow-hidden">
+                                          <div
+                                            className={`h-full rounded-full transition-all ${
+                                              subItem.isOver
+                                                ? 'bg-red-500'
+                                                : subItem.percent >= 75
+                                                  ? 'bg-amber-500'
+                                                  : 'bg-emerald-600'
+                                            }`}
+                                            style={{ width: `${Math.min(subItem.percent, 100)}%` }}
+                                          />
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <span className="text-[11px] font-medium text-slate-400 whitespace-nowrap min-w-[34px] sm:min-w-[38px] text-right">
+                                        <span>—</span>
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* ÍCONES DE GESTÃO INLINE NA SUBCATEGORIA */}
+                                  <div
+                                    className="flex items-center gap-0.5"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {/* Lápis: Renomear subcategoria E definir/editar teto orçamentário */}
+                                    <SubcategoryEditorPopover
+                                      subcategory={subItem.subcategory}
+                                      parentCategoryName={item.category.name}
+                                      showBudgetFields={true}
+                                      initialDefaultLimitCents={subItem.defaultLimitCents}
+                                      initialMonthLimitCents={subItem.limitCents}
+                                      hasMonthOverride={subItem.hasOverride}
+                                      currentMonthLabel={formatMonthYear(currentDate)}
+                                      trigger={
+                                        <button
+                                          type="button"
+                                          className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-all"
+                                          title="Editar subcategoria e teto"
+                                          aria-label={`Editar subcategoria ${subItem.subcategory.name} e teto`}
+                                        >
+                                          <Edit3 className="w-3.5 h-3.5" />
+                                        </button>
+                                      }
+                                      onSave={async (data) => {
+                                        // 1. Atualiza nome se alterado
+                                        if (data.name && data.name !== subItem.subcategory.name) {
+                                          await editSubcategory(subItem.subcategory.id, {
+                                            name: data.name,
+                                          })
+                                        }
+
+                                        // 2. Atualiza teto se fornecido
+                                        if (family) {
+                                          if (data.isEditingOnlyThisMonth) {
+                                            const monthCents = data.monthLimitCents || 0
+                                            await upsertMonthBudgetOverride(
                                               family.id,
                                               item.category.id,
                                               monthKey,
+                                              monthCents,
                                               subItem.subcategory.id,
                                             )
+                                          } else {
+                                            const defCents = data.defaultLimitCents || 0
+                                            await upsertDefaultBudget(
+                                              family.id,
+                                              item.category.id,
+                                              defCents,
+                                              subItem.subcategory.id,
+                                            )
+                                            // Se havia override pontual e salvou novo padrão, alinha o mês corrente
+                                            if (subItem.hasOverride) {
+                                              await resetMonthBudgetToDefault(
+                                                family.id,
+                                                item.category.id,
+                                                monthKey,
+                                                subItem.subcategory.id,
+                                              )
+                                            }
                                           }
                                         }
+
+                                        triggerRefresh()
+                                        await loadMonthData()
+                                      }}
+                                    />
+
+                                    {/* Lixeira: Excluir subcategoria com confirmação e contagem */}
+                                    <button
+                                      type="button"
+                                      onClick={(e) =>
+                                        handleInitiateDeleteSubcategory(
+                                          subItem.subcategory,
+                                          item.category.name,
+                                          e,
+                                        )
                                       }
+                                      className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-slate-100 transition-all"
+                                      title="Excluir subcategoria"
+                                      aria-label={`Excluir subcategoria ${subItem.subcategory.name}`}
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
 
-                                      triggerRefresh()
-                                      await loadMonthData()
-                                    }}
+                                  {/* Espaçador para alinhar perfeitamente com a categoria pai (que tem a setinha w-7 / p-1.5) */}
+                                  <div
+                                    className="w-7 shrink-0 pointer-events-none"
+                                    aria-hidden="true"
                                   />
-
-                                  {/* Lixeira: Excluir subcategoria com confirmação e contagem */}
-                                  <button
-                                    type="button"
-                                    onClick={(e) =>
-                                      handleInitiateDeleteSubcategory(
-                                        subItem.subcategory,
-                                        item.category.name,
-                                        e,
-                                      )
-                                    }
-                                    className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-slate-100 transition-all"
-                                    title="Excluir subcategoria"
-                                    aria-label={`Excluir subcategoria ${subItem.subcategory.name}`}
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </button>
                                 </div>
                               </div>
+                            ))
+                          ) : (
+                            /* Empty state amigável quando não houver subcategorias cadastradas */
+                            <div className="py-3 px-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500">
+                              <span className="italic text-slate-400">
+                                <span>Nenhuma subcategoria cadastrada</span>
+                              </span>
+                              <SubcategoryEditorPopover
+                                parentCategoryName={item.category.name}
+                                trigger={
+                                  <button
+                                    type="button"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 transition-colors self-start sm:self-auto"
+                                  >
+                                    <Plus className="w-3 h-3" />
+                                    <span>Criar subcategoria</span>
+                                  </button>
+                                }
+                                onSave={async (data) => {
+                                  await addNewSubcategory(item.category.id, data.name)
+                                  setExpandedBudgetCategories((prev) => ({
+                                    ...prev,
+                                    [item.category.id]: true,
+                                  }))
+                                  triggerRefresh()
+                                  await loadMonthData()
+                                }}
+                              />
                             </div>
-                          ))}
+                          )}
 
-                          {/* Botão rápido para adicionar subcategoria no fim do bloco expandido */}
-                          <div className="py-2 px-2.5">
-                            <SubcategoryEditorPopover
-                              parentCategoryName={item.category.name}
-                              trigger={
-                                <button
-                                  type="button"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 transition-colors"
-                                >
-                                  <Plus className="w-3 h-3" />
-                                  <span>Adicionar subcategoria</span>
-                                </button>
-                              }
-                              onSave={async (data) => {
-                                await addNewSubcategory(item.category.id, data.name)
-                                triggerRefresh()
-                                await loadMonthData()
-                              }}
-                            />
-                          </div>
+                          {/* Botão rápido para adicionar subcategoria no fim do bloco expandido (quando já tem subcategorias) */}
+                          {hasSubcats ? (
+                            <div className="py-2 px-2.5">
+                              <SubcategoryEditorPopover
+                                parentCategoryName={item.category.name}
+                                trigger={
+                                  <button
+                                    type="button"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 transition-colors"
+                                  >
+                                    <Plus className="w-3 h-3" />
+                                    <span>Adicionar subcategoria</span>
+                                  </button>
+                                }
+                                onSave={async (data) => {
+                                  await addNewSubcategory(item.category.id, data.name)
+                                  triggerRefresh()
+                                  await loadMonthData()
+                                }}
+                              />
+                            </div>
+                          ) : null}
                         </div>
                       ) : null}
                     </div>
