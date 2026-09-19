@@ -1076,7 +1076,7 @@ export default function WalletPage() {
                                   <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
                                     {tx.member?.name || 'Família'}
                                   </span>
-                                  {tx.category && (
+                                  {tx.category ? (
                                     <span className="text-[11px] text-slate-500 font-medium truncate">
                                       <span>{tx.category.name}</span>
                                       {tx.subcategory && (
@@ -1084,6 +1084,10 @@ export default function WalletPage() {
                                           · {tx.subcategory.name}
                                         </span>
                                       )}
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200/80 px-1.5 py-0.2 rounded shrink-0">
+                                      <span>Pendente de categoria</span>
                                     </span>
                                   )}
                                 </div>

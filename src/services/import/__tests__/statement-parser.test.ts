@@ -11,8 +11,12 @@ import {
   parseOFX,
   reconstructLinesFromPositionedItems,
 } from '@/services/import/statement-parser'
-import { predictCategory } from '@/services/import/categorization'
-import type { TransactionCategory } from '@/types/finance'
+import {
+  predictCategory,
+  matchCategorization,
+  extractPatternFromDescription,
+} from '@/services/import/categorization'
+import type { TransactionCategory, CategorizationRule } from '@/types/finance'
 
 describe('statement-parser unit tests', () => {
   describe('parseAmount', () => {
@@ -541,6 +545,48 @@ DATA:OFXSGML
     it('categoriza Uber como Transporte', () => {
       const cat = predictCategory('Uber *Trip 1234', 'expense', mockCategories)
       expect(cat?.name).toBe('Transporte')
+    })
+
+    it('prioriza regras de categorization_rules do banco com subcategoria', () => {
+      const dbRules: CategorizationRule[] = [
+        {
+          id: 'rule-1',
+          pattern: 'IFOOD',
+          category_id: 'cat-mercado',
+          subcategory_id: 'sub-delivery',
+          created_at: new Date().toISOString(),
+        },
+      ]
+
+      const categoriesWithSub: TransactionCategory[] = [
+        {
+          ...mockCategories[2], // Mercado
+          subcategories: [
+            {
+              id: 'sub-delivery',
+              family_id: 'fam-1',
+              category_id: 'cat-mercado',
+              name: 'Delivery',
+              icon: null,
+              color: null,
+              sort_order: 1,
+              created_at: '',
+            },
+          ],
+        },
+      ]
+
+      const match = matchCategorization('COMPRA IFOOD *1234', 'expense', categoriesWithSub, dbRules)
+      expect(match).not.toBeNull()
+      expect(match?.category.name).toBe('Mercado')
+      expect(match?.subcategory?.name).toBe('Delivery')
+      expect(match?.source).toBe('database_rule')
+    })
+
+    it('extrai padrão limpo da descrição descartando números e ruídos', () => {
+      expect(extractPatternFromDescription('COMPRA CARTAO IFOOD 12345')).toBe('IFOOD')
+      expect(extractPatternFromDescription('PAGAMENTO POSTO IPIRANGA 99')).toBe('IPIRANGA')
+      expect(extractPatternFromDescription('NETFLIX.COM')).toBe('NETFLIX.COM')
     })
   })
 })

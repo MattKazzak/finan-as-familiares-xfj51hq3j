@@ -30,9 +30,15 @@ import {
   type IgnoredLineInfo,
   type ParseDiagnostics,
 } from '@/services/import/statement-parser'
-import { predictCategory } from '@/services/import/categorization'
+import { matchCategorization } from '@/services/import/categorization'
+import { fetchCategorizationRules } from '@/services/categorization-rules'
 import { createTransactionsBatch, fetchTransactions } from '@/services/transactions'
-import type { Transaction, TransactionCategory, TransactionType } from '@/types/finance'
+import type {
+  Transaction,
+  TransactionCategory,
+  TransactionType,
+  CategorizationRule,
+} from '@/types/finance'
 import {
   UploadCloud,
   FileSpreadsheet,
@@ -117,6 +123,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
   // Itens em revisão
   const [items, setItems] = useState<ReviewItem[]>([])
   const [defaultMemberId, setDefaultMemberId] = useState<string>('')
+  const [categorizationRules, setCategorizationRules] = useState<CategorizationRule[]>([])
 
   // Estado para criar categoria rápida inline
   const [isQuickCatOpen, setIsQuickCatOpen] = useState(false)
@@ -243,12 +250,17 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
       const maxDate = dates.reduce((a, b) => (a > b ? a : b))
 
       let existingTxs: Transaction[] = []
+      let loadedRules: CategorizationRule[] = []
       try {
-        existingTxs = await fetchTransactions({
-          familyId: family.id,
-        })
+        const [txs, rules] = await Promise.all([
+          fetchTransactions({ familyId: family.id }),
+          fetchCategorizationRules(family.id).catch(() => []),
+        ])
+        existingTxs = txs
+        loadedRules = rules
+        setCategorizationRules(rules)
       } catch (fetchErr) {
-        console.warn('Não foi possível carregar transações anteriores para checagem:', fetchErr)
+        console.warn('Não foi possível carregar transações ou regras anteriores:', fetchErr)
       }
 
       // Função de similaridade simples para descrição
@@ -263,8 +275,8 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
       // 3. Montar itens para a tela de revisão aplicando categorização automática
       const activeMemberId = defaultMemberId || members[0]?.id || ''
       const reviewList: ReviewItem[] = result.transactions.map((tx: ParsedRawTransaction) => {
-        // Encontrar categoria recomendada
-        const predicted = predictCategory(tx.description, tx.type, categories)
+        // Encontrar categoria e subcategoria usando as regras da tabela categorization_rules
+        const matchResult = matchCategorization(tx.description, tx.type, categories, loadedRules)
 
         // Checar duplicata
         const dupMatch = existingTxs.find((ex) => {
@@ -282,7 +294,8 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           amount_cents: tx.amount_cents,
           type: tx.type,
           member_id: activeMemberId,
-          category_id: predicted ? predicted.id : null,
+          category_id: matchResult ? matchResult.category.id : null,
+          subcategory_id: matchResult?.subcategory ? matchResult.subcategory.id : null,
           isDuplicate: !!dupMatch,
           duplicateReason: dupMatch
             ? `Transação idêntica já cadastrada em ${dupMatch.transaction_date}`
@@ -390,6 +403,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
   // Estatísticas da revisão
   const selectedCount = useMemo(() => items.filter((i) => i.selected).length, [items])
   const duplicateCount = useMemo(() => items.filter((i) => i.isDuplicate).length, [items])
+  const uncategorizedCount = useMemo(() => items.filter((i) => !i.category_id).length, [items])
   const totalAmountSelected = useMemo(() => {
     let inc = 0
     let exp = 0
@@ -773,6 +787,14 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                       {duplicateCount} duplicata(s) detectada(s)
                     </span>
                   )}
+
+                  {/* Alerta de pendentes de categoria */}
+                  {uncategorizedCount > 0 && (
+                    <span className="text-[11px] font-semibold text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-purple-600" />
+                      {uncategorizedCount} pendente(s) de categoria
+                    </span>
+                  )}
                 </div>
 
                 {/* Membro em lote & Criar Categoria */}
@@ -900,9 +922,16 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                                   <AlertTriangle className="w-3 h-3 text-amber-600" />
                                   <span>Possível Duplicada</span>
                                 </span>
-                              ) : null}{' '}
+                              ) : null}
+                              {!item.category_id ? (
+                                <span
+                                  title="Transação sem match de regra. Você pode definir a categoria agora ou depois na Carteira."
+                                  className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80"
+                                >
+                                  <span>Pendente de categoria</span>
+                                </span>
+                              ) : null}
                             </div>
-
                             <div className="flex items-center gap-2 mt-1">
                               <input
                                 type="date"

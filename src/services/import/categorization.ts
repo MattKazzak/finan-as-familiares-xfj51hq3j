@@ -1,7 +1,19 @@
 // Motor de categorização automática por palavras-chave em extratos bancários brasileiros
 // Cobre os principais bancos (Nubank, Inter, Itaú, Bradesco, Santander, Caixa, C6, etc.)
 
-import type { TransactionCategory, TransactionType } from '@/types/finance'
+import type {
+  CategorizationRule,
+  TransactionCategory,
+  TransactionSubcategory,
+  TransactionType,
+} from '@/types/finance'
+
+export interface CategoryMatchResult {
+  category: TransactionCategory
+  subcategory: TransactionSubcategory | null
+  matchedRulePattern?: string
+  source: 'database_rule' | 'fallback_rule' | 'name_match'
+}
 
 export interface KeywordRule {
   categoryNames: string[] // Nome(s) preferidos para essa categoria no banco de dados
@@ -516,67 +528,147 @@ export function normalizeText(text: string): string {
 /**
  * Encontra a categoria correspondente para a descrição dada
  */
-export function predictCategory(
+/**
+ * Extrai um padrão limpo (keyword) da descrição para salvar em regras contínuas
+ * Remove números isolados, datas, códigos bancários comuns e pontuações
+ */
+export function extractPatternFromDescription(desc: string): string {
+  const norm = normalizeText(desc)
+  if (!norm) return ''
+
+  // Remover termos de ruído comuns de extratos antes do padrão
+  const clean = norm
+    .replace(
+      /\b(COMPRA|PAGAMENTO|PAGTO|PIX|TRANSF|TED|DOC|CARTAO|DEBITO|CREDITO|AUTO|POSTO)\b/g,
+      ' ',
+    )
+    .replace(/\b\d{2,}\b/g, ' ') // remove blocos de números
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  return clean || norm
+}
+
+/**
+ * Encontra a categoria e subcategoria com base nas regras do banco (categorization_rules)
+ * e, caso não dê match, recorre às regras auxiliares de vocabulário de mercado.
+ */
+export function matchCategorization(
   description: string,
   type: TransactionType,
   categories: TransactionCategory[],
-): TransactionCategory | null {
+  dbRules: CategorizationRule[] = [],
+): CategoryMatchResult | null {
   const normDesc = normalizeText(description)
   if (!normDesc) return null
 
-  // Filtra as categorias do tipo correto (income ou expense)
+  // 1. Prioridade máxima: regras aprendidas ou seeded salvas no banco de dados
+  // Ordenadas pelas mais específicas/longas primeiro
+  const sortedRules = [...dbRules].sort(
+    (a, b) => (b.pattern?.length || 0) - (a.pattern?.length || 0),
+  )
+
+  for (const rule of sortedRules) {
+    const normPattern = normalizeText(rule.pattern)
+    if (!normPattern || normPattern.length < 2) continue
+
+    // Verifica se a descrição normalizada contém o padrão
+    if (normDesc.includes(normPattern)) {
+      // Verificar se a categoria da regra existe na família
+      const category = categories.find((c) => c.id === rule.category_id)
+      if (category) {
+        // Encontra subcategoria associada se houver
+        let subcategory: TransactionSubcategory | null = null
+        if (rule.subcategory_id && category.subcategories) {
+          subcategory = category.subcategories.find((s) => s.id === rule.subcategory_id) || null
+        }
+        return {
+          category,
+          subcategory,
+          matchedRulePattern: rule.pattern,
+          source: 'database_rule',
+        }
+      }
+    }
+  }
+
+  // 2. Se nenhuma regra do banco bater, recorre às regras universais de fallback
   const availableCategories = categories.filter((c) => c.type === type)
   if (availableCategories.length === 0) return null
 
-  // Mapeia nome normalizado de cada categoria cadastrada
   const catByNameMap = new Map<string, TransactionCategory>()
   availableCategories.forEach((cat) => {
     catByNameMap.set(normalizeText(cat.name), cat)
   })
 
-  // 1. Se a descrição contiver "SALARIO", prioriza Salário com máxima precedência
+  // Prioridade Salário
   if (
     normDesc.includes('SALARIO') ||
     normDesc.includes('REMUNERACAO') ||
     normDesc.includes('FOLHA DE PAGAMENTO')
   ) {
     const salaryCat = catByNameMap.get(normalizeText('Salário'))
-    if (salaryCat) return salaryCat
+    if (salaryCat) {
+      return {
+        category: salaryCat,
+        subcategory: null,
+        source: 'fallback_rule',
+      }
+    }
   }
 
-  // 2. Procura nas regras pré-configuradas de mercado
   for (const rule of AUTO_CATEGORIZATION_RULES) {
     if (rule.type && rule.type !== type) continue
 
-    // Verifica se alguma palavra-chave bate com a descrição
-    // Para palavras curtas como 'POSTO', exigimos limite de palavra se não for composto
-    const matched = rule.keywords.some((kw) => {
+    const matchedKw = rule.keywords.find((kw) => {
       const normKw = normalizeText(kw)
       if (!normKw) return false
-      // Se for apenas "POSTO", não bate em "POSTO VEREDA" se for receita ou acompanhado de Salário
       if (normKw === 'POSTO' && (normDesc.includes('SALARIO') || normDesc.includes('PAGAMENTO'))) {
         return false
       }
       return normDesc.includes(normKw)
     })
 
-    if (matched) {
-      // Procura se a família tem alguma das categorias listadas na regra
+    if (matchedKw) {
       for (const targetName of rule.categoryNames) {
         const normTarget = normalizeText(targetName)
         const found = catByNameMap.get(normTarget)
-        if (found) return found
+        if (found) {
+          return {
+            category: found,
+            subcategory: null,
+            matchedRulePattern: matchedKw,
+            source: 'fallback_rule',
+          }
+        }
       }
     }
   }
 
-  // 2. Se nenhuma regra bater, verifica se o próprio nome de alguma categoria cadastrada está contido na descrição
+  // 3. Checar se o próprio nome da categoria está contido na descrição
   for (const cat of availableCategories) {
     const normCat = normalizeText(cat.name)
     if (normCat.length >= 3 && normDesc.includes(normCat)) {
-      return cat
+      return {
+        category: cat,
+        subcategory: null,
+        source: 'name_match',
+      }
     }
   }
 
   return null
+}
+
+/**
+ * Encontra a categoria correspondente para a descrição dada (compatibilidade retroativa)
+ */
+export function predictCategory(
+  description: string,
+  type: TransactionType,
+  categories: TransactionCategory[],
+  dbRules: CategorizationRule[] = [],
+): TransactionCategory | null {
+  const result = matchCategorization(description, type, categories, dbRules)
+  return result ? result.category : null
 }

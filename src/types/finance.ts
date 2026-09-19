@@ -141,6 +141,18 @@ export interface EffectiveBudget {
   defaultBudgetId?: string // id do registro na tabela default_budgets
 }
 
+export interface CategorizationRule {
+  id: string
+  user_id?: string | null
+  family_id?: string | null
+  pattern: string
+  category_id: string
+  subcategory_id?: string | null
+  created_at: string
+  category?: TransactionCategory
+  subcategory?: TransactionSubcategory
+}
+
 export interface Goal {
   id: string
   family_id: string

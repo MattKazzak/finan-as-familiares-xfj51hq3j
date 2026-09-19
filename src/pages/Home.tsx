@@ -629,7 +629,7 @@ export default function Home() {
                           </span>
                           {tx.member?.name || 'Membro'}
                         </span>
-                        {tx.category && (
+                        {tx.category ? (
                           <span className="inline-flex items-center gap-2">
                             <span className="text-[11px] text-slate-400">•</span>
                             <span className="text-[11px] text-slate-500 font-medium truncate">
@@ -639,6 +639,13 @@ export default function Home() {
                                   · {tx.subcategory.name}
                                 </span>
                               )}
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-2">
+                            <span className="text-[11px] text-slate-400">•</span>
+                            <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200/80 px-1.5 py-0.2 rounded shrink-0">
+                              Pendente de categoria
                             </span>
                           </span>
                         )}

@@ -57,7 +57,13 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
               </div>
               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                 <span className="text-xs font-semibold text-slate-600">
-                  <span>{transaction.category?.name || 'Sem categoria'}</span>
+                  {transaction.category ? (
+                    <span>{transaction.category.name}</span>
+                  ) : (
+                    <span className="text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded text-[11px] font-bold">
+                      Pendente de categoria
+                    </span>
+                  )}
                 </span>
                 {transaction.subcategory ? (
                   <span className="inline-flex items-center gap-1.5">

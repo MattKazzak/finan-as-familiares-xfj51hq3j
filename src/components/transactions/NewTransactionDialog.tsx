@@ -16,8 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useAuth } from '@/hooks/use-auth'
 import { useFamily } from '@/hooks/use-family'
 import { createTransaction, updateTransaction } from '@/services/transactions'
+import { upsertCategorizationRule } from '@/services/categorization-rules'
+import { extractPatternFromDescription } from '@/services/import/categorization'
 import { parseBRLToCents, formatNumberBRL } from '@/lib/formatters'
 import { useToast } from '@/hooks/use-toast'
 import type { Transaction } from '@/types/finance'
@@ -44,6 +47,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
     triggerRefresh,
     openImportStatement,
   } = useFamily()
+  const { user } = useAuth()
   const { toast } = useToast()
 
   const [type, setType] = useState<'income' | 'expense'>(newTransactionDefaultType)
@@ -52,10 +56,10 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
   const [memberId, setMemberId] = useState('')
   const [categoryId, setCategoryId] = useState<string>('none')
   const [subcategoryId, setSubcategoryId] = useState<string>('none')
-  const [transactionDate, setTransactionDate] = useState(new Date().toISOString().slice(0, 10))
+  const [transactionDate, setTransactionDate] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
-
+  const [rememberRule, setRememberRule] = useState<boolean>(true)
   useEffect(() => {
     if (editingTransaction) {
       setType(editingTransaction.type)
@@ -77,6 +81,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
       setSubcategoryId('none')
       setTransactionDate(new Date().toISOString().slice(0, 10))
     }
+    setRememberRule(true)
     setErrorMsg(null)
   }, [editingTransaction, newTransactionDefaultType, open, members])
 
@@ -91,6 +96,9 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
   }
 
   const filteredCategories = categories.filter((c) => c.type === type)
+
+  // Verifica se a transação sendo editada estava sem categoria
+  const isEditingUncategorized = Boolean(editingTransaction && !editingTransaction.category_id)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -129,6 +137,26 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           description: description.trim(),
           transaction_date: transactionDate,
         })
+
+        // Aprendizado contínuo: se o usuário optou por lembrar a regra e definiu uma categoria válida
+        if (rememberRule && categoryId !== 'none') {
+          try {
+            const rawPattern = extractPatternFromDescription(description.trim())
+            if (rawPattern && rawPattern.length >= 2) {
+              await upsertCategorizationRule({
+                family_id: family.id,
+                user_id: user?.id || null,
+                pattern: rawPattern,
+                category_id: categoryId,
+                subcategory_id: subcategoryId === 'none' ? null : subcategoryId,
+              })
+              console.log('Regra de categorização memorizada com sucesso:', rawPattern)
+            }
+          } catch (ruleErr) {
+            console.warn('Não foi possível salvar regra de categorização:', ruleErr)
+          }
+        }
+
         toast({ title: 'Sucesso', description: 'Transação atualizada com sucesso.' })
       } else {
         await createTransaction({
@@ -342,6 +370,35 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
               className="mt-1"
             />
           </div>
+
+          {/* Opção de Aprendizado Contínuo para transação pendente ou edição com categoria definida */}
+          {categoryId !== 'none' && (
+            <div
+              className={`p-2.5 rounded-xl border transition-colors ${
+                isEditingUncategorized
+                  ? 'bg-purple-50/70 border-purple-200'
+                  : 'bg-slate-50 border-slate-200/80'
+              }`}
+            >
+              <label className="flex items-start gap-2.5 cursor-pointer text-xs select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberRule}
+                  onChange={(e) => setRememberRule(e.target.checked)}
+                  className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <div className="space-y-0.5">
+                  <span className="font-semibold text-slate-800 flex items-center gap-1.5">
+                    <span>Lembrar para transações futuras com este nome</span>
+                  </span>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Auto-categorizar importações futuras semelhantes a &quot;
+                    {extractPatternFromDescription(description) || description || '...'}&quot;.
+                  </p>
+                </div>
+              </label>
+            </div>
+          )}
 
           <DialogFooter className="pt-2 gap-2 sm:gap-0">
             <Button
