@@ -16,14 +16,17 @@ import {
   parseBRLToCents,
   formatNumberBRL,
 } from '@/lib/formatters'
-import { CategoryIcon } from '@/components/common/CategoryIcon'
+import { CategoryIcon, AVAILABLE_ICONS } from '@/components/common/CategoryIcon'
 import { RecurringIncomesDialog } from '@/components/wallet/RecurringIncomesDialog'
 import {
   fetchRecurringIncomes,
   fetchRecurringIncomeOverrides,
   processAutoRecurringIncomes,
 } from '@/services/recurring-incomes'
-import { CategoryEditorPopover } from '@/components/categories/CategoryEditorPopover'
+import {
+  CategoryEditorPopover,
+  CATEGORY_COLORS,
+} from '@/components/categories/CategoryEditorPopover'
 import { SubcategoryEditorPopover } from '@/components/categories/SubcategoryEditorPopover'
 import {
   DeleteCategoryConfirmDialog,
@@ -76,6 +79,7 @@ import { Label } from '@/components/ui/label'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -130,9 +134,19 @@ export default function WalletPage() {
   // Diálogo de Receitas Fixas
   const [isRecurringIncomesOpen, setIsRecurringIncomesOpen] = useState(false)
 
-  // Estados para disparar popovers a partir de itens do menu dropdown
+  // Estados para disparar ações a partir de itens do menu dropdown mobile
+  const [isCategoryEditorOpen, setIsCategoryEditorOpen] = useState(false)
   const [categoryToEdit, setCategoryToEdit] = useState<TransactionCategory | null>(null)
+  const [categoryEditorName, setCategoryEditorName] = useState('')
+  const [categoryEditorType, setCategoryEditorType] = useState<'income' | 'expense'>('expense')
+  const [categoryEditorColor, setCategoryEditorColor] = useState('#3B82F6')
+  const [categoryEditorIcon, setCategoryEditorIcon] = useState('Tag')
+  const [savingCategoryEditor, setSavingCategoryEditor] = useState(false)
+
+  const [isNewSubcatDialogOpen, setIsNewSubcatDialogOpen] = useState(false)
   const [categoryForNewSubcat, setCategoryForNewSubcat] = useState<TransactionCategory | null>(null)
+  const [newSubcatName, setNewSubcatName] = useState('')
+  const [savingNewSubcat, setSavingNewSubcat] = useState(false)
 
   // Estados de confirmação para exclusão inline com verificação de uso no banco
   const [categoryToDelete, setCategoryToDelete] = useState<TransactionCategory | null>(null)
@@ -1420,14 +1434,25 @@ export default function WalletPage() {
                                 className="w-48 rounded-2xl shadow-xl p-1.5 text-xs"
                               >
                                 <DropdownMenuItem
-                                  onClick={() => setCategoryToEdit(item.category)}
+                                  onSelect={() => {
+                                    setCategoryToEdit(item.category)
+                                    setCategoryEditorName(item.category.name || '')
+                                    setCategoryEditorType(item.category.type || 'expense')
+                                    setCategoryEditorColor(item.category.color || '#3B82F6')
+                                    setCategoryEditorIcon(item.category.icon || 'Tag')
+                                    setIsCategoryEditorOpen(true)
+                                  }}
                                   className="gap-2 py-2 rounded-xl cursor-pointer"
                                 >
                                   <Edit3 className="w-3.5 h-3.5 text-slate-500" />
                                   <span>Editar categoria</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onClick={() => setCategoryForNewSubcat(item.category)}
+                                  onSelect={() => {
+                                    setCategoryForNewSubcat(item.category)
+                                    setNewSubcatName('')
+                                    setIsNewSubcatDialogOpen(true)
+                                  }}
                                   className="gap-2 py-2 rounded-xl cursor-pointer text-emerald-700 focus:text-emerald-800"
                                 >
                                   <Plus className="w-3.5 h-3.5 text-emerald-600" />
@@ -1435,7 +1460,9 @@ export default function WalletPage() {
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
-                                  onClick={(e) => handleInitiateDeleteCategory(item.category, e)}
+                                  onSelect={(e) =>
+                                    handleInitiateDeleteCategory(item.category, e as any)
+                                  }
                                   className="gap-2 py-2 rounded-xl cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50"
                                 >
                                   <Trash2 className="w-3.5 h-3.5 text-red-500" />
@@ -2044,39 +2071,295 @@ export default function WalletPage() {
       </Dialog>
 
       {/* MODAIS CONTROLADOS DE EDIÇÃO E CRIAÇÃO ACIONADOS VIA MENU DROPDOWN MOBILE */}
-      <CategoryEditorPopover
-        category={categoryToEdit}
-        open={Boolean(categoryToEdit)}
+      <Dialog
+        open={isCategoryEditorOpen}
         onOpenChange={(open) => {
+          setIsCategoryEditorOpen(open)
           if (!open) setCategoryToEdit(null)
         }}
-        onSave={async (data) => {
-          if (!categoryToEdit) return
-          await editCategory(categoryToEdit.id, data)
-          setCategoryToEdit(null)
-          triggerRefresh()
-          await loadMonthData()
-        }}
-      />
+      >
+        <DialogContent
+          className="max-w-md w-[95vw] rounded-2xl p-5 text-slate-800"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <DialogHeader>
+            <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+              <DialogTitle className="text-base font-bold text-slate-900">
+                <span>Editar Categoria</span>
+              </DialogTitle>
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ backgroundColor: categoryEditorColor }}
+                />
+                <span className="text-[10px] uppercase font-bold text-slate-400">
+                  {categoryEditorType === 'income' ? 'Receita' : 'Despesa'}
+                </span>
+              </div>
+            </div>
+            <DialogDescription className="sr-only">
+              <span>Edite o nome, tipo, cor e ícone da categoria selecionada.</span>
+            </DialogDescription>
+          </DialogHeader>
 
-      <SubcategoryEditorPopover
-        parentCategoryName={categoryForNewSubcat?.name}
-        open={Boolean(categoryForNewSubcat)}
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              const trimmed = categoryEditorName.trim()
+              if (!trimmed || !categoryToEdit) return
+              try {
+                setSavingCategoryEditor(true)
+                await editCategory(categoryToEdit.id, {
+                  name: trimmed,
+                  type: categoryEditorType,
+                  color: categoryEditorColor,
+                  icon: categoryEditorIcon,
+                })
+                setIsCategoryEditorOpen(false)
+                setCategoryToEdit(null)
+                triggerRefresh()
+                await loadMonthData()
+              } finally {
+                setSavingCategoryEditor(false)
+              }
+            }}
+            className="space-y-3.5 pt-1"
+          >
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">Nome da categoria</Label>
+              <Input
+                type="text"
+                placeholder="Ex.: Moradia, Transporte..."
+                value={categoryEditorName}
+                onChange={(e) => setCategoryEditorName(e.target.value)}
+                className="h-9 text-xs rounded-xl"
+                autoFocus
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-[11px] font-semibold text-slate-600">Tipo</Label>
+                <div className="grid grid-cols-2 gap-1 bg-slate-100 p-0.5 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => setCategoryEditorType('expense')}
+                    className={`text-[11px] font-semibold py-1 rounded-md transition-all ${
+                      categoryEditorType === 'expense'
+                        ? 'bg-white text-red-600 shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <span>Despesa</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCategoryEditorType('income')}
+                    className={`text-[11px] font-semibold py-1 rounded-md transition-all ${
+                      categoryEditorType === 'income'
+                        ? 'bg-white text-emerald-700 shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <span>Receita</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-[11px] font-semibold text-slate-600">Ícone Atual</Label>
+                <div className="flex items-center gap-2 h-8 px-2.5 rounded-xl border border-slate-200 bg-slate-50/50">
+                  <div
+                    className="w-5 h-5 rounded-md flex items-center justify-center text-white shrink-0"
+                    style={{ backgroundColor: categoryEditorColor }}
+                  >
+                    <CategoryIcon name={categoryEditorIcon} className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="text-[11px] font-medium text-slate-700 truncate">
+                    {categoryEditorIcon}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Paleta de Cores */}
+            <div className="space-y-1">
+              <Label className="text-[11px] font-semibold text-slate-600">Cor</Label>
+              <div className="flex items-center gap-2 flex-wrap">
+                {CATEGORY_COLORS.map((c) => (
+                  <button
+                    type="button"
+                    key={c}
+                    onClick={() => setCategoryEditorColor(c)}
+                    className={`w-6 h-6 rounded-full transition-transform ${
+                      categoryEditorColor === c
+                        ? 'ring-2 ring-slate-900 ring-offset-2 scale-110'
+                        : 'hover:scale-105'
+                    }`}
+                    style={{ backgroundColor: c }}
+                    title={c}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Galeria de Ícones Disponíveis */}
+            <div className="space-y-1">
+              <Label className="text-[11px] font-semibold text-slate-600">Escolher Ícone</Label>
+              <div className="grid grid-cols-7 gap-1.5 p-1.5 bg-slate-50 border border-slate-100 rounded-xl max-h-28 overflow-y-auto">
+                {AVAILABLE_ICONS.map((iName) => {
+                  const isSelected = categoryEditorIcon === iName
+                  return (
+                    <button
+                      type="button"
+                      key={iName}
+                      onClick={() => setCategoryEditorIcon(iName)}
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                        isSelected
+                          ? 'bg-slate-900 text-white shadow-2xs'
+                          : 'text-slate-600 hover:bg-slate-200/70 hover:text-slate-900'
+                      }`}
+                      title={iName}
+                    >
+                      <CategoryIcon name={iName} className="w-4 h-4" />
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t border-slate-100">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={savingCategoryEditor}
+                onClick={() => {
+                  setIsCategoryEditorOpen(false)
+                  setCategoryToEdit(null)
+                }}
+                className="text-xs rounded-xl"
+              >
+                <span>Cancelar</span>
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={savingCategoryEditor || !categoryEditorName.trim()}
+                className="text-xs rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+              >
+                <span className="flex items-center gap-1.5">
+                  {savingCategoryEditor ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                  <span>Salvar Alterações</span>
+                </span>
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isNewSubcatDialogOpen}
         onOpenChange={(open) => {
-          if (!open) setCategoryForNewSubcat(null)
+          setIsNewSubcatDialogOpen(open)
+          if (!open) {
+            setCategoryForNewSubcat(null)
+            setNewSubcatName('')
+          }
         }}
-        onSave={async (data) => {
-          if (!categoryForNewSubcat) return
-          await addNewSubcategory(categoryForNewSubcat.id, data.name)
-          setExpandedBudgetCategories((prev) => ({
-            ...prev,
-            [categoryForNewSubcat.id]: true,
-          }))
-          setCategoryForNewSubcat(null)
-          triggerRefresh()
-          await loadMonthData()
-        }}
-      />
+      >
+        <DialogContent
+          className="max-w-md w-[95vw] rounded-2xl p-5 text-slate-800"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900">
+              <span>Nova Subcategoria</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              {categoryForNewSubcat ? (
+                <span>
+                  Criar uma nova subcategoria em <strong>{categoryForNewSubcat.name}</strong>
+                </span>
+              ) : (
+                <span>Informe o nome da nova subcategoria.</span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              const trimmed = newSubcatName.trim()
+              if (!trimmed || !categoryForNewSubcat) return
+              try {
+                setSavingNewSubcat(true)
+                await addNewSubcategory(categoryForNewSubcat.id, trimmed)
+                setExpandedBudgetCategories((prev) => ({
+                  ...prev,
+                  [categoryForNewSubcat.id]: true,
+                }))
+                setIsNewSubcatDialogOpen(false)
+                setCategoryForNewSubcat(null)
+                setNewSubcatName('')
+                triggerRefresh()
+                await loadMonthData()
+              } finally {
+                setSavingNewSubcat(false)
+              }
+            }}
+            className="space-y-4 pt-1"
+          >
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">Nome da subcategoria</Label>
+              <Input
+                type="text"
+                placeholder="Ex.: Mercado, Restaurante, Farmácia..."
+                value={newSubcatName}
+                onChange={(e) => setNewSubcatName(e.target.value)}
+                className="h-9 text-xs rounded-xl"
+                autoFocus
+                required
+              />
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t border-slate-100">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={savingNewSubcat}
+                onClick={() => {
+                  setIsNewSubcatDialogOpen(false)
+                  setCategoryForNewSubcat(null)
+                  setNewSubcatName('')
+                }}
+                className="text-xs rounded-xl"
+              >
+                <span>Cancelar</span>
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={savingNewSubcat || !newSubcatName.trim()}
+                className="text-xs rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+              >
+                <span className="flex items-center gap-1.5">
+                  {savingNewSubcat ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Plus className="w-3.5 h-3.5" />
+                  )}
+                  <span>Adicionar Subcategoria</span>
+                </span>
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* DIÁLOGOS DE CONFIRMAÇÃO DE EXCLUSÃO (CATEGORIA E SUBCATEGORIA COM AUDITORIA DE LANÇAMENTOS) */}
       <DeleteCategoryConfirmDialog
