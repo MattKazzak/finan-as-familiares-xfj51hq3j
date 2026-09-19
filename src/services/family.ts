@@ -30,6 +30,7 @@ export async function fetchFamilyData() {
       .from('transaction_categories')
       .select('*')
       .or(`family_id.eq.${family.id},family_id.is.null`)
+      .order('sort_order', { ascending: true })
       .order('name', { ascending: true }),
     (supabase as any)
       .from('transaction_subcategories')
@@ -156,6 +157,16 @@ export async function addCategory(
   color?: string,
   icon?: string,
 ) {
+  // Obter o maior sort_order atual para adicionar ao final
+  const { data: maxOrderData } = await (supabase as any)
+    .from('transaction_categories')
+    .select('sort_order')
+    .eq('family_id', familyId)
+    .order('sort_order', { ascending: false })
+    .limit(1)
+
+  const nextOrder = (maxOrderData?.[0]?.sort_order ?? 0) + 1
+
   const { data, error } = await (supabase as any)
     .from('transaction_categories')
     .insert({
@@ -164,6 +175,7 @@ export async function addCategory(
       type,
       color: color || (type === 'income' ? '#10B981' : '#64748B'),
       icon: icon || 'Tag',
+      sort_order: nextOrder,
     })
     .select()
     .single()
@@ -280,4 +292,36 @@ export async function deleteSubcategory(id: string, clearTxs: boolean = true) {
   const { error } = await (supabase as any).from('transaction_subcategories').delete().eq('id', id)
 
   if (error) throw error
+}
+
+export async function reorderCategories(orderedIds: string[]): Promise<void> {
+  if (!orderedIds || orderedIds.length === 0) return
+
+  const updates = orderedIds.map((id, index) =>
+    (supabase as any)
+      .from('transaction_categories')
+      .update({ sort_order: index + 1 })
+      .eq('id', id),
+  )
+
+  const results = await Promise.all(updates)
+  for (const res of results) {
+    if (res.error) throw res.error
+  }
+}
+
+export async function reorderSubcategories(orderedIds: string[]): Promise<void> {
+  if (!orderedIds || orderedIds.length === 0) return
+
+  const updates = orderedIds.map((id, index) =>
+    (supabase as any)
+      .from('transaction_subcategories')
+      .update({ sort_order: index + 1 })
+      .eq('id', id),
+  )
+
+  const results = await Promise.all(updates)
+  for (const res of results) {
+    if (res.error) throw res.error
+  }
 }

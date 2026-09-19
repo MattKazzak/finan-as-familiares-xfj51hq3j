@@ -27,6 +27,7 @@ export interface TransactionCategory {
   icon: string | null
   color: string | null
   type: TransactionType
+  sort_order?: number
   created_at: string
   subcategories?: TransactionSubcategory[]
 }

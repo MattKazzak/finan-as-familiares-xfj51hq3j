@@ -65,7 +65,10 @@ import {
   Tag,
   Briefcase,
   MoreVertical,
+  Menu,
+  GripVertical,
 } from 'lucide-react'
+import { SortableList } from '@/components/common/SortableList'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -111,6 +114,8 @@ export default function WalletPage() {
     editSubcategory,
     removeSubcategory,
     checkSubcategoryUsage,
+    reorderCategoriesList,
+    reorderSubcategoriesList,
     openNewTransaction,
     openImportStatement,
   } = useFamily()
@@ -552,13 +557,13 @@ export default function WalletPage() {
       }
     })
 
-    // Ordenar: categorias com orçamento definido ou estouradas primeiro
+    // A ordem respeita prioritariamente a ordem customizada definida pelo usuário (sort_order da categoria)
+    // Se o sort_order for igual, desempata pelo nome
     list.sort((a, b) => {
-      if (a.isOver && !b.isOver) return -1
-      if (!a.isOver && b.isOver) return 1
-      if (a.limitCents > 0 && b.limitCents === 0) return -1
-      if (a.limitCents === 0 && b.limitCents > 0) return 1
-      return b.limitCents - a.limitCents
+      const orderA = a.category.sort_order ?? 0
+      const orderB = b.category.sort_order ?? 0
+      if (orderA !== orderB) return orderA - orderB
+      return a.category.name.localeCompare(b.category.name)
     })
 
     return {
@@ -1281,485 +1286,166 @@ export default function WalletPage() {
                   </div>
                 ) : null}
 
-                {categoryBudgetData.list.map((item) => {
-                  const isExpanded =
-                    expandedBudgetCategories[item.category.id] ??
-                    (item.limitCents > 0 || item.spentCents > 0)
-                  const hasSubcats = item.subcategories.length > 0
+                <SortableList
+                  items={categoryBudgetData.list}
+                  keyExtractor={(item) => item.category.id}
+                  onReorder={async (newOrder) => {
+                    const orderedIds = newOrder.map((it) => it.category.id)
+                    await reorderCategoriesList(orderedIds)
+                  }}
+                  renderItem={(item, _idx, dragHandleProps, isDragging) => {
+                    const isExpanded =
+                      expandedBudgetCategories[item.category.id] ??
+                      (item.limitCents > 0 || item.spentCents > 0)
+                    const hasSubcats = item.subcategories.length > 0
 
-                  return (
-                    <div
-                      key={item.category.id}
-                      className="border border-slate-200/80 rounded-2xl overflow-hidden bg-white shadow-2xs hover:border-slate-300 transition-all"
-                    >
-                      {/* Bloco da Categoria Pai */}
+                    return (
                       <div
-                        onClick={() =>
-                          openBudgetEditor(
-                            item.category.id,
-                            null,
-                            item.defaultLimitCents,
-                            item.limitCents,
-                            item.hasOverride,
-                          )
-                        }
-                        className="p-3 sm:p-3.5 flex items-center justify-between hover:bg-slate-50/80 cursor-pointer transition-colors group gap-2.5 sm:gap-3"
+                        className={`border rounded-2xl overflow-hidden bg-white transition-all ${
+                          isDragging
+                            ? 'border-emerald-500 shadow-xl'
+                            : 'border-slate-200/80 shadow-2xs hover:border-slate-300'
+                        }`}
                       >
-                        {/* Identificação da Categoria */}
-                        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                          <div
-                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center text-white shadow-xs shrink-0"
-                            style={{ backgroundColor: item.category.color || '#64748B' }}
-                          >
-                            <CategoryIcon
-                              name={item.category.icon}
-                              className="w-4 h-4 sm:w-5 sm:h-5"
-                            />
-                          </div>
+                        {/* Bloco da Categoria Pai */}
+                        <div
+                          onClick={() =>
+                            openBudgetEditor(
+                              item.category.id,
+                              null,
+                              item.defaultLimitCents,
+                              item.limitCents,
+                              item.hasOverride,
+                            )
+                          }
+                          className="p-3 sm:p-3.5 flex items-center justify-between hover:bg-slate-50/80 cursor-pointer transition-colors group gap-2 sm:gap-3 touch-manipulation"
+                        >
+                          {/* Identificação da Categoria + Alça de Arraste (≡) */}
+                          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                            {/* Ícone de arrasto ≡ para mobile e desktop */}
+                            <button
+                              type="button"
+                              {...dragHandleProps}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-6 h-8 sm:w-7 sm:h-9 flex items-center justify-center text-slate-300 hover:text-slate-600 cursor-grab active:cursor-grabbing shrink-0 touch-none rounded-lg hover:bg-slate-100 transition-colors"
+                              title="Segure e arraste para reordenar"
+                              aria-label={`Arrastar para reordenar categoria ${item.category.name}`}
+                            >
+                              <Menu className="w-4 h-4" />
+                            </button>
 
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5">
-                              <span
-                                className="font-bold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors break-words leading-snug"
-                                title={item.category.name}
-                              >
-                                {item.category.name}
-                              </span>
+                            <div
+                              className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center text-white shadow-xs shrink-0"
+                              style={{ backgroundColor: item.category.color || '#64748B' }}
+                            >
+                              <CategoryIcon
+                                name={item.category.icon}
+                                className="w-4 h-4 sm:w-5 sm:h-5"
+                              />
                             </div>
 
-                            <p className="text-xs text-slate-500 tabular-nums mt-0.5 flex items-center gap-1 flex-wrap">
-                              <span>{formatBRL(item.spentCents)}</span>
-                              <span className="text-slate-400">de</span>
-                              <span className="font-medium text-slate-700">
-                                {item.limitCents > 0 ? formatBRL(item.limitCents) : 'Sem teto'}
-                              </span>
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Lado Direito: Progresso / Teto + Ações (Desktop direto / Mobile menu ⋯) + Expand */}
-                        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-                          {/* Progresso / Barra de Cor da Categoria Pai com Percentual Visível */}
-                          <div className="flex items-center">
-                            {item.limitCents > 0 ? (
-                              <div className="flex items-center gap-1.5 sm:gap-2">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
                                 <span
-                                  className={`text-[11px] font-bold tabular-nums min-w-[34px] sm:min-w-[38px] text-right ${
-                                    item.isOver
-                                      ? 'text-red-600'
-                                      : item.percent >= 75
-                                        ? 'text-amber-600'
-                                        : 'text-emerald-600'
-                                  }`}
+                                  className="font-bold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors break-words leading-snug"
+                                  title={item.category.name}
                                 >
-                                  <span>{item.percent}%</span>
+                                  {item.category.name}
                                 </span>
-                                <div className="hidden xs:block w-12 sm:w-20 bg-slate-100 h-2 rounded-full overflow-hidden">
-                                  <div
-                                    className={`h-full rounded-full transition-all ${
+                              </div>
+
+                              <p className="text-xs text-slate-500 tabular-nums mt-0.5 flex items-center gap-1 flex-wrap">
+                                <span>{formatBRL(item.spentCents)}</span>
+                                <span className="text-slate-400">de</span>
+                                <span className="font-medium text-slate-700">
+                                  {item.limitCents > 0 ? formatBRL(item.limitCents) : 'Sem teto'}
+                                </span>
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Lado Direito: Progresso / Teto + Ações (Desktop direto / Mobile menu ⋯) + Expand */}
+                          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+                            {/* Progresso / Barra de Cor da Categoria Pai com Percentual Visível */}
+                            <div className="flex items-center">
+                              {item.limitCents > 0 ? (
+                                <div className="flex items-center gap-1.5 sm:gap-2">
+                                  <span
+                                    className={`text-[11px] font-bold tabular-nums min-w-[34px] sm:min-w-[38px] text-right ${
                                       item.isOver
-                                        ? 'bg-red-500'
+                                        ? 'text-red-600'
                                         : item.percent >= 75
-                                          ? 'bg-amber-500'
-                                          : 'bg-emerald-600'
+                                          ? 'text-amber-600'
+                                          : 'text-emerald-600'
                                     }`}
-                                    style={{ width: `${Math.min(item.percent, 100)}%` }}
-                                  />
-                                </div>
-                              </div>
-                            ) : (
-                              <span className="text-[11px] font-medium text-slate-400 whitespace-nowrap min-w-[34px] sm:min-w-[38px] text-right">
-                                <span>—</span>
-                              </span>
-                            )}
-                          </div>
-
-                          {/* AÇÕES DE GESTÃO: Desktop (barra com 3 botões) */}
-                          <div
-                            className="hidden md:flex items-center gap-0.5 bg-slate-100/70 p-0.5 rounded-xl border border-slate-200/60"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {/* Lápis: Editar categoria */}
-                            <CategoryEditorPopover
-                              category={item.category}
-                              trigger={
-                                <button
-                                  type="button"
-                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-white transition-all"
-                                  title="Editar categoria (nome, cor, ícone)"
-                                  aria-label={`Editar categoria ${item.category.name}`}
-                                >
-                                  <Edit3 className="w-3.5 h-3.5" />
-                                </button>
-                              }
-                              onSave={async (data) => {
-                                try {
-                                  await editCategory(item.category.id, data)
-                                  triggerRefresh()
-                                  await loadMonthData()
-                                } catch (err: any) {
-                                  console.error('Erro ao editar categoria:', err)
-                                  toast({
-                                    title: 'Erro ao editar categoria',
-                                    description: err?.message || 'Tente novamente.',
-                                    variant: 'destructive',
-                                  })
-                                }
-                              }}
-                            />
-
-                            {/* + : Criar subcategoria */}
-                            <SubcategoryEditorPopover
-                              parentCategoryName={item.category.name}
-                              trigger={
-                                <button
-                                  type="button"
-                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-emerald-700 hover:bg-white transition-all"
-                                  title="Adicionar subcategoria"
-                                  aria-label={`Adicionar subcategoria em ${item.category.name}`}
-                                >
-                                  <Plus className="w-3.5 h-3.5" />
-                                </button>
-                              }
-                              onSave={async (data) => {
-                                try {
-                                  await addNewSubcategory(item.category.id, data.name)
-                                  setExpandedBudgetCategories((prev) => ({
-                                    ...prev,
-                                    [item.category.id]: true,
-                                  }))
-                                  triggerRefresh()
-                                  await loadMonthData()
-                                } catch (err: any) {
-                                  console.error('Erro ao criar subcategoria:', err)
-                                  toast({
-                                    title: 'Erro ao criar subcategoria',
-                                    description: err?.message || 'Tente novamente.',
-                                    variant: 'destructive',
-                                  })
-                                }
-                              }}
-                            />
-
-                            {/* Lixeira: Excluir categoria */}
-                            <button
-                              type="button"
-                              onClick={(e) => handleInitiateDeleteCategory(item.category, e)}
-                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-white transition-all"
-                              title="Excluir categoria"
-                              aria-label={`Excluir categoria ${item.category.name}`}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-
-                          {/* AÇÕES DE GESTÃO: Mobile / Tablet (< md) via Menu "Mais Opções" (⋯) */}
-                          <div
-                            className="flex md:hidden items-center"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <DropdownMenu modal={false}>
-                              <DropdownMenuTrigger asChild>
-                                <button
-                                  type="button"
-                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
-                                  title="Mais opções da categoria"
-                                  aria-label={`Opções da categoria ${item.category.name}`}
-                                >
-                                  <MoreVertical className="w-4 h-4" />
-                                </button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent
-                                align="end"
-                                className="w-48 rounded-2xl shadow-xl p-1.5 text-xs"
-                              >
-                                <DropdownMenuItem
-                                  onSelect={(e) => {
-                                    e.preventDefault()
-                                    const cat = item.category
-                                    setCategoryToEdit(cat)
-                                    setCategoryEditorName(cat.name || '')
-                                    setCategoryEditorType(cat.type || 'expense')
-                                    setCategoryEditorColor(cat.color || '#3B82F6')
-                                    setCategoryEditorIcon(cat.icon || 'Tag')
-                                    setTimeout(() => {
-                                      setIsCategoryEditorOpen(true)
-                                    }, 0)
-                                  }}
-                                  className="gap-2 py-2 rounded-xl cursor-pointer"
-                                >
-                                  <Edit3 className="w-3.5 h-3.5 text-slate-500" />
-                                  <span>Editar categoria</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onSelect={(e) => {
-                                    e.preventDefault()
-                                    const cat = item.category
-                                    setCategoryForNewSubcat(cat)
-                                    setNewSubcatName('')
-                                    setTimeout(() => {
-                                      setIsNewSubcatDialogOpen(true)
-                                    }, 0)
-                                  }}
-                                  className="gap-2 py-2 rounded-xl cursor-pointer text-emerald-700 focus:text-emerald-800"
-                                >
-                                  <Plus className="w-3.5 h-3.5 text-emerald-600" />
-                                  <span>Nova subcategoria</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onSelect={(e) => {
-                                    e.preventDefault()
-                                    setTimeout(() => {
-                                      handleInitiateDeleteCategory(item.category, e as any)
-                                    }, 0)
-                                  }}
-                                  className="gap-2 py-2 rounded-xl cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                                  <span>Excluir categoria</span>
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-
-                          {/* Chevron de Expandir / Recolher Subcategorias */}
-                          <div className="flex items-center">
-                            <button
-                              type="button"
-                              onClick={(e) => toggleCatBudgetExpand(item.category.id, e)}
-                              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-                              title={
-                                isExpanded ? 'Recolher subcategorias' : 'Expandir subcategorias'
-                              }
-                              aria-label={
-                                isExpanded ? 'Recolher subcategorias' : 'Expandir subcategorias'
-                              }
-                            >
-                              <ChevronDown
-                                className={`w-4 h-4 transition-transform duration-200 ${
-                                  isExpanded ? 'rotate-180' : ''
-                                }`}
-                              />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Linhas Aninhadas: Subcategorias com Recuo e Visual Suave OU Mensagem Vazia */}
-                      {isExpanded ? (
-                        <div
-                          key={`budget-subcats-${item.category.id}`}
-                          className="bg-slate-50/60 border-t border-slate-100 divide-y divide-slate-100/80 pl-4 sm:pl-7 pr-3 py-1"
-                        >
-                          {hasSubcats ? (
-                            item.subcategories.map((subItem) => (
-                              <div
-                                key={`budget-sub-${subItem.subcategory.id}`}
-                                onClick={() =>
-                                  openBudgetEditor(
-                                    item.category.id,
-                                    subItem.subcategory.id,
-                                    subItem.defaultLimitCents,
-                                    subItem.limitCents,
-                                    subItem.hasOverride,
-                                  )
-                                }
-                                className="py-2.5 flex items-center justify-between hover:bg-white rounded-xl px-2.5 cursor-pointer transition-colors group/sub gap-2.5 sm:gap-3"
-                              >
-                                {/* Identificação da Subcategoria */}
-                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover/sub:bg-emerald-500 transition-colors shrink-0" />
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-1.5">
-                                      <span
-                                        className="text-xs font-semibold text-slate-700 group-hover/sub:text-emerald-700 transition-colors break-words leading-snug"
-                                        title={subItem.subcategory.name}
-                                      >
-                                        <span>{subItem.subcategory.name}</span>
-                                      </span>
-                                      {subItem.hasOverride ? (
-                                        <span className="text-[10px] font-semibold bg-amber-100/80 text-amber-900 border border-amber-200/80 px-1.5 py-0.2 rounded-full leading-tight shrink-0">
-                                          <span>ajustado</span>
-                                        </span>
-                                      ) : null}
-                                      {subItem.isOver ? (
-                                        <AlertTriangle className="w-3 h-3 text-red-500 shrink-0" />
-                                      ) : null}
-                                    </div>
-                                    <p className="text-[11px] text-slate-400 tabular-nums mt-0.5 flex items-center gap-1 flex-wrap">
-                                      <span>{formatBRL(subItem.spentCents)}</span>
-                                      <span className="text-slate-400">de</span>
-                                      <span className="font-medium text-slate-600">
-                                        {subItem.limitCents > 0 ? (
-                                          <span>{formatBRL(subItem.limitCents)}</span>
-                                        ) : (
-                                          <span>Sem teto</span>
-                                        )}
-                                      </span>
-                                    </p>
-                                  </div>
-                                </div>
-
-                                {/* Lado Direito da Subcategoria: Progresso / Teto + Ações Inline (Lápis e Lixeira) + Espaçador da setinha */}
-                                <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-                                  {/* Progresso / Percentual da Subcategoria (alinhado com a categoria pai) */}
-                                  <div className="flex items-center">
-                                    {subItem.limitCents > 0 ? (
-                                      <div className="flex items-center gap-1.5 sm:gap-2">
-                                        <span
-                                          className={`text-[11px] font-bold tabular-nums min-w-[34px] sm:min-w-[38px] text-right ${
-                                            subItem.isOver
-                                              ? 'text-red-600'
-                                              : subItem.percent >= 75
-                                                ? 'text-amber-600'
-                                                : 'text-emerald-600'
-                                          }`}
-                                        >
-                                          <span>{subItem.percent}%</span>
-                                        </span>
-                                        <div className="hidden xs:block w-12 sm:w-20 bg-slate-200/60 h-1.5 rounded-full overflow-hidden">
-                                          <div
-                                            className={`h-full rounded-full transition-all ${
-                                              subItem.isOver
-                                                ? 'bg-red-500'
-                                                : subItem.percent >= 75
-                                                  ? 'bg-amber-500'
-                                                  : 'bg-emerald-600'
-                                            }`}
-                                            style={{ width: `${Math.min(subItem.percent, 100)}%` }}
-                                          />
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <span className="text-[11px] font-medium text-slate-400 whitespace-nowrap min-w-[34px] sm:min-w-[38px] text-right">
-                                        <span>—</span>
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  {/* ÍCONES DE GESTÃO INLINE NA SUBCATEGORIA */}
-                                  <div
-                                    className="flex items-center gap-0.5"
-                                    onClick={(e) => e.stopPropagation()}
                                   >
-                                    {/* Lápis: Renomear subcategoria E definir/editar teto orçamentário */}
-                                    <SubcategoryEditorPopover
-                                      subcategory={subItem.subcategory}
-                                      parentCategoryName={item.category.name}
-                                      showBudgetFields={true}
-                                      initialDefaultLimitCents={subItem.defaultLimitCents}
-                                      initialMonthLimitCents={subItem.limitCents}
-                                      hasMonthOverride={subItem.hasOverride}
-                                      currentMonthLabel={formatMonthYear(currentDate)}
-                                      trigger={
-                                        <button
-                                          type="button"
-                                          className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-all"
-                                          title="Editar subcategoria e teto"
-                                          aria-label={`Editar subcategoria ${subItem.subcategory.name} e teto`}
-                                        >
-                                          <Edit3 className="w-3.5 h-3.5" />
-                                        </button>
-                                      }
-                                      onSave={async (data) => {
-                                        try {
-                                          // 1. Atualiza nome se alterado
-                                          if (data.name && data.name !== subItem.subcategory.name) {
-                                            await editSubcategory(subItem.subcategory.id, {
-                                              name: data.name,
-                                            })
-                                          }
-
-                                          // 2. Atualiza teto se fornecido
-                                          if (family) {
-                                            if (data.isEditingOnlyThisMonth) {
-                                              const monthCents = data.monthLimitCents || 0
-                                              await upsertMonthBudgetOverride(
-                                                family.id,
-                                                item.category.id,
-                                                monthKey,
-                                                monthCents,
-                                                subItem.subcategory.id,
-                                              )
-                                            } else {
-                                              const defCents = data.defaultLimitCents || 0
-                                              await upsertDefaultBudget(
-                                                family.id,
-                                                item.category.id,
-                                                defCents,
-                                                subItem.subcategory.id,
-                                              )
-                                              // Se havia override pontual e salvou novo padrão, alinha o mês corrente
-                                              if (subItem.hasOverride) {
-                                                await resetMonthBudgetToDefault(
-                                                  family.id,
-                                                  item.category.id,
-                                                  monthKey,
-                                                  subItem.subcategory.id,
-                                                )
-                                              }
-                                            }
-                                          }
-
-                                          triggerRefresh()
-                                          await loadMonthData()
-                                        } catch (err: any) {
-                                          console.error(
-                                            'Erro ao atualizar subcategoria ou teto:',
-                                            err,
-                                          )
-                                          toast({
-                                            title: 'Erro ao salvar',
-                                            description: err?.message || 'Tente novamente.',
-                                            variant: 'destructive',
-                                          })
-                                        }
-                                      }}
+                                    <span>{item.percent}%</span>
+                                  </span>
+                                  <div className="hidden xs:block w-12 sm:w-20 bg-slate-100 h-2 rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full transition-all ${
+                                        item.isOver
+                                          ? 'bg-red-500'
+                                          : item.percent >= 75
+                                            ? 'bg-amber-500'
+                                            : 'bg-emerald-600'
+                                      }`}
+                                      style={{ width: `${Math.min(item.percent, 100)}%` }}
                                     />
-
-                                    {/* Lixeira: Excluir subcategoria com confirmação e contagem */}
-                                    <button
-                                      type="button"
-                                      onClick={(e) =>
-                                        handleInitiateDeleteSubcategory(
-                                          subItem.subcategory,
-                                          item.category.name,
-                                          e,
-                                        )
-                                      }
-                                      className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-slate-100 transition-all"
-                                      title="Excluir subcategoria"
-                                      aria-label={`Excluir subcategoria ${subItem.subcategory.name}`}
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
                                   </div>
-
-                                  {/* Espaçador para alinhar perfeitamente com a categoria pai (que tem a setinha w-7 / p-1.5) */}
-                                  <div
-                                    className="w-7 shrink-0 pointer-events-none"
-                                    aria-hidden="true"
-                                  />
                                 </div>
-                              </div>
-                            ))
-                          ) : (
-                            /* Empty state amigável quando não houver subcategorias cadastradas */
-                            <div className="py-3 px-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500">
-                              <span className="italic text-slate-400">
-                                <span>Nenhuma subcategoria cadastrada</span>
-                              </span>
+                              ) : (
+                                <span className="text-[11px] font-medium text-slate-400 whitespace-nowrap min-w-[34px] sm:min-w-[38px] text-right">
+                                  <span>—</span>
+                                </span>
+                              )}
+                            </div>
+
+                            {/* AÇÕES DE GESTÃO: Desktop (barra com 3 botões) */}
+                            <div
+                              className="hidden md:flex items-center gap-0.5 bg-slate-100/70 p-0.5 rounded-xl border border-slate-200/60"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {/* Lápis: Editar categoria */}
+                              <CategoryEditorPopover
+                                category={item.category}
+                                trigger={
+                                  <button
+                                    type="button"
+                                    className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-white transition-all"
+                                    title="Editar categoria (nome, cor, ícone)"
+                                    aria-label={`Editar categoria ${item.category.name}`}
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
+                                }
+                                onSave={async (data) => {
+                                  try {
+                                    await editCategory(item.category.id, data)
+                                    triggerRefresh()
+                                    await loadMonthData()
+                                  } catch (err: any) {
+                                    console.error('Erro ao editar categoria:', err)
+                                    toast({
+                                      title: 'Erro ao editar categoria',
+                                      description: err?.message || 'Tente novamente.',
+                                      variant: 'destructive',
+                                    })
+                                  }
+                                }}
+                              />
+
+                              {/* + : Criar subcategoria */}
                               <SubcategoryEditorPopover
                                 parentCategoryName={item.category.name}
                                 trigger={
                                   <button
                                     type="button"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 transition-colors self-start sm:self-auto"
+                                    className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-emerald-700 hover:bg-white transition-all"
+                                    title="Adicionar subcategoria"
+                                    aria-label={`Adicionar subcategoria em ${item.category.name}`}
                                   >
-                                    <Plus className="w-3 h-3" />
-                                    <span>Criar subcategoria</span>
+                                    <Plus className="w-3.5 h-3.5" />
                                   </button>
                                 }
                                 onSave={async (data) => {
@@ -1781,46 +1467,414 @@ export default function WalletPage() {
                                   }
                                 }}
                               />
-                            </div>
-                          )}
 
-                          {/* Botão rápido para adicionar subcategoria no fim do bloco expandido (quando já tem subcategorias) */}
-                          {hasSubcats ? (
-                            <div className="py-2 px-2.5">
-                              <SubcategoryEditorPopover
-                                parentCategoryName={item.category.name}
-                                trigger={
+                              {/* Lixeira: Excluir categoria */}
+                              <button
+                                type="button"
+                                onClick={(e) => handleInitiateDeleteCategory(item.category, e)}
+                                className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-white transition-all"
+                                title="Excluir categoria"
+                                aria-label={`Excluir categoria ${item.category.name}`}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+
+                            {/* AÇÕES DE GESTÃO: Mobile / Tablet (< md) via Menu "Mais Opções" (⋯) */}
+                            <div
+                              className="flex md:hidden items-center"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <DropdownMenu modal={false}>
+                                <DropdownMenuTrigger asChild>
                                   <button
                                     type="button"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 transition-colors"
+                                    className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+                                    title="Mais opções da categoria"
+                                    aria-label={`Opções da categoria ${item.category.name}`}
                                   >
-                                    <Plus className="w-3 h-3" />
-                                    <span>Adicionar subcategoria</span>
+                                    <MoreVertical className="w-4 h-4" />
                                   </button>
-                                }
-                                onSave={async (data) => {
-                                  try {
-                                    await addNewSubcategory(item.category.id, data.name)
-                                    triggerRefresh()
-                                    await loadMonthData()
-                                  } catch (err: any) {
-                                    console.error('Erro ao criar subcategoria:', err)
-                                    toast({
-                                      title: 'Erro ao criar subcategoria',
-                                      description: err?.message || 'Tente novamente.',
-                                      variant: 'destructive',
-                                    })
-                                  }
-                                }}
-                              />
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  align="end"
+                                  className="w-48 rounded-2xl shadow-xl p-1.5 text-xs"
+                                >
+                                  <DropdownMenuItem
+                                    onSelect={(e) => {
+                                      e.preventDefault()
+                                      const cat = item.category
+                                      setCategoryToEdit(cat)
+                                      setCategoryEditorName(cat.name || '')
+                                      setCategoryEditorType(cat.type || 'expense')
+                                      setCategoryEditorColor(cat.color || '#3B82F6')
+                                      setCategoryEditorIcon(cat.icon || 'Tag')
+                                      setTimeout(() => {
+                                        setIsCategoryEditorOpen(true)
+                                      }, 0)
+                                    }}
+                                    className="gap-2 py-2 rounded-xl cursor-pointer"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5 text-slate-500" />
+                                    <span>Editar categoria</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onSelect={(e) => {
+                                      e.preventDefault()
+                                      const cat = item.category
+                                      setCategoryForNewSubcat(cat)
+                                      setNewSubcatName('')
+                                      setTimeout(() => {
+                                        setIsNewSubcatDialogOpen(true)
+                                      }, 0)
+                                    }}
+                                    className="gap-2 py-2 rounded-xl cursor-pointer text-emerald-700 focus:text-emerald-800"
+                                  >
+                                    <Plus className="w-3.5 h-3.5 text-emerald-600" />
+                                    <span>Nova subcategoria</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onSelect={(e) => {
+                                      e.preventDefault()
+                                      setTimeout(() => {
+                                        handleInitiateDeleteCategory(item.category, e as any)
+                                      }, 0)
+                                    }}
+                                    className="gap-2 py-2 rounded-xl cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                                    <span>Excluir categoria</span>
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
-                          ) : null}
+
+                            {/* Chevron de Expandir / Recolher Subcategorias */}
+                            <div className="flex items-center">
+                              <button
+                                type="button"
+                                onClick={(e) => toggleCatBudgetExpand(item.category.id, e)}
+                                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                                title={
+                                  isExpanded ? 'Recolher subcategorias' : 'Expandir subcategorias'
+                                }
+                                aria-label={
+                                  isExpanded ? 'Recolher subcategorias' : 'Expandir subcategorias'
+                                }
+                              >
+                                <ChevronDown
+                                  className={`w-4 h-4 transition-transform duration-200 ${
+                                    isExpanded ? 'rotate-180' : ''
+                                  }`}
+                                />
+                              </button>
+                            </div>
+                          </div>
                         </div>
-                      ) : null}
-                    </div>
-                  )
-                })}
+
+                        {/* Linhas Aninhadas: Subcategorias com Recuo e Visual Suave OU Mensagem Vazia */}
+                        {isExpanded ? (
+                          <div
+                            key={`budget-subcats-${item.category.id}`}
+                            className="bg-slate-50/60 border-t border-slate-100 divide-y divide-slate-100/80 pl-4 sm:pl-7 pr-3 py-1"
+                          >
+                            {hasSubcats ? (
+                              <SortableList
+                                items={item.subcategories}
+                                keyExtractor={(sub) => sub.subcategory.id}
+                                className="space-y-1 divide-y-0"
+                                onReorder={async (newSubOrder) => {
+                                  const orderedSubIds = newSubOrder.map((s) => s.subcategory.id)
+                                  await reorderSubcategoriesList(item.category.id, orderedSubIds)
+                                }}
+                                renderItem={(subItem, _sIdx, subDragHandleProps, isSubDragging) => (
+                                  <div
+                                    key={`budget-sub-${subItem.subcategory.id}`}
+                                    onClick={() =>
+                                      openBudgetEditor(
+                                        item.category.id,
+                                        subItem.subcategory.id,
+                                        subItem.defaultLimitCents,
+                                        subItem.limitCents,
+                                        subItem.hasOverride,
+                                      )
+                                    }
+                                    className={`py-2.5 flex items-center justify-between rounded-xl px-2.5 cursor-pointer transition-colors group/sub gap-2 sm:gap-3 touch-manipulation ${
+                                      isSubDragging ? 'bg-white shadow-md' : 'hover:bg-white'
+                                    }`}
+                                  >
+                                    {/* Identificação da Subcategoria + Alça de arrasto da subcategoria */}
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                      <button
+                                        type="button"
+                                        {...subDragHandleProps}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="w-5 h-6 flex items-center justify-center text-slate-300 hover:text-slate-600 cursor-grab active:cursor-grabbing shrink-0 touch-none rounded hover:bg-slate-100 transition-colors"
+                                        title="Arraste para reordenar subcategoria"
+                                        aria-label={`Arrastar subcategoria ${subItem.subcategory.name}`}
+                                      >
+                                        <GripVertical className="w-3.5 h-3.5" />
+                                      </button>
+                                      <span className="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover/sub:bg-emerald-500 transition-colors shrink-0" />
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-1.5">
+                                          <span
+                                            className="text-xs font-semibold text-slate-700 group-hover/sub:text-emerald-700 transition-colors break-words leading-snug"
+                                            title={subItem.subcategory.name}
+                                          >
+                                            <span>{subItem.subcategory.name}</span>
+                                          </span>
+                                          {subItem.hasOverride ? (
+                                            <span className="text-[10px] font-semibold bg-amber-100/80 text-amber-900 border border-amber-200/80 px-1.5 py-0.2 rounded-full leading-tight shrink-0">
+                                              <span>ajustado</span>
+                                            </span>
+                                          ) : null}
+                                          {subItem.isOver ? (
+                                            <AlertTriangle className="w-3 h-3 text-red-500 shrink-0" />
+                                          ) : null}
+                                        </div>
+                                        <p className="text-[11px] text-slate-400 tabular-nums mt-0.5 flex items-center gap-1 flex-wrap">
+                                          <span>{formatBRL(subItem.spentCents)}</span>
+                                          <span className="text-slate-400">de</span>
+                                          <span className="font-medium text-slate-600">
+                                            {subItem.limitCents > 0 ? (
+                                              <span>{formatBRL(subItem.limitCents)}</span>
+                                            ) : (
+                                              <span>Sem teto</span>
+                                            )}
+                                          </span>
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {/* Lado Direito da Subcategoria: Progresso / Teto + Ações Inline (Lápis e Lixeira) + Espaçador da setinha */}
+                                    <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+                                      {/* Progresso / Percentual da Subcategoria (alinhado com a categoria pai) */}
+                                      <div className="flex items-center">
+                                        {subItem.limitCents > 0 ? (
+                                          <div className="flex items-center gap-1.5 sm:gap-2">
+                                            <span
+                                              className={`text-[11px] font-bold tabular-nums min-w-[34px] sm:min-w-[38px] text-right ${
+                                                subItem.isOver
+                                                  ? 'text-red-600'
+                                                  : subItem.percent >= 75
+                                                    ? 'text-amber-600'
+                                                    : 'text-emerald-600'
+                                              }`}
+                                            >
+                                              <span>{subItem.percent}%</span>
+                                            </span>
+                                            <div className="hidden xs:block w-12 sm:w-20 bg-slate-200/60 h-1.5 rounded-full overflow-hidden">
+                                              <div
+                                                className={`h-full rounded-full transition-all ${
+                                                  subItem.isOver
+                                                    ? 'bg-red-500'
+                                                    : subItem.percent >= 75
+                                                      ? 'bg-amber-500'
+                                                      : 'bg-emerald-600'
+                                                }`}
+                                                style={{
+                                                  width: `${Math.min(subItem.percent, 100)}%`,
+                                                }}
+                                              />
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <span className="text-[11px] font-medium text-slate-400 whitespace-nowrap min-w-[34px] sm:min-w-[38px] text-right">
+                                            <span>—</span>
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      {/* ÍCONES DE GESTÃO INLINE NA SUBCATEGORIA */}
+                                      <div
+                                        className="flex items-center gap-0.5"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        {/* Lápis: Renomear subcategoria E definir/editar teto orçamentário */}
+                                        <SubcategoryEditorPopover
+                                          subcategory={subItem.subcategory}
+                                          parentCategoryName={item.category.name}
+                                          showBudgetFields={true}
+                                          initialDefaultLimitCents={subItem.defaultLimitCents}
+                                          initialMonthLimitCents={subItem.limitCents}
+                                          hasMonthOverride={subItem.hasOverride}
+                                          currentMonthLabel={formatMonthYear(currentDate)}
+                                          trigger={
+                                            <button
+                                              type="button"
+                                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-all"
+                                              title="Editar subcategoria e teto"
+                                              aria-label={`Editar subcategoria ${subItem.subcategory.name} e teto`}
+                                            >
+                                              <Edit3 className="w-3.5 h-3.5" />
+                                            </button>
+                                          }
+                                          onSave={async (data) => {
+                                            try {
+                                              // 1. Atualiza nome se alterado
+                                              if (
+                                                data.name &&
+                                                data.name !== subItem.subcategory.name
+                                              ) {
+                                                await editSubcategory(subItem.subcategory.id, {
+                                                  name: data.name,
+                                                })
+                                              }
+
+                                              // 2. Atualiza teto se fornecido
+                                              if (family) {
+                                                if (data.isEditingOnlyThisMonth) {
+                                                  const monthCents = data.monthLimitCents || 0
+                                                  await upsertMonthBudgetOverride(
+                                                    family.id,
+                                                    item.category.id,
+                                                    monthKey,
+                                                    monthCents,
+                                                    subItem.subcategory.id,
+                                                  )
+                                                } else {
+                                                  const defCents = data.defaultLimitCents || 0
+                                                  await upsertDefaultBudget(
+                                                    family.id,
+                                                    item.category.id,
+                                                    defCents,
+                                                    subItem.subcategory.id,
+                                                  )
+                                                  // Se havia override pontual e salvou novo padrão, alinha o mês corrente
+                                                  if (subItem.hasOverride) {
+                                                    await resetMonthBudgetToDefault(
+                                                      family.id,
+                                                      item.category.id,
+                                                      monthKey,
+                                                      subItem.subcategory.id,
+                                                    )
+                                                  }
+                                                }
+                                              }
+
+                                              triggerRefresh()
+                                              await loadMonthData()
+                                            } catch (err: any) {
+                                              console.error(
+                                                'Erro ao atualizar subcategoria ou teto:',
+                                                err,
+                                              )
+                                              toast({
+                                                title: 'Erro ao salvar',
+                                                description: err?.message || 'Tente novamente.',
+                                                variant: 'destructive',
+                                              })
+                                            }
+                                          }}
+                                        />
+
+                                        {/* Lixeira: Excluir subcategoria com confirmação e contagem */}
+                                        <button
+                                          type="button"
+                                          onClick={(e) =>
+                                            handleInitiateDeleteSubcategory(
+                                              subItem.subcategory,
+                                              item.category.name,
+                                              e,
+                                            )
+                                          }
+                                          className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-slate-100 transition-all"
+                                          title="Excluir subcategoria"
+                                          aria-label={`Excluir subcategoria ${subItem.subcategory.name}`}
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+
+                                      {/* Espaçador para alinhar perfeitamente com a categoria pai (que tem a setinha w-7 / p-1.5) */}
+                                      <div
+                                        className="w-7 shrink-0 pointer-events-none"
+                                        aria-hidden="true"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                              />
+                            ) : (
+                              /* Empty state amigável quando não houver subcategorias cadastradas */
+                              <div className="py-3 px-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500">
+                                <span className="italic text-slate-400">
+                                  <span>Nenhuma subcategoria cadastrada</span>
+                                </span>
+                                <SubcategoryEditorPopover
+                                  parentCategoryName={item.category.name}
+                                  trigger={
+                                    <button
+                                      type="button"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 transition-colors self-start sm:self-auto"
+                                    >
+                                      <Plus className="w-3 h-3" />
+                                      <span>Criar subcategoria</span>
+                                    </button>
+                                  }
+                                  onSave={async (data) => {
+                                    try {
+                                      await addNewSubcategory(item.category.id, data.name)
+                                      setExpandedBudgetCategories((prev) => ({
+                                        ...prev,
+                                        [item.category.id]: true,
+                                      }))
+                                      triggerRefresh()
+                                      await loadMonthData()
+                                    } catch (err: any) {
+                                      console.error('Erro ao criar subcategoria:', err)
+                                      toast({
+                                        title: 'Erro ao criar subcategoria',
+                                        description: err?.message || 'Tente novamente.',
+                                        variant: 'destructive',
+                                      })
+                                    }
+                                  }}
+                                />
+                              </div>
+                            )}
+
+                            {/* Botão rápido para adicionar subcategoria no fim do bloco expandido (quando já tem subcategorias) */}
+                            {hasSubcats ? (
+                              <div className="py-2 px-2.5">
+                                <SubcategoryEditorPopover
+                                  parentCategoryName={item.category.name}
+                                  trigger={
+                                    <button
+                                      type="button"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 transition-colors"
+                                    >
+                                      <Plus className="w-3 h-3" />
+                                      <span>Adicionar subcategoria</span>
+                                    </button>
+                                  }
+                                  onSave={async (data) => {
+                                    try {
+                                      await addNewSubcategory(item.category.id, data.name)
+                                      triggerRefresh()
+                                      await loadMonthData()
+                                    } catch (err: any) {
+                                      console.error('Erro ao criar subcategoria:', err)
+                                      toast({
+                                        title: 'Erro ao criar subcategoria',
+                                        description: err?.message || 'Tente novamente.',
+                                        variant: 'destructive',
+                                      })
+                                    }
+                                  }}
+                                />
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    )
+                  }}
+                />
 
                 {/* Linha discreta no fim da lista: "+ Nova categoria" */}
                 <div className="pt-2">

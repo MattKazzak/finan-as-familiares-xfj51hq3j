@@ -20,6 +20,8 @@ import {
   getSubcategoryUsageCount,
   updateFamilyDetails,
   uploadFamilyAvatarFile,
+  reorderCategories,
+  reorderSubcategories,
 } from '@/services/family'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
@@ -67,6 +69,8 @@ interface FamilyContextType {
   ) => Promise<TransactionSubcategory>
   removeSubcategory: (id: string) => Promise<void>
   checkSubcategoryUsage: (id: string) => Promise<number>
+  reorderCategoriesList: (orderedIds: string[]) => Promise<void>
+  reorderSubcategoriesList: (categoryId: string, orderedIds: string[]) => Promise<void>
   isNewTransactionOpen: boolean
   setIsNewTransactionOpen: (open: boolean) => void
   newTransactionDefaultType: 'income' | 'expense'
@@ -248,6 +252,76 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     return await getSubcategoryUsageCount(id)
   }
 
+  const reorderCategoriesList = async (orderedIds: string[]) => {
+    // Atualização otimista imediata no estado local
+    setCategories((prev) => {
+      const catMap = new Map(prev.map((c) => [c.id, c]))
+      const sorted: TransactionCategory[] = []
+      orderedIds.forEach((id, idx) => {
+        const cat = catMap.get(id)
+        if (cat) {
+          sorted.push({ ...cat, sort_order: idx + 1 })
+          catMap.delete(id)
+        }
+      })
+      // Qualquer categoria não inclusa na lista mantém sua posição relativa ao final
+      for (const remaining of catMap.values()) {
+        sorted.push(remaining)
+      }
+      return sorted
+    })
+
+    try {
+      await reorderCategories(orderedIds)
+    } catch (err) {
+      console.error('Erro ao salvar nova ordem das categorias:', err)
+      toast({
+        title: 'Erro ao salvar ordem',
+        description: 'Não foi possível salvar a nova ordem das categorias.',
+        variant: 'destructive',
+      })
+      // Recarrega do banco para desfazer
+      await reloadFamily()
+    }
+  }
+
+  const reorderSubcategoriesList = async (categoryId: string, orderedIds: string[]) => {
+    // Atualização otimista imediata no estado local
+    setCategories((prev) =>
+      prev.map((cat) => {
+        if (cat.id !== categoryId || !cat.subcategories) return cat
+        const subMap = new Map(cat.subcategories.map((s) => [s.id, s]))
+        const sorted: TransactionSubcategory[] = []
+        orderedIds.forEach((id, idx) => {
+          const sub = subMap.get(id)
+          if (sub) {
+            sorted.push({ ...sub, sort_order: idx + 1 })
+            subMap.delete(id)
+          }
+        })
+        for (const remaining of subMap.values()) {
+          sorted.push(remaining)
+        }
+        return {
+          ...cat,
+          subcategories: sorted,
+        }
+      }),
+    )
+
+    try {
+      await reorderSubcategories(orderedIds)
+    } catch (err) {
+      console.error('Erro ao salvar nova ordem das subcategorias:', err)
+      toast({
+        title: 'Erro ao salvar ordem',
+        description: 'Não foi possível salvar a nova ordem das subcategorias.',
+        variant: 'destructive',
+      })
+      await reloadFamily()
+    }
+  }
+
   const addNewSubcategory = async (
     categoryId: string,
     name: string,
@@ -344,6 +418,8 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         editSubcategory,
         removeSubcategory,
         checkSubcategoryUsage,
+        reorderCategoriesList,
+        reorderSubcategoriesList,
         isNewTransactionOpen,
         setIsNewTransactionOpen,
         newTransactionDefaultType,
