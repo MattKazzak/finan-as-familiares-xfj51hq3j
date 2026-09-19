@@ -147,7 +147,7 @@ export const SubcategoryEditorPopover: React.FC<SubcategoryEditorPopoverProps> =
                   }`}
                 >
                   <Layers className="w-3 h-3" />
-                  <span>Padrão Mensal</span>
+                  <span>Recorrente</span>
                 </button>
                 <button
                   type="button"
