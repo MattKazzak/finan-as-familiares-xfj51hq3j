@@ -61,6 +61,58 @@ export type Database = {
           },
         ]
       }
+      categorization_rules: {
+        Row: {
+          category_id: string
+          created_at: string
+          family_id: string | null
+          id: string
+          pattern: string
+          subcategory_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          family_id?: string | null
+          id?: string
+          pattern: string
+          subcategory_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          family_id?: string | null
+          id?: string
+          pattern?: string
+          subcategory_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'categorization_rules_category_id_fkey'
+            columns: ['category_id']
+            isOneToOne: false
+            referencedRelation: 'transaction_categories'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'categorization_rules_family_id_fkey'
+            columns: ['family_id']
+            isOneToOne: false
+            referencedRelation: 'families'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'categorization_rules_subcategory_id_fkey'
+            columns: ['subcategory_id']
+            isOneToOne: false
+            referencedRelation: 'transaction_subcategories'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       default_budgets: {
         Row: {
           amount_cents: number
@@ -254,58 +306,6 @@ export type Database = {
             columns: ['family_id']
             isOneToOne: false
             referencedRelation: 'families'
-            referencedColumns: ['id']
-          },
-        ]
-      }
-      categorization_rules: {
-        Row: {
-          category_id: string
-          created_at: string
-          family_id: string | null
-          id: string
-          pattern: string
-          subcategory_id: string | null
-          user_id: string | null
-        }
-        Insert: {
-          category_id: string
-          created_at?: string
-          family_id?: string | null
-          id?: string
-          pattern: string
-          subcategory_id?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          category_id?: string
-          created_at?: string
-          family_id?: string | null
-          id?: string
-          pattern?: string
-          subcategory_id?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: 'categorization_rules_category_id_fkey'
-            columns: ['category_id']
-            isOneToOne: false
-            referencedRelation: 'transaction_categories'
-            referencedColumns: ['id']
-          },
-          {
-            foreignKeyName: 'categorization_rules_family_id_fkey'
-            columns: ['family_id']
-            isOneToOne: false
-            referencedRelation: 'families'
-            referencedColumns: ['id']
-          },
-          {
-            foreignKeyName: 'categorization_rules_subcategory_id_fkey'
-            columns: ['subcategory_id']
-            isOneToOne: false
-            referencedRelation: 'transaction_subcategories'
             referencedColumns: ['id']
           },
         ]

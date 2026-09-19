@@ -95,10 +95,13 @@ export const AUTO_CATEGORIZATION_RULES: KeywordRule[] = [
       'ATACADÃO',
       'PAO DE ACUCAR',
       'PÃO DE AÇÚCAR',
+      'SAMS CLUB',
+      'SAM S CLUB',
       'EXTRA',
       'BIG',
-      'ZONA SUL',
       'HORTIFRUTI',
+      'HORTEFRUTI',
+      'ZONA SUL',
       'SACOLAO',
       'SACOLÃO',
       'DIA BRASIL',
@@ -279,21 +282,26 @@ export const AUTO_CATEGORIZATION_RULES: KeywordRule[] = [
   },
   // 9. Assinaturas e Serviços
   {
-    categoryNames: ['Assinaturas e Serviços', 'Lazer'],
+    categoryNames: ['Assinaturas & Serviços', 'Assinaturas e Serviços', 'Lazer'],
     type: 'expense',
     keywords: [
       'NETFLIX',
       'SPOTIFY',
       'AMAZON PRIME',
       'PRIME VIDEO',
+      'DISNEY PLUS',
+      'DISNEY+',
       'DISNEY',
       'HBO',
       'MAX',
       'GLOBO',
       'GLOBOPLAY',
+      'YOUTUBE PREMIUM',
       'YOUTUBE',
+      'APPLE.COM/BILL',
       'APPLE.COM',
       'APPLE COM',
+      'SMART FIT',
       'GOOGLE STORAGE',
       'GOOGLE ONE',
       'ICLOUD',
@@ -303,7 +311,6 @@ export const AUTO_CATEGORIZATION_RULES: KeywordRule[] = [
       'DEEZER',
       'CRUNCHYROLL',
       'PARAMOUNT',
-      'DEEZER',
       'CANVA',
       'ADOBE',
     ],
@@ -387,6 +394,7 @@ export const AUTO_CATEGORIZATION_RULES: KeywordRule[] = [
     keywords: [
       'PETZ',
       'COBASI',
+      'PETLOVE',
       'PET SHOP',
       'PETSHOP',
       'VETERINARIO',
@@ -425,11 +433,12 @@ export const AUTO_CATEGORIZATION_RULES: KeywordRule[] = [
   },
   // 14. Compras gerais / E-commerce
   {
-    categoryNames: ['Compras'],
+    categoryNames: ['Compras & Desejos', 'Compras', 'Vestuário'],
     type: 'expense',
     keywords: [
       'MERCADO LIVRE',
       'MERCADOLIVRE',
+      'AMAZON BRASIL',
       'AMAZON',
       'SHOPEE',
       'SHEIN',
@@ -569,11 +578,33 @@ export function matchCategorization(
   )
 
   for (const rule of sortedRules) {
-    const normPattern = normalizeText(rule.pattern)
+    const rawPattern = rule.pattern || ''
+    const normPattern = normalizeText(rawPattern)
     if (!normPattern || normPattern.length < 2) continue
 
-    // Verifica se a descrição normalizada contém o padrão
-    if (normDesc.includes(normPattern)) {
+    // Checagem de correspondência:
+    // Padrões curtos ou sensíveis a falsos positivos usam word-boundary:
+    // - 'MAX' (evita colisão com "MAXIMA", "MAXIMO", "OBRAMAX", "MAXMILHAS")
+    // - 'BAR' (quando pattern é 'BAR ' ou 'BAR', evita colisão com "BARATO", "BARALHO", "BARRA")
+    // - 'C&A' (normalizado fica 'C A')
+    let isMatch = false
+    const trimmedPattern = rawPattern.trim().toUpperCase()
+
+    if (
+      normPattern === 'MAX' ||
+      normPattern === 'BAR' ||
+      normPattern === 'C A' ||
+      trimmedPattern === 'C&A'
+    ) {
+      // Word boundary regex no texto normalizado por espaços
+      const escaped = normPattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const regex = new RegExp(`(?:^|\\s)${escaped}(?:\\s|$)`)
+      isMatch = regex.test(normDesc)
+    } else {
+      isMatch = normDesc.includes(normPattern)
+    }
+
+    if (isMatch) {
       // Verificar se a categoria da regra existe na família
       const category = categories.find((c) => c.id === rule.category_id)
       if (category) {

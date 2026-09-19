@@ -588,5 +588,102 @@ DATA:OFXSGML
       expect(extractPatternFromDescription('PAGAMENTO POSTO IPIRANGA 99')).toBe('IPIRANGA')
       expect(extractPatternFromDescription('NETFLIX.COM')).toBe('NETFLIX.COM')
     })
+
+    it('distingue padrões como MAX, BAR e UBER vs UBER EATS sem falsos positivos', () => {
+      const dbRules: CategorizationRule[] = [
+        {
+          id: 'rule-uber-eats',
+          pattern: 'UBER EATS',
+          category_id: 'cat-mercado',
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 'rule-uber',
+          pattern: 'UBER',
+          category_id: 'cat-transporte',
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 'rule-max',
+          pattern: 'MAX',
+          category_id: 'cat-moradia',
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 'rule-bar',
+          pattern: 'BAR ',
+          category_id: 'cat-mercado',
+          created_at: new Date().toISOString(),
+        },
+      ]
+
+      // 1. UBER EATS ganha de UBER por ser mais longo
+      const matchUberEats = matchCategorization(
+        'PAGTO UBER EATS 123',
+        'expense',
+        mockCategories,
+        dbRules,
+      )
+      expect(matchUberEats?.category.id).toBe('cat-mercado')
+      expect(matchUberEats?.matchedRulePattern).toBe('UBER EATS')
+
+      const matchUber = matchCategorization('PAGTO UBER VIAGEM', 'expense', mockCategories, dbRules)
+      expect(matchUber?.category.id).toBe('cat-transporte')
+      expect(matchUber?.matchedRulePattern).toBe('UBER')
+
+      // 2. MAX só dá match com word-boundary ("MAX", não "MAXIMA" ou "OBRAMAX")
+      const matchMaxWord = matchCategorization(
+        'ASSINATURA MAX MENSAL',
+        'expense',
+        mockCategories,
+        dbRules,
+      )
+      expect(matchMaxWord?.category.id).toBe('cat-moradia')
+
+      const matchMaxima = matchCategorization(
+        'FARMACIA MAXIMA 123',
+        'expense',
+        mockCategories,
+        dbRules,
+      )
+      expect(matchMaxima?.matchedRulePattern).not.toBe('MAX')
+
+      // 3. BAR só dá match com word-boundary ("BAR DA ESQUINA", não "BARATO" ou "BARALHO")
+      const matchBar = matchCategorization(
+        'PAGAMENTO NO BAR DA PRAIA',
+        'expense',
+        mockCategories,
+        dbRules,
+      )
+      expect(matchBar?.category.id).toBe('cat-mercado')
+
+      const matchBarato = matchCategorization(
+        'MERCADO SUPER BARATO',
+        'expense',
+        mockCategories,
+        dbRules,
+      )
+      expect(matchBarato?.matchedRulePattern).not.toBe('BAR ')
+    })
+
+    it("HABIB cobre tanto HABIB quanto HABIBS e HABIB'S", () => {
+      const dbRules: CategorizationRule[] = [
+        {
+          id: 'rule-habib',
+          pattern: 'HABIB',
+          category_id: 'cat-mercado',
+          created_at: new Date().toISOString(),
+        },
+      ]
+
+      const m1 = matchCategorization('HABIB FAST FOOD', 'expense', mockCategories, dbRules)
+      expect(m1?.category.id).toBe('cat-mercado')
+
+      const m2 = matchCategorization("HABIB'S REFEICAO", 'expense', mockCategories, dbRules)
+      expect(m2?.category.id).toBe('cat-mercado')
+
+      const m3 = matchCategorization('HABIBS DELIVERY', 'expense', mockCategories, dbRules)
+      expect(m3?.category.id).toBe('cat-mercado')
+    })
   })
 })
