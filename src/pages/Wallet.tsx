@@ -1346,8 +1346,8 @@ export default function WalletPage() {
                                 </div>
                               </div>
                             ) : (
-                              <span className="text-xs font-semibold text-emerald-700 group-hover:underline whitespace-nowrap">
-                                <span>+ Definir teto</span>
+                              <span className="text-[11px] font-medium text-slate-400 whitespace-nowrap min-w-[34px] sm:min-w-[38px] text-right">
+                                <span>—</span>
                               </span>
                             )}
                           </div>
