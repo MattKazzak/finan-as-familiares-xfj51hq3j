@@ -1643,31 +1643,18 @@ export default function WalletPage() {
                             {/* Progresso / Barra com largura fixa padronizada para alinhamento entre todas as categorias */}
                             <div className="w-[42px] xs:w-[110px] sm:w-[130px] flex items-center justify-end gap-1.5 sm:gap-2 shrink-0">
                               {item.limitCents > 0 ? (
-                                <>
-                                  <span
-                                    className={`text-xs font-bold tabular-nums min-w-[34px] sm:min-w-[38px] text-right shrink-0 leading-none ${
+                                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full transition-all ${
                                       item.isOver || item.percent > 90
-                                        ? 'text-red-600'
+                                        ? 'bg-red-500'
                                         : item.percent >= 71
-                                          ? 'text-amber-600'
-                                          : 'text-emerald-600'
+                                          ? 'bg-amber-500'
+                                          : 'bg-emerald-600'
                                     }`}
-                                  >
-                                    {item.percent}%
-                                  </span>
-                                  <div className="hidden xs:block flex-1 bg-slate-100 h-2 rounded-full overflow-hidden">
-                                    <div
-                                      className={`h-full rounded-full transition-all ${
-                                        item.isOver || item.percent > 90
-                                          ? 'bg-red-500'
-                                          : item.percent >= 71
-                                            ? 'bg-amber-500'
-                                            : 'bg-emerald-600'
-                                      }`}
-                                      style={{ width: `${Math.min(item.percent, 100)}%` }}
-                                    />
-                                  </div>
-                                </>
+                                    style={{ width: `${Math.min(item.percent, 100)}%` }}
+                                  />
+                                </div>
                               ) : (
                                 <>
                                   <span className="text-xs font-medium text-slate-400 tabular-nums min-w-[34px] sm:min-w-[38px] text-right shrink-0 leading-none">
