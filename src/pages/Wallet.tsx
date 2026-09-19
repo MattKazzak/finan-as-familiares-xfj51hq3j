@@ -1037,25 +1037,6 @@ export default function WalletPage() {
                   <Briefcase className="w-3.5 h-3.5 text-emerald-700" />
                   <span>Receitas fixas</span>
                 </Button>
-                <CategoryEditorPopover
-                  title="Nova Categoria"
-                  defaultType="expense"
-                  trigger={
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="rounded-xl text-xs font-semibold gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white h-8 shadow-xs"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Nova categoria</span>
-                    </Button>
-                  }
-                  onSave={async (data) => {
-                    await addNewCategory(data.name, data.type, data.color, data.icon)
-                    triggerRefresh()
-                    await loadMonthData()
-                  }}
-                />
               </div>
             </div>
 
