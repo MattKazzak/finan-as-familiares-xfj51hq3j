@@ -603,6 +603,7 @@ export default function WalletPage() {
   // Salvar Orçamento (Padrão recorrente ou Ajuste pontual deste mês)
   const handleSaveBudgetForm = async (e: React.FormEvent) => {
     e.preventDefault()
+    e.stopPropagation()
     if (!family || !editingBudgetCatId) return
 
     try {
@@ -644,7 +645,8 @@ export default function WalletPage() {
       }
 
       setIsBudgetDialogOpen(false)
-      loadMonthData()
+      triggerRefresh()
+      await loadMonthData()
     } catch (err) {
       console.error(err)
       toast({
@@ -673,7 +675,8 @@ export default function WalletPage() {
         description: `O orçamento deste mês agora segue o valor padrão recorrente.`,
       })
       setIsBudgetDialogOpen(false)
-      loadMonthData()
+      triggerRefresh()
+      await loadMonthData()
     } catch {
       toast({
         title: 'Erro ao resetar',
@@ -706,7 +709,8 @@ export default function WalletPage() {
         description: 'Este valor agora é o teto padrão para todos os meses.',
       })
       setIsBudgetDialogOpen(false)
-      loadMonthData()
+      triggerRefresh()
+      await loadMonthData()
     } catch {
       toast({
         title: 'Erro ao salvar',
@@ -1221,9 +1225,18 @@ export default function WalletPage() {
                       </button>
                     }
                     onSave={async (data) => {
-                      await addNewCategory(data.name, data.type, data.color, data.icon)
-                      triggerRefresh()
-                      await loadMonthData()
+                      try {
+                        await addNewCategory(data.name, data.type, data.color, data.icon)
+                        triggerRefresh()
+                        await loadMonthData()
+                      } catch (err: any) {
+                        console.error('Erro ao criar categoria:', err)
+                        toast({
+                          title: 'Erro ao criar categoria',
+                          description: err?.message || 'Tente novamente.',
+                          variant: 'destructive',
+                        })
+                      }
                     }}
                   />
                 </div>
@@ -1251,9 +1264,18 @@ export default function WalletPage() {
                         </Button>
                       }
                       onSave={async (data) => {
-                        await addNewCategory(data.name, data.type, data.color, data.icon)
-                        triggerRefresh()
-                        await loadMonthData()
+                        try {
+                          await addNewCategory(data.name, data.type, data.color, data.icon)
+                          triggerRefresh()
+                          await loadMonthData()
+                        } catch (err: any) {
+                          console.error('Erro ao criar categoria:', err)
+                          toast({
+                            title: 'Erro ao criar categoria',
+                            description: err?.message || 'Tente novamente.',
+                            variant: 'destructive',
+                          })
+                        }
                       }}
                     />
                   </div>
@@ -1371,9 +1393,18 @@ export default function WalletPage() {
                                 </button>
                               }
                               onSave={async (data) => {
-                                await editCategory(item.category.id, data)
-                                triggerRefresh()
-                                await loadMonthData()
+                                try {
+                                  await editCategory(item.category.id, data)
+                                  triggerRefresh()
+                                  await loadMonthData()
+                                } catch (err: any) {
+                                  console.error('Erro ao editar categoria:', err)
+                                  toast({
+                                    title: 'Erro ao editar categoria',
+                                    description: err?.message || 'Tente novamente.',
+                                    variant: 'destructive',
+                                  })
+                                }
                               }}
                             />
 
@@ -1391,13 +1422,22 @@ export default function WalletPage() {
                                 </button>
                               }
                               onSave={async (data) => {
-                                await addNewSubcategory(item.category.id, data.name)
-                                setExpandedBudgetCategories((prev) => ({
-                                  ...prev,
-                                  [item.category.id]: true,
-                                }))
-                                triggerRefresh()
-                                await loadMonthData()
+                                try {
+                                  await addNewSubcategory(item.category.id, data.name)
+                                  setExpandedBudgetCategories((prev) => ({
+                                    ...prev,
+                                    [item.category.id]: true,
+                                  }))
+                                  triggerRefresh()
+                                  await loadMonthData()
+                                } catch (err: any) {
+                                  console.error('Erro ao criar subcategoria:', err)
+                                  toast({
+                                    title: 'Erro ao criar subcategoria',
+                                    description: err?.message || 'Tente novamente.',
+                                    variant: 'destructive',
+                                  })
+                                }
                               }}
                             />
 
@@ -1418,7 +1458,7 @@ export default function WalletPage() {
                             className="flex md:hidden items-center"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <DropdownMenu>
+                            <DropdownMenu modal={false}>
                               <DropdownMenuTrigger asChild>
                                 <button
                                   type="button"
@@ -1434,13 +1474,17 @@ export default function WalletPage() {
                                 className="w-48 rounded-2xl shadow-xl p-1.5 text-xs"
                               >
                                 <DropdownMenuItem
-                                  onSelect={() => {
-                                    setCategoryToEdit(item.category)
-                                    setCategoryEditorName(item.category.name || '')
-                                    setCategoryEditorType(item.category.type || 'expense')
-                                    setCategoryEditorColor(item.category.color || '#3B82F6')
-                                    setCategoryEditorIcon(item.category.icon || 'Tag')
-                                    setIsCategoryEditorOpen(true)
+                                  onSelect={(e) => {
+                                    e.preventDefault()
+                                    const cat = item.category
+                                    setCategoryToEdit(cat)
+                                    setCategoryEditorName(cat.name || '')
+                                    setCategoryEditorType(cat.type || 'expense')
+                                    setCategoryEditorColor(cat.color || '#3B82F6')
+                                    setCategoryEditorIcon(cat.icon || 'Tag')
+                                    setTimeout(() => {
+                                      setIsCategoryEditorOpen(true)
+                                    }, 0)
                                   }}
                                   className="gap-2 py-2 rounded-xl cursor-pointer"
                                 >
@@ -1448,10 +1492,14 @@ export default function WalletPage() {
                                   <span>Editar categoria</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onSelect={() => {
-                                    setCategoryForNewSubcat(item.category)
+                                  onSelect={(e) => {
+                                    e.preventDefault()
+                                    const cat = item.category
+                                    setCategoryForNewSubcat(cat)
                                     setNewSubcatName('')
-                                    setIsNewSubcatDialogOpen(true)
+                                    setTimeout(() => {
+                                      setIsNewSubcatDialogOpen(true)
+                                    }, 0)
                                   }}
                                   className="gap-2 py-2 rounded-xl cursor-pointer text-emerald-700 focus:text-emerald-800"
                                 >
@@ -1460,9 +1508,12 @@ export default function WalletPage() {
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
-                                  onSelect={(e) =>
-                                    handleInitiateDeleteCategory(item.category, e as any)
-                                  }
+                                  onSelect={(e) => {
+                                    e.preventDefault()
+                                    setTimeout(() => {
+                                      handleInitiateDeleteCategory(item.category, e as any)
+                                    }, 0)
+                                  }}
                                   className="gap-2 py-2 rounded-xl cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50"
                                 >
                                   <Trash2 className="w-3.5 h-3.5 text-red-500" />
@@ -1612,46 +1663,58 @@ export default function WalletPage() {
                                         </button>
                                       }
                                       onSave={async (data) => {
-                                        // 1. Atualiza nome se alterado
-                                        if (data.name && data.name !== subItem.subcategory.name) {
-                                          await editSubcategory(subItem.subcategory.id, {
-                                            name: data.name,
-                                          })
-                                        }
+                                        try {
+                                          // 1. Atualiza nome se alterado
+                                          if (data.name && data.name !== subItem.subcategory.name) {
+                                            await editSubcategory(subItem.subcategory.id, {
+                                              name: data.name,
+                                            })
+                                          }
 
-                                        // 2. Atualiza teto se fornecido
-                                        if (family) {
-                                          if (data.isEditingOnlyThisMonth) {
-                                            const monthCents = data.monthLimitCents || 0
-                                            await upsertMonthBudgetOverride(
-                                              family.id,
-                                              item.category.id,
-                                              monthKey,
-                                              monthCents,
-                                              subItem.subcategory.id,
-                                            )
-                                          } else {
-                                            const defCents = data.defaultLimitCents || 0
-                                            await upsertDefaultBudget(
-                                              family.id,
-                                              item.category.id,
-                                              defCents,
-                                              subItem.subcategory.id,
-                                            )
-                                            // Se havia override pontual e salvou novo padrão, alinha o mês corrente
-                                            if (subItem.hasOverride) {
-                                              await resetMonthBudgetToDefault(
+                                          // 2. Atualiza teto se fornecido
+                                          if (family) {
+                                            if (data.isEditingOnlyThisMonth) {
+                                              const monthCents = data.monthLimitCents || 0
+                                              await upsertMonthBudgetOverride(
                                                 family.id,
                                                 item.category.id,
                                                 monthKey,
+                                                monthCents,
                                                 subItem.subcategory.id,
                                               )
+                                            } else {
+                                              const defCents = data.defaultLimitCents || 0
+                                              await upsertDefaultBudget(
+                                                family.id,
+                                                item.category.id,
+                                                defCents,
+                                                subItem.subcategory.id,
+                                              )
+                                              // Se havia override pontual e salvou novo padrão, alinha o mês corrente
+                                              if (subItem.hasOverride) {
+                                                await resetMonthBudgetToDefault(
+                                                  family.id,
+                                                  item.category.id,
+                                                  monthKey,
+                                                  subItem.subcategory.id,
+                                                )
+                                              }
                                             }
                                           }
-                                        }
 
-                                        triggerRefresh()
-                                        await loadMonthData()
+                                          triggerRefresh()
+                                          await loadMonthData()
+                                        } catch (err: any) {
+                                          console.error(
+                                            'Erro ao atualizar subcategoria ou teto:',
+                                            err,
+                                          )
+                                          toast({
+                                            title: 'Erro ao salvar',
+                                            description: err?.message || 'Tente novamente.',
+                                            variant: 'destructive',
+                                          })
+                                        }
                                       }}
                                     />
 
@@ -1700,13 +1763,22 @@ export default function WalletPage() {
                                   </button>
                                 }
                                 onSave={async (data) => {
-                                  await addNewSubcategory(item.category.id, data.name)
-                                  setExpandedBudgetCategories((prev) => ({
-                                    ...prev,
-                                    [item.category.id]: true,
-                                  }))
-                                  triggerRefresh()
-                                  await loadMonthData()
+                                  try {
+                                    await addNewSubcategory(item.category.id, data.name)
+                                    setExpandedBudgetCategories((prev) => ({
+                                      ...prev,
+                                      [item.category.id]: true,
+                                    }))
+                                    triggerRefresh()
+                                    await loadMonthData()
+                                  } catch (err: any) {
+                                    console.error('Erro ao criar subcategoria:', err)
+                                    toast({
+                                      title: 'Erro ao criar subcategoria',
+                                      description: err?.message || 'Tente novamente.',
+                                      variant: 'destructive',
+                                    })
+                                  }
                                 }}
                               />
                             </div>
@@ -1728,9 +1800,18 @@ export default function WalletPage() {
                                   </button>
                                 }
                                 onSave={async (data) => {
-                                  await addNewSubcategory(item.category.id, data.name)
-                                  triggerRefresh()
-                                  await loadMonthData()
+                                  try {
+                                    await addNewSubcategory(item.category.id, data.name)
+                                    triggerRefresh()
+                                    await loadMonthData()
+                                  } catch (err: any) {
+                                    console.error('Erro ao criar subcategoria:', err)
+                                    toast({
+                                      title: 'Erro ao criar subcategoria',
+                                      description: err?.message || 'Tente novamente.',
+                                      variant: 'destructive',
+                                    })
+                                  }
                                 }}
                               />
                             </div>
@@ -1756,9 +1837,18 @@ export default function WalletPage() {
                       </button>
                     }
                     onSave={async (data) => {
-                      await addNewCategory(data.name, data.type, data.color, data.icon)
-                      triggerRefresh()
-                      await loadMonthData()
+                      try {
+                        await addNewCategory(data.name, data.type, data.color, data.icon)
+                        triggerRefresh()
+                        await loadMonthData()
+                      } catch (err: any) {
+                        console.error('Erro ao criar categoria:', err)
+                        toast({
+                          title: 'Erro ao criar categoria',
+                          description: err?.message || 'Tente novamente.',
+                          variant: 'destructive',
+                        })
+                      }
                     }}
                   />
                 </div>
@@ -2040,7 +2130,6 @@ export default function WalletPage() {
                         onChange={(e) => setDefaultAmountStr(e.target.value)}
                         className="pl-10 text-lg font-bold tabular-nums bg-white"
                         autoFocus
-                        required
                       />
                     </div>
                     <p className="text-[11px] text-slate-500 mt-1">
@@ -2075,7 +2164,6 @@ export default function WalletPage() {
                         onChange={(e) => setMonthAmountStr(e.target.value)}
                         className="pl-10 text-lg font-bold tabular-nums bg-white"
                         autoFocus
-                        required
                       />
                     </div>
 
@@ -2131,11 +2219,7 @@ export default function WalletPage() {
                   >
                     <span className="flex items-center gap-2">
                       {savingBudget ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                      <span>
-                        {isEditingOnlyThisMonth
-                          ? 'Salvar Ajuste do Mês'
-                          : 'Salvar Orçamento Padrão'}
-                      </span>
+                      <span>Salvar Alterações</span>
                     </span>
                   </Button>
                 </DialogFooter>
@@ -2182,19 +2266,47 @@ export default function WalletPage() {
               e.preventDefault()
               e.stopPropagation()
               const trimmed = categoryEditorName.trim()
-              if (!trimmed || !categoryToEdit) return
+              const currentCat =
+                categoryToEdit || categories.find((c) => c.name === categoryEditorName)
+              if (!trimmed) {
+                toast({
+                  title: 'Nome obrigatório',
+                  description: 'Informe o nome da categoria.',
+                  variant: 'destructive',
+                })
+                return
+              }
+              if (!currentCat) {
+                toast({
+                  title: 'Categoria não encontrada',
+                  description: 'Não foi possível identificar a categoria para edição.',
+                  variant: 'destructive',
+                })
+                return
+              }
               try {
                 setSavingCategoryEditor(true)
-                await editCategory(categoryToEdit.id, {
+                await editCategory(currentCat.id, {
                   name: trimmed,
                   type: categoryEditorType,
                   color: categoryEditorColor,
                   icon: categoryEditorIcon,
                 })
+                toast({
+                  title: 'Categoria atualizada',
+                  description: 'As alterações foram salvas com sucesso.',
+                })
                 setIsCategoryEditorOpen(false)
                 setCategoryToEdit(null)
                 triggerRefresh()
                 await loadMonthData()
+              } catch (err: any) {
+                console.error('Erro ao salvar categoria:', err)
+                toast({
+                  title: 'Erro ao salvar categoria',
+                  description: err?.message || 'Tente novamente.',
+                  variant: 'destructive',
+                })
               } finally {
                 setSavingCategoryEditor(false)
               }
@@ -2369,10 +2481,29 @@ export default function WalletPage() {
               e.preventDefault()
               e.stopPropagation()
               const trimmed = newSubcatName.trim()
-              if (!trimmed || !categoryForNewSubcat) return
+              if (!trimmed) {
+                toast({
+                  title: 'Nome obrigatório',
+                  description: 'Informe o nome da nova subcategoria.',
+                  variant: 'destructive',
+                })
+                return
+              }
+              if (!categoryForNewSubcat) {
+                toast({
+                  title: 'Categoria não encontrada',
+                  description: 'Não foi possível identificar a categoria pai.',
+                  variant: 'destructive',
+                })
+                return
+              }
               try {
                 setSavingNewSubcat(true)
                 await addNewSubcategory(categoryForNewSubcat.id, trimmed)
+                toast({
+                  title: 'Subcategoria adicionada',
+                  description: `Subcategoria "${trimmed}" criada com sucesso.`,
+                })
                 setExpandedBudgetCategories((prev) => ({
                   ...prev,
                   [categoryForNewSubcat.id]: true,
@@ -2382,6 +2513,13 @@ export default function WalletPage() {
                 setNewSubcatName('')
                 triggerRefresh()
                 await loadMonthData()
+              } catch (err: any) {
+                console.error('Erro ao adicionar subcategoria:', err)
+                toast({
+                  title: 'Erro ao adicionar subcategoria',
+                  description: err?.message || 'Tente novamente.',
+                  variant: 'destructive',
+                })
               } finally {
                 setSavingNewSubcat(false)
               }
