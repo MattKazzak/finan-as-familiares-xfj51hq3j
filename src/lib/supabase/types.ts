@@ -255,6 +255,116 @@ export type Database = {
           },
         ]
       }
+      recurring_income_overrides: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          family_id: string
+          id: string
+          month: string
+          recurring_income_id: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          family_id: string
+          id?: string
+          month: string
+          recurring_income_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          family_id?: string
+          id?: string
+          month?: string
+          recurring_income_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'recurring_income_overrides_family_id_fkey'
+            columns: ['family_id']
+            isOneToOne: false
+            referencedRelation: 'families'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'recurring_income_overrides_recurring_income_id_fkey'
+            columns: ['recurring_income_id']
+            isOneToOne: false
+            referencedRelation: 'recurring_incomes'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      recurring_incomes: {
+        Row: {
+          active: boolean
+          amount_cents: number
+          category_id: string | null
+          created_at: string
+          day_of_month: number
+          family_id: string
+          id: string
+          member_id: string
+          name: string
+          subcategory_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          amount_cents: number
+          category_id?: string | null
+          created_at?: string
+          day_of_month: number
+          family_id: string
+          id?: string
+          member_id: string
+          name: string
+          subcategory_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          amount_cents?: number
+          category_id?: string | null
+          created_at?: string
+          day_of_month?: number
+          family_id?: string
+          id?: string
+          member_id?: string
+          name?: string
+          subcategory_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'recurring_incomes_category_id_fkey'
+            columns: ['category_id']
+            isOneToOne: false
+            referencedRelation: 'transaction_categories'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'recurring_incomes_family_id_fkey'
+            columns: ['family_id']
+            isOneToOne: false
+            referencedRelation: 'families'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'recurring_incomes_member_id_fkey'
+            columns: ['member_id']
+            isOneToOne: false
+            referencedRelation: 'family_members'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'recurring_incomes_subcategory_id_fkey'
+            columns: ['subcategory_id']
+            isOneToOne: false
+            referencedRelation: 'transaction_subcategories'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       transaction_categories: {
         Row: {
           color: string | null
@@ -349,7 +459,10 @@ export type Database = {
           description: string | null
           family_id: string
           id: string
+          is_recurring: boolean
           member_id: string
+          recurring_income_id: string | null
+          recurring_month: string | null
           subcategory_id: string | null
           transaction_date: string
           type: Database['public']['Enums']['transaction_type']
@@ -361,7 +474,10 @@ export type Database = {
           description?: string | null
           family_id: string
           id?: string
+          is_recurring?: boolean
           member_id: string
+          recurring_income_id?: string | null
+          recurring_month?: string | null
           subcategory_id?: string | null
           transaction_date?: string
           type: Database['public']['Enums']['transaction_type']
@@ -373,7 +489,10 @@ export type Database = {
           description?: string | null
           family_id?: string
           id?: string
+          is_recurring?: boolean
           member_id?: string
+          recurring_income_id?: string | null
+          recurring_month?: string | null
           subcategory_id?: string | null
           transaction_date?: string
           type?: Database['public']['Enums']['transaction_type']
@@ -398,6 +517,13 @@ export type Database = {
             columns: ['member_id']
             isOneToOne: false
             referencedRelation: 'family_members'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'transactions_recurring_income_id_fkey'
+            columns: ['recurring_income_id']
+            isOneToOne: false
+            referencedRelation: 'recurring_incomes'
             referencedColumns: ['id']
           },
           {

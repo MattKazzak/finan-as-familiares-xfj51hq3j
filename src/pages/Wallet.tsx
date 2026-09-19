@@ -18,12 +18,17 @@ import {
 } from '@/lib/formatters'
 import { CategoryIcon } from '@/components/common/CategoryIcon'
 import { RecurringIncomesDialog } from '@/components/wallet/RecurringIncomesDialog'
-import { CategoryManagementDialog } from '@/components/categories/CategoryManagementDialog'
 import {
   fetchRecurringIncomes,
   fetchRecurringIncomeOverrides,
   processAutoRecurringIncomes,
 } from '@/services/recurring-incomes'
+import { CategoryEditorPopover } from '@/components/categories/CategoryEditorPopover'
+import { SubcategoryEditorPopover } from '@/components/categories/SubcategoryEditorPopover'
+import {
+  DeleteCategoryConfirmDialog,
+  DeleteSubcategoryConfirmDialog,
+} from '@/components/categories/DeleteCategoryConfirmDialog'
 import type { RecurringIncome, RecurringIncomeOverride } from '@/types/finance'
 import { TransactionDetailDialog } from '@/components/transactions/TransactionDetailDialog'
 import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
@@ -86,6 +91,14 @@ export default function WalletPage() {
     setSelectedMemberId,
     refreshTrigger,
     triggerRefresh,
+    addNewCategory,
+    editCategory,
+    removeCategory,
+    checkCategoryUsage,
+    addNewSubcategory,
+    editSubcategory,
+    removeSubcategory,
+    checkSubcategoryUsage,
     openNewTransaction,
     openImportStatement,
   } = useFamily()
@@ -106,9 +119,91 @@ export default function WalletPage() {
   const [recurringOverrides, setRecurringOverrides] = useState<RecurringIncomeOverride[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Diálogos de Gestão de Categorias e Receitas Fixas
-  const [isCategoryManageOpen, setIsCategoryManageOpen] = useState(false)
+  // Diálogo de Receitas Fixas
   const [isRecurringIncomesOpen, setIsRecurringIncomesOpen] = useState(false)
+
+  // Estados de confirmação para exclusão inline com verificação de uso no banco
+  const [categoryToDelete, setCategoryToDelete] = useState<TransactionCategory | null>(null)
+  const [categoryUsageCount, setCategoryUsageCount] = useState<number>(0)
+  const [loadingCatUsage, setLoadingCatUsage] = useState<boolean>(false)
+
+  const [subcategoryToDelete, setSubcategoryToDelete] = useState<TransactionSubcategory | null>(
+    null,
+  )
+  const [subcatParentCategoryName, setSubcatParentCategoryName] = useState<string>('')
+  const [subcategoryUsageCount, setSubcategoryUsageCount] = useState<number>(0)
+  const [loadingSubUsage, setLoadingSubUsage] = useState<boolean>(false)
+
+  // Iniciar exclusão de categoria com contagem
+  const handleInitiateDeleteCategory = async (cat: TransactionCategory, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setCategoryToDelete(cat)
+    setCategoryUsageCount(0)
+    setLoadingCatUsage(true)
+    try {
+      const count = await checkCategoryUsage(cat.id)
+      setCategoryUsageCount(count)
+    } catch (err) {
+      console.error('Erro ao verificar uso da categoria:', err)
+      setCategoryUsageCount(0)
+    } finally {
+      setLoadingCatUsage(false)
+    }
+  }
+
+  // Confirmar exclusão de categoria
+  const handleConfirmDeleteCategory = async () => {
+    if (!categoryToDelete) return
+    try {
+      await removeCategory(categoryToDelete.id)
+      triggerRefresh()
+      await loadMonthData()
+    } catch {
+      toast({
+        title: 'Erro ao excluir categoria',
+        description: 'Tente novamente.',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  // Iniciar exclusão de subcategoria com contagem
+  const handleInitiateDeleteSubcategory = async (
+    sub: TransactionSubcategory,
+    parentName: string,
+    e: React.MouseEvent,
+  ) => {
+    e.stopPropagation()
+    setSubcategoryToDelete(sub)
+    setSubcatParentCategoryName(parentName)
+    setSubcategoryUsageCount(0)
+    setLoadingSubUsage(true)
+    try {
+      const count = await checkSubcategoryUsage(sub.id)
+      setSubcategoryUsageCount(count)
+    } catch (err) {
+      console.error('Erro ao verificar uso da subcategoria:', err)
+      setSubcategoryUsageCount(0)
+    } finally {
+      setLoadingSubUsage(false)
+    }
+  }
+
+  // Confirmar exclusão de subcategoria
+  const handleConfirmDeleteSubcategory = async () => {
+    if (!subcategoryToDelete) return
+    try {
+      await removeSubcategory(subcategoryToDelete.id)
+      triggerRefresh()
+      await loadMonthData()
+    } catch {
+      toast({
+        title: 'Erro ao excluir subcategoria',
+        description: 'Tente novamente.',
+        variant: 'destructive',
+      })
+    }
+  }
 
   // Categorias expandidas na aba de Orçamentos para visualização das subcategorias
   const [expandedBudgetCategories, setExpandedBudgetCategories] = useState<Record<string, boolean>>(
@@ -916,7 +1011,7 @@ export default function WalletPage() {
         {/* ================= TAB 2: ORÇAMENTOS ================= */}
         {activeTab === 'orcamentos' ? (
           <div className="space-y-5 mt-0 animate-in fade-in-50 duration-200">
-            {/* Cabeçalho da Aba Orçamentos: Ações de Gestão de Categorias e Receitas Fixas */}
+            {/* Cabeçalho da Aba Orçamentos: Ações Rápidas (Receitas Fixas & Nova Categoria) */}
             <div className="flex items-center justify-between gap-2 flex-wrap bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
@@ -924,10 +1019,10 @@ export default function WalletPage() {
                 </div>
                 <div>
                   <h3 className="font-bold text-sm text-slate-900 leading-tight">
-                    Planejamento & Categorias
+                    Planejamento & Orçamentos
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    Controle de tetos de gastos e estrutura de classificação
+                    Defina tetos e gerencie categorias diretamente pelos ícones da lista
                   </p>
                 </div>
               </div>
@@ -942,15 +1037,25 @@ export default function WalletPage() {
                   <Briefcase className="w-3.5 h-3.5 text-emerald-700" />
                   <span>Receitas fixas</span>
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsCategoryManageOpen(true)}
-                  className="rounded-xl text-xs font-semibold gap-1.5 border-emerald-600/30 text-emerald-800 bg-emerald-50/70 hover:bg-emerald-100/70 h-8"
-                >
-                  <Tag className="w-3.5 h-3.5 text-emerald-700" />
-                  <span>Gerenciar categorias</span>
-                </Button>
+                <CategoryEditorPopover
+                  title="Nova Categoria"
+                  defaultType="expense"
+                  trigger={
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="rounded-xl text-xs font-semibold gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white h-8 shadow-xs"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Nova categoria</span>
+                    </Button>
+                  }
+                  onSave={async (data) => {
+                    await addNewCategory(data.name, data.type, data.color, data.icon)
+                    triggerRefresh()
+                    await loadMonthData()
+                  }}
+                />
               </div>
             </div>
 
@@ -1085,19 +1190,68 @@ export default function WalletPage() {
               </div>
             </div>
 
-            {/* Lista de Orçamentos com Hierarquia Categoria Pai -> Subcategorias */}
+            {/* Lista de Orçamentos com Hierarquia Categoria Pai -> Subcategorias e Gestão Inline com Ícones */}
             <div className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <h3 className="font-bold text-base text-slate-900">Categorias e Subcategorias</h3>
                   <p className="text-xs text-slate-500">
-                    Defina tetos por categoria ou detalhe por subcategoria. Valores ajustados
-                    exclusivamente neste mês recebem destaque.
+                    Clique na linha para definir teto. Use o lápis para editar, o + para criar
+                    subcategoria e a lixeira para excluir.
                   </p>
+                </div>
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <CategoryEditorPopover
+                    title="Nova Categoria"
+                    defaultType="expense"
+                    trigger={
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100/80 px-2.5 py-1.5 rounded-xl border border-emerald-600/20 transition-colors"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Nova categoria</span>
+                      </button>
+                    }
+                    onSave={async (data) => {
+                      await addNewCategory(data.name, data.type, data.color, data.icon)
+                      triggerRefresh()
+                      await loadMonthData()
+                    }}
+                  />
                 </div>
               </div>
 
               <div className="space-y-3">
+                {categoryBudgetData.list.length === 0 ? (
+                  <div className="text-center py-12 px-4 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+                    <p className="text-sm font-semibold text-slate-600">
+                      Nenhuma categoria de despesa cadastrada
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1 mb-3">
+                      Crie sua primeira categoria para organizar seu orçamento familiar.
+                    </p>
+                    <CategoryEditorPopover
+                      title="Criar Primeira Categoria"
+                      defaultType="expense"
+                      trigger={
+                        <Button
+                          size="sm"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs gap-1.5"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Criar categoria</span>
+                        </Button>
+                      }
+                      onSave={async (data) => {
+                        await addNewCategory(data.name, data.type, data.color, data.icon)
+                        triggerRefresh()
+                        await loadMonthData()
+                      }}
+                    />
+                  </div>
+                ) : null}
+
                 {categoryBudgetData.list.map((item) => {
                   const isExpanded =
                     expandedBudgetCategories[item.category.id] ??
@@ -1107,7 +1261,7 @@ export default function WalletPage() {
                   return (
                     <div
                       key={item.category.id}
-                      className="border border-slate-200/80 rounded-2xl overflow-hidden bg-white shadow-2xs transition-all"
+                      className="border border-slate-200/80 rounded-2xl overflow-hidden bg-white shadow-2xs hover:border-slate-300 transition-all"
                     >
                       {/* Bloco da Categoria Pai */}
                       <div
@@ -1122,6 +1276,7 @@ export default function WalletPage() {
                         }
                         className="p-3.5 flex items-center justify-between hover:bg-slate-50/80 cursor-pointer transition-colors group gap-2"
                       >
+                        {/* Identificação da Categoria */}
                         <div className="flex items-center gap-3 min-w-0 flex-1">
                           <div
                             className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-xs shrink-0"
@@ -1147,8 +1302,70 @@ export default function WalletPage() {
                           </div>
                         </div>
 
-                        {/* Progresso / Barra de Cor da Categoria Pai com Percentual Visível */}
-                        <div className="flex items-center gap-2 text-right shrink-0">
+                        {/* Lado Direito: Ações Inline (Editar, + Subcategoria, Excluir) + Teto/Progresso + Expand */}
+                        <div className="flex items-center gap-2.5 shrink-0">
+                          {/* ÍCONES DE GESTÃO INLINE NA CATEGORIA PAI */}
+                          <div
+                            className="flex items-center gap-0.5 bg-slate-100/70 p-0.5 rounded-xl border border-slate-200/60"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {/* Lápis: Editar categoria (renomear, cor, ícone, tipo) */}
+                            <CategoryEditorPopover
+                              category={item.category}
+                              trigger={
+                                <button
+                                  type="button"
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-white transition-all"
+                                  title="Editar categoria (nome, cor, ícone)"
+                                  aria-label={`Editar categoria ${item.category.name}`}
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                              }
+                              onSave={async (data) => {
+                                await editCategory(item.category.id, data)
+                                triggerRefresh()
+                                await loadMonthData()
+                              }}
+                            />
+
+                            {/* + : Criar subcategoria dentro desta categoria */}
+                            <SubcategoryEditorPopover
+                              parentCategoryName={item.category.name}
+                              trigger={
+                                <button
+                                  type="button"
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-emerald-700 hover:bg-white transition-all"
+                                  title="Adicionar subcategoria"
+                                  aria-label={`Adicionar subcategoria em ${item.category.name}`}
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                </button>
+                              }
+                              onSave={async (data) => {
+                                await addNewSubcategory(item.category.id, data.name)
+                                setExpandedBudgetCategories((prev) => ({
+                                  ...prev,
+                                  [item.category.id]: true,
+                                }))
+                                triggerRefresh()
+                                await loadMonthData()
+                              }}
+                            />
+
+                            {/* Lixeira: Excluir categoria com confirmação e contagem */}
+                            <button
+                              type="button"
+                              onClick={(e) => handleInitiateDeleteCategory(item.category, e)}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-white transition-all"
+                              title="Excluir categoria"
+                              aria-label={`Excluir categoria ${item.category.name}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          {/* Progresso / Barra de Cor da Categoria Pai com Percentual Visível */}
                           <div className="flex items-center">
                             {item.limitCents > 0 ? (
                               <div className="flex items-center gap-2">
@@ -1183,13 +1400,17 @@ export default function WalletPage() {
                             )}
                           </div>
 
+                          {/* Chevron de Expandir / Recolher Subcategorias */}
                           <div className="flex items-center">
                             {hasSubcats && (
                               <button
                                 type="button"
                                 onClick={(e) => toggleCatBudgetExpand(item.category.id, e)}
-                                className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg ml-0.5 transition-colors"
+                                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg ml-0.5 transition-colors"
                                 title={
+                                  isExpanded ? 'Recolher subcategorias' : 'Expandir subcategorias'
+                                }
+                                aria-label={
                                   isExpanded ? 'Recolher subcategorias' : 'Expandir subcategorias'
                                 }
                               >
@@ -1223,25 +1444,25 @@ export default function WalletPage() {
                                   subItem.hasOverride,
                                 )
                               }}
-                              className="py-2.5 flex items-center justify-between hover:bg-white rounded-xl px-2 cursor-pointer transition-colors group/sub"
+                              className="py-2 flex items-center justify-between hover:bg-white rounded-xl px-2.5 cursor-pointer transition-colors group/sub gap-2"
                             >
-                              <div className="flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover/sub:bg-emerald-500 transition-colors" />
-                                <div>
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover/sub:bg-emerald-500 transition-colors shrink-0" />
+                                <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-1.5">
-                                    <span className="text-xs font-semibold text-slate-700 group-hover/sub:text-emerald-700 transition-colors">
-                                      <span>{subItem.subcategory.name}</span>
+                                    <span className="text-xs font-semibold text-slate-700 group-hover/sub:text-emerald-700 transition-colors truncate">
+                                      {subItem.subcategory.name}
                                     </span>
                                     {subItem.hasOverride ? (
-                                      <span className="text-[11px] font-semibold bg-amber-100/80 text-amber-900 border border-amber-200/80 px-2 py-0.5 rounded-full leading-tight">
+                                      <span className="text-[10px] font-semibold bg-amber-100/80 text-amber-900 border border-amber-200/80 px-1.5 py-0.2 rounded-full leading-tight shrink-0">
                                         <span>ajustado</span>
                                       </span>
                                     ) : null}
                                     {subItem.isOver ? (
-                                      <AlertTriangle className="w-3 h-3 text-red-500" />
+                                      <AlertTriangle className="w-3 h-3 text-red-500 shrink-0" />
                                     ) : null}
                                   </div>
-                                  <p className="text-[11px] text-slate-400 tabular-nums flex items-center gap-1">
+                                  <p className="text-[11px] text-slate-400 tabular-nums flex items-center gap-1 truncate">
                                     <span>{formatBRL(subItem.spentCents)}</span>
                                     <span>de</span>
                                     <span>
@@ -1255,8 +1476,53 @@ export default function WalletPage() {
                                 </div>
                               </div>
 
-                              {/* Progresso Subcategoria */}
+                              {/* Lado Direito da Subcategoria: Ações Inline (Lápis e Lixeira) + Progresso */}
                               <div className="flex items-center gap-2 shrink-0">
+                                {/* ÍCONES DE GESTÃO INLINE NA SUBCATEGORIA */}
+                                <div
+                                  className="flex items-center gap-0.5"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {/* Lápis: Renomear subcategoria */}
+                                  <SubcategoryEditorPopover
+                                    subcategory={subItem.subcategory}
+                                    parentCategoryName={item.category.name}
+                                    trigger={
+                                      <button
+                                        type="button"
+                                        className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-all"
+                                        title="Renomear subcategoria"
+                                        aria-label={`Renomear subcategoria ${subItem.subcategory.name}`}
+                                      >
+                                        <Edit3 className="w-3 h-3" />
+                                      </button>
+                                    }
+                                    onSave={async (data) => {
+                                      await editSubcategory(subItem.subcategory.id, data)
+                                      triggerRefresh()
+                                      await loadMonthData()
+                                    }}
+                                  />
+
+                                  {/* Lixeira: Excluir subcategoria com confirmação e contagem */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) =>
+                                      handleInitiateDeleteSubcategory(
+                                        subItem.subcategory,
+                                        item.category.name,
+                                        e,
+                                      )
+                                    }
+                                    className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-slate-100 transition-all"
+                                    title="Excluir subcategoria"
+                                    aria-label={`Excluir subcategoria ${subItem.subcategory.name}`}
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+
+                                {/* Progresso Subcategoria */}
                                 {subItem.limitCents > 0 ? (
                                   <div className="flex items-center gap-2">
                                     <span
@@ -1291,11 +1557,55 @@ export default function WalletPage() {
                               </div>
                             </div>
                           ))}
+
+                          {/* Botão rápido para adicionar subcategoria no fim do bloco expandido */}
+                          <div className="py-2 px-2.5">
+                            <SubcategoryEditorPopover
+                              parentCategoryName={item.category.name}
+                              trigger={
+                                <button
+                                  type="button"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 transition-colors"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                  <span>Adicionar subcategoria</span>
+                                </button>
+                              }
+                              onSave={async (data) => {
+                                await addNewSubcategory(item.category.id, data.name)
+                                triggerRefresh()
+                                await loadMonthData()
+                              }}
+                            />
+                          </div>
                         </div>
                       ) : null}
                     </div>
                   )
                 })}
+
+                {/* Linha discreta no fim da lista: "+ Nova categoria" */}
+                <div className="pt-2">
+                  <CategoryEditorPopover
+                    title="Nova Categoria"
+                    defaultType="expense"
+                    trigger={
+                      <button
+                        type="button"
+                        className="w-full py-3 border-2 border-dashed border-slate-200 hover:border-emerald-500/50 hover:bg-emerald-50/30 rounded-2xl flex items-center justify-center gap-2 text-xs font-semibold text-slate-600 hover:text-emerald-700 transition-all"
+                      >
+                        <Plus className="w-4 h-4 text-emerald-600" />
+                        <span>Nova categoria</span>
+                      </button>
+                    }
+                    onSave={async (data) => {
+                      await addNewCategory(data.name, data.type, data.color, data.icon)
+                      triggerRefresh()
+                      await loadMonthData()
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -1679,10 +1989,22 @@ export default function WalletPage() {
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGO DE GERENCIAR CATEGORIAS */}
-      <CategoryManagementDialog
-        open={isCategoryManageOpen}
-        onOpenChange={setIsCategoryManageOpen}
+      {/* DIÁLOGOS DE CONFIRMAÇÃO DE EXCLUSÃO (CATEGORIA E SUBCATEGORIA COM AUDITORIA DE LANÇAMENTOS) */}
+      <DeleteCategoryConfirmDialog
+        category={categoryToDelete}
+        usageCount={categoryUsageCount}
+        loadingUsage={loadingCatUsage}
+        onClose={() => setCategoryToDelete(null)}
+        onConfirm={handleConfirmDeleteCategory}
+      />
+
+      <DeleteSubcategoryConfirmDialog
+        subcategory={subcategoryToDelete}
+        parentCategoryName={subcatParentCategoryName}
+        usageCount={subcategoryUsageCount}
+        loadingUsage={loadingSubUsage}
+        onClose={() => setSubcategoryToDelete(null)}
+        onConfirm={handleConfirmDeleteSubcategory}
       />
 
       {/* DIÁLOGO DE RECEITAS FIXAS RECORRENTES */}

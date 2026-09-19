@@ -11,8 +11,10 @@ import {
   updateFamilyMember,
   deleteFamilyMember,
   addCategory,
+  updateCategory,
   deleteCategory,
   addSubcategory,
+  updateSubcategory,
   deleteSubcategory,
   getCategoryUsageCount,
   getSubcategoryUsageCount,
@@ -47,6 +49,10 @@ interface FamilyContextType {
     color?: string,
     icon?: string,
   ) => Promise<TransactionCategory>
+  editCategory: (
+    id: string,
+    updates: { name?: string; color?: string; icon?: string; type?: 'income' | 'expense' },
+  ) => Promise<TransactionCategory>
   removeCategory: (id: string) => Promise<void>
   checkCategoryUsage: (id: string) => Promise<number>
   addNewSubcategory: (
@@ -54,6 +60,10 @@ interface FamilyContextType {
     name: string,
     icon?: string,
     color?: string,
+  ) => Promise<TransactionSubcategory>
+  editSubcategory: (
+    id: string,
+    updates: { name?: string; icon?: string | null; color?: string | null },
   ) => Promise<TransactionSubcategory>
   removeSubcategory: (id: string) => Promise<void>
   checkSubcategoryUsage: (id: string) => Promise<number>
@@ -212,6 +222,18 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     return created
   }
 
+  const editCategory = async (
+    id: string,
+    updates: { name?: string; color?: string; icon?: string; type?: 'income' | 'expense' },
+  ) => {
+    const updated = await updateCategory(id, updates)
+    setCategories((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, ...updated, subcategories: c.subcategories } : c)),
+    )
+    toast({ title: 'Sucesso', description: 'Categoria atualizada.' })
+    return updated
+  }
+
   const removeCategory = async (id: string) => {
     await deleteCategory(id)
     setCategories((prev) => prev.filter((c) => c.id !== id))
@@ -247,6 +269,21 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     )
     toast({ title: 'Sucesso', description: `Subcategoria "${name}" criada.` })
     return created
+  }
+
+  const editSubcategory = async (
+    id: string,
+    updates: { name?: string; icon?: string | null; color?: string | null },
+  ) => {
+    const updated = await updateSubcategory(id, updates)
+    setCategories((prev) =>
+      prev.map((c) => ({
+        ...c,
+        subcategories: (c.subcategories || []).map((s) => (s.id === id ? { ...s, ...updated } : s)),
+      })),
+    )
+    toast({ title: 'Sucesso', description: 'Subcategoria atualizada.' })
+    return updated as TransactionSubcategory
   }
 
   const removeSubcategory = async (id: string) => {
@@ -300,9 +337,11 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         editMember,
         removeMember,
         addNewCategory,
+        editCategory,
         removeCategory,
         checkCategoryUsage,
         addNewSubcategory,
+        editSubcategory,
         removeSubcategory,
         checkSubcategoryUsage,
         isNewTransactionOpen,

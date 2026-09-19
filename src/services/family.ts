@@ -172,6 +172,27 @@ export async function addCategory(
   return data as TransactionCategory
 }
 
+export async function updateCategory(
+  id: string,
+  updates: { name?: string; color?: string; icon?: string; type?: 'income' | 'expense' },
+) {
+  const payload: any = {}
+  if (updates.name !== undefined) payload.name = updates.name.trim()
+  if (updates.color !== undefined) payload.color = updates.color
+  if (updates.icon !== undefined) payload.icon = updates.icon
+  if (updates.type !== undefined) payload.type = updates.type
+
+  const { data, error } = await (supabase as any)
+    .from('transaction_categories')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data as TransactionCategory
+}
+
 export async function getCategoryUsageCount(categoryId: string): Promise<number> {
   const { count, error } = await (supabase as any)
     .from('transactions')
@@ -221,6 +242,26 @@ export async function addSubcategory(
       icon: icon || null,
       color: color || null,
     })
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function updateSubcategory(
+  id: string,
+  updates: { name?: string; icon?: string | null; color?: string | null },
+) {
+  const payload: any = {}
+  if (updates.name !== undefined) payload.name = updates.name.trim()
+  if (updates.icon !== undefined) payload.icon = updates.icon
+  if (updates.color !== undefined) payload.color = updates.color
+
+  const { data, error } = await (supabase as any)
+    .from('transaction_subcategories')
+    .update(payload)
+    .eq('id', id)
     .select()
     .single()
 
