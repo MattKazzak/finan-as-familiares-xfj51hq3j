@@ -1117,19 +1117,9 @@ export default function WalletPage() {
               </div>
             </div>
 
-            {/* Barra de Filtro, Atalho de Receitas Fixas, Importar Extrato e Contagem */}
+            {/* Barra de Filtro, Atalho de Receitas Fixas e Contagem */}
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap">
-                <Button
-                  onClick={openImportStatement}
-                  variant="outline"
-                  size="sm"
-                  className="rounded-xl border-emerald-600/30 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 hover:border-emerald-600 font-bold text-xs gap-1.5 shadow-sm transition-all"
-                >
-                  <UploadCloud className="w-4 h-4 text-emerald-700" />
-                  <span>Importar extrato</span>
-                </Button>
-
                 <Button
                   variant="outline"
                   size="sm"
