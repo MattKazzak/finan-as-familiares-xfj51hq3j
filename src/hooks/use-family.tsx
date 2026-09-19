@@ -54,6 +54,7 @@ interface FamilyContextType {
     type: 'income' | 'expense',
     color?: string,
     icon?: string,
+    budget_bucket?: 'essentials' | 'lifestyle' | 'future' | null,
   ) => Promise<TransactionCategory>
   editCategory: (
     id: string,
@@ -64,7 +65,7 @@ interface FamilyContextType {
       type?: 'income' | 'expense'
       percent_default?: number | null
       percent_alert?: number | null
-      budget_bucket?: any
+      budget_bucket?: 'essentials' | 'lifestyle' | 'future' | null
     },
   ) => Promise<TransactionCategory>
   removeCategory: (id: string) => Promise<void>
@@ -234,9 +235,10 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     type: 'income' | 'expense',
     color?: string,
     icon?: string,
+    budget_bucket?: 'essentials' | 'lifestyle' | 'future' | null,
   ) => {
     if (!family) throw new Error('Família não carregada')
-    const created = await addCategory(family.id, name, type, color, icon)
+    const created = await addCategory(family.id, name, type, color, icon, budget_bucket)
     setCategories((prev) => [...prev, created])
     toast({ title: 'Sucesso', description: `Categoria "${name}" criada.` })
     return created
@@ -251,7 +253,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
       type?: 'income' | 'expense'
       percent_default?: number | null
       percent_alert?: number | null
-      budget_bucket?: any
+      budget_bucket?: 'essentials' | 'lifestyle' | 'future' | null
     },
   ) => {
     const updated = await updateCategory(id, updates)

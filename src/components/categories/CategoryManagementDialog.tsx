@@ -28,23 +28,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { CategoryIcon, AVAILABLE_ICONS } from '@/components/common/CategoryIcon'
+import { CATEGORY_COLORS, BUCKET_OPTIONS } from './CategoryEditorPopover'
 import { useFamily } from '@/hooks/use-family'
 import { useToast } from '@/hooks/use-toast'
-import type { TransactionCategory, TransactionSubcategory } from '@/types/finance'
+import type { BudgetBucket, TransactionCategory, TransactionSubcategory } from '@/types/finance'
 import { Plus, Trash2, Loader2, AlertTriangle, Layers, Tag } from 'lucide-react'
-
-const CATEGORY_COLORS = [
-  '#F59E0B',
-  '#3B82F6',
-  '#6366F1',
-  '#EC4899',
-  '#EF4444',
-  '#8B5CF6',
-  '#14B8A6',
-  '#10B981',
-  '#059669',
-  '#64748B',
-]
 
 interface CategoryManagementDialogProps {
   open: boolean
@@ -77,6 +65,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
   const [newCatType, setNewCatType] = useState<'income' | 'expense'>('expense')
   const [newCatColor, setNewCatColor] = useState('#3B82F6')
   const [newCatIcon, setNewCatIcon] = useState('Tag')
+  const [newCatBucket, setNewCatBucket] = useState<BudgetBucket>('essentials')
   const [savingCat, setSavingCat] = useState(false)
 
   // Subcategorias
@@ -169,16 +158,31 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newCatName.trim()) return
+    if (newCatType === 'expense' && !newCatBucket) {
+      toast({
+        title: 'Balde obrigatório',
+        description: 'Selecione um dos 3 baldes orçamentários.',
+        variant: 'destructive',
+      })
+      return
+    }
     try {
       setSavingCat(true)
-      await addNewCategory(newCatName.trim(), newCatType, newCatColor, newCatIcon)
+      await addNewCategory(
+        newCatName.trim(),
+        newCatType,
+        newCatColor,
+        newCatIcon,
+        newCatType === 'expense' ? newCatBucket : null,
+      )
       setNewCatName('')
+      setNewCatBucket('essentials')
       setIsAddingCategory(false)
       triggerRefresh()
-    } catch {
+    } catch (err: any) {
       toast({
         title: 'Erro ao criar categoria',
-        description: 'Tente novamente.',
+        description: err?.message || 'Tente novamente.',
         variant: 'destructive',
       })
     } finally {
@@ -328,6 +332,44 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Balde Orçamentário (Obrigatório para categorias de Despesa) */}
+              {newCatType === 'expense' && (
+                <div className="space-y-1 pt-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-700">
+                      Balde Orçamentário <span className="text-rose-500">*</span>
+                    </span>
+                    <span className="text-[10px] text-slate-500">Obrigatório</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {BUCKET_OPTIONS.map((opt) => {
+                      const isSelected = newCatBucket === opt.id
+                      const IconComp = opt.icon
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setNewCatBucket(opt.id)}
+                          className={`p-2 rounded-xl border text-left flex flex-col gap-1 transition-all ${
+                            isSelected
+                              ? opt.activeBorderClass
+                              : 'border-slate-200 bg-white hover:border-slate-300 text-slate-600'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <IconComp className="w-3.5 h-3.5 shrink-0" />
+                            <span className="text-xs font-bold truncate">{opt.label}</span>
+                          </div>
+                          <p className="text-[10px] text-slate-500 leading-tight">
+                            {opt.description}
+                          </p>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Seletor de Cores */}
               <div className="flex items-center gap-2">

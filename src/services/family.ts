@@ -156,7 +156,28 @@ export async function addCategory(
   type: 'income' | 'expense',
   color?: string,
   icon?: string,
+  budgetBucket?: 'essentials' | 'lifestyle' | 'future' | null,
 ) {
+  const trimmedName = name.trim()
+  if (!trimmedName) {
+    throw new Error('O nome da categoria é obrigatório.')
+  }
+
+  // Validação obrigatória do balde orçamentário para despesas
+  let resolvedBucket = budgetBucket
+  if (type === 'expense') {
+    if (!resolvedBucket) {
+      throw new Error('O balde orçamentário é obrigatório para categorias de despesa.')
+    }
+    const validBuckets = ['essentials', 'lifestyle', 'future']
+    if (!validBuckets.includes(resolvedBucket)) {
+      throw new Error('Balde orçamentário inválido.')
+    }
+  } else {
+    // Receitas não usam balde orçamentário
+    resolvedBucket = null
+  }
+
   // Obter o maior sort_order atual para adicionar ao final
   const { data: maxOrderData } = await (supabase as any)
     .from('transaction_categories')
@@ -171,10 +192,11 @@ export async function addCategory(
     .from('transaction_categories')
     .insert({
       family_id: familyId,
-      name: name.trim(),
+      name: trimmedName,
       type,
       color: color || (type === 'income' ? '#10B981' : '#64748B'),
       icon: icon || 'Tag',
+      budget_bucket: resolvedBucket,
       sort_order: nextOrder,
     })
     .select()
@@ -193,17 +215,38 @@ export async function updateCategory(
     type?: 'income' | 'expense'
     percent_default?: number | null
     percent_alert?: number | null
-    budget_bucket?: string | null
+    budget_bucket?: 'essentials' | 'lifestyle' | 'future' | null
   },
 ) {
   const payload: any = {}
-  if (updates.name !== undefined) payload.name = updates.name.trim()
+  if (updates.name !== undefined) {
+    const trimmed = updates.name.trim()
+    if (!trimmed) throw new Error('O nome da categoria é obrigatório.')
+    payload.name = trimmed
+  }
   if (updates.color !== undefined) payload.color = updates.color
   if (updates.icon !== undefined) payload.icon = updates.icon
   if (updates.type !== undefined) payload.type = updates.type
   if (updates.percent_default !== undefined) payload.percent_default = updates.percent_default
   if (updates.percent_alert !== undefined) payload.percent_alert = updates.percent_alert
-  if (updates.budget_bucket !== undefined) payload.budget_bucket = updates.budget_bucket
+
+  // Validação se o budget_bucket foi informado ou se alterou para despesa
+  if (updates.budget_bucket !== undefined) {
+    if (updates.type === 'expense' || (!updates.type && updates.budget_bucket !== null)) {
+      if (!updates.budget_bucket) {
+        throw new Error('O balde orçamentário é obrigatório para categorias de despesa.')
+      }
+      const validBuckets = ['essentials', 'lifestyle', 'future']
+      if (!validBuckets.includes(updates.budget_bucket)) {
+        throw new Error('Balde orçamentário inválido.')
+      }
+      payload.budget_bucket = updates.budget_bucket
+    } else if (updates.type === 'income') {
+      payload.budget_bucket = null
+    } else {
+      payload.budget_bucket = updates.budget_bucket
+    }
+  }
 
   const { data, error } = await (supabase as any)
     .from('transaction_categories')

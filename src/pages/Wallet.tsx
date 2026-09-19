@@ -42,6 +42,7 @@ import type {
   DefaultBudget,
   TransactionCategory,
   TransactionSubcategory,
+  BudgetBucket,
 } from '@/types/finance'
 import {
   ChevronLeft,
@@ -150,6 +151,7 @@ export default function WalletPage() {
   const [categoryEditorType, setCategoryEditorType] = useState<'income' | 'expense'>('expense')
   const [categoryEditorColor, setCategoryEditorColor] = useState('#3B82F6')
   const [categoryEditorIcon, setCategoryEditorIcon] = useState('Tag')
+  const [categoryEditorBucket, setCategoryEditorBucket] = useState<BudgetBucket>('essentials')
   const [savingCategoryEditor, setSavingCategoryEditor] = useState(false)
 
   const [isNewSubcatDialogOpen, setIsNewSubcatDialogOpen] = useState(false)
@@ -572,7 +574,8 @@ export default function WalletPage() {
       return a.category.name.localeCompare(b.category.name)
     })
 
-    // Agrupamento por Baldes (Essenciais, Estilo de Vida, Futuro e Metas, Outros)
+    // Agrupamento por Baldes do modelo 3 Baldes (Essenciais, Estilo de Vida, Futuro & Metas)
+    // 100% das categorias de despesas pertencem a um dos 3 baldes.
     const netIncomeCents = family?.monthly_net_income_cents || 0
     const bucketsSummary = {
       essentials: { budgetCents: 0, spentCents: 0, percentIncome: 0 },
@@ -582,14 +585,36 @@ export default function WalletPage() {
     }
 
     list.forEach((item) => {
-      const bucket = item.category.budget_bucket || 'other'
-      if (bucket in bucketsSummary) {
-        bucketsSummary[bucket as keyof typeof bucketsSummary].budgetCents += item.limitCents
-        bucketsSummary[bucket as keyof typeof bucketsSummary].spentCents += item.spentCents
+      // Caso haja alguma anomalia legada sem balde, direciona preventivamente pelo nome ou estilo de vida
+      const rawBucket = item.category.budget_bucket
+      let bucket: 'essentials' | 'lifestyle' | 'future' = 'lifestyle'
+      if (rawBucket === 'essentials' || rawBucket === 'lifestyle' || rawBucket === 'future') {
+        bucket = rawBucket
       } else {
-        bucketsSummary.other.budgetCents += item.limitCents
-        bucketsSummary.other.spentCents += item.spentCents
+        const catNameLower = (item.category.name || '').toLowerCase()
+        if (
+          catNameLower.includes('moradia') ||
+          catNameLower.includes('alimenta') ||
+          catNameLower.includes('saúde') ||
+          catNameLower.includes('saude') ||
+          catNameLower.includes('transporte') ||
+          catNameLower.includes('serviço') ||
+          catNameLower.includes('servico')
+        ) {
+          bucket = 'essentials'
+        } else if (
+          catNameLower.includes('reserva') ||
+          catNameLower.includes('invest') ||
+          catNameLower.includes('meta')
+        ) {
+          bucket = 'future'
+        } else {
+          bucket = 'lifestyle'
+        }
       }
+
+      bucketsSummary[bucket].budgetCents += item.limitCents
+      bucketsSummary[bucket].spentCents += item.spentCents
     })
 
     if (netIncomeCents > 0) {
@@ -602,9 +627,7 @@ export default function WalletPage() {
       bucketsSummary.future.percentIncome = Math.round(
         (bucketsSummary.future.budgetCents / netIncomeCents) * 100,
       )
-      bucketsSummary.other.percentIncome = Math.round(
-        (bucketsSummary.other.budgetCents / netIncomeCents) * 100,
-      )
+      bucketsSummary.other.percentIncome = 0
     }
 
     const totalBudgetPercentOfIncome =
@@ -1348,7 +1371,13 @@ export default function WalletPage() {
                     }
                     onSave={async (data) => {
                       try {
-                        await addNewCategory(data.name, data.type, data.color, data.icon)
+                        await addNewCategory(
+                          data.name,
+                          data.type,
+                          data.color,
+                          data.icon,
+                          data.budget_bucket,
+                        )
                         triggerRefresh()
                         await loadMonthData()
                       } catch (err: any) {
@@ -1387,7 +1416,13 @@ export default function WalletPage() {
                       }
                       onSave={async (data) => {
                         try {
-                          await addNewCategory(data.name, data.type, data.color, data.icon)
+                          await addNewCategory(
+                            data.name,
+                            data.type,
+                            data.color,
+                            data.icon,
+                            data.budget_bucket,
+                          )
                           triggerRefresh()
                           await loadMonthData()
                         } catch (err: any) {
@@ -1730,6 +1765,7 @@ export default function WalletPage() {
                                       setCategoryEditorType(cat.type || 'expense')
                                       setCategoryEditorColor(cat.color || '#3B82F6')
                                       setCategoryEditorIcon(cat.icon || 'Tag')
+                                      setCategoryEditorBucket(cat.budget_bucket || 'essentials')
                                       setTimeout(() => {
                                         setIsCategoryEditorOpen(true)
                                       }, 0)
@@ -2611,6 +2647,14 @@ export default function WalletPage() {
                 })
                 return
               }
+              if (categoryEditorType === 'expense' && !categoryEditorBucket) {
+                toast({
+                  title: 'Balde obrigatório',
+                  description: 'Selecione um balde orçamentário para a categoria.',
+                  variant: 'destructive',
+                })
+                return
+              }
               try {
                 setSavingCategoryEditor(true)
                 await editCategory(currentCat.id, {
@@ -2618,6 +2662,7 @@ export default function WalletPage() {
                   type: categoryEditorType,
                   color: categoryEditorColor,
                   icon: categoryEditorIcon,
+                  budget_bucket: categoryEditorType === 'expense' ? categoryEditorBucket : null,
                 })
                 toast({
                   title: 'Categoria atualizada',
@@ -2698,6 +2743,77 @@ export default function WalletPage() {
               </div>
             </div>
 
+            {/* Balde Orçamentário (Obrigatório para Despesas) */}
+            {categoryEditorType === 'expense' && (
+              <div className="space-y-1.5 pt-1">
+                <div className="flex items-center justify-between">
+                  <Label className="text-[11px] font-semibold text-slate-700">
+                    Balde Orçamentário <span className="text-rose-500">*</span>
+                  </Label>
+                  <span className="text-[10px] text-slate-500 font-medium">Obrigatório</span>
+                </div>
+                <div className="grid grid-cols-1 gap-1.5">
+                  {[
+                    {
+                      id: 'essentials' as const,
+                      label: 'Essenciais',
+                      desc: 'necessidades básicas, moradia, saúde, subsistência',
+                      borderActive:
+                        'border-sky-500 bg-sky-50/70 text-sky-950 ring-1 ring-sky-500/30',
+                    },
+                    {
+                      id: 'lifestyle' as const,
+                      label: 'Estilo de Vida',
+                      desc: 'conforto, lazer, compras, desejos, pets',
+                      borderActive:
+                        'border-amber-500 bg-amber-50/70 text-amber-950 ring-1 ring-amber-500/30',
+                    },
+                    {
+                      id: 'future' as const,
+                      label: 'Futuro & Metas',
+                      desc: 'investimentos, reserva de emergência, projetos',
+                      borderActive:
+                        'border-emerald-500 bg-emerald-50/70 text-emerald-950 ring-1 ring-emerald-500/30',
+                    },
+                  ].map((bucketOpt) => {
+                    const isSelected = categoryEditorBucket === bucketOpt.id
+                    return (
+                      <button
+                        key={bucketOpt.id}
+                        type="button"
+                        onClick={() => setCategoryEditorBucket(bucketOpt.id)}
+                        className={`w-full text-left p-2 rounded-xl border transition-all flex items-start gap-2 ${
+                          isSelected
+                            ? bucketOpt.borderActive
+                            : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/80 bg-white text-slate-600'
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <span
+                              className={`text-xs font-semibold ${
+                                isSelected ? 'text-slate-900' : 'text-slate-700'
+                              }`}
+                            >
+                              {bucketOpt.label}
+                            </span>
+                            {isSelected && (
+                              <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                                Ativo
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-slate-500 leading-snug mt-0.5">
+                            {bucketOpt.desc}
+                          </p>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Paleta de Cores */}
             <div className="space-y-1">
               <Label className="text-[11px] font-semibold text-slate-600">Cor</Label>
@@ -2761,7 +2877,11 @@ export default function WalletPage() {
               <Button
                 type="submit"
                 size="sm"
-                disabled={savingCategoryEditor || !categoryEditorName.trim()}
+                disabled={
+                  savingCategoryEditor ||
+                  !categoryEditorName.trim() ||
+                  (categoryEditorType === 'expense' && !categoryEditorBucket)
+                }
                 className="text-xs rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
               >
                 <span className="flex items-center gap-1.5">

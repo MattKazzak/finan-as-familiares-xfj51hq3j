@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { CategoryIcon, AVAILABLE_ICONS } from '@/components/common/CategoryIcon'
-import { Loader2, Plus } from 'lucide-react'
-import type { TransactionCategory } from '@/types/finance'
+import { Loader2, Plus, Home, Coffee, TrendingUp } from 'lucide-react'
+import type { BudgetBucket, TransactionCategory } from '@/types/finance'
 
 export const CATEGORY_COLORS = [
   '#F59E0B',
@@ -20,6 +20,41 @@ export const CATEGORY_COLORS = [
   '#64748B',
 ]
 
+export const BUCKET_OPTIONS: Array<{
+  id: BudgetBucket
+  label: string
+  description: string
+  icon: typeof Home
+  badgeClass: string
+  activeBorderClass: string
+}> = [
+  {
+    id: 'essentials',
+    label: 'Essenciais',
+    description: 'necessidades básicas, moradia, saúde, subsistência',
+    icon: Home,
+    badgeClass: 'text-sky-700 bg-sky-50 border-sky-200',
+    activeBorderClass: 'border-sky-500 bg-sky-50/70 text-sky-950 ring-1 ring-sky-500/30',
+  },
+  {
+    id: 'lifestyle',
+    label: 'Estilo de Vida',
+    description: 'conforto, lazer, compras, desejos, pets',
+    icon: Coffee,
+    badgeClass: 'text-amber-700 bg-amber-50 border-amber-200',
+    activeBorderClass: 'border-amber-500 bg-amber-50/70 text-amber-950 ring-1 ring-amber-500/30',
+  },
+  {
+    id: 'future',
+    label: 'Futuro & Metas',
+    description: 'investimentos, reserva de emergência, projetos',
+    icon: TrendingUp,
+    badgeClass: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+    activeBorderClass:
+      'border-emerald-500 bg-emerald-50/70 text-emerald-950 ring-1 ring-emerald-500/30',
+  },
+]
+
 interface CategoryEditorPopoverProps {
   category?: TransactionCategory | null
   trigger?: React.ReactNode
@@ -30,6 +65,7 @@ interface CategoryEditorPopoverProps {
     type: 'income' | 'expense'
     color: string
     icon: string
+    budget_bucket?: BudgetBucket | null
   }) => Promise<void>
   title?: string
   defaultType?: 'income' | 'expense'
@@ -60,20 +96,25 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
   const [type, setType] = useState<'income' | 'expense'>('expense')
   const [color, setColor] = useState('#3B82F6')
   const [icon, setIcon] = useState('Tag')
+  const [budgetBucket, setBudgetBucket] = useState<BudgetBucket>('essentials')
   const [saving, setSaving] = useState(false)
+  const [bucketError, setBucketError] = useState<string | null>(null)
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
+      setBucketError(null)
       if (category) {
         setName(category.name || '')
         setType(category.type || 'expense')
         setColor(category.color || '#3B82F6')
         setIcon(category.icon || 'Tag')
+        setBudgetBucket(category.budget_bucket || 'essentials')
       } else {
         setName('')
         setType(defaultType)
         setColor(defaultType === 'income' ? '#10B981' : '#3B82F6')
         setIcon('Tag')
+        setBudgetBucket('essentials')
       }
     }
     setOpen(nextOpen)
@@ -85,6 +126,14 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
     const trimmed = name.trim()
     if (!trimmed) return
 
+    // Validação obrigatória do balde orçamentário para despesas
+    if (type === 'expense' && !budgetBucket) {
+      setBucketError('Selecione um dos 3 baldes orçamentários.')
+      return
+    }
+
+    setBucketError(null)
+
     try {
       setSaving(true)
       await onSave({
@@ -92,6 +141,7 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
         type,
         color,
         icon,
+        budget_bucket: type === 'expense' ? budgetBucket : null,
       })
       setOpen(false)
     } finally {
@@ -182,6 +232,71 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
             </div>
           </div>
 
+          {/* Balde Orçamentário (Obrigatório para categorias de Despesa) */}
+          {type === 'expense' && (
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center justify-between">
+                <Label className="text-[11px] font-semibold text-slate-700">
+                  Balde Orçamentário <span className="text-rose-500">*</span>
+                </Label>
+                <span className="text-[10px] text-slate-500 font-medium">Obrigatório</span>
+              </div>
+              <div className="grid grid-cols-1 gap-1.5">
+                {BUCKET_OPTIONS.map((opt) => {
+                  const isSelected = budgetBucket === opt.id
+                  const IconComp = opt.icon
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => {
+                        setBudgetBucket(opt.id)
+                        setBucketError(null)
+                      }}
+                      className={`w-full text-left p-2 rounded-xl border transition-all flex items-start gap-2.5 ${
+                        isSelected
+                          ? opt.activeBorderClass
+                          : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/80 bg-white text-slate-600'
+                      }`}
+                    >
+                      <div
+                        className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
+                          isSelected
+                            ? 'bg-white shadow-2xs text-slate-900'
+                            : 'bg-slate-100 text-slate-500'
+                        }`}
+                      >
+                        <IconComp className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <span
+                            className={`text-xs font-semibold ${
+                              isSelected ? 'text-slate-900' : 'text-slate-700'
+                            }`}
+                          >
+                            {opt.label}
+                          </span>
+                          {isSelected && (
+                            <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                              Ativo
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-slate-500 leading-snug mt-0.5">
+                          {opt.description}
+                        </p>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+              {bucketError && (
+                <p className="text-[10px] text-rose-500 font-medium mt-0.5">{bucketError}</p>
+              )}
+            </div>
+          )}
+
           {/* Paleta de Cores */}
           <div className="space-y-1">
             <Label className="text-[11px] font-semibold text-slate-600">Cor</Label>
@@ -243,7 +358,7 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
             <Button
               type="submit"
               size="sm"
-              disabled={saving || !name.trim()}
+              disabled={saving || !name.trim() || (type === 'expense' && !budgetBucket)}
               className="h-7 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3"
             >
               <span className="flex items-center gap-1.5">
