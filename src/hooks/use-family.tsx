@@ -91,6 +91,20 @@ interface FamilyContextType {
   isImportStatementOpen: boolean
   setIsImportStatementOpen: (open: boolean) => void
   openImportStatement: () => void
+  lastImportSummary: {
+    total: number
+    categorized: number
+    pending: number
+    importedAt: Date
+  } | null
+  setLastImportSummary: (
+    summary: {
+      total: number
+      categorized: number
+      pending: number
+      importedAt: Date
+    } | null,
+  ) => void
   refreshTrigger: number
   triggerRefresh: () => void
 }
@@ -117,6 +131,12 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   const [newTransactionDefaultType, setNewTransactionDefaultType] = useState<'income' | 'expense'>(
     'expense',
   )
+  const [lastImportSummary, setLastImportSummary] = useState<{
+    total: number
+    categorized: number
+    pending: number
+    importedAt: Date
+  } | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   // Membro ativo salvo localmente por dispositivo
@@ -453,6 +473,8 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         isImportStatementOpen,
         setIsImportStatementOpen,
         openImportStatement,
+        lastImportSummary,
+        setLastImportSummary,
         refreshTrigger,
         triggerRefresh,
       }}

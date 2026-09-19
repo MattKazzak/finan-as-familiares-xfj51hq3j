@@ -8,7 +8,14 @@ import {
   upsertMonthBudgetOverride,
   resetMonthBudgetToDefault,
   deleteTransaction,
+  updateTransaction,
 } from '@/services/transactions'
+import { upsertCategorizationRule } from '@/services/categorization-rules'
+import { normalizeText, extractPatternFromDescription } from '@/services/import/categorization'
+import {
+  TransactionInlineRow,
+  type SaveInlineCategoryData,
+} from '@/components/transactions/TransactionInlineRow'
 import {
   formatBRL,
   formatDayGroupHeader,
@@ -123,6 +130,8 @@ export default function WalletPage() {
     reorderSubcategoriesList,
     openNewTransaction,
     openImportStatement,
+    lastImportSummary,
+    setLastImportSummary,
   } = useFamily()
   const { toast } = useToast()
 
@@ -253,6 +262,7 @@ export default function WalletPage() {
   const [filterCategoryIds, setFilterCategoryIds] = useState<string[]>([])
   const [filterSubcategoryIds, setFilterSubcategoryIds] = useState<string[]>([])
   const [filterType, setFilterType] = useState<'income' | 'expense' | null>(null)
+  const [filterOnlyPending, setFilterOnlyPending] = useState<boolean>(false)
 
   // Ações de transação
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null)
@@ -339,16 +349,25 @@ export default function WalletPage() {
   // Contagem de filtros ativos
   const activeFiltersCount = useMemo(() => {
     let count = 0
+    if (filterOnlyPending) count += 1
     if (filterMemberIds.length > 0) count += 1
     if (filterCategoryIds.length > 0) count += 1
     if (filterSubcategoryIds.length > 0) count += 1
     if (filterType !== null) count += 1
     return count
-  }, [filterMemberIds, filterCategoryIds, filterSubcategoryIds, filterType])
+  }, [filterOnlyPending, filterMemberIds, filterCategoryIds, filterSubcategoryIds, filterType])
+
+  // Contagem de pendentes no mês atual
+  const pendingTransactionsCount = useMemo(() => {
+    return transactions.filter((t) => !t.category_id).length
+  }, [transactions])
 
   // Transações filtradas
   const filteredTransactions = useMemo(() => {
     return transactions.filter((tx) => {
+      if (filterOnlyPending && tx.category_id) {
+        return false
+      }
       if (filterMemberIds.length > 0 && !filterMemberIds.includes(tx.member_id)) {
         return false
       }
@@ -369,7 +388,14 @@ export default function WalletPage() {
       }
       return true
     })
-  }, [transactions, filterMemberIds, filterCategoryIds, filterSubcategoryIds, filterType])
+  }, [
+    transactions,
+    filterOnlyPending,
+    filterMemberIds,
+    filterCategoryIds,
+    filterSubcategoryIds,
+    filterType,
+  ])
 
   // Resumo do mês (Receitas, Despesas, Saldo)
   const { monthIncomeCents, monthExpenseCents, monthNetCents } = useMemo(() => {
@@ -418,6 +444,87 @@ export default function WalletPage() {
     })
     return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a))
   }, [filteredTransactions])
+
+  // Handler para salvar categorização inline de transação pendente com atualização otimista dos 3 Baldes
+  const handleSaveInlineCategory = async (data: SaveInlineCategoryData) => {
+    if (!family) return
+
+    const { transactionId, categoryId, subcategoryId, rememberRule, description } = data
+
+    // Categoria e subcategoria escolhidas para atualização otimista
+    const chosenCat = categories.find((c) => c.id === categoryId)
+    const chosenSub = chosenCat?.subcategories?.find((s) => s.id === subcategoryId) || null
+
+    // Atualização otimista imediata das transações (sai de pendente e reflete no estado local)
+    setTransactions((prev) =>
+      prev.map((t) => {
+        if (t.id !== transactionId) return t
+        return {
+          ...t,
+          category_id: categoryId,
+          subcategory_id: subcategoryId,
+          category: chosenCat || t.category,
+          subcategory: chosenSub || null,
+        }
+      }),
+    )
+
+    // Atualiza contagem do banner se houver
+    if (lastImportSummary && lastImportSummary.pending > 0) {
+      setLastImportSummary({
+        ...lastImportSummary,
+        pending: Math.max(0, lastImportSummary.pending - 1),
+        categorized: lastImportSummary.categorized + 1,
+      })
+    }
+
+    try {
+      // 1. Atualizar a transação no banco de dados
+      await updateTransaction(transactionId, {
+        category_id: categoryId,
+        subcategory_id: subcategoryId,
+      })
+
+      // 2. Se o checkbox 'Lembrar' estiver marcado, salvar regra em categorization_rules
+      // Usa a mesma normalização do parser (uppercase + sem acentos + trim)
+      if (rememberRule && description && description.trim()) {
+        try {
+          const derivedPattern =
+            extractPatternFromDescription(description) || normalizeText(description)
+          const patternToSave = (derivedPattern || description.trim()).toUpperCase()
+
+          await upsertCategorizationRule({
+            family_id: family.id,
+            user_id: null,
+            pattern: patternToSave,
+            category_id: categoryId,
+            subcategory_id: subcategoryId || null,
+          })
+        } catch (ruleErr) {
+          console.warn('Erro ao salvar regra automática:', ruleErr)
+        }
+      }
+
+      toast({
+        title: 'Transação categorizada!',
+        description: rememberRule
+          ? `"${description.trim()}" vinculada a ${chosenCat?.name}. Lembraremos para compras futuras.`
+          : `Transação atualizada para ${chosenCat?.name}.`,
+      })
+
+      // Dispara refresh suave para sincronizar os dados gerais da família
+      triggerRefresh()
+    } catch (err: any) {
+      console.error('Erro ao categorizar transação inline:', err)
+      toast({
+        title: 'Erro ao salvar categoria',
+        description: err?.message || 'Tente novamente.',
+        variant: 'destructive',
+      })
+      // Em caso de falha, recarrega o mês do banco para desfazer estado otimista
+      await loadMonthData()
+    }
+  }
 
   // Confirmação de exclusão de transação
   const handleConfirmDelete = async () => {
@@ -880,6 +987,99 @@ export default function WalletPage() {
         {/* ================= TAB 1: TRANSAÇÕES ================= */}
         {activeTab === 'transacoes' ? (
           <div className="space-y-5 mt-0 animate-in fade-in-50 duration-200">
+            {/* 1. VISÃO DE RESUMO PÓS-IMPORTAÇÃO (Banner Oficial de Destaque) */}
+            {lastImportSummary ? (
+              <div className="rounded-3xl border border-emerald-300 bg-gradient-to-r from-emerald-50 via-teal-50/60 to-emerald-50 p-4 sm:p-5 shadow-sm space-y-3 animate-in fade-in-50 duration-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-xs">
+                      📥
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-sm sm:text-base text-slate-900 leading-tight">
+                        📥 Extrato importado: {lastImportSummary.categorized} transações
+                        categorizadas automaticamente e {lastImportSummary.pending} pendentes de
+                        revisão.
+                      </h4>
+                      <p className="text-xs text-slate-600 mt-1">
+                        Defina a categoria das transações pendentes diretamente nas linhas abaixo.
+                        Suas escolhas atualizam o orçamento na hora.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-start sm:self-center shrink-0 flex-wrap">
+                    {lastImportSummary.pending > 0 ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => setFilterOnlyPending((prev) => !prev)}
+                        className={`text-xs font-bold rounded-xl shadow-xs transition-all gap-1.5 ${
+                          filterOnlyPending
+                            ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                            : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                        }`}
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>
+                          {filterOnlyPending
+                            ? 'Ver todas as transações'
+                            : `Ver apenas pendentes (${lastImportSummary.pending})`}
+                        </span>
+                      </Button>
+                    ) : null}
+
+                    <button
+                      type="button"
+                      onClick={() => setLastImportSummary(null)}
+                      className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                      title="Fechar aviso de importação"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : pendingTransactionsCount > 0 ? (
+              /* Banner complementar quando há pendentes sem o lastImportSummary ativo */
+              <div className="rounded-3xl border border-amber-200 bg-amber-50/70 p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold shrink-0">
+                    <Sparkles className="w-4 h-4 text-amber-700" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-xs sm:text-sm text-slate-900 block">
+                      Você tem {pendingTransactionsCount}{' '}
+                      {pendingTransactionsCount === 1
+                        ? 'transação pendente'
+                        : 'transações pendentes'}{' '}
+                      de categorização neste mês
+                    </span>
+                    <span className="text-[11px] text-slate-600">
+                      Categorize rapidamente nas linhas abaixo para atualizar seus 3 Baldes em tempo
+                      real.
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFilterOnlyPending((prev) => !prev)}
+                  className={`text-xs font-bold rounded-xl shrink-0 ${
+                    filterOnlyPending
+                      ? 'bg-amber-600 text-white border-amber-600 hover:bg-amber-700'
+                      : 'border-amber-300 text-amber-900 hover:bg-amber-100/70 bg-white'
+                  }`}
+                >
+                  {filterOnlyPending
+                    ? 'Ver todas as transações'
+                    : `Ver apenas pendentes (${pendingTransactionsCount})`}
+                </Button>
+              </div>
+            ) : null}
+
             {/* Summary Strip (3 Mini Cards) */}
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
@@ -967,6 +1167,7 @@ export default function WalletPage() {
                 {activeFiltersCount > 0 && (
                   <button
                     onClick={() => {
+                      setFilterOnlyPending(false)
                       setFilterMemberIds([])
                       setFilterCategoryIds([])
                       setFilterType(null)
@@ -1039,6 +1240,21 @@ export default function WalletPage() {
                     {/* Lista de itens do dia */}
                     <div className="divide-y divide-slate-100">
                       {dayTxs.map((tx) => {
+                        const isPending = !tx.category_id
+
+                        // Requisito 2: Se a transação estiver pendente de categoria, exibir EDIÇÃO RÁPIDA EM LINHA
+                        if (isPending) {
+                          return (
+                            <div key={tx.id} className="p-2 sm:p-2.5">
+                              <TransactionInlineRow
+                                transaction={tx}
+                                categories={categories}
+                                onSave={handleSaveInlineCategory}
+                              />
+                            </div>
+                          )
+                        }
+
                         const isIncome = tx.type === 'income'
                         return (
                           <div
@@ -2285,6 +2501,40 @@ export default function WalletPage() {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
+            {/* Status de Categorização (Filtro Rápido de Pendentes) */}
+            <div>
+              <Label className="text-xs font-semibold text-slate-700">Status de Categoria</Label>
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                <button
+                  type="button"
+                  onClick={() => setFilterOnlyPending(false)}
+                  className={`py-1.5 rounded-xl text-xs font-semibold border ${
+                    !filterOnlyPending
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'border-slate-200 text-slate-600'
+                  }`}
+                >
+                  Todas as transações
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterOnlyPending(true)}
+                  className={`py-1.5 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1 ${
+                    filterOnlyPending
+                      ? 'bg-amber-600 text-white border-amber-600'
+                      : 'border-slate-200 text-slate-600'
+                  }`}
+                >
+                  <span>Apenas pendentes</span>
+                  {pendingTransactionsCount > 0 && (
+                    <span className="text-[10px] bg-amber-100 text-amber-900 px-1.5 py-0.2 rounded-full font-bold">
+                      {pendingTransactionsCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+
             {/* Tipo */}
             <div>
               <Label className="text-xs font-semibold text-slate-700">Tipo</Label>
@@ -2425,6 +2675,7 @@ export default function WalletPage() {
             <Button
               variant="outline"
               onClick={() => {
+                setFilterOnlyPending(false)
                 setFilterMemberIds([])
                 setFilterCategoryIds([])
                 setFilterSubcategoryIds([])

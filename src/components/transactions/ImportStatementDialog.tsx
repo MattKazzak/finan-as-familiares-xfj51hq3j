@@ -103,7 +103,8 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
   onOpenChange,
   onSuccess,
 }) => {
-  const { family, members, categories, addNewCategory, triggerRefresh } = useFamily()
+  const { family, members, categories, addNewCategory, triggerRefresh, setLastImportSummary } =
+    useFamily()
   const { toast } = useToast()
 
   // Estados do fluxo
@@ -443,6 +444,16 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
         transaction_date: item.date,
       }))
       await createTransactionsBatch(payloads)
+
+      const pendingCount = selectedItems.filter((i) => !i.category_id).length
+      const categorizedCount = selectedItems.length - pendingCount
+
+      setLastImportSummary({
+        total: selectedItems.length,
+        categorized: categorizedCount,
+        pending: pendingCount,
+        importedAt: new Date(),
+      })
 
       toast({
         title: 'Extrato importado com sucesso! 🎉',
