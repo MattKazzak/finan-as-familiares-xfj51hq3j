@@ -1917,36 +1917,23 @@ export default function WalletPage() {
 
                                     {/* Lado Direito da Subcategoria: Coluna com largura e alinhamento idênticos ao card pai */}
                                     <div className="flex items-center gap-2 sm:gap-3 shrink-0 self-center">
-                                      {/* Progresso / Percentual da Subcategoria (alinhado exatamente com a categoria pai) */}
+                                      {/* Progresso / Barra da Subcategoria (alinhado exatamente com a categoria pai) */}
                                       <div className="w-[42px] xs:w-[110px] sm:w-[130px] flex items-center justify-end gap-1.5 sm:gap-2 shrink-0">
                                         {subItem.limitCents > 0 ? (
-                                          <>
-                                            <span
-                                              className={`text-xs font-bold tabular-nums min-w-[34px] sm:min-w-[38px] text-right shrink-0 leading-none ${
+                                          <div className="w-full bg-slate-200/60 h-1.5 rounded-full overflow-hidden">
+                                            <div
+                                              className={`h-full rounded-full transition-all ${
                                                 subItem.isOver
-                                                  ? 'text-red-600'
+                                                  ? 'bg-red-500'
                                                   : subItem.percent >= 75
-                                                    ? 'text-amber-600'
-                                                    : 'text-emerald-600'
+                                                    ? 'bg-amber-500'
+                                                    : 'bg-emerald-600'
                                               }`}
-                                            >
-                                              {subItem.percent}%
-                                            </span>
-                                            <div className="hidden xs:block flex-1 bg-slate-200/60 h-1.5 rounded-full overflow-hidden">
-                                              <div
-                                                className={`h-full rounded-full transition-all ${
-                                                  subItem.isOver
-                                                    ? 'bg-red-500'
-                                                    : subItem.percent >= 75
-                                                      ? 'bg-amber-500'
-                                                      : 'bg-emerald-600'
-                                                }`}
-                                                style={{
-                                                  width: `${Math.min(subItem.percent, 100)}%`,
-                                                }}
-                                              />
-                                            </div>
-                                          </>
+                                              style={{
+                                                width: `${Math.min(subItem.percent, 100)}%`,
+                                              }}
+                                            />
+                                          </div>
                                         ) : (
                                           <>
                                             <span className="text-xs font-medium text-slate-400 tabular-nums min-w-[34px] sm:min-w-[38px] text-right shrink-0 leading-none">
