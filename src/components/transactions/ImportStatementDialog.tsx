@@ -61,6 +61,8 @@ import {
   Building2,
   Star,
   ExternalLink,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react'
 
 export interface ReviewItem {
@@ -120,6 +122,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
   const [showIgnoredLines, setShowIgnoredLines] = useState(false)
   const [fileWarnings, setFileWarnings] = useState<string[]>([])
   const [showBankGuide, setShowBankGuide] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
 
   // Itens em revisão
   const [items, setItems] = useState<ReviewItem[]>([])
@@ -207,6 +210,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
       setFileWarnings([])
       setIsQuickCatOpen(false)
       setShowBankGuide(false)
+      setIsExpanded(false)
     }
     onOpenChange(isOpen)
   }
@@ -478,35 +482,78 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
   return (
     <>
       <Dialog open={open} onOpenChange={handleDialogChange}>
-        <DialogContent className="max-w-4xl w-[96vw] max-h-[92vh] flex flex-col p-4 sm:p-6 rounded-2xl overflow-hidden">
-          <DialogHeader className="shrink-0 pb-2 border-b border-slate-100">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+        <DialogContent
+          className={`flex flex-col p-3 sm:p-6 overflow-hidden transition-all duration-200 border-slate-200/90 shadow-2xl ${
+            /* Mobile: quase full-screen com cantos suaves */
+            'w-[calc(100vw-1rem)] h-[calc(100dvh-1rem)] max-w-none max-h-none rounded-2xl sm:w-auto sm:h-auto'
+          } ${
+            /* Desktop (sm+): tamanho padrão espaçoso ou expandido */
+            isExpanded
+              ? 'sm:w-[98vw] sm:max-w-7xl sm:h-[94vh] sm:max-h-[94vh] sm:rounded-2xl'
+              : 'sm:w-[94vw] sm:max-w-6xl sm:h-[88vh] sm:max-h-[88vh] sm:rounded-2xl'
+          }`}
+        >
+          <DialogHeader className="shrink-0 pb-3 border-b border-slate-100">
+            <div className="flex items-center justify-between gap-2 pr-7 sm:pr-8">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-base shrink-0">
                   📥
                 </div>
-                <div>
-                  <DialogTitle className="text-base sm:text-lg font-bold text-slate-900">
-                    Importar Extrato Bancário
-                  </DialogTitle>
-                  <p className="text-xs text-slate-500">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 truncate">
+                      Importar Extrato Bancário
+                    </DialogTitle>
+                    {step === 'review' && fileInfo ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-md">
+                        <span>{fileInfo.format}</span>
+                        <span className="text-emerald-400">•</span>
+                        <span className="max-w-[140px] sm:max-w-[220px] truncate">
+                          {fileInfo.name}
+                        </span>
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="text-xs text-slate-500 truncate mt-0.5">
                     {step === 'upload'
                       ? 'Recomendado: OFX (100% de precisão bancária). Também aceita CSV e PDF.'
-                      : `Revisão de lançamentos: ${fileInfo?.name} (${fileInfo?.format})`}
+                      : `Revisão de lançamentos: ajuste categorias, membros, datas e confirme a importação`}
                   </p>
                 </div>
               </div>
 
-              {step === 'review' ? (
+              <div className="flex items-center gap-1.5 shrink-0">
+                {step === 'review' ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setStep('upload')}
+                    className="text-xs h-8 rounded-xl px-2.5"
+                    title="Enviar outro extrato"
+                  >
+                    <span>Trocar arquivo</span>
+                  </Button>
+                ) : null}
+
+                {/* Botão de Expandir / Colapsar no desktop */}
                 <Button
-                  variant="outline"
+                  type="button"
+                  variant="ghost"
                   size="sm"
-                  onClick={() => setStep('upload')}
-                  className="text-xs h-8 rounded-xl"
+                  onClick={() => setIsExpanded((prev) => !prev)}
+                  className="hidden sm:inline-flex items-center justify-center h-8 w-8 p-0 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+                  title={
+                    isExpanded ? 'Restaurar tamanho padrão' : 'Expandir diálogo para tela cheia'
+                  }
+                  aria-label={isExpanded ? 'Restaurar tamanho padrão' : 'Expandir diálogo'}
                 >
-                  <span>Trocar arquivo</span>
+                  {isExpanded ? (
+                    <Minimize2 className="w-4 h-4" />
+                  ) : (
+                    <Maximize2 className="w-4 h-4" />
+                  )}
                 </Button>
-              ) : null}
+              </div>
             </div>
           </DialogHeader>
 
@@ -898,101 +945,94 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                   return (
                     <div
                       key={item.id}
-                      className={`pt-2.5 pb-2.5 px-2 rounded-xl transition-colors ${
+                      className={`pt-2.5 pb-2.5 px-2.5 rounded-xl transition-colors ${
                         item.isDuplicate
-                          ? 'bg-amber-50/40'
+                          ? 'bg-amber-50/50 border border-amber-200/60'
                           : item.selected
-                            ? 'hover:bg-slate-50'
+                            ? 'hover:bg-slate-50/80'
                             : 'opacity-60 bg-slate-50/50'
                       }`}
                     >
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                        {/* Checkbox + Descrição + Data */}
-                        <div className="flex items-start gap-2.5 flex-1 min-w-0">
-                          <input
-                            type="checkbox"
-                            checked={item.selected}
-                            onChange={() => handleToggleItem(item.id)}
-                            className="mt-1 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 shrink-0"
+                      {/* ================= DESKTOP LAYOUT (md+): Linha Horizontal Completa e Espaçosa ================= */}
+                      <div className="hidden md:flex items-center gap-3 w-full">
+                        {/* Checkbox */}
+                        <input
+                          type="checkbox"
+                          checked={item.selected}
+                          onChange={() => handleToggleItem(item.id)}
+                          className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 shrink-0 cursor-pointer"
+                        />
+
+                        {/* Data */}
+                        <input
+                          type="date"
+                          value={item.date}
+                          onChange={(e) => handleUpdateItemField(item.id, 'date', e.target.value)}
+                          className="text-xs text-slate-700 bg-white border border-slate-200 rounded-lg px-2 py-1 shrink-0 w-32 focus:border-emerald-500 focus:outline-none"
+                        />
+
+                        {/* Toggle Receita / Despesa */}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleUpdateItemField(item.id, 'type', isIncome ? 'expense' : 'income')
+                          }
+                          className={`text-xs font-semibold px-2 py-1 rounded-lg flex items-center gap-1 shrink-0 transition-colors ${
+                            isIncome
+                              ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                              : 'bg-red-100 text-red-700 hover:bg-red-200'
+                          }`}
+                          title="Alternar entre receita e despesa"
+                        >
+                          {isIncome ? (
+                            <>
+                              <ArrowUpRight className="w-3.5 h-3.5" /> Receita
+                            </>
+                          ) : (
+                            <>
+                              <ArrowDownRight className="w-3.5 h-3.5" /> Despesa
+                            </>
+                          )}
+                        </button>
+
+                        {/* Descrição editável (ocupa o espaço flexível) */}
+                        <div className="flex-1 min-w-[180px] flex items-center gap-1.5">
+                          <Input
+                            value={item.description}
+                            onChange={(e) =>
+                              handleUpdateItemField(item.id, 'description', e.target.value)
+                            }
+                            className="h-8 text-xs font-semibold text-slate-800 bg-transparent border-slate-200 hover:border-slate-300 focus:border-emerald-500 focus:bg-white px-2 py-1 rounded-lg w-full"
                           />
-
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <Input
-                                value={item.description}
-                                onChange={(e) =>
-                                  handleUpdateItemField(item.id, 'description', e.target.value)
-                                }
-                                className="h-7 text-xs font-semibold text-slate-800 bg-transparent border-transparent hover:border-slate-300 focus:border-emerald-500 focus:bg-white px-1.5 py-0 rounded max-w-md w-full sm:w-auto"
-                              />
-                              {item.isDuplicate ? (
-                                <span
-                                  title={item.duplicateReason}
-                                  className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-200"
-                                >
-                                  <AlertTriangle className="w-3 h-3 text-amber-600" />
-                                  <span>Possível Duplicada</span>
-                                </span>
-                              ) : null}
-                              {!item.category_id ? (
-                                <span
-                                  title="Transação sem match de regra. Você pode definir a categoria agora ou depois na Carteira."
-                                  className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80"
-                                >
-                                  <span>Pendente de categoria</span>
-                                </span>
-                              ) : null}
-                            </div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <input
-                                type="date"
-                                value={item.date}
-                                onChange={(e) =>
-                                  handleUpdateItemField(item.id, 'date', e.target.value)
-                                }
-                                className="text-[11px] text-slate-500 bg-transparent border border-slate-200 rounded px-1.5 py-0.5"
-                              />
-
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleUpdateItemField(
-                                    item.id,
-                                    'type',
-                                    isIncome ? 'expense' : 'income',
-                                  )
-                                }
-                                className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 transition-colors ${
-                                  isIncome
-                                    ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
-                                    : 'bg-red-100 text-red-700 hover:bg-red-200'
-                                }`}
-                                title="Alternar entre receita e despesa"
-                              >
-                                {isIncome ? (
-                                  <>
-                                    <ArrowUpRight className="w-3 h-3" /> Receita
-                                  </>
-                                ) : (
-                                  <>
-                                    <ArrowDownRight className="w-3 h-3" /> Despesa
-                                  </>
-                                )}
-                              </button>
-                            </div>
-                          </div>
+                          {item.isDuplicate ? (
+                            <span
+                              title={item.duplicateReason}
+                              className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100/90 px-2 py-0.5 rounded-full border border-amber-200 shrink-0"
+                            >
+                              <AlertTriangle className="w-3 h-3 text-amber-600" />
+                              <span className="hidden lg:inline">Possível Duplicada</span>
+                            </span>
+                          ) : null}
+                          {!item.category_id ? (
+                            <span
+                              title="Transação sem match de regra. Você pode definir a categoria agora ou depois na Carteira."
+                              className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80 shrink-0"
+                            >
+                              <span className="hidden lg:inline">Pendente de categoria</span>
+                              <span className="lg:hidden">Pendente</span>
+                            </span>
+                          ) : null}
                         </div>
 
-                        {/* Valor + Seletor de Categoria + Membro + Excluir */}
-                        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end pl-6 sm:pl-0">
-                          {/* Membro */}
+                        {/* Membro */}
+                        <div className="shrink-0">
                           <Select
                             value={item.member_id}
                             onValueChange={(val) =>
                               handleUpdateItemField(item.id, 'member_id', val)
                             }
                           >
-                            <SelectTrigger className="h-7 text-xs w-24 sm:w-28 rounded-lg bg-white border-slate-200">
+                            <SelectTrigger className="h-8 text-xs w-28 lg:w-32 rounded-lg bg-white border-slate-200">
                               <SelectValue placeholder="Membro" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1003,9 +1043,224 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                               ))}
                             </SelectContent>
                           </Select>
+                        </div>
 
-                          {/* Categoria */}
-                          <div className="relative">
+                        {/* Categoria */}
+                        <div className="shrink-0">
+                          <Select
+                            value={item.category_id || 'none'}
+                            onValueChange={(val) => {
+                              if (val === 'CREATE_NEW') {
+                                openQuickCategoryModal(item.id)
+                              } else {
+                                handleUpdateItemField(
+                                  item.id,
+                                  'category_id',
+                                  val === 'none' ? null : val,
+                                )
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="h-8 text-xs w-36 lg:w-44 rounded-lg bg-white border-slate-200">
+                              <SelectValue placeholder="Sem categoria">
+                                {currentCategory ? (
+                                  <span className="flex items-center gap-1.5 truncate">
+                                    <CategoryIcon
+                                      name={currentCategory.icon}
+                                      className="w-3.5 h-3.5 shrink-0"
+                                    />
+                                    <span className="truncate">{currentCategory.name}</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400">Sem categoria</span>
+                                )}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none" className="text-xs text-slate-500">
+                                Sem categoria
+                              </SelectItem>
+                              {filteredCategories.map((c) => (
+                                <SelectItem key={c.id} value={c.id} className="text-xs">
+                                  <span className="flex items-center gap-1.5">
+                                    <CategoryIcon name={c.icon} className="w-3.5 h-3.5" />
+                                    {c.name}
+                                  </span>
+                                </SelectItem>
+                              ))}
+                              <SelectItem
+                                value="CREATE_NEW"
+                                className="text-xs font-semibold text-emerald-700 border-t mt-1"
+                              >
+                                + Criar nova categoria
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Subcategoria */}
+                        <div className="shrink-0 w-32 lg:w-36">
+                          {availableSubcategories.length > 0 ? (
+                            <Select
+                              value={item.subcategory_id || 'none'}
+                              onValueChange={(val) =>
+                                handleUpdateItemField(
+                                  item.id,
+                                  'subcategory_id',
+                                  val === 'none' ? null : val,
+                                )
+                              }
+                            >
+                              <SelectTrigger className="h-8 text-xs w-full rounded-lg bg-white border-slate-200">
+                                <SelectValue placeholder="Subcategoria" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none" className="text-xs text-slate-500">
+                                  Sem subcat.
+                                </SelectItem>
+                                {availableSubcategories.map((sub) => (
+                                  <SelectItem key={sub.id} value={sub.id} className="text-xs">
+                                    {sub.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <span className="text-[11px] text-slate-400 block px-2 italic truncate">
+                              Sem subcat.
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Valor */}
+                        <div className="text-right min-w-[100px] shrink-0">
+                          <span
+                            className={`font-bold text-sm tabular-nums ${
+                              isIncome ? 'text-emerald-700' : 'text-red-600'
+                            }`}
+                          >
+                            {isIncome ? '+' : '−'} {formatBRL(item.amount_cents)}
+                          </span>
+                        </div>
+
+                        {/* Remover */}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(item.id)}
+                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                          title="Remover linha"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* ================= MOBILE LAYOUT (<md): Bloco empilhado confortável ================= */}
+                      <div className="flex md:hidden flex-col gap-2.5">
+                        {/* Linha 1: Checkbox + Descrição + Valor */}
+                        <div className="flex items-start gap-2">
+                          <input
+                            type="checkbox"
+                            checked={item.selected}
+                            onChange={() => handleToggleItem(item.id)}
+                            className="mt-1.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <Input
+                              value={item.description}
+                              onChange={(e) =>
+                                handleUpdateItemField(item.id, 'description', e.target.value)
+                              }
+                              className="h-8 text-xs font-semibold text-slate-800 bg-white border-slate-200 focus:border-emerald-500 px-2 rounded-lg w-full"
+                            />
+                          </div>
+                          <div className="text-right shrink-0 pt-1">
+                            <span
+                              className={`font-bold text-xs tabular-nums ${
+                                isIncome ? 'text-emerald-700' : 'text-red-600'
+                              }`}
+                            >
+                              {isIncome ? '+' : '−'} {formatBRL(item.amount_cents)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Badges de duplicata e categoria pendente se aplicável */}
+                        {(item.isDuplicate || !item.category_id) && (
+                          <div className="flex items-center gap-1.5 flex-wrap pl-6">
+                            {item.isDuplicate ? (
+                              <span
+                                title={item.duplicateReason}
+                                className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100/90 px-2 py-0.5 rounded-full border border-amber-200"
+                              >
+                                <AlertTriangle className="w-3 h-3 text-amber-600" />
+                                <span>Possível Duplicada</span>
+                              </span>
+                            ) : null}
+                            {!item.category_id ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80">
+                                <span>Pendente de categoria</span>
+                              </span>
+                            ) : null}
+                          </div>
+                        )}
+
+                        {/* Linha 2: Data + Tipo (Receita/Despesa) + Membro */}
+                        <div className="flex items-center gap-2 pl-6 flex-wrap">
+                          <input
+                            type="date"
+                            value={item.date}
+                            onChange={(e) => handleUpdateItemField(item.id, 'date', e.target.value)}
+                            className="text-[11px] text-slate-700 bg-white border border-slate-200 rounded-lg px-2 py-1 flex-1 min-w-[120px]"
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleUpdateItemField(
+                                item.id,
+                                'type',
+                                isIncome ? 'expense' : 'income',
+                              )
+                            }
+                            className={`text-[11px] font-semibold px-2 py-1 rounded-lg flex items-center gap-1 shrink-0 ${
+                              isIncome
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-red-100 text-red-700'
+                            }`}
+                          >
+                            {isIncome ? (
+                              <>
+                                <ArrowUpRight className="w-3 h-3" /> Receita
+                              </>
+                            ) : (
+                              <>
+                                <ArrowDownRight className="w-3 h-3" /> Despesa
+                              </>
+                            )}
+                          </button>
+
+                          <Select
+                            value={item.member_id}
+                            onValueChange={(val) =>
+                              handleUpdateItemField(item.id, 'member_id', val)
+                            }
+                          >
+                            <SelectTrigger className="h-7 text-xs w-28 rounded-lg bg-white border-slate-200 shrink-0">
+                              <SelectValue placeholder="Membro" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {members.map((m) => (
+                                <SelectItem key={m.id} value={m.id} className="text-xs">
+                                  {m.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Linha 3: Categoria + Subcategoria + Excluir */}
+                        <div className="flex items-center gap-2 pl-6">
+                          <div className="flex-1 min-w-0">
                             <Select
                               value={item.category_id || 'none'}
                               onValueChange={(val) => {
@@ -1020,13 +1275,13 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                                 }
                               }}
                             >
-                              <SelectTrigger className="h-7 text-xs w-36 sm:w-40 rounded-lg bg-white border-slate-200">
+                              <SelectTrigger className="h-8 text-xs w-full rounded-lg bg-white border-slate-200">
                                 <SelectValue placeholder="Sem categoria">
                                   {currentCategory ? (
                                     <span className="flex items-center gap-1.5 truncate">
                                       <CategoryIcon
                                         name={currentCategory.icon}
-                                        className="w-3.5 h-3.5"
+                                        className="w-3.5 h-3.5 shrink-0"
                                       />
                                       <span className="truncate">{currentCategory.name}</span>
                                     </span>
@@ -1057,53 +1312,42 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                             </Select>
                           </div>
 
-                          {/* Subcategoria (se disponível) */}
                           {availableSubcategories.length > 0 ? (
-                            <Select
-                              value={item.subcategory_id || 'none'}
-                              onValueChange={(val) =>
-                                handleUpdateItemField(
-                                  item.id,
-                                  'subcategory_id',
-                                  val === 'none' ? null : val,
-                                )
-                              }
-                            >
-                              <SelectTrigger className="h-7 text-xs w-28 sm:w-32 rounded-lg bg-white border-slate-200">
-                                <SelectValue placeholder="Subcategoria" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none" className="text-xs text-slate-500">
-                                  Sem subcat.
-                                </SelectItem>
-                                {availableSubcategories.map((sub) => (
-                                  <SelectItem key={sub.id} value={sub.id} className="text-xs">
-                                    {sub.name}
+                            <div className="w-32 shrink-0">
+                              <Select
+                                value={item.subcategory_id || 'none'}
+                                onValueChange={(val) =>
+                                  handleUpdateItemField(
+                                    item.id,
+                                    'subcategory_id',
+                                    val === 'none' ? null : val,
+                                  )
+                                }
+                              >
+                                <SelectTrigger className="h-8 text-xs w-full rounded-lg bg-white border-slate-200">
+                                  <SelectValue placeholder="Subcategoria" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none" className="text-xs text-slate-500">
+                                    Sem subcat.
                                   </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                                  {availableSubcategories.map((sub) => (
+                                    <SelectItem key={sub.id} value={sub.id} className="text-xs">
+                                      {sub.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           ) : null}
 
-                          {/* Valor editável */}
-                          <div className="text-right min-w-[90px]">
-                            <span
-                              className={`font-bold text-xs sm:text-sm tabular-nums ${
-                                isIncome ? 'text-emerald-700' : 'text-red-600'
-                              }`}
-                            >
-                              {isIncome ? '+' : '−'} {formatBRL(item.amount_cents)}
-                            </span>
-                          </div>
-
-                          {/* Remover da lista */}
                           <button
                             type="button"
                             onClick={() => handleRemoveItem(item.id)}
-                            className="p-1 text-slate-400 hover:text-red-500 transition-colors"
+                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
                             title="Remover linha"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
