@@ -1471,10 +1471,10 @@ export default function WalletPage() {
                               item.category.percent_default,
                             )
                           }
-                          className="p-3 sm:p-3.5 flex items-center justify-between hover:bg-slate-50/80 cursor-pointer transition-colors group gap-2 sm:gap-3 touch-manipulation"
+                          className="p-3 sm:p-3.5 flex items-center justify-between hover:bg-slate-50/80 cursor-pointer transition-colors group gap-2.5 sm:gap-4 touch-manipulation"
                         >
-                          {/* Identificação da Categoria + Alça de Arraste (≡) */}
-                          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                          {/* Coluna Esquerda: Drag handle + Ícone + Bloco textual em 2 linhas limpas */}
+                          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                             {/* Ícone de arrasto ≡ para mobile e desktop */}
                             <button
                               type="button"
@@ -1497,10 +1497,12 @@ export default function WalletPage() {
                               />
                             </div>
 
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-1.5 flex-wrap">
+                            {/* Hierarquia de texto: Linha 1 = Nome + Badges | Linha 2 = Valores "R$ X de R$ Y" | Linha 3 = Ritmo */}
+                            <div className="min-w-0 flex-1 flex flex-col justify-center">
+                              {/* Linha 1: Nome da categoria com badges compactos e truncamento limpo */}
+                              <div className="flex items-center gap-1.5 min-w-0">
                                 <span
-                                  className="font-bold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors break-words leading-snug"
+                                  className="font-bold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors truncate"
                                   title={item.category.name}
                                 >
                                   {item.category.name}
@@ -1509,7 +1511,7 @@ export default function WalletPage() {
                                 {/* Tag de Balde se houver */}
                                 {item.category.budget_bucket && (
                                   <span
-                                    className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md ${
+                                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md shrink-0 leading-none whitespace-nowrap ${
                                       BUCKET_METADATA[item.category.budget_bucket]?.bgLight ||
                                       'bg-slate-100 text-slate-600'
                                     }`}
@@ -1520,21 +1522,36 @@ export default function WalletPage() {
 
                                 {/* Percentual da renda se definido */}
                                 {item.category.percent_default ? (
-                                  <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/70 px-1.5 py-0.2 rounded-md tabular-nums">
+                                  <span className="hidden xs:inline-flex text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/70 px-1.5 py-0.5 rounded-md tabular-nums shrink-0 leading-none whitespace-nowrap">
                                     {item.category.percent_default}% da renda
+                                  </span>
+                                ) : null}
+
+                                {/* Tag de ajuste manual se houver override */}
+                                {item.hasOverride ? (
+                                  <span className="text-[9px] font-semibold bg-amber-100/90 text-amber-900 border border-amber-200/80 px-1.5 py-0.5 rounded-md leading-none shrink-0 whitespace-nowrap">
+                                    ajustado
                                   </span>
                                 ) : null}
                               </div>
 
-                              <p className="text-xs text-slate-500 tabular-nums mt-0.5 flex items-center gap-1 flex-wrap">
-                                <span>{formatBRL(item.spentCents)}</span>
-                                <span className="text-slate-400">de</span>
-                                <span className="font-medium text-slate-700">
+                              {/* Linha 2: Valores "R$ X de R$ Y" com tabular-nums e sem quebra feia */}
+                              <div className="text-xs text-slate-500 tabular-nums mt-0.5 flex items-baseline gap-1 truncate">
+                                <span className="font-semibold text-slate-800 shrink-0">
+                                  {formatBRL(item.spentCents)}
+                                </span>
+                                <span className="text-slate-400 text-[11px] shrink-0">de</span>
+                                <span className="text-slate-600 shrink-0">
                                   {item.limitCents > 0 ? formatBRL(item.limitCents) : 'Sem teto'}
                                 </span>
-                              </p>
+                                {item.category.percent_default ? (
+                                  <span className="xs:hidden text-[10px] text-emerald-700 font-medium ml-1 shrink-0">
+                                    ({item.category.percent_default}%)
+                                  </span>
+                                ) : null}
+                              </div>
 
-                              {/* FAROL PREVENTIVO APRIMORADO COM DIAS RESTANTES */}
+                              {/* Linha 3: Farol preventivo discreto alinhado sob os valores */}
                               {(() => {
                                 if (item.limitCents <= 0) return null
 
@@ -1559,21 +1576,20 @@ export default function WalletPage() {
                                 if (isInvestmentCategory) {
                                   if (item.percent < 70) {
                                     return (
-                                      <p className="text-[10px] text-amber-600 font-semibold mt-1 flex items-center gap-1">
+                                      <p className="text-[10px] text-amber-600 font-semibold mt-1 flex items-center gap-1 truncate">
                                         <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
-                                        <span>
+                                        <span className="truncate">
                                           Aporte em {item.percent}% do teto ideal. Priorize sua
-                                          reserva de segurança.
+                                          reserva.
                                         </span>
                                       </p>
                                     )
                                   }
                                   return (
-                                    <p className="text-[10px] text-emerald-600 font-medium mt-1 flex items-center gap-1">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                      <span>
-                                        Meta de investimentos no ritmo saudável ({item.percent}%
-                                        alcançado).
+                                    <p className="text-[10px] text-emerald-600 font-medium mt-1 flex items-center gap-1 truncate">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                      <span className="truncate">
+                                        Meta de aportes saudável ({item.percent}% alcançado).
                                       </span>
                                     </p>
                                   )
@@ -1583,9 +1599,9 @@ export default function WalletPage() {
                                 // 🔴 Acima de 90% ou 100%+
                                 if (item.percent > 90) {
                                   return (
-                                    <p className="text-[10px] text-red-600 font-semibold mt-1 flex items-center gap-1">
-                                      <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
-                                      <span>
+                                    <p className="text-[10px] text-red-600 font-semibold mt-1 flex items-center gap-1 truncate">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />
+                                      <span className="truncate">
                                         {item.isOver
                                           ? `Estourou o teto em ${formatBRL(item.spentCents - item.limitCents)}!`
                                           : `Atenção: ${item.percent}% consumido do teto.`}
@@ -1597,12 +1613,12 @@ export default function WalletPage() {
                                 // 🟡 71% a 90%: Alerta preventivo com dias restantes
                                 if (item.percent >= 71) {
                                   return (
-                                    <p className="text-[10px] text-amber-700 font-medium mt-1 flex items-center gap-1">
+                                    <p className="text-[10px] text-amber-700 font-medium mt-1 flex items-center gap-1 truncate">
                                       <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                                      <span>
+                                      <span className="truncate">
                                         Já consumiu {item.percent}% do orçamento
                                         {daysRemaining > 0 && isCurrentViewingMonth
-                                          ? ` e ainda faltam ${daysRemaining} dias para o fim do mês.`
+                                          ? ` (${daysRemaining} dias restantes).`
                                           : '.'}
                                       </span>
                                     </p>
@@ -1611,23 +1627,25 @@ export default function WalletPage() {
 
                                 // 🟢 Até 70%: Verde ritmo saudável
                                 return (
-                                  <p className="text-[10px] text-emerald-600 font-medium mt-1 flex items-center gap-1">
+                                  <p className="text-[10px] text-emerald-600 font-medium mt-1 flex items-center gap-1 truncate">
                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                                    <span>Ritmo saudável ({item.percent}% consumido).</span>
+                                    <span className="truncate">
+                                      Ritmo saudável ({item.percent}% consumido).
+                                    </span>
                                   </p>
                                 )
                               })()}
                             </div>
                           </div>
 
-                          {/* Lado Direito: Progresso / Teto + Ações (Desktop direto / Mobile menu ⋯) + Expand */}
-                          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 self-start sm:self-center mt-1 sm:mt-0">
-                            {/* Progresso / Barra de Cor da Categoria Pai com Percentual Visível */}
-                            <div className="flex items-center">
+                          {/* Coluna Direita Fixa: Percentual + Barra de Progresso + Ações + Chevron (alinhados ao centro vertical) */}
+                          <div className="flex items-center gap-2 sm:gap-3 shrink-0 self-center">
+                            {/* Progresso / Barra com largura fixa padronizada para alinhamento entre todas as categorias */}
+                            <div className="w-[42px] xs:w-[110px] sm:w-[130px] flex items-center justify-end gap-1.5 sm:gap-2 shrink-0">
                               {item.limitCents > 0 ? (
-                                <div className="flex items-center gap-1.5 sm:gap-2">
+                                <>
                                   <span
-                                    className={`text-[11px] font-bold tabular-nums min-w-[34px] sm:min-w-[38px] text-right ${
+                                    className={`text-xs font-bold tabular-nums min-w-[34px] sm:min-w-[38px] text-right shrink-0 leading-none ${
                                       item.isOver || item.percent > 90
                                         ? 'text-red-600'
                                         : item.percent >= 71
@@ -1635,9 +1653,9 @@ export default function WalletPage() {
                                           : 'text-emerald-600'
                                     }`}
                                   >
-                                    <span>{item.percent}%</span>
+                                    {item.percent}%
                                   </span>
-                                  <div className="hidden xs:block w-12 sm:w-20 bg-slate-100 h-2 rounded-full overflow-hidden">
+                                  <div className="hidden xs:block flex-1 bg-slate-100 h-2 rounded-full overflow-hidden">
                                     <div
                                       className={`h-full rounded-full transition-all ${
                                         item.isOver || item.percent > 90
@@ -1649,17 +1667,20 @@ export default function WalletPage() {
                                       style={{ width: `${Math.min(item.percent, 100)}%` }}
                                     />
                                   </div>
-                                </div>
+                                </>
                               ) : (
-                                <span className="text-[11px] font-medium text-slate-400 whitespace-nowrap min-w-[34px] sm:min-w-[38px] text-right">
-                                  <span>—</span>
-                                </span>
+                                <>
+                                  <span className="text-xs font-medium text-slate-400 tabular-nums min-w-[34px] sm:min-w-[38px] text-right shrink-0 leading-none">
+                                    —
+                                  </span>
+                                  <div className="hidden xs:block flex-1 bg-slate-100/60 h-2 rounded-full" />
+                                </>
                               )}
                             </div>
 
-                            {/* AÇÕES DE GESTÃO: Desktop (barra com 3 botões) */}
+                            {/* AÇÕES DE GESTÃO: Desktop (barra com 3 botões em cápsula limpa) */}
                             <div
-                              className="hidden md:flex items-center gap-0.5 bg-slate-100/70 p-0.5 rounded-xl border border-slate-200/60"
+                              className="hidden md:flex items-center gap-0.5 bg-slate-100/70 p-0.5 rounded-xl border border-slate-200/60 shrink-0"
                               onClick={(e) => e.stopPropagation()}
                             >
                               {/* Lápis: Editar categoria */}
@@ -1738,7 +1759,7 @@ export default function WalletPage() {
 
                             {/* AÇÕES DE GESTÃO: Mobile / Tablet (< md) via Menu "Mais Opções" (⋯) */}
                             <div
-                              className="flex md:hidden items-center"
+                              className="flex md:hidden items-center shrink-0"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <DropdownMenu modal={false}>
@@ -1808,11 +1829,11 @@ export default function WalletPage() {
                             </div>
 
                             {/* Chevron de Expandir / Recolher Subcategorias */}
-                            <div className="flex items-center">
+                            <div className="flex items-center shrink-0">
                               <button
                                 type="button"
                                 onClick={(e) => toggleCatBudgetExpand(item.category.id, e)}
-                                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                                className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                                 title={
                                   isExpanded ? 'Recolher subcategorias' : 'Expandir subcategorias'
                                 }
@@ -1834,7 +1855,7 @@ export default function WalletPage() {
                         {isExpanded ? (
                           <div
                             key={`budget-subcats-${item.category.id}`}
-                            className="bg-slate-50/60 border-t border-slate-100 divide-y divide-slate-100/80 pl-4 sm:pl-7 pr-3 py-1"
+                            className="bg-slate-50/70 border-t border-slate-100 divide-y divide-slate-100/80 pl-3 sm:pl-6 pr-3 py-1.5"
                           >
                             {hasSubcats ? (
                               <SortableList
@@ -1857,12 +1878,12 @@ export default function WalletPage() {
                                         subItem.hasOverride,
                                       )
                                     }
-                                    className={`py-2.5 flex items-center justify-between rounded-xl px-2.5 cursor-pointer transition-colors group/sub gap-2 sm:gap-3 touch-manipulation ${
+                                    className={`py-2 px-2 sm:px-2.5 flex items-center justify-between rounded-xl cursor-pointer transition-colors group/sub gap-2.5 sm:gap-4 touch-manipulation ${
                                       isSubDragging ? 'bg-white shadow-md' : 'hover:bg-white'
                                     }`}
                                   >
                                     {/* Identificação da Subcategoria + Alça de arrasto da subcategoria */}
-                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                    <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
                                       <button
                                         type="button"
                                         {...subDragHandleProps}
@@ -1874,45 +1895,47 @@ export default function WalletPage() {
                                         <GripVertical className="w-3.5 h-3.5" />
                                       </button>
                                       <span className="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover/sub:bg-emerald-500 transition-colors shrink-0" />
-                                      <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-1.5">
+                                      <div className="min-w-0 flex-1 flex flex-col justify-center">
+                                        <div className="flex items-center gap-1.5 min-w-0">
                                           <span
-                                            className="text-xs font-semibold text-slate-700 group-hover/sub:text-emerald-700 transition-colors break-words leading-snug"
+                                            className="text-xs font-semibold text-slate-700 group-hover/sub:text-emerald-700 transition-colors truncate leading-snug"
                                             title={subItem.subcategory.name}
                                           >
-                                            <span>{subItem.subcategory.name}</span>
+                                            {subItem.subcategory.name}
                                           </span>
                                           {subItem.hasOverride ? (
-                                            <span className="text-[10px] font-semibold bg-amber-100/80 text-amber-900 border border-amber-200/80 px-1.5 py-0.2 rounded-full leading-tight shrink-0">
-                                              <span>ajustado</span>
+                                            <span className="text-[9px] font-semibold bg-amber-100/90 text-amber-900 border border-amber-200/80 px-1.5 py-0.2 rounded-md leading-none shrink-0 whitespace-nowrap">
+                                              ajustado
                                             </span>
                                           ) : null}
                                           {subItem.isOver ? (
                                             <AlertTriangle className="w-3 h-3 text-red-500 shrink-0" />
                                           ) : null}
                                         </div>
-                                        <p className="text-[11px] text-slate-400 tabular-nums mt-0.5 flex items-center gap-1 flex-wrap">
-                                          <span>{formatBRL(subItem.spentCents)}</span>
-                                          <span className="text-slate-400">de</span>
-                                          <span className="font-medium text-slate-600">
-                                            {subItem.limitCents > 0 ? (
-                                              <span>{formatBRL(subItem.limitCents)}</span>
-                                            ) : (
-                                              <span>Sem teto</span>
-                                            )}
+                                        <div className="text-[11px] text-slate-500 tabular-nums mt-0.5 flex items-baseline gap-1 truncate">
+                                          <span className="font-medium text-slate-700 shrink-0">
+                                            {formatBRL(subItem.spentCents)}
                                           </span>
-                                        </p>
+                                          <span className="text-slate-400 text-[10px] shrink-0">
+                                            de
+                                          </span>
+                                          <span className="text-slate-500 shrink-0">
+                                            {subItem.limitCents > 0
+                                              ? formatBRL(subItem.limitCents)
+                                              : 'Sem teto'}
+                                          </span>
+                                        </div>
                                       </div>
                                     </div>
 
-                                    {/* Lado Direito da Subcategoria: Progresso / Teto + Ações Inline (Lápis e Lixeira) + Espaçador da setinha */}
-                                    <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-                                      {/* Progresso / Percentual da Subcategoria (alinhado com a categoria pai) */}
-                                      <div className="flex items-center">
+                                    {/* Lado Direito da Subcategoria: Coluna com largura e alinhamento idênticos ao card pai */}
+                                    <div className="flex items-center gap-2 sm:gap-3 shrink-0 self-center">
+                                      {/* Progresso / Percentual da Subcategoria (alinhado exatamente com a categoria pai) */}
+                                      <div className="w-[42px] xs:w-[110px] sm:w-[130px] flex items-center justify-end gap-1.5 sm:gap-2 shrink-0">
                                         {subItem.limitCents > 0 ? (
-                                          <div className="flex items-center gap-1.5 sm:gap-2">
+                                          <>
                                             <span
-                                              className={`text-[11px] font-bold tabular-nums min-w-[34px] sm:min-w-[38px] text-right ${
+                                              className={`text-xs font-bold tabular-nums min-w-[34px] sm:min-w-[38px] text-right shrink-0 leading-none ${
                                                 subItem.isOver
                                                   ? 'text-red-600'
                                                   : subItem.percent >= 75
@@ -1920,9 +1943,9 @@ export default function WalletPage() {
                                                     : 'text-emerald-600'
                                               }`}
                                             >
-                                              <span>{subItem.percent}%</span>
+                                              {subItem.percent}%
                                             </span>
-                                            <div className="hidden xs:block w-12 sm:w-20 bg-slate-200/60 h-1.5 rounded-full overflow-hidden">
+                                            <div className="hidden xs:block flex-1 bg-slate-200/60 h-1.5 rounded-full overflow-hidden">
                                               <div
                                                 className={`h-full rounded-full transition-all ${
                                                   subItem.isOver
@@ -1936,17 +1959,20 @@ export default function WalletPage() {
                                                 }}
                                               />
                                             </div>
-                                          </div>
+                                          </>
                                         ) : (
-                                          <span className="text-[11px] font-medium text-slate-400 whitespace-nowrap min-w-[34px] sm:min-w-[38px] text-right">
-                                            <span>—</span>
-                                          </span>
+                                          <>
+                                            <span className="text-xs font-medium text-slate-400 tabular-nums min-w-[34px] sm:min-w-[38px] text-right shrink-0 leading-none">
+                                              —
+                                            </span>
+                                            <div className="hidden xs:block flex-1 bg-slate-200/40 h-1.5 rounded-full" />
+                                          </>
                                         )}
                                       </div>
 
                                       {/* ÍCONES DE GESTÃO INLINE NA SUBCATEGORIA */}
                                       <div
-                                        className="flex items-center gap-0.5"
+                                        className="flex items-center gap-0.5 shrink-0"
                                         onClick={(e) => e.stopPropagation()}
                                       >
                                         {/* Lápis: Renomear subcategoria E definir/editar teto orçamentário */}
@@ -1961,7 +1987,7 @@ export default function WalletPage() {
                                           trigger={
                                             <button
                                               type="button"
-                                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-all"
+                                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-200/70 transition-all"
                                               title="Editar subcategoria e teto"
                                               aria-label={`Editar subcategoria ${subItem.subcategory.name} e teto`}
                                             >
@@ -2037,7 +2063,7 @@ export default function WalletPage() {
                                               e,
                                             )
                                           }
-                                          className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-slate-100 transition-all"
+                                          className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-slate-200/70 transition-all"
                                           title="Excluir subcategoria"
                                           aria-label={`Excluir subcategoria ${subItem.subcategory.name}`}
                                         >
@@ -2045,7 +2071,7 @@ export default function WalletPage() {
                                         </button>
                                       </div>
 
-                                      {/* Espaçador para alinhar perfeitamente com a categoria pai (que tem a setinha w-7 / p-1.5) */}
+                                      {/* Espaçador idêntico ao chevron da categoria pai (w-7 shrink-0) para alinhamento estrito */}
                                       <div
                                         className="w-7 shrink-0 pointer-events-none"
                                         aria-hidden="true"
