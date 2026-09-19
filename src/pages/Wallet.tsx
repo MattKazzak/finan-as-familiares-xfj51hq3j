@@ -1883,49 +1883,149 @@ export default function WalletPage() {
                                         subItem.hasOverride,
                                       )
                                     }
-                                    className={`py-2 px-2 sm:px-2.5 flex items-center justify-between rounded-xl cursor-pointer transition-colors group/sub gap-2 sm:gap-3 touch-manipulation ${
+                                    className={`py-2 px-2 sm:px-2.5 flex flex-col sm:flex-row sm:items-center justify-between rounded-xl cursor-pointer transition-colors group/sub gap-1.5 sm:gap-3 touch-manipulation ${
                                       isSubDragging ? 'bg-white shadow-md' : 'hover:bg-white'
                                     }`}
                                   >
-                                    {/* Identificação da Subcategoria + Alça de arrasto da subcategoria */}
-                                    <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1">
-                                      <button
-                                        type="button"
-                                        {...subDragHandleProps}
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="w-5 h-6 flex items-center justify-center text-slate-300 hover:text-slate-600 cursor-grab active:cursor-grabbing shrink-0 touch-none rounded hover:bg-slate-100 transition-colors"
-                                        title="Arraste para reordenar subcategoria"
-                                        aria-label={`Arrastar subcategoria ${subItem.subcategory.name}`}
-                                      >
-                                        <GripVertical className="w-3.5 h-3.5" />
-                                      </button>
-                                      <span className="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover/sub:bg-emerald-500 transition-colors shrink-0" />
-                                      <div className="min-w-0 flex-1 flex flex-col justify-center">
-                                        <div className="flex items-center gap-1.5 min-w-0">
-                                          <span
-                                            className="text-xs sm:text-sm font-semibold text-slate-700 group-hover/sub:text-emerald-700 transition-colors break-words leading-snug"
-                                            title={subItem.subcategory.name}
-                                          >
-                                            {subItem.subcategory.name}
-                                          </span>
-                                          {subItem.hasOverride ? (
-                                            <span className="text-[9px] font-semibold bg-amber-100/90 text-amber-900 border border-amber-200/80 px-1.5 py-0.2 rounded-md leading-none shrink-0 whitespace-nowrap">
-                                              ajustado
+                                    {/* Linha superior no mobile / lado esquerdo no desktop: Alça de arrasto + Nome + Badges + Ações no mobile */}
+                                    <div className="flex items-center justify-between gap-1.5 sm:gap-2.5 min-w-0 w-full sm:flex-1 sm:w-auto">
+                                      <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1">
+                                        <button
+                                          type="button"
+                                          {...subDragHandleProps}
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="w-5 h-6 flex items-center justify-center text-slate-300 hover:text-slate-600 cursor-grab active:cursor-grabbing shrink-0 touch-none rounded hover:bg-slate-100 transition-colors"
+                                          title="Arraste para reordenar subcategoria"
+                                          aria-label={`Arrastar subcategoria ${subItem.subcategory.name}`}
+                                        >
+                                          <GripVertical className="w-3.5 h-3.5" />
+                                        </button>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover/sub:bg-emerald-500 transition-colors shrink-0" />
+                                        <div className="min-w-0 flex-1 flex flex-col justify-center">
+                                          <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                                            <span
+                                              className="text-xs sm:text-sm font-semibold text-slate-700 group-hover/sub:text-emerald-700 transition-colors break-words leading-snug"
+                                              title={subItem.subcategory.name}
+                                            >
+                                              {subItem.subcategory.name}
                                             </span>
-                                          ) : null}
-                                          {subItem.isOver ? (
-                                            <AlertTriangle className="w-3 h-3 text-red-500 shrink-0" />
-                                          ) : null}
+                                            {subItem.hasOverride ? (
+                                              <span className="text-[9px] font-semibold bg-amber-100/90 text-amber-900 border border-amber-200/80 px-1.5 py-0.5 rounded-md leading-none shrink-0 whitespace-nowrap">
+                                                ajustado
+                                              </span>
+                                            ) : null}
+                                            {subItem.isOver ? (
+                                              <AlertTriangle className="w-3 h-3 text-red-500 shrink-0" />
+                                            ) : null}
+                                          </div>
                                         </div>
+                                      </div>
+
+                                      {/* Ações inline no mobile (ao lado do nome para fácil acesso por toque) */}
+                                      <div
+                                        className="flex sm:hidden items-center gap-0.5 shrink-0"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        {/* Lápis: Renomear subcategoria E definir/editar teto orçamentário */}
+                                        <SubcategoryEditorPopover
+                                          subcategory={subItem.subcategory}
+                                          parentCategoryName={item.category.name}
+                                          showBudgetFields={true}
+                                          initialDefaultLimitCents={subItem.defaultLimitCents}
+                                          initialMonthLimitCents={subItem.limitCents}
+                                          hasMonthOverride={subItem.hasOverride}
+                                          currentMonthLabel={formatMonthYear(currentDate)}
+                                          trigger={
+                                            <button
+                                              type="button"
+                                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-200/70 transition-all"
+                                              title="Editar subcategoria e teto"
+                                              aria-label={`Editar subcategoria ${subItem.subcategory.name} e teto`}
+                                            >
+                                              <Edit3 className="w-3.5 h-3.5" />
+                                            </button>
+                                          }
+                                          onSave={async (data) => {
+                                            try {
+                                              if (
+                                                data.name &&
+                                                data.name !== subItem.subcategory.name
+                                              ) {
+                                                await editSubcategory(subItem.subcategory.id, {
+                                                  name: data.name,
+                                                })
+                                              }
+
+                                              if (family) {
+                                                if (data.isEditingOnlyThisMonth) {
+                                                  const monthCents = data.monthLimitCents || 0
+                                                  await upsertMonthBudgetOverride(
+                                                    family.id,
+                                                    item.category.id,
+                                                    monthKey,
+                                                    monthCents,
+                                                    subItem.subcategory.id,
+                                                  )
+                                                } else {
+                                                  const defCents = data.defaultLimitCents || 0
+                                                  await upsertDefaultBudget(
+                                                    family.id,
+                                                    item.category.id,
+                                                    defCents,
+                                                    subItem.subcategory.id,
+                                                  )
+                                                  if (subItem.hasOverride) {
+                                                    await resetMonthBudgetToDefault(
+                                                      family.id,
+                                                      item.category.id,
+                                                      monthKey,
+                                                      subItem.subcategory.id,
+                                                    )
+                                                  }
+                                                }
+                                              }
+
+                                              triggerRefresh()
+                                              await loadMonthData()
+                                            } catch (err: any) {
+                                              console.error(
+                                                'Erro ao atualizar subcategoria ou teto:',
+                                                err,
+                                              )
+                                              toast({
+                                                title: 'Erro ao salvar',
+                                                description: err?.message || 'Tente novamente.',
+                                                variant: 'destructive',
+                                              })
+                                            }
+                                          }}
+                                        />
+
+                                        {/* Lixeira: Excluir subcategoria com confirmação e contagem */}
+                                        <button
+                                          type="button"
+                                          onClick={(e) =>
+                                            handleInitiateDeleteSubcategory(
+                                              subItem.subcategory,
+                                              item.category.name,
+                                              e,
+                                            )
+                                          }
+                                          className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-slate-200/70 transition-all"
+                                          title="Excluir subcategoria"
+                                          aria-label={`Excluir subcategoria ${subItem.subcategory.name}`}
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
                                       </div>
                                     </div>
 
-                                    {/* Lado Direito da Subcategoria: Gasto vs Teto (SEM barra, SEM percentual) + Ações Inline + Espaçador */}
-                                    <div className="flex items-center gap-2 sm:gap-3 shrink-0 self-center">
-                                      {/* Apenas o valor gasto de teto OU marcador "—" para sem teto */}
-                                      <div className="text-right text-xs tabular-nums text-slate-500 shrink-0">
+                                    {/* Linha de valores: no mobile recuada com a mesma margem do texto (pl-8), no desktop alinhada à direita com ações e espaçador */}
+                                    <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto shrink-0 pl-8 sm:pl-0">
+                                      {/* Gasto vs Teto OU marcador "—" para sem teto */}
+                                      <div className="text-left sm:text-right text-xs tabular-nums text-slate-500 min-w-0">
                                         {subItem.limitCents > 0 ? (
-                                          <div className="flex items-baseline gap-1 justify-end">
+                                          <div className="flex items-baseline gap-1 flex-wrap sm:justify-end">
                                             <span className="font-semibold text-slate-800">
                                               {formatBRL(subItem.spentCents)}
                                             </span>
@@ -1935,7 +2035,7 @@ export default function WalletPage() {
                                             </span>
                                           </div>
                                         ) : (
-                                          <div className="flex items-baseline gap-1 justify-end">
+                                          <div className="flex items-baseline gap-1 sm:justify-end">
                                             {subItem.spentCents > 0 ? (
                                               <span className="font-semibold text-slate-800">
                                                 {formatBRL(subItem.spentCents)}
@@ -1946,9 +2046,9 @@ export default function WalletPage() {
                                         )}
                                       </div>
 
-                                      {/* ÍCONES DE GESTÃO INLINE NA SUBCATEGORIA */}
+                                      {/* ÍCONES DE GESTÃO NO DESKTOP + Espaçador */}
                                       <div
-                                        className="flex items-center gap-0.5 shrink-0"
+                                        className="hidden sm:flex items-center gap-0.5 shrink-0"
                                         onClick={(e) => e.stopPropagation()}
                                       >
                                         {/* Lápis: Renomear subcategoria E definir/editar teto orçamentário */}
@@ -2049,7 +2149,7 @@ export default function WalletPage() {
 
                                       {/* Espaçador idêntico ao chevron da categoria pai (w-7 shrink-0) para alinhamento estrito */}
                                       <div
-                                        className="w-7 shrink-0 pointer-events-none"
+                                        className="hidden sm:block w-7 shrink-0 pointer-events-none"
                                         aria-hidden="true"
                                       />
                                     </div>
