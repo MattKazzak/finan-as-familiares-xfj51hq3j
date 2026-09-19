@@ -116,6 +116,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          monthly_net_income_cents: number | null
           name: string
         }
         Insert: {
@@ -123,6 +124,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          monthly_net_income_cents?: number | null
           name: string
         }
         Update: {
@@ -130,6 +132,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          monthly_net_income_cents?: number | null
           name?: string
         }
         Relationships: []
@@ -367,32 +370,41 @@ export type Database = {
       }
       transaction_categories: {
         Row: {
+          budget_bucket: string | null
           color: string | null
           created_at: string
           family_id: string | null
           icon: string | null
           id: string
           name: string
+          percent_alert: number | null
+          percent_default: number | null
           sort_order: number | null
           type: Database['public']['Enums']['transaction_type']
         }
         Insert: {
+          budget_bucket?: string | null
           color?: string | null
           created_at?: string
           family_id?: string | null
           icon?: string | null
           id?: string
           name: string
+          percent_alert?: number | null
+          percent_default?: number | null
           sort_order?: number | null
           type?: Database['public']['Enums']['transaction_type']
         }
         Update: {
+          budget_bucket?: string | null
           color?: string | null
           created_at?: string
           family_id?: string | null
           icon?: string | null
           id?: string
           name?: string
+          percent_alert?: number | null
+          percent_default?: number | null
           sort_order?: number | null
           type?: Database['public']['Enums']['transaction_type']
         }

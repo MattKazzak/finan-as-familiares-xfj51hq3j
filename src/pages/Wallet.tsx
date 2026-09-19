@@ -70,6 +70,7 @@ import {
 } from 'lucide-react'
 import { SortableList } from '@/components/common/SortableList'
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
+import { BudgetOverviewCard } from '@/components/wallet/BudgetOverviewCard'
 import { BUCKET_METADATA } from '@/types/budget-presets'
 import { updateCategoryBudgetPercent, updateCategoryBudgetAmount } from '@/services/budget-model'
 import {
@@ -1186,121 +1187,19 @@ export default function WalletPage() {
               </div>
             )}
 
-            {/* CARD DE RESUMO DOS 3 BALDES (ESSENCIAIS / ESTILO DE VIDA / FUTURO) */}
+            {/* PAINEL FLUÍDO E ORGÂNICO DOS 3 BALDES, RENDA LÍQUIDA E FAROL PREVENTIVO */}
             {family?.monthly_net_income_cents && family.monthly_net_income_cents > 0 ? (
-              <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-sm space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs uppercase font-bold tracking-wider text-slate-500">
-                        Matriz de Orçamento Familiar · Baldes Financeiros
-                      </span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                        Renda Líquida: {formatBRL(family.monthly_net_income_cents)}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Distribuição do orçamento planejado em relação à renda líquida da família.
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2 self-start sm:self-auto">
-                    <button
-                      type="button"
-                      onClick={() => setIsApplyModelOpen(true)}
-                      className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 underline flex items-center gap-1 transition-colors"
-                    >
-                      <Sparkles className="w-3 h-3" />
-                      <span>Trocar perfil / Ajustar renda</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Grid dos 3 Baldes Macro */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {/* Balde 1: Gastos Essenciais */}
-                  <div className="rounded-2xl p-3.5 border border-sky-200/80 bg-sky-50/40">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800">
-                        Essenciais
-                      </span>
-                      <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 tabular-nums">
-                        {categoryBudgetData.bucketsSummary.essentials.percentIncome}% da renda
-                      </span>
-                    </div>
-                    <div className="mt-2">
-                      <span className="text-base sm:text-lg font-black text-slate-900 tabular-nums block">
-                        {formatBRL(categoryBudgetData.bucketsSummary.essentials.spentCents)}{' '}
-                        <span className="text-xs font-medium text-slate-400">
-                          / {formatBRL(categoryBudgetData.bucketsSummary.essentials.budgetCents)}
-                        </span>
-                      </span>
-                      <span className="text-[10px] text-slate-500 block mt-0.5">
-                        Moradia, Alimentação, Transporte, Saúde, Educação
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Balde 2: Estilo de Vida */}
-                  <div className="rounded-2xl p-3.5 border border-amber-200/80 bg-amber-50/40">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
-                        Estilo de Vida
-                      </span>
-                      <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 tabular-nums">
-                        {categoryBudgetData.bucketsSummary.lifestyle.percentIncome}% da renda
-                      </span>
-                    </div>
-                    <div className="mt-2">
-                      <span className="text-base sm:text-lg font-black text-slate-900 tabular-nums block">
-                        {formatBRL(categoryBudgetData.bucketsSummary.lifestyle.spentCents)}{' '}
-                        <span className="text-xs font-medium text-slate-400">
-                          / {formatBRL(categoryBudgetData.bucketsSummary.lifestyle.budgetCents)}
-                        </span>
-                      </span>
-                      <span className="text-[10px] text-slate-500 block mt-0.5">
-                        Lazer, Compras, Assinaturas e Cuidados
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Balde 3: Futuro e Metas */}
-                  <div className="rounded-2xl p-3.5 border border-emerald-200/80 bg-emerald-50/40">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
-                        Futuro & Metas
-                      </span>
-                      <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 tabular-nums">
-                        {categoryBudgetData.bucketsSummary.future.percentIncome}% da renda
-                      </span>
-                    </div>
-                    <div className="mt-2">
-                      <span className="text-base sm:text-lg font-black text-slate-900 tabular-nums block">
-                        {formatBRL(categoryBudgetData.bucketsSummary.future.spentCents)}{' '}
-                        <span className="text-xs font-medium text-slate-400">
-                          / {formatBRL(categoryBudgetData.bucketsSummary.future.budgetCents)}
-                        </span>
-                      </span>
-                      <span className="text-[10px] text-slate-500 block mt-0.5">
-                        Reserva, Investimentos de Longo Prazo e Sonhos
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Total Comprometido */}
-                <div className="pt-2 flex items-center justify-between text-xs text-slate-500 border-t border-slate-100">
-                  <span>
-                    Total dos tetos cadastrados:{' '}
-                    <strong className="text-slate-800">
-                      {formatBRL(categoryBudgetData.totalBudget)}
-                    </strong>
-                  </span>
-                  <span className="font-bold text-slate-700">
-                    {categoryBudgetData.totalBudgetPercentOfIncome}% da renda líquida total
-                  </span>
-                </div>
-              </div>
+              <BudgetOverviewCard
+                family={family}
+                bucketsSummary={categoryBudgetData.bucketsSummary}
+                totalBudget={categoryBudgetData.totalBudget}
+                totalBudgetPercentOfIncome={categoryBudgetData.totalBudgetPercentOfIncome}
+                totalSpent={categoryBudgetData.totalSpent}
+                currentDate={currentDate}
+                monthKey={monthKey}
+                categoryList={categoryBudgetData.list}
+                onOpenModelDialog={() => setIsApplyModelOpen(true)}
+              />
             ) : null}
 
             {/* CARD DE PREVISÃO DE CUSTO DE VIDA (RECEITAS FIXAS VS TETOS COMPROMETIDOS) */}
