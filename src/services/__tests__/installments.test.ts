@@ -1,0 +1,94 @@
+import { describe, it, expect } from 'vitest'
+import {
+  parseInstallmentFromDescription,
+  addMonthsToDate,
+  generateInstallmentTransactions,
+} from '../installments'
+
+describe('Installment parser & generator', () => {
+  describe('parseInstallmentFromDescription', () => {
+    it('detects standard Nubank XX/YY pattern: Compra 03/10', () => {
+      const result = parseInstallmentFromDescription('Compra 03/10')
+      expect(result.isInstallment).toBe(true)
+      expect(result.current).toBe(3)
+      expect(result.total).toBe(10)
+      expect(result.cleanDescription).toBe('Compra')
+    })
+
+    it('detects PARC XX/YY format: PARC 3/10 Magazine Luiza', () => {
+      const result = parseInstallmentFromDescription('PARC 3/10 Magazine Luiza')
+      expect(result.isInstallment).toBe(true)
+      expect(result.current).toBe(3)
+      expect(result.total).toBe(10)
+    })
+
+    it('detects PARC XX format without explicit total: UBER TRIP PARC 02', () => {
+      const result = parseInstallmentFromDescription('UBER TRIP PARC 02')
+      expect(result.isInstallment).toBe(true)
+      expect(result.current).toBe(2)
+      expect(result.total).toBeGreaterThanOrEqual(2)
+    })
+
+    it('detects 1/YY: iPhone 1/12 Apple Store', () => {
+      const result = parseInstallmentFromDescription('iPhone 1/12 Apple Store')
+      expect(result.isInstallment).toBe(true)
+      expect(result.current).toBe(1)
+      expect(result.total).toBe(12)
+    })
+
+    it('returns false for regular non-installment descriptions', () => {
+      const result = parseInstallmentFromDescription('Supermercado Pao de Acucar')
+      expect(result.isInstallment).toBe(false)
+      expect(result.current).toBe(1)
+      expect(result.total).toBe(1)
+    })
+  })
+
+  describe('addMonthsToDate', () => {
+    it('adds months cleanly', () => {
+      expect(addMonthsToDate('2026-03-15', 1)).toBe('2026-04-15')
+      expect(addMonthsToDate('2026-03-15', 3)).toBe('2026-06-15')
+      expect(addMonthsToDate('2026-11-15', 2)).toBe('2027-01-15')
+    })
+
+    it('handles end-of-month clamping (e.g. 31st of Jan -> Feb)', () => {
+      // 2026 is not a leap year, Feb has 28 days
+      expect(addMonthsToDate('2026-01-31', 1)).toBe('2026-02-28')
+    })
+  })
+
+  describe('generateInstallmentTransactions', () => {
+    it('generates 1 confirmed and N-1 projected transactions', () => {
+      const gen = generateInstallmentTransactions({
+        familyId: 'fam-1',
+        memberId: 'mem-1',
+        categoryId: 'cat-1',
+        baseDescription: 'Sofá Sala',
+        amountCents: 15000,
+        baseDate: '2026-04-10',
+        startInstallmentNumber: 1,
+        totalInstallments: 4,
+      })
+
+      expect(gen.transactions.length).toBe(4)
+      expect(gen.transactions[0].status).toBe('confirmed')
+      expect(gen.transactions[0].installment_number).toBe(1)
+      expect(gen.transactions[0].transaction_date).toBe('2026-04-10')
+
+      expect(gen.transactions[1].status).toBe('projected')
+      expect(gen.transactions[1].installment_number).toBe(2)
+      expect(gen.transactions[1].transaction_date).toBe('2026-05-10')
+
+      expect(gen.transactions[2].status).toBe('projected')
+      expect(gen.transactions[2].installment_number).toBe(3)
+      expect(gen.transactions[2].transaction_date).toBe('2026-06-10')
+
+      expect(gen.transactions[3].status).toBe('projected')
+      expect(gen.transactions[3].installment_number).toBe(4)
+      expect(gen.transactions[3].transaction_date).toBe('2026-07-10')
+
+      expect(gen.transactions.every((t) => t.installment_group_id === gen.groupId)).toBe(true)
+      expect(gen.transactions.every((t) => t.is_installment === true)).toBe(true)
+    })
+  })
+})

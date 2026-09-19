@@ -86,6 +86,8 @@ export interface EffectiveRecurringIncome {
   scheduledDate: string // YYYY-MM-DD
 }
 
+export type TransactionStatus = 'confirmed' | 'projected'
+
 export interface Transaction {
   id: string
   family_id: string
@@ -100,6 +102,11 @@ export interface Transaction {
   recurring_income_id?: string | null
   is_recurring?: boolean
   recurring_month?: string | null
+  is_installment?: boolean
+  installment_number?: number | null
+  installment_total?: number | null
+  installment_group_id?: string | null
+  status?: TransactionStatus
   // Relações resolvidas
   member?: FamilyMember
   category?: TransactionCategory

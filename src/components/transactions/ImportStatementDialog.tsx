@@ -32,7 +32,11 @@ import {
 } from '@/services/import/statement-parser'
 import { matchCategorization } from '@/services/import/categorization'
 import { fetchCategorizationRules } from '@/services/categorization-rules'
-import { createTransactionsBatch, fetchTransactions } from '@/services/transactions'
+import {
+  createTransactionsBatch,
+  fetchTransactions,
+  updateTransaction,
+} from '@/services/transactions'
 import type {
   Transaction,
   TransactionCategory,
@@ -66,6 +70,12 @@ import {
   Tag,
 } from 'lucide-react'
 
+import {
+  parseInstallmentFromDescription,
+  generateInstallmentTransactions,
+  type ParsedInstallmentInfo,
+} from '@/services/installments'
+
 export interface ReviewItem {
   id: string
   date: string
@@ -78,6 +88,13 @@ export interface ReviewItem {
   isDuplicate: boolean
   duplicateReason?: string
   selected: boolean
+  // Dados de parcelamento
+  isInstallment?: boolean
+  installmentCurrent?: number
+  installmentTotal?: number
+  matchedProjectId?: string | null // Se casou com uma transação 'projected' existente no banco
+  matchedGroupId?: string | null
+  generateFutureInstallments?: boolean // Se é 1/YY e deve gerar as X-1 parcelas futuras
 }
 
 interface ImportStatementDialogProps {
@@ -281,20 +298,80 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
         return false
       }
 
-      // 3. Montar itens para a tela de revisão aplicando categorização automática
+      // 3. Montar itens para a tela de revisão aplicando categorização automática e detecção de parcelas
       const activeMemberId = defaultMemberId || members[0]?.id || ''
       const reviewList: ReviewItem[] = result.transactions.map((tx: ParsedRawTransaction) => {
         // Encontrar categoria e subcategoria usando as regras da tabela categorization_rules
         const matchResult = matchCategorization(tx.description, tx.type, categories, loadedRules)
 
-        // Checar duplicata
-        const dupMatch = existingTxs.find((ex) => {
-          return (
-            ex.transaction_date === tx.date &&
-            ex.amount_cents === tx.amount_cents &&
-            isSimilar(ex.description, tx.description)
-          )
-        })
+        // Detecção de parcelamento na descrição
+        const instInfo = tx.installmentInfo || parseInstallmentFromDescription(tx.description)
+        const isInstallment = instInfo.isInstallment && tx.type === 'expense'
+        const currentInst = isInstallment ? instInfo.current : 1
+        const totalInst = isInstallment ? instInfo.total : 1
+
+        // Checar duplicata e verificar correspondência com projeção futura existente
+        // Caso 1: Se for parcela (ex: 3/10), procurar se já existe uma transação 'projected' com mesmo valor/descrição similar/mês
+        let matchedProjectId: string | null = null
+        let matchedGroupId: string | null = null
+        let dupMatch: Transaction | undefined = undefined
+
+        const txMonth = tx.date.slice(0, 7) // YYYY-MM
+
+        if (isInstallment) {
+          // Procurar se já existe uma 'projected' correspondente
+          const matchingProjection = existingTxs.find((ex) => {
+            const exMonth = ex.transaction_date?.slice(0, 7)
+            const sameMonth = exMonth === txMonth
+            const sameAmount = ex.amount_cents === tx.amount_cents
+            const sameInstNum =
+              ex.installment_number === currentInst ||
+              (ex.description && ex.description.includes(`${currentInst}/${totalInst}`))
+            const descMatch =
+              isSimilar(ex.description || '', instInfo.cleanDescription) ||
+              isSimilar(ex.description || '', tx.description)
+
+            return (
+              ex.status === 'projected' && sameMonth && sameAmount && (sameInstNum || descMatch)
+            )
+          })
+
+          if (matchingProjection) {
+            matchedProjectId = matchingProjection.id
+            matchedGroupId = matchingProjection.installment_group_id || null
+          }
+
+          // Checar se já existe uma 'confirmed' (duplicata de parcela confirmada)
+          dupMatch = existingTxs.find((ex) => {
+            const exMonth = ex.transaction_date?.slice(0, 7)
+            const sameMonth = exMonth === txMonth
+            const sameAmount = ex.amount_cents === tx.amount_cents
+            const sameGroup =
+              matchedGroupId && ex.installment_group_id
+                ? ex.installment_group_id === matchedGroupId
+                : false
+            const descMatch = isSimilar(ex.description || '', tx.description)
+
+            return ex.status !== 'projected' && sameMonth && sameAmount && (sameGroup || descMatch)
+          })
+        } else {
+          // Transação comum: verificar duplicata tradicional por data, valor e descrição
+          dupMatch = existingTxs.find((ex) => {
+            return (
+              ex.transaction_date === tx.date &&
+              ex.amount_cents === tx.amount_cents &&
+              isSimilar(ex.description || '', tx.description)
+            )
+          })
+        }
+
+        // Se for parcela 1/YY (ou a primeira parcela importada de uma compra), gerar projeções futuras por padrão
+        const isFirstInstallment = isInstallment && currentInst === 1 && totalInst > 1
+
+        let duplicateReason: string | undefined = undefined
+        if (dupMatch) {
+          duplicateReason = `Transação idêntica já cadastrada em ${dupMatch.transaction_date}`
+        }
 
         return {
           id: tx.id,
@@ -306,9 +383,13 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           category_id: matchResult ? matchResult.category.id : null,
           subcategory_id: matchResult?.subcategory ? matchResult.subcategory.id : null,
           isDuplicate: !!dupMatch,
-          duplicateReason: dupMatch
-            ? `Transação idêntica já cadastrada em ${dupMatch.transaction_date}`
-            : undefined,
+          duplicateReason,
+          isInstallment,
+          installmentCurrent: currentInst,
+          installmentTotal: totalInst,
+          matchedProjectId,
+          matchedGroupId,
+          generateFutureInstallments: isFirstInstallment,
           // Se for duplicada, desmarcar por padrão para segurança do usuário
           selected: !dupMatch,
         }
@@ -441,17 +522,97 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 
     try {
       setSaving(true)
-      const payloads = selectedItems.map((item) => ({
-        family_id: family.id,
-        member_id: item.member_id || members[0]?.id,
-        category_id: item.category_id,
-        subcategory_id: item.subcategory_id || null,
-        type: item.type,
-        amount_cents: item.amount_cents,
-        description: item.description.trim() || 'Transação importada',
-        transaction_date: item.date,
-      }))
-      await createTransactionsBatch(payloads)
+
+      // Separar itens que atualizam projeção existente vs novos a criar
+      const toUpdateProjections: Array<{
+        id: string
+        payload: any
+      }> = []
+
+      const toCreatePayloads: Array<any> = []
+
+      for (const item of selectedItems) {
+        // Se este item casa com uma projeção futura existente no banco, converte para 'confirmed'
+        if (item.matchedProjectId) {
+          toUpdateProjections.push({
+            id: item.matchedProjectId,
+            payload: {
+              status: 'confirmed',
+              amount_cents: item.amount_cents,
+              description: item.description.trim(),
+              transaction_date: item.date,
+              category_id: item.category_id || undefined,
+              subcategory_id: item.subcategory_id || null,
+              member_id: item.member_id || undefined,
+            },
+          })
+          continue
+        }
+
+        // Se for parcela e foi marcado para gerar projeções futuras (ex: 1/YY)
+        if (
+          item.isInstallment &&
+          item.generateFutureInstallments &&
+          (item.installmentTotal || 1) > 1
+        ) {
+          const totalInst = item.installmentTotal || 1
+          const startNum = item.installmentCurrent || 1
+          const instGroup = item.matchedGroupId || crypto.randomUUID()
+
+          // Gera todas as parcelas (a 1ª como confirmed e as próximas como projected)
+          const gen = generateInstallmentTransactions({
+            familyId: family.id,
+            memberId: item.member_id || members[0]?.id,
+            categoryId: item.category_id,
+            subcategoryId: item.subcategory_id || null,
+            baseDescription: item.description.trim() || 'Despesa parcelada',
+            amountCents: item.amount_cents,
+            baseDate: item.date,
+            startInstallmentNumber: startNum,
+            totalInstallments: totalInst,
+            groupId: instGroup,
+          })
+
+          toCreatePayloads.push(...gen.transactions)
+        } else if (item.isInstallment) {
+          // Parcela avulsa ou intermediária sem projeção correspondente
+          toCreatePayloads.push({
+            family_id: family.id,
+            member_id: item.member_id || members[0]?.id,
+            category_id: item.category_id,
+            subcategory_id: item.subcategory_id || null,
+            type: item.type,
+            amount_cents: item.amount_cents,
+            description: item.description.trim() || 'Transação parcelada',
+            transaction_date: item.date,
+            is_installment: true,
+            installment_number: item.installmentCurrent || 1,
+            installment_total: item.installmentTotal || 1,
+            installment_group_id: item.matchedGroupId || crypto.randomUUID(),
+            status: 'confirmed',
+          })
+        } else {
+          // Transação comum
+          toCreatePayloads.push({
+            family_id: family.id,
+            member_id: item.member_id || members[0]?.id,
+            category_id: item.category_id,
+            subcategory_id: item.subcategory_id || null,
+            type: item.type,
+            amount_cents: item.amount_cents,
+            description: item.description.trim() || 'Transação importada',
+            transaction_date: item.date,
+            is_installment: false,
+            status: 'confirmed',
+          })
+        }
+      }
+
+      // Executa updates e creates
+      await Promise.all([
+        ...toUpdateProjections.map((up) => updateTransaction(up.id, up.payload)),
+        createTransactionsBatch(toCreatePayloads),
+      ])
 
       const pendingCount = selectedItems.filter((i) => !i.category_id).length
       const categorizedCount = selectedItems.length - pendingCount
@@ -463,9 +624,14 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
         importedAt: new Date(),
       })
 
+      const convertedMsg =
+        toUpdateProjections.length > 0
+          ? ` (${toUpdateProjections.length} projeção(ões) convertida(s) em confirmada(s))`
+          : ''
+
       toast({
         title: 'Extrato importado com sucesso! 🎉',
-        description: `${selectedItems.length} transações foram adicionadas à carteira da família.`,
+        description: `${selectedItems.length} transações processadas com sucesso${convertedMsg}.`,
       })
 
       triggerRefresh()
@@ -1015,6 +1181,18 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                                 <span className="tabular-nums font-mono text-slate-600 shrink-0">
                                   {item.date}
                                 </span>
+                                {item.isInstallment && (
+                                  <span className="font-bold text-[10px] bg-purple-100 text-purple-900 border border-purple-300/80 px-1.5 py-0.2 rounded shrink-0 flex items-center gap-0.5">
+                                    <span>
+                                      {item.installmentCurrent}/{item.installmentTotal}
+                                    </span>
+                                  </span>
+                                )}
+                                {item.matchedProjectId && (
+                                  <span className="font-semibold text-[10px] bg-blue-100 text-blue-900 border border-blue-300/80 px-1.5 py-0.2 rounded shrink-0 flex items-center gap-0.5">
+                                    <span>Converte projeção</span>
+                                  </span>
+                                )}
                                 {item.isDuplicate && (
                                   <span
                                     title={item.duplicateReason}
@@ -1032,7 +1210,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                                   <span className="truncate text-slate-600 font-medium">
                                     • {currentCategory?.name}
                                   </span>
-                                )}
+                                )}{' '}
                               </div>
                             </div>
                           </div>
@@ -1154,6 +1332,62 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                                 </Select>
                               </div>
                             </div>
+
+                            {/* Detalhes de Parcelamento quando detectado */}
+                            {item.isInstallment && (
+                              <div className="p-3 bg-purple-50/70 border border-purple-200/90 rounded-xl space-y-2 text-xs">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-purple-950 flex items-center gap-1.5">
+                                    <span>📦 Despesa Parcelada Detectada</span>
+                                    <span className="bg-purple-200/80 text-purple-900 px-2 py-0.5 rounded-full font-mono text-[11px]">
+                                      Parcela {item.installmentCurrent} de {item.installmentTotal}
+                                    </span>
+                                  </span>
+                                  {item.matchedProjectId ? (
+                                    <span className="text-[10px] font-semibold text-blue-800 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
+                                      ✓ Projeção existente encontrada no mês
+                                    </span>
+                                  ) : null}
+                                </div>
+
+                                {item.matchedProjectId ? (
+                                  <p className="text-[11px] text-purple-800 leading-relaxed">
+                                    Esta parcela corresponde a uma projeção futura já cadastrada. Ao
+                                    importar, ela será convertida de <em>projetada</em> para{' '}
+                                    <strong>confirmada</strong> sem gerar duplicidade.
+                                  </p>
+                                ) : item.installmentCurrent === 1 &&
+                                  (item.installmentTotal || 1) > 1 ? (
+                                  <label className="flex items-start gap-2 cursor-pointer select-none text-[11px] text-purple-950 font-medium">
+                                    <input
+                                      type="checkbox"
+                                      checked={item.generateFutureInstallments ?? true}
+                                      onChange={(e) =>
+                                        handleUpdateItemField(
+                                          item.id,
+                                          'generateFutureInstallments',
+                                          e.target.checked,
+                                        )
+                                      }
+                                      className="mt-0.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                                    />
+                                    <span>
+                                      <strong>
+                                        Gerar automaticamente as {(item.installmentTotal || 1) - 1}{' '}
+                                        parcelas futuras
+                                      </strong>{' '}
+                                      como despesas projetadas nos próximos meses (mesmo dia,
+                                      categoria e valor).
+                                    </span>
+                                  </label>
+                                ) : (
+                                  <p className="text-[11px] text-purple-800 leading-relaxed">
+                                    Parcela intermediária sem projeção prévia identificada. Será
+                                    criada como despesa confirmada deste mês.
+                                  </p>
+                                )}
+                              </div>
+                            )}
 
                             {/* Linha 2: Categoria e Subcategoria */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">

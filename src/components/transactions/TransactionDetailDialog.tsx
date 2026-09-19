@@ -54,6 +54,19 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
                     <span>Lançamento fixo mensal</span>
                   </span>
                 ) : null}
+                {transaction.is_installment ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-purple-100 text-purple-900 border border-purple-300/70 px-2 py-0.5 rounded-full">
+                    <span>
+                      Parcela {transaction.installment_number || 1}/
+                      {transaction.installment_total || 1}
+                    </span>
+                  </span>
+                ) : null}
+                {transaction.status === 'projected' ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300/70 px-2 py-0.5 rounded-full">
+                    <span>Projetada (Futuro)</span>
+                  </span>
+                ) : null}
               </div>
               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                 <span className="text-xs font-semibold text-slate-600">

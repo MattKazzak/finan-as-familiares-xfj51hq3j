@@ -18,13 +18,26 @@ import {
 } from '@/components/ui/select'
 import { useAuth } from '@/hooks/use-auth'
 import { useFamily } from '@/hooks/use-family'
-import { createTransaction, updateTransaction } from '@/services/transactions'
+import {
+  createTransaction,
+  createTransactionsBatch,
+  updateTransaction,
+} from '@/services/transactions'
+import { generateInstallmentTransactions } from '@/services/installments'
 import { upsertCategorizationRule } from '@/services/categorization-rules'
 import { extractPatternFromDescription } from '@/services/import/categorization'
-import { parseBRLToCents, formatNumberBRL } from '@/lib/formatters'
+import { parseBRLToCents, formatNumberBRL, formatBRL } from '@/lib/formatters'
 import { useToast } from '@/hooks/use-toast'
 import type { Transaction } from '@/types/finance'
-import { ArrowDownRight, ArrowUpRight, Loader2, UploadCloud } from 'lucide-react'
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  Loader2,
+  UploadCloud,
+  Layers,
+  Minus,
+  Plus,
+} from 'lucide-react'
 
 interface NewTransactionDialogProps {
   open: boolean
@@ -60,6 +73,11 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [rememberRule, setRememberRule] = useState<boolean>(true)
+
+  // Estado de parcelamento
+  const [installmentsCount, setInstallmentsCount] = useState<number>(1)
+  const [amountMode, setAmountMode] = useState<'per_installment' | 'total'>('per_installment')
+
   useEffect(() => {
     if (editingTransaction) {
       setType(editingTransaction.type)
@@ -69,6 +87,8 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
       setCategoryId(editingTransaction.category_id || 'none')
       setSubcategoryId(editingTransaction.subcategory_id || 'none')
       setTransactionDate(editingTransaction.transaction_date)
+      setInstallmentsCount(editingTransaction.installment_total || 1)
+      setAmountMode('per_installment')
     } else {
       setType(newTransactionDefaultType)
       setDescription('')
@@ -80,6 +100,8 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
       setCategoryId('none')
       setSubcategoryId('none')
       setTransactionDate(new Date().toISOString().slice(0, 10))
+      setInstallmentsCount(1)
+      setAmountMode('per_installment')
     }
     setRememberRule(true)
     setErrorMsg(null)
@@ -158,6 +180,29 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
         }
 
         toast({ title: 'Sucesso', description: 'Transação atualizada com sucesso.' })
+      } else if (type === 'expense' && installmentsCount > 1) {
+        // Compra parcelada: gera a parcela 1 (status 'confirmed') e as demais (status 'projected')
+        const perInstallmentCents =
+          amountMode === 'total' ? Math.round(cents / installmentsCount) : cents
+
+        const { transactions: installmentPayloads } = generateInstallmentTransactions({
+          familyId: family.id,
+          memberId,
+          categoryId: categoryId === 'none' ? null : categoryId,
+          subcategoryId: subcategoryId === 'none' || categoryId === 'none' ? null : subcategoryId,
+          baseDescription: description.trim(),
+          amountCents: perInstallmentCents,
+          baseDate: transactionDate,
+          startInstallmentNumber: 1,
+          totalInstallments: installmentsCount,
+        })
+
+        await createTransactionsBatch(installmentPayloads)
+
+        toast({
+          title: 'Compra parcelada registrada! 🎉',
+          description: `1ª parcela confirmada neste mês e ${installmentsCount - 1} parcelas projetadas para os próximos meses.`,
+        })
       } else {
         await createTransaction({
           family_id: family.id,
@@ -168,6 +213,8 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           amount_cents: cents,
           description: description.trim(),
           transaction_date: transactionDate,
+          is_installment: false,
+          status: 'confirmed',
         })
         toast({ title: 'Sucesso', description: 'Transação registrada com sucesso!' })
       }
@@ -370,6 +417,100 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
               className="mt-1"
             />
           </div>
+
+          {/* Seção de Parcelamento (disponível para novas despesas) */}
+          {!editingTransaction && type === 'expense' && (
+            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/90 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-purple-600" />
+                  <Label className="text-xs font-bold text-slate-800">Parcelamento</Label>
+                </div>
+                {installmentsCount > 1 && (
+                  <span className="text-[11px] font-bold text-purple-800 bg-purple-100 px-2 py-0.5 rounded-full">
+                    {installmentsCount}x de{' '}
+                    {formatBRL(
+                      amountMode === 'total'
+                        ? Math.round(parseBRLToCents(amountStr) / installmentsCount)
+                        : parseBRLToCents(amountStr),
+                    )}
+                  </span>
+                )}
+              </div>
+
+              {/* Stepper de Parcelas */}
+              <div className="flex items-center justify-between gap-3 bg-white p-2 rounded-xl border border-slate-200">
+                <span className="text-xs text-slate-600 font-medium pl-1">
+                  {installmentsCount === 1 ? 'À vista (1x)' : `Parcelar em ${installmentsCount}x`}
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setInstallmentsCount((prev) => Math.max(1, prev - 1))}
+                    disabled={installmentsCount <= 1}
+                    className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:hover:bg-slate-100 flex items-center justify-center text-slate-700 transition-colors font-bold"
+                    title="Diminuir parcelas"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+
+                  <span className="w-8 text-center font-bold text-sm text-slate-900 tabular-nums">
+                    {installmentsCount}x
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => setInstallmentsCount((prev) => Math.min(48, prev + 1))}
+                    disabled={installmentsCount >= 48}
+                    className="w-8 h-8 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-900 flex items-center justify-center transition-colors font-bold"
+                    title="Aumentar parcelas"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Opção se o valor digitado é por parcela ou total */}
+              {installmentsCount > 1 && (
+                <div className="space-y-2 pt-1 border-t border-slate-200/70">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-600">O valor digitado acima é:</span>
+                    <div className="flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-lg text-[11px] font-semibold">
+                      <button
+                        type="button"
+                        onClick={() => setAmountMode('per_installment')}
+                        className={`px-2 py-1 rounded-md transition-all ${
+                          amountMode === 'per_installment'
+                            ? 'bg-white text-purple-950 shadow-2xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        Por parcela
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAmountMode('total')}
+                        className={`px-2 py-1 rounded-md transition-all ${
+                          amountMode === 'total'
+                            ? 'bg-white text-purple-950 shadow-2xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        Total da compra
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    💡 A 1ª parcela será confirmada no mês da transação. As outras{' '}
+                    <strong>{installmentsCount - 1} parcelas</strong> serão criadas automaticamente
+                    como <em>projetadas</em> nos próximos meses, já abatendo do orçamento futuro.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Opção de Aprendizado Contínuo para transação pendente ou edição com categoria definida */}
           {categoryId !== 'none' && (

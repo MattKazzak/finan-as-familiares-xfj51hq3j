@@ -2,6 +2,11 @@
 // Suporta bancos e fintechs como Nubank, Rico, Inter, Itaú, Bradesco, Santander, BTG, XP, C6, Caixa, etc.
 import type { TransactionType } from '@/types/finance'
 
+import {
+  parseInstallmentFromDescription,
+  type ParsedInstallmentInfo,
+} from '@/services/installments'
+
 export interface ParsedRawTransaction {
   id: string // temporário único no preview
   date: string // YYYY-MM-DD
@@ -9,6 +14,7 @@ export interface ParsedRawTransaction {
   amount_cents: number // positivo, centavos
   type: TransactionType
   rawLine?: string
+  installmentInfo?: ParsedInstallmentInfo
 }
 
 export interface IgnoredLineInfo {
@@ -712,6 +718,8 @@ export function parseCSV(content: string): ParseResult {
       continue
     }
 
+    const installmentInfo = parseInstallmentFromDescription(description)
+
     rawTransactions.push({
       id: `csv-${i}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       date: parsedDate,
@@ -719,6 +727,7 @@ export function parseCSV(content: string): ParseResult {
       amount_cents: amountCents,
       type,
       rawLine: line,
+      installmentInfo: installmentInfo.isInstallment ? installmentInfo : undefined,
     })
   }
 
@@ -985,12 +994,15 @@ export function parseOFX(content: string): ParseResult {
       }
     }
 
+    const installmentInfo = parseInstallmentFromDescription(description)
+
     transactions.push({
       id: `ofx-${count}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       date,
       description,
       amount_cents: parsedAmt.amountCents,
       type: finalType,
+      installmentInfo: installmentInfo.isInstallment ? installmentInfo : undefined,
     })
   }
 
@@ -1337,6 +1349,8 @@ export function parsePDFText(text: string): ParseResult {
       }
     }
 
+    const installmentInfo = parseInstallmentFromDescription(desc)
+
     rawTransactions.push({
       id: `pdf-${lineCount}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       date: parsedDate,
@@ -1344,6 +1358,7 @@ export function parsePDFText(text: string): ParseResult {
       amount_cents: parsedAmt.amountCents,
       type: finalType,
       rawLine: line,
+      installmentInfo: installmentInfo.isInstallment ? installmentInfo : undefined,
     })
   }
 

@@ -309,10 +309,20 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
                 {transaction.description || 'Transação sem descrição'}
               </p>
             </div>
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5 min-w-0">
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5 min-w-0 flex-wrap">
               <span className="font-semibold text-[10px] bg-amber-100 text-amber-900 border border-amber-300/80 px-1.5 py-0.2 rounded font-mono shrink-0">
                 Pendente
               </span>
+              {transaction.is_installment && (
+                <span className="font-bold text-[10px] bg-purple-100 text-purple-900 border border-purple-300/80 px-1.5 py-0.2 rounded shrink-0">
+                  {transaction.installment_number || 1}/{transaction.installment_total || 1}
+                </span>
+              )}
+              {transaction.status === 'projected' && (
+                <span className="font-semibold text-[10px] bg-blue-100 text-blue-900 border border-blue-300/80 px-1.5 py-0.2 rounded shrink-0">
+                  Previsto
+                </span>
+              )}
               {transaction.member?.name && (
                 <span className="truncate text-slate-500 text-[10px]">
                   • {transaction.member.name}

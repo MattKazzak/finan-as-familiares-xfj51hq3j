@@ -9,6 +9,7 @@ export interface TransactionFilter {
   subcategoryId?: string | null
   type?: 'income' | 'expense' | null
   month?: string // YYYY-MM
+  status?: 'confirmed' | 'projected' | null
   limit?: number
 }
 
@@ -41,6 +42,10 @@ export async function fetchTransactions(filter: TransactionFilter) {
     query = query.eq('type', filter.type)
   }
 
+  if (filter.status) {
+    query = query.eq('status', filter.status)
+  }
+
   if (filter.month) {
     const start = `${filter.month}-01`
     const nextMonthDate = new Date(`${filter.month}-01T12:00:00Z`)
@@ -70,6 +75,11 @@ export async function createTransaction(payload: {
   recurring_income_id?: string | null
   is_recurring?: boolean
   recurring_month?: string | null
+  is_installment?: boolean
+  installment_number?: number | null
+  installment_total?: number | null
+  installment_group_id?: string | null
+  status?: 'confirmed' | 'projected'
 }) {
   const { data, error } = await (supabase as any)
     .from('transactions')
@@ -100,6 +110,11 @@ export async function createTransactionsBatch(
     recurring_income_id?: string | null
     is_recurring?: boolean
     recurring_month?: string | null
+    is_installment?: boolean
+    installment_number?: number | null
+    installment_total?: number | null
+    installment_group_id?: string | null
+    status?: 'confirmed' | 'projected'
   }>,
 ) {
   if (payloads.length === 0) return []
@@ -128,6 +143,11 @@ export async function updateTransaction(
     recurring_income_id: string | null
     is_recurring: boolean
     recurring_month: string | null
+    is_installment: boolean
+    installment_number: number | null
+    installment_total: number | null
+    installment_group_id: string | null
+    status: 'confirmed' | 'projected'
   }>,
 ) {
   const { data, error } = await (supabase as any)

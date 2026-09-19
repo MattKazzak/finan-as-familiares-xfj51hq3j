@@ -401,18 +401,39 @@ export default function WalletPage() {
     filterType,
   ])
 
-  // Resumo do mês (Receitas, Despesas, Saldo)
-  const { monthIncomeCents, monthExpenseCents, monthNetCents } = useMemo(() => {
+  // Resumo do mês (Receitas, Despesas, Saldo) - inclui projeções futuras e detalha confirmados vs projetados
+  const {
+    monthIncomeCents,
+    monthExpenseCents,
+    monthNetCents,
+    monthConfirmedExpenseCents,
+    monthProjectedExpenseCents,
+    hasProjectedExpenses,
+  } = useMemo(() => {
     let income = 0
     let expense = 0
+    let confirmedExp = 0
+    let projectedExp = 0
+
     filteredTransactions.forEach((tx) => {
-      if (tx.type === 'income') income += tx.amount_cents
-      else expense += tx.amount_cents
+      if (tx.type === 'income') {
+        income += tx.amount_cents
+      } else {
+        expense += tx.amount_cents
+        if (tx.status === 'projected') {
+          projectedExp += tx.amount_cents
+        } else {
+          confirmedExp += tx.amount_cents
+        }
+      }
     })
     return {
       monthIncomeCents: income,
       monthExpenseCents: expense,
       monthNetCents: income - expense,
+      monthConfirmedExpenseCents: confirmedExp,
+      monthProjectedExpenseCents: projectedExp,
+      hasProjectedExpenses: projectedExp > 0,
     }
   }, [filteredTransactions])
 
@@ -1291,13 +1312,26 @@ export default function WalletPage() {
               </div>
 
               <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
-                <div className="flex items-center gap-1.5 text-red-600 text-[11px] font-bold uppercase tracking-wider">
-                  <ArrowDownRight className="w-3.5 h-3.5" />
-                  <span>Despesas</span>
+                <div className="flex items-center justify-between gap-1">
+                  <div className="flex items-center gap-1.5 text-red-600 text-[11px] font-bold uppercase tracking-wider">
+                    <ArrowDownRight className="w-3.5 h-3.5" />
+                    <span>Despesas</span>
+                  </div>
+                  {hasProjectedExpenses && (
+                    <span className="text-[10px] font-semibold text-purple-800 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200">
+                      Inclui projeções
+                    </span>
+                  )}
                 </div>
                 <span className="text-sm sm:text-lg font-bold text-slate-900 tabular-nums mt-1 truncate">
                   {formatBRL(monthExpenseCents)}
                 </span>
+                {hasProjectedExpenses && (
+                  <span className="text-[10px] text-slate-500 tabular-nums mt-0.5 truncate">
+                    {formatBRL(monthConfirmedExpenseCents)} conf. +{' '}
+                    {formatBRL(monthProjectedExpenseCents)} prev.
+                  </span>
+                )}
               </div>
 
               <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
@@ -1460,6 +1494,8 @@ export default function WalletPage() {
                         }
 
                         const isIncome = tx.type === 'income'
+                        const isProjected = tx.status === 'projected'
+
                         return (
                           <div
                             key={tx.id}
@@ -1467,24 +1503,45 @@ export default function WalletPage() {
                               setSelectedTx(tx)
                               setIsDetailOpen(true)
                             }}
-                            className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group cursor-pointer"
+                            className={`flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group cursor-pointer ${
+                              isProjected
+                                ? 'bg-slate-50/50 border-l-4 border-l-amber-400 opacity-90'
+                                : ''
+                            }`}
                           >
                             <div className="flex items-center gap-3 flex-1 overflow-hidden">
                               <div
                                 className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-sm shrink-0"
                                 style={{
                                   backgroundColor:
-                                    tx.category?.color || (isIncome ? '#10B981' : '#64748B'),
+                                    tx.category?.color ||
+                                    (isIncome ? '#10B981' : isProjected ? '#F59E0B' : '#64748B'),
                                 }}
                               >
                                 <CategoryIcon name={tx.category?.icon} className="w-5 h-5" />
                               </div>
 
                               <div className="overflow-hidden pr-2">
-                                <div className="flex items-center gap-1.5 overflow-hidden">
-                                  <p className="font-semibold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors truncate">
+                                <div className="flex items-center gap-1.5 overflow-hidden flex-wrap">
+                                  <p
+                                    className={`font-semibold text-sm group-hover:text-emerald-700 transition-colors truncate ${
+                                      isProjected ? 'text-slate-700' : 'text-slate-900'
+                                    }`}
+                                  >
                                     {tx.description || tx.category?.name || 'Sem descrição'}
                                   </p>
+                                  {isProjected && (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-amber-100 text-amber-900 border border-dashed border-amber-400 px-1.5 py-0.2 rounded-md shrink-0">
+                                      <span>Previsto</span>
+                                    </span>
+                                  )}
+                                  {tx.is_installment && (
+                                    <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-purple-100 text-purple-900 border border-purple-300/80 px-1.5 py-0.2 rounded-md shrink-0">
+                                      <span>
+                                        {tx.installment_number || 1}/{tx.installment_total || 1}
+                                      </span>
+                                    </span>
+                                  )}
                                   {tx.is_recurring ? (
                                     <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300/70 px-1.5 py-0.2 rounded-md shrink-0">
                                       <Sparkles className="w-2.5 h-2.5" />
@@ -1517,7 +1574,11 @@ export default function WalletPage() {
                             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                               <span
                                 className={`font-bold text-sm sm:text-base tabular-nums ${
-                                  isIncome ? 'text-emerald-600' : 'text-red-600'
+                                  isIncome
+                                    ? 'text-emerald-600'
+                                    : isProjected
+                                      ? 'text-amber-800 border-b border-dashed border-amber-400'
+                                      : 'text-red-600'
                                 }`}
                               >
                                 <span>
