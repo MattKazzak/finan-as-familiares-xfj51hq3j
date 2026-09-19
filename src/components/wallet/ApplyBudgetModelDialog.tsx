@@ -306,10 +306,12 @@ export function ApplyBudgetModelDialog({
                             </Badge>
                           )}
                         </div>
-                        <p className="text-xs text-slate-600 font-medium mt-0.5">
-                          {preset.subtitle}
-                        </p>
-                        <p className="text-[11px] text-slate-400 mt-1 leading-snug">
+                        {preset.subtitle && (
+                          <p className="text-xs text-slate-600 font-medium mt-0.5">
+                            {preset.subtitle}
+                          </p>
+                        )}
+                        <p className="text-xs text-slate-600 mt-1 leading-relaxed">
                           {preset.description}
                         </p>
                       </div>
@@ -326,22 +328,33 @@ export function ApplyBudgetModelDialog({
                     </div>
 
                     {/* Barra de distribuição dos 3 baldes */}
-                    <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                    <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
                       <div className="flex items-center gap-3 flex-wrap">
-                        <span className="flex items-center gap-1 font-semibold text-sky-700">
+                        <span className="flex items-center gap-1.5 font-semibold text-sky-700">
                           <span className="w-2 h-2 rounded-full bg-sky-500" />
                           Essenciais {preset.bucketDistribution.essentials}%
                         </span>
-                        <span className="flex items-center gap-1 font-semibold text-amber-700">
+                        <span className="text-slate-300">|</span>
+                        <span className="flex items-center gap-1.5 font-semibold text-amber-700">
                           <span className="w-2 h-2 rounded-full bg-amber-500" />
                           Estilo {preset.bucketDistribution.lifestyle}%
                         </span>
-                        <span className="flex items-center gap-1 font-semibold text-emerald-700">
+                        <span className="text-slate-300">|</span>
+                        <span className="flex items-center gap-1.5 font-semibold text-emerald-700">
                           <span className="w-2 h-2 rounded-full bg-emerald-500" />
                           Futuro {preset.bucketDistribution.future}%
                         </span>
                       </div>
                     </div>
+
+                    {/* Rodapé metodológico */}
+                    {preset.methodologyFooter && (
+                      <div className="mt-2 pt-2 border-t border-slate-100/80">
+                        <p className="text-[11px] text-slate-500 font-medium">
+                          {preset.methodologyFooter}
+                        </p>
+                      </div>
+                    )}
                   </button>
                 )
               })}

@@ -14,9 +14,10 @@ export interface CategoryPresetConfig {
 export interface BudgetPreset {
   id: 'equilibrado' | 'enxuto' | 'acelerador'
   title: string
-  subtitle: string
+  subtitle?: string
   description: string
   distributionText: string
+  methodologyFooter?: string
   bucketDistribution: {
     essentials: number
     lifestyle: number
@@ -305,9 +306,9 @@ export const BUDGET_PRESETS: BudgetPreset[] = [
   {
     id: 'equilibrado',
     title: 'Equilibrado Familiar',
-    subtitle: 'Recomendação de consultores e estudos de finanças',
     description:
-      'Ideal para quem busca equilíbrio saudável entre conforto no presente e construção sólida de patrimônio no futuro.',
+      'Ideal para quem busca equilíbrio saudável entre conforto no presente e construção sólida de patrimônio.',
+    methodologyFooter: '📚 Baseado na regra 50-30-20 de Harvard adaptada para famílias.',
     distributionText: '57% Essenciais · 21% Estilo de Vida · 22% Futuro',
     bucketDistribution: {
       essentials: 57,
@@ -319,9 +320,9 @@ export const BUDGET_PRESETS: BudgetPreset[] = [
   {
     id: 'enxuto',
     title: 'Enxuto / Ajuste de Contas',
-    subtitle: 'Para reestruturação ou fases de contas mais apertadas',
     description:
-      'Aumenta o espaço para despesas fixas e de subsistência, mantendo a disciplina de poupança mínima de 15%.',
+      'Para momentos de aperto ou reestruturação. Dá fôlego aos custos fixos, mantendo poupança mínima de 15%.',
+    methodologyFooter: '📚 Baseado em diretrizes de reestruturação e limites da CFP®.',
     distributionText: '65% Essenciais · 20% Estilo de Vida · 15% Futuro',
     bucketDistribution: {
       essentials: 65,
@@ -333,9 +334,10 @@ export const BUDGET_PRESETS: BudgetPreset[] = [
   {
     id: 'acelerador',
     title: 'Acelerador Patrimonial',
-    subtitle: 'Foco total em liberdade financeira e aposentadoria precoce',
     description:
-      'Comprime os custos essenciais para permitir 30% da renda líquida destinados a reservas, investimentos e metas.',
+      'Foco em independência financeira. Comprime despesas para destinar 30% da renda a investimentos e metas.',
+    methodologyFooter:
+      '📚 Fundamentado em taxas de poupança acelerada e estudos do movimento FIRE.',
     distributionText: '45% Essenciais · 25% Estilo de Vida · 30% Futuro',
     bucketDistribution: {
       essentials: 45,
