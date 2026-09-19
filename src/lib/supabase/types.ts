@@ -526,10 +526,15 @@ export type Database = {
           description: string | null
           family_id: string
           id: string
+          installment_group_id: string | null
+          installment_number: number | null
+          installment_total: number | null
+          is_installment: boolean
           is_recurring: boolean
           member_id: string
           recurring_income_id: string | null
           recurring_month: string | null
+          status: string
           subcategory_id: string | null
           transaction_date: string
           type: Database['public']['Enums']['transaction_type']
@@ -541,10 +546,15 @@ export type Database = {
           description?: string | null
           family_id: string
           id?: string
+          installment_group_id?: string | null
+          installment_number?: number | null
+          installment_total?: number | null
+          is_installment?: boolean
           is_recurring?: boolean
           member_id: string
           recurring_income_id?: string | null
           recurring_month?: string | null
+          status?: string
           subcategory_id?: string | null
           transaction_date?: string
           type: Database['public']['Enums']['transaction_type']
@@ -556,10 +566,15 @@ export type Database = {
           description?: string | null
           family_id?: string
           id?: string
+          installment_group_id?: string | null
+          installment_number?: number | null
+          installment_total?: number | null
+          is_installment?: boolean
           is_recurring?: boolean
           member_id?: string
           recurring_income_id?: string | null
           recurring_month?: string | null
+          status?: string
           subcategory_id?: string | null
           transaction_date?: string
           type?: Database['public']['Enums']['transaction_type']

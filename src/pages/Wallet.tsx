@@ -1772,64 +1772,93 @@ export default function WalletPage() {
               </div>
             ) : null}
 
-            {/* Card Geral de Orçamento Recorrente */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs uppercase font-bold tracking-wider text-slate-500">
-                    <span>Teto Orçamentário de</span> <span>{formatMonthYear(currentDate)}</span>
-                  </span>
-                  <span className="text-[11px] text-slate-400 font-medium">· Padrão mensal</span>
-                </div>
-                <span
-                  className={`text-xs font-bold px-2.5 py-1 rounded-full self-start sm:self-auto ${
-                    categoryBudgetData.isTotalOver
-                      ? 'bg-red-100 text-red-700'
-                      : categoryBudgetData.totalPercent >= 75
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-emerald-100 text-emerald-800'
-                  }`}
-                >
-                  <span>
-                    {categoryBudgetData.isTotalOver
-                      ? `Excedeu ${formatBRL(Math.abs(categoryBudgetData.totalRemaining))}`
-                      : `Disponível ${formatBRL(categoryBudgetData.totalRemaining)}`}
-                  </span>
-                </span>
-              </div>
+            {/* Card Geral de Orçamento Recorrente / Projeção */}
+            {(() => {
+              const now = new Date()
+              const isFutureMonth =
+                currentDate.getFullYear() > now.getFullYear() ||
+                (currentDate.getFullYear() === now.getFullYear() &&
+                  currentDate.getMonth() > now.getMonth())
 
-              <div className="flex items-baseline justify-between mb-3">
-                <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 tabular-nums">
-                  <span>
-                    {formatBRL(categoryBudgetData.totalSpent)}{' '}
-                    <span className="text-sm font-medium text-slate-400">
-                      / {formatBRL(categoryBudgetData.totalBudget)}
+              const cardTitle = isFutureMonth
+                ? `Projeção de ${formatMonthYear(currentDate)}`
+                : `Orçamento de ${formatMonthYear(currentDate)}`
+
+              const badgeText = categoryBudgetData.isTotalOver
+                ? `Excedeu ${formatBRL(Math.abs(categoryBudgetData.totalRemaining))}`
+                : isFutureMonth
+                  ? `Livre ${formatBRL(categoryBudgetData.totalRemaining)}`
+                  : `Restam ${formatBRL(categoryBudgetData.totalRemaining)}`
+
+              const consumedPrefix = isFutureMonth ? 'Comprometido ' : 'Gasto '
+
+              return (
+                <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs uppercase font-bold tracking-wider text-slate-500">
+                        {cardTitle}
+                      </span>
+                      {isFutureMonth ? (
+                        <span className="text-[11px] text-slate-400 font-medium">
+                          · Teto mensal: {formatBRL(categoryBudgetData.totalBudget)}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 font-medium">
+                          · Padrão mensal
+                        </span>
+                      )}
+                    </div>
+                    <span
+                      className={`text-xs font-bold px-2.5 py-1 rounded-full self-start sm:self-auto ${
+                        categoryBudgetData.isTotalOver
+                          ? 'bg-red-100 text-red-700'
+                          : categoryBudgetData.totalPercent >= 75
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-emerald-100 text-emerald-800'
+                      }`}
+                    >
+                      <span>{badgeText}</span>
                     </span>
-                  </span>
-                </span>
-                <span className="text-sm font-bold text-slate-600 tabular-nums">
-                  <span>{categoryBudgetData.totalPercent}%</span>
-                </span>
-              </div>
+                  </div>
 
-              {/* Barra de Progresso com Limites: <75% Verde, 75-100% Âmbar, >100% Vermelho */}
-              <div className="w-full bg-slate-100 h-3.5 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-700 ${
-                    categoryBudgetData.isTotalOver
-                      ? 'bg-red-500'
-                      : categoryBudgetData.totalPercent >= 75
-                        ? 'bg-amber-500'
-                        : 'bg-emerald-600'
-                  }`}
-                  style={{ width: `${Math.min(categoryBudgetData.totalPercent, 100)}%` }}
-                />
-              </div>
+                  <div className="flex items-baseline justify-between mb-3">
+                    <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 tabular-nums">
+                      <span className="text-base sm:text-lg font-semibold text-slate-500 mr-1.5">
+                        {consumedPrefix}
+                      </span>
+                      <span>
+                        {formatBRL(categoryBudgetData.totalSpent)}{' '}
+                        <span className="text-sm font-medium text-slate-400">
+                          de {formatBRL(categoryBudgetData.totalBudget)}
+                        </span>
+                      </span>
+                    </span>
+                    <span className="text-sm font-bold text-slate-600 tabular-nums">
+                      <span>{categoryBudgetData.totalPercent}%</span>
+                    </span>
+                  </div>
 
-              <div className="text-[11px] text-slate-400 mt-2 text-right">
-                <span>Tetos recorrentes mensais</span>
-              </div>
-            </div>
+                  {/* Barra de Progresso com Limites: <75% Verde, 75-100% Âmbar, >100% Vermelho */}
+                  <div className="w-full bg-slate-100 h-3.5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${
+                        categoryBudgetData.isTotalOver
+                          ? 'bg-red-500'
+                          : categoryBudgetData.totalPercent >= 75
+                            ? 'bg-amber-500'
+                            : 'bg-emerald-600'
+                      }`}
+                      style={{ width: `${Math.min(categoryBudgetData.totalPercent, 100)}%` }}
+                    />
+                  </div>
+
+                  <div className="text-[11px] text-slate-400 mt-2 text-right">
+                    <span>Tetos recorrentes mensais</span>
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Lista de Orçamentos com Hierarquia Categoria Pai -> Subcategorias e Gestão Inline com Ícones */}
             <div className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm space-y-4">
