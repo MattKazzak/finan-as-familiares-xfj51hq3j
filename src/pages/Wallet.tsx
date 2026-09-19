@@ -748,18 +748,8 @@ export default function WalletPage() {
             </button>
           </div>
 
-          {/* Seletor de Mês Compartilhado & Botão de Importação Proeminente */}
+          {/* Seletor de Mês Compartilhado */}
           <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-            <Button
-              onClick={openImportStatement}
-              variant="outline"
-              size="sm"
-              className="rounded-2xl border-emerald-600/30 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 hover:border-emerald-600 font-bold text-xs gap-1.5 shadow-sm transition-all"
-            >
-              <UploadCloud className="w-4 h-4 text-emerald-700" />
-              <span>Importar extrato</span>
-            </Button>
-
             <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-2xl border border-slate-200/80 shadow-sm">
               <button
                 onClick={handlePrevMonth}
@@ -822,9 +812,19 @@ export default function WalletPage() {
               </div>
             </div>
 
-            {/* Barra de Filtro, Atalho de Receitas Fixas e Contagem */}
+            {/* Barra de Filtro, Atalho de Receitas Fixas, Importar Extrato e Contagem */}
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  onClick={openImportStatement}
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl border-emerald-600/30 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 hover:border-emerald-600 font-bold text-xs gap-1.5 shadow-sm transition-all"
+                >
+                  <UploadCloud className="w-4 h-4 text-emerald-700" />
+                  <span>Importar extrato</span>
+                </Button>
+
                 <Button
                   variant="outline"
                   size="sm"
