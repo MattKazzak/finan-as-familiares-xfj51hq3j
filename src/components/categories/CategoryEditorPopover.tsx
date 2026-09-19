@@ -22,7 +22,9 @@ export const CATEGORY_COLORS = [
 
 interface CategoryEditorPopoverProps {
   category?: TransactionCategory | null
-  trigger: React.ReactNode
+  trigger?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
   onSave: (data: {
     name: string
     type: 'income' | 'expense'
@@ -36,11 +38,22 @@ interface CategoryEditorPopoverProps {
 export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
   category,
   trigger,
+  open: controlledOpen,
+  onOpenChange: setControlledOpen,
   onSave,
   title,
   defaultType = 'expense',
 }) => {
-  const [open, setOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : uncontrolledOpen
+  const setOpen = (next: boolean) => {
+    if (isControlled) {
+      setControlledOpen?.(next)
+    } else {
+      setUncontrolledOpen(next)
+    }
+  }
   const isEditing = Boolean(category)
 
   const [name, setName] = useState('')
@@ -88,9 +101,11 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
-        {trigger}
-      </PopoverTrigger>
+      {trigger ? (
+        <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+          {trigger}
+        </PopoverTrigger>
+      ) : null}
       <PopoverContent
         align="end"
         side="bottom"

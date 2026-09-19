@@ -17,7 +17,9 @@ export interface SubcategorySaveData {
 interface SubcategoryEditorPopoverProps {
   subcategory?: TransactionSubcategory | null
   parentCategoryName?: string
-  trigger: React.ReactNode
+  trigger?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
   onSave: (data: SubcategorySaveData) => Promise<void>
   title?: string
   // Valores atuais de orçamento (quando disponíveis na visualização da carteira)
@@ -32,6 +34,8 @@ export const SubcategoryEditorPopover: React.FC<SubcategoryEditorPopoverProps> =
   subcategory,
   parentCategoryName,
   trigger,
+  open: controlledOpen,
+  onOpenChange: setControlledOpen,
   onSave,
   title,
   initialDefaultLimitCents = 0,
@@ -40,7 +44,16 @@ export const SubcategoryEditorPopover: React.FC<SubcategoryEditorPopoverProps> =
   currentMonthLabel,
   showBudgetFields = false,
 }) => {
-  const [open, setOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : uncontrolledOpen
+  const setOpen = (next: boolean) => {
+    if (isControlled) {
+      setControlledOpen?.(next)
+    } else {
+      setUncontrolledOpen(next)
+    }
+  }
   const isEditing = Boolean(subcategory)
   const [name, setName] = useState('')
   const [defaultAmountStr, setDefaultAmountStr] = useState('')
@@ -85,9 +98,11 @@ export const SubcategoryEditorPopover: React.FC<SubcategoryEditorPopoverProps> =
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
-        {trigger}
-      </PopoverTrigger>
+      {trigger ? (
+        <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+          {trigger}
+        </PopoverTrigger>
+      ) : null}
       <PopoverContent
         align="end"
         side="bottom"
