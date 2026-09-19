@@ -1503,38 +1503,12 @@ export default function WalletPage() {
                                   </button>
                                 </div>
 
-                                {/* Progresso Subcategoria */}
-                                {subItem.limitCents > 0 ? (
-                                  <div className="flex items-center gap-2">
-                                    <span
-                                      className={`text-[11px] font-bold tabular-nums min-w-[38px] text-right ${
-                                        subItem.isOver
-                                          ? 'text-red-600'
-                                          : subItem.percent >= 75
-                                            ? 'text-amber-600'
-                                            : 'text-emerald-600'
-                                      }`}
-                                    >
-                                      <span>{subItem.percent}%</span>
-                                    </span>
-                                    <div className="w-14 sm:w-16 bg-slate-200/80 h-1.5 rounded-full overflow-hidden">
-                                      <div
-                                        className={`h-full rounded-full ${
-                                          subItem.isOver
-                                            ? 'bg-red-500'
-                                            : subItem.percent >= 75
-                                              ? 'bg-amber-500'
-                                              : 'bg-emerald-600'
-                                        }`}
-                                        style={{ width: `${Math.min(subItem.percent, 100)}%` }}
-                                      />
-                                    </div>
-                                  </div>
-                                ) : (
+                                {/* Se não tem teto definido na subcategoria, exibir atalho discreto */}
+                                {subItem.limitCents <= 0 ? (
                                   <span className="text-[11px] font-medium text-emerald-700 opacity-80 group-hover/sub:opacity-100 group-hover/sub:underline">
                                     <span>+ Definir</span>
                                   </span>
-                                )}
+                                ) : null}
                               </div>
                             </div>
                           ))}
