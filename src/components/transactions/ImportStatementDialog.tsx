@@ -63,6 +63,7 @@ import {
   ExternalLink,
   Maximize2,
   Minimize2,
+  Tag,
 } from 'lucide-react'
 
 export interface ReviewItem {
@@ -128,6 +129,8 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
   const [items, setItems] = useState<ReviewItem[]>([])
   const [defaultMemberId, setDefaultMemberId] = useState<string>('')
   const [categorizationRules, setCategorizationRules] = useState<CategorizationRule[]>([])
+  // Accordion na revisão do extrato: ID do item atualmente expandido (null = todos recolhidos)
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
 
   // Estado para criar categoria rápida inline
   const [isQuickCatOpen, setIsQuickCatOpen] = useState(false)
@@ -202,6 +205,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
     if (!isOpen) {
       setStep('upload')
       setItems([])
+      setExpandedItemId(null)
       setErrorMessage(null)
       setDiagnostics(null)
       setFileInfo(null)
@@ -934,421 +938,354 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 </div>
               )}
 
-              {/* Lista Scrollável de Transações */}
-              <div className="flex-1 overflow-y-auto space-y-2 pr-1 divide-y divide-slate-100 border border-slate-200/80 rounded-2xl bg-white p-2">
+              {/* Lista Scrollável de Transações com padrão Accordion Tap-to-Expand */}
+              <div className="flex-1 overflow-y-auto space-y-2 pr-1 border border-slate-200/80 rounded-2xl bg-slate-50/40 p-2">
                 {items.map((item) => {
                   const isIncome = item.type === 'income'
                   const currentCategory = categories.find((c) => c.id === item.category_id)
                   const filteredCategories = categories.filter((c) => c.type === item.type)
                   const availableSubcategories = currentCategory?.subcategories || []
+                  const isOpen = expandedItemId === item.id
 
                   return (
                     <div
                       key={item.id}
-                      className={`pt-2.5 pb-2.5 px-2.5 rounded-xl transition-colors ${
-                        item.isDuplicate
-                          ? 'bg-amber-50/50 border border-amber-200/60'
-                          : item.selected
-                            ? 'hover:bg-slate-50/80'
-                            : 'opacity-60 bg-slate-50/50'
+                      className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+                        isOpen
+                          ? 'bg-amber-50/40 border-amber-300 shadow-md ring-2 ring-amber-400/40'
+                          : item.isDuplicate
+                            ? 'bg-amber-50/60 border-amber-200 shadow-2xs hover:bg-amber-50'
+                            : item.selected
+                              ? 'bg-white border-slate-200/90 shadow-2xs hover:bg-slate-50/80'
+                              : 'opacity-60 bg-slate-100/70 border-slate-200/60 shadow-2xs'
                       }`}
                     >
-                      {/* ================= DESKTOP LAYOUT (md+): Linha Horizontal Completa e Espaçosa ================= */}
-                      <div className="hidden md:flex items-center gap-3 w-full">
-                        {/* Checkbox */}
-                        <input
-                          type="checkbox"
-                          checked={item.selected}
-                          onChange={() => handleToggleItem(item.id)}
-                          className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 shrink-0 cursor-pointer"
-                        />
-
-                        {/* Data */}
-                        <input
-                          type="date"
-                          value={item.date}
-                          onChange={(e) => handleUpdateItemField(item.id, 'date', e.target.value)}
-                          className="text-xs text-slate-700 bg-white border border-slate-200 rounded-lg px-2 py-1 shrink-0 w-32 focus:border-emerald-500 focus:outline-none"
-                        />
-
-                        {/* Toggle Receita / Despesa */}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleUpdateItemField(item.id, 'type', isIncome ? 'expense' : 'income')
-                          }
-                          className={`text-xs font-semibold px-2 py-1 rounded-lg flex items-center gap-1 shrink-0 transition-colors ${
-                            isIncome
-                              ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
-                              : 'bg-red-100 text-red-700 hover:bg-red-200'
-                          }`}
-                          title="Alternar entre receita e despesa"
+                      {/* ================= 1. LINHA RECOLHIDA (TAP-TO-EXPAND HEADER) ================= */}
+                      <div className="p-2.5 sm:p-3 flex items-center justify-between gap-2 min-h-[44px]">
+                        {/* Checkbox de seleção para importação */}
+                        <div
+                          className="shrink-0 flex items-center pr-1"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          {isIncome ? (
-                            <>
-                              <ArrowUpRight className="w-3.5 h-3.5" /> Receita
-                            </>
-                          ) : (
-                            <>
-                              <ArrowDownRight className="w-3.5 h-3.5" /> Despesa
-                            </>
-                          )}
-                        </button>
-
-                        {/* Descrição editável (ocupa o espaço flexível) */}
-                        <div className="flex-1 min-w-[180px] flex items-center gap-1.5">
-                          <Input
-                            value={item.description}
-                            onChange={(e) =>
-                              handleUpdateItemField(item.id, 'description', e.target.value)
-                            }
-                            className="h-8 text-xs font-semibold text-slate-800 bg-transparent border-slate-200 hover:border-slate-300 focus:border-emerald-500 focus:bg-white px-2 py-1 rounded-lg w-full"
-                          />
-                          {item.isDuplicate ? (
-                            <span
-                              title={item.duplicateReason}
-                              className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100/90 px-2 py-0.5 rounded-full border border-amber-200 shrink-0"
-                            >
-                              <AlertTriangle className="w-3 h-3 text-amber-600" />
-                              <span className="hidden lg:inline">Possível Duplicada</span>
-                            </span>
-                          ) : null}
-                          {!item.category_id ? (
-                            <span
-                              title="Transação sem match de regra. Você pode definir a categoria agora ou depois na Carteira."
-                              className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80 shrink-0"
-                            >
-                              <span className="hidden lg:inline">Pendente de categoria</span>
-                              <span className="lg:hidden">Pendente</span>
-                            </span>
-                          ) : null}
-                        </div>
-
-                        {/* Membro */}
-                        <div className="shrink-0">
-                          <Select
-                            value={item.member_id}
-                            onValueChange={(val) =>
-                              handleUpdateItemField(item.id, 'member_id', val)
-                            }
-                          >
-                            <SelectTrigger className="h-8 text-xs w-28 lg:w-32 rounded-lg bg-white border-slate-200">
-                              <SelectValue placeholder="Membro" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {members.map((m) => (
-                                <SelectItem key={m.id} value={m.id} className="text-xs">
-                                  {m.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {/* Categoria */}
-                        <div className="shrink-0">
-                          <Select
-                            value={item.category_id || 'none'}
-                            onValueChange={(val) => {
-                              if (val === 'CREATE_NEW') {
-                                openQuickCategoryModal(item.id)
-                              } else {
-                                handleUpdateItemField(
-                                  item.id,
-                                  'category_id',
-                                  val === 'none' ? null : val,
-                                )
-                              }
-                            }}
-                          >
-                            <SelectTrigger className="h-8 text-xs w-36 lg:w-44 rounded-lg bg-white border-slate-200">
-                              <SelectValue placeholder="Sem categoria">
-                                {currentCategory ? (
-                                  <span className="flex items-center gap-1.5 truncate">
-                                    <CategoryIcon
-                                      name={currentCategory.icon}
-                                      className="w-3.5 h-3.5 shrink-0"
-                                    />
-                                    <span className="truncate">{currentCategory.name}</span>
-                                  </span>
-                                ) : (
-                                  <span className="text-slate-400">Sem categoria</span>
-                                )}
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none" className="text-xs text-slate-500">
-                                Sem categoria
-                              </SelectItem>
-                              {filteredCategories.map((c) => (
-                                <SelectItem key={c.id} value={c.id} className="text-xs">
-                                  <span className="flex items-center gap-1.5">
-                                    <CategoryIcon name={c.icon} className="w-3.5 h-3.5" />
-                                    {c.name}
-                                  </span>
-                                </SelectItem>
-                              ))}
-                              <SelectItem
-                                value="CREATE_NEW"
-                                className="text-xs font-semibold text-emerald-700 border-t mt-1"
-                              >
-                                + Criar nova categoria
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {/* Subcategoria */}
-                        <div className="shrink-0 w-32 lg:w-36">
-                          {availableSubcategories.length > 0 ? (
-                            <Select
-                              value={item.subcategory_id || 'none'}
-                              onValueChange={(val) =>
-                                handleUpdateItemField(
-                                  item.id,
-                                  'subcategory_id',
-                                  val === 'none' ? null : val,
-                                )
-                              }
-                            >
-                              <SelectTrigger className="h-8 text-xs w-full rounded-lg bg-white border-slate-200">
-                                <SelectValue placeholder="Subcategoria" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none" className="text-xs text-slate-500">
-                                  Sem subcat.
-                                </SelectItem>
-                                {availableSubcategories.map((sub) => (
-                                  <SelectItem key={sub.id} value={sub.id} className="text-xs">
-                                    {sub.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <span className="text-[11px] text-slate-400 block px-2 italic truncate">
-                              Sem subcat.
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Valor */}
-                        <div className="text-right min-w-[100px] shrink-0">
-                          <span
-                            className={`font-bold text-sm tabular-nums ${
-                              isIncome ? 'text-emerald-700' : 'text-red-600'
-                            }`}
-                          >
-                            {isIncome ? '+' : '−'} {formatBRL(item.amount_cents)}
-                          </span>
-                        </div>
-
-                        {/* Remover */}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveItem(item.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
-                          title="Remover linha"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      {/* ================= MOBILE LAYOUT (<md): Bloco empilhado confortável ================= */}
-                      <div className="flex md:hidden flex-col gap-2.5">
-                        {/* Linha 1: Checkbox + Descrição + Valor */}
-                        <div className="flex items-start gap-2">
                           <input
                             type="checkbox"
                             checked={item.selected}
                             onChange={() => handleToggleItem(item.id)}
-                            className="mt-1.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 shrink-0"
+                            className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                            title={
+                              item.selected ? 'Desmarcar da importação' : 'Marcar para importação'
+                            }
                           />
-                          <div className="flex-1 min-w-0">
-                            <Input
-                              value={item.description}
-                              onChange={(e) =>
-                                handleUpdateItemField(item.id, 'description', e.target.value)
-                              }
-                              className="h-8 text-xs font-semibold text-slate-800 bg-white border-slate-200 focus:border-emerald-500 px-2 rounded-lg w-full"
-                            />
+                        </div>
+
+                        {/* Botão de toque em toda a linha para abrir o accordion */}
+                        <button
+                          type="button"
+                          role="button"
+                          aria-expanded={isOpen}
+                          onClick={() =>
+                            setExpandedItemId((prev) => (prev === item.id ? null : item.id))
+                          }
+                          className="flex items-center justify-between gap-2.5 min-w-0 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-xl select-none"
+                        >
+                          {/* Lado esquerdo: Ícone da categoria + Descrição + Badges */}
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <div
+                              className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 shadow-2xs"
+                              style={{
+                                backgroundColor: currentCategory?.color || '#F59E0B',
+                                color: '#FFFFFF',
+                              }}
+                            >
+                              {currentCategory?.icon ? (
+                                <CategoryIcon name={currentCategory.icon} className="w-3.5 h-3.5" />
+                              ) : (
+                                <Tag className="w-3.5 h-3.5" />
+                              )}
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <p
+                                className="font-bold text-xs sm:text-sm text-slate-900 truncate leading-tight"
+                                title={item.description}
+                              >
+                                {item.description || 'Transação sem descrição'}
+                              </p>
+                              <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-slate-500 mt-0.5 min-w-0 flex-wrap">
+                                <span className="tabular-nums font-mono text-slate-600 shrink-0">
+                                  {item.date}
+                                </span>
+                                {item.isDuplicate && (
+                                  <span
+                                    title={item.duplicateReason}
+                                    className="font-semibold text-[10px] bg-amber-100 text-amber-900 border border-amber-300/80 px-1.5 py-0.2 rounded shrink-0 flex items-center gap-0.5"
+                                  >
+                                    <AlertTriangle className="w-2.5 h-2.5 text-amber-700" />
+                                    <span>Duplicada</span>
+                                  </span>
+                                )}
+                                {!item.category_id ? (
+                                  <span className="font-semibold text-[10px] bg-amber-100 text-amber-900 border border-amber-300/80 px-1.5 py-0.2 rounded font-mono shrink-0">
+                                    Pendente
+                                  </span>
+                                ) : (
+                                  <span className="truncate text-slate-600 font-medium">
+                                    • {currentCategory?.name}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-right shrink-0 pt-1">
+
+                          {/* Lado direito: Valor alinhado + Chevron */}
+                          <div className="flex items-center gap-2 shrink-0">
                             <span
-                              className={`font-bold text-xs tabular-nums ${
+                              className={`font-extrabold text-xs sm:text-sm tabular-nums whitespace-nowrap ${
                                 isIncome ? 'text-emerald-700' : 'text-red-600'
                               }`}
                             >
                               {isIncome ? '+' : '−'} {formatBRL(item.amount_cents)}
                             </span>
-                          </div>
-                        </div>
-
-                        {/* Badges de duplicata e categoria pendente se aplicável */}
-                        {(item.isDuplicate || !item.category_id) && (
-                          <div className="flex items-center gap-1.5 flex-wrap pl-6">
-                            {item.isDuplicate ? (
-                              <span
-                                title={item.duplicateReason}
-                                className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100/90 px-2 py-0.5 rounded-full border border-amber-200"
-                              >
-                                <AlertTriangle className="w-3 h-3 text-amber-600" />
-                                <span>Possível Duplicada</span>
-                              </span>
-                            ) : null}
-                            {!item.category_id ? (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80">
-                                <span>Pendente de categoria</span>
-                              </span>
-                            ) : null}
-                          </div>
-                        )}
-
-                        {/* Linha 2: Data + Tipo (Receita/Despesa) + Membro */}
-                        <div className="flex items-center gap-2 pl-6 flex-wrap">
-                          <input
-                            type="date"
-                            value={item.date}
-                            onChange={(e) => handleUpdateItemField(item.id, 'date', e.target.value)}
-                            className="text-[11px] text-slate-700 bg-white border border-slate-200 rounded-lg px-2 py-1 flex-1 min-w-[120px]"
-                          />
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleUpdateItemField(
-                                item.id,
-                                'type',
-                                isIncome ? 'expense' : 'income',
-                              )
-                            }
-                            className={`text-[11px] font-semibold px-2 py-1 rounded-lg flex items-center gap-1 shrink-0 ${
-                              isIncome
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : 'bg-red-100 text-red-700'
-                            }`}
-                          >
-                            {isIncome ? (
-                              <>
-                                <ArrowUpRight className="w-3 h-3" /> Receita
-                              </>
-                            ) : (
-                              <>
-                                <ArrowDownRight className="w-3 h-3" /> Despesa
-                              </>
-                            )}
-                          </button>
-
-                          <Select
-                            value={item.member_id}
-                            onValueChange={(val) =>
-                              handleUpdateItemField(item.id, 'member_id', val)
-                            }
-                          >
-                            <SelectTrigger className="h-7 text-xs w-28 rounded-lg bg-white border-slate-200 shrink-0">
-                              <SelectValue placeholder="Membro" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {members.map((m) => (
-                                <SelectItem key={m.id} value={m.id} className="text-xs">
-                                  {m.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {/* Linha 3: Categoria + Subcategoria + Excluir */}
-                        <div className="flex items-center gap-2 pl-6">
-                          <div className="flex-1 min-w-0">
-                            <Select
-                              value={item.category_id || 'none'}
-                              onValueChange={(val) => {
-                                if (val === 'CREATE_NEW') {
-                                  openQuickCategoryModal(item.id)
-                                } else {
-                                  handleUpdateItemField(
-                                    item.id,
-                                    'category_id',
-                                    val === 'none' ? null : val,
-                                  )
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="h-8 text-xs w-full rounded-lg bg-white border-slate-200">
-                                <SelectValue placeholder="Sem categoria">
-                                  {currentCategory ? (
-                                    <span className="flex items-center gap-1.5 truncate">
-                                      <CategoryIcon
-                                        name={currentCategory.icon}
-                                        className="w-3.5 h-3.5 shrink-0"
-                                      />
-                                      <span className="truncate">{currentCategory.name}</span>
-                                    </span>
-                                  ) : (
-                                    <span className="text-slate-400">Sem categoria</span>
-                                  )}
-                                </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none" className="text-xs text-slate-500">
-                                  Sem categoria
-                                </SelectItem>
-                                {filteredCategories.map((c) => (
-                                  <SelectItem key={c.id} value={c.id} className="text-xs">
-                                    <span className="flex items-center gap-1.5">
-                                      <CategoryIcon name={c.icon} className="w-3.5 h-3.5" />
-                                      {c.name}
-                                    </span>
-                                  </SelectItem>
-                                ))}
-                                <SelectItem
-                                  value="CREATE_NEW"
-                                  className="text-xs font-semibold text-emerald-700 border-t mt-1"
-                                >
-                                  + Criar nova categoria
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          {availableSubcategories.length > 0 ? (
-                            <div className="w-32 shrink-0">
-                              <Select
-                                value={item.subcategory_id || 'none'}
-                                onValueChange={(val) =>
-                                  handleUpdateItemField(
-                                    item.id,
-                                    'subcategory_id',
-                                    val === 'none' ? null : val,
-                                  )
-                                }
-                              >
-                                <SelectTrigger className="h-8 text-xs w-full rounded-lg bg-white border-slate-200">
-                                  <SelectValue placeholder="Subcategoria" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="none" className="text-xs text-slate-500">
-                                    Sem subcat.
-                                  </SelectItem>
-                                  {availableSubcategories.map((sub) => (
-                                    <SelectItem key={sub.id} value={sub.id} className="text-xs">
-                                      {sub.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                            <div className="w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                              {isOpen ? (
+                                <ChevronUp className="w-3.5 h-3.5 transition-transform" />
+                              ) : (
+                                <ChevronDown className="w-3.5 h-3.5 transition-transform" />
+                              )}
                             </div>
-                          ) : null}
+                          </div>
+                        </button>
+                      </div>
 
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveItem(item.id)}
-                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
-                            title="Remover linha"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                      {/* ================= 2. PAINEL EXPANDIDO COM OS CONTROLES COMPLETOS ================= */}
+                      <div
+                        className={`grid transition-all duration-200 ease-out ${
+                          isOpen
+                            ? 'grid-rows-[1fr] opacity-100'
+                            : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+                        }`}
+                      >
+                        <div className="overflow-hidden">
+                          <div className="p-3 sm:p-4 pt-1 sm:pt-1 border-t border-slate-200/80 space-y-3 bg-gradient-to-b from-amber-50/20 to-white/95">
+                            {/* Linha 1: Descrição editável, Data, Toggle Receita/Despesa e Membro */}
+                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 pt-1">
+                              {/* Descrição */}
+                              <div className="sm:col-span-5">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                                  Descrição
+                                </label>
+                                <Input
+                                  value={item.description}
+                                  onChange={(e) =>
+                                    handleUpdateItemField(item.id, 'description', e.target.value)
+                                  }
+                                  className="h-8 text-xs font-semibold bg-white border-slate-300 focus:border-emerald-600 rounded-xl"
+                                />
+                              </div>
+
+                              {/* Data */}
+                              <div className="sm:col-span-3">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                                  Data
+                                </label>
+                                <input
+                                  type="date"
+                                  value={item.date}
+                                  onChange={(e) =>
+                                    handleUpdateItemField(item.id, 'date', e.target.value)
+                                  }
+                                  className="h-8 w-full text-xs text-slate-800 bg-white border border-slate-300 rounded-xl px-2.5 font-medium focus:outline-none focus:border-emerald-600"
+                                />
+                              </div>
+
+                              {/* Toggle Receita / Despesa */}
+                              <div className="sm:col-span-2">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                                  Tipo
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleUpdateItemField(
+                                      item.id,
+                                      'type',
+                                      isIncome ? 'expense' : 'income',
+                                    )
+                                  }
+                                  className={`h-8 w-full text-xs font-bold rounded-xl flex items-center justify-center gap-1 transition-colors border ${
+                                    isIncome
+                                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200'
+                                      : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                                  }`}
+                                >
+                                  {isIncome ? (
+                                    <>
+                                      <ArrowUpRight className="w-3.5 h-3.5" /> Receita
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ArrowDownRight className="w-3.5 h-3.5" /> Despesa
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+
+                              {/* Membro */}
+                              <div className="sm:col-span-2">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                                  Membro
+                                </label>
+                                <Select
+                                  value={item.member_id}
+                                  onValueChange={(val) =>
+                                    handleUpdateItemField(item.id, 'member_id', val)
+                                  }
+                                >
+                                  <SelectTrigger className="h-8 text-xs bg-white border-slate-300 rounded-xl">
+                                    <SelectValue placeholder="Membro" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {members.map((m) => (
+                                      <SelectItem key={m.id} value={m.id} className="text-xs">
+                                        {m.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+
+                            {/* Linha 2: Categoria e Subcategoria */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
+                              {/* Categoria */}
+                              <div>
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block mb-1">
+                                  Categoria
+                                </label>
+                                <Select
+                                  value={item.category_id || 'none'}
+                                  onValueChange={(val) => {
+                                    if (val === 'CREATE_NEW') {
+                                      openQuickCategoryModal(item.id)
+                                    } else {
+                                      handleUpdateItemField(
+                                        item.id,
+                                        'category_id',
+                                        val === 'none' ? null : val,
+                                      )
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger
+                                    className={`h-9 text-xs bg-white rounded-xl shadow-2xs font-medium border-2 ${
+                                      !item.category_id
+                                        ? 'text-amber-900 border-amber-400 bg-amber-50/40'
+                                        : 'text-slate-900 border-slate-300'
+                                    }`}
+                                  >
+                                    <SelectValue placeholder="Sem categoria">
+                                      {currentCategory ? (
+                                        <span className="flex items-center gap-1.5 truncate">
+                                          <CategoryIcon
+                                            name={currentCategory.icon}
+                                            className="w-3.5 h-3.5 shrink-0"
+                                          />
+                                          <span className="truncate">{currentCategory.name}</span>
+                                        </span>
+                                      ) : (
+                                        <span className="text-slate-400">Sem categoria</span>
+                                      )}
+                                    </SelectValue>
+                                  </SelectTrigger>
+                                  <SelectContent className="max-h-72">
+                                    <SelectItem value="none" className="text-xs text-slate-500">
+                                      Sem categoria
+                                    </SelectItem>
+                                    {filteredCategories.map((c) => (
+                                      <SelectItem
+                                        key={c.id}
+                                        value={c.id}
+                                        className="text-xs py-1.5"
+                                      >
+                                        <span className="flex items-center gap-1.5">
+                                          <CategoryIcon name={c.icon} className="w-3.5 h-3.5" />
+                                          {c.name}
+                                        </span>
+                                      </SelectItem>
+                                    ))}
+                                    <SelectItem
+                                      value="CREATE_NEW"
+                                      className="text-xs font-semibold text-emerald-700 border-t mt-1"
+                                    >
+                                      + Criar nova categoria
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              {/* Subcategoria */}
+                              <div>
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block mb-1">
+                                  Subcategoria
+                                </label>
+                                <Select
+                                  value={item.subcategory_id || 'none'}
+                                  onValueChange={(val) =>
+                                    handleUpdateItemField(
+                                      item.id,
+                                      'subcategory_id',
+                                      val === 'none' ? null : val,
+                                    )
+                                  }
+                                  disabled={availableSubcategories.length === 0}
+                                >
+                                  <SelectTrigger className="h-9 text-xs w-full rounded-xl bg-white border-slate-300 shadow-2xs font-medium">
+                                    <SelectValue
+                                      placeholder={
+                                        availableSubcategories.length === 0
+                                          ? 'Sem subcategorias nesta categoria'
+                                          : 'Subcategoria opcional...'
+                                      }
+                                    />
+                                  </SelectTrigger>
+                                  <SelectContent className="max-h-60">
+                                    <SelectItem value="none" className="text-xs text-slate-500">
+                                      Sem subcategoria
+                                    </SelectItem>
+                                    {availableSubcategories.map((sub) => (
+                                      <SelectItem key={sub.id} value={sub.id} className="text-xs">
+                                        {sub.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+
+                            {/* Ações da linha expandida: Remover ou Concluir e Recolher */}
+                            <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveItem(item.id)}
+                                className="rounded-xl text-xs text-red-600 hover:text-red-700 hover:bg-red-50 h-8 gap-1.5"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Remover do extrato</span>
+                              </Button>
+
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={() => setExpandedItemId(null)}
+                                className="rounded-xl text-xs font-bold gap-1 bg-slate-900 hover:bg-slate-800 text-white h-8 px-3"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                <span>Concluir</span>
+                              </Button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>

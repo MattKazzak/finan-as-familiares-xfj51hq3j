@@ -14,7 +14,8 @@ import { upsertCategorizationRule } from '@/services/categorization-rules'
 import { normalizeText, extractPatternFromDescription } from '@/services/import/categorization'
 import {
   TransactionInlineRow,
-  type SaveInlineCategoryData,
+  SaveInlineCategoryData,
+  SaveBatchSameNameData,
 } from '@/components/transactions/TransactionInlineRow'
 import {
   formatBRL,
@@ -256,6 +257,9 @@ export default function WalletPage() {
     {},
   )
 
+  // ID da transação pendente atualmente aberta no accordion (apenas 1 por vez)
+  const [expandedPendingTxId, setExpandedPendingTxId] = useState<string | null>(null)
+
   // Filtros de transação
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false)
   const [filterMemberIds, setFilterMemberIds] = useState<string[]>([])
@@ -445,15 +449,35 @@ export default function WalletPage() {
     return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a))
   }, [filteredTransactions])
 
+  // Lista ordenada das transações pendentes para cálculo de avanços e lotes
+  const pendingTransactionsList = useMemo(() => {
+    return transactions.filter((t) => !t.category_id)
+  }, [transactions])
+
   // Handler para salvar categorização inline de transação pendente com atualização otimista dos 3 Baldes
+  // e avanço automático suave para a próxima pendente (série de revisão)
   const handleSaveInlineCategory = async (data: SaveInlineCategoryData) => {
     if (!family) return
 
-    const { transactionId, categoryId, subcategoryId, rememberRule, description } = data
+    const {
+      transactionId,
+      categoryId,
+      subcategoryId,
+      rememberRule,
+      description,
+      type,
+      memberId,
+      date,
+    } = data
+
+    // Próxima pendente na fila para avançar o foco
+    const remainingPendings = pendingTransactionsList.filter((t) => t.id !== transactionId)
+    const nextPending = remainingPendings[0] || null
 
     // Categoria e subcategoria escolhidas para atualização otimista
     const chosenCat = categories.find((c) => c.id === categoryId)
     const chosenSub = chosenCat?.subcategories?.find((s) => s.id === subcategoryId) || null
+    const chosenMember = memberId ? members.find((m) => m.id === memberId) : undefined
 
     // Atualização otimista imediata das transações (sai de pendente e reflete no estado local)
     setTransactions((prev) =>
@@ -465,9 +489,17 @@ export default function WalletPage() {
           subcategory_id: subcategoryId,
           category: chosenCat || t.category,
           subcategory: chosenSub || null,
+          description: description || t.description,
+          type: type || t.type,
+          member_id: memberId || t.member_id,
+          member: chosenMember || t.member,
+          transaction_date: date || t.transaction_date,
         }
       }),
     )
+
+    // Avança o accordion para a próxima transação pendente (se houver) ou fecha
+    setExpandedPendingTxId(nextPending ? nextPending.id : null)
 
     // Atualiza contagem do banner se houver
     if (lastImportSummary && lastImportSummary.pending > 0) {
@@ -479,11 +511,17 @@ export default function WalletPage() {
     }
 
     try {
-      // 1. Atualizar a transação no banco de dados
-      await updateTransaction(transactionId, {
+      // 1. Atualizar a transação no banco de dados com todos os dados editados
+      const payload: any = {
         category_id: categoryId,
         subcategory_id: subcategoryId,
-      })
+        description: description || undefined,
+      }
+      if (type) payload.type = type
+      if (memberId) payload.member_id = memberId
+      if (date) payload.transaction_date = date
+
+      await updateTransaction(transactionId, payload)
 
       // 2. Se o checkbox 'Lembrar' estiver marcado, salvar regra em categorization_rules
       // Usa a mesma normalização do parser (uppercase + sem acentos + trim)
@@ -522,6 +560,104 @@ export default function WalletPage() {
         variant: 'destructive',
       })
       // Em caso de falha, recarrega o mês do banco para desfazer estado otimista
+      await loadMonthData()
+    }
+  }
+
+  // Mapa de agrupamento das transações pendentes por padrão/descrição normalizada
+  const pendingByPatternMap = useMemo(() => {
+    const map = new Map<string, string[]>()
+    pendingTransactionsList.forEach((t) => {
+      const key = (
+        extractPatternFromDescription(t.description || '') || normalizeText(t.description || '')
+      ).toUpperCase()
+      if (!key) return
+      const list = map.get(key) || []
+      list.push(t.id)
+      map.set(key, list)
+    })
+    return map
+  }, [pendingTransactionsList])
+
+  // Handler para salvar em lote todas as pendentes com o mesmo nome normalizado
+  const handleSaveBatchSameName = async (data: SaveBatchSameNameData) => {
+    if (!family) return
+    const { transactionIds, categoryId, subcategoryId, rememberRule, description, type } = data
+
+    const chosenCat = categories.find((c) => c.id === categoryId)
+    const chosenSub = chosenCat?.subcategories?.find((s) => s.id === subcategoryId) || null
+    const targetSet = new Set(transactionIds)
+
+    // Atualização otimista local
+    setTransactions((prev) =>
+      prev.map((t) => {
+        if (!targetSet.has(t.id)) return t
+        return {
+          ...t,
+          category_id: categoryId,
+          subcategory_id: subcategoryId,
+          category: chosenCat || t.category,
+          subcategory: chosenSub || null,
+          type: type || t.type,
+        }
+      }),
+    )
+
+    // Próxima pendente fora do lote para focar no accordion
+    const nextPending = transactions.find((t) => !t.category_id && !targetSet.has(t.id)) || null
+    setExpandedPendingTxId(nextPending ? nextPending.id : null)
+
+    // Atualiza resumo do banner se houver
+    if (lastImportSummary && lastImportSummary.pending > 0) {
+      setLastImportSummary({
+        ...lastImportSummary,
+        pending: Math.max(0, lastImportSummary.pending - transactionIds.length),
+        categorized: lastImportSummary.categorized + transactionIds.length,
+      })
+    }
+
+    try {
+      // 1. Atualizar todas as transações em paralelo no Supabase
+      const updatePayload: any = {
+        category_id: categoryId,
+        subcategory_id: subcategoryId,
+      }
+      if (type) updatePayload.type = type
+
+      await Promise.all(transactionIds.map((id) => updateTransaction(id, updatePayload)))
+
+      // 2. Se lembrar regra estiver marcado, cria a regra de categorização
+      if (rememberRule && description && description.trim()) {
+        try {
+          const derivedPattern =
+            extractPatternFromDescription(description) || normalizeText(description)
+          const patternToSave = (derivedPattern || description.trim()).toUpperCase()
+
+          await upsertCategorizationRule({
+            family_id: family.id,
+            user_id: null,
+            pattern: patternToSave,
+            category_id: categoryId,
+            subcategory_id: subcategoryId || null,
+          })
+        } catch (ruleErr) {
+          console.warn('Erro ao salvar regra automática em lote:', ruleErr)
+        }
+      }
+
+      toast({
+        title: `${transactionIds.length} transações categorizadas! 🎉`,
+        description: `Todas as pendentes "${description.trim()}" foram vinculadas a ${chosenCat?.name}.`,
+      })
+
+      triggerRefresh()
+    } catch (err: any) {
+      console.error('Erro ao categorizar transações em lote:', err)
+      toast({
+        title: 'Erro ao aplicar em lote',
+        description: err?.message || 'Tente novamente.',
+        variant: 'destructive',
+      })
       await loadMonthData()
     }
   }
@@ -987,23 +1123,29 @@ export default function WalletPage() {
         {/* ================= TAB 1: TRANSAÇÕES ================= */}
         {activeTab === 'transacoes' ? (
           <div className="space-y-5 mt-0 animate-in fade-in-50 duration-200">
-            {/* 1. VISÃO DE RESUMO PÓS-IMPORTAÇÃO (Banner Oficial de Destaque) */}
+            {/* 1. VISÃO DE RESUMO PÓS-IMPORTAÇÃO & SEÇÃO DE REVISÃO DE PENDENTES (Com Barra de Progresso) */}
             {lastImportSummary ? (
               <div className="rounded-3xl border border-emerald-300 bg-gradient-to-r from-emerald-50 via-teal-50/60 to-emerald-50 p-4 sm:p-5 shadow-sm space-y-3 animate-in fade-in-50 duration-200">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-start gap-3">
                     <div className="w-9 h-9 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-xs">
-                      📥
+                      {lastImportSummary.pending === 0 ? '🎉' : '📥'}
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <h4 className="font-extrabold text-sm sm:text-base text-slate-900 leading-tight">
-                        📥 Extrato importado: {lastImportSummary.categorized} transações
-                        categorizadas automaticamente e {lastImportSummary.pending} pendentes de
-                        revisão.
+                        {lastImportSummary.pending === 0 ? (
+                          'Tudo categorizado! 🎉'
+                        ) : (
+                          <>
+                            📥 Extrato importado: {lastImportSummary.categorized} de{' '}
+                            {lastImportSummary.total} transações categorizadas
+                          </>
+                        )}
                       </h4>
                       <p className="text-xs text-slate-600 mt-1">
-                        Defina a categoria das transações pendentes diretamente nas linhas abaixo.
-                        Suas escolhas atualizam o orçamento na hora.
+                        {lastImportSummary.pending === 0
+                          ? 'Todas as transações do extrato estão devidamente classificadas nos 3 Baldes.'
+                          : `${lastImportSummary.pending} transações pendentes de revisão. Toque em qualquer linha para abrir e categorizar.`}
                       </p>
                     </div>
                   </div>
@@ -1024,10 +1166,14 @@ export default function WalletPage() {
                         <span>
                           {filterOnlyPending
                             ? 'Ver todas as transações'
-                            : `Ver apenas pendentes (${lastImportSummary.pending})`}
+                            : `Revisar pendentes (${lastImportSummary.pending})`}
                         </span>
                       </Button>
-                    ) : null}
+                    ) : (
+                      <span className="text-xs font-bold text-emerald-800 bg-emerald-100/80 px-2.5 py-1 rounded-xl">
+                        100% revisado
+                      </span>
+                    )}
 
                     <button
                       type="button"
@@ -1039,10 +1185,39 @@ export default function WalletPage() {
                     </button>
                   </div>
                 </div>
+
+                {/* Barra de Progresso da Revisão */}
+                {lastImportSummary.total > 0 && (
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-700">
+                      <span>Progresso da categorização</span>
+                      <span className="tabular-nums text-emerald-800">
+                        {lastImportSummary.categorized} de {lastImportSummary.total} revisadas (
+                        {Math.round(
+                          (lastImportSummary.categorized / lastImportSummary.total) * 100,
+                        )}
+                        %)
+                      </span>
+                    </div>
+                    <div className="w-full bg-emerald-200/70 h-2.5 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-600 rounded-full transition-all duration-500 ease-out"
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            Math.round(
+                              (lastImportSummary.categorized / lastImportSummary.total) * 100,
+                            ),
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             ) : pendingTransactionsCount > 0 ? (
               /* Banner complementar quando há pendentes sem o lastImportSummary ativo */
-              <div className="rounded-3xl border border-amber-200 bg-amber-50/70 p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="rounded-3xl border border-amber-200 bg-amber-50/70 p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold shrink-0">
                     <Sparkles className="w-4 h-4 text-amber-700" />
@@ -1056,8 +1231,7 @@ export default function WalletPage() {
                       de categorização neste mês
                     </span>
                     <span className="text-[11px] text-slate-600">
-                      Categorize rapidamente nas linhas abaixo para atualizar seus 3 Baldes em tempo
-                      real.
+                      Toque na linha desejada para expandir confortavelmente e categorizar.
                     </span>
                   </div>
                 </div>
@@ -1076,6 +1250,30 @@ export default function WalletPage() {
                   {filterOnlyPending
                     ? 'Ver todas as transações'
                     : `Ver apenas pendentes (${pendingTransactionsCount})`}
+                </Button>
+              </div>
+            ) : filterOnlyPending && pendingTransactionsCount === 0 ? (
+              /* Estado de Sucesso quando o usuário estava filtrando pendentes e terminou todas */
+              <div className="rounded-3xl border border-emerald-300 bg-emerald-50/80 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in-50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-bold text-lg shrink-0">
+                    🎉
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-sm sm:text-base text-emerald-950">
+                      Tudo categorizado! Parabéns!
+                    </h4>
+                    <p className="text-xs text-emerald-800">
+                      Não há mais nenhuma transação pendente neste mês.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => setFilterOnlyPending(false)}
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs rounded-xl font-bold"
+                >
+                  Ver todas as transações
                 </Button>
               </div>
             ) : null}
@@ -1234,12 +1432,28 @@ export default function WalletPage() {
 
                         // Requisito 2: Se a transação estiver pendente de categoria, exibir EDIÇÃO RÁPIDA EM LINHA
                         if (isPending) {
+                          const patternKey = (
+                            extractPatternFromDescription(tx.description || '') ||
+                            normalizeText(tx.description || '')
+                          ).toUpperCase()
+                          const matchingIds = (pendingByPatternMap.get(patternKey) || []).filter(
+                            (id) => id !== tx.id,
+                          )
+
                           return (
                             <div key={tx.id} className="p-2 sm:p-2.5">
                               <TransactionInlineRow
                                 transaction={tx}
                                 categories={categories}
+                                members={members}
+                                isExpanded={expandedPendingTxId === tx.id}
+                                onToggleExpand={() =>
+                                  setExpandedPendingTxId((prev) => (prev === tx.id ? null : tx.id))
+                                }
                                 onSave={handleSaveInlineCategory}
+                                onSaveBatchSameName={handleSaveBatchSameName}
+                                matchingCount={matchingIds.length}
+                                matchingTransactionIds={matchingIds}
                               />
                             </div>
                           )

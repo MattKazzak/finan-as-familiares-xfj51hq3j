@@ -1,13 +1,17 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import type {
   Transaction,
   TransactionCategory,
   TransactionSubcategory,
   BudgetBucket,
+  FamilyMember,
+  TransactionType,
 } from '@/types/finance'
 import { CategoryIcon } from '@/components/common/CategoryIcon'
 import { formatBRL } from '@/lib/formatters'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -17,7 +21,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Check, Loader2, Sparkles, AlertCircle } from 'lucide-react'
+import {
+  Check,
+  Loader2,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
+  Tag,
+  ArrowUpRight,
+  ArrowDownRight,
+  Layers,
+} from 'lucide-react'
 
 export interface SaveInlineCategoryData {
   transactionId: string
@@ -25,12 +39,31 @@ export interface SaveInlineCategoryData {
   subcategoryId: string | null
   rememberRule: boolean
   description: string
+  type?: TransactionType
+  memberId?: string
+  date?: string
+}
+
+export interface SaveBatchSameNameData {
+  pattern: string
+  transactionIds: string[]
+  categoryId: string
+  subcategoryId: string | null
+  rememberRule: boolean
+  type?: TransactionType
+  description: string
 }
 
 interface TransactionInlineRowProps {
   transaction: Transaction
   categories: TransactionCategory[]
+  members?: FamilyMember[]
+  isExpanded?: boolean
+  onToggleExpand?: () => void
   onSave: (data: SaveInlineCategoryData) => Promise<void>
+  onSaveBatchSameName?: (data: SaveBatchSameNameData) => Promise<void>
+  matchingCount?: number
+  matchingTransactionIds?: string[]
   disabled?: boolean
 }
 
@@ -38,29 +71,60 @@ interface TransactionInlineRowProps {
 const BUCKET_GROUPS: {
   bucket: BudgetBucket
   label: string
-  badgeColor: string
 }[] = [
-  { bucket: 'essentials', label: 'Essenciais', badgeColor: 'bg-sky-100 text-sky-800' },
-  { bucket: 'lifestyle', label: 'Estilo de Vida', badgeColor: 'bg-amber-100 text-amber-800' },
-  { bucket: 'future', label: 'Futuro & Metas', badgeColor: 'bg-emerald-100 text-emerald-800' },
+  { bucket: 'essentials', label: 'Essenciais' },
+  { bucket: 'lifestyle', label: 'Estilo de Vida' },
+  { bucket: 'future', label: 'Futuro & Metas' },
 ]
 
 export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
   transaction,
   categories,
+  members = [],
+  isExpanded = false,
+  onToggleExpand,
   onSave,
+  onSaveBatchSameName,
+  matchingCount = 0,
+  matchingTransactionIds = [],
   disabled = false,
 }) => {
-  const [selectedCatId, setSelectedCatId] = useState<string>('')
-  const [selectedSubcatId, setSelectedSubcatId] = useState<string>('none')
-  const [rememberRule, setRememberRule] = useState<boolean>(true) // MARCADO POR PADRÃO para acelerar
+  // Estado local para os campos editáveis quando expandido
+  const [description, setDescription] = useState<string>(transaction.description || '')
+  const [txType, setTxType] = useState<TransactionType>(transaction.type || 'expense')
+  const [txDate, setTxDate] = useState<string>(transaction.transaction_date || '')
+  const [memberId, setMemberId] = useState<string>(transaction.member_id || '')
+  const [selectedCatId, setSelectedCatId] = useState<string>(transaction.category_id || '')
+  const [selectedSubcatId, setSelectedSubcatId] = useState<string>(
+    transaction.subcategory_id || 'none',
+  )
+  const [rememberRule, setRememberRule] = useState<boolean>(true) // Marcado por padrão
   const [saving, setSaving] = useState(false)
+  const [savingBatch, setSavingBatch] = useState(false)
   const [justResolved, setJustResolved] = useState(false)
 
-  // Filtrar categorias aplicáveis pelo tipo da transação (despesas na sua maioria)
+  // Sincronizar estado caso a transação mude externamente
+  useEffect(() => {
+    setDescription(transaction.description || '')
+    setTxType(transaction.type || 'expense')
+    setTxDate(transaction.transaction_date || '')
+    setMemberId(transaction.member_id || '')
+    setSelectedCatId(transaction.category_id || '')
+    setSelectedSubcatId(transaction.subcategory_id || 'none')
+  }, [
+    transaction.id,
+    transaction.description,
+    transaction.type,
+    transaction.transaction_date,
+    transaction.member_id,
+    transaction.category_id,
+    transaction.subcategory_id,
+  ])
+
+  // Filtrar categorias aplicáveis pelo tipo da transação
   const filteredCategories = useMemo(() => {
-    return categories.filter((c) => c.type === transaction.type)
-  }, [categories, transaction.type])
+    return categories.filter((c) => c.type === txType)
+  }, [categories, txType])
 
   // Categoria atualmente selecionada
   const activeCategory = useMemo(() => {
@@ -74,7 +138,7 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
 
   // Agrupamento das categorias de despesas por Balde
   const categorizedByBucket = useMemo(() => {
-    if (transaction.type !== 'expense') {
+    if (txType !== 'expense') {
       return null
     }
 
@@ -94,43 +158,48 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
     })
 
     return groups
-  }, [filteredCategories, transaction.type])
+  }, [filteredCategories, txType])
 
-  // Quando o usuário escolhe a categoria:
-  // Se a categoria NÃO tem subcategorias, já salva diretamente.
-  // Se tem subcategorias, redefine a subcategoria e permite selecionar opcionalmente.
-  const handleCategoryChange = async (newCatId: string) => {
-    if (!newCatId || newCatId === 'none') return
+  // Troca de tipo (receita / despesa) reseta categoria se ela não for do novo tipo
+  const handleToggleType = (newType: TransactionType) => {
+    setTxType(newType)
+    const existsInNewType = categories.some((c) => c.id === selectedCatId && c.type === newType)
+    if (!existsInNewType) {
+      setSelectedCatId('')
+      setSelectedSubcatId('none')
+    }
+  }
+
+  // Troca de categoria
+  const handleCategoryChange = (newCatId: string) => {
+    if (newCatId === 'none') {
+      setSelectedCatId('')
+      setSelectedSubcatId('none')
+      return
+    }
     setSelectedCatId(newCatId)
     setSelectedSubcatId('none')
-
-    const chosenCat = filteredCategories.find((c) => c.id === newCatId)
-    const hasSubs = chosenCat && chosenCat.subcategories && chosenCat.subcategories.length > 0
-
-    // Se NÃO tiver subcategorias, já dispara o salvamento imediatamente
-    if (!hasSubs) {
-      await executeSave(newCatId, null)
-    }
   }
 
-  // Quando o usuário escolhe a subcategoria
-  const handleSubcategoryChange = async (newSubId: string) => {
-    const subVal = newSubId === 'none' ? null : newSubId
-    setSelectedSubcatId(newSubId)
-    if (selectedCatId) {
-      await executeSave(selectedCatId, subVal)
+  // Salvar a transação atual
+  const handleSave = async (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
     }
-  }
+    if (!selectedCatId || selectedCatId === 'none') return
 
-  const executeSave = async (catId: string, subId: string | null) => {
     try {
       setSaving(true)
       await onSave({
         transactionId: transaction.id,
-        categoryId: catId,
-        subcategoryId: subId,
+        categoryId: selectedCatId,
+        subcategoryId: selectedSubcatId === 'none' ? null : selectedSubcatId,
         rememberRule,
-        description: transaction.description || '',
+        description: description.trim() || transaction.description || 'Transação',
+        type: txType,
+        memberId: memberId || undefined,
+        date: txDate || undefined,
       })
       setJustResolved(true)
     } catch (err) {
@@ -140,26 +209,56 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
     }
   }
 
-  const isIncome = transaction.type === 'income'
+  // Salvar em lote para pendentes com o mesmo nome
+  const handleSaveBatch = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    if (!selectedCatId || selectedCatId === 'none' || !onSaveBatchSameName) return
+
+    try {
+      setSavingBatch(true)
+      // Inclui o ID atual junto com os outros
+      const allTargetIds = Array.from(new Set([transaction.id, ...matchingTransactionIds]))
+      await onSaveBatchSameName({
+        pattern: description.trim() || transaction.description || '',
+        transactionIds: allTargetIds,
+        categoryId: selectedCatId,
+        subcategoryId: selectedSubcatId === 'none' ? null : selectedSubcatId,
+        rememberRule,
+        type: txType,
+        description: description.trim() || transaction.description || 'Transação',
+      })
+      setJustResolved(true)
+    } catch (err) {
+      console.error('Erro ao aplicar categoria em lote:', err)
+    } finally {
+      setSavingBatch(false)
+    }
+  }
+
+  const isIncome = txType === 'income'
+  const isOriginalIncome = transaction.type === 'income'
 
   if (justResolved) {
     return (
-      <div className="p-3.5 bg-emerald-50/70 border-l-4 border-emerald-500 rounded-2xl flex items-center justify-between text-xs transition-all animate-in fade-in-50">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold shrink-0">
-            <Check className="w-3.5 h-3.5 stroke-[3]" />
+      <div className="p-3 sm:p-3.5 bg-emerald-50/80 border border-emerald-300 rounded-2xl flex items-center justify-between text-xs transition-all animate-in fade-in-50">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold shrink-0 shadow-2xs">
+            <Check className="w-4 h-4 stroke-[2.5]" />
           </div>
-          <div>
-            <span className="font-bold text-emerald-900 block truncate">
-              {transaction.description || 'Transação'}
+          <div className="min-w-0">
+            <span className="font-bold text-emerald-950 block truncate text-xs sm:text-sm">
+              {description || transaction.description || 'Transação'}
             </span>
-            <span className="text-[11px] text-emerald-700">
-              Categorizada como <strong>{activeCategory?.name}</strong>
-              {rememberRule ? ' • Regra salva para próximas compras' : ''}
+            <span className="text-[11px] text-emerald-800 flex items-center gap-1 truncate">
+              Categorizada como <strong>{activeCategory?.name || 'Categoria'}</strong>
+              {rememberRule ? ' • Regra salva' : ''}
             </span>
           </div>
         </div>
-        <span className="font-bold text-emerald-700 tabular-nums shrink-0">
+        <span className="font-extrabold text-emerald-700 tabular-nums shrink-0 ml-2">
           {formatBRL(transaction.amount_cents)}
         </span>
       </div>
@@ -168,141 +267,368 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
 
   return (
     <div
-      className={`p-3 sm:p-3.5 rounded-2xl border transition-all bg-amber-50/30 border-amber-200/90 hover:border-amber-300 hover:bg-amber-50/50 shadow-2xs ${
-        saving ? 'opacity-60 pointer-events-none' : ''
-      }`}
+      className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+        isExpanded
+          ? 'bg-amber-50/40 border-amber-300 shadow-md ring-2 ring-amber-400/40'
+          : 'bg-white hover:bg-amber-50/30 border-amber-200/90 shadow-2xs'
+      } ${saving || savingBatch ? 'opacity-70 pointer-events-none' : ''}`}
     >
-      {/* Linha superior: Descrição original do banco + Valor */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <span
-            className="w-2 h-2 rounded-full bg-amber-500 shrink-0 animate-pulse"
-            title="Pendente de categoria"
-          />
-          <div className="min-w-0">
-            <p
-              className="font-bold text-xs sm:text-sm text-slate-900 truncate"
-              title={transaction.description}
-            >
-              {transaction.description || 'Transação sem descrição'}
-            </p>
-            <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mt-0.5">
-              <span className="font-medium bg-amber-100/80 text-amber-900 px-1.5 py-0.2 rounded font-mono">
+      {/* ================= 1. LINHA RECOLHIDA (TAP-TO-EXPAND HEADER) ================= */}
+      <button
+        type="button"
+        role="button"
+        aria-expanded={isExpanded}
+        onClick={onToggleExpand}
+        disabled={disabled || saving || savingBatch}
+        className="w-full text-left p-3 sm:p-3.5 flex items-center justify-between gap-2.5 min-h-[44px] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-2xl transition-colors select-none"
+      >
+        {/* Lado esquerdo: Ícone + Descrição + Tag Pendente */}
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          {/* Ícone de categoria ou etiqueta pendente */}
+          <div
+            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform shadow-2xs"
+            style={{
+              backgroundColor: activeCategory?.color || '#F59E0B',
+              color: '#FFFFFF',
+            }}
+          >
+            {activeCategory?.icon ? (
+              <CategoryIcon name={activeCategory.icon} className="w-4 h-4" />
+            ) : (
+              <Tag className="w-4 h-4" />
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 animate-pulse" />
+              <p
+                className="font-bold text-xs sm:text-sm text-slate-900 truncate leading-tight"
+                title={transaction.description || 'Transação sem descrição'}
+              >
+                {transaction.description || 'Transação sem descrição'}
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5 min-w-0">
+              <span className="font-semibold text-[10px] bg-amber-100 text-amber-900 border border-amber-300/80 px-1.5 py-0.2 rounded font-mono shrink-0">
                 Pendente
               </span>
-              {transaction.member?.name && <span>• {transaction.member.name}</span>}
+              {transaction.member?.name && (
+                <span className="truncate text-slate-500 text-[10px]">
+                  • {transaction.member.name}
+                </span>
+              )}
             </div>
           </div>
         </div>
 
-        <div className="text-right shrink-0">
+        {/* Lado direito: Valor alinhado + Chevron */}
+        <div className="flex items-center gap-2 shrink-0">
           <span
-            className={`font-extrabold text-xs sm:text-sm tabular-nums ${
-              isIncome ? 'text-emerald-700' : 'text-red-600'
+            className={`font-extrabold text-xs sm:text-sm tabular-nums whitespace-nowrap ${
+              isOriginalIncome ? 'text-emerald-700' : 'text-red-600'
             }`}
           >
-            {isIncome ? '+' : '−'} {formatBRL(transaction.amount_cents)}
+            {isOriginalIncome ? '+' : '−'} {formatBRL(transaction.amount_cents)}
           </span>
+          <div className="w-6 h-6 rounded-lg bg-amber-100/70 text-amber-900 flex items-center justify-center shrink-0">
+            {isExpanded ? (
+              <ChevronUp className="w-4 h-4 transition-transform duration-200" />
+            ) : (
+              <ChevronDown className="w-4 h-4 transition-transform duration-200" />
+            )}
+          </div>
         </div>
-      </div>
+      </button>
 
-      {/* Linha inferior: Dropdown de Categoria (agrupado por balde) + Subcategoria + Checkbox Lembrar */}
-      <div className="mt-2.5 pt-2.5 border-t border-amber-200/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div className="flex items-center gap-2 flex-1 flex-wrap">
-          {/* Select de Categoria */}
-          <div className="w-full sm:w-auto min-w-[190px] flex-1">
-            <Select
-              value={selectedCatId || 'placeholder'}
-              onValueChange={handleCategoryChange}
-              disabled={disabled || saving}
-            >
-              <SelectTrigger
-                className={`h-8 text-xs bg-white rounded-xl border-amber-300 shadow-2xs font-medium ${
-                  !selectedCatId ? 'text-amber-900 border-amber-300' : 'text-slate-800'
-                }`}
-              >
-                <SelectValue placeholder="Escolher categoria..." />
-              </SelectTrigger>
-              <SelectContent className="max-h-72">
-                {categorizedByBucket
-                  ? BUCKET_GROUPS.map(({ bucket, label, badgeColor }) => {
-                      const list = categorizedByBucket[bucket] || []
-                      if (list.length === 0) return null
-                      return (
-                        <SelectGroup key={bucket}>
-                          <SelectLabel className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1 px-2 py-1 bg-slate-50">
-                            <span>{label}</span>
-                          </SelectLabel>
-                          {list.map((c) => (
-                            <SelectItem key={c.id} value={c.id} className="text-xs">
-                              <span className="flex items-center gap-2">
-                                <CategoryIcon name={c.icon} className="w-3.5 h-3.5" />
-                                <span className="font-medium text-slate-800">{c.name}</span>
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      )
-                    })
-                  : filteredCategories.map((c) => (
-                      <SelectItem key={c.id} value={c.id} className="text-xs">
-                        <span className="flex items-center gap-2">
-                          <CategoryIcon name={c.icon} className="w-3.5 h-3.5" />
-                          <span className="font-medium text-slate-800">{c.name}</span>
-                        </span>
+      {/* ================= 2. PAINEL EXPANDIDO (TRANSIÇÃO SUAVE GRID-ROWS) ================= */}
+      <div
+        className={`grid transition-all duration-200 ease-out ${
+          isExpanded
+            ? 'grid-rows-[1fr] opacity-100'
+            : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+        }`}
+      >
+        <div className="overflow-hidden">
+          <form
+            onSubmit={handleSave}
+            className="p-3 sm:p-4 pt-1 sm:pt-1 border-t border-amber-200/80 space-y-3 bg-gradient-to-b from-amber-50/40 to-white/90"
+          >
+            {/* Fileira 1: Descrição editável, Data, Toggle Receita/Despesa e Membro */}
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 pt-1">
+              {/* Descrição */}
+              <div className="sm:col-span-5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                  Descrição
+                </label>
+                <Input
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Nome da transação"
+                  disabled={saving || savingBatch}
+                  className="h-8 text-xs font-semibold bg-white border-slate-300 focus:border-emerald-600 rounded-xl"
+                />
+              </div>
+
+              {/* Data */}
+              <div className="sm:col-span-3">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                  Data
+                </label>
+                <input
+                  type="date"
+                  value={txDate}
+                  onChange={(e) => setTxDate(e.target.value)}
+                  disabled={saving || savingBatch}
+                  className="h-8 w-full text-xs text-slate-800 bg-white border border-slate-300 rounded-xl px-2.5 font-medium focus:outline-none focus:border-emerald-600"
+                />
+              </div>
+
+              {/* Toggle Receita / Despesa */}
+              <div className="sm:col-span-2">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                  Tipo
+                </label>
+                <button
+                  type="button"
+                  onClick={() => handleToggleType(isIncome ? 'expense' : 'income')}
+                  disabled={saving || savingBatch}
+                  className={`h-8 w-full text-xs font-bold rounded-xl flex items-center justify-center gap-1 transition-colors border ${
+                    isIncome
+                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200'
+                      : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                  }`}
+                >
+                  {isIncome ? (
+                    <>
+                      <ArrowUpRight className="w-3.5 h-3.5" /> Receita
+                    </>
+                  ) : (
+                    <>
+                      <ArrowDownRight className="w-3.5 h-3.5" /> Despesa
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Membro */}
+              {members.length > 0 && (
+                <div className="sm:col-span-2">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                    Membro
+                  </label>
+                  <Select
+                    value={memberId}
+                    onValueChange={setMemberId}
+                    disabled={saving || savingBatch}
+                  >
+                    <SelectTrigger className="h-8 text-xs bg-white border-slate-300 rounded-xl">
+                      <SelectValue placeholder="Membro" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {members.map((m) => (
+                        <SelectItem key={m.id} value={m.id} className="text-xs">
+                          {m.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            {/* Fileira 2: Select de Categoria (3 Baldes) e Subcategoria */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
+              {/* Select de Categoria */}
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block mb-1 flex items-center gap-1">
+                  <span>Categoria *</span>
+                  {!selectedCatId && (
+                    <span className="text-amber-700 font-normal normal-case">
+                      (escolha para habilitar o salvamento)
+                    </span>
+                  )}
+                </label>
+                <Select
+                  value={selectedCatId || 'placeholder'}
+                  onValueChange={handleCategoryChange}
+                  disabled={disabled || saving || savingBatch}
+                >
+                  <SelectTrigger
+                    className={`h-9 text-xs bg-white rounded-xl shadow-2xs font-medium border-2 ${
+                      !selectedCatId
+                        ? 'text-amber-900 border-amber-400 bg-amber-50/40 animate-pulse'
+                        : 'text-slate-900 border-slate-300'
+                    }`}
+                  >
+                    <SelectValue placeholder="Escolher categoria..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {categorizedByBucket
+                      ? BUCKET_GROUPS.map(({ bucket, label }) => {
+                          const list = categorizedByBucket[bucket] || []
+                          if (list.length === 0) return null
+                          return (
+                            <SelectGroup key={bucket}>
+                              <SelectLabel className="text-[10px] uppercase font-bold text-slate-500 tracking-wider flex items-center gap-1 px-2.5 py-1.5 bg-slate-100/90 rounded-md my-0.5">
+                                <span>{label}</span>
+                              </SelectLabel>
+                              {list.map((c) => (
+                                <SelectItem key={c.id} value={c.id} className="text-xs py-1.5">
+                                  <span className="flex items-center gap-2">
+                                    <div
+                                      className="w-4 h-4 rounded-md flex items-center justify-center shrink-0"
+                                      style={{
+                                        backgroundColor: c.color || '#10B981',
+                                        color: '#FFFFFF',
+                                      }}
+                                    >
+                                      <CategoryIcon name={c.icon} className="w-2.5 h-2.5" />
+                                    </div>
+                                    <span className="font-semibold text-slate-800">{c.name}</span>
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          )
+                        })
+                      : filteredCategories.map((c) => (
+                          <SelectItem key={c.id} value={c.id} className="text-xs py-1.5">
+                            <span className="flex items-center gap-2">
+                              <div
+                                className="w-4 h-4 rounded-md flex items-center justify-center shrink-0"
+                                style={{
+                                  backgroundColor: c.color || '#10B981',
+                                  color: '#FFFFFF',
+                                }}
+                              >
+                                <CategoryIcon name={c.icon} className="w-2.5 h-2.5" />
+                              </div>
+                              <span className="font-semibold text-slate-800">{c.name}</span>
+                            </span>
+                          </SelectItem>
+                        ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Select de Subcategoria */}
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block mb-1">
+                  Subcategoria
+                </label>
+                <Select
+                  value={selectedSubcatId}
+                  onValueChange={setSelectedSubcatId}
+                  disabled={
+                    disabled ||
+                    saving ||
+                    savingBatch ||
+                    !selectedCatId ||
+                    availableSubcategories.length === 0
+                  }
+                >
+                  <SelectTrigger className="h-9 text-xs bg-white rounded-xl border-slate-300 shadow-2xs font-medium">
+                    <SelectValue
+                      placeholder={
+                        availableSubcategories.length === 0
+                          ? 'Sem subcategorias nesta categoria'
+                          : 'Subcategoria opcional...'
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    <SelectItem value="none" className="text-xs text-slate-500 font-medium">
+                      Nenhuma subcategoria
+                    </SelectItem>
+                    {availableSubcategories.map((sub: TransactionSubcategory) => (
+                      <SelectItem key={sub.id} value={sub.id} className="text-xs">
+                        {sub.name}
                       </SelectItem>
                     ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Select de Subcategoria (aparece se houver subcategorias) */}
-          {availableSubcategories.length > 0 && (
-            <div className="w-full sm:w-auto min-w-[150px]">
-              <Select
-                value={selectedSubcatId}
-                onValueChange={handleSubcategoryChange}
-                disabled={disabled || saving}
-              >
-                <SelectTrigger className="h-8 text-xs bg-white rounded-xl border-slate-200 shadow-2xs">
-                  <SelectValue placeholder="Subcategoria..." />
-                </SelectTrigger>
-                <SelectContent className="max-h-60">
-                  <SelectItem value="none" className="text-xs text-slate-500">
-                    Sem subcategoria
-                  </SelectItem>
-                  {availableSubcategories.map((sub: TransactionSubcategory) => (
-                    <SelectItem key={sub.id} value={sub.id} className="text-xs">
-                      {sub.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          )}
 
-          {saving && (
-            <div className="flex items-center gap-1 text-[11px] text-emerald-700 font-semibold">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Salvando...</span>
+            {/* Checkbox "Lembrar para compras futuras com este nome" (Marcado por padrão) */}
+            <div className="pt-1">
+              <label className="flex items-center gap-2 text-xs text-slate-700 font-medium cursor-pointer select-none">
+                <Checkbox
+                  checked={rememberRule}
+                  onCheckedChange={(checked) => setRememberRule(!!checked)}
+                  disabled={disabled || saving || savingBatch}
+                  className="data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 rounded-md"
+                />
+                <span className="flex items-center gap-1.5 leading-tight">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>Lembrar para compras futuras com este nome</span>
+                </span>
+              </label>
             </div>
-          )}
-        </div>
 
-        {/* Checkbox "Lembrar para compras futuras com este nome" (Marcado por padrão) */}
-        <div className="flex items-center gap-2 pt-1 sm:pt-0 shrink-0">
-          <label className="flex items-center gap-2 text-[11px] text-slate-700 font-medium cursor-pointer select-none">
-            <Checkbox
-              checked={rememberRule}
-              onCheckedChange={(checked) => setRememberRule(!!checked)}
-              disabled={disabled || saving}
-              className="data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
-            />
-            <span className="flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-emerald-600 shrink-0" />
-              <span>Lembrar para compras futuras com este nome</span>
-            </span>
-          </label>
+            {/* Fileira de Ações: Botão em Lote "Aplicar aos N pendentes com o mesmo nome" + Salvar Primário */}
+            <div className="pt-2 border-t border-amber-200/60 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+              {/* Botão em lote destacado quando houver outras com mesmo nome */}
+              {matchingCount > 0 && onSaveBatchSameName ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSaveBatch}
+                  disabled={!selectedCatId || saving || savingBatch}
+                  className="rounded-xl text-xs font-bold gap-1.5 border-purple-300 bg-purple-50 hover:bg-purple-100 text-purple-900 shadow-2xs h-9 order-2 sm:order-1"
+                >
+                  {savingBatch ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Aplicando em lote...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Layers className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                      <span>Aplicar aos {matchingCount + 1} pendentes com o mesmo nome</span>
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <div className="order-2 sm:order-1" />
+              )}
+
+              {/* Botão Salvar Primário */}
+              <div className="flex items-center gap-2 justify-end order-1 sm:order-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onToggleExpand}
+                  disabled={saving || savingBatch}
+                  className="rounded-xl text-xs text-slate-600 hover:text-slate-900 h-9 px-3"
+                >
+                  Recolher
+                </Button>
+
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={!selectedCatId || saving || savingBatch}
+                  className="rounded-xl text-xs font-bold gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-9 px-4 min-w-[100px]"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Salvando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>Salvar</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </form>
         </div>
       </div>
     </div>
