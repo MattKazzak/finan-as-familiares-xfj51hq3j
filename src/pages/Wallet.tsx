@@ -1464,22 +1464,64 @@ export default function WalletPage() {
                                   className="flex items-center gap-0.5"
                                   onClick={(e) => e.stopPropagation()}
                                 >
-                                  {/* Lápis: Renomear subcategoria */}
+                                  {/* Lápis: Renomear subcategoria E definir/editar teto orçamentário */}
                                   <SubcategoryEditorPopover
                                     subcategory={subItem.subcategory}
                                     parentCategoryName={item.category.name}
+                                    showBudgetFields={true}
+                                    initialDefaultLimitCents={subItem.defaultLimitCents}
+                                    initialMonthLimitCents={subItem.limitCents}
+                                    hasMonthOverride={subItem.hasOverride}
+                                    currentMonthLabel={formatMonthYear(currentDate)}
                                     trigger={
                                       <button
                                         type="button"
                                         className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-all"
-                                        title="Renomear subcategoria"
-                                        aria-label={`Renomear subcategoria ${subItem.subcategory.name}`}
+                                        title="Editar subcategoria e teto"
+                                        aria-label={`Editar subcategoria ${subItem.subcategory.name} e teto`}
                                       >
                                         <Edit3 className="w-3 h-3" />
                                       </button>
                                     }
                                     onSave={async (data) => {
-                                      await editSubcategory(subItem.subcategory.id, data)
+                                      // 1. Atualiza nome se alterado
+                                      if (data.name && data.name !== subItem.subcategory.name) {
+                                        await editSubcategory(subItem.subcategory.id, {
+                                          name: data.name,
+                                        })
+                                      }
+
+                                      // 2. Atualiza teto se fornecido
+                                      if (family) {
+                                        if (data.isEditingOnlyThisMonth) {
+                                          const monthCents = data.monthLimitCents || 0
+                                          await upsertMonthBudgetOverride(
+                                            family.id,
+                                            item.category.id,
+                                            monthKey,
+                                            monthCents,
+                                            subItem.subcategory.id,
+                                          )
+                                        } else {
+                                          const defCents = data.defaultLimitCents || 0
+                                          await upsertDefaultBudget(
+                                            family.id,
+                                            item.category.id,
+                                            defCents,
+                                            subItem.subcategory.id,
+                                          )
+                                          // Se havia override pontual e salvou novo padrão, alinha o mês corrente
+                                          if (subItem.hasOverride) {
+                                            await resetMonthBudgetToDefault(
+                                              family.id,
+                                              item.category.id,
+                                              monthKey,
+                                              subItem.subcategory.id,
+                                            )
+                                          }
+                                        }
+                                      }
+
                                       triggerRefresh()
                                       await loadMonthData()
                                     }}
@@ -1502,13 +1544,6 @@ export default function WalletPage() {
                                     <Trash2 className="w-3 h-3" />
                                   </button>
                                 </div>
-
-                                {/* Se não tem teto definido na subcategoria, exibir atalho discreto */}
-                                {subItem.limitCents <= 0 ? (
-                                  <span className="text-[11px] font-medium text-emerald-700 opacity-80 group-hover/sub:opacity-100 group-hover/sub:underline">
-                                    <span>+ Definir</span>
-                                  </span>
-                                ) : null}
                               </div>
                             </div>
                           ))}
