@@ -75,6 +75,7 @@ import {
   generateInstallmentTransactions,
   type ParsedInstallmentInfo,
 } from '@/services/installments'
+import { findReconciliationMatch, type MatchStatus } from '@/services/import/reconciliation'
 
 export interface ReviewItem {
   id: string
@@ -82,6 +83,7 @@ export interface ReviewItem {
   description: string
   amount_cents: number
   type: TransactionType
+  fitid?: string // FITID bancário
   member_id: string
   category_id: string | null
   subcategory_id?: string | null
@@ -95,6 +97,12 @@ export interface ReviewItem {
   matchedProjectId?: string | null // Se casou com uma transação 'projected' existente no banco
   matchedGroupId?: string | null
   generateFutureInstallments?: boolean // Se é 1/YY e deve gerar as X-1 parcelas futuras
+  // Conciliação Inteligente com Lançamento Manual (Smart Matching)
+  isReconciledManual?: boolean // Se está marcado para mesclar com lançamento manual
+  matchedManualTransaction?: Transaction | null // A transação manual candidata ou vinculada
+  reconciliationStatus?: MatchStatus // 'unmatched' | 'single_match' | 'multiple_candidates'
+  reconciliationCandidates?: Transaction[] // Lista de candidatas manuais (em caso de múltiplas)
+  reconciliationReason?: string // Explicação para o usuário
 }
 
 interface ImportStatementDialogProps {
@@ -298,8 +306,14 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
         return false
       }
 
-      // 3. Montar itens para a tela de revisão aplicando categorização automática e detecção de parcelas
+      // 3. Montar itens para a tela de revisão aplicando:
+      //    a) Conciliação inteligente (Smart Matching com transações manuais ±3 dias)
+      //    b) Detecção de parcelas e correspondência de projeções
+      //    c) Anti-duplicidade tradicional
+      //    d) Auto-categorização por regras
       const activeMemberId = defaultMemberId || members[0]?.id || ''
+      const claimedManualIds = new Set<string>()
+
       const reviewList: ReviewItem[] = result.transactions.map((tx: ParsedRawTransaction) => {
         // Encontrar categoria e subcategoria usando as regras da tabela categorization_rules
         const matchResult = matchCategorization(tx.description, tx.type, categories, loadedRules)
@@ -311,7 +325,6 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
         const totalInst = isInstallment ? instInfo.total : 1
 
         // Checar duplicata e verificar correspondência com projeção futura existente
-        // Caso 1: Se for parcela (ex: 3/10), procurar se já existe uma transação 'projected' com mesmo valor/descrição similar/mês
         let matchedProjectId: string | null = null
         let matchedGroupId: string | null = null
         let dupMatch: Transaction | undefined = undefined
@@ -355,14 +368,55 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
             return ex.status !== 'projected' && sameMonth && sameAmount && (sameGroup || descMatch)
           })
         } else {
-          // Transação comum: verificar duplicata tradicional por data, valor e descrição
+          // Transação comum: verificar se é duplicata idêntica tradicional (mesma data, mesmo FITID se houver, ou mesma descrição)
           dupMatch = existingTxs.find((ex) => {
+            // Se ambos têm FITID/bank_transaction_id idêntico: duplicata absoluta
+            if (tx.fitid && ex.bank_transaction_id && ex.bank_transaction_id === tx.fitid) {
+              return true
+            }
+            // Transação confirmada já vinculada a extrato anterior
             return (
               ex.transaction_date === tx.date &&
               ex.amount_cents === tx.amount_cents &&
+              ex.bank_transaction_id &&
               isSimilar(ex.description || '', tx.description)
             )
           })
+        }
+
+        // ================= CONCILIAÇÃO INTELIGENTE (SMART MATCHING) =================
+        // Se NÃO for uma duplicata idêntica já vinculada nem uma projeção parcelada,
+        // checar se é um lançamento manual que coincide com o extrato (±3 dias, mesmo valor e tipo)
+        let isReconciledManual = false
+        let matchedManualTransaction: Transaction | null = null
+        let reconciliationCandidates: Transaction[] = []
+        let reconciliationReason: string | undefined = undefined
+        let reconciliationStatus: MatchStatus = 'unmatched'
+
+        if (!dupMatch && !matchedProjectId) {
+          const reconMatch = findReconciliationMatch(
+            {
+              id: tx.id,
+              date: tx.date,
+              amount_cents: tx.amount_cents,
+              type: tx.type,
+              description: tx.description,
+              fitid: tx.fitid,
+            },
+            existingTxs,
+            claimedManualIds,
+            3,
+          )
+
+          reconciliationStatus = reconMatch.status
+          reconciliationCandidates = reconMatch.candidateTransactions
+          reconciliationReason = reconMatch.matchReason
+
+          if (reconMatch.suggestAutoMerge && reconMatch.matchedTransaction) {
+            isReconciledManual = true
+            matchedManualTransaction = reconMatch.matchedTransaction
+            claimedManualIds.add(reconMatch.matchedTransaction.id)
+          }
         }
 
         // Se for parcela 1/YY (ou a primeira parcela importada de uma compra), gerar projeções futuras por padrão
@@ -373,15 +427,37 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           duplicateReason = `Transação idêntica já cadastrada em ${dupMatch.transaction_date}`
         }
 
+        // Se houver transação manual mesclada:
+        // Preserva a Categoria, Subcategoria, Membro da família e anotações que o usuário já havia preenchido manualmente
+        const initialCategoryId =
+          isReconciledManual && matchedManualTransaction?.category_id
+            ? matchedManualTransaction.category_id
+            : matchResult
+              ? matchResult.category.id
+              : null
+
+        const initialSubcategoryId =
+          isReconciledManual && matchedManualTransaction
+            ? matchedManualTransaction.subcategory_id || null
+            : matchResult?.subcategory
+              ? matchResult.subcategory.id
+              : null
+
+        const initialMemberId =
+          isReconciledManual && matchedManualTransaction?.member_id
+            ? matchedManualTransaction.member_id
+            : activeMemberId
+
         return {
           id: tx.id,
           date: tx.date,
           description: tx.description,
           amount_cents: tx.amount_cents,
           type: tx.type,
-          member_id: activeMemberId,
-          category_id: matchResult ? matchResult.category.id : null,
-          subcategory_id: matchResult?.subcategory ? matchResult.subcategory.id : null,
+          fitid: tx.fitid,
+          member_id: initialMemberId,
+          category_id: initialCategoryId,
+          subcategory_id: initialSubcategoryId,
           isDuplicate: !!dupMatch,
           duplicateReason,
           isInstallment,
@@ -392,6 +468,12 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           generateFutureInstallments: isFirstInstallment,
           // Se for duplicada, desmarcar por padrão para segurança do usuário
           selected: !dupMatch,
+          // Conciliação inteligente
+          isReconciledManual,
+          matchedManualTransaction,
+          reconciliationStatus,
+          reconciliationCandidates,
+          reconciliationReason,
         }
       })
 
@@ -493,6 +575,11 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
   // Estatísticas da revisão
   const selectedCount = useMemo(() => items.filter((i) => i.selected).length, [items])
   const duplicateCount = useMemo(() => items.filter((i) => i.isDuplicate).length, [items])
+  const mergedCount = useMemo(() => items.filter((i) => i.isReconciledManual).length, [items])
+  const multipleCandidatesCount = useMemo(
+    () => items.filter((i) => i.reconciliationStatus === 'multiple_candidates').length,
+    [items],
+  )
   const uncategorizedCount = useMemo(() => items.filter((i) => !i.category_id).length, [items])
   const totalAmountSelected = useMemo(() => {
     let inc = 0
@@ -523,8 +610,16 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
     try {
       setSaving(true)
 
-      // Separar itens que atualizam projeção existente vs novos a criar
+      // Separar itens que:
+      // 1. Atualizam projeção existente ('projected' -> 'confirmed')
+      // 2. Mesclam com transação manual existente (vincula bank_transaction_id / FITID, sem duplicar orçamento)
+      // 3. Criam novas transações no banco
       const toUpdateProjections: Array<{
+        id: string
+        payload: any
+      }> = []
+
+      const toUpdateManualMerges: Array<{
         id: string
         payload: any
       }> = []
@@ -532,7 +627,29 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
       const toCreatePayloads: Array<any> = []
 
       for (const item of selectedItems) {
-        // Se este item casa com uma projeção futura existente no banco, converte para 'confirmed'
+        // Caso A: Se este item está marcado para mesclar com lançamento manual existente
+        // Atualiza a transação manual existente com o FITID bancário (e ajusta a data para a do banco,
+        // preservando categoria, subcategoria, membro e anotações já definidas)
+        if (item.isReconciledManual && item.matchedManualTransaction) {
+          toUpdateManualMerges.push({
+            id: item.matchedManualTransaction.id,
+            payload: {
+              bank_transaction_id: item.fitid || `merged-${item.matchedManualTransaction.id}`,
+              // Ajusta a data para a data do extrato bancário oficial
+              transaction_date: item.date,
+              category_id:
+                item.category_id || item.matchedManualTransaction.category_id || undefined,
+              subcategory_id:
+                item.subcategory_id !== undefined
+                  ? item.subcategory_id
+                  : item.matchedManualTransaction.subcategory_id,
+              member_id: item.member_id || item.matchedManualTransaction.member_id || undefined,
+            },
+          })
+          continue
+        }
+
+        // Caso B: Se este item casa com uma projeção futura existente no banco, converte para 'confirmed'
         if (item.matchedProjectId) {
           toUpdateProjections.push({
             id: item.matchedProjectId,
@@ -544,6 +661,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
               category_id: item.category_id || undefined,
               subcategory_id: item.subcategory_id || null,
               member_id: item.member_id || undefined,
+              bank_transaction_id: item.fitid || undefined,
             },
           })
           continue
@@ -590,6 +708,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
             installment_total: item.installmentTotal || 1,
             installment_group_id: item.matchedGroupId || crypto.randomUUID(),
             status: 'confirmed',
+            bank_transaction_id: item.fitid || null,
           })
         } else {
           // Transação comum
@@ -604,12 +723,14 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
             transaction_date: item.date,
             is_installment: false,
             status: 'confirmed',
+            bank_transaction_id: item.fitid || null,
           })
         }
       }
 
-      // Executa updates e creates
+      // Executa updates (projeções e mesclas manuais) e criações em lote
       await Promise.all([
+        ...toUpdateManualMerges.map((up) => updateTransaction(up.id, up.payload)),
         ...toUpdateProjections.map((up) => updateTransaction(up.id, up.payload)),
         createTransactionsBatch(toCreatePayloads),
       ])
@@ -624,14 +745,19 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
         importedAt: new Date(),
       })
 
-      const convertedMsg =
-        toUpdateProjections.length > 0
-          ? ` (${toUpdateProjections.length} projeção(ões) convertida(s) em confirmada(s))`
-          : ''
+      const detailsMsgParts: string[] = []
+      if (toUpdateManualMerges.length > 0) {
+        detailsMsgParts.push(`${toUpdateManualMerges.length} mesclada(s) com lançamento manual`)
+      }
+      if (toUpdateProjections.length > 0) {
+        detailsMsgParts.push(`${toUpdateProjections.length} projeção(ões) convertida(s)`)
+      }
+
+      const detailsMsg = detailsMsgParts.length > 0 ? ` (${detailsMsgParts.join(', ')})` : ''
 
       toast({
         title: 'Extrato importado com sucesso! 🎉',
-        description: `${selectedItems.length} transações processadas com sucesso${convertedMsg}.`,
+        description: `${selectedItems.length} transações processadas com sucesso${detailsMsg}. Orçamento sem duplicações.`,
       })
 
       triggerRefresh()
@@ -1005,14 +1131,30 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                   {/* Badge de lançamentos válidos */}
                   <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-100/80 border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                    {items.length} lançamentos válidos detectados
+                    {items.length} válidos
                   </span>
+
+                  {/* Badge de Mescla com Lançamento Manual (Conciliação Inteligente) */}
+                  {mergedCount > 0 && (
+                    <span className="text-[11px] font-bold text-teal-800 bg-teal-100/90 border border-teal-300 px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+                      <span>🔗</span>
+                      <span>{mergedCount} mesclada(s) com manual</span>
+                    </span>
+                  )}
+
+                  {/* Aviso de múltiplas candidatas */}
+                  {multipleCandidatesCount > 0 && (
+                    <span className="text-[11px] font-semibold text-indigo-800 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <span>⚡</span>
+                      <span>{multipleCandidatesCount} com múltiplos manuais</span>
+                    </span>
+                  )}
 
                   {/* Alerta de duplicatas */}
                   {duplicateCount > 0 && (
                     <span className="text-[11px] font-semibold text-amber-700 bg-amber-100/80 border border-amber-200 px-2 py-0.5 rounded-full flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" />
-                      {duplicateCount} duplicata(s) detectada(s)
+                      {duplicateCount} duplicata(s)
                     </span>
                   )}
 
@@ -1181,6 +1323,31 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                                 <span className="tabular-nums font-mono text-slate-600 shrink-0">
                                   {item.date}
                                 </span>
+                                {item.isReconciledManual && (
+                                  <span
+                                    title={
+                                      item.reconciliationReason ||
+                                      'Transação manual correspondente vinculada sem duplicar orçamento'
+                                    }
+                                    className="font-bold text-[10px] bg-teal-100 text-teal-900 border border-teal-300 px-1.5 py-0.2 rounded shrink-0 flex items-center gap-0.5"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <span>🔗 Mesclada com lançamento manual</span>
+                                  </span>
+                                )}
+                                {!item.isReconciledManual &&
+                                  item.reconciliationStatus === 'multiple_candidates' && (
+                                    <span
+                                      title={item.reconciliationReason}
+                                      className="font-semibold text-[10px] bg-indigo-100 text-indigo-900 border border-indigo-300 px-1.5 py-0.2 rounded shrink-0 flex items-center gap-0.5"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <span>
+                                        ⚡ {item.reconciliationCandidates?.length} candidatas
+                                        manuais (decida na expansão)
+                                      </span>
+                                    </span>
+                                  )}
                                 {item.isInstallment && (
                                   <span className="font-bold text-[10px] bg-purple-100 text-purple-900 border border-purple-300/80 px-1.5 py-0.2 rounded shrink-0 flex items-center gap-0.5">
                                     <span>
@@ -1245,6 +1412,199 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                       >
                         <div className="overflow-hidden">
                           <div className="p-3 sm:p-4 pt-1 sm:pt-1 border-t border-slate-200/80 space-y-3 bg-gradient-to-b from-amber-50/20 to-white/95">
+                            {/* Bloco de Conciliação Inteligente com Lançamento Manual (Smart Matching) */}
+                            {item.matchedManualTransaction ||
+                            item.reconciliationStatus === 'multiple_candidates' ? (
+                              <div
+                                className={`p-3 rounded-xl border text-xs space-y-2.5 ${
+                                  item.isReconciledManual
+                                    ? 'bg-teal-50/80 border-teal-200 text-teal-950'
+                                    : 'bg-indigo-50/80 border-indigo-200 text-indigo-950'
+                                }`}
+                              >
+                                <div className="flex items-start justify-between gap-2 flex-wrap">
+                                  <div className="flex items-center gap-1.5 font-bold">
+                                    <span className="text-sm">🔗</span>
+                                    <span>
+                                      {item.isReconciledManual
+                                        ? 'Mesclada com lançamento manual'
+                                        : 'Correspondência manual detectada'}
+                                    </span>
+                                    {item.isReconciledManual && (
+                                      <span className="text-[10px] font-semibold text-teal-800 bg-white/80 border border-teal-300 px-1.5 py-0.2 rounded-full">
+                                        Ativo
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Toggle / Checkbox de mescla */}
+                                  <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold px-2.5 py-1 rounded-lg bg-white shadow-2xs border border-teal-300 text-teal-900 hover:bg-teal-50">
+                                    <input
+                                      type="checkbox"
+                                      checked={item.isReconciledManual ?? false}
+                                      onChange={(e) => {
+                                        const shouldMerge = e.target.checked
+                                        if (shouldMerge) {
+                                          const targetManual =
+                                            item.matchedManualTransaction ||
+                                            item.reconciliationCandidates?.[0] ||
+                                            null
+                                          handleUpdateItemField(item.id, 'isReconciledManual', true)
+                                          if (targetManual) {
+                                            handleUpdateItemField(
+                                              item.id,
+                                              'matchedManualTransaction',
+                                              targetManual,
+                                            )
+                                            if (targetManual.category_id) {
+                                              handleUpdateItemField(
+                                                item.id,
+                                                'category_id',
+                                                targetManual.category_id,
+                                              )
+                                            }
+                                            if (targetManual.subcategory_id) {
+                                              handleUpdateItemField(
+                                                item.id,
+                                                'subcategory_id',
+                                                targetManual.subcategory_id,
+                                              )
+                                            }
+                                            if (targetManual.member_id) {
+                                              handleUpdateItemField(
+                                                item.id,
+                                                'member_id',
+                                                targetManual.member_id,
+                                              )
+                                            }
+                                          }
+                                        } else {
+                                          handleUpdateItemField(
+                                            item.id,
+                                            'isReconciledManual',
+                                            false,
+                                          )
+                                        }
+                                      }}
+                                      className="rounded border-teal-400 text-teal-600 focus:ring-teal-500 w-3.5 h-3.5"
+                                    />
+                                    <span>
+                                      {item.isReconciledManual
+                                        ? '🔗 Mesclada (desmarque se forem compras distintas)'
+                                        : 'Vincular e mesclar com este lançamento'}
+                                    </span>
+                                  </label>
+                                </div>
+
+                                {/* Informações da transação manual vinculada */}
+                                {item.matchedManualTransaction && (
+                                  <div className="bg-white/90 rounded-lg p-2.5 border border-teal-200/80 space-y-1 text-[11px]">
+                                    <div className="flex items-center justify-between text-slate-700">
+                                      <span className="font-semibold text-slate-900">
+                                        Lançamento manual no app:
+                                      </span>
+                                      <span className="font-mono text-slate-600 font-medium">
+                                        Data: {item.matchedManualTransaction.transaction_date}
+                                      </span>
+                                    </div>
+                                    <div className="text-slate-800 font-medium truncate">
+                                      "
+                                      {item.matchedManualTransaction.description || 'Sem descrição'}
+                                      "
+                                      {item.matchedManualTransaction.category?.name ? (
+                                        <span className="text-teal-700 font-semibold ml-2">
+                                          • {item.matchedManualTransaction.category.name}
+                                          {item.matchedManualTransaction.subcategory?.name
+                                            ? ` / ${item.matchedManualTransaction.subcategory.name}`
+                                            : ''}
+                                        </span>
+                                      ) : null}
+                                      {item.matchedManualTransaction.member?.name ? (
+                                        <span className="text-slate-500 ml-2">
+                                          ({item.matchedManualTransaction.member.name})
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                    <p className="text-[10px] text-teal-900/80 pt-0.5">
+                                      {item.isReconciledManual
+                                        ? '✓ O FITID do banco será vinculado à transação manual existente, preservando categoria, subcategoria e membro. O valor será contabilizado uma única vez no orçamento.'
+                                        : 'Se mantiver desmarcado, uma nova transação será importada e a transação manual permanecerá independente.'}
+                                    </p>
+                                  </div>
+                                )}
+
+                                {/* Se houver múltiplas candidatas, permitir seleção da candidata desejada */}
+                                {!item.isReconciledManual &&
+                                  (item.reconciliationCandidates?.length || 0) > 1 && (
+                                    <div className="space-y-1.5 pt-1">
+                                      <span className="font-semibold text-slate-800 text-[11px] block">
+                                        Escolha qual lançamento manual corresponde a esta despesa:
+                                      </span>
+                                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                                        {item.reconciliationCandidates?.map((cand) => (
+                                          <div
+                                            key={cand.id}
+                                            className="flex items-center justify-between gap-2 p-2 rounded-lg bg-white border border-indigo-200 text-[11px]"
+                                          >
+                                            <div className="min-w-0 flex-1">
+                                              <span className="font-bold text-slate-800 block truncate">
+                                                {cand.description || 'Sem descrição'}
+                                              </span>
+                                              <span className="text-[10px] text-slate-500">
+                                                {cand.transaction_date} •{' '}
+                                                {cand.category?.name || 'Sem categoria'} •{' '}
+                                                {cand.member?.name || 'Membro'}
+                                              </span>
+                                            </div>
+                                            <Button
+                                              type="button"
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => {
+                                                handleUpdateItemField(
+                                                  item.id,
+                                                  'isReconciledManual',
+                                                  true,
+                                                )
+                                                handleUpdateItemField(
+                                                  item.id,
+                                                  'matchedManualTransaction',
+                                                  cand,
+                                                )
+                                                if (cand.category_id) {
+                                                  handleUpdateItemField(
+                                                    item.id,
+                                                    'category_id',
+                                                    cand.category_id,
+                                                  )
+                                                }
+                                                if (cand.subcategory_id) {
+                                                  handleUpdateItemField(
+                                                    item.id,
+                                                    'subcategory_id',
+                                                    cand.subcategory_id,
+                                                  )
+                                                }
+                                                if (cand.member_id) {
+                                                  handleUpdateItemField(
+                                                    item.id,
+                                                    'member_id',
+                                                    cand.member_id,
+                                                  )
+                                                }
+                                              }}
+                                              className="h-7 text-[10px] px-2 font-bold rounded-lg bg-teal-50 text-teal-800 border-teal-300 hover:bg-teal-100 shrink-0"
+                                            >
+                                              🔗 Mesclar com esta
+                                            </Button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                              </div>
+                            ) : null}
+
                             {/* Linha 1: Descrição editável, Data, Toggle Receita/Despesa e Membro */}
                             <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 pt-1">
                               {/* Descrição */}

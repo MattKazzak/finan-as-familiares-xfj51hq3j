@@ -404,16 +404,19 @@ NEWFILESPEC:NONE
       expect(result.transactions[0].amount_cents).toBe(18990)
       expect(result.transactions[0].type).toBe('expense')
       expect(result.transactions[0].date).toBe('2026-03-10')
+      expect(result.transactions[0].fitid).toBe('20260310001')
 
       expect(result.transactions[1].description).toBe('PIX RECEBIDO JOAO SILVA')
       expect(result.transactions[1].amount_cents).toBe(35000)
       expect(result.transactions[1].type).toBe('income')
       expect(result.transactions[1].date).toBe('2026-03-12')
+      expect(result.transactions[1].fitid).toBe('20260312002')
 
       expect(result.transactions[2].description).toBe('PAGAMENTO CONTA ENERGIA')
       expect(result.transactions[2].amount_cents).toBe(21040)
       expect(result.transactions[2].type).toBe('expense')
       expect(result.transactions[2].date).toBe('2026-03-14')
+      expect(result.transactions[2].fitid).toBe('20260314003')
     })
 
     it('faz parsing de fatura de cartão de crédito em OFX (<CCSTMTRS>) com valores com vírgula e estorno', () => {

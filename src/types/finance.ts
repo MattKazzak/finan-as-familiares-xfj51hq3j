@@ -107,6 +107,7 @@ export interface Transaction {
   installment_total?: number | null
   installment_group_id?: string | null
   status?: TransactionStatus
+  bank_transaction_id?: string | null
   // Relações resolvidas
   member?: FamilyMember
   category?: TransactionCategory

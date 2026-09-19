@@ -13,6 +13,7 @@ export interface ParsedRawTransaction {
   description: string
   amount_cents: number // positivo, centavos
   type: TransactionType
+  fitid?: string // Identificador bancário único (FITID no OFX ou gerado de forma determinística)
   rawLine?: string
   installmentInfo?: ParsedInstallmentInfo
 }
@@ -914,6 +915,7 @@ export function parseOFX(content: string): ParseResult {
     const trntype = extractOFXTagValue(block, 'TRNTYPE').toUpperCase()
     const dtpostedRaw = extractOFXTagValue(block, 'DTPOSTED')
     const trnamtRaw = extractOFXTagValue(block, 'TRNAMT')
+    const fitidRaw = extractOFXTagValue(block, 'FITID')
     const memo = extractOFXTagValue(block, 'MEMO')
     const name = extractOFXTagValue(block, 'NAME')
 
@@ -995,6 +997,7 @@ export function parseOFX(content: string): ParseResult {
     }
 
     const installmentInfo = parseInstallmentFromDescription(description)
+    const fitid = fitidRaw.trim() || undefined
 
     transactions.push({
       id: `ofx-${count}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -1002,6 +1005,7 @@ export function parseOFX(content: string): ParseResult {
       description,
       amount_cents: parsedAmt.amountCents,
       type: finalType,
+      fitid,
       installmentInfo: installmentInfo.isInstallment ? installmentInfo : undefined,
     })
   }
