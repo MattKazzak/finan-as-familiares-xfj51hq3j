@@ -373,6 +373,7 @@ export type Database = {
           icon: string | null
           id: string
           name: string
+          sort_order: number | null
           type: Database['public']['Enums']['transaction_type']
         }
         Insert: {
@@ -382,6 +383,7 @@ export type Database = {
           icon?: string | null
           id?: string
           name: string
+          sort_order?: number | null
           type?: Database['public']['Enums']['transaction_type']
         }
         Update: {
@@ -391,6 +393,7 @@ export type Database = {
           icon?: string | null
           id?: string
           name?: string
+          sort_order?: number | null
           type?: Database['public']['Enums']['transaction_type']
         }
         Relationships: [

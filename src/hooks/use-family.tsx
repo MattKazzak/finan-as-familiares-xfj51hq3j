@@ -40,7 +40,11 @@ interface FamilyContextType {
   openWhoIsUsing: () => void
   loading: boolean
   reloadFamily: () => Promise<void>
-  updateFamily: (updates: { name?: string; avatar_url?: string | null }) => Promise<Family>
+  updateFamily: (updates: {
+    name?: string
+    avatar_url?: string | null
+    monthly_net_income_cents?: number | null
+  }) => Promise<Family>
   uploadFamilyAvatar: (file: File) => Promise<string>
   addMember: (name: string) => Promise<FamilyMember>
   editMember: (id: string, name: string) => Promise<FamilyMember>
@@ -53,7 +57,15 @@ interface FamilyContextType {
   ) => Promise<TransactionCategory>
   editCategory: (
     id: string,
-    updates: { name?: string; color?: string; icon?: string; type?: 'income' | 'expense' },
+    updates: {
+      name?: string
+      color?: string
+      icon?: string
+      type?: 'income' | 'expense'
+      percent_default?: number | null
+      percent_alert?: number | null
+      budget_bucket?: any
+    },
   ) => Promise<TransactionCategory>
   removeCategory: (id: string) => Promise<void>
   checkCategoryUsage: (id: string) => Promise<number>
@@ -174,7 +186,11 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [loading, members])
 
-  const updateFamily = async (updates: { name?: string; avatar_url?: string | null }) => {
+  const updateFamily = async (updates: {
+    name?: string
+    avatar_url?: string | null
+    monthly_net_income_cents?: number | null
+  }) => {
     if (!family) throw new Error('Família não carregada')
     const updated = await updateFamilyDetails(family.id, updates)
     setFamily(updated)
@@ -228,7 +244,15 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
 
   const editCategory = async (
     id: string,
-    updates: { name?: string; color?: string; icon?: string; type?: 'income' | 'expense' },
+    updates: {
+      name?: string
+      color?: string
+      icon?: string
+      type?: 'income' | 'expense'
+      percent_default?: number | null
+      percent_alert?: number | null
+      budget_bucket?: any
+    },
   ) => {
     const updated = await updateCategory(id, updates)
     setCategories((prev) =>

@@ -21,6 +21,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { formatBRL, formatNumberBRL, parseBRLToCents } from '@/lib/formatters'
+import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
+import { Sparkles, Landmark, ArrowUpRight } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -65,6 +68,12 @@ export default function ProfilePage() {
   const [savingFamily, setSavingFamily] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  // Renda Líquida Mensal da Família
+  const [isEditingIncome, setIsEditingIncome] = useState(false)
+  const [incomeInputStr, setIncomeInputStr] = useState('')
+  const [savingIncome, setSavingIncome] = useState(false)
+  const [isApplyModelOpen, setIsApplyModelOpen] = useState(false)
 
   // Diálogo Adicionar/Editar Membro
   const [isMemberDialogOpen, setIsMemberDialogOpen] = useState(false)
@@ -258,6 +267,128 @@ export default function ProfilePage() {
           <Pencil className="w-3.5 h-3.5 mr-1.5" />
           Editar Família
         </Button>
+      </div>
+
+      {/* 1.5. Card de Renda Líquida Mensal da Família (Base do Orçamento) */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold shrink-0">
+              <Landmark className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-base text-slate-900">
+                  Renda Líquida Mensal Familiar
+                </h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                  Base dos cálculos
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Valor líquido que efetivamente entra na conta familiar para cálculo dos tetos
+                ideais.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <Button
+              onClick={() => setIsApplyModelOpen(true)}
+              variant="outline"
+              size="sm"
+              className="text-xs font-semibold rounded-xl border-emerald-600/30 text-emerald-700 hover:bg-emerald-50 gap-1.5"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Aplicar modelo sugerido</span>
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          {isEditingIncome ? (
+            <div className="flex items-center gap-2 flex-1 max-w-sm">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                  R$
+                </span>
+                <Input
+                  type="text"
+                  placeholder="0,00"
+                  value={incomeInputStr}
+                  onChange={(e) => setIncomeInputStr(e.target.value)}
+                  className="pl-9 text-sm font-bold rounded-xl h-9"
+                  autoFocus
+                />
+              </div>
+              <Button
+                size="sm"
+                onClick={async () => {
+                  try {
+                    setSavingIncome(true)
+                    const cents = parseBRLToCents(incomeInputStr)
+                    await updateFamily({ monthly_net_income_cents: cents })
+                    setIsEditingIncome(false)
+                    triggerRefresh()
+                  } catch {
+                    toast({
+                      title: 'Erro ao salvar renda',
+                      description: 'Tente novamente.',
+                      variant: 'destructive',
+                    })
+                  } finally {
+                    setSavingIncome(false)
+                  }
+                }}
+                disabled={savingIncome}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded-xl h-9 font-semibold"
+              >
+                Salvar
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsEditingIncome(false)}
+                disabled={savingIncome}
+                className="text-xs rounded-xl h-9 text-slate-500"
+              >
+                Cancelar
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                  Renda Líquida Cadastrada
+                </span>
+                <span className="text-xl sm:text-2xl font-black text-slate-900 tabular-nums">
+                  {family?.monthly_net_income_cents && family.monthly_net_income_cents > 0
+                    ? formatBRL(family.monthly_net_income_cents)
+                    : 'Não definida'}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const curr = family?.monthly_net_income_cents || 0
+                  setIncomeInputStr(curr > 0 ? formatNumberBRL(curr) : '')
+                  setIsEditingIncome(true)
+                }}
+                className="text-xs text-emerald-700 hover:bg-emerald-50 rounded-xl h-8 px-2.5 font-semibold"
+              >
+                <Edit3 className="w-3.5 h-3.5 mr-1" />
+                {family?.monthly_net_income_cents && family.monthly_net_income_cents > 0
+                  ? 'Alterar valor'
+                  : 'Definir agora'}
+              </Button>
+            </div>
+          )}
+
+          <div className="text-right sm:text-left text-[11px] text-slate-400">
+            <span>Usado para ajustar tetos por % e farol preventivo</span>
+          </div>
+        </div>
       </div>
 
       {/* 2. Seletor 'Quem está usando?' por Aparelho */}
@@ -603,6 +734,17 @@ export default function ProfilePage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* MODAL DE APLICAÇÃO DO MODELO ORÇAMENTÁRIO */}
+      <ApplyBudgetModelDialog
+        open={isApplyModelOpen}
+        onOpenChange={setIsApplyModelOpen}
+        family={family}
+        categories={categories}
+        onSuccess={() => {
+          triggerRefresh()
+        }}
+      />
 
       {/* Rodapé de Versão */}
       <div className="text-center pt-2 pb-4">

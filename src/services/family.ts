@@ -101,7 +101,7 @@ export async function deleteFamilyMember(id: string) {
 
 export async function updateFamilyDetails(
   familyId: string,
-  updates: { name?: string; avatar_url?: string | null },
+  updates: { name?: string; avatar_url?: string | null; monthly_net_income_cents?: number | null },
 ) {
   const { data, error } = await (supabase as any)
     .from('families')
@@ -186,13 +186,24 @@ export async function addCategory(
 
 export async function updateCategory(
   id: string,
-  updates: { name?: string; color?: string; icon?: string; type?: 'income' | 'expense' },
+  updates: {
+    name?: string
+    color?: string
+    icon?: string
+    type?: 'income' | 'expense'
+    percent_default?: number | null
+    percent_alert?: number | null
+    budget_bucket?: string | null
+  },
 ) {
   const payload: any = {}
   if (updates.name !== undefined) payload.name = updates.name.trim()
   if (updates.color !== undefined) payload.color = updates.color
   if (updates.icon !== undefined) payload.icon = updates.icon
   if (updates.type !== undefined) payload.type = updates.type
+  if (updates.percent_default !== undefined) payload.percent_default = updates.percent_default
+  if (updates.percent_alert !== undefined) payload.percent_alert = updates.percent_alert
+  if (updates.budget_bucket !== undefined) payload.budget_bucket = updates.budget_bucket
 
   const { data, error } = await (supabase as any)
     .from('transaction_categories')

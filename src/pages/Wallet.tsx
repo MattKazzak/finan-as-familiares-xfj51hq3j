@@ -69,6 +69,9 @@ import {
   GripVertical,
 } from 'lucide-react'
 import { SortableList } from '@/components/common/SortableList'
+import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
+import { BUCKET_METADATA } from '@/types/budget-presets'
+import { updateCategoryBudgetPercent, updateCategoryBudgetAmount } from '@/services/budget-model'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -261,9 +264,11 @@ export default function WalletPage() {
   const [editingBudgetSubcatId, setEditingBudgetSubcatId] = useState<string | null>(null)
   const [defaultAmountStr, setDefaultAmountStr] = useState('')
   const [monthAmountStr, setMonthAmountStr] = useState('')
+  const [editingPercentStr, setEditingPercentStr] = useState('')
   const [isEditingOnlyThisMonth, setIsEditingOnlyThisMonth] = useState(false)
   const [hasMonthOverride, setHasMonthOverride] = useState(false)
   const [savingBudget, setSavingBudget] = useState(false)
+  const [isApplyModelOpen, setIsApplyModelOpen] = useState(false)
 
   // Navegação de mês
   const handlePrevMonth = () => {
@@ -566,6 +571,44 @@ export default function WalletPage() {
       return a.category.name.localeCompare(b.category.name)
     })
 
+    // Agrupamento por Baldes (Essenciais, Estilo de Vida, Futuro e Metas, Outros)
+    const netIncomeCents = family?.monthly_net_income_cents || 0
+    const bucketsSummary = {
+      essentials: { budgetCents: 0, spentCents: 0, percentIncome: 0 },
+      lifestyle: { budgetCents: 0, spentCents: 0, percentIncome: 0 },
+      future: { budgetCents: 0, spentCents: 0, percentIncome: 0 },
+      other: { budgetCents: 0, spentCents: 0, percentIncome: 0 },
+    }
+
+    list.forEach((item) => {
+      const bucket = item.category.budget_bucket || 'other'
+      if (bucket in bucketsSummary) {
+        bucketsSummary[bucket as keyof typeof bucketsSummary].budgetCents += item.limitCents
+        bucketsSummary[bucket as keyof typeof bucketsSummary].spentCents += item.spentCents
+      } else {
+        bucketsSummary.other.budgetCents += item.limitCents
+        bucketsSummary.other.spentCents += item.spentCents
+      }
+    })
+
+    if (netIncomeCents > 0) {
+      bucketsSummary.essentials.percentIncome = Math.round(
+        (bucketsSummary.essentials.budgetCents / netIncomeCents) * 100,
+      )
+      bucketsSummary.lifestyle.percentIncome = Math.round(
+        (bucketsSummary.lifestyle.budgetCents / netIncomeCents) * 100,
+      )
+      bucketsSummary.future.percentIncome = Math.round(
+        (bucketsSummary.future.budgetCents / netIncomeCents) * 100,
+      )
+      bucketsSummary.other.percentIncome = Math.round(
+        (bucketsSummary.other.budgetCents / netIncomeCents) * 100,
+      )
+    }
+
+    const totalBudgetPercentOfIncome =
+      netIncomeCents > 0 ? Math.round((totalBudget / netIncomeCents) * 100) : 0
+
     return {
       list,
       totalBudget,
@@ -574,8 +617,10 @@ export default function WalletPage() {
       totalPercent:
         totalBudget > 0 ? Math.min(Math.round((totalSpent / totalBudget) * 100), 100) : 0,
       isTotalOver: totalSpent > totalBudget && totalBudget > 0,
+      bucketsSummary,
+      totalBudgetPercentOfIncome,
     }
-  }, [categories, transactions, defaultBudgets, monthOverrides])
+  }, [categories, transactions, defaultBudgets, monthOverrides, family])
 
   // Abrir modal de edição de orçamento (para categoria pai ou subcategoria)
   const openBudgetEditor = (
@@ -584,12 +629,16 @@ export default function WalletPage() {
     currentDefault?: number,
     currentMonthVal?: number,
     isOverridden: boolean = false,
+    currentPercent?: number | null,
   ) => {
     setEditingBudgetCatId(catId)
     setEditingBudgetSubcatId(subcatId)
     setDefaultAmountStr(currentDefault && currentDefault > 0 ? formatNumberBRL(currentDefault) : '')
     setMonthAmountStr(
       currentMonthVal && currentMonthVal > 0 ? formatNumberBRL(currentMonthVal) : '',
+    )
+    setEditingPercentStr(
+      currentPercent !== undefined && currentPercent !== null ? String(currentPercent) : '',
     )
     setIsEditingOnlyThisMonth(isOverridden)
     setHasMonthOverride(isOverridden)
@@ -632,6 +681,29 @@ export default function WalletPage() {
         // Orçamento padrão recorrente (todos os meses)
         const defCents = parseBRLToCents(defaultAmountStr)
         await upsertDefaultBudget(family.id, editingBudgetCatId, defCents, editingBudgetSubcatId)
+
+        // Se estiver editando a categoria pai e houver percentual ou renda familiar
+        if (!editingBudgetSubcatId) {
+          const netIncome = family.monthly_net_income_cents || 0
+          if (editingPercentStr.trim() !== '') {
+            const pVal = parseFloat(editingPercentStr.replace(',', '.'))
+            if (!isNaN(pVal)) {
+              await updateCategoryBudgetPercent({
+                familyId: family.id,
+                categoryId: editingBudgetCatId,
+                monthlyNetIncomeCents: netIncome,
+                newPercent: pVal,
+              })
+            }
+          } else if (netIncome > 0 && defCents > 0) {
+            await updateCategoryBudgetAmount({
+              familyId: family.id,
+              categoryId: editingBudgetCatId,
+              monthlyNetIncomeCents: netIncome,
+              newAmountCents: defCents,
+            })
+          }
+        }
 
         // Se o usuário estiver alterando o padrão e existia um override, opcionalmente remove o override para alinhar
         if (hasMonthOverride) {
@@ -1046,7 +1118,7 @@ export default function WalletPage() {
         {/* ================= TAB 2: ORÇAMENTOS ================= */}
         {activeTab === 'orcamentos' ? (
           <div className="space-y-5 mt-0 animate-in fade-in-50 duration-200">
-            {/* Cabeçalho da Aba Orçamentos: Ações Rápidas (Receitas Fixas & Nova Categoria) */}
+            {/* Cabeçalho da Aba Orçamentos: Ações Rápidas (Receitas Fixas & Modelo Sugerido) */}
             <div className="flex items-center justify-between gap-2 flex-wrap bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
@@ -1057,12 +1129,22 @@ export default function WalletPage() {
                     Planejamento & Orçamentos
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    Defina tetos e gerencie categorias diretamente pelos ícones da lista
+                    Tetos baseados em percentuais da renda líquida familiar com liberdade total
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsApplyModelOpen(true)}
+                  className="rounded-xl text-xs font-bold gap-1.5 border-emerald-600/30 text-emerald-800 bg-emerald-50 hover:bg-emerald-100/80 h-8 shadow-xs"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Aplicar modelo sugerido</span>
+                </Button>
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -1074,6 +1156,152 @@ export default function WalletPage() {
                 </Button>
               </div>
             </div>
+
+            {/* CARD DE ONBOARDING LEVE (QUANDO A RENDA LÍQUIDA AINDA NÃO FOI DEFINIDA) */}
+            {(!family?.monthly_net_income_cents || family.monthly_net_income_cents <= 0) && (
+              <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-emerald-950 text-white rounded-3xl p-5 shadow-sm border border-emerald-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in-50 duration-200">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-emerald-300 shrink-0 mt-0.5">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-sm sm:text-base text-white">
+                      Defina a renda líquida mensal da família
+                    </h4>
+                    <p className="text-xs text-emerald-100/80 mt-1 max-w-xl leading-relaxed">
+                      O app calcula os tetos ideais automaticamente com base na metodologia de
+                      consultores financeiros (Essenciais 57%, Estilo de Vida 21%, Futuro 22%),
+                      convertendo em reais e oferecendo total flexibilidade de personalização.
+                    </p>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={() => setIsApplyModelOpen(true)}
+                  className="bg-white text-emerald-900 hover:bg-emerald-50 font-bold text-xs rounded-xl shadow-md self-start sm:self-center shrink-0 gap-1.5"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Configurar em 3 passos</span>
+                </Button>
+              </div>
+            )}
+
+            {/* CARD DE RESUMO DOS 3 BALDES (ESSENCIAIS / ESTILO DE VIDA / FUTURO) */}
+            {family?.monthly_net_income_cents && family.monthly_net_income_cents > 0 ? (
+              <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs uppercase font-bold tracking-wider text-slate-500">
+                        Matriz de Orçamento Familiar · Baldes Financeiros
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                        Renda Líquida: {formatBRL(family.monthly_net_income_cents)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Distribuição do orçamento planejado em relação à renda líquida da família.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => setIsApplyModelOpen(true)}
+                      className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 underline flex items-center gap-1 transition-colors"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Trocar perfil / Ajustar renda</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Grid dos 3 Baldes Macro */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* Balde 1: Gastos Essenciais */}
+                  <div className="rounded-2xl p-3.5 border border-sky-200/80 bg-sky-50/40">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800">
+                        Essenciais
+                      </span>
+                      <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 tabular-nums">
+                        {categoryBudgetData.bucketsSummary.essentials.percentIncome}% da renda
+                      </span>
+                    </div>
+                    <div className="mt-2">
+                      <span className="text-base sm:text-lg font-black text-slate-900 tabular-nums block">
+                        {formatBRL(categoryBudgetData.bucketsSummary.essentials.spentCents)}{' '}
+                        <span className="text-xs font-medium text-slate-400">
+                          / {formatBRL(categoryBudgetData.bucketsSummary.essentials.budgetCents)}
+                        </span>
+                      </span>
+                      <span className="text-[10px] text-slate-500 block mt-0.5">
+                        Moradia, Alimentação, Transporte, Saúde, Educação
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Balde 2: Estilo de Vida */}
+                  <div className="rounded-2xl p-3.5 border border-amber-200/80 bg-amber-50/40">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
+                        Estilo de Vida
+                      </span>
+                      <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 tabular-nums">
+                        {categoryBudgetData.bucketsSummary.lifestyle.percentIncome}% da renda
+                      </span>
+                    </div>
+                    <div className="mt-2">
+                      <span className="text-base sm:text-lg font-black text-slate-900 tabular-nums block">
+                        {formatBRL(categoryBudgetData.bucketsSummary.lifestyle.spentCents)}{' '}
+                        <span className="text-xs font-medium text-slate-400">
+                          / {formatBRL(categoryBudgetData.bucketsSummary.lifestyle.budgetCents)}
+                        </span>
+                      </span>
+                      <span className="text-[10px] text-slate-500 block mt-0.5">
+                        Lazer, Compras, Assinaturas e Cuidados
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Balde 3: Futuro e Metas */}
+                  <div className="rounded-2xl p-3.5 border border-emerald-200/80 bg-emerald-50/40">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
+                        Futuro & Metas
+                      </span>
+                      <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 tabular-nums">
+                        {categoryBudgetData.bucketsSummary.future.percentIncome}% da renda
+                      </span>
+                    </div>
+                    <div className="mt-2">
+                      <span className="text-base sm:text-lg font-black text-slate-900 tabular-nums block">
+                        {formatBRL(categoryBudgetData.bucketsSummary.future.spentCents)}{' '}
+                        <span className="text-xs font-medium text-slate-400">
+                          / {formatBRL(categoryBudgetData.bucketsSummary.future.budgetCents)}
+                        </span>
+                      </span>
+                      <span className="text-[10px] text-slate-500 block mt-0.5">
+                        Reserva, Investimentos de Longo Prazo e Sonhos
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Total Comprometido */}
+                <div className="pt-2 flex items-center justify-between text-xs text-slate-500 border-t border-slate-100">
+                  <span>
+                    Total dos tetos cadastrados:{' '}
+                    <strong className="text-slate-800">
+                      {formatBRL(categoryBudgetData.totalBudget)}
+                    </strong>
+                  </span>
+                  <span className="font-bold text-slate-700">
+                    {categoryBudgetData.totalBudgetPercentOfIncome}% da renda líquida total
+                  </span>
+                </div>
+              </div>
+            ) : null}
 
             {/* CARD DE PREVISÃO DE CUSTO DE VIDA (RECEITAS FIXAS VS TETOS COMPROMETIDOS) */}
             {forecastData.totalPlannedIncomeCents > 0 || categoryBudgetData.totalBudget > 0 ? (
@@ -1316,6 +1544,7 @@ export default function WalletPage() {
                               item.defaultLimitCents,
                               item.limitCents,
                               item.hasOverride,
+                              item.category.percent_default,
                             )
                           }
                           className="p-3 sm:p-3.5 flex items-center justify-between hover:bg-slate-50/80 cursor-pointer transition-colors group gap-2 sm:gap-3 touch-manipulation"
@@ -1345,13 +1574,32 @@ export default function WalletPage() {
                             </div>
 
                             <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1.5 flex-wrap">
                                 <span
                                   className="font-bold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors break-words leading-snug"
                                   title={item.category.name}
                                 >
                                   {item.category.name}
                                 </span>
+
+                                {/* Tag de Balde se houver */}
+                                {item.category.budget_bucket && (
+                                  <span
+                                    className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md ${
+                                      BUCKET_METADATA[item.category.budget_bucket]?.bgLight ||
+                                      'bg-slate-100 text-slate-600'
+                                    }`}
+                                  >
+                                    {BUCKET_METADATA[item.category.budget_bucket]?.shortLabel}
+                                  </span>
+                                )}
+
+                                {/* Percentual da renda se definido */}
+                                {item.category.percent_default ? (
+                                  <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/70 px-1.5 py-0.2 rounded-md tabular-nums">
+                                    {item.category.percent_default}% da renda
+                                  </span>
+                                ) : null}
                               </div>
 
                               <p className="text-xs text-slate-500 tabular-nums mt-0.5 flex items-center gap-1 flex-wrap">
@@ -1361,20 +1609,104 @@ export default function WalletPage() {
                                   {item.limitCents > 0 ? formatBRL(item.limitCents) : 'Sem teto'}
                                 </span>
                               </p>
+
+                              {/* FAROL PREVENTIVO APRIMORADO COM DIAS RESTANTES */}
+                              {(() => {
+                                if (item.limitCents <= 0) return null
+
+                                const isInvestmentCategory =
+                                  item.category.name.toLowerCase().includes('reserva') ||
+                                  item.category.name.toLowerCase().includes('invest') ||
+                                  item.category.budget_bucket === 'future'
+
+                                const now = new Date()
+                                const isCurrentViewingMonth =
+                                  now.toISOString().slice(0, 7) === monthKey
+
+                                const daysInMonth = new Date(
+                                  currentDate.getFullYear(),
+                                  currentDate.getMonth() + 1,
+                                  0,
+                                ).getDate()
+                                const currentDay = isCurrentViewingMonth ? now.getDate() : 1
+                                const daysRemaining = Math.max(0, daysInMonth - currentDay)
+
+                                // Lógica para Reserva & Investimentos: alerta quando aporte ficar ABAIXO do mínimo
+                                if (isInvestmentCategory) {
+                                  if (item.percent < 70) {
+                                    return (
+                                      <p className="text-[10px] text-amber-600 font-semibold mt-1 flex items-center gap-1">
+                                        <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
+                                        <span>
+                                          Aporte em {item.percent}% do teto ideal. Priorize sua
+                                          reserva de segurança.
+                                        </span>
+                                      </p>
+                                    )
+                                  }
+                                  return (
+                                    <p className="text-[10px] text-emerald-600 font-medium mt-1 flex items-center gap-1">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                      <span>
+                                        Meta de investimentos no ritmo saudável ({item.percent}%
+                                        alcançado).
+                                      </span>
+                                    </p>
+                                  )
+                                }
+
+                                // Regra preventiva padrão:
+                                // 🔴 Acima de 90% ou 100%+
+                                if (item.percent > 90) {
+                                  return (
+                                    <p className="text-[10px] text-red-600 font-semibold mt-1 flex items-center gap-1">
+                                      <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+                                      <span>
+                                        {item.isOver
+                                          ? `Estourou o teto em ${formatBRL(item.spentCents - item.limitCents)}!`
+                                          : `Atenção: ${item.percent}% consumido do teto.`}
+                                      </span>
+                                    </p>
+                                  )
+                                }
+
+                                // 🟡 71% a 90%: Alerta preventivo com dias restantes
+                                if (item.percent >= 71) {
+                                  return (
+                                    <p className="text-[10px] text-amber-700 font-medium mt-1 flex items-center gap-1">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                                      <span>
+                                        Já consumiu {item.percent}% do orçamento
+                                        {daysRemaining > 0 && isCurrentViewingMonth
+                                          ? ` e ainda faltam ${daysRemaining} dias para o fim do mês.`
+                                          : '.'}
+                                      </span>
+                                    </p>
+                                  )
+                                }
+
+                                // 🟢 Até 70%: Verde ritmo saudável
+                                return (
+                                  <p className="text-[10px] text-emerald-600 font-medium mt-1 flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                    <span>Ritmo saudável ({item.percent}% consumido).</span>
+                                  </p>
+                                )
+                              })()}
                             </div>
                           </div>
 
                           {/* Lado Direito: Progresso / Teto + Ações (Desktop direto / Mobile menu ⋯) + Expand */}
-                          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+                          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 self-start sm:self-center mt-1 sm:mt-0">
                             {/* Progresso / Barra de Cor da Categoria Pai com Percentual Visível */}
                             <div className="flex items-center">
                               {item.limitCents > 0 ? (
                                 <div className="flex items-center gap-1.5 sm:gap-2">
                                   <span
                                     className={`text-[11px] font-bold tabular-nums min-w-[34px] sm:min-w-[38px] text-right ${
-                                      item.isOver
+                                      item.isOver || item.percent > 90
                                         ? 'text-red-600'
-                                        : item.percent >= 75
+                                        : item.percent >= 71
                                           ? 'text-amber-600'
                                           : 'text-emerald-600'
                                     }`}
@@ -1384,9 +1716,9 @@ export default function WalletPage() {
                                   <div className="hidden xs:block w-12 sm:w-20 bg-slate-100 h-2 rounded-full overflow-hidden">
                                     <div
                                       className={`h-full rounded-full transition-all ${
-                                        item.isOver
+                                        item.isOver || item.percent > 90
                                           ? 'bg-red-500'
-                                          : item.percent >= 75
+                                          : item.percent >= 71
                                             ? 'bg-amber-500'
                                             : 'bg-emerald-600'
                                       }`}
@@ -2158,7 +2490,7 @@ export default function WalletPage() {
 
                 {/* 1. Modo: Padrão Recorrente */}
                 {!isEditingOnlyThisMonth ? (
-                  <div className="space-y-2 bg-emerald-50/50 border border-emerald-200/60 p-4 rounded-2xl">
+                  <div className="space-y-3 bg-emerald-50/50 border border-emerald-200/60 p-4 rounded-2xl">
                     <div className="flex items-center justify-between">
                       <Label
                         htmlFor="bg-default-amount"
@@ -2171,24 +2503,76 @@ export default function WalletPage() {
                       </span>
                     </div>
 
-                    <div className="relative mt-1">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
-                        R$
-                      </span>
-                      <Input
-                        id="bg-default-amount"
-                        type="text"
-                        inputMode="decimal"
-                        placeholder="0,00"
-                        value={defaultAmountStr}
-                        onChange={(e) => setDefaultAmountStr(e.target.value)}
-                        className="pl-10 text-lg font-bold tabular-nums bg-white"
-                        autoFocus
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">
+                            R$
+                          </span>
+                          <Input
+                            id="bg-default-amount"
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="0,00"
+                            value={defaultAmountStr}
+                            onChange={(e) => {
+                              const val = e.target.value
+                              setDefaultAmountStr(val)
+                              // Se houver renda da família, recalcula o % na hora
+                              const netIncome = family?.monthly_net_income_cents || 0
+                              const cents = parseBRLToCents(val)
+                              if (netIncome > 0 && cents > 0) {
+                                const p = Math.round((cents / netIncome) * 1000) / 10
+                                setEditingPercentStr(String(p))
+                              }
+                            }}
+                            className="pl-9 text-base font-bold tabular-nums bg-white h-10 rounded-xl"
+                            autoFocus
+                          />
+                        </div>
+                        <span className="text-[10px] text-slate-500 mt-1 block">
+                          Valor em reais
+                        </span>
+                      </div>
+
+                      {!editingBudgetSubcatId && (
+                        <div>
+                          <div className="relative">
+                            <Input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              max="100"
+                              placeholder="Ex: 15"
+                              value={editingPercentStr}
+                              onChange={(e) => {
+                                const pStr = e.target.value
+                                setEditingPercentStr(pStr)
+                                // Se houver renda da família, recalcula o valor em reais na hora
+                                const netIncome = family?.monthly_net_income_cents || 0
+                                const pVal = parseFloat(pStr.replace(',', '.'))
+                                if (netIncome > 0 && !isNaN(pVal) && pVal >= 0) {
+                                  const c = Math.round((netIncome * pVal) / 100)
+                                  setDefaultAmountStr(formatNumberBRL(c))
+                                }
+                              }}
+                              className="pr-8 text-base font-bold tabular-nums bg-white h-10 rounded-xl"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">
+                              %
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-500 mt-1 block">
+                            % da renda líquida
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-1">
-                      Este teto serve como base automática para todos os meses futuros sem
-                      necessidade de recriar.
+
+                    <p className="text-[11px] text-slate-500">
+                      Alterar o valor em reais ou a porcentagem atualiza automaticamente o outro
+                      campo com base na renda líquida familiar (
+                      {formatBRL(family?.monthly_net_income_cents || 0)}).
                     </p>
                   </div>
                 ) : null}
@@ -2644,6 +3028,18 @@ export default function WalletPage() {
         loadingUsage={loadingSubUsage}
         onClose={() => setSubcategoryToDelete(null)}
         onConfirm={handleConfirmDeleteSubcategory}
+      />
+
+      {/* MODAL DE APLICAÇÃO DO MODELO ORÇAMENTÁRIO */}
+      <ApplyBudgetModelDialog
+        open={isApplyModelOpen}
+        onOpenChange={setIsApplyModelOpen}
+        family={family}
+        categories={categories}
+        onSuccess={async () => {
+          triggerRefresh()
+          await loadMonthData()
+        }}
       />
 
       {/* DIÁLOGO DE RECEITAS FIXAS RECORRENTES */}

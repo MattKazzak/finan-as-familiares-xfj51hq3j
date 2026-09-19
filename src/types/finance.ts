@@ -8,6 +8,7 @@ export interface Family {
   id: string
   name: string
   avatar_url?: string | null
+  monthly_net_income_cents?: number | null
   created_by: string | null
   created_at: string
 }
@@ -20,6 +21,8 @@ export interface FamilyMember {
   created_at: string
 }
 
+export type BudgetBucket = 'essentials' | 'lifestyle' | 'future'
+
 export interface TransactionCategory {
   id: string
   family_id: string | null
@@ -28,6 +31,9 @@ export interface TransactionCategory {
   color: string | null
   type: TransactionType
   sort_order?: number
+  percent_default?: number | null
+  percent_alert?: number | null
+  budget_bucket?: BudgetBucket | null
   created_at: string
   subcategories?: TransactionSubcategory[]
 }
