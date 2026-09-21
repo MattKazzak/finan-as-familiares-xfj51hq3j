@@ -74,7 +74,6 @@ import {
   Tag,
   Briefcase,
   MoreVertical,
-  Menu,
   GripVertical,
   GraduationCap,
 } from 'lucide-react'
@@ -2062,20 +2061,8 @@ export default function WalletPage() {
                         >
                           {/* Top Row: Identificação + Ações */}
                           <div className="flex items-start justify-between gap-2 sm:gap-3">
-                            {/* Alça de arrasto + Ícone + Nome completo e badges */}
-                            <div className="flex items-start gap-2 sm:gap-3 min-w-0 flex-1">
-                              {/* Ícone de arrasto ≡ */}
-                              <button
-                                type="button"
-                                {...dragHandleProps}
-                                onClick={(e) => e.stopPropagation()}
-                                className="w-6 h-8 sm:w-7 sm:h-9 flex items-center justify-center text-slate-300 hover:text-slate-600 cursor-grab active:cursor-grabbing shrink-0 touch-none rounded-lg hover:bg-slate-100 transition-colors mt-0.5"
-                                title="Segure e arraste para reordenar"
-                                aria-label={`Arrastar para reordenar categoria ${item.category.name}`}
-                              >
-                                <Menu className="w-4 h-4" />
-                              </button>
-
+                            {/* Ícone da Categoria + Nome completo e badges */}
+                            <div className="flex items-start gap-2.5 sm:gap-3 min-w-0 flex-1">
                               {/* Ícone da categoria */}
                               <div
                                 className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center text-white shadow-xs shrink-0 mt-0.5"
@@ -2480,7 +2467,7 @@ export default function WalletPage() {
                           </div>
 
                           {/* Seção Inferior: Valores + Barra de Progresso (apenas na categoria pai) + Farol */}
-                          <div className="mt-2.5 sm:mt-2 pl-8 sm:pl-10">
+                          <div className="mt-2.5 sm:mt-2">
                             {/* Linha de Valores: Gasto vs Teto */}
                             <div className="flex items-baseline justify-between gap-2">
                               <div className="text-xs sm:text-sm text-slate-500 tabular-nums flex items-baseline gap-1.5 flex-wrap">
