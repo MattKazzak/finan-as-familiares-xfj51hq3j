@@ -2042,9 +2042,7 @@ export default function WalletPage() {
                     await reorderCategoriesList(orderedIds)
                   }}
                   renderItem={(item, _idx, dragHandleProps, isDragging) => {
-                    const isExpanded =
-                      expandedBudgetCategories[item.category.id] ??
-                      (item.limitCents > 0 || item.spentCents > 0)
+                    const isExpanded = Boolean(expandedBudgetCategories[item.category.id])
                     const hasSubcats = item.subcategories.length > 0
 
                     return (

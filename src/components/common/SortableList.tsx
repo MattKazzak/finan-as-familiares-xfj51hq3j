@@ -11,7 +11,8 @@ export interface SortableListProps<T> {
     isDragging: boolean,
   ) => React.ReactNode
   className?: string
-  dragHandleOnly?: boolean // se false, aceita long-press em qualquer lugar sem clique em botão
+  dragHandleOnly?: boolean // se true, apenas o handle inicia o drag
+  longPressDelay?: number // milissegundos para disparar long press (default: 350ms)
 }
 
 export interface DragHandleProps {
@@ -23,11 +24,12 @@ export interface DragHandleProps {
 }
 
 /**
- * Componente leve de reordenação arrastável (Drag & Drop) com Pointer Events.
- * - Suporta mouse no desktop e toque no mobile.
- * - Suporte a pegar pelo ícone ≡ direto (arraste imediato) OU toque longo / segurar no card.
- * - Exibe linha indicadora de inserção ou visual suave sem causar conflitos de React 19.
- * - Não bloqueia cliques curtos (abrir modal / botões).
+ * Componente refinado de reordenação arrastável (Drag & Drop) mobile-first com Pointer Events:
+ * - Pressão longa (long-press ~350ms) em qualquer lugar do card ativa o modo de arrasto
+ * - Toque simples abre gavetas/modais sem interferência (não dispara long-press nem drag)
+ * - Enquanto arrasta, o item selecionado ganha elevação, escala suave e segue o movimento vertical
+ * - Os outros itens abrem espaço suavemente com translateY animado (estilo iOS / FLIP reordering)
+ * - Haptic feedback (vibração leve de 25ms) no momento exato em que a pressão longa é confirmada
  */
 export function SortableList<T>({
   items,
@@ -35,6 +37,8 @@ export function SortableList<T>({
   onReorder,
   renderItem,
   className = '',
+  dragHandleOnly = false,
+  longPressDelay = 350,
 }: SortableListProps<T>) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
@@ -42,17 +46,19 @@ export function SortableList<T>({
   // Estado de arraste
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [overIndex, setOverIndex] = useState<number | null>(null)
-  const [isPointerActive, setIsPointerActive] = useState<boolean>(false)
+  const [dragTranslateY, setDragTranslateY] = useState<number>(0)
+  const [isPressing, setIsPressing] = useState<number | null>(null) // feedback visual durante o hold antes de ativar
 
   // Refs de controle para touch/mouse
   const activePointerId = useRef<number | null>(null)
   const startPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
-  const currentPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isDraggingRef = useRef<boolean>(false)
   const draggedIndexRef = useRef<number | null>(null)
   const overIndexRef = useRef<number | null>(null)
   const itemsRef = useRef<T[]>(items)
+  const itemHeightsRef = useRef<number[]>([])
+  const draggedElHeightRef = useRef<number>(0)
 
   useEffect(() => {
     itemsRef.current = items
@@ -63,6 +69,7 @@ export function SortableList<T>({
       clearTimeout(longPressTimer.current)
       longPressTimer.current = null
     }
+    setIsPressing(null)
   }
 
   const cleanupDrag = useCallback(() => {
@@ -73,23 +80,24 @@ export function SortableList<T>({
     activePointerId.current = null
     setDraggedIndex(null)
     setOverIndex(null)
-    setIsPointerActive(false)
+    setDragTranslateY(0)
+    setIsPressing(null)
     document.body.style.userSelect = ''
     document.body.style.touchAction = ''
   }, [])
 
+  // Calcula qual índice da lista o ponteiro está sobrevoando
   const findHoveredIndex = useCallback(
     (clientY: number): number | null => {
       const list = itemsRef.current
       if (!list || list.length === 0) return null
 
-      // Percorre cada elemento de item medindo seu bounding rect
       for (let i = 0; i < list.length; i++) {
         const id = keyExtractor(list[i])
         const el = itemRefs.current.get(id)
         if (!el) continue
         const rect = el.getBoundingClientRect()
-        // Se clientY está no topo/meio ou dentro deste item
+        // Ponto de teste com folga vertical
         if (clientY >= rect.top && clientY <= rect.bottom) {
           return i
         }
@@ -105,36 +113,48 @@ export function SortableList<T>({
     [keyExtractor],
   )
 
-  // Iniciar o arraste de fato
-  const startDrag = useCallback((index: number) => {
-    isDraggingRef.current = true
-    draggedIndexRef.current = index
-    overIndexRef.current = index
-    setDraggedIndex(index)
-    setOverIndex(index)
-    setIsPointerActive(true)
+  // Iniciar o arraste após confirmação (seja por handle imediato ou por timer de long press)
+  const startDrag = useCallback(
+    (index: number) => {
+      isDraggingRef.current = true
+      draggedIndexRef.current = index
+      overIndexRef.current = index
+      setDraggedIndex(index)
+      setOverIndex(index)
+      setDragTranslateY(0)
+      setIsPressing(null)
 
-    document.body.style.userSelect = 'none'
-    document.body.style.touchAction = 'none'
+      document.body.style.userSelect = 'none'
+      document.body.style.touchAction = 'none'
 
-    // Vibração suave no mobile (haptic feedback) se disponível
-    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-      try {
-        navigator.vibrate?.(30)
-      } catch {
-        // Ignora caso navegador restrinja
+      // Medir alturas dos elementos no momento de início para animação de deslocamento suave
+      const heights: number[] = []
+      itemsRef.current.forEach((it) => {
+        const id = keyExtractor(it)
+        const el = itemRefs.current.get(id)
+        heights.push(el ? el.offsetHeight : 64)
+      })
+      itemHeightsRef.current = heights
+      draggedElHeightRef.current = heights[index] || 64
+
+      // Haptic feedback (vibração mobile nativa)
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        try {
+          navigator.vibrate?.(25)
+        } catch {
+          // Ignora se não for suportado
+        }
       }
-    }
-  }, [])
+    },
+    [keyExtractor],
+  )
 
   const handlePointerMove = useCallback(
     (e: PointerEvent) => {
       if (activePointerId.current !== null && e.pointerId !== activePointerId.current) return
 
-      currentPos.current = { x: e.clientX, y: e.clientY }
-
       if (!isDraggingRef.current) {
-        // Se mover mais que 8px antes do long-press, cancela timer para permitir scroll normal
+        // Se mover mais de 8px antes de completar o long press, cancela o timer (o usuário está fazendo scroll normal)
         const dx = Math.abs(e.clientX - startPos.current.x)
         const dy = Math.abs(e.clientY - startPos.current.y)
         if (dx > 8 || dy > 8) {
@@ -143,8 +163,12 @@ export function SortableList<T>({
         return
       }
 
-      // Se estiver arrastando, impede scroll nativo e calcula a nova posição
+      // Se já estiver arrastando, impede scroll nativo e calcula a nova posição
       e.preventDefault()
+
+      const deltaY = e.clientY - startPos.current.y
+      setDragTranslateY(deltaY)
+
       const targetIdx = findHoveredIndex(e.clientY)
       if (targetIdx !== null && targetIdx !== overIndexRef.current) {
         overIndexRef.current = targetIdx
@@ -184,16 +208,14 @@ export function SortableList<T>({
     [cleanupDrag, handlePointerMove, onReorder],
   )
 
-  // Iniciar ao tocar no botão de arrasto (≡) -> arrasto imediato
+  // Iniciar pelo grip handle dedicado (se o usuário preferir usar o ícone)
   const createDragHandleProps = (index: number): DragHandleProps => ({
     onPointerDown: (e: React.PointerEvent) => {
-      // Apenas botão esquerdo ou toque
       if (e.button !== 0 && e.pointerType === 'mouse') return
       e.stopPropagation()
 
       activePointerId.current = e.pointerId
       startPos.current = { x: e.clientX, y: e.clientY }
-      currentPos.current = { x: e.clientX, y: e.clientY }
 
       startDrag(index)
 
@@ -205,9 +227,11 @@ export function SortableList<T>({
     'aria-grabbed': draggedIndex === index,
   })
 
-  // Toque longo no card como um todo
+  // Long-press no card como um todo
   const handleCardPointerDown = (e: React.PointerEvent, index: number) => {
-    // Se o clique foi num botão, input ou elemento interativo, não ativa long-press
+    if (dragHandleOnly) return
+
+    // Se o toque iniciou em botão, input, select, link ou elemento interativo, NÃO inicia long press
     const target = e.target as HTMLElement | null
     if (
       target &&
@@ -216,6 +240,7 @@ export function SortableList<T>({
         target.closest('select') ||
         target.closest('a') ||
         target.closest('[role="menuitem"]') ||
+        target.closest('[role="dialog"]') ||
         target.closest('[data-drag-handle]'))
     ) {
       return
@@ -225,30 +250,63 @@ export function SortableList<T>({
 
     activePointerId.current = e.pointerId
     startPos.current = { x: e.clientX, y: e.clientY }
-    currentPos.current = { x: e.clientX, y: e.clientY }
 
     clearTimer()
+    setIsPressing(index)
 
-    // 400ms para pressão longa (padrão mobile consagrado)
     longPressTimer.current = setTimeout(() => {
       startDrag(index)
-    }, 400)
+    }, longPressDelay)
 
     window.addEventListener('pointermove', handlePointerMove, { passive: false })
     window.addEventListener('pointerup', handlePointerUp)
     window.addEventListener('pointercancel', handlePointerUp)
   }
 
+  // Intercepta cliques simples durante ou imediatamente após arrasto para não abrir drawers acidentalmente
+  const handleCaptureClick = (e: React.MouseEvent) => {
+    if (isDraggingRef.current) {
+      e.stopPropagation()
+      e.preventDefault()
+    }
+  }
+
   return (
     <div
       ref={containerRef}
-      className={`space-y-3 relative ${isPointerActive ? 'select-none' : ''} ${className}`}
+      className={`space-y-3 relative ${draggedIndex !== null ? 'select-none' : ''} ${className}`}
+      onClickCapture={handleCaptureClick}
     >
       {items.map((item, index) => {
         const id = keyExtractor(item)
         const isDragging = draggedIndex === index
         const isOver = overIndex === index && draggedIndex !== null && !isDragging
+        const isCurrentlyPressing = isPressing === index && draggedIndex === null
         const dragHandleProps = createDragHandleProps(index)
+
+        // Efeito de deslocamento suave dos outros itens:
+        // Se este item não está sendo arrastado, mas o item arrastado se moveu por ele:
+        // - se draggedIndex < overIndex e o item está entre (draggedIndex, overIndex], ele sobe (-offset)
+        // - se draggedIndex > overIndex e o item está entre [overIndex, draggedIndex), ele desce (+offset)
+        let displacementY = 0
+        if (draggedIndex !== null && !isDragging && overIndex !== null) {
+          const itemHeight = draggedElHeightRef.current + 12 // altura do item + gap da lista
+          if (draggedIndex < overIndex && index > draggedIndex && index <= overIndex) {
+            displacementY = -itemHeight
+          } else if (draggedIndex > overIndex && index >= overIndex && index < draggedIndex) {
+            displacementY = itemHeight
+          }
+        }
+
+        const inlineStyle: React.CSSProperties = isDragging
+          ? {
+              transform: `translate3d(0, ${dragTranslateY}px, 0) scale(1.02)`,
+              zIndex: 50,
+            }
+          : {
+              transform: displacementY !== 0 ? `translate3d(0, ${displacementY}px, 0)` : undefined,
+              zIndex: isOver ? 10 : 1,
+            }
 
         return (
           <div
@@ -258,24 +316,18 @@ export function SortableList<T>({
               else itemRefs.current.delete(id)
             }}
             onPointerDown={(e) => handleCardPointerDown(e, index)}
-            className={`transition-all duration-150 relative ${
+            onPointerUp={() => clearTimer()}
+            onPointerCancel={() => clearTimer()}
+            style={inlineStyle}
+            className={`relative touch-manipulation ${
               isDragging
-                ? 'opacity-60 scale-[0.98] shadow-lg ring-2 ring-emerald-500 rounded-2xl z-20'
-                : isOver
-                  ? 'scale-[1.01] ring-2 ring-emerald-400/70 rounded-2xl z-10'
-                  : ''
+                ? 'shadow-2xl ring-2 ring-emerald-500 rounded-2xl opacity-95 pointer-events-none transition-none cursor-grabbing'
+                : isCurrentlyPressing
+                  ? 'scale-[0.99] transition-transform duration-200'
+                  : 'transition-transform duration-200 ease-out'
             }`}
           >
-            {/* Linha indicadora visual sutil quando outro card estiver passando por cima */}
-            {isOver && draggedIndex !== null && draggedIndex > index && (
-              <div className="absolute -top-1.5 left-2 right-2 h-1 bg-emerald-500 rounded-full animate-pulse z-30 pointer-events-none" />
-            )}
-
             {renderItem(item, index, dragHandleProps, isDragging)}
-
-            {isOver && draggedIndex !== null && draggedIndex < index && (
-              <div className="absolute -bottom-1.5 left-2 right-2 h-1 bg-emerald-500 rounded-full animate-pulse z-30 pointer-events-none" />
-            )}
           </div>
         )
       })}
