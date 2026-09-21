@@ -8,6 +8,7 @@ import { NewTransactionDialog } from '@/components/transactions/NewTransactionDi
 import { ImportStatementDialog } from '@/components/transactions/ImportStatementDialog'
 import { RecurringIncomesDialog } from '@/components/wallet/RecurringIncomesDialog'
 import { WhoIsUsingDialog } from '@/components/common/WhoIsUsingDialog'
+import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { fetchRecurringIncomes, fetchRecurringIncomeOverrides } from '@/services/recurring-incomes'
@@ -35,6 +36,10 @@ export default function Layout() {
     openImportStatement,
     isImportStatementOpen,
     setIsImportStatementOpen,
+    isOnboardingOpen,
+    setIsOnboardingOpen,
+    categories,
+    reloadFamily,
   } = useFamily()
 
   // Dados globais de receitas fixas para o modal compartilhado
@@ -322,6 +327,26 @@ export default function Layout() {
 
       {/* DIÁLOGO GLOBAL QUEM ESTÁ USANDO */}
       <WhoIsUsingDialog open={isWhoIsUsingOpen} onOpenChange={setIsWhoIsUsingOpen} />
+
+      {/* DIÁLOGO GLOBAL DE ONBOARDING AUTOMÁTICO (Passo 1: Renda Líquida -> Passo 2: Perfil 3 Baldes -> Passo 3: Conferir & Aplicar) */}
+      <ApplyBudgetModelDialog
+        open={isOnboardingOpen}
+        onOpenChange={(open) => {
+          setIsOnboardingOpen(open)
+          if (!open && family?.id) {
+            sessionStorage.setItem(`onboarding_dismissed_${family.id}`, 'true')
+          }
+        }}
+        family={family}
+        categories={categories}
+        onSuccess={async () => {
+          if (family?.id) {
+            sessionStorage.setItem(`onboarding_dismissed_${family.id}`, 'true')
+          }
+          await reloadFamily()
+          triggerRefresh()
+        }}
+      />
     </div>
   )
 }

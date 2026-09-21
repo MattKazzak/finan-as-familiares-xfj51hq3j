@@ -253,7 +253,7 @@ export default function ProfilePage() {
               </button>
             </div>
             <p className="text-xs text-emerald-100/80 mt-0.5 truncate">
-              Login Compartilhado: {user?.email || 'innexu1@gmail.com'}
+              Conta: {user?.email || 'Usuário'}
             </p>
           </div>
         </div>

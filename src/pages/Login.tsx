@@ -4,134 +4,280 @@ import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Loader2, Lock, Mail } from 'lucide-react'
+import {
+  Loader2,
+  Lock,
+  Mail,
+  User as UserIcon,
+  ArrowLeft,
+  KeyRound,
+  CheckCircle2,
+} from 'lucide-react'
+
+type AuthMode = 'login' | 'signup' | 'forgot_password'
 
 export default function Login() {
-  const { signIn, signUp } = useAuth()
+  const { signIn, signUp, resetPasswordForEmail } = useAuth()
   const navigate = useNavigate()
 
-  const [isRegister, setIsRegister] = useState(false)
-  const [email, setEmail] = useState('innexu1@gmail.com')
-  const [password, setPassword] = useState('Skip@Pass')
-  const [confirmPassword, setConfirmPassword] = useState('Skip@Pass')
+  const [mode, setMode] = useState<AuthMode>('login')
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMessage(null)
+    setSuccessMessage(null)
 
-    if (!email || !password) {
-      setErrorMessage('Preencha todos os campos.')
-      return
-    }
+    if (mode === 'forgot_password') {
+      if (!email.trim()) {
+        setErrorMessage('Por favor, informe seu e-mail para receber as instruções.')
+        return
+      }
 
-    if (isRegister && password !== confirmPassword) {
-      setErrorMessage('As senhas não coincidem.')
-      return
-    }
-
-    try {
-      setLoading(true)
-      if (isRegister) {
-        const { error } = await signUp(email, password)
+      try {
+        setLoading(true)
+        const { error } = await resetPasswordForEmail(email.trim())
         if (error) {
-          if (error.message?.includes('already registered')) {
-            setErrorMessage('Este e-mail já está cadastrado. Faça login.')
+          setErrorMessage(
+            error.message || 'Não foi possível enviar o e-mail de recuperação. Tente novamente.',
+          )
+          return
+        }
+        setSuccessMessage(
+          'Enviamos as instruções para redefinir sua senha no seu e-mail. Verifique sua caixa de entrada e spam.',
+        )
+      } catch {
+        setErrorMessage('Erro de conexão ao solicitar recuperação de senha.')
+      } finally {
+        setLoading(false)
+      }
+      return
+    }
+
+    if (!email.trim() || !password) {
+      setErrorMessage('Preencha todos os campos obrigatórios.')
+      return
+    }
+
+    if (mode === 'signup') {
+      if (!name.trim()) {
+        setErrorMessage('Informe seu nome ou da sua família.')
+        return
+      }
+      if (password.length < 6) {
+        setErrorMessage('A senha deve ter no mínimo 6 caracteres.')
+        return
+      }
+      if (password !== confirmPassword) {
+        setErrorMessage('As senhas digitadas não coincidem.')
+        return
+      }
+
+      try {
+        setLoading(true)
+        const { data, error } = await signUp(email.trim(), password, { name: name.trim() })
+        if (error) {
+          if (error.message?.toLowerCase().includes('already registered')) {
+            setErrorMessage('Este e-mail já está cadastrado. Faça login ou recupere a senha.')
           } else {
-            setErrorMessage('Erro ao criar conta. Verifique os dados.')
+            setErrorMessage(error.message || 'Erro ao criar conta. Verifique os dados.')
           }
           return
         }
-        // Sucesso no cadastro
-        navigate('/inicio')
-      } else {
-        const { error } = await signIn(email, password)
-        if (error) {
-          setErrorMessage('E-mail ou senha incorretos.')
-          return
+
+        // Se o Supabase confirmou a sessão automaticamente ou enviou confirmação
+        if (data?.session) {
+          navigate('/inicio')
+        } else if (data?.user && !data?.session) {
+          setSuccessMessage(
+            'Conta criada com sucesso! Verifique seu e-mail para confirmar seu cadastro ou faça login.',
+          )
+          setMode('login')
+        } else {
+          navigate('/inicio')
         }
-        navigate('/inicio')
+      } catch {
+        setErrorMessage('Erro de conexão ao cadastrar conta. Tente novamente.')
+      } finally {
+        setLoading(false)
       }
-    } catch (err: any) {
+      return
+    }
+
+    // Modo login
+    try {
+      setLoading(true)
+      const { error } = await signIn(email.trim(), password)
+      if (error) {
+        setErrorMessage('E-mail ou senha incorretos.')
+        return
+      }
+      navigate('/inicio')
+    } catch {
       setErrorMessage('Erro de conexão. Tente novamente.')
     } finally {
       setLoading(false)
     }
   }
 
+  const switchMode = (newMode: AuthMode) => {
+    setMode(newMode)
+    setErrorMessage(null)
+    setSuccessMessage(null)
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/20 to-teal-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-8">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-7 sm:p-8">
         {/* Logo & Marca */}
-        <div className="flex flex-col items-center text-center mb-8">
+        <div className="flex flex-col items-center text-center mb-6">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 flex items-center justify-center text-3xl shadow-lg shadow-emerald-700/20 mb-3 text-white">
             🌱
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Finanças da Família</h1>
-          <p className="text-sm text-slate-500 mt-1 max-w-xs">
-            {isRegister
-              ? 'Crie a conta compartilhada para toda a família'
-              : 'Acesso único compartilhado para gerenciar receitas, despesas e investimentos'}
+          <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-xs">
+            {mode === 'login' &&
+              'Acesse sua conta familiar para gerenciar receitas, despesas e investimentos.'}
+            {mode === 'signup' &&
+              'Crie um novo workspace seguro e exclusivo para as finanças da sua casa.'}
+            {mode === 'forgot_password' &&
+              'Recupere o acesso à sua conta informando o e-mail cadastrado.'}
           </p>
         </div>
+
+        {/* Abas Alternadoras no topo (Login / Criar Conta) */}
+        {mode !== 'forgot_password' && (
+          <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-2xl mb-6">
+            <button
+              type="button"
+              onClick={() => switchMode('login')}
+              className={`py-2 text-xs font-bold rounded-xl transition-all ${
+                mode === 'login'
+                  ? 'bg-white text-emerald-950 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Entrar na Conta
+            </button>
+            <button
+              type="button"
+              onClick={() => switchMode('signup')}
+              className={`py-2 text-xs font-bold rounded-xl transition-all ${
+                mode === 'signup'
+                  ? 'bg-white text-emerald-950 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Criar Nova Conta
+            </button>
+          </div>
+        )}
 
         {/* Formulário */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {errorMessage && (
-            <div className="p-3 text-xs bg-red-50 border border-red-200 text-red-700 rounded-xl font-medium animate-fade-in">
+            <div className="p-3 text-xs bg-red-50 border border-red-200 text-red-700 rounded-xl font-medium animate-fade-in leading-relaxed">
               {errorMessage}
+            </div>
+          )}
+
+          {successMessage && (
+            <div className="p-3 text-xs bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl font-medium animate-fade-in flex items-start gap-2 leading-relaxed">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <span>{successMessage}</span>
+            </div>
+          )}
+
+          {/* Nome (Apenas no Cadastro) */}
+          {mode === 'signup' && (
+            <div className="animate-fade-in">
+              <Label htmlFor="signup-name" className="text-xs font-semibold text-slate-700">
+                Seu Nome (ou Nome da Família)
+              </Label>
+              <div className="relative mt-1">
+                <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Input
+                  id="signup-name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ex: Matheus ou Família Silva"
+                  className="pl-10 h-11 rounded-xl"
+                  required={mode === 'signup'}
+                  autoFocus={mode === 'signup'}
+                />
+              </div>
             </div>
           )}
 
           {/* E-mail */}
           <div>
-            <Label htmlFor="login-email" className="text-xs font-semibold text-slate-700">
-              E-mail da Família
+            <Label htmlFor="auth-email" className="text-xs font-semibold text-slate-700">
+              E-mail
             </Label>
             <div className="relative mt-1">
               <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <Input
-                id="login-email"
+                id="auth-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="exemplo@gmail.com"
+                placeholder="seu.email@exemplo.com"
                 className="pl-10 h-11 rounded-xl"
                 required
+                autoFocus={mode !== 'signup'}
               />
             </div>
           </div>
 
-          {/* Senha */}
-          <div>
-            <Label htmlFor="login-pass" className="text-xs font-semibold text-slate-700">
-              Senha
-            </Label>
-            <div className="relative mt-1">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <Input
-                id="login-pass"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="pl-10 h-11 rounded-xl"
-                required
-              />
+          {/* Senha (não exibida na recuperação) */}
+          {mode !== 'forgot_password' && (
+            <div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="auth-pass" className="text-xs font-semibold text-slate-700">
+                  Senha
+                </Label>
+                {mode === 'login' && (
+                  <button
+                    type="button"
+                    onClick={() => switchMode('forgot_password')}
+                    className="text-xs text-emerald-700 hover:text-emerald-800 font-medium hover:underline"
+                  >
+                    Esqueci minha senha
+                  </button>
+                )}
+              </div>
+              <div className="relative mt-1">
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Input
+                  id="auth-pass"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="pl-10 h-11 rounded-xl"
+                  required
+                />
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Confirmar Senha (apenas registro) */}
-          {isRegister && (
+          {/* Confirmar Senha (apenas no Cadastro) */}
+          {mode === 'signup' && (
             <div className="animate-fade-in">
-              <Label htmlFor="login-pass-confirm" className="text-xs font-semibold text-slate-700">
+              <Label htmlFor="auth-pass-confirm" className="text-xs font-semibold text-slate-700">
                 Confirmar Senha
               </Label>
               <div className="relative mt-1">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <Input
-                  id="login-pass-confirm"
+                  id="auth-pass-confirm"
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -143,41 +289,56 @@ export default function Login() {
             </div>
           )}
 
-          {/* Botão Principal com Gradiente */}
+          {/* Botão de Ação Principal */}
           <Button
             type="submit"
             disabled={loading}
-            className="w-full h-11 mt-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-semibold rounded-xl shadow-md shadow-emerald-700/20 active:scale-98 transition-all"
+            className="w-full h-11 mt-3 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-semibold rounded-xl shadow-md shadow-emerald-700/20 active:scale-98 transition-all"
           >
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin mr-2" />
-            ) : isRegister ? (
-              'Criar Conta da Família'
+            ) : mode === 'signup' ? (
+              'Criar Minha Família'
+            ) : mode === 'forgot_password' ? (
+              <span className="flex items-center gap-2">
+                <KeyRound className="w-4 h-4" />
+                <span>Enviar Link de Recuperação</span>
+              </span>
             ) : (
               'Entrar'
             )}
           </Button>
 
-          {/* Alternar Modo */}
-          <div className="text-center pt-2">
-            <button
-              type="button"
-              onClick={() => {
-                setIsRegister(!isRegister)
-                setErrorMessage(null)
-              }}
-              className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 underline transition-colors"
-            >
-              {isRegister
-                ? 'Já tem uma conta compartilhada? Entrar'
-                : 'Não tem conta? Criar conta da família'}
-            </button>
-          </div>
+          {/* Links e Alternâncias Secundárias */}
+          {mode === 'forgot_password' ? (
+            <div className="text-center pt-2">
+              <button
+                type="button"
+                onClick={() => switchMode('login')}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Voltar para o Login</span>
+              </button>
+            </div>
+          ) : (
+            <div className="text-center pt-2">
+              <button
+                type="button"
+                onClick={() => switchMode(mode === 'login' ? 'signup' : 'login')}
+                className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 underline transition-colors"
+              >
+                {mode === 'login'
+                  ? 'Ainda não tem conta? Crie o workspace da sua família'
+                  : 'Já possui cadastro? Entrar com e-mail e senha'}
+              </button>
+            </div>
+          )}
         </form>
 
         <div className="mt-8 pt-6 border-t border-slate-100 text-center">
           <p className="text-[11px] text-slate-400">
-            Dica: use as credenciais de teste já preenchidas para acesso instantâneo.
+            Ambiente seguro com criptografia e isolamento individual de dados por família.
           </p>
         </div>
       </div>

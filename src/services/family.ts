@@ -2,14 +2,60 @@
 import { supabase } from '@/lib/supabase/client'
 import type { Family, FamilyMember, TransactionCategory } from '@/types/finance'
 
+export async function createNewFamilyWorkspace(
+  familyName?: string,
+  memberName?: string,
+): Promise<string> {
+  const { data, error } = await (supabase as any).rpc('create_new_family_workspace', {
+    p_family_name: familyName || 'Minha Família',
+    p_member_name: memberName || 'Principal',
+  })
+
+  if (error) throw error
+  return data as string
+}
+
 export async function fetchFamilyData() {
-  const { data: families, error: famErr } = await (supabase as any)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { family: null, members: [], categories: [] }
+  }
+
+  // Busca a família pertencente ao usuário autenticado (como owner ou única família acessível via RLS)
+  let { data: families, error: famErr } = await (supabase as any)
     .from('families')
     .select('*')
+    .order('created_at', { ascending: true })
     .limit(1)
 
   if (famErr) throw famErr
-  const family: Family | null = families && families.length > 0 ? (families[0] as Family) : null
+  let family: Family | null = families && families.length > 0 ? (families[0] as Family) : null
+
+  // Se o usuário não possui uma família criada ainda, cria automaticamente o workspace padrão
+  if (!family) {
+    const rawName = (user.user_metadata?.name as string) || ''
+    const fallbackFamilyName = rawName ? `Família ${rawName}` : 'Minha Família'
+    const fallbackMemberName = rawName || user.email?.split('@')[0] || 'Principal'
+
+    try {
+      await createNewFamilyWorkspace(fallbackFamilyName, fallbackMemberName)
+      const { data: refetched } = await (supabase as any)
+        .from('families')
+        .select('*')
+        .order('created_at', { ascending: true })
+        .limit(1)
+
+      if (refetched && refetched.length > 0) {
+        family = refetched[0] as Family
+      }
+    } catch (createErr) {
+      console.error('Erro ao auto-criar família para o usuário:', createErr)
+      return { family: null, members: [], categories: [] }
+    }
+  }
 
   if (!family) {
     return { family: null, members: [], categories: [] }
@@ -29,13 +75,13 @@ export async function fetchFamilyData() {
     (supabase as any)
       .from('transaction_categories')
       .select('*')
-      .or(`family_id.eq.${family.id},family_id.is.null`)
+      .eq('family_id', family.id)
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true }),
     (supabase as any)
       .from('transaction_subcategories')
       .select('*')
-      .or(`family_id.eq.${family.id},family_id.is.null`)
+      .eq('family_id', family.id)
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true }),
   ])

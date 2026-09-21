@@ -97,6 +97,9 @@ interface FamilyContextType {
   isImportStatementOpen: boolean
   setIsImportStatementOpen: (open: boolean) => void
   openImportStatement: () => void
+  isOnboardingOpen: boolean
+  setIsOnboardingOpen: (open: boolean) => void
+  openOnboarding: () => void
   lastImportSummary: {
     total: number
     categorized: number
@@ -136,6 +139,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   const [isRecurringIncomesOpen, setIsRecurringIncomesOpen] = useState(false)
   const [isImportStatementOpen, setIsImportStatementOpen] = useState(false)
   const [isWhoIsUsingOpen, setIsWhoIsUsingOpen] = useState(false)
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false)
   const [newTransactionDefaultType, setNewTransactionDefaultType] = useState<'income' | 'expense'>(
     'expense',
   )
@@ -210,10 +214,28 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     if (!loading && members.length > 0) {
       const stored = localStorage.getItem('financas_familiares_active_member_id')
       if (!stored || !members.some((m) => m.id === stored)) {
-        setIsWhoIsUsingOpen(true)
+        // Se a família tem renda cadastrada, pode sugerir quem está usando; senão o onboarding terá prioridade
+        if (family?.monthly_net_income_cents && family.monthly_net_income_cents > 0) {
+          setIsWhoIsUsingOpen(true)
+        }
       }
     }
-  }, [loading, members])
+  }, [loading, members, family?.monthly_net_income_cents])
+
+  // Iniciar automaticamente o fluxo de Onboarding se a família não tiver renda líquida cadastrada
+  // ou se nunca tiver completado o setup inicial
+  useEffect(() => {
+    if (
+      !loading &&
+      family &&
+      (!family.monthly_net_income_cents || family.monthly_net_income_cents <= 0)
+    ) {
+      const onboardingDismissed = sessionStorage.getItem(`onboarding_dismissed_${family.id}`)
+      if (!onboardingDismissed) {
+        setIsOnboardingOpen(true)
+      }
+    }
+  }, [loading, family])
 
   const updateFamily = async (updates: {
     name?: string
@@ -446,6 +468,10 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     setIsImportStatementOpen(true)
   }
 
+  const openOnboarding = () => {
+    setIsOnboardingOpen(true)
+  }
+
   // Se o activeMemberId apontar para um membro existente, ele é o currentMember do dispositivo;
   // senão faz fallback para o admin ou primeiro membro
   const currentMember =
@@ -498,6 +524,9 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         isImportStatementOpen,
         setIsImportStatementOpen,
         openImportStatement,
+        isOnboardingOpen,
+        setIsOnboardingOpen,
+        openOnboarding,
         lastImportSummary,
         setLastImportSummary,
         refreshTrigger,
