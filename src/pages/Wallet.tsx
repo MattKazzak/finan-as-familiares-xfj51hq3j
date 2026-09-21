@@ -913,8 +913,18 @@ export default function WalletPage() {
     const totalBudgetPercentOfIncome =
       netIncomeCents > 0 ? Math.round((totalBudget / netIncomeCents) * 100) : 0
 
+    // Cálculo dinâmico para cada categoria: percentual da renda líquida = teto / renda líquida * 100
+    const listWithIncomePercent = list.map((item) => {
+      const percentOfIncome =
+        netIncomeCents > 0 ? Math.round((item.limitCents / netIncomeCents) * 1000) / 10 : 0
+      return {
+        ...item,
+        percentOfIncome,
+      }
+    })
+
     return {
-      list,
+      list: listWithIncomePercent,
       totalBudget,
       totalSpent,
       totalRemaining: totalBudget - totalSpent,
@@ -996,6 +1006,39 @@ export default function WalletPage() {
         // Orçamento padrão recorrente (todos os meses)
         // Regra de Arquitetura: apenas default_budgets é atualizado; percent_default não é gravado na categoria.
         const defCents = parseBRLToCents(defaultAmountStr)
+        // Sincronização IMEDIATA no estado local defaultBudgets
+        setDefaultBudgets((prev) => {
+          const exists = prev.some(
+            (b) =>
+              b.category_id === editingBudgetCatId &&
+              (editingBudgetSubcatId
+                ? b.subcategory_id === editingBudgetSubcatId
+                : !b.subcategory_id),
+          )
+          if (exists) {
+            return prev.map((b) =>
+              b.category_id === editingBudgetCatId &&
+              (editingBudgetSubcatId
+                ? b.subcategory_id === editingBudgetSubcatId
+                : !b.subcategory_id)
+                ? { ...b, amount_cents: defCents }
+                : b,
+            )
+          }
+          return [
+            ...prev,
+            {
+              id: `temp-${Date.now()}`,
+              family_id: family.id,
+              category_id: editingBudgetCatId,
+              subcategory_id: editingBudgetSubcatId,
+              amount_cents: defCents,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            } as any,
+          ]
+        })
+
         await upsertDefaultBudget(family.id, editingBudgetCatId, defCents, editingBudgetSubcatId)
 
         // Se o usuário estiver alterando o padrão e existia um override, opcionalmente remove o override para alinhar
@@ -2147,14 +2190,43 @@ export default function WalletPage() {
                                         budget_bucket: data.budget_bucket,
                                       })
                                       if (
-                                        family &&
                                         data.type === 'expense' &&
-                                        data.budget_amount_cents !== undefined
+                                        typeof data.budget_amount_cents === 'number'
                                       ) {
+                                        const newLimit = data.budget_amount_cents
+                                        // Sincronização IMEDIATA no estado local defaultBudgets
+                                        // Recalcula na mesma hora percentual da categoria, do balde e Farol global
+                                        setDefaultBudgets((prev) => {
+                                          const exists = prev.some(
+                                            (b) =>
+                                              b.category_id === item.category.id &&
+                                              !b.subcategory_id,
+                                          )
+                                          if (exists) {
+                                            return prev.map((b) =>
+                                              b.category_id === item.category.id &&
+                                              !b.subcategory_id
+                                                ? { ...b, amount_cents: newLimit }
+                                                : b,
+                                            )
+                                          }
+                                          return [
+                                            ...prev,
+                                            {
+                                              id: `temp-${Date.now()}`,
+                                              family_id: family.id,
+                                              category_id: item.category.id,
+                                              subcategory_id: null,
+                                              amount_cents: newLimit,
+                                              created_at: new Date().toISOString(),
+                                              updated_at: new Date().toISOString(),
+                                            } as any,
+                                          ]
+                                        })
                                         await upsertDefaultBudget(
                                           family.id,
                                           item.category.id,
-                                          data.budget_amount_cents,
+                                          newLimit,
                                           null,
                                         )
                                       }

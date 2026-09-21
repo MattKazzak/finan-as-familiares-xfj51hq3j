@@ -1,447 +1,397 @@
-import type { BudgetBucket } from '@/types/finance'
+/**
+ * Finanças Familiares - Types para Modelos/Presets de Orçamento
+ *
+ * Presets de orçamento com base em metodologias consagradas de finanças pessoais:
+ * 1. 50/30/20 (Equilibrado / Elizabeth Warren)
+ * 2. 60/20/20 (Foco no Futuro / Construção de Patrimônio)
+ * 3. 70/20/10 (Vida Confortável / Família em Crescimento)
+ */
+
+import { BudgetBucket } from './finance'
 
 export interface CategoryPresetConfig {
-  key: string
+  /** Nome amigável / rótulo da categoria no modelo */
   name: string
+  /** Chave normalizada para match resiliente (minúsculo, sem acentos) */
+  matchKey: string
+  /** Balde ao qual a categoria pertence */
   bucket: BudgetBucket
+  /** Percentual sugerido sobre a renda líquida */
   percent: number
-  percentAlert?: number
-  // Flag especial para categorias de investimento/reserva onde o alerta é ficar ABAIXO do mínimo
-  isInvestmentTarget?: boolean
-  description: string
+  /** Descrição explicativa do porquê desse valor no modelo */
+  description?: string
 }
 
 export interface BudgetPreset {
-  id: 'equilibrado' | 'enxuto' | 'acelerador'
-  title: string
-  subtitle?: string
-  description: string
-  distributionText: string
-  methodologyFooter?: string
+  id: string
+  name: string
+  shortDescription: string
+  fullDescription: string
+  recommendedFor: string
+  badgeText?: string
+  /** Divisão por baldes: Essenciais, Estilo de Vida, Futuro & Metas */
   bucketDistribution: {
-    essentials: number
-    lifestyle: number
-    future: number
+    essentials: number // %
+    lifestyle: number // %
+    future: number // %
   }
+  /** Categorias com percentuais padrão */
   categories: CategoryPresetConfig[]
 }
 
-// 1. Preset Equilibrado Familiar (57% Essenciais / 21% Estilo de Vida / 22% Futuro)
-// Matriz sugerida pelo consultor financeiro
-const EQUILIBRADO_CATEGORIES: CategoryPresetConfig[] = [
-  // Essenciais (57%)
-  {
-    key: 'moradia',
-    name: 'Moradia',
-    bucket: 'essentials',
-    percent: 25,
-    percentAlert: 30,
-    description: 'Aluguel, condomínio, luz, água, gás, internet e reparos',
-  },
-  {
-    key: 'alimentacao',
-    name: 'Alimentação',
-    bucket: 'essentials',
-    percent: 12,
-    percentAlert: 15,
-    description: 'Alimentação básica, supermercado, feira e açougue',
-  },
-  {
-    key: 'transporte',
-    name: 'Transporte',
-    bucket: 'essentials',
-    percent: 10,
-    percentAlert: 13,
-    description: 'Combustível, transporte público, seguro, IPVA e apps',
-  },
-  {
-    key: 'saude',
-    name: 'Saúde',
-    bucket: 'essentials',
-    percent: 5,
-    percentAlert: 8,
-    description: 'Plano de saúde, consultas, farmácia e exames',
-  },
-  {
-    key: 'educacao',
-    name: 'Educação',
-    bucket: 'essentials',
-    percent: 5,
-    percentAlert: 8,
-    description: 'Mensalidades, cursos, material escolar e livros',
-  },
-
-  // Estilo de Vida (21%)
-  {
-    key: 'lazer',
-    name: 'Gastronomia & Lazer',
-    bucket: 'lifestyle',
-    percent: 12,
-    percentAlert: 15,
-    description: 'Restaurantes, delivery, saídas de fim de semana e passeios',
-  },
-  {
-    key: 'compras',
-    name: 'Compras & Desejos',
-    bucket: 'lifestyle',
-    percent: 6,
-    percentAlert: 10,
-    description: 'Vestuário, eletrônicos, cuidados pessoais e compras pessoais',
-  },
-  {
-    key: 'assinaturas',
-    name: 'Assinaturas & Serviços',
-    bucket: 'lifestyle',
-    percent: 3,
-    percentAlert: 5,
-    description: 'Streaming, aplicativos, clubes de assinatura e serviços',
-  },
-
-  // Futuro e Metas (22%)
-  {
-    key: 'reserva',
-    name: 'Reserva & Investimentos',
-    bucket: 'future',
-    percent: 15,
-    percentAlert: 10, // Mínimo 10%: alerta por ficar ABAIXO
-    isInvestmentTarget: true,
-    description: 'Reserva de emergência e investimentos de longo prazo',
-  },
-  {
-    key: 'metas',
-    name: 'Metas & Projetos',
-    bucket: 'future',
-    percent: 7,
-    percentAlert: undefined,
-    isInvestmentTarget: true,
-    description: 'Projetos familiares, viagens, troca de carro e compras planejadas',
-  },
-]
-
-// 2. Preset Enxuto / Ajuste de Contas (65% Essenciais / 20% Estilo de Vida / 15% Futuro)
-// Foco em quitar pendências ou fases de custos essenciais mais elevados
-const ENXUTO_CATEGORIES: CategoryPresetConfig[] = [
-  // Essenciais (65%)
-  {
-    key: 'moradia',
-    name: 'Moradia',
-    bucket: 'essentials',
-    percent: 28,
-    percentAlert: 33,
-    description: 'Custos básicos de habitação e manutenção',
-  },
-  {
-    key: 'alimentacao',
-    name: 'Alimentação',
-    bucket: 'essentials',
-    percent: 14,
-    percentAlert: 17,
-    description: 'Alimentação básica focada em preparo em casa',
-  },
-  {
-    key: 'transporte',
-    name: 'Transporte',
-    bucket: 'essentials',
-    percent: 11,
-    percentAlert: 14,
-    description: 'Mobilidade essencial do dia a dia',
-  },
-  {
-    key: 'saude',
-    name: 'Saúde',
-    bucket: 'essentials',
-    percent: 6,
-    percentAlert: 9,
-    description: 'Cuidados essenciais de saúde e remédios',
-  },
-  {
-    key: 'educacao',
-    name: 'Educação',
-    bucket: 'essentials',
-    percent: 6,
-    percentAlert: 9,
-    description: 'Educação e formação prioritária',
-  },
-
-  // Estilo de Vida (20%)
-  {
-    key: 'lazer',
-    name: 'Gastronomia & Lazer',
-    bucket: 'lifestyle',
-    percent: 11,
-    percentAlert: 14,
-    description: 'Lazer controlado para preservar o orçamento',
-  },
-  {
-    key: 'compras',
-    name: 'Compras & Desejos',
-    bucket: 'lifestyle',
-    percent: 6,
-    percentAlert: 9,
-    description: 'Compras estritamente necessárias',
-  },
-  {
-    key: 'assinaturas',
-    name: 'Assinaturas & Serviços',
-    bucket: 'lifestyle',
-    percent: 3,
-    percentAlert: 5,
-    description: 'Apenas serviços e assinaturas indispensáveis',
-  },
-
-  // Futuro e Metas (15%)
-  {
-    key: 'reserva',
-    name: 'Reserva & Investimentos',
-    bucket: 'future',
-    percent: 10,
-    percentAlert: 8,
-    isInvestmentTarget: true,
-    description: 'Formação básica de reserva de segurança',
-  },
-  {
-    key: 'metas',
-    name: 'Metas & Projetos',
-    bucket: 'future',
-    percent: 5,
-    percentAlert: undefined,
-    isInvestmentTarget: true,
-    description: 'Fundo para imprevistos e projetos essenciais',
-  },
-]
-
-// 3. Preset Acelerador Patrimonial (45% Essenciais / 25% Estilo de Vida / 30% Futuro)
-// Foco em liberdade financeira, acumulação patrimonial rápida e renda passiva
-const ACELERADOR_CATEGORIES: CategoryPresetConfig[] = [
-  // Essenciais (45%)
-  {
-    key: 'moradia',
-    name: 'Moradia',
-    bucket: 'essentials',
-    percent: 20,
-    percentAlert: 24,
-    description: 'Habitação enxuta e otimizada',
-  },
-  {
-    key: 'alimentacao',
-    name: 'Alimentação',
-    bucket: 'essentials',
-    percent: 10,
-    percentAlert: 13,
-    description: 'Alimentação básica balanceada',
-  },
-  {
-    key: 'transporte',
-    name: 'Transporte',
-    bucket: 'essentials',
-    percent: 7,
-    percentAlert: 10,
-    description: 'Custos de locomoção enxutos',
-  },
-  {
-    key: 'saude',
-    name: 'Saúde',
-    bucket: 'essentials',
-    percent: 4,
-    percentAlert: 7,
-    description: 'Prevenção e cuidados médicos essenciais',
-  },
-  {
-    key: 'educacao',
-    name: 'Educação',
-    bucket: 'essentials',
-    percent: 4,
-    percentAlert: 7,
-    description: 'Qualificação e livros de alto retorno',
-  },
-
-  // Estilo de Vida (25%)
-  {
-    key: 'lazer',
-    name: 'Gastronomia & Lazer',
-    bucket: 'lifestyle',
-    percent: 14,
-    percentAlert: 17,
-    description: 'Gastronomia e momentos em família com folga',
-  },
-  {
-    key: 'compras',
-    name: 'Compras & Desejos',
-    bucket: 'lifestyle',
-    percent: 7,
-    percentAlert: 10,
-    description: 'Conforto e qualidade de vida',
-  },
-  {
-    key: 'assinaturas',
-    name: 'Assinaturas & Serviços',
-    bucket: 'lifestyle',
-    percent: 4,
-    percentAlert: 6,
-    description: 'Serviços que agregam conveniência e tempo',
-  },
-
-  // Futuro e Metas (30%)
-  {
-    key: 'reserva',
-    name: 'Reserva & Investimentos',
-    bucket: 'future',
-    percent: 20,
-    percentAlert: 15,
-    isInvestmentTarget: true,
-    description: 'Aporte massivo em ativos geradores de renda',
-  },
-  {
-    key: 'metas',
-    name: 'Metas & Projetos',
-    bucket: 'future',
-    percent: 10,
-    percentAlert: undefined,
-    isInvestmentTarget: true,
-    description: 'Grandes conquistas patrimoniais e liberdade financeira',
-  },
-]
-
-export const BUDGET_PRESETS: BudgetPreset[] = [
-  {
-    id: 'equilibrado',
-    title: 'Equilibrado Familiar',
-    description:
-      'Ideal para quem busca equilíbrio saudável entre conforto no presente e construção sólida de patrimônio.',
-    methodologyFooter: '📚 Baseado na regra 50-30-20 de Harvard adaptada para famílias.',
-    distributionText: '57% Essenciais · 21% Estilo de Vida · 22% Futuro',
-    bucketDistribution: {
-      essentials: 57,
-      lifestyle: 21,
-      future: 22,
-    },
-    categories: EQUILIBRADO_CATEGORIES,
-  },
-  {
-    id: 'enxuto',
-    title: 'Enxuto / Ajuste de Contas',
-    description:
-      'Para momentos de aperto ou reestruturação. Dá fôlego aos custos fixos, mantendo poupança mínima de 15%.',
-    methodologyFooter: '📚 Baseado em diretrizes de reestruturação e limites da CFP®.',
-    distributionText: '65% Essenciais · 20% Estilo de Vida · 15% Futuro',
-    bucketDistribution: {
-      essentials: 65,
-      lifestyle: 20,
-      future: 15,
-    },
-    categories: ENXUTO_CATEGORIES,
-  },
-  {
-    id: 'acelerador',
-    title: 'Acelerador Patrimonial',
-    description:
-      'Foco em independência financeira. Comprime despesas para destinar 30% da renda a investimentos e metas.',
-    methodologyFooter:
-      '📚 Fundamentado em taxas de poupança acelerada e estudos do movimento FIRE.',
-    distributionText: '45% Essenciais · 25% Estilo de Vida · 30% Futuro',
-    bucketDistribution: {
-      essentials: 45,
-      lifestyle: 25,
-      future: 30,
-    },
-    categories: ACELERADOR_CATEGORIES,
-  },
-]
+export type BudgetPresetId = '50_30_20' | '60_20_20' | '70_20_10'
 
 export const BUCKET_METADATA: Record<
   BudgetBucket,
   {
-    label: string
+    name: string
     shortLabel: string
     color: string
     bgLight: string
+    borderColor: string
     textColor: string
-    icon: string
+    description: string
   }
 > = {
   essentials: {
-    label: 'Gastos Essenciais',
+    name: 'Essenciais (Necessidades)',
     shortLabel: 'Essenciais',
     color: '#0284C7', // sky-600
     bgLight: 'bg-sky-50 text-sky-800 border-sky-200',
+    borderColor: 'border-sky-500',
     textColor: 'text-sky-700',
-    icon: 'Home',
+    description: 'Moradia, alimentação básica, saúde, contas essenciais e transporte necessário.',
   },
   lifestyle: {
-    label: 'Estilo de Vida',
+    name: 'Estilo de Vida (Desejos & Conforto)',
     shortLabel: 'Estilo de Vida',
     color: '#D97706', // amber-600
     bgLight: 'bg-amber-50 text-amber-800 border-amber-200',
+    borderColor: 'border-amber-500',
     textColor: 'text-amber-700',
-    icon: 'Coffee',
+    description: 'Lazer, restaurantes, compras, hobbies, streaming e conforto pessoal.',
   },
   future: {
-    label: 'Futuro e Metas',
+    name: 'Futuro & Metas (Investimentos & Reserva)',
     shortLabel: 'Futuro & Metas',
     color: '#059669', // emerald-600
     bgLight: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+    borderColor: 'border-emerald-500',
     textColor: 'text-emerald-700',
-    icon: 'TrendingUp',
+    description: 'Reserva de emergência, aposentadoria, investimentos e objetivos de longo prazo.',
   },
 }
 
+export const BUDGET_PRESET_ITEMS: BudgetPreset[] = [
+  {
+    id: '50_30_20',
+    name: 'Regra 50 / 30 / 20 (Equilibrado)',
+    shortDescription:
+      'O padrão de ouro das finanças: 50% necessidades, 30% estilo de vida, 20% futuro.',
+    fullDescription:
+      'Ideal para famílias que buscam equilíbrio entre viver bem no presente e construir segurança financeira para o futuro.',
+    recommendedFor: 'Recomendado para a maioria das famílias com renda estável.',
+    badgeText: 'Mais Popular',
+    bucketDistribution: {
+      essentials: 50,
+      lifestyle: 30,
+      future: 20,
+    },
+    categories: [
+      {
+        name: 'Moradia & Contas',
+        matchKey: 'moradia',
+        bucket: 'essentials',
+        percent: 25,
+        description: 'Aluguel/financiamento, condomínio, luz, água, internet',
+      },
+      {
+        name: 'Alimentação & Mercado',
+        matchKey: 'alimentacao',
+        bucket: 'essentials',
+        percent: 15,
+        description: 'Supermercado, feira e alimentação básica em casa',
+      },
+      {
+        name: 'Transporte',
+        matchKey: 'transporte',
+        bucket: 'essentials',
+        percent: 10,
+        description: 'Combustível, transporte público, manutenção essencial do veículo',
+      },
+      {
+        name: 'Lazer & Restaurantes',
+        matchKey: 'lazer',
+        bucket: 'lifestyle',
+        percent: 12,
+        description: 'Passeios, refeições fora, cinema e entretenimento',
+      },
+      {
+        name: 'Compras & Pessoais',
+        matchKey: 'compras',
+        bucket: 'lifestyle',
+        percent: 10,
+        description: 'Roupas, cuidados pessoais, tecnologia e conveniências',
+      },
+      {
+        name: 'Assinaturas & Serviços',
+        matchKey: 'servicos',
+        bucket: 'lifestyle',
+        percent: 8,
+        description: 'Streaming, academias, clubes e assinaturas diversas',
+      },
+      {
+        name: 'Reserva de Emergência & Aportes',
+        matchKey: 'reserva',
+        bucket: 'future',
+        percent: 12,
+        description: 'Construção ou manutenção da reserva de 6 meses',
+      },
+      {
+        name: 'Investimentos & Projetos',
+        matchKey: 'investimentos',
+        bucket: 'future',
+        percent: 8,
+        description: 'Previdência, aposentadoria e metas familiares de longo prazo',
+      },
+    ],
+  },
+  {
+    id: '60_20_20',
+    name: 'Modelo 60 / 20 / 20 (Foco em Essenciais)',
+    shortDescription:
+      'Mais folga para custos fixos altos: 60% essenciais, 20% estilo de vida, 20% futuro.',
+    fullDescription:
+      'Projetado para famílias com custos fixos elevados (moradia em capitais, filhos em idade escolar, saúde).',
+    recommendedFor:
+      'Famílias com aluguel alto, despesas médicas contínuas ou mensalidades escolares.',
+    badgeText: 'Custo Fixo Alto',
+    bucketDistribution: {
+      essentials: 60,
+      lifestyle: 20,
+      future: 20,
+    },
+    categories: [
+      {
+        name: 'Moradia & Contas',
+        matchKey: 'moradia',
+        bucket: 'essentials',
+        percent: 30,
+        description: 'Moradia, condomínio e serviços básicos',
+      },
+      {
+        name: 'Alimentação & Mercado',
+        matchKey: 'alimentacao',
+        bucket: 'essentials',
+        percent: 18,
+        description: 'Compras de supermercado para toda a família',
+      },
+      {
+        name: 'Transporte',
+        matchKey: 'transporte',
+        bucket: 'essentials',
+        percent: 12,
+        description: 'Custos de deslocamento e manutenção',
+      },
+      {
+        name: 'Lazer & Restaurantes',
+        matchKey: 'lazer',
+        bucket: 'lifestyle',
+        percent: 8,
+        description: 'Momentos de descanso e lazer moderados',
+      },
+      {
+        name: 'Compras & Pessoais',
+        matchKey: 'compras',
+        bucket: 'lifestyle',
+        percent: 7,
+        description: 'Gastos pessoais essenciais e vestuário',
+      },
+      {
+        name: 'Assinaturas & Serviços',
+        matchKey: 'servicos',
+        bucket: 'lifestyle',
+        percent: 5,
+        description: 'Serviços digitais e assinaturas prioritárias',
+      },
+      {
+        name: 'Reserva de Emergência & Aportes',
+        matchKey: 'reserva',
+        bucket: 'future',
+        percent: 12,
+        description: 'Blindagem financeira familiar prioritária',
+      },
+      {
+        name: 'Investimentos & Projetos',
+        matchKey: 'investimentos',
+        bucket: 'future',
+        percent: 8,
+        description: 'Construção contínua de patrimônio',
+      },
+    ],
+  },
+  {
+    id: '70_20_10',
+    name: 'Modelo 70 / 20 / 10 (Transição & Organização)',
+    shortDescription:
+      'Passo a passo para quem está começando: 70% essenciais, 20% estilo de vida, 10% futuro.',
+    fullDescription:
+      'Excelente ponto de partida para famílias em fase de reestruturação de dívidas ou organização inicial das finanças.',
+    recommendedFor: 'Iniciantes na organização financeira ou fase de transição de carreira.',
+    badgeText: 'Iniciantes',
+    bucketDistribution: {
+      essentials: 70,
+      lifestyle: 20,
+      future: 10,
+    },
+    categories: [
+      {
+        name: 'Moradia & Contas',
+        matchKey: 'moradia',
+        bucket: 'essentials',
+        percent: 35,
+        description: 'Custos de habitação e contas de consumo',
+      },
+      {
+        name: 'Alimentação & Mercado',
+        matchKey: 'alimentacao',
+        bucket: 'essentials',
+        percent: 22,
+        description: 'Alimentação doméstica completa',
+      },
+      {
+        name: 'Transporte',
+        matchKey: 'transporte',
+        bucket: 'essentials',
+        percent: 13,
+        description: 'Mobilidade da família',
+      },
+      {
+        name: 'Lazer & Restaurantes',
+        matchKey: 'lazer',
+        bucket: 'lifestyle',
+        percent: 10,
+        description: 'Conforto e descanso familiar',
+      },
+      {
+        name: 'Compras & Pessoais',
+        matchKey: 'compras',
+        bucket: 'lifestyle',
+        percent: 6,
+        description: 'Necessidades pontuais',
+      },
+      {
+        name: 'Assinaturas & Serviços',
+        matchKey: 'servicos',
+        bucket: 'lifestyle',
+        percent: 4,
+        description: 'Serviços básicos de entretenimento',
+      },
+      {
+        name: 'Reserva de Emergência & Aportes',
+        matchKey: 'reserva',
+        bucket: 'future',
+        percent: 6,
+        description: 'Primeiros passos da reserva financeira',
+      },
+      {
+        name: 'Investimentos & Projetos',
+        matchKey: 'investimentos',
+        bucket: 'future',
+        percent: 4,
+        description: 'Hábito de poupar consistentemente todo mês',
+      },
+    ],
+  },
+]
+
+// Mantém suporte tanto a array quanto a Record para compatibilidade
+export const BUDGET_PRESETS: any = Object.assign([...BUDGET_PRESET_ITEMS], {
+  '50_30_20': BUDGET_PRESET_ITEMS[0],
+  '60_20_20': BUDGET_PRESET_ITEMS[1],
+  '70_20_10': BUDGET_PRESET_ITEMS[2],
+})
+
 /**
- * Função utilitária para mapear categoria do banco para a chave da matriz
- * Moradia, Alimentação, Transporte, Saúde, Educação, Gastronomia & Lazer, Compras & Desejos,
- * Assinaturas & Serviços, Reserva & Investimentos, Metas & Projetos
+ * Normaliza uma string para matching resiliente (sem acentos, minúsculo, sem pontuação).
+ */
+export function normalizeCategoryMatchString(str: string): string {
+  return (str || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+/**
+ * Associa uma categoria do banco a uma chave de preset através de correspondência flexível.
  */
 export function matchCategoryToPresetKey(categoryName: string): string | null {
-  const norm = categoryName.trim().toLowerCase()
+  const norm = normalizeCategoryMatchString(categoryName)
 
-  if (norm.includes('moradia') || norm.includes('habita')) return 'moradia'
-  if (norm.includes('alimenta') || norm === 'mercado') return 'alimentacao'
+  if (
+    norm.includes('moradia') ||
+    norm.includes('habit') ||
+    norm.includes('casa') ||
+    norm.includes('conta')
+  ) {
+    return 'moradia'
+  }
+  if (
+    norm.includes('alimenta') ||
+    norm.includes('mercado') ||
+    norm.includes('supermercado') ||
+    norm.includes('feira')
+  ) {
+    return 'alimentacao'
+  }
   if (
     norm.includes('transporte') ||
-    norm.includes('veículo') ||
-    norm.includes('veiculo') ||
-    norm.includes('carro')
-  )
+    norm.includes('carro') ||
+    norm.includes('combust') ||
+    norm.includes('uber')
+  ) {
     return 'transporte'
+  }
   if (
-    norm.includes('saúde') ||
-    norm.includes('saude') ||
-    norm.includes('farmácia') ||
-    norm.includes('farmacia')
-  )
-    return 'saude'
-  if (norm.includes('educa') || norm.includes('estudo') || norm.includes('escola'))
-    return 'educacao'
-  if (
-    norm.includes('gastronomia') ||
     norm.includes('lazer') ||
     norm.includes('restaurante') ||
-    norm.includes('delivery')
-  )
+    norm.includes('bar') ||
+    norm.includes('viagem') ||
+    norm.includes('passeio')
+  ) {
     return 'lazer'
+  }
   if (
-    norm.includes('compras') ||
-    norm.includes('desejos') ||
-    norm.includes('vestuário') ||
-    norm.includes('vestuario')
-  )
+    norm.includes('compra') ||
+    norm.includes('vestu') ||
+    norm.includes('roupa') ||
+    norm.includes('eletr') ||
+    norm.includes('pessoal')
+  ) {
     return 'compras'
+  }
   if (
+    norm.includes('servico') ||
     norm.includes('assinatura') ||
-    norm.includes('serviços') ||
-    norm.includes('servicos') ||
-    norm.includes('streaming')
-  )
-    return 'assinaturas'
-  if (
-    norm.includes('reserva') ||
-    norm.includes('investimento') ||
-    norm.includes('poupança') ||
-    norm.includes('poupanca') ||
-    norm.includes('patrimônio') ||
-    norm.includes('patrimonio')
-  )
+    norm.includes('stream') ||
+    norm.includes('academia') ||
+    norm.includes('internet')
+  ) {
+    return 'servicos'
+  }
+  if (norm.includes('reserva') || norm.includes('emergenc') || norm.includes('poupanca')) {
     return 'reserva'
-  if (norm.includes('meta') || norm.includes('projeto') || norm.includes('sonho')) return 'metas'
+  }
+  if (
+    norm.includes('invest') ||
+    norm.includes('aporte') ||
+    norm.includes('meta') ||
+    norm.includes('projeto') ||
+    norm.includes('futuro')
+  ) {
+    return 'investimentos'
+  }
 
   return null
 }

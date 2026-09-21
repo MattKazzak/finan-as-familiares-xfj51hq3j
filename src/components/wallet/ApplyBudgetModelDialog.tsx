@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -10,28 +10,24 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { formatBRL, parseBRLToCents, formatNumberBRL } from '@/lib/formatters'
+import { useToast } from '@/hooks/use-toast'
+import { Family, TransactionCategory } from '@/types/finance'
 import {
   BUDGET_PRESETS,
+  BudgetPreset,
   BUCKET_METADATA,
   matchCategoryToPresetKey,
-  type BudgetPreset,
 } from '@/types/budget-presets'
-import type { Family, TransactionCategory } from '@/types/finance'
 import { applyBudgetPreset } from '@/services/budget-model'
-import { useToast } from '@/hooks/use-toast'
+import { formatBRL, parseBRLToCents } from '@/lib/formatters'
 import {
-  Check,
   Sparkles,
-  ArrowRight,
-  ArrowLeft,
+  AlertTriangle,
+  ChevronRight,
+  ChevronLeft,
+  CheckCircle2,
   Info,
-  ShieldCheck,
-  Sliders,
-  DollarSign,
-  TrendingUp,
-  PieChart,
+  RotateCcw,
 } from 'lucide-react'
 
 interface ApplyBudgetModelDialogProps {
@@ -39,8 +35,7 @@ interface ApplyBudgetModelDialogProps {
   onOpenChange: (open: boolean) => void
   family: Family | null
   categories: TransactionCategory[]
-  onSuccess: () => void
-  initialStep?: 1 | 2 | 3
+  onSuccess?: () => void
 }
 
 export function ApplyBudgetModelDialog({
@@ -49,73 +44,127 @@ export function ApplyBudgetModelDialog({
   family,
   categories,
   onSuccess,
-  initialStep = 1,
 }: ApplyBudgetModelDialogProps) {
   const { toast } = useToast()
 
-  const [step, setStep] = useState<1 | 2 | 3>(initialStep)
-  const [incomeStr, setIncomeStr] = useState('')
-  const [selectedPresetId, setSelectedPresetId] = useState<'equilibrado' | 'enxuto' | 'acelerador'>(
-    'equilibrado',
-  )
+  // Fluxo em 3 etapas:
+  // 1: Confirmar renda líquida
+  // 2: Escolher perfil/preset
+  // 3: Conferir & Aplicar (com inputs editáveis por categoria)
+  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [selectedPresetId, setSelectedPresetId] = useState<string>('50_30_20')
+  const [incomeInput, setIncomeInput] = useState<string>('')
   const [isApplying, setIsApplying] = useState(false)
 
+  // Valores customizados editados pelo usuário no Passo 3: Record<categoryId, string (formatada)>
+  const [categoryAmountsInput, setCategoryAmountsInput] = useState<Record<string, string>>({})
+
+  // Inicializa a renda a partir da família
   useEffect(() => {
-    if (open) {
-      setStep(initialStep)
-      const currentCents = family?.monthly_net_income_cents || 0
-      setIncomeStr(currentCents > 0 ? formatNumberBRL(currentCents) : '')
+    if (family?.monthly_net_income_cents) {
+      setIncomeInput((family.monthly_net_income_cents / 100).toFixed(2).replace('.', ','))
     }
-  }, [open, family, initialStep])
+  }, [family])
 
-  const parsedIncomeCents = parseBRLToCents(incomeStr)
-  const selectedPreset = BUDGET_PRESETS.find((p) => p.id === selectedPresetId) || BUDGET_PRESETS[0]
+  const parsedNetIncomeCents = useMemo(() => {
+    return parseBRLToCents(incomeInput)
+  }, [incomeInput])
 
-  // Mapeamento e simulação das categorias com valores em reais
-  const categorySimulations = selectedPreset.categories.map((item) => {
-    const matchedCategory = categories.find(
-      (c) => c.type === 'expense' && matchCategoryToPresetKey(c.name) === item.key,
-    )
-    const amountCents =
-      parsedIncomeCents > 0 ? Math.round((parsedIncomeCents * item.percent) / 100) : 0
+  const selectedPreset: BudgetPreset | undefined = useMemo(() => {
+    const list = Array.isArray(BUDGET_PRESETS)
+      ? (BUDGET_PRESETS as BudgetPreset[])
+      : Object.values(BUDGET_PRESETS as Record<string, BudgetPreset>)
+    return list.find((p) => p.id === selectedPresetId)
+  }, [selectedPresetId])
+
+  // Apenas categorias de despesa são orçadas
+  const expenseCategories = useMemo(() => {
+    return categories.filter((c) => c.type === 'expense')
+  }, [categories])
+
+  // Itens mapeados do preset para as categorias da família
+  const mappedCategories = useMemo(() => {
+    if (!selectedPreset) return []
+    return expenseCategories.map((cat) => {
+      const matchedKey = matchCategoryToPresetKey(cat.name)
+      const presetItem = selectedPreset.categories.find((p) => p.matchKey === matchedKey)
+      const defaultPercent = presetItem?.percent || 0
+      const defaultAmountCents = Math.round((parsedNetIncomeCents * defaultPercent) / 100)
+      const bucket = presetItem?.bucket || cat.budget_bucket || 'lifestyle'
+
+      return {
+        category: cat,
+        matched: !!presetItem,
+        presetItem,
+        defaultPercent,
+        defaultAmountCents,
+        bucket,
+      }
+    })
+  }, [expenseCategories, selectedPreset, parsedNetIncomeCents])
+
+  // Ao entrar no Passo 3 ou trocar preset/renda, pré-preenche os inputs de valor com o preset
+  useEffect(() => {
+    if (step === 3 && mappedCategories.length > 0) {
+      setCategoryAmountsInput((prev) => {
+        const initialMap: Record<string, string> = {}
+        mappedCategories.forEach((item) => {
+          const currentInput = prev[item.category.id]
+          if (currentInput === undefined) {
+            const reais = (item.defaultAmountCents / 100).toFixed(2).replace('.', ',')
+            initialMap[item.category.id] = reais
+          } else {
+            initialMap[item.category.id] = currentInput
+          }
+        })
+        return initialMap
+      })
+    }
+  }, [step, mappedCategories])
+
+  // Resetar inputs para valores originais do preset
+  const handleResetToPreset = () => {
+    const resetMap: Record<string, string> = {}
+    mappedCategories.forEach((item) => {
+      resetMap[item.category.id] = (item.defaultAmountCents / 100).toFixed(2).replace('.', ',')
+    })
+    setCategoryAmountsInput(resetMap)
+  }
+
+  // Cálculos dinâmicos em tempo real no Passo 3
+  const step3Summary = useMemo(() => {
+    let totalCustomBudgetCents = 0
+    const amountsByCatId: Record<string, number> = {}
+
+    mappedCategories.forEach((item) => {
+      const rawInput = categoryAmountsInput[item.category.id]
+      const cents = rawInput !== undefined ? parseBRLToCents(rawInput) : item.defaultAmountCents
+      amountsByCatId[item.category.id] = cents
+      totalCustomBudgetCents += cents
+    })
+
+    const rawPercent =
+      parsedNetIncomeCents > 0 ? (totalCustomBudgetCents / parsedNetIncomeCents) * 100 : 0
+    // Formatação amigável do percentual (arredondado ou com 1 casa se decimal)
+    const percentOfIncome = rawPercent % 1 === 0 ? rawPercent : Math.round(rawPercent * 10) / 10
+    const isOver100 = rawPercent > 100
+    const diffCents = totalCustomBudgetCents - parsedNetIncomeCents
 
     return {
-      ...item,
-      matchedCategory,
-      amountCents,
+      totalCustomBudgetCents,
+      amountsByCatId,
+      percentOfIncome,
+      isOver100,
+      diffCents,
     }
-  })
-
-  const totalCalculatedCents = categorySimulations.reduce((acc, c) => acc + c.amountCents, 0)
-  const matchedCategoriesCount = categorySimulations.filter((c) => !!c.matchedCategory).length
-
-  const handleNext = () => {
-    if (step === 1) {
-      if (parsedIncomeCents <= 0) {
-        toast({
-          title: 'Informe a renda líquida',
-          description: 'Insira o valor mensal da renda líquida familiar para continuar.',
-          variant: 'destructive',
-        })
-        return
-      }
-      setStep(2)
-    } else if (step === 2) {
-      setStep(3)
-    }
-  }
-
-  const handleBack = () => {
-    if (step === 3) setStep(2)
-    else if (step === 2) setStep(1)
-  }
+  }, [mappedCategories, categoryAmountsInput, parsedNetIncomeCents])
 
   const handleApply = async () => {
     if (!family) return
-    if (parsedIncomeCents <= 0) {
+    if (parsedNetIncomeCents <= 0) {
       toast({
-        title: 'Renda líquida necessária',
-        description: 'Defina a renda líquida para calcular os valores em reais.',
+        title: 'Renda inválida',
+        description: 'Informe uma renda líquida mensal maior que zero.',
         variant: 'destructive',
       })
       setStep(1)
@@ -124,21 +173,23 @@ export function ApplyBudgetModelDialog({
 
     try {
       setIsApplying(true)
-      const res = await applyBudgetPreset({
-        familyId: family.id,
-        presetId: selectedPresetId,
-        monthlyNetIncomeCents: parsedIncomeCents,
-        existingCategories: categories,
-      })
+      const res = await applyBudgetPreset(
+        family.id,
+        selectedPresetId,
+        categories,
+        parsedNetIncomeCents,
+        step3Summary.amountsByCatId,
+      )
 
       toast({
-        title: 'Modelo aplicado com sucesso!',
-        description: `Tetos calculados para ${res.updatedBudgetsCount} categorias. Seus ajustes pontuais dos meses foram preservados.`,
+        title: 'Modelo aplicado com sucesso! 🎉',
+        description: `${res.appliedCount} tetos de categorias foram personalizados e atualizados.`,
       })
-      onSuccess()
+
       onOpenChange(false)
+      onSuccess?.()
     } catch (err: any) {
-      console.error('Erro ao aplicar modelo:', err)
+      console.error(err)
       toast({
         title: 'Erro ao aplicar modelo',
         description: err?.message || 'Tente novamente.',
@@ -149,359 +200,330 @@ export function ApplyBudgetModelDialog({
     }
   }
 
+  const handleNext = () => {
+    if (step === 1) {
+      if (parsedNetIncomeCents <= 0) {
+        toast({
+          title: 'Informe a renda',
+          description: 'A renda líquida é necessária para calcular a sugestão de tetos.',
+          variant: 'destructive',
+        })
+        return
+      }
+      setStep(2)
+    } else if (step === 2) {
+      // Ao avançar para o passo 3, inicializa os inputs de valores
+      const initialMap: Record<string, string> = {}
+      mappedCategories.forEach((item) => {
+        initialMap[item.category.id] = (item.defaultAmountCents / 100).toFixed(2).replace('.', ',')
+      })
+      setCategoryAmountsInput(initialMap)
+      setStep(3)
+    }
+  }
+
+  const handleBack = () => {
+    if (step === 2) setStep(1)
+    if (step === 3) setStep(2)
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl w-[94vw] rounded-3xl p-5 sm:p-6 max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-xl bg-emerald-100 text-emerald-800">
-              <Sparkles className="w-4 h-4" />
+      <DialogContent className="max-w-xl w-[95vw] rounded-3xl p-5 sm:p-7 max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
+              Assistente de Orçamento
             </span>
-            <DialogTitle className="text-lg font-black text-slate-900">
-              Modelo Orçamentário Inteligente
-            </DialogTitle>
           </div>
-          <DialogDescription className="text-xs text-slate-500">
-            Ajuste os tetos da sua família conforme os percentuais ideais da renda líquida
-            recomendados por consultores financeiros.
+          <DialogTitle className="text-lg sm:text-xl font-bold text-slate-900">
+            {step === 1 && 'Passo 1: Qual é a renda líquida mensal?'}
+            {step === 2 && 'Passo 2: Escolha o perfil da sua família'}
+            {step === 3 && 'Passo 3: Conferir & Aplicar'}
+          </DialogTitle>
+          <DialogDescription className="text-xs sm:text-sm text-slate-500">
+            {step === 1 &&
+              'Base sobre a qual os tetos sugeridos serão distribuídos. Você poderá personalizar tudo a qualquer momento.'}
+            {step === 2 &&
+              'Selecione o modelo que melhor reflete o momento atual. Ele servirá de ponto de partida editável.'}
+            {step === 3 &&
+              'Altere livremente os valores em R$ de qualquer categoria antes de salvar. Nada é engessado.'}
           </DialogDescription>
         </DialogHeader>
 
-        {/* Indicador de Passos */}
-        <div className="flex items-center justify-between py-2 border-y border-slate-100 my-1">
-          <div className="flex items-center gap-1.5">
-            <span
-              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                step >= 1 ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-400'
+        {/* Indicador de passos */}
+        <div className="flex items-center gap-2 my-2">
+          {[1, 2, 3].map((s) => (
+            <div
+              key={s}
+              className={`flex-1 h-1.5 rounded-full transition-all ${
+                step >= s ? 'bg-emerald-600' : 'bg-slate-200'
               }`}
-            >
-              1
-            </span>
-            <span
-              className={`text-xs font-semibold ${step === 1 ? 'text-emerald-700' : 'text-slate-500'}`}
-            >
-              Renda Líquida
-            </span>
-          </div>
-
-          <div className="h-0.5 w-6 bg-slate-200" />
-
-          <div className="flex items-center gap-1.5">
-            <span
-              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                step >= 2 ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-400'
-              }`}
-            >
-              2
-            </span>
-            <span
-              className={`text-xs font-semibold ${step === 2 ? 'text-emerald-700' : 'text-slate-500'}`}
-            >
-              Perfil
-            </span>
-          </div>
-
-          <div className="h-0.5 w-6 bg-slate-200" />
-
-          <div className="flex items-center gap-1.5">
-            <span
-              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                step >= 3 ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-400'
-              }`}
-            >
-              3
-            </span>
-            <span
-              className={`text-xs font-semibold ${step === 3 ? 'text-emerald-700' : 'text-slate-500'}`}
-            >
-              Conferir & Aplicar
-            </span>
-          </div>
+            />
+          ))}
         </div>
 
-        {/* PASSO 1: RENDA LÍQUIDA MENSAL DA FAMÍLIA */}
+        {/* CONTEÚDO PASSO 1: RENDA */}
         {step === 1 && (
-          <div className="space-y-4 py-2 animate-in fade-in-50 duration-150">
-            <div className="bg-emerald-50/70 border border-emerald-200/60 rounded-2xl p-4 text-xs text-emerald-950 space-y-1.5">
-              <div className="flex items-center gap-1.5 font-bold text-emerald-900">
-                <ShieldCheck className="w-4 h-4 text-emerald-700" />
-                <span>Base única de cálculo: Renda Líquida</span>
-              </div>
-              <p className="text-[11px] text-emerald-800 leading-relaxed">
-                Use a renda que <strong>efetivamente cai na conta</strong> da família (salários
-                líquidos após descontos de INSS/IR, pró-labore líquido, rendimentos médios). Nunca
-                use salário bruto.
-              </p>
-            </div>
-
-            <div className="space-y-2">
+          <div className="space-y-4 py-3">
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/70 space-y-3">
               <Label htmlFor="net-income-input" className="text-xs font-bold text-slate-800">
-                Renda Líquida Mensal da Família (R$)
+                Renda Líquida Familiar Mensal (R$)
               </Label>
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">
                   R$
                 </span>
                 <Input
                   id="net-income-input"
                   type="text"
-                  placeholder="Ex.: 10.000,00"
-                  value={incomeStr}
-                  onChange={(e) => setIncomeStr(e.target.value)}
-                  className="pl-10 text-base font-bold text-slate-900 rounded-2xl h-12"
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={incomeInput}
+                  onChange={(e) => setIncomeInput(e.target.value)}
+                  className="pl-11 text-lg font-bold tabular-nums bg-white h-12 rounded-2xl"
                   autoFocus
                 />
               </div>
-              <p className="text-[11px] text-slate-400">
-                Você poderá atualizar esse valor a qualquer momento no seu Perfil ou nesta aba.
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Soma de salários líquidos, pró-labores, rendimentos e receitas fixas regulares da
+                casa.
               </p>
             </div>
 
-            {parsedIncomeCents > 0 && (
-              <div className="bg-slate-50 rounded-2xl p-3 border border-slate-200/80 flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-600">
-                  Renda líquida reconhecida:
-                </span>
-                <span className="text-sm font-extrabold text-emerald-700 tabular-nums">
-                  {formatBRL(parsedIncomeCents)}
-                </span>
-              </div>
-            )}
+            <div className="p-3 bg-sky-50/70 border border-sky-200 rounded-2xl flex items-start gap-2.5">
+              <Info className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
+              <p className="text-xs text-sky-900 leading-snug">
+                Você pode editar o teto de qualquer categoria individualmente em R$ no próximo
+                passo. Os modelos são apenas referências financeiras para economizar seu tempo.
+              </p>
+            </div>
           </div>
         )}
 
-        {/* PASSO 2: ESCOLHA DO PERFIL (PRESET) */}
+        {/* CONTEÚDO PASSO 2: ESCOLHER MODELO */}
         {step === 2 && (
-          <div className="space-y-3 py-2 animate-in fade-in-50 duration-150">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-700">
-                Escolha o momento financeiro da família:
-              </span>
-              <span className="text-xs text-slate-500 font-medium">
-                Base: <strong className="text-emerald-700">{formatBRL(parsedIncomeCents)}</strong>
-              </span>
-            </div>
-
-            <div className="space-y-2.5">
-              {BUDGET_PRESETS.map((preset) => {
-                const isSelected = selectedPresetId === preset.id
-                return (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => setSelectedPresetId(preset.id)}
-                    className={`w-full text-left p-3.5 sm:p-4 rounded-2xl border transition-all relative ${
-                      isSelected
-                        ? 'border-emerald-600 bg-emerald-50/50 shadow-xs ring-2 ring-emerald-600/20'
-                        : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-bold text-slate-900">{preset.title}</h4>
-                          {preset.id === 'equilibrado' && (
-                            <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 text-[10px] font-bold border-0 px-2 py-0.5 rounded-full">
-                              Recomendado
-                            </Badge>
-                          )}
-                        </div>
-                        {preset.subtitle && (
-                          <p className="text-xs text-slate-600 font-medium mt-0.5">
-                            {preset.subtitle}
-                          </p>
-                        )}
-                        <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                          {preset.description}
-                        </p>
-                      </div>
-
-                      <div
-                        className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
-                          isSelected
-                            ? 'border-emerald-600 bg-emerald-600 text-white'
-                            : 'border-slate-300 bg-white'
-                        }`}
-                      >
-                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                      </div>
-                    </div>
-
-                    {/* Barra de distribuição dos 3 baldes */}
-                    <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <span className="flex items-center gap-1.5 font-semibold text-sky-700">
-                          <span className="w-2 h-2 rounded-full bg-sky-500" />
-                          Essenciais {preset.bucketDistribution.essentials}%
-                        </span>
-                        <span className="text-slate-300">|</span>
-                        <span className="flex items-center gap-1.5 font-semibold text-amber-700">
-                          <span className="w-2 h-2 rounded-full bg-amber-500" />
-                          Estilo {preset.bucketDistribution.lifestyle}%
-                        </span>
-                        <span className="text-slate-300">|</span>
-                        <span className="flex items-center gap-1.5 font-semibold text-emerald-700">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                          Futuro {preset.bucketDistribution.future}%
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Rodapé metodológico */}
-                    {preset.methodologyFooter && (
-                      <div className="mt-2 pt-2 border-t border-slate-100/80">
-                        <p className="text-[11px] text-slate-500 font-medium">
-                          {preset.methodologyFooter}
-                        </p>
-                      </div>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* PASSO 3: CONFERÊNCIA DOS VALORES EM REAIS */}
-        {step === 3 && (
-          <div className="space-y-4 py-2 animate-in fade-in-50 duration-150">
-            {/* Resumo Tangível em Reais */}
-            <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-4 shadow-sm">
-              <div className="flex items-center justify-between text-xs text-slate-300 mb-2">
-                <span>Perfil: {selectedPreset.title}</span>
-                <span className="font-bold text-emerald-400">
-                  Renda Líquida: {formatBRL(parsedIncomeCents)}
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-700/80 text-center">
-                <div className="bg-white/5 rounded-xl p-2">
-                  <span className="text-[10px] text-sky-300 font-bold uppercase block">
-                    Essenciais ({selectedPreset.bucketDistribution.essentials}%)
-                  </span>
-                  <span className="text-xs sm:text-sm font-extrabold text-white mt-0.5 block tabular-nums">
-                    {formatBRL(
-                      Math.round(
-                        (parsedIncomeCents * selectedPreset.bucketDistribution.essentials) / 100,
-                      ),
-                    )}
-                  </span>
-                </div>
-                <div className="bg-white/5 rounded-xl p-2">
-                  <span className="text-[10px] text-amber-300 font-bold uppercase block">
-                    Estilo ({selectedPreset.bucketDistribution.lifestyle}%)
-                  </span>
-                  <span className="text-xs sm:text-sm font-extrabold text-white mt-0.5 block tabular-nums">
-                    {formatBRL(
-                      Math.round(
-                        (parsedIncomeCents * selectedPreset.bucketDistribution.lifestyle) / 100,
-                      ),
-                    )}
-                  </span>
-                </div>
-                <div className="bg-white/5 rounded-xl p-2">
-                  <span className="text-[10px] text-emerald-300 font-bold uppercase block">
-                    Futuro ({selectedPreset.bucketDistribution.future}%)
-                  </span>
-                  <span className="text-xs sm:text-sm font-extrabold text-white mt-0.5 block tabular-nums">
-                    {formatBRL(
-                      Math.round(
-                        (parsedIncomeCents * selectedPreset.bucketDistribution.future) / 100,
-                      ),
-                    )}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Aviso de Não Destruição / Preservação de Overrides */}
-            <div className="flex items-start gap-2 bg-slate-50 border border-slate-200/80 p-3 rounded-2xl text-[11px] text-slate-600">
-              <Info className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-              <div>
-                <p>
-                  <strong>Seus dados e históricos estão seguros:</strong> O modelo atualiza apenas
-                  os tetos padrão das categorias correspondentes (foram mapeadas{' '}
-                  <strong>{matchedCategoriesCount}</strong> categorias existentes).
-                </p>
-                <p className="text-slate-500 mt-0.5">
-                  Ajustes pontuais específicos de meses já cadastrados continuarão intactos. Depois
-                  de aplicar, você pode customizar individualmente qualquer percentual ou valor em
-                  reais.
-                </p>
-              </div>
-            </div>
-
-            {/* Lista detalhada por categoria */}
-            <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
-                Tetos Calculados em Reais por Categoria:
-              </span>
-
-              {categorySimulations.map((sim) => {
-                const bMeta = BUCKET_METADATA[sim.bucket]
-                return (
-                  <div
-                    key={sim.key}
-                    className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50/80 transition-colors"
-                  >
-                    <div className="min-w-0 flex-1 pr-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-xs text-slate-900 truncate">
-                          {sim.matchedCategory ? sim.matchedCategory.name : sim.name}
-                        </span>
-                        <span
-                          className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md ${bMeta.bgLight}`}
-                        >
-                          {bMeta.shortLabel}
-                        </span>
-                        {!sim.matchedCategory && (
-                          <span className="text-[9px] text-amber-600 bg-amber-50 px-1 py-0.2 rounded border border-amber-200">
-                            Será vinculada
+          <div className="space-y-3 py-2">
+            {(Array.isArray(BUDGET_PRESETS)
+              ? (BUDGET_PRESETS as BudgetPreset[])
+              : Object.values(BUDGET_PRESETS as Record<string, BudgetPreset>)
+            ).map((preset: BudgetPreset) => {
+              const isSelected = selectedPresetId === preset.id
+              return (
+                <div
+                  key={preset.id}
+                  onClick={() => setSelectedPresetId(preset.id)}
+                  className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+                    isSelected
+                      ? 'border-emerald-600 bg-emerald-50/40 ring-2 ring-emerald-500/20 shadow-xs'
+                      : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/50'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-sm text-slate-900">{preset.name}</h4>
+                        {preset.badgeText && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                            {preset.badgeText}
                           </span>
                         )}
                       </div>
-                      <p className="text-[10px] text-slate-400 truncate mt-0.5">
-                        {sim.description}
+                      <p className="text-xs text-slate-600 mt-1 leading-snug">
+                        {preset.shortDescription}
                       </p>
                     </div>
+                    <div
+                      className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
+                        isSelected
+                          ? 'border-emerald-600 bg-emerald-600 text-white'
+                          : 'border-slate-300'
+                      }`}
+                    >
+                      {isSelected && <CheckCircle2 className="w-3.5 h-3.5" />}
+                    </div>
+                  </div>
 
-                    <div className="text-right shrink-0">
-                      <span className="text-xs font-extrabold text-slate-900 block tabular-nums">
-                        {formatBRL(sim.amountCents)}
+                  {/* Distribuição visual dos 3 Baldes */}
+                  <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-100 text-center">
+                    <div className="bg-sky-50/80 rounded-xl p-2 border border-sky-100">
+                      <span className="text-[10px] uppercase font-bold text-sky-800 block">
+                        Essenciais
                       </span>
-                      <span className="text-[10px] font-semibold text-slate-500 tabular-nums">
-                        {sim.percent}% da renda
+                      <span className="text-xs sm:text-sm font-bold text-sky-900">
+                        {preset.bucketDistribution.essentials}%
                       </span>
+                    </div>
+                    <div className="bg-amber-50/80 rounded-xl p-2 border border-amber-100">
+                      <span className="text-[10px] uppercase font-bold text-amber-800 block">
+                        Estilo de Vida
+                      </span>
+                      <span className="text-xs sm:text-sm font-bold text-amber-900">
+                        {preset.bucketDistribution.lifestyle}%
+                      </span>
+                    </div>
+                    <div className="bg-emerald-50/80 rounded-xl p-2 border border-emerald-100">
+                      <span className="text-[10px] uppercase font-bold text-emerald-800 block">
+                        Futuro & Metas
+                      </span>
+                      <span className="text-xs sm:text-sm font-bold text-emerald-900">
+                        {preset.bucketDistribution.future}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* CONTEÚDO PASSO 3: CONFERIR & APLICAR (INPUTS DE MOEDA EDITÁVEIS EM R$) */}
+        {step === 3 && selectedPreset && (
+          <div className="space-y-4 py-2">
+            {/* Banner Dinâmico em tempo real: Total orçado: R$ X de R$ Y (Z% da renda) + alerta sutil se Z > 100% */}
+            <div
+              className={`p-3.5 rounded-2xl border transition-all ${
+                step3Summary.isOver100
+                  ? 'bg-amber-50 border-amber-300 text-amber-950'
+                  : 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start gap-2.5 min-w-0">
+                  {step3Summary.isOver100 ? (
+                    <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <Sparkles className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-bold leading-tight">
+                      Total orçado: {formatBRL(step3Summary.totalCustomBudgetCents)} de{' '}
+                      {formatBRL(parsedNetIncomeCents)} ({step3Summary.percentOfIncome}% da renda)
+                    </p>
+                    {step3Summary.isOver100 ? (
+                      <p className="text-[11px] text-amber-900 mt-1 leading-snug">
+                        O total orçado ultrapassou 100% da renda líquida familiar. Você pode
+                        continuar e aplicar assim mesmo, ou reequilibrar manualmente reduzindo
+                        outras categorias abaixo antes de aplicar.
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-emerald-800 mt-0.5 leading-snug">
+                        Orçamento dentro da renda líquida planejada. Saldo livre planejado:{' '}
+                        <strong>
+                          {formatBRL(parsedNetIncomeCents - step3Summary.totalCustomBudgetCents)}
+                        </strong>
+                        .
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Botão para restaurar valores originais do preset */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleResetToPreset}
+                  className="text-[11px] h-7 px-2 text-slate-600 hover:text-slate-900 shrink-0 gap-1 rounded-lg"
+                  title="Restaurar valores sugeridos pelo modelo"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span className="hidden sm:inline">Restaurar</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Lista de Categorias com Inputs de Moeda Editáveis em R$ */}
+            <div className="space-y-2 max-h-[38vh] overflow-y-auto pr-1">
+              {mappedCategories.map((item) => {
+                const currentVal = categoryAmountsInput[item.category.id] ?? ''
+                const currentCents = parseBRLToCents(currentVal)
+                const dynamicPercent =
+                  parsedNetIncomeCents > 0
+                    ? Math.round((currentCents / parsedNetIncomeCents) * 1000) / 10
+                    : 0
+
+                return (
+                  <div
+                    key={item.category.id}
+                    className="p-3 bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:border-slate-300 transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div
+                        className="w-3 h-3 rounded-full shrink-0"
+                        style={{ backgroundColor: item.category.color || '#64748B' }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-xs sm:text-sm text-slate-900 break-words leading-tight">
+                            {item.category.name}
+                          </span>
+                          <span
+                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md leading-none whitespace-nowrap ${
+                              BUCKET_METADATA[item.bucket]?.bgLight || 'bg-slate-100 text-slate-600'
+                            }`}
+                          >
+                            {BUCKET_METADATA[item.bucket]?.shortLabel}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 block mt-0.5">
+                          Preset original: {item.defaultPercent}% (
+                          {formatBRL(item.defaultAmountCents)})
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Input de Moeda Editável em R$ + badge com percentual recalculado dinamicamente */}
+                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                      <span className="text-[10px] sm:text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/70 px-1.5 py-1 rounded-lg tabular-nums">
+                        {dynamicPercent}% da renda
+                      </span>
+                      <div className="relative w-32 sm:w-36">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">
+                          R$
+                        </span>
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          value={currentVal}
+                          onChange={(e) => {
+                            const val = e.target.value
+                            setCategoryAmountsInput((prev) => ({
+                              ...prev,
+                              [item.category.id]: val,
+                            }))
+                          }}
+                          placeholder="0,00"
+                          className="h-8 pl-8 pr-2 text-xs sm:text-sm font-bold tabular-nums text-right rounded-xl"
+                        />
+                      </div>
                     </div>
                   </div>
                 )
               })}
             </div>
+
+            <p className="text-[11px] text-slate-500 leading-snug">
+              Ao aplicar, cada categoria terá seu teto padrão atualizado para o valor customizado
+              digitado. Você também poderá alterá-los a qualquer momento no lápis de cada categoria
+              na tela de Orçamento.
+            </p>
           </div>
         )}
 
         <DialogFooter className="gap-2 sm:gap-0 pt-3 border-t border-slate-100">
-          {step > 1 ? (
+          {step > 1 && (
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={handleBack}
               disabled={isApplying}
-              className="rounded-xl text-xs"
+              className="rounded-xl text-xs gap-1.5"
             >
-              <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
-              Voltar
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-              disabled={isApplying}
-              className="rounded-xl text-xs"
-            >
-              Cancelar
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>Voltar</span>
             </Button>
           )}
 
@@ -510,10 +532,10 @@ export function ApplyBudgetModelDialog({
               type="button"
               size="sm"
               onClick={handleNext}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold gap-1.5"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs gap-1.5"
             >
               <span>Avançar</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ChevronRight className="w-3.5 h-3.5" />
             </Button>
           ) : (
             <Button
@@ -521,15 +543,18 @@ export function ApplyBudgetModelDialog({
               size="sm"
               onClick={handleApply}
               disabled={isApplying}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold gap-1.5"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs gap-1.5 shadow-sm"
             >
               {isApplying ? (
-                <span>Aplicando modelo...</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Aplicando tetos...</span>
+                </span>
               ) : (
-                <>
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Aplicar Tetos na Família</span>
-                </>
+                <span className="flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Aplicar Orçamento</span>
+                </span>
               )}
             </Button>
           )}

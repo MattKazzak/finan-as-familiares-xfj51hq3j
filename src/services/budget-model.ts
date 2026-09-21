@@ -1,166 +1,107 @@
-import { supabase } from '@/lib/supabase/client'
-import {
-  BUDGET_PRESETS,
-  matchCategoryToPresetKey,
-  type CategoryPresetConfig,
-} from '@/types/budget-presets'
-import type { TransactionCategory } from '@/types/finance'
+import { TransactionCategory } from '@/types/finance'
+import { BUDGET_PRESETS, matchCategoryToPresetKey } from '@/types/budget-presets'
 import { upsertDefaultBudget } from '@/services/transactions'
+import { updateCategory } from '@/services/family'
 
 export interface ApplyPresetResult {
-  updatedCategoriesCount: number
-  updatedBudgetsCount: number
-  totalBudgetCalculatedCents: number
+  appliedCount: number
+  totalBudgetCents: number
+  percentOfIncome: number
 }
 
 /**
- * Aplica um preset orçamentário para a família:
- * 1. Salva a renda líquida na família (se informada)
- * 2. Mapeia as categorias da matriz para as categorias existentes no banco
- * 3. Atualiza percent_default, percent_alert e budget_bucket na transaction_categories
- * 4. Calcula o valor em reais: Math.round((monthlyNetIncomeCents * percent) / 100)
- * 5. Grava os tetos padrão na tabela default_budgets para as categorias correspondentes
- *    PRESERVANDO todos os overrides pontuais de meses criados pelo usuário
+ * Aplica um preset orçamentário (50/30/20, 60/20/20, 70/20/10) a uma família,
+ * aceitando opcionalmente valores customizados em centavos por categoria (customAmountsByCatId).
+ *
+ * Para cada categoria de despesa mapeada ou que possua valor customizado:
+ * - Upsert em default_budgets com o teto em centavos.
+ * - Sincroniza o balde (budget_bucket: essentials | lifestyle | future).
+ * - Tetos orçamentários passam a ser presets flexíveis e 100% editáveis.
+ *
+ * Percentuais são sempre calculados dinamicamente em tempo de renderização (teto / renda * 100),
+ * nunca fixos ou lidos de percentual engessado no banco.
  */
-export async function applyBudgetPreset(params: {
-  familyId: string
-  presetId: 'equilibrado' | 'enxuto' | 'acelerador'
-  monthlyNetIncomeCents: number
-  existingCategories: TransactionCategory[]
-}): Promise<ApplyPresetResult> {
-  const { familyId, presetId, monthlyNetIncomeCents, existingCategories } = params
+export async function applyBudgetPreset(
+  familyId: string,
+  presetId: '50_30_20' | '60_20_20' | '70_20_10' | string,
+  categories: TransactionCategory[],
+  netIncomeCents: number,
+  customAmountsByCatId?: Record<string, number>,
+): Promise<ApplyPresetResult> {
+  const preset = (BUDGET_PRESETS as Record<string, any>)[presetId]
+  if (!preset) {
+    throw new Error(`Preset "${presetId}" não encontrado.`)
+  }
 
-  const preset = BUDGET_PRESETS.find((p) => p.id === presetId)
-  if (!preset) throw new Error('Preset não encontrado')
-
-  // 1. Atualizar a renda líquida na tabela families
-  const { error: famError } = await (supabase as any)
-    .from('families')
-    .update({ monthly_net_income_cents: monthlyNetIncomeCents })
-    .eq('id', familyId)
-
-  if (famError) throw famError
-
-  // 2. Mapear categorias existentes da família com base nas chaves do preset
-  // Chaves: moradia, alimentacao, transporte, saude, educacao, lazer, compras, assinaturas, reserva, metas
-  const presetMap = new Map<string, CategoryPresetConfig>()
-  preset.categories.forEach((cat) => {
-    presetMap.set(cat.key, cat)
-  })
-
-  // Lista de despesas existentes
-  const expenseCategories = existingCategories.filter((c) => c.type === 'expense')
-
-  let updatedCategoriesCount = 0
-  let updatedBudgetsCount = 0
-  let totalBudgetCalculatedCents = 0
-
-  // Guardar quais chaves de preset já foram associadas para evitar atribuir duas categorias à mesma chave
-  const usedKeys = new Set<string>()
+  const expenseCategories = categories.filter((c) => c.type === 'expense')
+  let appliedCount = 0
+  let totalBudgetCents = 0
 
   for (const cat of expenseCategories) {
-    const key = matchCategoryToPresetKey(cat.name)
-    if (!key) continue
-    if (usedKeys.has(key)) continue
+    const matchedKey = matchCategoryToPresetKey(cat.name)
+    const presetItem = matchedKey
+      ? preset.categories?.find((p: any) => p.matchKey === matchedKey)
+      : undefined
 
-    const config = presetMap.get(key)
-    if (!config) continue
+    const hasCustomAmount = customAmountsByCatId && typeof customAmountsByCatId[cat.id] === 'number'
 
-    usedKeys.add(key)
-
-    // Atualiza metadados da categoria no banco
-    const { error: catErr } = await (supabase as any)
-      .from('transaction_categories')
-      .update({
-        percent_default: config.percent,
-        percent_alert: config.percentAlert ?? null,
-        budget_bucket: config.bucket,
-      })
-      .eq('id', cat.id)
-
-    if (catErr) {
-      console.error(`Erro ao atualizar categoria ${cat.name}:`, catErr)
+    // Se a categoria não tem valor customizado e nem item correspondente no preset, não aplica teto automático
+    if (!presetItem && !hasCustomAmount) {
       continue
     }
 
-    updatedCategoriesCount += 1
+    const targetBucket = presetItem?.bucket || cat.budget_bucket || 'lifestyle'
+    const targetPercent = presetItem?.percent ?? 0
 
-    // Calcular o teto padrão em centavos
-    const amountCents = Math.round((monthlyNetIncomeCents * config.percent) / 100)
-    totalBudgetCalculatedCents += amountCents
+    // Se o usuário informou um valor customizado em R$ (centavos) para esta categoria, usa-o diretamente.
+    // Caso contrário, calcula baseado no percentual sugerido pelo modelo.
+    const targetAmountCents = hasCustomAmount
+      ? Math.max(0, Math.round(customAmountsByCatId[cat.id]))
+      : Math.round((netIncomeCents * targetPercent) / 100)
 
-    // Salvar teto padrão da categoria pai (preserva overrides de meses)
-    try {
-      await upsertDefaultBudget(familyId, cat.id, amountCents, null)
-      updatedBudgetsCount += 1
-    } catch (bErr) {
-      console.error(`Erro ao atualizar default_budget para ${cat.name}:`, bErr)
+    // Atualiza o balde na categoria se necessário
+    if (targetBucket && targetBucket !== cat.budget_bucket) {
+      await updateCategory(cat.id, {
+        budget_bucket: targetBucket,
+      })
     }
+
+    // Upsert na tabela default_budgets para definir o teto orçamentário recorrente
+    await upsertDefaultBudget(familyId, cat.id, targetAmountCents, null)
+    appliedCount += 1
+    totalBudgetCents += targetAmountCents
   }
+
+  const percentOfIncome =
+    netIncomeCents > 0 ? Math.round((totalBudgetCents / netIncomeCents) * 100) : 0
 
   return {
-    updatedCategoriesCount,
-    updatedBudgetsCount,
-    totalBudgetCalculatedCents,
+    appliedCount,
+    totalBudgetCents,
+    percentOfIncome,
   }
 }
 
 /**
- * Atualiza o orçamento padrão de uma categoria com base em um percentual informativo da renda.
- * Regra de Arquitetura: `percent_default` NÃO é gravado em categorias personalizadas
- * (a coluna percent_default é exclusiva do template inicial de onboarding).
- * Apenas atualiza metadados opcionais (percentAlert, budgetBucket) e grava o valor em default_budgets.
+ * Atualiza o percentual de uma categoria específica (calculando o valor em R$ correspondente)
  */
-export async function updateCategoryBudgetPercent(params: {
-  familyId: string
-  categoryId: string
-  monthlyNetIncomeCents: number
-  newPercent: number
-  percentAlert?: number | null
-  budgetBucket?: string | null
-}): Promise<number> {
-  const { familyId, categoryId, monthlyNetIncomeCents, newPercent, percentAlert, budgetBucket } =
-    params
-
-  const roundedPercent = Math.max(0, Math.min(100, Math.round(newPercent * 100) / 100))
-  const newAmountCents =
-    monthlyNetIncomeCents > 0 ? Math.round((monthlyNetIncomeCents * roundedPercent) / 100) : 0
-
-  const updatePayload: any = {}
-  if (percentAlert !== undefined) updatePayload.percent_alert = percentAlert
-  if (budgetBucket !== undefined) updatePayload.budget_bucket = budgetBucket
-
-  if (Object.keys(updatePayload).length > 0) {
-    await (supabase as any)
-      .from('transaction_categories')
-      .update(updatePayload)
-      .eq('id', categoryId)
-  }
-
-  await upsertDefaultBudget(familyId, categoryId, newAmountCents, null)
-
-  return newAmountCents
+export async function updateCategoryBudgetPercent(
+  familyId: string,
+  categoryId: string,
+  percent: number,
+  netIncomeCents: number,
+): Promise<void> {
+  const amountCents = Math.round((netIncomeCents * percent) / 100)
+  await upsertDefaultBudget(familyId, categoryId, amountCents, null)
 }
 
 /**
- * Atualiza o teto em reais diretamente em default_budgets.
- * Regra de Arquitetura: NÃO altera `percent_default` na categoria, apenas calcula
- * e retorna o percentual equivalente informativo em relação à renda líquida.
+ * Atualiza o teto orçamentário de uma categoria diretamente em centavos (R$)
  */
-export async function updateCategoryBudgetAmount(params: {
-  familyId: string
-  categoryId: string
-  monthlyNetIncomeCents: number
-  newAmountCents: number
-}): Promise<number | null> {
-  const { familyId, categoryId, monthlyNetIncomeCents, newAmountCents } = params
-
-  await upsertDefaultBudget(familyId, categoryId, newAmountCents, null)
-
-  let calculatedPercent: number | null = null
-  if (monthlyNetIncomeCents > 0 && newAmountCents > 0) {
-    calculatedPercent = Math.round((newAmountCents / monthlyNetIncomeCents) * 1000) / 10 // ex: 25.5%
-  }
-
-  return calculatedPercent
+export async function updateCategoryBudgetAmount(
+  familyId: string,
+  categoryId: string,
+  amountCents: number,
+): Promise<void> {
+  await upsertDefaultBudget(familyId, categoryId, amountCents, null)
 }

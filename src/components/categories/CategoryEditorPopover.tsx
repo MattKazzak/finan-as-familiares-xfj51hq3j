@@ -69,12 +69,11 @@ interface CategoryEditorPopoverProps {
     icon: string
     budget_bucket?: BudgetBucket | null
     budget_amount_cents?: number
-  }) => Promise<void>
+  }) => Promise<void> | void
   title?: string
   defaultType?: 'income' | 'expense'
   initialLimitCents?: number
 }
-
 export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
   category,
   trigger,
