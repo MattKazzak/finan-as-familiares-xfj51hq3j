@@ -623,9 +623,9 @@ export default function Home() {
                     {/* Bloco de Textos (Título + Metadados) */}
                     <div className="min-w-0 flex-1">
                       {/* Linha 1: Título completo + Badges de status/tipo (Parcelado estilo banco / Fixa) */}
-                      <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5 min-w-0">
                         <p
-                          className="font-semibold text-xs sm:text-sm text-slate-900 group-hover:text-emerald-700 transition-colors truncate leading-tight"
+                          className="font-semibold text-xs sm:text-sm text-slate-900 group-hover:text-emerald-700 transition-colors break-words leading-tight"
                           title={displayTitle}
                         >
                           {displayTitle}
