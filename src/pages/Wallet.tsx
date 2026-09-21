@@ -410,39 +410,22 @@ export default function WalletPage() {
     filterType,
   ])
 
-  // Resumo do mês (Receitas, Despesas, Saldo) - inclui projeções futuras e detalha confirmados vs projetados
-  const {
-    monthIncomeCents,
-    monthExpenseCents,
-    monthNetCents,
-    monthConfirmedExpenseCents,
-    monthProjectedExpenseCents,
-    hasProjectedExpenses,
-  } = useMemo(() => {
+  // Resumo do mês (Receitas, Despesas, Saldo) - inclui projeções futuras
+  const { monthIncomeCents, monthExpenseCents, monthNetCents } = useMemo(() => {
     let income = 0
     let expense = 0
-    let confirmedExp = 0
-    let projectedExp = 0
 
     filteredTransactions.forEach((tx) => {
       if (tx.type === 'income') {
         income += tx.amount_cents
       } else {
         expense += tx.amount_cents
-        if (tx.status === 'projected') {
-          projectedExp += tx.amount_cents
-        } else {
-          confirmedExp += tx.amount_cents
-        }
       }
     })
     return {
       monthIncomeCents: income,
       monthExpenseCents: expense,
       monthNetCents: income - expense,
-      monthConfirmedExpenseCents: confirmedExp,
-      monthProjectedExpenseCents: projectedExp,
-      hasProjectedExpenses: projectedExp > 0,
     }
   }, [filteredTransactions])
 
@@ -1367,12 +1350,6 @@ export default function WalletPage() {
                 <span className="text-sm sm:text-lg font-bold text-slate-900 tabular-nums mt-1 truncate">
                   {formatBRL(monthExpenseCents)}
                 </span>
-                {hasProjectedExpenses && (
-                  <span className="text-[10px] text-slate-500 tabular-nums mt-0.5 truncate">
-                    {formatBRL(monthConfirmedExpenseCents)} conf. +{' '}
-                    {formatBRL(monthProjectedExpenseCents)} prev.
-                  </span>
-                )}
               </div>
 
               <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
