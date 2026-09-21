@@ -344,9 +344,7 @@ export const RecurringIncomesDialog: React.FC<RecurringIncomesDialogProps> = ({
             } text-white text-xs rounded-xl shadow-xs`}
           >
             <Plus className="w-3.5 h-3.5 mr-1" />
-            <span>
-              {isIncome ? 'Cadastrar primeira receita fixa' : 'Cadastrar primeira despesa fixa'}
-            </span>
+            <span>{isIncome ? 'Nova Receita Fixa' : 'Nova Despesa Fixa'}</span>
           </Button>
         </div>
       )
