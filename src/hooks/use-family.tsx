@@ -88,6 +88,12 @@ interface FamilyContextType {
   setIsNewTransactionOpen: (open: boolean) => void
   newTransactionDefaultType: 'income' | 'expense'
   openNewTransaction: (type?: 'income' | 'expense') => void
+  isActionSheetOpen: boolean
+  setIsActionSheetOpen: (open: boolean) => void
+  openActionSheet: () => void
+  isRecurringIncomesOpen: boolean
+  setIsRecurringIncomesOpen: (open: boolean) => void
+  openRecurringIncomes: () => void
   isImportStatementOpen: boolean
   setIsImportStatementOpen: (open: boolean) => void
   openImportStatement: () => void
@@ -126,6 +132,8 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null) // null = 'Todos'
   const [loading, setLoading] = useState<boolean>(true)
   const [isNewTransactionOpen, setIsNewTransactionOpen] = useState(false)
+  const [isActionSheetOpen, setIsActionSheetOpen] = useState(false)
+  const [isRecurringIncomesOpen, setIsRecurringIncomesOpen] = useState(false)
   const [isImportStatementOpen, setIsImportStatementOpen] = useState(false)
   const [isWhoIsUsingOpen, setIsWhoIsUsingOpen] = useState(false)
   const [newTransactionDefaultType, setNewTransactionDefaultType] = useState<'income' | 'expense'>(
@@ -418,11 +426,22 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const openNewTransaction = (type: 'income' | 'expense' = 'expense') => {
+    setIsActionSheetOpen(false)
     setNewTransactionDefaultType(type)
     setIsNewTransactionOpen(true)
   }
 
+  const openActionSheet = () => {
+    setIsActionSheetOpen(true)
+  }
+
+  const openRecurringIncomes = () => {
+    setIsActionSheetOpen(false)
+    setIsRecurringIncomesOpen(true)
+  }
+
   const openImportStatement = () => {
+    setIsActionSheetOpen(false)
     setIsNewTransactionOpen(false)
     setIsImportStatementOpen(true)
   }
@@ -470,6 +489,12 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         setIsNewTransactionOpen,
         newTransactionDefaultType,
         openNewTransaction,
+        isActionSheetOpen,
+        setIsActionSheetOpen,
+        openActionSheet,
+        isRecurringIncomesOpen,
+        setIsRecurringIncomesOpen,
+        openRecurringIncomes,
         isImportStatementOpen,
         setIsImportStatementOpen,
         openImportStatement,

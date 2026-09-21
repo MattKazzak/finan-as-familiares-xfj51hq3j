@@ -1389,21 +1389,6 @@ export default function WalletPage() {
                   )}
                 </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsRecurringIncomesOpen(true)}
-                  className="rounded-xl text-xs font-semibold gap-1.5 border-emerald-600/30 text-emerald-800 bg-emerald-50/50 hover:bg-emerald-100/70"
-                >
-                  <Briefcase className="w-3.5 h-3.5 text-emerald-700" />
-                  <span>Receitas fixas</span>
-                  {forecastData.totalRecurringCount > 0 ? (
-                    <span className="w-4 h-4 rounded-full bg-emerald-700 text-white text-[10px] flex items-center justify-center font-bold">
-                      {forecastData.totalRecurringCount}
-                    </span>
-                  ) : null}
-                </Button>
-
                 {activeFiltersCount > 0 && (
                   <button
                     onClick={() => {
@@ -1740,10 +1725,9 @@ export default function WalletPage() {
                     onClick={() => setIsRecurringIncomesOpen(true)}
                     className="text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold underline self-start sm:self-auto transition-colors"
                   >
-                    Editar receitas fixas ({forecastData.totalRecurringCount})
+                    Gerenciar receitas fixas ({forecastData.totalRecurringCount})
                   </button>
                 </div>
-
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                   <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
                     <span className="text-[11px] uppercase tracking-wider text-emerald-300 font-bold block">

@@ -1,27 +1,70 @@
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { Home, Wallet, Plus, Target, User, TrendingUp, LogOut, ChevronRight } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { useFamily } from '@/hooks/use-family'
+import { NewTransactionActionSheet } from '@/components/transactions/NewTransactionActionSheet'
 import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
 import { ImportStatementDialog } from '@/components/transactions/ImportStatementDialog'
+import { RecurringIncomesDialog } from '@/components/wallet/RecurringIncomesDialog'
 import { WhoIsUsingDialog } from '@/components/common/WhoIsUsingDialog'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { fetchRecurringIncomes, fetchRecurringIncomeOverrides } from '@/services/recurring-incomes'
+import type { RecurringIncome, RecurringIncomeOverride } from '@/types/finance'
 
 export default function Layout() {
   const { signOut } = useAuth()
   const {
     family,
     currentMember,
+    refreshTrigger,
+    triggerRefresh,
     openWhoIsUsing,
     isWhoIsUsingOpen,
     setIsWhoIsUsingOpen,
     isNewTransactionOpen,
     setIsNewTransactionOpen,
     openNewTransaction,
+    isActionSheetOpen,
+    setIsActionSheetOpen,
+    openActionSheet,
+    isRecurringIncomesOpen,
+    setIsRecurringIncomesOpen,
+    openRecurringIncomes,
+    openImportStatement,
     isImportStatementOpen,
     setIsImportStatementOpen,
   } = useFamily()
+
+  // Dados globais de receitas fixas para o modal compartilhado
+  const [globalRecurringIncomes, setGlobalRecurringIncomes] = useState<RecurringIncome[]>([])
+  const [globalRecurringOverrides, setGlobalRecurringOverrides] = useState<
+    RecurringIncomeOverride[]
+  >([])
+
+  const currentMonthDate = new Date()
+  const currentMonthStr = currentMonthDate.toISOString().slice(0, 7)
+
+  const loadGlobalRecurring = useCallback(async () => {
+    if (!family) return
+    try {
+      const [recIncomes, recOverrides] = await Promise.all([
+        fetchRecurringIncomes(family.id),
+        fetchRecurringIncomeOverrides(family.id, currentMonthStr),
+      ])
+      setGlobalRecurringIncomes(recIncomes)
+      setGlobalRecurringOverrides(recOverrides)
+    } catch (err) {
+      console.warn('Erro ao carregar receitas fixas no layout:', err)
+    }
+  }, [family, currentMonthStr])
+
+  useEffect(() => {
+    if (family) {
+      loadGlobalRecurring()
+    }
+  }, [family, loadGlobalRecurring, refreshTrigger])
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -79,7 +122,7 @@ export default function Layout() {
         {/* Botão Nova Transação Desktop */}
         <div className="p-4">
           <Button
-            onClick={() => openNewTransaction('expense')}
+            onClick={openActionSheet}
             className="w-full bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-semibold py-2.5 shadow-md shadow-emerald-700/20 rounded-xl flex items-center justify-center gap-2 transition-all transform active:scale-95"
           >
             <Plus className="w-5 h-5" />
@@ -211,8 +254,8 @@ export default function Layout() {
             <div className="flex-1 flex justify-center -translate-y-5">
               <button
                 type="button"
-                onClick={() => openNewTransaction('expense')}
-                className="w-13 h-13 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-lg shadow-emerald-900/30 ring-4 ring-white active:scale-95 transition-transform"
+                onClick={openActionSheet}
+                className="w-13 h-13 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-lg shadow-emerald-900/30 ring-4 ring-white active:scale-95 transition-transform cursor-pointer"
                 aria-label="Nova Transação"
               >
                 <Plus className="w-7 h-7 stroke-[2.5]" />
@@ -247,6 +290,29 @@ export default function Layout() {
           </div>
         </nav>
       </div>
+
+      {/* ACTION SHEET GLOBAL DO FAB / NOVA TRANSAÇÃO */}
+      <NewTransactionActionSheet
+        open={isActionSheetOpen}
+        onOpenChange={setIsActionSheetOpen}
+        onSelectExpense={() => openNewTransaction('expense')}
+        onSelectIncome={() => openNewTransaction('income')}
+        onSelectRecurringIncomes={openRecurringIncomes}
+        onSelectImportStatement={openImportStatement}
+      />
+
+      {/* DIÁLOGO GLOBAL DE RECEITAS FIXAS RECORRENTES */}
+      <RecurringIncomesDialog
+        open={isRecurringIncomesOpen}
+        onOpenChange={setIsRecurringIncomesOpen}
+        currentMonthDate={currentMonthDate}
+        recurringIncomes={globalRecurringIncomes}
+        recurringOverrides={globalRecurringOverrides}
+        onSuccess={async () => {
+          triggerRefresh()
+          await loadGlobalRecurring()
+        }}
+      />
 
       {/* DIÁLOGO GLOBAL DE NOVA TRANSAÇÃO */}
       <NewTransactionDialog open={isNewTransactionOpen} onOpenChange={setIsNewTransactionOpen} />
