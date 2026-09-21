@@ -56,6 +56,7 @@ export interface RecurringIncome {
   category_id: string | null
   subcategory_id?: string | null
   name: string
+  type?: TransactionType
   amount_cents: number
   day_of_month: number // 1..31
   active: boolean

@@ -7,9 +7,9 @@ import type {
   Transaction,
 } from '@/types/finance'
 
-// 1. Buscar todas as receitas fixas da família
-export async function fetchRecurringIncomes(familyId: string) {
-  const { data, error } = await (supabase as any)
+// 1. Buscar todas as receitas e despesas fixas recorrentes da família
+export async function fetchRecurringIncomes(familyId: string, type?: 'income' | 'expense') {
+  let query = (supabase as any)
     .from('recurring_incomes')
     .select(`
       *,
@@ -18,6 +18,12 @@ export async function fetchRecurringIncomes(familyId: string) {
       subcategory:transaction_subcategories(*)
     `)
     .eq('family_id', familyId)
+
+  if (type) {
+    query = query.eq('type', type)
+  }
+
+  const { data, error } = await query
     .order('day_of_month', { ascending: true })
     .order('created_at', { ascending: false })
 
@@ -38,13 +44,14 @@ export async function fetchRecurringIncomeOverrides(familyId: string, monthStr: 
   return (data || []) as RecurringIncomeOverride[]
 }
 
-// 3. Criar nova receita fixa recorrente
+// 3. Criar nova receita ou despesa fixa recorrente
 export async function createRecurringIncome(payload: {
   family_id: string
   member_id: string
   category_id?: string | null
   subcategory_id?: string | null
   name: string
+  type?: 'income' | 'expense'
   amount_cents: number
   day_of_month: number
 }) {
@@ -56,6 +63,7 @@ export async function createRecurringIncome(payload: {
       category_id: payload.category_id || null,
       subcategory_id: payload.subcategory_id || null,
       name: payload.name.trim(),
+      type: payload.type || 'income',
       amount_cents: payload.amount_cents,
       day_of_month: Math.max(1, Math.min(31, payload.day_of_month)),
       active: true,
@@ -72,7 +80,7 @@ export async function createRecurringIncome(payload: {
   return data as RecurringIncome
 }
 
-// 4. Atualizar dados gerais da receita fixa (padrão)
+// 4. Atualizar dados gerais da receita ou despesa fixa (padrão)
 export async function updateRecurringIncome(
   id: string,
   payload: Partial<{
@@ -80,6 +88,7 @@ export async function updateRecurringIncome(
     category_id: string | null
     subcategory_id: string | null
     name: string
+    type: 'income' | 'expense'
     amount_cents: number
     day_of_month: number
     active: boolean
@@ -261,15 +270,25 @@ export async function processAutoRecurringIncomes(params: {
       continue
     }
 
-    // Regra de timing:
-    // Se for mês passado, o dia com certeza já passou.
-    // Se for mês corrente, gera se todayDay >= income.day_of_month OU se forceAllDays for true.
-    // Se for mês futuro, só gera se forceAllDays for true.
-    const shouldGenerate =
-      params.forceAllDays || isPastMonth || (isCurrentMonth && todayDay >= income.day_of_month)
+    // Regra de timing e projeção:
+    // Para despesas e receitas fixas no calendário orçamentário:
+    // - Mês passado: se ainda não gerou, gera como 'confirmed'
+    // - Mês corrente: se todayDay >= day_of_month ou forceAllDays -> 'confirmed'
+    //                 se todayDay < day_of_month -> 'projected' (previsto no calendário)
+    // - Mês futuro: gera como 'projected' (previsto no calendário)
+    let txStatus: 'confirmed' | 'projected' = 'confirmed'
 
-    if (!shouldGenerate) {
-      continue
+    if (isPastMonth) {
+      txStatus = 'confirmed'
+    } else if (isCurrentMonth) {
+      if (todayDay >= income.day_of_month || params.forceAllDays) {
+        txStatus = 'confirmed'
+      } else {
+        txStatus = 'projected'
+      }
+    } else {
+      // Mês futuro
+      txStatus = 'projected'
     }
 
     // Valor efetivo (respeitando override deste mês)
@@ -278,11 +297,12 @@ export async function processAutoRecurringIncomes(params: {
       : income.amount_cents
 
     if (amountCents <= 0) {
-      // Valor zero indica que o usuário desativou a receita neste mês específico
+      // Valor zero indica que o usuário desativou a recorrência neste mês específico
       continue
     }
 
     const txDate = getSafeDateForMonth(currentMonthStr, income.day_of_month)
+    const itemType = income.type || 'income'
 
     try {
       const { error: insertErr } = await (supabase as any).from('transactions').insert({
@@ -290,13 +310,14 @@ export async function processAutoRecurringIncomes(params: {
         member_id: income.member_id,
         category_id: income.category_id || null,
         subcategory_id: income.subcategory_id || null,
-        type: 'income',
+        type: itemType,
         amount_cents: amountCents,
         description: income.name,
         transaction_date: txDate,
         recurring_income_id: income.id,
         is_recurring: true,
         recurring_month: monthDate,
+        status: txStatus,
       })
 
       if (insertErr) {
@@ -305,7 +326,7 @@ export async function processAutoRecurringIncomes(params: {
           existingMap.add(income.id)
           continue
         }
-        console.error(`Erro ao auto-lançar receita fixa ${income.name}:`, insertErr)
+        console.error(`Erro ao auto-lançar recorrência fixa ${income.name}:`, insertErr)
         errors.push(insertErr.message)
       } else {
         generatedCount += 1
