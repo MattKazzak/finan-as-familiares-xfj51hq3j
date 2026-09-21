@@ -519,7 +519,7 @@ export const RecurringIncomesDialog: React.FC<RecurringIncomesDialogProps> = ({
             }}
             className="flex-1 flex flex-col min-h-0"
           >
-            {/* Barra de Ações: Abas + Mês de referência + Botão Novo */}
+            {/* Barra de Ações: Abas + Mês de referência + Ação de Adicionar */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2 border-b border-slate-100 pb-3">
               <TabsList className="grid grid-cols-2 p-1 bg-slate-100/90 rounded-2xl h-10 w-full sm:w-72">
                 <TabsTrigger
@@ -545,6 +545,19 @@ export const RecurringIncomesDialog: React.FC<RecurringIncomesDialogProps> = ({
                     <strong>{formatMonthYear(currentMonthDate)}</strong>
                   </span>
                 </div>
+
+                {!isFormOpen ? (
+                  <Button
+                    type="button"
+                    onClick={() => openCreateForm(activeTab)}
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 px-2.5 text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-xl gap-1 border border-slate-200/60"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Adicionar</span>
+                  </Button>
+                ) : null}
               </div>
             </div>
 
@@ -754,7 +767,7 @@ export const RecurringIncomesDialog: React.FC<RecurringIncomesDialogProps> = ({
             </TabsContent>
           </Tabs>
 
-          <DialogFooter className="pt-2 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2">
+          <DialogFooter className="pt-2 border-t border-slate-100 flex items-center justify-end">
             <Button
               type="button"
               variant="outline"
@@ -762,19 +775,6 @@ export const RecurringIncomesDialog: React.FC<RecurringIncomesDialogProps> = ({
               className="text-xs rounded-xl w-full sm:w-auto"
             >
               <span>Fechar</span>
-            </Button>
-            <Button
-              type="button"
-              onClick={() => openCreateForm(activeTab)}
-              size="sm"
-              className={`${
-                activeTab === 'income'
-                  ? 'bg-emerald-600 hover:bg-emerald-700'
-                  : 'bg-rose-600 hover:bg-rose-700'
-              } text-white text-xs rounded-xl gap-1.5 h-9 sm:h-8 font-semibold shadow-xs w-full sm:w-auto`}
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{activeTab === 'income' ? 'Nova Receita Fixa' : 'Nova Despesa Fixa'}</span>
             </Button>
           </DialogFooter>
         </DialogContent>
