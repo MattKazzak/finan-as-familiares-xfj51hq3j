@@ -216,6 +216,26 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           is_installment: false,
           status: 'confirmed',
         })
+
+        // Se o usuário optou por lembrar a regra e definiu uma categoria válida para nova transação
+        if (rememberRule && categoryId !== 'none') {
+          try {
+            const rawPattern = extractPatternFromDescription(description.trim())
+            if (rawPattern && rawPattern.length >= 2) {
+              await upsertCategorizationRule({
+                family_id: family.id,
+                user_id: user?.id || null,
+                pattern: rawPattern,
+                category_id: categoryId,
+                subcategory_id: subcategoryId === 'none' ? null : subcategoryId,
+              })
+              console.log('Regra de categorização memorizada com sucesso:', rawPattern)
+            }
+          } catch (ruleErr) {
+            console.warn('Não foi possível salvar regra de categorização:', ruleErr)
+          }
+        }
+
         toast({ title: 'Sucesso', description: 'Transação registrada com sucesso!' })
       }
 

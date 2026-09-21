@@ -30,8 +30,12 @@ import {
   type IgnoredLineInfo,
   type ParseDiagnostics,
 } from '@/services/import/statement-parser'
-import { matchCategorization } from '@/services/import/categorization'
-import { fetchCategorizationRules } from '@/services/categorization-rules'
+import {
+  matchCategorization,
+  extractPatternFromDescription,
+  normalizeText,
+} from '@/services/import/categorization'
+import { fetchCategorizationRules, upsertCategorizationRule } from '@/services/categorization-rules'
 import {
   createTransactionsBatch,
   fetchTransactions,
@@ -87,6 +91,7 @@ export interface ReviewItem {
   member_id: string
   category_id: string | null
   subcategory_id?: string | null
+  rememberRule?: boolean
   isDuplicate: boolean
   duplicateReason?: string
   selected: boolean
@@ -458,6 +463,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           member_id: initialMemberId,
           category_id: initialCategoryId,
           subcategory_id: initialSubcategoryId,
+          rememberRule: !!initialCategoryId,
           isDuplicate: !!dupMatch,
           duplicateReason,
           isInstallment,
@@ -521,7 +527,24 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
     setItems((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item
-        return { ...item, [field]: value }
+        const updated = { ...item, [field]: value }
+        // Se a categoria mudou e a subcategoria atual não pertence a ela, limpa a subcategoria
+        if (field === 'category_id') {
+          if (!value) {
+            updated.subcategory_id = null
+            updated.rememberRule = false
+          } else {
+            const cat = categories.find((c) => c.id === value)
+            const validSub = cat?.subcategories?.some((s) => s.id === item.subcategory_id)
+            if (!validSub) {
+              updated.subcategory_id = null
+            }
+            if (item.rememberRule === undefined) {
+              updated.rememberRule = true
+            }
+          }
+        }
+        return updated
       }),
     )
   }
@@ -734,6 +757,31 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
         ...toUpdateProjections.map((up) => updateTransaction(up.id, up.payload)),
         createTransactionsBatch(toCreatePayloads),
       ])
+
+      // Upsert das regras de categorização para itens com "Lembrar para compras futuras"
+      const rulesToUpsert = selectedItems.filter(
+        (i) => i.rememberRule && i.category_id && i.description && i.description.trim(),
+      )
+
+      for (const item of rulesToUpsert) {
+        try {
+          const rawPattern =
+            extractPatternFromDescription(item.description) || normalizeText(item.description)
+          const patternToSave = (rawPattern || item.description.trim()).toUpperCase()
+
+          if (patternToSave && patternToSave.length >= 2) {
+            await upsertCategorizationRule({
+              family_id: family.id,
+              user_id: null,
+              pattern: patternToSave,
+              category_id: item.category_id!,
+              subcategory_id: item.subcategory_id || null,
+            })
+          }
+        } catch (ruleErr) {
+          console.warn('Não foi possível salvar regra de categorização ao importar:', ruleErr)
+        }
+      }
 
       const pendingCount = selectedItems.filter((i) => !i.category_id).length
       const categorizedCount = selectedItems.length - pendingCount
@@ -1855,6 +1903,30 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                                 </Select>
                               </div>
                             </div>
+
+                            {/* Lembrar regra para compras futuras */}
+                            {item.category_id && (
+                              <div className="pt-0.5">
+                                <label className="flex items-center gap-2 cursor-pointer text-xs select-none">
+                                  <input
+                                    type="checkbox"
+                                    checked={item.rememberRule ?? true}
+                                    onChange={(e) =>
+                                      handleUpdateItemField(
+                                        item.id,
+                                        'rememberRule',
+                                        e.target.checked,
+                                      )
+                                    }
+                                    className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                                  />
+                                  <span className="text-slate-700 font-medium flex items-center gap-1.5 text-[11px]">
+                                    <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                    <span>Lembrar para compras futuras com este nome</span>
+                                  </span>
+                                </label>
+                              </div>
+                            )}
 
                             {/* Ações da linha expandida: Remover ou Concluir e Recolher */}
                             <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2">

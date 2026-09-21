@@ -80,6 +80,7 @@ import {
 import { SortableList } from '@/components/common/SortableList'
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
 import { BudgetOverviewCard } from '@/components/wallet/BudgetOverviewCard'
+import { CategoryTransactionsDrawer } from '@/components/wallet/CategoryTransactionsDrawer'
 import { BUCKET_METADATA } from '@/types/budget-presets'
 
 import {
@@ -153,6 +154,15 @@ export default function WalletPage() {
 
   // Diálogo de Receitas Fixas
   const [isRecurringIncomesOpen, setIsRecurringIncomesOpen] = useState(false)
+
+  // Drawer de transações ao clicar nas linhas de orçamento
+  const [budgetDrawerOpen, setBudgetDrawerOpen] = useState(false)
+  const [budgetDrawerCategory, setBudgetDrawerCategory] = useState<TransactionCategory | null>(null)
+  const [budgetDrawerSubcategory, setBudgetDrawerSubcategory] =
+    useState<TransactionSubcategory | null>(null)
+  const [budgetDrawerFilterType, setBudgetDrawerFilterType] = useState<
+    'category' | 'direct' | 'subcategory'
+  >('category')
 
   // Estados para disparar ações a partir de itens do menu dropdown mobile
   const [isCategoryEditorOpen, setIsCategoryEditorOpen] = useState(false)
@@ -705,15 +715,19 @@ export default function WalletPage() {
   const categoryBudgetData = useMemo(() => {
     const expenseCategories = categories.filter((c) => c.type === 'expense')
 
-    // 1. Gastos por categoria e por subcategoria
+    // 1. Gastos por categoria, por subcategoria e direto na categoria (sem subcategoria)
     const catSpentMap: Record<string, number> = {}
     const subSpentMap: Record<string, number> = {}
+    const catDirectSpentMap: Record<string, number> = {}
 
     transactions.forEach((tx) => {
       if (tx.type === 'expense' && tx.category_id) {
         catSpentMap[tx.category_id] = (catSpentMap[tx.category_id] || 0) + tx.amount_cents
         if (tx.subcategory_id) {
           subSpentMap[tx.subcategory_id] = (subSpentMap[tx.subcategory_id] || 0) + tx.amount_cents
+        } else {
+          catDirectSpentMap[tx.category_id] =
+            (catDirectSpentMap[tx.category_id] || 0) + tx.amount_cents
         }
       }
     })
@@ -810,6 +824,8 @@ export default function WalletPage() {
       // Verificar se alguma subcategoria tem override
       const hasAnySubOverride = subcategoryItems.some((s) => s.hasOverride)
 
+      const directSpentCents = catDirectSpentMap[cat.id] || 0
+
       return {
         category: cat,
         limitCents,
@@ -818,6 +834,7 @@ export default function WalletPage() {
         subcatsLimitSum,
         hasSubcatLimits,
         spentCents,
+        directSpentCents,
         percent,
         isOver,
         hasOverride,
@@ -927,6 +944,20 @@ export default function WalletPage() {
     setIsEditingOnlyThisMonth(isOverridden)
     setHasMonthOverride(isOverridden)
     setIsBudgetDialogOpen(true)
+  }
+
+  // Abrir drawer de transações ao clicar nas linhas de orçamento
+  const openCategoryTransactionsDrawer = (
+    category: TransactionCategory,
+    subcategory: TransactionSubcategory | null = null,
+    filterType: 'category' | 'direct' | 'subcategory' = 'category',
+    e?: React.MouseEvent,
+  ) => {
+    if (e) e.stopPropagation()
+    setBudgetDrawerCategory(category)
+    setBudgetDrawerSubcategory(subcategory)
+    setBudgetDrawerFilterType(filterType)
+    setBudgetDrawerOpen(true)
   }
 
   // Toggle expansão da categoria na lista de orçamentos
@@ -1976,14 +2007,7 @@ export default function WalletPage() {
                         {/* Bloco da Categoria Pai */}
                         <div
                           onClick={() =>
-                            openBudgetEditor(
-                              item.category.id,
-                              null,
-                              item.defaultLimitCents,
-                              item.limitCents,
-                              item.hasOverride,
-                              item.category.percent_default,
-                            )
+                            openCategoryTransactionsDrawer(item.category, null, 'category')
                           }
                           className="p-3 sm:p-3.5 hover:bg-slate-50/80 cursor-pointer transition-colors group touch-manipulation"
                         >
@@ -2026,55 +2050,68 @@ export default function WalletPage() {
                                   </span>
 
                                   {/* Badges em linha flexível abaixo do nome */}
-                                  {(item.category.budget_bucket ||
-                                    item.category.percent_default ||
-                                    item.hasOverride) && (
-                                    <div className="flex items-center flex-wrap gap-1 mt-1">
-                                      {item.category.budget_bucket && (
-                                        <span
-                                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md shrink-0 leading-none whitespace-nowrap ${
-                                            BUCKET_METADATA[item.category.budget_bucket]?.bgLight ||
-                                            'bg-slate-100 text-slate-600'
-                                          }`}
-                                        >
-                                          {BUCKET_METADATA[item.category.budget_bucket]?.shortLabel}
-                                        </span>
-                                      )}
+                                  <div className="flex items-center flex-wrap gap-1 mt-1">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        openBudgetEditor(
+                                          item.category.id,
+                                          null,
+                                          item.defaultLimitCents,
+                                          item.limitCents,
+                                          item.hasOverride,
+                                          item.category.percent_default,
+                                        )
+                                      }}
+                                      className="text-[9px] font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-200/80 px-1.5 py-0.5 rounded-md leading-none shrink-0 transition-colors"
+                                      title="Editar teto da categoria"
+                                    >
+                                      Orçamento
+                                    </button>
+                                    {item.category.budget_bucket && (
+                                      <span
+                                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md shrink-0 leading-none whitespace-nowrap ${
+                                          BUCKET_METADATA[item.category.budget_bucket]?.bgLight ||
+                                          'bg-slate-100 text-slate-600'
+                                        }`}
+                                      >
+                                        {BUCKET_METADATA[item.category.budget_bucket]?.shortLabel}
+                                      </span>
+                                    )}
 
-                                      {(() => {
-                                        const dynamicPercent =
-                                          family?.monthly_net_income_cents && item.limitCents > 0
-                                            ? Math.round(
-                                                (item.limitCents /
-                                                  family.monthly_net_income_cents) *
-                                                  1000,
-                                              ) / 10
-                                            : null
+                                    {(() => {
+                                      const dynamicPercent =
+                                        family?.monthly_net_income_cents && item.limitCents > 0
+                                          ? Math.round(
+                                              (item.limitCents / family.monthly_net_income_cents) *
+                                                1000,
+                                            ) / 10
+                                          : null
 
-                                        if (item.limitCents > 0) {
-                                          return (
-                                            <span className="text-[9px] sm:text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/70 px-1.5 py-0.5 rounded-md tabular-nums shrink-0 leading-none whitespace-nowrap">
-                                              {family?.monthly_net_income_cents
-                                                ? `${dynamicPercent}% da renda`
-                                                : '—'}
-                                            </span>
-                                          )
-                                        }
-
+                                      if (item.limitCents > 0) {
                                         return (
-                                          <span className="text-[9px] sm:text-[10px] font-medium text-slate-500 bg-slate-100 border border-slate-200/80 px-1.5 py-0.5 rounded-md shrink-0 leading-none whitespace-nowrap">
-                                            Consumo livre do balde
+                                          <span className="text-[9px] sm:text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/70 px-1.5 py-0.5 rounded-md tabular-nums shrink-0 leading-none whitespace-nowrap">
+                                            {family?.monthly_net_income_cents
+                                              ? `${dynamicPercent}% da renda`
+                                              : '—'}
                                           </span>
                                         )
-                                      })()}
+                                      }
 
-                                      {item.hasOverride ? (
-                                        <span className="text-[9px] font-semibold bg-amber-100/90 text-amber-900 border border-amber-200/80 px-1.5 py-0.5 rounded-md leading-none shrink-0 whitespace-nowrap">
-                                          ajustado
+                                      return (
+                                        <span className="text-[9px] sm:text-[10px] font-medium text-slate-500 bg-slate-100 border border-slate-200/80 px-1.5 py-0.5 rounded-md shrink-0 leading-none whitespace-nowrap">
+                                          Consumo livre do balde
                                         </span>
-                                      ) : null}
-                                    </div>
-                                  )}
+                                      )
+                                    })()}
+
+                                    {item.hasOverride ? (
+                                      <span className="text-[9px] font-semibold bg-amber-100/90 text-amber-900 border border-amber-200/80 px-1.5 py-0.5 rounded-md leading-none shrink-0 whitespace-nowrap">
+                                        ajustado
+                                      </span>
+                                    ) : null}
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -2429,12 +2466,10 @@ export default function WalletPage() {
                                   <div
                                     key={`budget-sub-${subItem.subcategory.id}`}
                                     onClick={() =>
-                                      openBudgetEditor(
-                                        item.category.id,
-                                        subItem.subcategory.id,
-                                        subItem.defaultLimitCents,
-                                        subItem.limitCents,
-                                        subItem.hasOverride,
+                                      openCategoryTransactionsDrawer(
+                                        item.category,
+                                        subItem.subcategory,
+                                        'subcategory',
                                       )
                                     }
                                     className={`py-2 px-2 sm:px-2.5 flex flex-col sm:flex-row sm:items-center justify-between rounded-xl cursor-pointer transition-colors group/sub gap-1.5 sm:gap-3 touch-manipulation ${
@@ -2710,7 +2745,43 @@ export default function WalletPage() {
                                   </div>
                                 )}
                               />
-                            ) : (
+                            ) : null}
+
+                            {/* Linha extra: Direto na categoria / Sem subcategoria (quando houver gastos diretos) */}
+                            {item.directSpentCents > 0 && (
+                              <div
+                                onClick={() =>
+                                  openCategoryTransactionsDrawer(item.category, null, 'direct')
+                                }
+                                className="py-2 px-2 sm:px-2.5 flex flex-col sm:flex-row sm:items-center justify-between rounded-xl cursor-pointer transition-colors hover:bg-white group/direct gap-1.5 sm:gap-3 touch-manipulation border-t border-slate-100"
+                              >
+                                <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1">
+                                  <div className="w-5 h-6 flex items-center justify-center shrink-0">
+                                    <Tag className="w-3.5 h-3.5 text-amber-500" />
+                                  </div>
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                                  <div className="min-w-0 flex-1">
+                                    <span className="text-xs sm:text-sm font-medium text-slate-700 group-hover/direct:text-amber-700 transition-colors break-words leading-snug">
+                                      Direto na categoria / Sem subcategoria
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto shrink-0 pl-8 sm:pl-0">
+                                  <div className="text-left sm:text-right text-xs tabular-nums text-slate-500 min-w-0">
+                                    <span className="font-semibold text-slate-800">
+                                      {formatBRL(item.directSpentCents)}
+                                    </span>
+                                  </div>
+                                  <div
+                                    className="hidden sm:block w-7 shrink-0 pointer-events-none"
+                                    aria-hidden="true"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {!hasSubcats && item.directSpentCents === 0 ? (
                               /* Empty state amigável quando não houver subcategorias cadastradas */
                               <div className="py-3 px-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500">
                                 <span className="italic text-slate-400">
@@ -2748,7 +2819,7 @@ export default function WalletPage() {
                                   }}
                                 />
                               </div>
-                            )}
+                            ) : null}
 
                             {/* Botão rápido para adicionar subcategoria no fim do bloco expandido (quando já tem subcategorias) */}
                             {hasSubcats ? (
@@ -3797,6 +3868,22 @@ export default function WalletPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* DRAWER DE TRANSAÇÕES COMPONENTES DO ORÇAMENTO (CATEGORIA / SEM SUBCATEGORIA / SUBCATEGORIA) */}
+      <CategoryTransactionsDrawer
+        open={budgetDrawerOpen}
+        onOpenChange={setBudgetDrawerOpen}
+        category={budgetDrawerCategory}
+        subcategory={budgetDrawerSubcategory}
+        filterType={budgetDrawerFilterType}
+        transactions={transactions}
+        onTransactionUpdated={(updatedTx) => {
+          setTransactions((prev) =>
+            prev.map((t) => (t.id === updatedTx.id ? { ...t, ...updatedTx } : t)),
+          )
+          triggerRefresh()
+        }}
+      />
     </div>
   )
 }
