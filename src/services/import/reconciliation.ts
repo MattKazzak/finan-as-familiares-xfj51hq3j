@@ -1,5 +1,5 @@
 // Serviço de Conciliação Inteligente (Smart Matching / Reconciliation)
-// Permite reconciliar transações manuais com extratos bancários importados (OFX / CSV / PDF)
+// Permite reconciliar transações manuais com extratos bancários importados em formato OFX,
 // evitando duplicações no orçamento familiar.
 import type { Transaction, TransactionType } from '@/types/finance'
 

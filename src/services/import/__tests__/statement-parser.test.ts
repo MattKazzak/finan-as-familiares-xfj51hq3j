@@ -1,15 +1,13 @@
-// Testes unitários para o parser robusto de extratos (PDF, OFX e CSV)
-// Valida faturas bancárias reais brasileiras (Rico, Nubank, Itaú, Bradesco, Inter)
+// Testes unitários para o parser de extratos OFX e categorização automática
+// Valida extratos bancários em formato OFX e regras de negócio de categorização
 
 import { describe, it, expect } from 'vitest'
 import {
   parseAmount,
   parseDate,
   isNoiseLine,
-  parsePDFText,
-  parseCSV,
   parseOFX,
-  reconstructLinesFromPositionedItems,
+  parseStatementFile,
 } from '@/services/import/statement-parser'
 import {
   predictCategory,
@@ -60,12 +58,12 @@ describe('statement-parser unit tests', () => {
   })
 
   describe('isNoiseLine', () => {
-    it('detecta rodapé de telefones e atendimento (caso real Rico reportado pelo usuário)', () => {
+    it('detecta rodapé de telefones e atendimento', () => {
       const line = '+ 55 11 4935-2740 (Auto atendimento via WhatsApp) + 55 11 3003-5465'
       expect(isNoiseLine(line).isNoise).toBe(true)
     })
 
-    it('detecta cabeçalho de fatura com titular e resumo (caso real Rico reportado pelo usuário)', () => {
+    it('detecta cabeçalho com titular e resumo', () => {
       const line =
         'Titular MATHEUS KAZMIERCZAK BERCA Endereço RUA FRANCELINA F DOS SANTOS ... Vencimento Resumo da sua fatura Cartão Rico Rico Visa Infinite Total da fatura'
       expect(isNoiseLine(line).isNoise).toBe(true)
@@ -76,220 +74,10 @@ describe('statement-parser unit tests', () => {
       expect(isNoiseLine('Central de Atendimento 4004-3535').isNoise).toBe(true)
     })
 
-    it('detecta URLs e links bancários', () => {
-      expect(isNoiseLine('Acesse www.rico.com.vc para mais informações').isNoise).toBe(true)
-    })
-
     it('não considera uma transação real como ruído', () => {
       expect(isNoiseLine('30/09/2026 Salário Posto Vereda 3.488,48').isNoise).toBe(false)
       expect(isNoiseLine('30/09/2026 Água 148,00').isNoise).toBe(false)
       expect(isNoiseLine('15/03/2026 Supermercado Carrefour 250,90').isNoise).toBe(false)
-    })
-  })
-
-  describe('parsePDFText — Fatura Cartão Rico (Caso Real do Usuário)', () => {
-    it('ignora cabeçalho e rodapé e extrai apenas transações reais com tipo expense na fatura', () => {
-      // Amostra que replica fielmente o arquivo que gerou o bug no banco
-      const samplePdfText = `
-Titular MATHEUS KAZMIERCZAK BERCA Endereço RUA FRANCELINA F DOS SANTOS Vencimento 10/10/2026 Resumo da sua fatura Cartão Rico Rico Visa Infinite Total da fatura R$ 1.476,12
-Limite total R$ 15.000,00 Limite disponível R$ 13.523,88
-Data Estabelecimento / Lançamento Valor
-30/09/2026 Salário Posto Vereda 3.488,48
-30/09/2026 Água 148,00
-15/09/2026 Mercado Extra 320,50
-+ 55 11 4935-2740 (Auto atendimento via WhatsApp) + 55 11 3003-5465 Capitais e regiões metropolitanas 0800 774 0404 Ouvidoria
-Acesse www.rico.com.vc
-`
-      const result = parsePDFText(samplePdfText)
-
-      expect(result.success).toBe(true)
-      // Deve extrair exatamente as transações válidas e descartar cabeçalho e rodapé
-      expect(result.transactions.length).toBe(3)
-
-      // 1. Salário Posto Vereda
-      const sal = result.transactions.find((t) => t.description.includes('Salário Posto Vereda'))
-      expect(sal).toBeDefined()
-      expect(sal?.amount_cents).toBe(348848)
-      expect(sal?.date).toBe('2026-09-30')
-      expect(sal?.type).toBe('income') // Salário é reconhecido como income
-
-      // 2. Água
-      const agua = result.transactions.find((t) => t.description.includes('Água'))
-      expect(agua).toBeDefined()
-      expect(agua?.amount_cents).toBe(14800)
-      expect(agua?.date).toBe('2026-09-30')
-      expect(agua?.type).toBe('expense') // Fatura de cartão classifica compra como expense
-
-      // 3. Mercado Extra
-      const mercado = result.transactions.find((t) => t.description.includes('Mercado Extra'))
-      expect(mercado).toBeDefined()
-      expect(mercado?.amount_cents).toBe(32050)
-      expect(mercado?.type).toBe('expense')
-
-      // Garantir que as linhas de rodapé e cabeçalho NUNCA viraram transações
-      const hasPhoneTx = result.transactions.some(
-        (t) => t.description.includes('4935') || t.description.includes('WhatsApp'),
-      )
-      expect(hasPhoneTx).toBe(false)
-
-      const hasTitularTx = result.transactions.some(
-        (t) => t.description.includes('MATHEUS') || t.description.includes('Titular'),
-      )
-      expect(hasTitularTx).toBe(false)
-
-      // Garantir que foram registradas linhas ignoradas para feedback na UI
-      expect(result.ignoredLines && result.ignoredLines.length).toBeGreaterThan(0)
-    })
-
-    it('retorna erro amigável se nenhuma transação for identificada', () => {
-      const emptyText = 'Titular MATHEUS BERCA\nResumo da fatura\nSAC 0800 000 0000'
-      const result = parsePDFText(emptyText)
-      expect(result.success).toBe(false)
-      expect(result.transactions.length).toBe(0)
-      expect(result.error).toContain('Não encontramos lançamentos válidos')
-    })
-  })
-
-  describe('parseCSV', () => {
-    it('faz o parsing de CSV padrão Nubank (Data, Valor, Identificador, Descrição)', () => {
-      const csvContent = `data,valor,identificador,descricao
-2026-03-10,-45.50,12345,Restaurante Bom Sabor
-2026-03-11,-120.00,12346,Posto Ipiranga
-2026-03-15,3500.00,12347,Salário Mensal Empresa
-`
-      const result = parseCSV(csvContent)
-      expect(result.success).toBe(true)
-      expect(result.transactions.length).toBe(3)
-
-      expect(result.transactions[0].description).toBe('Restaurante Bom Sabor')
-      expect(result.transactions[0].amount_cents).toBe(4550)
-      expect(result.transactions[0].type).toBe('expense')
-
-      expect(result.transactions[2].description).toBe('Salário Mensal Empresa')
-      expect(result.transactions[2].amount_cents).toBe(350000)
-      expect(result.transactions[2].type).toBe('income')
-    })
-
-    it('faz o parsing de CSV do Banco Inter (cabeçalho com nomes variados e formato monetário BR)', () => {
-      // Formato típico de exportação de extrato do Banco Inter:
-      // Data Lançamento;Histórico;Valor;Saldo
-      const interCsv = `Data Lancamento;Historico;Valor;Saldo
-10/03/2026;PIX ENVIADO MERCADO LIVRE;-189,90;1.200,50
-12/03/2026;PIX RECEBIDO JOAO SILVA;350,00;1.550,50
-14/03/2026;PAGAMENTO CONTA ENERGIA;-210,40;1.340,10
-`
-      const result = parseCSV(interCsv)
-      expect(result.success).toBe(true)
-      expect(result.transactions.length).toBe(3)
-
-      expect(result.transactions[0].description).toContain('PIX ENVIADO MERCADO LIVRE')
-      expect(result.transactions[0].amount_cents).toBe(18990)
-      expect(result.transactions[0].type).toBe('expense')
-      expect(result.transactions[0].date).toBe('2026-03-10')
-
-      expect(result.transactions[1].description).toContain('PIX RECEBIDO JOAO SILVA')
-      expect(result.transactions[1].amount_cents).toBe(35000)
-      expect(result.transactions[1].type).toBe('income')
-    })
-
-    it('faz o parsing de CSV com colunas separadas de Débito e Crédito (ex: Itaú/Bradesco)', () => {
-      const csvContent = `Data;Historico;Debito;Credito
-30/09/2026;Agua Sabesp;148,00;
-30/09/2026;Salario Posto Vereda;;3.488,48
-15/09/2026;SALDO ANTERIOR;0,00;1.000,00
-`
-      const result = parseCSV(csvContent)
-      expect(result.success).toBe(true)
-      expect(result.transactions.length).toBe(2)
-
-      const agua = result.transactions.find((t) => t.description.includes('Agua'))
-      expect(agua).toBeDefined()
-      expect(agua?.amount_cents).toBe(14800)
-      expect(agua?.type).toBe('expense')
-
-      const salario = result.transactions.find((t) => t.description.includes('Salario'))
-      expect(salario).toBeDefined()
-      expect(salario?.amount_cents).toBe(348848)
-      expect(salario?.type).toBe('income')
-
-      // Linha de SALDO ANTERIOR deve ter sido ignorada
-      const saldoTx = result.transactions.find((t) => t.description.includes('SALDO'))
-      expect(saldoTx).toBeUndefined()
-    })
-
-    it('faz detecção por amostragem quando o CSV NÃO possui cabeçalho', () => {
-      const rawRowsCsv = `10/03/2026;Farmacia Droga Raia;-65,40
-12/03/2026;Supermercado Pao de Acucar;-320,10
-15/03/2026;Prestacao Servicos Consultoria;2.500,00
-`
-      const result = parseCSV(rawRowsCsv)
-      expect(result.success).toBe(true)
-      expect(result.transactions.length).toBe(3)
-      expect(result.transactions[0].amount_cents).toBe(6540)
-      expect(result.transactions[0].type).toBe('expense')
-      expect(result.transactions[2].amount_cents).toBe(250000)
-      expect(result.transactions[2].type).toBe('income')
-    })
-
-    it('fornece diagnósticos completos e sugestão quando nenhum lançamento é reconhecido', () => {
-      const badCsv = `Linha aleatoria de texto sem data e sem valor
-Outra linha qualquer de informacoes
-Apenas texto sem numeros de transacoes
-`
-      const result = parseCSV(badCsv)
-      expect(result.success).toBe(false)
-      expect(result.diagnostics).toBeDefined()
-      expect(result.diagnostics?.totalLines).toBe(3)
-      expect(result.diagnostics?.linesWithDate).toBe(0)
-      expect(result.diagnostics?.linesWithValue).toBe(0)
-      expect(result.diagnostics?.suggestion).toBeDefined()
-    })
-  })
-
-  describe('reconstructLinesFromPositionedItems (Reconstrução de Linhas de PDF)', () => {
-    it('agrupa palavras com mesmo Y em uma única linha ordenada por X da esquerda para a direita', () => {
-      // Simula a saída de uma página com múltiplos lançamentos no PDF
-      // Em PDF: Y decresce de cima para baixo na leitura visual
-      const items = [
-        // Linha 1 (topo - Y=500): "30/09/2026" (x=50), "Salário Posto Vereda" (x=150), "3.488,48" (x=400)
-        { str: 'Salário Posto Vereda', x: 150, y: 500 },
-        { str: '30/09/2026', x: 50, y: 500 },
-        { str: '3.488,48', x: 400, y: 500 },
-
-        // Linha 2 (meio - Y=480): "30/09/2026" (x=50), "Água" (x=150), "148,00" (x=400)
-        { str: '148,00', x: 400, y: 480 },
-        { str: '30/09/2026', x: 50, y: 480 },
-        { str: 'Água Sabesp', x: 150, y: 480 },
-
-        // Linha 3 (rodapé - Y=100): "Acesse www.bancointer.com.br"
-        { str: 'Acesse', x: 50, y: 100 },
-        { str: 'www.bancointer.com.br', x: 120, y: 100 },
-      ]
-
-      const lines = reconstructLinesFromPositionedItems(items)
-      expect(lines.length).toBe(3)
-      expect(lines[0]).toBe('30/09/2026 Salário Posto Vereda 3.488,48')
-      expect(lines[1]).toBe('30/09/2026 Água Sabesp 148,00')
-      expect(lines[2]).toBe('Acesse www.bancointer.com.br')
-
-      // Quando passa pelo parsePDFText, o ruído é filtrado e os lançamentos são extraídos
-      const fullText = lines.join('\n')
-      const parseResult = parsePDFText(fullText)
-      expect(parseResult.success).toBe(true)
-      expect(parseResult.transactions.length).toBe(2)
-      expect(parseResult.transactions[0].description).toBe('Salário Posto Vereda')
-      expect(parseResult.transactions[1].description).toBe('Água Sabesp')
-    })
-
-    it('acomoda pequenas variações de alinhamento vertical dentro da tolerância Y', () => {
-      const items = [
-        { str: '15/03/2026', x: 50, y: 350.2 },
-        { str: 'Restaurante Sabor', x: 180, y: 351.0 }, // 0.8pt de diferença
-        { str: '89,90', x: 420, y: 349.5 }, // 0.7pt de diferença
-      ]
-      const lines = reconstructLinesFromPositionedItems(items, 4)
-      expect(lines.length).toBe(1)
-      expect(lines[0]).toBe('15/03/2026 Restaurante Sabor 89,90')
     })
   })
 
@@ -329,7 +117,6 @@ OFXHEADER:100
     })
 
     it('faz o parsing de OFX SGML 1.x real do Banco Inter (sem tags de fechamento </STMTTRN>, </DTPOSTED>, etc.)', () => {
-      // Formato típico de exportação de extrato SGML do Banco Inter:
       const interOfxSGML = `OFXHEADER:100
 DATA:OFXSGML
 VERSION:102
@@ -456,17 +243,14 @@ DATA:OFXSGML
       expect(result.success).toBe(true)
       expect(result.transactions.length).toBe(3)
 
-      // 1. Compra de R$ 1.234,56 classificada como despesa
       expect(result.transactions[0].description).toBe('Compra Supermercado Pão de Açúcar')
       expect(result.transactions[0].amount_cents).toBe(123456)
       expect(result.transactions[0].type).toBe('expense')
 
-      // 2. Restaurante R$ 89,90 classificado como despesa
       expect(result.transactions[1].description).toBe('Restaurante Italiano')
       expect(result.transactions[1].amount_cents).toBe(8990)
       expect(result.transactions[1].type).toBe('expense')
 
-      // 3. Estorno classificado como income
       expect(result.transactions[2].description).toBe('ESTORNO COMPRA CANCELADA')
       expect(result.transactions[2].amount_cents).toBe(5000)
       expect(result.transactions[2].type).toBe('income')
@@ -483,6 +267,52 @@ DATA:OFXSGML
       const emptyResult = parseOFX(emptyOfx)
       expect(emptyResult.success).toBe(false)
       expect(emptyResult.error).toContain('O arquivo OFX selecionado está vazio')
+    })
+  })
+
+  describe('parseStatementFile — Restrição exclusiva para .OFX', () => {
+    it('rejeita arquivos .csv com mensagem amigável em português explicando a restrição ao OFX', async () => {
+      const csvFile = new File(['data,valor,descricao\n2026-03-10,-50.00,Mercado'], 'extrato.csv', {
+        type: 'text/csv',
+      })
+      const result = await parseStatementFile(csvFile)
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('.CSV não é suportado')
+      expect(result.error).toContain('exclusivamente com importação de extrato em arquivo OFX')
+      expect(result.error).toContain('Nubank')
+    })
+
+    it('rejeita arquivos .pdf com mensagem amigável em português explicando a restrição ao OFX', async () => {
+      const pdfFile = new File(['%PDF-1.4 mock content'], 'fatura.pdf', {
+        type: 'application/pdf',
+      })
+      const result = await parseStatementFile(pdfFile)
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('.PDF não é suportado')
+      expect(result.error).toContain('exclusivamente com importação de extrato em arquivo OFX')
+    })
+
+    it('processa arquivo .ofx com sucesso', async () => {
+      const ofxContent = `
+<OFX>
+<BANKTRANLIST>
+<STMTTRN>
+<TRNTYPE>DEBIT</TRNTYPE>
+<DTPOSTED>20260310</DTPOSTED>
+<TRNAMT>-85.00</TRNAMT>
+<MEMO>Posto Shell Combustivel</MEMO>
+</STMTTRN>
+</BANKTRANLIST>
+</OFX>
+`
+      const ofxFile = new File([ofxContent], 'extrato_nubank.ofx', {
+        type: 'application/x-ofx',
+      })
+      const result = await parseStatementFile(ofxFile)
+      expect(result.success).toBe(true)
+      expect(result.transactions.length).toBe(1)
+      expect(result.transactions[0].description).toBe('Posto Shell Combustivel')
+      expect(result.transactions[0].amount_cents).toBe(8500)
     })
   })
 
@@ -620,7 +450,6 @@ DATA:OFXSGML
         },
       ]
 
-      // 1. UBER EATS ganha de UBER por ser mais longo
       const matchUberEats = matchCategorization(
         'PAGTO UBER EATS 123',
         'expense',
@@ -634,7 +463,6 @@ DATA:OFXSGML
       expect(matchUber?.category.id).toBe('cat-transporte')
       expect(matchUber?.matchedRulePattern).toBe('UBER')
 
-      // 2. MAX só dá match com word-boundary ("MAX", não "MAXIMA" ou "OBRAMAX")
       const matchMaxWord = matchCategorization(
         'ASSINATURA MAX MENSAL',
         'expense',
@@ -651,7 +479,6 @@ DATA:OFXSGML
       )
       expect(matchMaxima?.matchedRulePattern).not.toBe('MAX')
 
-      // 3. BAR só dá match com word-boundary ("BAR DA ESQUINA", não "BARATO" ou "BARALHO")
       const matchBar = matchCategorization(
         'PAGAMENTO NO BAR DA PRAIA',
         'expense',

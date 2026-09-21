@@ -170,7 +170,7 @@ export const NewTransactionActionSheet: React.FC<NewTransactionActionSheetProps>
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 truncate mt-0.5">
-                      OFX, CSV ou PDF com conciliação automática.
+                      Arquivo OFX com conciliação automática.
                     </p>
                   </div>
                 </div>

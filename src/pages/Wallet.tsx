@@ -1443,7 +1443,7 @@ export default function WalletPage() {
                     className="border-emerald-600 text-emerald-800 hover:bg-emerald-50 text-xs rounded-xl"
                   >
                     <UploadCloud className="w-4 h-4 mr-1.5 text-emerald-600" />
-                    Importar Extrato (CSV, OFX, PDF)
+                    Importar Extrato (OFX)
                   </Button>
                   <Button
                     onClick={() => openNewTransaction('expense')}

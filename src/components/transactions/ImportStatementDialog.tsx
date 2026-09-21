@@ -1,4 +1,4 @@
-// Componente completo de Importação de Extrato Bancário (CSV, OFX, PDF)
+// Componente completo de Importação de Extrato Bancário em formato OFX
 // Inclui: upload drag&drop, detecção automática, categorização inteligente,
 // tela de revisão inline, detecção de possíveis duplicadas e criação ágil de categorias.
 
@@ -49,8 +49,6 @@ import type {
 } from '@/types/finance'
 import {
   UploadCloud,
-  FileSpreadsheet,
-  FileText,
   AlertCircle,
   AlertTriangle,
   CheckCircle2,
@@ -266,7 +264,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
       if (!result.success || result.transactions.length === 0) {
         setErrorMessage(
           result.error ||
-            'Não foram encontradas transações válidas no arquivo. Verifique se o formato é CSV, OFX ou PDF de extrato bancário.',
+            'Não foram encontradas transações válidas no arquivo OFX. Verifique se o arquivo foi exportado corretamente do seu banco.',
         )
         if (result.diagnostics) {
           setDiagnostics(result.diagnostics)
@@ -487,16 +485,37 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
       setStep('review')
     } catch (err: any) {
       console.error('Erro na importação:', err)
-      setErrorMessage(err?.message || 'Erro inesperado ao ler o extrato. Tente outro formato.')
+      setErrorMessage(err?.message || 'Erro inesperado ao processar o extrato OFX.')
     } finally {
       setParsing(false)
     }
   }
 
+  const validateAndProcessFile = (file: File) => {
+    const ext = file.name.split('.').pop()?.toLowerCase() || ''
+    if (ext !== 'ofx') {
+      if (ext === 'csv' || ext === 'pdf') {
+        setErrorMessage(
+          `O formato .${ext.toUpperCase()} não é aceito. No momento, o Finanças Familiares trabalha exclusivamente com extratos em formato OFX. Por favor, exporte seu extrato em .OFX no seu banco (ex.: Nubank, Inter, Itaú) e tente novamente.`,
+        )
+      } else {
+        setErrorMessage(
+          'Formato não suportado. Por favor, selecione exclusivamente um arquivo com extensão .ofx gerado pelo seu banco.',
+        )
+      }
+      return
+    }
+    handleProcessFile(file)
+  }
+
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      handleProcessFile(file)
+      validateAndProcessFile(file)
+    }
+    // Limpar o valor do input para permitir selecionar novamente o mesmo arquivo se necessário
+    if (e.target) {
+      e.target.value = ''
     }
   }
 
@@ -504,7 +523,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
     e.preventDefault()
     const file = e.dataTransfer.files?.[0]
     if (file) {
-      handleProcessFile(file)
+      validateAndProcessFile(file)
     }
   }
 
@@ -860,7 +879,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                   </div>
                   <p className="text-xs text-slate-500 truncate mt-0.5">
                     {step === 'upload'
-                      ? 'Recomendado: OFX (100% de precisão bancária). Também aceita CSV e PDF.'
+                      ? 'Arquivo OFX com conciliação automática e 100% de precisão bancária.'
                       : `Revisão de lançamentos: ajuste categorias, membros, datas e confirme a importação`}
                   </p>
                 </div>
@@ -1008,7 +1027,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".csv,.ofx,.pdf"
+                  accept=".ofx"
                   onChange={handleFileInputChange}
                   className="hidden"
                 />
@@ -1022,32 +1041,26 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 </div>
 
                 <h3 className="font-bold text-base text-slate-800">
-                  {parsing ? 'Processando e categorizando extrato...' : 'Arraste seu extrato aqui'}
+                  {parsing
+                    ? 'Processando e categorizando extrato OFX...'
+                    : 'Arraste seu arquivo .OFX aqui'}
                 </h3>
                 <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 mb-4">
                   {parsing
                     ? 'Lendo transações, identificando valores e aplicando inteligência de categorias...'
-                    : 'Ou clique para selecionar um arquivo do seu computador ou celular'}
+                    : 'Ou clique para selecionar o arquivo .ofx do seu computador ou celular'}
                 </p>
 
-                {/* Badges de Formato com Destaque para OFX */}
+                {/* Badge exclusivo OFX */}
                 <div className="flex items-center justify-center gap-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-emerald-600 text-white shadow-sm px-3 py-1 rounded-xl">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-emerald-600 text-white shadow-sm px-3.5 py-1.5 rounded-xl">
                     <Star className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
-                    <span>OFX (Recomendado • 100% Preciso)</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1 rounded-lg">
-                    <FileSpreadsheet className="w-3.5 h-3.5" />
-                    <span>CSV (Alternativa confiável)</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200 px-2.5 py-1 rounded-lg">
-                    <FileText className="w-3.5 h-3.5" />
-                    <span>PDF (Melhor esforço)</span>
+                    <span>Formato Exclusivo: OFX (.ofx) • 100% Preciso</span>
                   </span>
                 </div>
               </div>
 
-              {/* Box Informativo: Por que preferir OFX & Mini-guia expansível */}
+              {/* Box Informativo: OFX & Mini-guia expansível */}
               <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/70 to-teal-50/40 p-3.5 sm:p-4 text-xs space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-start gap-2.5">
@@ -1056,13 +1069,12 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                     </div>
                     <div>
                       <h4 className="font-bold text-slate-900 text-xs sm:text-sm">
-                        OFX é o formato oficial e recomendado
+                        Importação exclusiva via OFX
                       </h4>
                       <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
-                        Ao exportar em <strong>OFX</strong> no seu banco, os dados chegam sem falhas
-                        de layout, com datas e valores exatos. O <strong>CSV</strong> também é uma
-                        ótima alternativa. Já arquivos em <strong>PDF</strong> funcionam por
-                        aproximação visual e podem falhar dependendo da formatação gráfica do banco.
+                        O formato <strong>OFX</strong> (Open Financial Exchange) é o padrão bancário
+                        oficial que garante máxima precisão em datas, valores e identificadores
+                        únicos (FITID), sem riscos de erros de leitura.
                       </p>
                     </div>
                   </div>
