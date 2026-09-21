@@ -17,6 +17,7 @@ export interface SortableListProps<T> {
 
 export interface DragHandleProps {
   onPointerDown: (e: React.PointerEvent) => void
+  onTouchStart?: (e: React.TouchEvent) => void
   style?: React.CSSProperties
   className?: string
   'data-drag-handle'?: boolean
@@ -73,7 +74,9 @@ export function SortableList<T>({
       clearTimeout(longPressTimer.current)
       longPressTimer.current = null
     }
-    setIsPressing(null)
+    if (!isDraggingRef.current) {
+      setIsPressing(null)
+    }
   }
 
   const cleanupDrag = useCallback(() => {
@@ -100,6 +103,9 @@ export function SortableList<T>({
     setIsPressing(null)
     document.body.style.userSelect = ''
     document.body.style.touchAction = ''
+    document.documentElement.style.touchAction = ''
+    document.body.classList.remove('dragging-active')
+    document.documentElement.classList.remove('dragging-active')
   }, [])
 
   // Calcula qual índice da lista o ponteiro está sobrevoando
@@ -154,6 +160,9 @@ export function SortableList<T>({
 
       document.body.style.userSelect = 'none'
       document.body.style.touchAction = 'none'
+      document.documentElement.style.touchAction = 'none'
+      document.body.classList.add('dragging-active')
+      document.documentElement.classList.add('dragging-active')
 
       // Atualiza/valida posições estáticas iniciais dos elementos caso não tenham sido gravadas
       if (initialRectsRef.current.size === 0) {
@@ -305,9 +314,158 @@ export function SortableList<T>({
       window.addEventListener('pointerup', handlePointerUp)
       window.addEventListener('pointercancel', handlePointerUp)
     },
+    onTouchStart: (e: React.TouchEvent) => {
+      e.stopPropagation()
+      if (e.touches.length !== 1) return
+      const touch = e.touches[0]
+      activePointerId.current = null
+      activeTargetEl.current =
+        (e.currentTarget.closest('[data-sortable-index]') as HTMLElement) ||
+        (e.currentTarget as HTMLElement)
+      startPos.current = { x: touch.clientX, y: touch.clientY }
+
+      const rects = new Map<string, DOMRect>()
+      const heights: number[] = []
+      itemsRef.current.forEach((it) => {
+        const id = keyExtractor(it)
+        const el = itemRefs.current.get(id)
+        if (el) {
+          rects.set(id, el.getBoundingClientRect())
+          heights.push(el.offsetHeight)
+        } else {
+          heights.push(64)
+        }
+      })
+      initialRectsRef.current = rects
+      itemHeightsRef.current = heights
+      draggedElHeightRef.current = heights[index] || 64
+
+      startDrag(index)
+    },
     'data-drag-handle': true,
     'aria-grabbed': draggedIndex === index,
   })
+
+  // WebKit / Safari hack: Adicionar listener persistente não-passivo de touchmove no window
+  // para permitir que listeners subsequentes adicionados dinamicamente possam usar preventDefault()
+  // sem serem forçados como passivos pelo motor WebKit.
+  useEffect(() => {
+    const noopTouch = () => {}
+    window.addEventListener('touchmove', noopTouch, { passive: false, capture: false })
+    return () => {
+      window.removeEventListener('touchmove', noopTouch)
+    }
+  }, [])
+
+  // Limpeza de segurança no unmount
+  useEffect(() => {
+    return () => {
+      document.body.style.userSelect = ''
+      document.body.style.touchAction = ''
+      document.documentElement.style.touchAction = ''
+      document.body.classList.remove('dragging-active')
+      document.documentElement.classList.remove('dragging-active')
+    }
+  }, [])
+
+  // Touchmove nativo no window para bloquear o scroll da página durante o arrasto no mobile.
+  // IMPORTANTE: browsers móveis (iOS Safari e Chrome Android) ignoram pointermove preventDefault
+  // se o scroll já foi delegado ao compositor, mas honram touchmove preventDefault em listener não-passivo.
+  // Além disso, enquanto o longPressTimer estiver pendente (dedo repousado no card), se o dedo
+  // se mover mais de 8px, cancelamos o timer e deixamos o scroll nativo acontecer sem travar a tela.
+  useEffect(() => {
+    const handleNativeTouchMove = (e: TouchEvent) => {
+      if (!isDraggingRef.current) {
+        if (longPressTimer.current !== null && e.touches && e.touches.length > 0) {
+          const touch = e.touches[0]
+          const dx = Math.abs(touch.clientX - startPos.current.x)
+          const dy = Math.abs(touch.clientY - startPos.current.y)
+          if (dx > 8 || dy > 8) {
+            clearTimer()
+          }
+        }
+        return
+      }
+
+      // Se já está arrastando: bloqueia scroll nativo e move o card
+      if (e.cancelable) {
+        e.preventDefault()
+      }
+      if (e.touches && e.touches.length > 0) {
+        const touch = e.touches[0]
+        const deltaY = touch.clientY - startPos.current.y
+        setDragTranslateY(deltaY)
+
+        const draggedH = draggedElHeightRef.current || 64
+        const fromIdx = draggedIndexRef.current ?? 0
+        const initialItemRect = itemsRef.current[fromIdx]
+          ? initialRectsRef.current.get(keyExtractor(itemsRef.current[fromIdx]))
+          : null
+        const currentCenterY = initialItemRect
+          ? initialItemRect.top + deltaY + draggedH / 2
+          : touch.clientY
+
+        const targetIdx = findHoveredIndex(currentCenterY)
+        if (targetIdx !== null && targetIdx !== overIndexRef.current) {
+          overIndexRef.current = targetIdx
+          setOverIndex(targetIdx)
+        }
+      }
+    }
+
+    const handleNativeTouchEnd = (e: TouchEvent) => {
+      if (isDraggingRef.current) {
+        if (e.cancelable) {
+          e.preventDefault()
+        }
+        clearTimer()
+        const wasDragging = isDraggingRef.current
+        if (wasDragging && draggedIndexRef.current !== null && overIndexRef.current !== null) {
+          const from = draggedIndexRef.current
+          const to = overIndexRef.current
+
+          if (from !== to && from >= 0 && to >= 0) {
+            const next = [...itemsRef.current]
+            const [moved] = next.splice(from, 1)
+            next.splice(to, 0, moved)
+            onReorder(next)
+          }
+        }
+
+        cleanupDrag()
+        if (wasDragging) {
+          hasDraggedRecently.current = true
+          setTimeout(() => {
+            hasDraggedRecently.current = false
+          }, 200)
+        }
+      }
+    }
+
+    // Registra listeners com passive: false para garantir que preventDefault() funcione
+    window.addEventListener('touchmove', handleNativeTouchMove, { passive: false, capture: true })
+    window.addEventListener('touchend', handleNativeTouchEnd, { passive: false, capture: true })
+    window.addEventListener('touchcancel', handleNativeTouchEnd, { passive: false, capture: true })
+
+    return () => {
+      window.removeEventListener('touchmove', handleNativeTouchMove, { capture: true })
+      window.removeEventListener('touchend', handleNativeTouchEnd, { capture: true })
+      window.removeEventListener('touchcancel', handleNativeTouchEnd, { capture: true })
+    }
+  }, [findHoveredIndex, keyExtractor, cleanupDrag, onReorder])
+
+  // Previne menu de contexto (botão direito / long press menu nativo do mobile) durante a interação
+  useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => {
+      if (isDraggingRef.current || longPressTimer.current !== null) {
+        e.preventDefault()
+      }
+    }
+    window.addEventListener('contextmenu', handleContextMenu, { capture: true })
+    return () => {
+      window.removeEventListener('contextmenu', handleContextMenu, { capture: true })
+    }
+  }, [])
 
   // Cancela o drag caso a janela perca foco (ex: popup ou troca de aba)
   useEffect(() => {
@@ -320,40 +478,31 @@ export function SortableList<T>({
     }
   }, [cleanupDrag])
 
-  // Long-press no card como um todo
-  const handleCardPointerDown = (e: React.PointerEvent, index: number) => {
-    if (dragHandleOnly) return
-
-    // Se o toque iniciou em botão, input, select, link ou elemento interativo, NÃO inicia long press
-    const target = e.target as HTMLElement | null
-    if (
-      target &&
-      (target.closest('button') ||
-        target.closest('input') ||
-        target.closest('select') ||
-        target.closest('a') ||
-        target.closest('[role="menuitem"]') ||
-        target.closest('[role="dialog"]') ||
-        target.closest('[data-drag-handle]'))
-    ) {
-      return
+  // Limpeza de touchmove/touchend no unmount para handlers diretos
+  useEffect(() => {
+    return () => {
+      clearTimer()
     }
+  }, [])
 
-    // Se o clique foi com botão direito ou do meio do mouse, ignora
-    if (e.button !== 0 && e.pointerType === 'mouse') return
-
-    activePointerId.current = e.pointerId
-    const cardEl =
-      (e.currentTarget.closest('[data-sortable-index]') as HTMLElement) ||
-      (e.currentTarget as HTMLElement)
-    activeTargetEl.current = cardEl
-    startPos.current = { x: e.clientX, y: e.clientY }
+  // Iniciar a captura de toque ou mouse num card
+  const handleInitiateCardPress = (
+    clientX: number,
+    clientY: number,
+    pointerId: number | null,
+    targetEl: HTMLElement,
+    isMouse: boolean,
+    index: number,
+  ) => {
+    activePointerId.current = pointerId
+    activeTargetEl.current = targetEl
+    startPos.current = { x: clientX, y: clientY }
 
     clearTimer()
     activeCardIndex.current = index
     setIsPressing(index)
 
-    // Mede as posições dos itens logo no pointerdown para garantir coordenadas limpas antes de qualquer movimento
+    // Mede as posições dos itens logo no toque para garantir coordenadas limpas antes de qualquer movimento
     const rects = new Map<string, DOMRect>()
     const heights: number[] = []
     itemsRef.current.forEach((it) => {
@@ -371,9 +520,8 @@ export function SortableList<T>({
     draggedElHeightRef.current = heights[index] || 64
 
     // No desktop com mouse, 200ms de segurada ou arrasto intencional é ainda mais confortável,
-    // enquanto no toque mobile respeitamos os 350ms de longPressDelay configurados.
-    const effectiveDelay =
-      e.pointerType === 'mouse' ? Math.min(220, longPressDelay) : longPressDelay
+    // enquanto no toque mobile usamos ~300ms (ou longPressDelay) para ativação ágil antes do browser engajar momentum scroll
+    const effectiveDelay = isMouse ? Math.min(200, longPressDelay) : Math.min(300, longPressDelay)
 
     longPressTimer.current = setTimeout(() => {
       startDrag(index)
@@ -382,6 +530,68 @@ export function SortableList<T>({
     window.addEventListener('pointermove', handlePointerMove, { passive: false })
     window.addEventListener('pointerup', handlePointerUp)
     window.addEventListener('pointercancel', handlePointerUp)
+  }
+
+  // Touchstart direto no card com passive: false (garante suporte pleno no Safari e Chrome mobile)
+  const handleCardTouchStart = (e: React.TouchEvent, index: number) => {
+    if (dragHandleOnly) return
+
+    const target = e.target as HTMLElement | null
+    if (
+      target &&
+      (target.closest('button') ||
+        target.closest('input') ||
+        target.closest('select') ||
+        target.closest('a') ||
+        target.closest('[role="menuitem"]') ||
+        target.closest('[role="dialog"]') ||
+        target.closest('[data-drag-handle]'))
+    ) {
+      return
+    }
+
+    if (e.touches.length !== 1) {
+      clearTimer()
+      return
+    }
+
+    const touch = e.touches[0]
+    const cardEl =
+      (e.currentTarget.closest('[data-sortable-index]') as HTMLElement) ||
+      (e.currentTarget as HTMLElement)
+
+    handleInitiateCardPress(touch.clientX, touch.clientY, null, cardEl, false, index)
+  }
+  // Pointerdown (usado principalmente para mouse no desktop ou em navegadores desktop)
+  const handleCardPointerDown = (e: React.PointerEvent, index: number) => {
+    if (dragHandleOnly) return
+
+    // Se for touch, o onTouchStart já iniciou (para garantir compatibilidade nativa perfeita com iOS)
+    if (e.pointerType === 'touch') return
+
+    // Se o toque iniciou em botão, input, select, link ou elemento interativo, NÃO inicia drag
+    const target = e.target as HTMLElement | null
+    if (
+      target &&
+      (target.closest('button') ||
+        target.closest('input') ||
+        target.closest('select') ||
+        target.closest('a') ||
+        target.closest('[role="menuitem"]') ||
+        target.closest('[role="dialog"]') ||
+        target.closest('[data-drag-handle]'))
+    ) {
+      return
+    }
+
+    // Se o clique foi com botão direito ou do meio do mouse, ignora
+    if (e.button !== 0) return
+
+    const cardEl =
+      (e.currentTarget.closest('[data-sortable-index]') as HTMLElement) ||
+      (e.currentTarget as HTMLElement)
+
+    handleInitiateCardPress(e.clientX, e.clientY, e.pointerId, cardEl, true, index)
   }
 
   const handleCaptureClick = (e: React.MouseEvent) => {
@@ -447,6 +657,13 @@ export function SortableList<T>({
               if (el) itemRefs.current.set(id, el)
               else itemRefs.current.delete(id)
             }}
+            onTouchStart={(e) => handleCardTouchStart(e, index)}
+            onTouchEnd={() => {
+              if (!isDraggingRef.current) clearTimer()
+            }}
+            onTouchCancel={() => {
+              if (!isDraggingRef.current) clearTimer()
+            }}
             onPointerDown={(e) => handleCardPointerDown(e, index)}
             onPointerUp={() => {
               if (!isDraggingRef.current) clearTimer()
@@ -459,7 +676,7 @@ export function SortableList<T>({
               isDragging
                 ? 'shadow-2xl ring-2 ring-emerald-500 rounded-2xl opacity-95 pointer-events-none transition-none cursor-grabbing touch-none select-none'
                 : isCurrentlyPressing
-                  ? 'scale-[0.99] transition-transform duration-200 touch-pan-y'
+                  ? 'scale-[0.99] transition-transform duration-200 touch-none'
                   : 'transition-transform duration-250 ease-[cubic-bezier(0.2,0,0,1)] will-change-transform touch-pan-y'
             }`}
           >

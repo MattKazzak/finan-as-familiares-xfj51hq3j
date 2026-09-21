@@ -2057,7 +2057,7 @@ export default function WalletPage() {
                           onClick={() =>
                             openCategoryTransactionsDrawer(item.category, null, 'category')
                           }
-                          className="p-3 sm:p-3.5 hover:bg-slate-50/80 cursor-pointer transition-colors group"
+                          className="p-3 sm:p-3.5 hover:bg-slate-50/80 cursor-pointer transition-colors group select-none touch-manipulation"
                         >
                           {/* Top Row: Identificação + Ações */}
                           <div className="flex items-start justify-between gap-2 sm:gap-3">
@@ -2642,12 +2642,15 @@ export default function WalletPage() {
                                         <button
                                           type="button"
                                           {...subDragHandleProps}
-                                          onClick={(e) => e.stopPropagation()}
-                                          className="w-5 h-6 flex items-center justify-center text-slate-300 hover:text-slate-600 cursor-grab active:cursor-grabbing shrink-0 touch-none rounded hover:bg-slate-100 transition-colors"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            e.preventDefault()
+                                          }}
+                                          className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-700 active:text-emerald-600 cursor-grab active:cursor-grabbing shrink-0 touch-none rounded-lg hover:bg-slate-100 active:bg-slate-200 transition-colors"
                                           title="Arraste para reordenar subcategoria"
                                           aria-label={`Arrastar subcategoria ${subItem.subcategory.name}`}
                                         >
-                                          <GripVertical className="w-3.5 h-3.5" />
+                                          <GripVertical className="w-4 h-4" />
                                         </button>
                                         <span className="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover/sub:bg-emerald-500 transition-colors shrink-0" />
                                         <div className="min-w-0 flex-1 flex flex-col justify-center">

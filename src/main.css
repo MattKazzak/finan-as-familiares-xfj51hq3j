@@ -113,6 +113,17 @@
     padding: 0 !important;
     margin: 0 !important;
   }
+
+  /* Impede qualquer scroll ou overflow quando um item de lista está ativamente sendo arrastado */
+  html.dragging-active,
+  body.dragging-active {
+    touch-action: none !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    -webkit-overflow-scrolling: auto !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+  }
 }
 
 @layer utilities {
