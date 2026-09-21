@@ -5,6 +5,7 @@ import {
   generateInstallmentTransactions,
   cleanInstallmentBaseDescription,
   formatTransactionTitle,
+  groupInstallmentTransactions,
 } from '../installments'
 
 describe('Installment parser & generator', () => {
@@ -166,6 +167,131 @@ describe('Installment parser & generator', () => {
         category: { name: 'Alimentação' },
       })
       expect(formatted).toBe('Alimentação')
+    })
+  })
+
+  describe('groupInstallmentTransactions', () => {
+    it('groups multiple installments belonging to the same purchase into a single line', () => {
+      const mockTxs = [
+        {
+          id: 'tx-10',
+          member_id: 'm-1',
+          description: 'Flavios Calcados - Parcela 1/10 (10/10)',
+          is_installment: true,
+          installment_number: 10,
+          installment_total: 10,
+          installment_group_id: 'grp-flavios',
+          transaction_date: '2027-06-01',
+          amount_cents: 30145,
+          type: 'expense' as const,
+        },
+        {
+          id: 'tx-9',
+          member_id: 'm-1',
+          description: 'Flavios Calcados - Parcela 1/10 (09/10)',
+          is_installment: true,
+          installment_number: 9,
+          installment_total: 10,
+          installment_group_id: 'grp-flavios',
+          transaction_date: '2027-05-01',
+          amount_cents: 30145,
+          type: 'expense' as const,
+        },
+        {
+          id: 'tx-8',
+          member_id: 'm-1',
+          description: 'Flavios Calcados - Parcela 1/10 (08/10)',
+          is_installment: true,
+          installment_number: 8,
+          installment_total: 10,
+          installment_group_id: 'grp-flavios',
+          transaction_date: '2027-04-01',
+          amount_cents: 30145,
+          type: 'expense' as const,
+        },
+        {
+          id: 'tx-hifly-6',
+          member_id: 'm-1',
+          description: 'Hifly Goiania - Parcela 1/6 (06/06)',
+          is_installment: true,
+          installment_number: 6,
+          installment_total: 6,
+          installment_group_id: 'grp-hifly',
+          transaction_date: '2027-02-01',
+          amount_cents: 10330,
+          type: 'expense' as const,
+        },
+        {
+          id: 'tx-normal',
+          member_id: 'm-1',
+          description: 'Supermercado Carrefour',
+          is_installment: false,
+          transaction_date: '2026-08-10',
+          amount_cents: 15420,
+          type: 'expense' as const,
+        },
+      ]
+
+      const grouped = groupInstallmentTransactions(mockTxs)
+
+      // Expected: 3 items (Flavios consolidated, Hifly consolidated, Supermercado normal)
+      expect(grouped.length).toBe(3)
+
+      // 1. Flavios Calcados
+      const flavios = grouped[0]
+      expect(flavios.isGroup).toBe(true)
+      expect(flavios.baseDescription).toBe('Flavios Calcados')
+      expect(flavios.currentInstallment).toBe(10)
+      expect(flavios.totalInstallments).toBe(10)
+      expect(flavios.installmentCount).toBe(3)
+      expect(flavios.amountCents).toBe(30145)
+      expect(flavios.transactionDate).toBe('2027-06-01')
+
+      // 2. Hifly Goiania
+      const hifly = grouped[1]
+      expect(hifly.isGroup).toBe(true)
+      expect(hifly.baseDescription).toBe('Hifly Goiania')
+      expect(hifly.currentInstallment).toBe(6)
+      expect(hifly.totalInstallments).toBe(6)
+      expect(hifly.installmentCount).toBe(1)
+      expect(hifly.amountCents).toBe(10330)
+
+      // 3. Regular transaction
+      const carrefour = grouped[2]
+      expect(carrefour.isGroup).toBe(false)
+      expect(carrefour.baseDescription).toBe('Supermercado Carrefour')
+      expect(carrefour.amountCents).toBe(15420)
+    })
+
+    it('groups installments even without installment_group_id if cleanDescription and member match', () => {
+      const mockTxs = [
+        {
+          id: 'a1',
+          member_id: 'm-1',
+          description: 'Magazine Luiza 02/05',
+          is_installment: true,
+          installment_number: 2,
+          installment_total: 5,
+          transaction_date: '2026-09-01',
+          amount_cents: 8000,
+        },
+        {
+          id: 'a2',
+          member_id: 'm-1',
+          description: 'Magazine Luiza 01/05',
+          is_installment: true,
+          installment_number: 1,
+          installment_total: 5,
+          transaction_date: '2026-08-01',
+          amount_cents: 8000,
+        },
+      ]
+
+      const grouped = groupInstallmentTransactions(mockTxs)
+      expect(grouped.length).toBe(1)
+      expect(grouped[0].baseDescription).toBe('Magazine Luiza')
+      expect(grouped[0].currentInstallment).toBe(2)
+      expect(grouped[0].totalInstallments).toBe(5)
     })
   })
 })

@@ -17,7 +17,7 @@ import { CountUp } from '@/components/common/CountUp'
 import { CategoryIcon } from '@/components/common/CategoryIcon'
 import { TransactionDetailDialog } from '@/components/transactions/TransactionDetailDialog'
 import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
-import { formatTransactionTitle } from '@/services/installments'
+import { formatTransactionTitle, groupInstallmentTransactions } from '@/services/installments'
 import { deleteTransaction } from '@/services/transactions'
 import { useToast } from '@/hooks/use-toast'
 import type { Transaction, Budget } from '@/types/finance'
@@ -247,9 +247,12 @@ export default function Home() {
     }
   }, [recurringIncomes, recurringOverrides, totalBudgetLimitCents])
 
-  // Últimas 5-7 transações para a seção recente
-  const recentTransactions = useMemo(() => {
-    return transactions.slice(0, 7)
+  // Transações recentes agrupadas estilo banco (compras parceladas agrupadas em linha única)
+  const recentItems = useMemo(() => {
+    // Agrupa todas as transações da família/filtro mantendo a ordenação por data recente
+    const grouped = groupInstallmentTransactions(transactions)
+    // Mostra as primeiras 7 linhas consolidadas na Home
+    return grouped.slice(0, 7)
   }, [transactions])
 
   const handleDelete = async (tx: Transaction) => {
@@ -569,7 +572,7 @@ export default function Home() {
               </div>
             ))}
           </div>
-        ) : recentTransactions.length === 0 ? (
+        ) : recentItems.length === 0 ? (
           /* Empty State com ilustração line-art */
           <div className="py-12 flex flex-col items-center text-center">
             <div className="w-16 h-16 rounded-3xl bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
@@ -589,13 +592,16 @@ export default function Home() {
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
-            {recentTransactions.map((tx) => {
+            {recentItems.map((item) => {
+              const tx = item.representativeTx
               const isIncome = tx.type === 'income'
-              const formattedTitle = formatTransactionTitle(tx)
+              // Se for grupo de parcelamento, exibe a descrição base completa sem abreviar
+              // Se for transação normal, usa formatTransactionTitle
+              const displayTitle = item.isGroup ? item.baseDescription : formatTransactionTitle(tx)
 
               return (
                 <div
-                  key={tx.id}
+                  key={item.id}
                   onClick={() => {
                     setSelectedTx(tx)
                     setIsDetailOpen(true)
@@ -616,14 +622,22 @@ export default function Home() {
 
                     {/* Bloco de Textos (Título + Metadados) */}
                     <div className="min-w-0 flex-1">
-                      {/* Linha 1: Título limpo truncado + Badge Fixa (se recorrente) */}
+                      {/* Linha 1: Título completo + Badges de status/tipo (Parcelado estilo banco / Fixa) */}
                       <div className="flex items-center gap-1.5 min-w-0">
                         <p
                           className="font-semibold text-xs sm:text-sm text-slate-900 group-hover:text-emerald-700 transition-colors truncate leading-tight"
-                          title={formattedTitle}
+                          title={displayTitle}
                         >
-                          {formattedTitle}
+                          {displayTitle}
                         </p>
+                        {item.isGroup ? (
+                          <span
+                            className="inline-flex items-center text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/70 px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap"
+                            title={`Compra parcelada: parcela ${item.currentInstallment} de ${item.totalInstallments}`}
+                          >
+                            Parcelado • {item.currentInstallment}/{item.totalInstallments}
+                          </span>
+                        ) : null}
                         {tx.is_recurring ? (
                           <span className="inline-flex items-center text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300/60 px-1.5 py-0.2 rounded-md shrink-0">
                             Fixa
@@ -663,9 +677,9 @@ export default function Home() {
 
                         <span className="text-slate-300 shrink-0">•</span>
 
-                        {/* Data relativa */}
+                        {/* Data relativa da parcela mais recente */}
                         <span className="text-[10px] sm:text-[11px] text-slate-400 capitalize shrink-0 whitespace-nowrap">
-                          {formatRelativeDate(tx.transaction_date)}
+                          {formatRelativeDate(item.transactionDate)}
                         </span>
                       </div>
                     </div>
@@ -678,8 +692,11 @@ export default function Home() {
                         isIncome ? 'text-emerald-600' : 'text-red-600'
                       }`}
                     >
-                      {isIncome ? '+' : '−'} {formatBRL(tx.amount_cents)}
+                      {isIncome ? '+' : '−'} {formatBRL(item.amountCents)}
                     </span>
+                    {item.isGroup && (
+                      <span className="block text-[9px] text-slate-400 tabular-nums">/parcela</span>
+                    )}
                   </div>
                 </div>
               )

@@ -9,6 +9,19 @@ export interface ParsedInstallmentInfo {
   rawPattern?: string
 }
 
+export interface GroupedTransactionItem {
+  id: string
+  isGroup: boolean
+  baseDescription: string
+  currentInstallment: number
+  totalInstallments: number
+  installmentCount: number
+  representativeTx: any // Transaction
+  transactions: any[] // Transaction[]
+  amountCents: number // Valor da parcela mais recente
+  transactionDate: string // Data da parcela mais recente
+}
+
 /**
  * Remove qualquer marcação de parcela pré-existente de uma descrição (ex.: "- Parcela 1/10",
  * "Parcela 1/10", "(02/10)", "PARC 02/10", etc.) para obter o nome base limpo do estabelecimento.
@@ -277,4 +290,128 @@ export function generateInstallmentTransactions(params: GenerateInstallmentsPara
   }
 
   return { groupId, transactions }
+}
+
+/**
+ * Agrupa transações de parcelamento para visualização consolidada (estilo banco).
+ * Transações normais permanecem como itens únicos.
+ * Transações pertencentes ao mesmo parcelamento (mesmo grupo ou mesma base limpa + membro + valor)
+ * são condensadas em uma única linha, mostrando a parcela mais recente, descrição limpa completa
+ * e métricas consolidadas.
+ */
+export function groupInstallmentTransactions<
+  T extends {
+    id: string
+    member_id?: string | null
+    description?: string | null
+    is_installment?: boolean | null
+    installment_number?: number | null
+    installment_total?: number | null
+    installment_group_id?: string | null
+    transaction_date: string
+    amount_cents: number
+    status?: string | null
+    category?: { name?: string } | null
+  },
+>(transactions: T[]): GroupedTransactionItem[] {
+  if (!transactions || transactions.length === 0) return []
+
+  const groupsMap = new Map<
+    string,
+    {
+      key: string
+      baseDescription: string
+      transactions: T[]
+    }
+  >()
+
+  // Lista mantendo a ordem original da primeira ocorrência de cada grupo/transação
+  const orderedGroupKeys: string[] = []
+
+  for (const tx of transactions) {
+    const isInst =
+      !!tx.is_installment || (!!tx.description && /\bparc(?:ela)?\b/i.test(tx.description))
+
+    if (!isInst) {
+      // Transação normal: gera chave única por ID
+      const singleKey = `tx-${tx.id}`
+      orderedGroupKeys.push(singleKey)
+      groupsMap.set(singleKey, {
+        key: singleKey,
+        baseDescription: tx.description?.trim() || tx.category?.name || 'Sem descrição',
+        transactions: [tx],
+      })
+      continue
+    }
+
+    // Identificar a chave do grupo de parcelamento
+    const cleanBase =
+      cleanInstallmentBaseDescription(tx.description?.trim() || '') ||
+      tx.category?.name ||
+      'Despesa'
+    const memberKey = tx.member_id || 'none'
+
+    // Se tiver installment_group_id válido, usa ele
+    const groupKey = tx.installment_group_id
+      ? `grp-${tx.installment_group_id}`
+      : `base-${memberKey}-${cleanBase.toLowerCase()}-${tx.installment_total || 0}`
+
+    if (!groupsMap.has(groupKey)) {
+      orderedGroupKeys.push(groupKey)
+      groupsMap.set(groupKey, {
+        key: groupKey,
+        baseDescription: cleanBase,
+        transactions: [tx],
+      })
+    } else {
+      groupsMap.get(groupKey)!.transactions.push(tx)
+    }
+  }
+
+  // Monta o array final ordenado pela aparição
+  return orderedGroupKeys.map((key) => {
+    const group = groupsMap.get(key)!
+    const txs = group.transactions
+
+    // Se só tem 1 transação e ela não é parcelada, é uma transação simples
+    const isInstallmentTx =
+      !!txs[0].is_installment ||
+      (!!txs[0].description && /\bparc(?:ela)?\b/i.test(txs[0].description || ''))
+
+    // Ordena transações do grupo para pegar a mais recente (data desc, installment_number desc)
+    txs.sort((a, b) => {
+      const dateCmp = b.transaction_date.localeCompare(a.transaction_date)
+      if (dateCmp !== 0) return dateCmp
+      const numA = a.installment_number || 0
+      const numB = b.installment_number || 0
+      return numB - numA
+    })
+
+    const mostRecentTx = txs[0]
+
+    let current = mostRecentTx.installment_number || 1
+    let total = mostRecentTx.installment_total || Math.max(current, txs.length)
+
+    // Se não tinha installment_number no objeto, tenta extrair da descrição
+    if (!mostRecentTx.installment_number && mostRecentTx.description) {
+      const parsed = parseInstallmentFromDescription(mostRecentTx.description)
+      if (parsed.isInstallment) {
+        current = parsed.current
+        total = parsed.total
+      }
+    }
+
+    return {
+      id: mostRecentTx.id,
+      isGroup: isInstallmentTx,
+      baseDescription: group.baseDescription,
+      currentInstallment: current,
+      totalInstallments: total,
+      installmentCount: txs.length,
+      representativeTx: mostRecentTx,
+      transactions: txs,
+      amountCents: mostRecentTx.amount_cents,
+      transactionDate: mostRecentTx.transaction_date,
+    }
+  })
 }
