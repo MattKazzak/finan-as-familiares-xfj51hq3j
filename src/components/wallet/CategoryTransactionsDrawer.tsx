@@ -175,17 +175,24 @@ export function CategoryTransactionsDrawer({
                 <div key={tx.id} className="py-3 first:pt-0 last:pb-0 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground truncate">
-                        {tx.description || 'Sem descrição'}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                        <span className="flex items-center gap-1">
+                      <div className="flex items-start gap-1.5 flex-wrap">
+                        <p className="text-sm font-semibold text-foreground break-words leading-snug">
+                          {tx.description || 'Sem descrição'}
+                        </p>
+                        {tx.is_installment && (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-purple-100 text-purple-900 border border-purple-300/80 px-1.5 py-0.2 rounded-md shrink-0">
+                            {tx.installment_number || 1}/{tx.installment_total || 1}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 text-xs text-muted-foreground mt-1">
+                        <span className="flex items-center gap-1 shrink-0">
                           <Calendar className="w-3 h-3" />
                           {formatRelativeDate(tx.transaction_date)}
                         </span>
-                        {tx.member && <span>• {tx.member.name}</span>}
+                        {tx.member && <span className="shrink-0">• {tx.member.name}</span>}
                         {currentSubcat && (
-                          <span className="inline-flex items-center gap-1 text-primary font-medium">
+                          <span className="inline-flex items-center gap-1 text-primary font-medium shrink-0">
                             <Tag className="w-3 h-3" />
                             {currentSubcat.name}
                           </span>
