@@ -1360,16 +1360,9 @@ export default function WalletPage() {
               </div>
 
               <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
-                <div className="flex items-center justify-between gap-1">
-                  <div className="flex items-center gap-1.5 text-red-600 text-[11px] font-bold uppercase tracking-wider">
-                    <ArrowDownRight className="w-3.5 h-3.5" />
-                    <span>Despesas</span>
-                  </div>
-                  {hasProjectedExpenses && (
-                    <span className="text-[10px] font-semibold text-purple-800 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200">
-                      Inclui projeções
-                    </span>
-                  )}
+                <div className="flex items-center gap-1.5 text-red-600 text-[11px] font-bold uppercase tracking-wider">
+                  <ArrowDownRight className="w-3.5 h-3.5" />
+                  <span>Despesas</span>
                 </div>
                 <span className="text-sm sm:text-lg font-bold text-slate-900 tabular-nums mt-1 truncate">
                   {formatBRL(monthExpenseCents)}
