@@ -232,7 +232,7 @@ export default function Home() {
 
     let totalPlannedIncomeCents = 0
     recurringIncomes.forEach((rec) => {
-      if (rec.active) {
+      if (rec.active && (rec.type || 'income') === 'income') {
         const amt = overrideMap.has(rec.id) ? overrideMap.get(rec.id)! : rec.amount_cents
         totalPlannedIncomeCents += amt
       }
@@ -242,7 +242,7 @@ export default function Home() {
     return {
       totalPlannedIncomeCents,
       netForecast,
-      count: recurringIncomes.filter((r) => r.active).length,
+      count: recurringIncomes.filter((r) => r.active && (r.type || 'income') === 'income').length,
     }
   }, [recurringIncomes, recurringOverrides, totalBudgetLimitCents])
 

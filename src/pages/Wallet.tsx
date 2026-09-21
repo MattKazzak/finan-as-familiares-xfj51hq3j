@@ -436,16 +436,27 @@ export default function WalletPage() {
 
     // Soma das receitas fixas ativas (usando override deste mês se houver)
     let totalPlannedIncomeCents = 0
+    let totalPlannedExpenseCents = 0
     recurringIncomes.forEach((rec) => {
       if (rec.active) {
         const amt = overrideMap.has(rec.id) ? overrideMap.get(rec.id)! : rec.amount_cents
-        totalPlannedIncomeCents += amt
+        if ((rec.type || 'income') === 'income') {
+          totalPlannedIncomeCents += amt
+        } else {
+          totalPlannedExpenseCents += amt
+        }
       }
     })
 
     return {
       totalPlannedIncomeCents,
+      totalPlannedExpenseCents,
       totalRecurringCount: recurringIncomes.filter((r) => r.active).length,
+      incomeRecurringCount: recurringIncomes.filter(
+        (r) => r.active && (r.type || 'income') === 'income',
+      ).length,
+      expenseRecurringCount: recurringIncomes.filter((r) => r.active && r.type === 'expense')
+        .length,
     }
   }, [recurringIncomes, recurringOverrides])
 
@@ -1725,7 +1736,7 @@ export default function WalletPage() {
                     onClick={() => setIsRecurringIncomesOpen(true)}
                     className="text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold underline self-start sm:self-auto transition-colors"
                   >
-                    Gerenciar receitas fixas ({forecastData.totalRecurringCount})
+                    Gerenciar contas & rendas fixas ({forecastData.totalRecurringCount})
                   </button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">

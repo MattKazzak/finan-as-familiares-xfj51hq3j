@@ -364,6 +364,7 @@ export type Database = {
           member_id: string
           name: string
           subcategory_id: string | null
+          type: Database['public']['Enums']['transaction_type']
         }
         Insert: {
           active?: boolean
@@ -376,6 +377,7 @@ export type Database = {
           member_id: string
           name: string
           subcategory_id?: string | null
+          type?: Database['public']['Enums']['transaction_type']
         }
         Update: {
           active?: boolean
@@ -388,6 +390,7 @@ export type Database = {
           member_id?: string
           name?: string
           subcategory_id?: string | null
+          type?: Database['public']['Enums']['transaction_type']
         }
         Relationships: [
           {

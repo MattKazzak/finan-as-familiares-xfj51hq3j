@@ -195,5 +195,81 @@ describe('recurring-incomes service', () => {
         }),
       )
     })
+
+    it('deve gerar despesa fixa com type "expense"', async () => {
+      const mockFamilyId = 'fam-123'
+      const mockMonth = '2026-03'
+
+      const recurringExpenseMock = [
+        {
+          id: 'rec-exp-1',
+          family_id: mockFamilyId,
+          member_id: 'mem-1',
+          name: 'Aluguel Apartamento',
+          type: 'expense',
+          amount_cents: 350000,
+          day_of_month: 10,
+          active: true,
+          category_id: null,
+          subcategory_id: null,
+        },
+      ]
+
+      const insertMock = vi.fn().mockResolvedValue({ data: null, error: null })
+
+      const fromMock = vi.fn().mockImplementation((table: string) => {
+        if (table === 'recurring_incomes') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                order: vi.fn().mockReturnValue({
+                  order: vi.fn().mockResolvedValue({ data: recurringExpenseMock, error: null }),
+                }),
+              }),
+            }),
+          }
+        }
+        if (table === 'recurring_income_overrides') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          }
+        }
+        if (table === 'transactions') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+            insert: insertMock,
+          }
+        }
+        return {}
+      })
+
+      ;(supabase.from as any) = fromMock
+
+      const result = await processAutoRecurringIncomes({
+        familyId: mockFamilyId,
+        targetMonthStr: mockMonth,
+        forceAllDays: true,
+      })
+
+      expect(result.generatedCount).toBe(1)
+      expect(insertMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          family_id: mockFamilyId,
+          type: 'expense',
+          amount_cents: 350000,
+          description: 'Aluguel Apartamento',
+          recurring_income_id: 'rec-exp-1',
+          is_recurring: true,
+        }),
+      )
+    })
   })
 })
