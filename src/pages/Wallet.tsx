@@ -76,6 +76,7 @@ import {
   MoreVertical,
   Menu,
   GripVertical,
+  GraduationCap,
 } from 'lucide-react'
 import { SortableList } from '@/components/common/SortableList'
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
@@ -1687,6 +1688,13 @@ export default function WalletPage() {
                   </h3>
                   <p className="text-[11px] text-slate-500">
                     Tetos baseados em percentuais da renda líquida familiar com liberdade total
+                  </p>
+                  <p className="text-[10px] text-slate-400 italic flex items-center gap-1 mt-0.5">
+                    <GraduationCap className="w-3 h-3 text-slate-400 shrink-0 not-italic" />
+                    <span>
+                      Modelos baseados em metodologias consagradas: 50/30/20 (Elizabeth Warren) e
+                      variações para perfis de família.
+                    </span>
                   </p>
                 </div>
               </div>

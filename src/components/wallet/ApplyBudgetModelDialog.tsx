@@ -28,6 +28,7 @@ import {
   CheckCircle2,
   Info,
   RotateCcw,
+  GraduationCap,
 } from 'lucide-react'
 
 interface ApplyBudgetModelDialogProps {
@@ -333,9 +334,15 @@ export function ApplyBudgetModelDialog({
                       <p className="text-xs text-slate-600 mt-1 leading-snug">
                         {preset.shortDescription}
                       </p>
+                      {preset.sourceCaption && (
+                        <div className="flex items-start gap-1.5 mt-2 pt-1.5 text-[11px] text-slate-500 italic leading-snug border-t border-slate-100/80">
+                          <GraduationCap className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5 not-italic" />
+                          <span>{preset.sourceCaption}</span>
+                        </div>
+                      )}
                     </div>
                     <div
-                      className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
+                      className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
                         isSelected
                           ? 'border-emerald-600 bg-emerald-600 text-white'
                           : 'border-slate-300'

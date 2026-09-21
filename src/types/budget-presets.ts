@@ -29,6 +29,8 @@ export interface BudgetPreset {
   fullDescription: string
   recommendedFor: string
   badgeText?: string
+  /** Legenda explicativa com embasamento científico / especialista / literatura */
+  sourceCaption?: string
   /** Divisão por baldes: Essenciais, Estilo de Vida, Futuro & Metas */
   bucketDistribution: {
     essentials: number // %
@@ -92,6 +94,8 @@ export const BUDGET_PRESET_ITEMS: BudgetPreset[] = [
       'Ideal para famílias que buscam equilíbrio entre viver bem no presente e construir segurança financeira para o futuro.',
     recommendedFor: 'Recomendado para a maioria das famílias com renda estável.',
     badgeText: 'Mais Popular',
+    sourceCaption:
+      "Baseada na regra popularizada por Elizabeth Warren (ex-professora de direito de falências de Harvard, livro 'All Your Worth', 2005) — referência mundial de equilíbrio financeiro familiar.",
     bucketDistribution: {
       essentials: 50,
       lifestyle: 30,
@@ -166,6 +170,8 @@ export const BUDGET_PRESET_ITEMS: BudgetPreset[] = [
     recommendedFor:
       'Famílias com aluguel alto, despesas médicas contínuas ou mensalidades escolares.',
     badgeText: 'Custo Fixo Alto',
+    sourceCaption:
+      'Variação da regra 50/30/20 adaptada para famílias com custos fixos elevados — abordagem recorrente em metodologias de organização financeira doméstica.',
     bucketDistribution: {
       essentials: 60,
       lifestyle: 20,
@@ -239,6 +245,8 @@ export const BUDGET_PRESET_ITEMS: BudgetPreset[] = [
       'Excelente ponto de partida para famílias em fase de reestruturação de dívidas ou organização inicial das finanças.',
     recommendedFor: 'Iniciantes na organização financeira ou fase de transição de carreira.',
     badgeText: 'Iniciantes',
+    sourceCaption:
+      'Modelo de transição usado por consultores financeiros como primeiro passo de reorganização: prioriza estabilizar essenciais antes de acelerar a reserva.',
     bucketDistribution: {
       essentials: 70,
       lifestyle: 20,
