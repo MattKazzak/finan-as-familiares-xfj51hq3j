@@ -24,6 +24,7 @@ import {
   parseBRLToCents,
   formatNumberBRL,
 } from '@/lib/formatters'
+import { formatTransactionTitle } from '@/services/installments'
 import { CategoryIcon, AVAILABLE_ICONS } from '@/components/common/CategoryIcon'
 import { RecurringIncomesDialog } from '@/components/wallet/RecurringIncomesDialog'
 import {
@@ -1541,19 +1542,13 @@ export default function WalletPage() {
                                     className={`font-semibold text-sm group-hover:text-emerald-700 transition-colors truncate ${
                                       isProjected ? 'text-slate-700' : 'text-slate-900'
                                     }`}
+                                    title={formatTransactionTitle(tx)}
                                   >
-                                    {tx.description || tx.category?.name || 'Sem descrição'}
+                                    {formatTransactionTitle(tx)}
                                   </p>
                                   {isProjected && (
                                     <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-amber-100 text-amber-900 border border-dashed border-amber-400 px-1.5 py-0.2 rounded-md shrink-0">
                                       <span>Previsto</span>
-                                    </span>
-                                  )}
-                                  {tx.is_installment && (
-                                    <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-purple-100 text-purple-900 border border-purple-300/80 px-1.5 py-0.2 rounded-md shrink-0">
-                                      <span>
-                                        {tx.installment_number || 1}/{tx.installment_total || 1}
-                                      </span>
                                     </span>
                                   )}
                                   {tx.is_recurring ? (

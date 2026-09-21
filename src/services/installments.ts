@@ -10,6 +10,81 @@ export interface ParsedInstallmentInfo {
 }
 
 /**
+ * Remove qualquer marcação de parcela pré-existente de uma descrição (ex.: "- Parcela 1/10",
+ * "Parcela 1/10", "(02/10)", "PARC 02/10", etc.) para obter o nome base limpo do estabelecimento.
+ */
+export function cleanInstallmentBaseDescription(description: string): string {
+  if (!description) return ''
+  let text = description.trim()
+
+  // 1. Remove sufixos com parênteses no final, ex: "(02/10)", "(2/10)", "(02)"
+  text = text.replace(
+    /\s*\(\s*(?:parc(?:ela)?\.?\s*)?\d{1,2}\s*(?:\/|\s+de\s+)?\s*\d{0,2}\s*\)\s*$/i,
+    '',
+  )
+
+  // 2. Remove sufixos com hífen / traço como " - Parcela 1/10", " - Parc 1/10", " - 01/10"
+  text = text.replace(
+    /\s*[-–—/]\s*(?:parc(?:ela)?\.?\s*)?\d{1,2}\s*(?:\/|\s+de\s+)\s*\d{1,2}\s*$/i,
+    '',
+  )
+
+  // 3. Remove "Parcela X/Y" ou "Parc X/Y" no final sem hífen
+  text = text.replace(
+    /\s+\b(?:parc(?:ela)?\.?)\s*[:#-]?\s*\d{1,2}\s*(?:\/|\s+de\s+)\s*\d{1,2}\s*$/i,
+    '',
+  )
+
+  // 4. Remove " X/Y" no final se for padrão de parcela
+  text = text.replace(/\s+\d{1,2}\s*\/\s*\d{1,2}\s*$/i, '')
+
+  // 5. Remove "Parcela X de Y" ou "Parc X"
+  text = text.replace(/\s+\b(?:parc(?:ela)?\.?)\s*[:#-]?\s*\d{1,2}\s*(?:\s+de\s+\d{1,2})?\s*$/i, '')
+
+  // Limpa pontuações / espaços residuais nas bordas
+  text = text.replace(/^[-–—/,\s]+|[-–—/,\s]+$/g, '').trim()
+
+  return text || description.trim()
+}
+
+/**
+ * Monta o título formatado exibido na interface para uma transação.
+ * Se a transação for parcela (ou contiver indicação de parcela no banco):
+ * - Reconstrói com a parcela correta baseada em installment_number e installment_total reais.
+ * - Evita absurdos como "Flavios Calcados - Parcela 1/10 (10/10)" ou duplicações.
+ * Para transações comuns, retorna a descrição limpa ou fallback.
+ */
+export function formatTransactionTitle(tx: {
+  description?: string | null
+  is_installment?: boolean | null
+  installment_number?: number | null
+  installment_total?: number | null
+  category?: { name?: string } | null
+}): string {
+  const rawDesc = tx.description?.trim() || ''
+  const isInstallment = !!tx.is_installment
+
+  if (isInstallment) {
+    const num = tx.installment_number || 1
+    const total = tx.installment_total || Math.max(num, 1)
+    const base = cleanInstallmentBaseDescription(rawDesc) || tx.category?.name || 'Despesa'
+    return `${base} - Parcela ${num}/${total}`
+  }
+
+  // Se não foi marcada com is_installment mas a descrição tem padrão de parcela explícito
+  if (rawDesc && /\bparc(?:ela)?\b/i.test(rawDesc)) {
+    const parsed = parseInstallmentFromDescription(rawDesc)
+    if (parsed.isInstallment) {
+      const base =
+        cleanInstallmentBaseDescription(parsed.cleanDescription) || tx.category?.name || 'Despesa'
+      return `${base} - Parcela ${parsed.current}/${parsed.total}`
+    }
+  }
+
+  return rawDesc || tx.category?.name || 'Sem descrição'
+}
+
+/**
  * Detecta se a descrição contém padrão de compra parcelada e extrai número da parcela e total.
  * Exemplos aceitos:
  *  - "Compra 03/10" -> current: 3, total: 10, cleanDescription: "Compra"
@@ -180,10 +255,9 @@ export function generateInstallmentTransactions(params: GenerateInstallmentsPara
     const isFirst = i === startInstallmentNumber
     const status: 'confirmed' | 'projected' = isFirst ? 'confirmed' : 'projected'
 
-    // Formatar descrição com sufixo claro da parcela (ex: "Geladeira (01/10)")
-    const descWithSuffix = baseDescription.includes(`${i}/${totalInstallments}`)
-      ? baseDescription
-      : `${baseDescription} (${String(i).padStart(2, '0')}/${String(totalInstallments).padStart(2, '0')})`
+    // Se a descrição base já tiver sufixos como " - Parcela X/Y", "Parcela X/Y" ou "(X/Y)", limpamos a base
+    const cleanBase = cleanInstallmentBaseDescription(baseDescription)
+    const formattedDesc = `${cleanBase} - Parcela ${i}/${totalInstallments}`
 
     transactions.push({
       family_id: familyId,
@@ -192,7 +266,7 @@ export function generateInstallmentTransactions(params: GenerateInstallmentsPara
       subcategory_id: subcategoryId || null,
       type: 'expense' as const,
       amount_cents: amountCents,
-      description: descWithSuffix,
+      description: formattedDesc,
       transaction_date: date,
       is_installment: true,
       installment_number: i,

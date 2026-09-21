@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { formatBRL, formatRelativeDate } from '@/lib/formatters'
 import { CategoryIcon } from '@/components/common/CategoryIcon'
+import { formatTransactionTitle } from '@/services/installments'
 import type { Transaction } from '@/types/finance'
 import { ArrowDownRight, ArrowUpRight, Calendar, User, Edit3, Trash2 } from 'lucide-react'
 
@@ -47,19 +48,11 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <DialogTitle className="text-lg font-bold text-slate-900 leading-tight">
-                  <span>{transaction.description || 'Transação'}</span>
+                  <span>{formatTransactionTitle(transaction)}</span>
                 </DialogTitle>
                 {transaction.is_recurring ? (
                   <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300/70 px-2 py-0.5 rounded-full">
                     <span>Lançamento fixo mensal</span>
-                  </span>
-                ) : null}
-                {transaction.is_installment ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-purple-100 text-purple-900 border border-purple-300/70 px-2 py-0.5 rounded-full">
-                    <span>
-                      Parcela {transaction.installment_number || 1}/
-                      {transaction.installment_total || 1}
-                    </span>
                   </span>
                 ) : null}
                 {transaction.status === 'projected' ? (

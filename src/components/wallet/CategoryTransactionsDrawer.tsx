@@ -16,6 +16,7 @@ import { formatBRL, formatRelativeDate } from '@/lib/formatters'
 import { updateTransaction } from '@/services/transactions'
 import { toast } from '@/hooks/use-toast'
 import { CategoryIcon } from '@/components/common/CategoryIcon'
+import { formatTransactionTitle } from '@/services/installments'
 
 export interface CategoryTransactionsDrawerProps {
   open: boolean
@@ -177,13 +178,8 @@ export function CategoryTransactionsDrawer({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start gap-1.5 flex-wrap">
                         <p className="text-sm font-semibold text-foreground break-words leading-snug">
-                          {tx.description || 'Sem descrição'}
+                          {formatTransactionTitle(tx)}
                         </p>
-                        {tx.is_installment && (
-                          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-purple-100 text-purple-900 border border-purple-300/80 px-1.5 py-0.2 rounded-md shrink-0">
-                            {tx.installment_number || 1}/{tx.installment_total || 1}
-                          </span>
-                        )}
                       </div>
                       <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 text-xs text-muted-foreground mt-1">
                         <span className="flex items-center gap-1 shrink-0">

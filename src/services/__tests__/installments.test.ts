@@ -3,6 +3,8 @@ import {
   parseInstallmentFromDescription,
   addMonthsToDate,
   generateInstallmentTransactions,
+  cleanInstallmentBaseDescription,
+  formatTransactionTitle,
 } from '../installments'
 
 describe('Installment parser & generator', () => {
@@ -89,6 +91,81 @@ describe('Installment parser & generator', () => {
 
       expect(gen.transactions.every((t) => t.installment_group_id === gen.groupId)).toBe(true)
       expect(gen.transactions.every((t) => t.is_installment === true)).toBe(true)
+      expect(gen.transactions[0].description).toBe('Sofá Sala - Parcela 1/4')
+      expect(gen.transactions[1].description).toBe('Sofá Sala - Parcela 2/4')
+      expect(gen.transactions[2].description).toBe('Sofá Sala - Parcela 3/4')
+      expect(gen.transactions[3].description).toBe('Sofá Sala - Parcela 4/4')
+    })
+  })
+
+  describe('cleanInstallmentBaseDescription', () => {
+    it('cleans - Parcela X/Y suffix and (XX/YY) suffix', () => {
+      expect(cleanInstallmentBaseDescription('Flavios Calcados - Parcela 1/10')).toBe(
+        'Flavios Calcados',
+      )
+      expect(cleanInstallmentBaseDescription('Flavios Calcados - Parcela 1/10 (02/10)')).toBe(
+        'Flavios Calcados',
+      )
+      expect(cleanInstallmentBaseDescription('Hifly Goiania - Parcela 1/6 (06/06)')).toBe(
+        'Hifly Goiania',
+      )
+      expect(cleanInstallmentBaseDescription('Wwwemba*Emb*Cantelle - Parcela 1/2')).toBe(
+        'Wwwemba*Emb*Cantelle',
+      )
+    })
+
+    it('cleans PARC 03/10 or simple 03/10 at the end', () => {
+      expect(cleanInstallmentBaseDescription('Loja Zara PARC 02/05')).toBe('Loja Zara')
+      expect(cleanInstallmentBaseDescription('Amazon 01/12')).toBe('Amazon')
+    })
+  })
+
+  describe('formatTransactionTitle', () => {
+    it('reconstructs title using real installment_number and installment_total from DB', () => {
+      const formatted = formatTransactionTitle({
+        description: 'Flavios Calcados - Parcela 1/10 (10/10)',
+        is_installment: true,
+        installment_number: 10,
+        installment_total: 10,
+      })
+      expect(formatted).toBe('Flavios Calcados - Parcela 10/10')
+    })
+
+    it('formats intermediary installment without duplicate parentheses', () => {
+      const formatted = formatTransactionTitle({
+        description: 'Flavios Calcados - Parcela 1/10 (07/10)',
+        is_installment: true,
+        installment_number: 7,
+        installment_total: 10,
+      })
+      expect(formatted).toBe('Flavios Calcados - Parcela 7/10')
+    })
+
+    it('formats first installment cleanly', () => {
+      const formatted = formatTransactionTitle({
+        description: 'Flavios Calcados - Parcela 1/10',
+        is_installment: true,
+        installment_number: 1,
+        installment_total: 10,
+      })
+      expect(formatted).toBe('Flavios Calcados - Parcela 1/10')
+    })
+
+    it('returns clean description for regular transactions', () => {
+      const formatted = formatTransactionTitle({
+        description: 'Supermercado Pão de Açúcar',
+        is_installment: false,
+      })
+      expect(formatted).toBe('Supermercado Pão de Açúcar')
+    })
+
+    it('falls back to category name if description is empty', () => {
+      const formatted = formatTransactionTitle({
+        description: '',
+        is_installment: false,
+        category: { name: 'Alimentação' },
+      })
+      expect(formatted).toBe('Alimentação')
     })
   })
 })

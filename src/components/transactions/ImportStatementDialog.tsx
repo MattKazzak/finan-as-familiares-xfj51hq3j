@@ -75,6 +75,7 @@ import {
 import {
   parseInstallmentFromDescription,
   generateInstallmentTransactions,
+  cleanInstallmentBaseDescription,
   type ParsedInstallmentInfo,
 } from '@/services/installments'
 import { findReconciliationMatch, type MatchStatus } from '@/services/import/reconciliation'
@@ -736,6 +737,11 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           toCreatePayloads.push(...gen.transactions)
         } else if (item.isInstallment) {
           // Parcela avulsa ou intermediária sem projeção correspondente
+          const curNum = item.installmentCurrent || 1
+          const totNum = item.installmentTotal || 1
+          const baseName = cleanInstallmentBaseDescription(item.description.trim()) || 'Despesa'
+          const singleDesc = `${baseName} - Parcela ${curNum}/${totNum}`
+
           toCreatePayloads.push({
             family_id: family.id,
             member_id: item.member_id || members[0]?.id,
@@ -743,11 +749,11 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
             subcategory_id: item.subcategory_id || null,
             type: item.type,
             amount_cents: item.amount_cents,
-            description: item.description.trim() || 'Transação parcelada',
+            description: singleDesc,
             transaction_date: item.date,
             is_installment: true,
-            installment_number: item.installmentCurrent || 1,
-            installment_total: item.installmentTotal || 1,
+            installment_number: curNum,
+            installment_total: totNum,
             installment_group_id: item.matchedGroupId || crypto.randomUUID(),
             status: 'confirmed',
             bank_transaction_id: item.fitid || null,

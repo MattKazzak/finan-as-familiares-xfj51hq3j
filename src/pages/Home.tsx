@@ -17,6 +17,7 @@ import { CountUp } from '@/components/common/CountUp'
 import { CategoryIcon } from '@/components/common/CategoryIcon'
 import { TransactionDetailDialog } from '@/components/transactions/TransactionDetailDialog'
 import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
+import { formatTransactionTitle } from '@/services/installments'
 import { deleteTransaction } from '@/services/transactions'
 import { useToast } from '@/hooks/use-toast'
 import type { Transaction, Budget } from '@/types/finance'
@@ -590,6 +591,8 @@ export default function Home() {
           <div className="divide-y divide-slate-100">
             {recentTransactions.map((tx) => {
               const isIncome = tx.type === 'income'
+              const formattedTitle = formatTransactionTitle(tx)
+
               return (
                 <div
                   key={tx.id}
@@ -597,12 +600,13 @@ export default function Home() {
                     setSelectedTx(tx)
                     setIsDetailOpen(true)
                   }}
-                  className="flex items-center justify-between py-3.5 px-2 hover:bg-slate-50/80 rounded-2xl cursor-pointer transition-colors group"
+                  className="flex items-center justify-between gap-3 py-3 px-2 sm:px-2.5 hover:bg-slate-50/90 rounded-2xl cursor-pointer transition-colors group"
                 >
-                  <div className="flex items-center gap-3">
+                  {/* Bloco Esquerda: Ícone + Textos */}
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     {/* Ícone de Categoria */}
                     <div
-                      className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-sm shrink-0"
+                      className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center text-white shadow-sm shrink-0"
                       style={{
                         backgroundColor: tx.category?.color || (isIncome ? '#10B981' : '#64748B'),
                       }}
@@ -610,57 +614,67 @@ export default function Home() {
                       <CategoryIcon name={tx.category?.icon} className="w-5 h-5" />
                     </div>
 
-                    <div className="overflow-hidden">
-                      <div className="flex items-center gap-1.5 overflow-hidden">
-                        <p className="font-semibold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors truncate">
-                          {tx.description || tx.category?.name || 'Sem descrição'}
+                    {/* Bloco de Textos (Título + Metadados) */}
+                    <div className="min-w-0 flex-1">
+                      {/* Linha 1: Título limpo truncado + Badge Fixa (se recorrente) */}
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <p
+                          className="font-semibold text-xs sm:text-sm text-slate-900 group-hover:text-emerald-700 transition-colors truncate leading-tight"
+                          title={formattedTitle}
+                        >
+                          {formattedTitle}
                         </p>
                         {tx.is_recurring ? (
-                          <span className="inline-flex items-center gap-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300/60 px-1.5 py-0.2 rounded-md shrink-0">
-                            <span>Fixa</span>
+                          <span className="inline-flex items-center text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300/60 px-1.5 py-0.2 rounded-md shrink-0">
+                            Fixa
                           </span>
                         ) : null}
                       </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {/* Avatar do membro */}
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
-                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[7px] font-bold">
+
+                      {/* Linha 2: Metadados alinhados em uma linha única (membro, categoria, data) */}
+                      <div className="flex items-center gap-1.5 sm:gap-2 mt-1 min-w-0 text-[11px] text-slate-500 overflow-hidden">
+                        {/* Chip do membro */}
+                        <span className="inline-flex items-center gap-1 font-medium bg-slate-100 px-1.5 py-0.5 rounded-md shrink-0 text-[10px] sm:text-[11px]">
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[7px] font-bold shrink-0">
                             {tx.member?.name?.charAt(0).toUpperCase() || 'M'}
                           </span>
-                          {tx.member?.name || 'Membro'}
+                          <span className="max-w-[70px] sm:max-w-[100px] truncate">
+                            {tx.member?.name || 'Membro'}
+                          </span>
                         </span>
+
+                        <span className="text-slate-300 shrink-0">•</span>
+
+                        {/* Categoria / Subcategoria ou Pendente */}
                         {tx.category ? (
-                          <span className="inline-flex items-center gap-2">
-                            <span className="text-[11px] text-slate-400">•</span>
-                            <span className="text-[11px] text-slate-500 font-medium truncate">
-                              {tx.category.name}
-                              {tx.subcategory && (
-                                <span className="text-emerald-700 font-semibold ml-1">
-                                  · {tx.subcategory.name}
-                                </span>
-                              )}
-                            </span>
+                          <span className="truncate min-w-0 font-medium text-slate-500 text-[11px]">
+                            <span>{tx.category.name}</span>
+                            {tx.subcategory && (
+                              <span className="text-emerald-700 font-semibold ml-1">
+                                · {tx.subcategory.name}
+                              </span>
+                            )}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-2">
-                            <span className="text-[11px] text-slate-400">•</span>
-                            <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200/80 px-1.5 py-0.2 rounded shrink-0">
-                              Pendente de categoria
-                            </span>
+                          <span className="inline-flex items-center text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200/80 px-1.5 py-0.2 rounded shrink-0">
+                            Pendente
                           </span>
                         )}
-                        <span className="text-[11px] text-slate-400">•</span>
-                        <span className="text-[11px] text-slate-400 capitalize shrink-0">
+
+                        <span className="text-slate-300 shrink-0">•</span>
+
+                        {/* Data relativa */}
+                        <span className="text-[10px] sm:text-[11px] text-slate-400 capitalize shrink-0 whitespace-nowrap">
                           {formatRelativeDate(tx.transaction_date)}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Valor */}
-                  <div className="text-right">
+                  {/* Bloco Direita: Valor alinhado e estável */}
+                  <div className="text-right shrink-0 pl-1">
                     <span
-                      className={`font-bold text-sm sm:text-base tabular-nums ${
+                      className={`font-bold text-xs sm:text-sm md:text-base tabular-nums whitespace-nowrap ${
                         isIncome ? 'text-emerald-600' : 'text-red-600'
                       }`}
                     >
