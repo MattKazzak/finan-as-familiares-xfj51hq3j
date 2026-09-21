@@ -2144,7 +2144,7 @@ export default function WalletPage() {
 
                                       return (
                                         <span className="text-[9px] sm:text-[10px] font-medium text-slate-500 bg-slate-100 border border-slate-200/80 px-1.5 py-0.5 rounded-md shrink-0 leading-none whitespace-nowrap">
-                                          Consumo livre do balde
+                                          Consumo livre do saldo do balde
                                         </span>
                                       )
                                     })()}
@@ -2193,8 +2193,8 @@ export default function WalletPage() {
                                         data.type === 'expense' &&
                                         typeof data.budget_amount_cents === 'number'
                                       ) {
-                                        const newLimit = data.budget_amount_cents
-                                        // Sincronização IMEDIATA no estado local defaultBudgets
+                                        const newLimit = Math.max(0, data.budget_amount_cents)
+                                        // Sincronização IMEDIATA no estado local defaultBudgets e monthOverrides
                                         // Recalcula na mesma hora percentual da categoria, do balde e Farol global
                                         setDefaultBudgets((prev) => {
                                           const exists = prev.some(
@@ -2223,12 +2223,31 @@ export default function WalletPage() {
                                             } as any,
                                           ]
                                         })
+                                        if (item.hasOverride) {
+                                          setMonthOverrides((prev) =>
+                                            prev.filter(
+                                              (b) =>
+                                                !(
+                                                  b.category_id === item.category.id &&
+                                                  !b.subcategory_id
+                                                ),
+                                            ),
+                                          )
+                                        }
                                         await upsertDefaultBudget(
                                           family.id,
                                           item.category.id,
                                           newLimit,
                                           null,
                                         )
+                                        if (item.hasOverride) {
+                                          await resetMonthBudgetToDefault(
+                                            family.id,
+                                            item.category.id,
+                                            monthKey,
+                                            null,
+                                          )
+                                        }
                                       }
                                       triggerRefresh()
                                       await loadMonthData()
@@ -2308,25 +2327,99 @@ export default function WalletPage() {
                                     align="end"
                                     className="w-48 rounded-2xl shadow-xl p-1.5 text-xs"
                                   >
-                                    <DropdownMenuItem
-                                      onSelect={(e) => {
-                                        e.preventDefault()
-                                        const cat = item.category
-                                        setCategoryToEdit(cat)
-                                        setCategoryEditorName(cat.name || '')
-                                        setCategoryEditorType(cat.type || 'expense')
-                                        setCategoryEditorColor(cat.color || '#3B82F6')
-                                        setCategoryEditorIcon(cat.icon || 'Tag')
-                                        setCategoryEditorBucket(cat.budget_bucket || 'essentials')
-                                        setTimeout(() => {
-                                          setIsCategoryEditorOpen(true)
-                                        }, 0)
+                                    <CategoryEditorPopover
+                                      category={item.category}
+                                      initialLimitCents={item.defaultLimitCents || item.limitCents}
+                                      trigger={
+                                        <button
+                                          type="button"
+                                          className="w-full flex items-center gap-2 py-2 px-2 rounded-xl cursor-pointer text-slate-700 hover:bg-slate-100 transition-colors text-xs text-left"
+                                        >
+                                          <Edit3 className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                          <span>Editar categoria</span>
+                                        </button>
+                                      }
+                                      onSave={async (data) => {
+                                        try {
+                                          await editCategory(item.category.id, {
+                                            name: data.name,
+                                            type: data.type,
+                                            color: data.color,
+                                            icon: data.icon,
+                                            budget_bucket: data.budget_bucket,
+                                          })
+                                          if (
+                                            data.type === 'expense' &&
+                                            typeof data.budget_amount_cents === 'number'
+                                          ) {
+                                            const newLimit = Math.max(0, data.budget_amount_cents)
+                                            // Sincronização IMEDIATA no estado local defaultBudgets e monthOverrides
+                                            // Recalcula na mesma hora percentual da categoria, do balde e Farol global
+                                            setDefaultBudgets((prev) => {
+                                              const exists = prev.some(
+                                                (b) =>
+                                                  b.category_id === item.category.id &&
+                                                  !b.subcategory_id,
+                                              )
+                                              if (exists) {
+                                                return prev.map((b) =>
+                                                  b.category_id === item.category.id &&
+                                                  !b.subcategory_id
+                                                    ? { ...b, amount_cents: newLimit }
+                                                    : b,
+                                                )
+                                              }
+                                              return [
+                                                ...prev,
+                                                {
+                                                  id: `temp-${Date.now()}`,
+                                                  family_id: family.id,
+                                                  category_id: item.category.id,
+                                                  subcategory_id: null,
+                                                  amount_cents: newLimit,
+                                                  created_at: new Date().toISOString(),
+                                                  updated_at: new Date().toISOString(),
+                                                } as any,
+                                              ]
+                                            })
+                                            if (item.hasOverride) {
+                                              setMonthOverrides((prev) =>
+                                                prev.filter(
+                                                  (b) =>
+                                                    !(
+                                                      b.category_id === item.category.id &&
+                                                      !b.subcategory_id
+                                                    ),
+                                                ),
+                                              )
+                                            }
+                                            await upsertDefaultBudget(
+                                              family.id,
+                                              item.category.id,
+                                              newLimit,
+                                              null,
+                                            )
+                                            if (item.hasOverride) {
+                                              await resetMonthBudgetToDefault(
+                                                family.id,
+                                                item.category.id,
+                                                monthKey,
+                                                null,
+                                              )
+                                            }
+                                          }
+                                          triggerRefresh()
+                                          await loadMonthData()
+                                        } catch (err: any) {
+                                          console.error('Erro ao editar categoria:', err)
+                                          toast({
+                                            title: 'Erro ao editar categoria',
+                                            description: err?.message || 'Tente novamente.',
+                                            variant: 'destructive',
+                                          })
+                                        }
                                       }}
-                                      className="gap-2 py-2 rounded-xl cursor-pointer"
-                                    >
-                                      <Edit3 className="w-3.5 h-3.5 text-slate-500" />
-                                      <span>Editar categoria</span>
-                                    </DropdownMenuItem>
+                                    />
                                     <DropdownMenuItem
                                       onSelect={(e) => {
                                         e.preventDefault()
@@ -2390,7 +2483,9 @@ export default function WalletPage() {
                                 </span>
                                 <span className="text-slate-400 text-xs">de</span>
                                 <span className="text-slate-600 font-medium">
-                                  {item.limitCents > 0 ? formatBRL(item.limitCents) : 'Sem teto'}
+                                  {item.limitCents > 0
+                                    ? formatBRL(item.limitCents)
+                                    : 'Consumo livre do saldo do balde'}
                                 </span>
                               </div>
 
