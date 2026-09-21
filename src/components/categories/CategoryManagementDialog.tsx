@@ -33,6 +33,8 @@ import { useFamily } from '@/hooks/use-family'
 import { useToast } from '@/hooks/use-toast'
 import type { BudgetBucket, TransactionCategory, TransactionSubcategory } from '@/types/finance'
 import { Plus, Trash2, Loader2, AlertTriangle, Layers, Tag } from 'lucide-react'
+import { parseBRLToCents, formatBRL } from '@/lib/formatters'
+import { upsertDefaultBudget } from '@/services/transactions'
 
 interface CategoryManagementDialogProps {
   open: boolean
@@ -66,6 +68,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
   const [newCatColor, setNewCatColor] = useState('#3B82F6')
   const [newCatIcon, setNewCatIcon] = useState('Tag')
   const [newCatBucket, setNewCatBucket] = useState<BudgetBucket>('essentials')
+  const [newCatLimitStr, setNewCatLimitStr] = useState('')
   const [savingCat, setSavingCat] = useState(false)
 
   // Subcategorias
@@ -168,15 +171,24 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
     }
     try {
       setSavingCat(true)
-      await addNewCategory(
+      const createdCat = await addNewCategory(
         newCatName.trim(),
         newCatType,
         newCatColor,
         newCatIcon,
         newCatType === 'expense' ? newCatBucket : null,
       )
+
+      if (family && createdCat && newCatType === 'expense') {
+        const cents = parseBRLToCents(newCatLimitStr)
+        if (cents > 0) {
+          await upsertDefaultBudget(family.id, createdCat.id, cents, null)
+        }
+      }
+
       setNewCatName('')
       setNewCatBucket('essentials')
+      setNewCatLimitStr('')
       setIsAddingCategory(false)
       triggerRefresh()
     } catch (err: any) {
@@ -371,6 +383,50 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                 </div>
               )}
 
+              {/* Teto Orçamentário Mensal (R$) - Opcional */}
+              {newCatType === 'expense' && (
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-700">
+                      Teto orçamentário mensal (R$)
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium">Opcional</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="relative">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">
+                        R$
+                      </span>
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0,00"
+                        value={newCatLimitStr}
+                        onChange={(e) => setNewCatLimitStr(e.target.value)}
+                        className="bg-white pl-8 text-xs font-bold tabular-nums h-9 rounded-xl"
+                      />
+                    </div>
+                    <div className="h-9 px-3 rounded-xl border border-slate-200 bg-white flex items-center justify-between text-xs font-semibold tabular-nums text-slate-700">
+                      <span className="text-slate-400 text-[11px] font-normal">% renda:</span>
+                      <span className="text-xs text-emerald-800">
+                        {(() => {
+                          const netIncome = family?.monthly_net_income_cents || 0
+                          const cents = parseBRLToCents(newCatLimitStr)
+                          if (!netIncome || cents <= 0) return '—'
+                          const p = Math.round((cents / netIncome) * 1000) / 10
+                          return `${p}% da renda`
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-500 leading-tight">
+                    {parseBRLToCents(newCatLimitStr) > 0
+                      ? `Teto individual fixado em ${formatBRL(parseBRLToCents(newCatLimitStr))}.`
+                      : 'Consumo livre do saldo do balde (sem teto individual). Esta categoria consumirá o saldo livre do balde orçamentário sem limite individual.'}
+                  </p>
+                </div>
+              )}
+
               {/* Seletor de Cores */}
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-500 font-medium">Cor:</span>
@@ -455,6 +511,23 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                           </span>
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
+                          {cat.type === 'expense' && cat.budget_bucket ? (
+                            <span
+                              className={`text-[9px] font-semibold px-2 py-0.5 rounded-md ${
+                                cat.budget_bucket === 'essentials'
+                                  ? 'bg-amber-100 text-amber-900 border border-amber-200'
+                                  : cat.budget_bucket === 'lifestyle'
+                                    ? 'bg-blue-100 text-blue-900 border border-blue-200'
+                                    : 'bg-emerald-100 text-emerald-900 border border-emerald-200'
+                              }`}
+                            >
+                              {cat.budget_bucket === 'essentials'
+                                ? 'Essenciais'
+                                : cat.budget_bucket === 'lifestyle'
+                                  ? 'Estilo de Vida'
+                                  : 'Futuro & Metas'}
+                            </span>
+                          ) : null}
                           <span className="text-[11px] text-slate-400">
                             <span>
                               {subCount} {subCount === 1 ? 'subcategoria' : 'subcategorias'}

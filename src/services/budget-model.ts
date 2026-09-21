@@ -106,9 +106,10 @@ export async function applyBudgetPreset(params: {
 }
 
 /**
- * Atualiza o percentual ou teto de uma categoria específica individualmente:
- * Se o usuário editar o %, recalcula o teto em reais na default_budgets e salva o percent_default na categoria.
- * Se o usuário editar o teto em reais, calcula o % equivalente em relação à renda da família e atualiza ambos.
+ * Atualiza o orçamento padrão de uma categoria com base em um percentual informativo da renda.
+ * Regra de Arquitetura: `percent_default` NÃO é gravado em categorias personalizadas
+ * (a coluna percent_default é exclusiva do template inicial de onboarding).
+ * Apenas atualiza metadados opcionais (percentAlert, budgetBucket) e grava o valor em default_budgets.
  */
 export async function updateCategoryBudgetPercent(params: {
   familyId: string
@@ -125,13 +126,16 @@ export async function updateCategoryBudgetPercent(params: {
   const newAmountCents =
     monthlyNetIncomeCents > 0 ? Math.round((monthlyNetIncomeCents * roundedPercent) / 100) : 0
 
-  const updatePayload: any = {
-    percent_default: roundedPercent,
-  }
+  const updatePayload: any = {}
   if (percentAlert !== undefined) updatePayload.percent_alert = percentAlert
   if (budgetBucket !== undefined) updatePayload.budget_bucket = budgetBucket
 
-  await (supabase as any).from('transaction_categories').update(updatePayload).eq('id', categoryId)
+  if (Object.keys(updatePayload).length > 0) {
+    await (supabase as any)
+      .from('transaction_categories')
+      .update(updatePayload)
+      .eq('id', categoryId)
+  }
 
   await upsertDefaultBudget(familyId, categoryId, newAmountCents, null)
 
@@ -139,7 +143,9 @@ export async function updateCategoryBudgetPercent(params: {
 }
 
 /**
- * Atualiza o teto em reais diretamente e sincroniza o % de percent_default se houver renda cadastrada
+ * Atualiza o teto em reais diretamente em default_budgets.
+ * Regra de Arquitetura: NÃO altera `percent_default` na categoria, apenas calcula
+ * e retorna o percentual equivalente informativo em relação à renda líquida.
  */
 export async function updateCategoryBudgetAmount(params: {
   familyId: string
@@ -152,12 +158,8 @@ export async function updateCategoryBudgetAmount(params: {
   await upsertDefaultBudget(familyId, categoryId, newAmountCents, null)
 
   let calculatedPercent: number | null = null
-  if (monthlyNetIncomeCents > 0) {
+  if (monthlyNetIncomeCents > 0 && newAmountCents > 0) {
     calculatedPercent = Math.round((newAmountCents / monthlyNetIncomeCents) * 1000) / 10 // ex: 25.5%
-    await (supabase as any)
-      .from('transaction_categories')
-      .update({ percent_default: calculatedPercent })
-      .eq('id', categoryId)
   }
 
   return calculatedPercent

@@ -81,7 +81,7 @@ import { SortableList } from '@/components/common/SortableList'
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
 import { BudgetOverviewCard } from '@/components/wallet/BudgetOverviewCard'
 import { BUCKET_METADATA } from '@/types/budget-presets'
-import { updateCategoryBudgetPercent, updateCategoryBudgetAmount } from '@/services/budget-model'
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -281,7 +281,6 @@ export default function WalletPage() {
   const [editingBudgetSubcatId, setEditingBudgetSubcatId] = useState<string | null>(null)
   const [defaultAmountStr, setDefaultAmountStr] = useState('')
   const [monthAmountStr, setMonthAmountStr] = useState('')
-  const [editingPercentStr, setEditingPercentStr] = useState('')
   const [isEditingOnlyThisMonth, setIsEditingOnlyThisMonth] = useState(false)
   const [hasMonthOverride, setHasMonthOverride] = useState(false)
   const [savingBudget, setSavingBudget] = useState(false)
@@ -925,9 +924,6 @@ export default function WalletPage() {
     setMonthAmountStr(
       currentMonthVal && currentMonthVal > 0 ? formatNumberBRL(currentMonthVal) : '',
     )
-    setEditingPercentStr(
-      currentPercent !== undefined && currentPercent !== null ? String(currentPercent) : '',
-    )
     setIsEditingOnlyThisMonth(isOverridden)
     setHasMonthOverride(isOverridden)
     setIsBudgetDialogOpen(true)
@@ -967,31 +963,9 @@ export default function WalletPage() {
         })
       } else {
         // Orçamento padrão recorrente (todos os meses)
+        // Regra de Arquitetura: apenas default_budgets é atualizado; percent_default não é gravado na categoria.
         const defCents = parseBRLToCents(defaultAmountStr)
         await upsertDefaultBudget(family.id, editingBudgetCatId, defCents, editingBudgetSubcatId)
-
-        // Se estiver editando a categoria pai e houver percentual ou renda familiar
-        if (!editingBudgetSubcatId) {
-          const netIncome = family.monthly_net_income_cents || 0
-          if (editingPercentStr.trim() !== '') {
-            const pVal = parseFloat(editingPercentStr.replace(',', '.'))
-            if (!isNaN(pVal)) {
-              await updateCategoryBudgetPercent({
-                familyId: family.id,
-                categoryId: editingBudgetCatId,
-                monthlyNetIncomeCents: netIncome,
-                newPercent: pVal,
-              })
-            }
-          } else if (netIncome > 0 && defCents > 0) {
-            await updateCategoryBudgetAmount({
-              familyId: family.id,
-              categoryId: editingBudgetCatId,
-              monthlyNetIncomeCents: netIncome,
-              newAmountCents: defCents,
-            })
-          }
-        }
 
         // Se o usuário estiver alterando o padrão e existia um override, opcionalmente remove o override para alinhar
         if (hasMonthOverride) {
@@ -1885,13 +1859,26 @@ export default function WalletPage() {
                     }
                     onSave={async (data) => {
                       try {
-                        await addNewCategory(
+                        const newCat = await addNewCategory(
                           data.name,
                           data.type,
                           data.color,
                           data.icon,
                           data.budget_bucket,
                         )
+                        if (
+                          family &&
+                          newCat &&
+                          data.type === 'expense' &&
+                          data.budget_amount_cents !== undefined
+                        ) {
+                          await upsertDefaultBudget(
+                            family.id,
+                            newCat.id,
+                            data.budget_amount_cents,
+                            null,
+                          )
+                        }
                         triggerRefresh()
                         await loadMonthData()
                       } catch (err: any) {
@@ -1930,13 +1917,26 @@ export default function WalletPage() {
                       }
                       onSave={async (data) => {
                         try {
-                          await addNewCategory(
+                          const newCat = await addNewCategory(
                             data.name,
                             data.type,
                             data.color,
                             data.icon,
                             data.budget_bucket,
                           )
+                          if (
+                            family &&
+                            newCat &&
+                            data.type === 'expense' &&
+                            data.budget_amount_cents !== undefined
+                          ) {
+                            await upsertDefaultBudget(
+                              family.id,
+                              newCat.id,
+                              data.budget_amount_cents,
+                              null,
+                            )
+                          }
                           triggerRefresh()
                           await loadMonthData()
                         } catch (err: any) {
@@ -2041,11 +2041,32 @@ export default function WalletPage() {
                                         </span>
                                       )}
 
-                                      {item.category.percent_default ? (
-                                        <span className="text-[9px] sm:text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/70 px-1.5 py-0.5 rounded-md tabular-nums shrink-0 leading-none whitespace-nowrap">
-                                          {item.category.percent_default}% da renda
-                                        </span>
-                                      ) : null}
+                                      {(() => {
+                                        const dynamicPercent =
+                                          family?.monthly_net_income_cents && item.limitCents > 0
+                                            ? Math.round(
+                                                (item.limitCents /
+                                                  family.monthly_net_income_cents) *
+                                                  1000,
+                                              ) / 10
+                                            : null
+
+                                        if (item.limitCents > 0) {
+                                          return (
+                                            <span className="text-[9px] sm:text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/70 px-1.5 py-0.5 rounded-md tabular-nums shrink-0 leading-none whitespace-nowrap">
+                                              {family?.monthly_net_income_cents
+                                                ? `${dynamicPercent}% da renda`
+                                                : '—'}
+                                            </span>
+                                          )
+                                        }
+
+                                        return (
+                                          <span className="text-[9px] sm:text-[10px] font-medium text-slate-500 bg-slate-100 border border-slate-200/80 px-1.5 py-0.5 rounded-md shrink-0 leading-none whitespace-nowrap">
+                                            Consumo livre do balde
+                                          </span>
+                                        )
+                                      })()}
 
                                       {item.hasOverride ? (
                                         <span className="text-[9px] font-semibold bg-amber-100/90 text-amber-900 border border-amber-200/80 px-1.5 py-0.5 rounded-md leading-none shrink-0 whitespace-nowrap">
@@ -2068,11 +2089,12 @@ export default function WalletPage() {
                                 {/* Lápis: Editar categoria */}
                                 <CategoryEditorPopover
                                   category={item.category}
+                                  initialLimitCents={item.defaultLimitCents || item.limitCents}
                                   trigger={
                                     <button
                                       type="button"
                                       className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-white transition-all"
-                                      title="Editar categoria (nome, cor, ícone)"
+                                      title="Editar categoria (nome, cor, ícone, teto)"
                                       aria-label={`Editar categoria ${item.category.name}`}
                                     >
                                       <Edit3 className="w-3.5 h-3.5" />
@@ -2080,7 +2102,25 @@ export default function WalletPage() {
                                   }
                                   onSave={async (data) => {
                                     try {
-                                      await editCategory(item.category.id, data)
+                                      await editCategory(item.category.id, {
+                                        name: data.name,
+                                        type: data.type,
+                                        color: data.color,
+                                        icon: data.icon,
+                                        budget_bucket: data.budget_bucket,
+                                      })
+                                      if (
+                                        family &&
+                                        data.type === 'expense' &&
+                                        data.budget_amount_cents !== undefined
+                                      ) {
+                                        await upsertDefaultBudget(
+                                          family.id,
+                                          item.category.id,
+                                          data.budget_amount_cents,
+                                          null,
+                                        )
+                                      }
                                       triggerRefresh()
                                       await loadMonthData()
                                     } catch (err: any) {
@@ -2765,7 +2805,26 @@ export default function WalletPage() {
                     }
                     onSave={async (data) => {
                       try {
-                        await addNewCategory(data.name, data.type, data.color, data.icon)
+                        const newCat = await addNewCategory(
+                          data.name,
+                          data.type,
+                          data.color,
+                          data.icon,
+                          data.budget_bucket,
+                        )
+                        if (
+                          family &&
+                          newCat &&
+                          data.type === 'expense' &&
+                          data.budget_amount_cents !== undefined
+                        ) {
+                          await upsertDefaultBudget(
+                            family.id,
+                            newCat.id,
+                            data.budget_amount_cents,
+                            null,
+                          )
+                        }
                         triggerRefresh()
                         await loadMonthData()
                       } catch (err: any) {
@@ -3094,13 +3153,6 @@ export default function WalletPage() {
                             onChange={(e) => {
                               const val = e.target.value
                               setDefaultAmountStr(val)
-                              // Se houver renda da família, recalcula o % na hora
-                              const netIncome = family?.monthly_net_income_cents || 0
-                              const cents = parseBRLToCents(val)
-                              if (netIncome > 0 && cents > 0) {
-                                const p = Math.round((cents / netIncome) * 1000) / 10
-                                setEditingPercentStr(String(p))
-                              }
                             }}
                             className="pl-9 text-base font-bold tabular-nums bg-white h-10 rounded-xl"
                             autoFocus
@@ -3113,41 +3165,29 @@ export default function WalletPage() {
 
                       {!editingBudgetSubcatId && (
                         <div>
-                          <div className="relative">
-                            <Input
-                              type="number"
-                              step="0.1"
-                              min="0"
-                              max="100"
-                              placeholder="Ex: 15"
-                              value={editingPercentStr}
-                              onChange={(e) => {
-                                const pStr = e.target.value
-                                setEditingPercentStr(pStr)
-                                // Se houver renda da família, recalcula o valor em reais na hora
+                          <div className="h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between text-xs font-semibold tabular-nums text-slate-700">
+                            <span className="text-slate-400 text-[11px] font-normal">
+                              Calculado:
+                            </span>
+                            <span>
+                              {(() => {
                                 const netIncome = family?.monthly_net_income_cents || 0
-                                const pVal = parseFloat(pStr.replace(',', '.'))
-                                if (netIncome > 0 && !isNaN(pVal) && pVal >= 0) {
-                                  const c = Math.round((netIncome * pVal) / 100)
-                                  setDefaultAmountStr(formatNumberBRL(c))
-                                }
-                              }}
-                              className="pr-8 text-base font-bold tabular-nums bg-white h-10 rounded-xl"
-                            />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">
-                              %
+                                const cents = parseBRLToCents(defaultAmountStr)
+                                if (!netIncome || cents <= 0) return '—'
+                                const p = Math.round((cents / netIncome) * 1000) / 10
+                                return `${p}% da renda`
+                              })()}
                             </span>
                           </div>
                           <span className="text-[10px] text-slate-500 mt-1 block">
-                            % da renda líquida
+                            Indicador dinâmico informativo
                           </span>
                         </div>
                       )}
                     </div>
 
                     <p className="text-[11px] text-slate-500">
-                      Alterar o valor em reais ou a porcentagem atualiza automaticamente o outro
-                      campo com base na renda líquida familiar (
+                      O percentual é calculado dinamicamente com base na renda líquida familiar (
                       {formatBRL(family?.monthly_net_income_cents || 0)}).
                     </p>
                   </div>

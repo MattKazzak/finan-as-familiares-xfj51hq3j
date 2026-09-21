@@ -6,6 +6,8 @@ import { Label } from '@/components/ui/label'
 import { CategoryIcon, AVAILABLE_ICONS } from '@/components/common/CategoryIcon'
 import { Loader2, Plus, Home, Coffee, TrendingUp } from 'lucide-react'
 import type { BudgetBucket, TransactionCategory } from '@/types/finance'
+import { useFamily } from '@/hooks/use-family'
+import { parseBRLToCents, formatNumberBRL, formatBRL } from '@/lib/formatters'
 
 export const CATEGORY_COLORS = [
   '#F59E0B',
@@ -66,9 +68,11 @@ interface CategoryEditorPopoverProps {
     color: string
     icon: string
     budget_bucket?: BudgetBucket | null
+    budget_amount_cents?: number
   }) => Promise<void>
   title?: string
   defaultType?: 'income' | 'expense'
+  initialLimitCents?: number
 }
 
 export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
@@ -79,7 +83,9 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
   onSave,
   title,
   defaultType = 'expense',
+  initialLimitCents,
 }) => {
+  const { family } = useFamily()
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
   const isControlled = controlledOpen !== undefined
   const open = isControlled ? controlledOpen : uncontrolledOpen
@@ -97,6 +103,7 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
   const [color, setColor] = useState('#3B82F6')
   const [icon, setIcon] = useState('Tag')
   const [budgetBucket, setBudgetBucket] = useState<BudgetBucket>('essentials')
+  const [budgetAmountStr, setBudgetAmountStr] = useState('')
   const [saving, setSaving] = useState(false)
   const [bucketError, setBucketError] = useState<string | null>(null)
 
@@ -109,16 +116,29 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
         setColor(category.color || '#3B82F6')
         setIcon(category.icon || 'Tag')
         setBudgetBucket(category.budget_bucket || 'essentials')
+        setBudgetAmountStr(
+          initialLimitCents && initialLimitCents > 0 ? formatNumberBRL(initialLimitCents) : '',
+        )
       } else {
         setName('')
         setType(defaultType)
         setColor(defaultType === 'income' ? '#10B981' : '#3B82F6')
         setIcon('Tag')
         setBudgetBucket('essentials')
+        setBudgetAmountStr(
+          initialLimitCents && initialLimitCents > 0 ? formatNumberBRL(initialLimitCents) : '',
+        )
       }
     }
     setOpen(nextOpen)
   }
+
+  const parsedBudgetCents = parseBRLToCents(budgetAmountStr)
+  const netIncome = family?.monthly_net_income_cents || 0
+  const calculatedPercent =
+    netIncome > 0 && parsedBudgetCents > 0
+      ? Math.round((parsedBudgetCents / netIncome) * 1000) / 10
+      : null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -142,6 +162,7 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
         color,
         icon,
         budget_bucket: type === 'expense' ? budgetBucket : null,
+        budget_amount_cents: type === 'expense' ? parsedBudgetCents : 0,
       })
       setOpen(false)
     } finally {
@@ -294,6 +315,48 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
               {bucketError && (
                 <p className="text-[10px] text-rose-500 font-medium mt-0.5">{bucketError}</p>
               )}
+            </div>
+          )}
+
+          {/* Teto Orçamentário Mensal (R$) - Opcional para categorias de Despesa */}
+          {type === 'expense' && (
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center justify-between">
+                <Label
+                  htmlFor="category-budget-limit"
+                  className="text-[11px] font-semibold text-slate-700"
+                >
+                  Teto orçamentário mensal (R$)
+                </Label>
+                <span className="text-[10px] text-slate-400 font-medium">Opcional</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[11px]">
+                    R$
+                  </span>
+                  <Input
+                    id="category-budget-limit"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0,00"
+                    value={budgetAmountStr}
+                    onChange={(e) => setBudgetAmountStr(e.target.value)}
+                    className="pl-8 text-xs font-bold tabular-nums h-8 rounded-xl"
+                  />
+                </div>
+                <div className="h-8 px-2.5 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between text-xs font-semibold tabular-nums text-slate-700">
+                  <span className="text-slate-400 text-[10px] font-normal">% renda:</span>
+                  <span className="text-[11px] text-emerald-800">
+                    {netIncome > 0 && parsedBudgetCents > 0 ? `${calculatedPercent}%` : '—'}
+                  </span>
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-500 leading-tight">
+                {parsedBudgetCents > 0
+                  ? `Teto individual fixado em ${formatBRL(parsedBudgetCents)}.`
+                  : 'Consumo livre do saldo do balde (sem teto individual). Esta categoria consumirá o saldo livre do balde orçamentário sem limite individual.'}
+              </p>
             </div>
           )}
 
