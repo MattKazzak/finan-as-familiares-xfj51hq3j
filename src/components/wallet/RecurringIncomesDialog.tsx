@@ -547,20 +547,6 @@ export const RecurringIncomesDialog: React.FC<RecurringIncomesDialogProps> = ({
                     <strong>{formatMonthYear(currentMonthDate)}</strong>
                   </span>
                 </div>
-
-                <Button
-                  type="button"
-                  onClick={() => openCreateForm(activeTab)}
-                  size="sm"
-                  className={`${
-                    activeTab === 'income'
-                      ? 'bg-emerald-600 hover:bg-emerald-700'
-                      : 'bg-rose-600 hover:bg-rose-700'
-                  } text-white text-xs rounded-xl gap-1.5 h-8 font-semibold shadow-xs shrink-0`}
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>{activeTab === 'income' ? 'Nova Receita Fixa' : 'Nova Despesa Fixa'}</span>
-                </Button>
               </div>
             </div>
 
@@ -770,7 +756,7 @@ export const RecurringIncomesDialog: React.FC<RecurringIncomesDialogProps> = ({
             </TabsContent>
           </Tabs>
 
-          <DialogFooter className="pt-2 border-t border-slate-100">
+          <DialogFooter className="pt-2 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2">
             <Button
               type="button"
               variant="outline"
@@ -778,6 +764,19 @@ export const RecurringIncomesDialog: React.FC<RecurringIncomesDialogProps> = ({
               className="text-xs rounded-xl w-full sm:w-auto"
             >
               <span>Fechar</span>
+            </Button>
+            <Button
+              type="button"
+              onClick={() => openCreateForm(activeTab)}
+              size="sm"
+              className={`${
+                activeTab === 'income'
+                  ? 'bg-emerald-600 hover:bg-emerald-700'
+                  : 'bg-rose-600 hover:bg-rose-700'
+              } text-white text-xs rounded-xl gap-1.5 h-9 sm:h-8 font-semibold shadow-xs w-full sm:w-auto`}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>{activeTab === 'income' ? 'Nova Receita Fixa' : 'Nova Despesa Fixa'}</span>
             </Button>
           </DialogFooter>
         </DialogContent>
