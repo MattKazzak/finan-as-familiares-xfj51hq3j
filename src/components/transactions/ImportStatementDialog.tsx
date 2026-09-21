@@ -1061,20 +1061,19 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
               </div>
 
               {/* Box Informativo: OFX & Mini-guia expansível */}
-              <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/70 to-teal-50/40 p-3.5 sm:p-4 text-xs space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-start gap-2.5">
-                    <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 mt-0.5">
-                      <Star className="w-4 h-4 text-emerald-700 fill-emerald-600" />
+              <div className="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/80 via-emerald-50/40 to-teal-50/30 p-4 sm:p-5 text-xs space-y-3.5 shadow-2xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100/90 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                      <Star className="w-4 h-4 fill-emerald-600 text-emerald-600" />
                     </div>
-                    <div>
-                      <h4 className="font-bold text-slate-900 text-xs sm:text-sm">
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <h4 className="font-bold text-slate-900 text-xs sm:text-sm tracking-tight">
                         Importação exclusiva via OFX
                       </h4>
-                      <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
-                        O formato <strong>OFX</strong> (Open Financial Exchange) é o padrão bancário
-                        oficial que garante máxima precisão em datas, valores e identificadores
-                        únicos (FITID), sem riscos de erros de leitura.
+                      <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed">
+                        O OFX é o formato oficial dos bancos — garante datas, valores e
+                        identificadores precisos para não duplicar nada e evitar erros de leitura.
                       </p>
                     </div>
                   </div>
@@ -1084,7 +1083,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={() => setShowBankGuide((prev) => !prev)}
-                    className="h-8 text-xs rounded-xl bg-white/90 border-emerald-300 text-emerald-800 hover:bg-emerald-100/60 shrink-0 font-semibold gap-1"
+                    className="h-8 text-xs rounded-xl bg-white/95 border-emerald-300 text-emerald-800 hover:bg-emerald-100/60 shrink-0 font-semibold gap-1.5 self-start sm:self-center shadow-2xs"
                   >
                     <Building2 className="w-3.5 h-3.5 text-emerald-700" />
                     <span>{showBankGuide ? 'Ocultar guia' : 'Como exportar nos bancos'}</span>
@@ -1098,8 +1097,8 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 
                 {/* Lista de Bancos Expansível */}
                 {showBankGuide && (
-                  <div className="pt-2 border-t border-emerald-200/80">
-                    <div className="flex items-center gap-1.5 font-bold text-slate-800 mb-2">
+                  <div className="pt-3 border-t border-emerald-200/70 space-y-2.5">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-800">
                       <Building2 className="w-3.5 h-3.5 text-emerald-700" />
                       <span>Passo a passo nos principais bancos brasileiros:</span>
                     </div>
@@ -1121,11 +1120,10 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                       ))}
                     </div>
 
-                    <p className="text-[10px] text-slate-500 mt-2 italic">
-                      Dica: No Internet Banking ou no app, procure o botão de
-                      download/compartilhamento no extrato ou fatura e escolha a opção{' '}
-                      <strong>OFX</strong> (às vezes chamada de "Money", "MS Money" ou "Outros
-                      formatos").
+                    <p className="text-[10px] text-slate-500 pt-0.5 italic">
+                      Dica: No Internet Banking ou app, procure a opção de download/compartilhar no
+                      extrato ou fatura e escolha <strong>OFX</strong> (às vezes listada como
+                      "Money", "MS Money" ou "Outros formatos").
                     </p>
                   </div>
                 )}
