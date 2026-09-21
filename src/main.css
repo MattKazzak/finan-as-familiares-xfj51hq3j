@@ -124,6 +124,14 @@
     user-select: none !important;
     -webkit-user-select: none !important;
   }
+
+  /* Durante a segurada preliminar (press-hold), previne touch actions e seleções de texto nativas */
+  .sortable-card-pressing {
+    touch-action: none !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -webkit-touch-callout: none !important;
+  }
 }
 
 @layer utilities {
