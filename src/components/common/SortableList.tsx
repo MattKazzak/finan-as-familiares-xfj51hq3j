@@ -51,14 +51,18 @@ export function SortableList<T>({
 
   // Refs de controle para touch/mouse
   const activePointerId = useRef<number | null>(null)
+  const activeTargetEl = useRef<HTMLElement | null>(null)
   const startPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isDraggingRef = useRef<boolean>(false)
   const draggedIndexRef = useRef<number | null>(null)
   const overIndexRef = useRef<number | null>(null)
+  const initialRectsRef = useRef<Map<string, DOMRect>>(new Map())
   const itemsRef = useRef<T[]>(items)
   const itemHeightsRef = useRef<number[]>([])
   const draggedElHeightRef = useRef<number>(0)
+  const hasDraggedRecently = useRef<boolean>(false)
+  const activeCardIndex = useRef<number | null>(null)
 
   useEffect(() => {
     itemsRef.current = items
@@ -74,10 +78,22 @@ export function SortableList<T>({
 
   const cleanupDrag = useCallback(() => {
     clearTimer()
+    if (activeTargetEl.current && activePointerId.current !== null) {
+      try {
+        if (activeTargetEl.current.hasPointerCapture(activePointerId.current)) {
+          activeTargetEl.current.releasePointerCapture(activePointerId.current)
+        }
+      } catch {
+        // Ignora caso já tenha sido liberado
+      }
+    }
     isDraggingRef.current = false
     draggedIndexRef.current = null
     overIndexRef.current = null
     activePointerId.current = null
+    activeTargetEl.current = null
+    activeCardIndex.current = null
+    initialRectsRef.current.clear()
     setDraggedIndex(null)
     setOverIndex(null)
     setDragTranslateY(0)
@@ -94,10 +110,8 @@ export function SortableList<T>({
 
       for (let i = 0; i < list.length; i++) {
         const id = keyExtractor(list[i])
-        const el = itemRefs.current.get(id)
-        if (!el) continue
-        const rect = el.getBoundingClientRect()
-        // Ponto de teste com folga vertical
+        const rect = initialRectsRef.current.get(id)
+        if (!rect) continue
         if (clientY >= rect.top && clientY <= rect.bottom) {
           return i
         }
@@ -108,7 +122,21 @@ export function SortableList<T>({
           return list.length - 1
         }
       }
-      return null
+      // Se não encontrou por faixa direta, acha o mais próximo pelo centro
+      let closestIdx = 0
+      let minDist = Infinity
+      for (let i = 0; i < list.length; i++) {
+        const id = keyExtractor(list[i])
+        const rect = initialRectsRef.current.get(id)
+        if (!rect) continue
+        const centerY = rect.top + rect.height / 2
+        const dist = Math.abs(clientY - centerY)
+        if (dist < minDist) {
+          minDist = dist
+          closestIdx = i
+        }
+      }
+      return closestIdx
     },
     [keyExtractor],
   )
@@ -127,20 +155,37 @@ export function SortableList<T>({
       document.body.style.userSelect = 'none'
       document.body.style.touchAction = 'none'
 
-      // Medir alturas dos elementos no momento de início para animação de deslocamento suave
-      const heights: number[] = []
-      itemsRef.current.forEach((it) => {
-        const id = keyExtractor(it)
-        const el = itemRefs.current.get(id)
-        heights.push(el ? el.offsetHeight : 64)
-      })
-      itemHeightsRef.current = heights
-      draggedElHeightRef.current = heights[index] || 64
+      // Atualiza/valida posições estáticas iniciais dos elementos caso não tenham sido gravadas
+      if (initialRectsRef.current.size === 0) {
+        const heights: number[] = []
+        const rects = new Map<string, DOMRect>()
+        itemsRef.current.forEach((it) => {
+          const id = keyExtractor(it)
+          const el = itemRefs.current.get(id)
+          if (el) {
+            rects.set(id, el.getBoundingClientRect())
+            heights.push(el.offsetHeight)
+          } else {
+            heights.push(64)
+          }
+        })
+        initialRectsRef.current = rects
+        itemHeightsRef.current = heights
+        draggedElHeightRef.current = heights[index] || 64
+      }
+      // Tenta pointer capture no elemento ativo para garantir fluxo contínuo de pointermove no mobile
+      if (activeTargetEl.current && activePointerId.current !== null) {
+        try {
+          activeTargetEl.current.setPointerCapture(activePointerId.current)
+        } catch {
+          // Ignora caso o browser não permita ou elemento tenha saído
+        }
+      }
 
       // Haptic feedback (vibração mobile nativa)
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
         try {
-          navigator.vibrate?.(25)
+          navigator.vibrate?.([25])
         } catch {
           // Ignora se não for suportado
         }
@@ -159,6 +204,9 @@ export function SortableList<T>({
         const dy = Math.abs(e.clientY - startPos.current.y)
         if (dx > 8 || dy > 8) {
           clearTimer()
+          window.removeEventListener('pointermove', handlePointerMove)
+          window.removeEventListener('pointerup', handlePointerUp)
+          window.removeEventListener('pointercancel', handlePointerUp)
         }
         return
       }
@@ -169,13 +217,23 @@ export function SortableList<T>({
       const deltaY = e.clientY - startPos.current.y
       setDragTranslateY(deltaY)
 
-      const targetIdx = findHoveredIndex(e.clientY)
+      // Calcula a linha central do item arrastado na tela para detecção de hover muito mais precisa
+      const draggedH = draggedElHeightRef.current || 64
+      const fromIdx = draggedIndexRef.current ?? 0
+      const initialItemRect = itemsRef.current[fromIdx]
+        ? initialRectsRef.current.get(keyExtractor(itemsRef.current[fromIdx]))
+        : null
+      const currentCenterY = initialItemRect
+        ? initialItemRect.top + deltaY + draggedH / 2
+        : e.clientY
+
+      const targetIdx = findHoveredIndex(currentCenterY)
       if (targetIdx !== null && targetIdx !== overIndexRef.current) {
         overIndexRef.current = targetIdx
         setOverIndex(targetIdx)
       }
     },
-    [findHoveredIndex],
+    [findHoveredIndex, keyExtractor],
   )
 
   const handlePointerUp = useCallback(
@@ -184,11 +242,8 @@ export function SortableList<T>({
 
       clearTimer()
 
-      if (
-        isDraggingRef.current &&
-        draggedIndexRef.current !== null &&
-        overIndexRef.current !== null
-      ) {
+      const wasDragging = isDraggingRef.current
+      if (wasDragging && draggedIndexRef.current !== null && overIndexRef.current !== null) {
         const from = draggedIndexRef.current
         const to = overIndexRef.current
 
@@ -204,6 +259,13 @@ export function SortableList<T>({
       window.removeEventListener('pointermove', handlePointerMove)
       window.removeEventListener('pointerup', handlePointerUp)
       window.removeEventListener('pointercancel', handlePointerUp)
+
+      if (wasDragging) {
+        hasDraggedRecently.current = true
+        setTimeout(() => {
+          hasDraggedRecently.current = false
+        }, 200)
+      }
     },
     [cleanupDrag, handlePointerMove, onReorder],
   )
@@ -215,7 +277,27 @@ export function SortableList<T>({
       e.stopPropagation()
 
       activePointerId.current = e.pointerId
+      activeTargetEl.current =
+        (e.currentTarget.closest('[data-sortable-index]') as HTMLElement) ||
+        (e.currentTarget as HTMLElement)
       startPos.current = { x: e.clientX, y: e.clientY }
+
+      // Mede as posições antes de iniciar
+      const rects = new Map<string, DOMRect>()
+      const heights: number[] = []
+      itemsRef.current.forEach((it) => {
+        const id = keyExtractor(it)
+        const el = itemRefs.current.get(id)
+        if (el) {
+          rects.set(id, el.getBoundingClientRect())
+          heights.push(el.offsetHeight)
+        } else {
+          heights.push(64)
+        }
+      })
+      initialRectsRef.current = rects
+      itemHeightsRef.current = heights
+      draggedElHeightRef.current = heights[index] || 64
 
       startDrag(index)
 
@@ -226,6 +308,17 @@ export function SortableList<T>({
     'data-drag-handle': true,
     'aria-grabbed': draggedIndex === index,
   })
+
+  // Cancela o drag caso a janela perca foco (ex: popup ou troca de aba)
+  useEffect(() => {
+    const handleBlur = () => {
+      cleanupDrag()
+    }
+    window.addEventListener('blur', handleBlur)
+    return () => {
+      window.removeEventListener('blur', handleBlur)
+    }
+  }, [cleanupDrag])
 
   // Long-press no card como um todo
   const handleCardPointerDown = (e: React.PointerEvent, index: number) => {
@@ -246,30 +339,66 @@ export function SortableList<T>({
       return
     }
 
+    // Se o clique foi com botão direito ou do meio do mouse, ignora
     if (e.button !== 0 && e.pointerType === 'mouse') return
 
     activePointerId.current = e.pointerId
+    const cardEl =
+      (e.currentTarget.closest('[data-sortable-index]') as HTMLElement) ||
+      (e.currentTarget as HTMLElement)
+    activeTargetEl.current = cardEl
     startPos.current = { x: e.clientX, y: e.clientY }
 
     clearTimer()
+    activeCardIndex.current = index
     setIsPressing(index)
+
+    // Mede as posições dos itens logo no pointerdown para garantir coordenadas limpas antes de qualquer movimento
+    const rects = new Map<string, DOMRect>()
+    const heights: number[] = []
+    itemsRef.current.forEach((it) => {
+      const id = keyExtractor(it)
+      const el = itemRefs.current.get(id)
+      if (el) {
+        rects.set(id, el.getBoundingClientRect())
+        heights.push(el.offsetHeight)
+      } else {
+        heights.push(64)
+      }
+    })
+    initialRectsRef.current = rects
+    itemHeightsRef.current = heights
+    draggedElHeightRef.current = heights[index] || 64
+
+    // No desktop com mouse, 200ms de segurada ou arrasto intencional é ainda mais confortável,
+    // enquanto no toque mobile respeitamos os 350ms de longPressDelay configurados.
+    const effectiveDelay =
+      e.pointerType === 'mouse' ? Math.min(220, longPressDelay) : longPressDelay
 
     longPressTimer.current = setTimeout(() => {
       startDrag(index)
-    }, longPressDelay)
+    }, effectiveDelay)
 
     window.addEventListener('pointermove', handlePointerMove, { passive: false })
     window.addEventListener('pointerup', handlePointerUp)
     window.addEventListener('pointercancel', handlePointerUp)
   }
 
-  // Intercepta cliques simples durante ou imediatamente após arrasto para não abrir drawers acidentalmente
   const handleCaptureClick = (e: React.MouseEvent) => {
-    if (isDraggingRef.current) {
+    if (isDraggingRef.current || hasDraggedRecently.current) {
       e.stopPropagation()
       e.preventDefault()
     }
   }
+
+  // Também limpar os listeners no unmount
+  useEffect(() => {
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerUp)
+      window.removeEventListener('pointercancel', handlePointerUp)
+    }
+  }, [handlePointerMove, handlePointerUp])
 
   return (
     <div
@@ -302,6 +431,8 @@ export function SortableList<T>({
           ? {
               transform: `translate3d(0, ${dragTranslateY}px, 0) scale(1.02)`,
               zIndex: 50,
+              touchAction: 'none',
+              pointerEvents: 'none',
             }
           : {
               transform: displacementY !== 0 ? `translate3d(0, ${displacementY}px, 0)` : undefined,
@@ -311,20 +442,25 @@ export function SortableList<T>({
         return (
           <div
             key={id}
+            data-sortable-index={index}
             ref={(el) => {
               if (el) itemRefs.current.set(id, el)
               else itemRefs.current.delete(id)
             }}
             onPointerDown={(e) => handleCardPointerDown(e, index)}
-            onPointerUp={() => clearTimer()}
-            onPointerCancel={() => clearTimer()}
+            onPointerUp={() => {
+              if (!isDraggingRef.current) clearTimer()
+            }}
+            onPointerCancel={() => {
+              if (!isDraggingRef.current) clearTimer()
+            }}
             style={inlineStyle}
-            className={`relative touch-manipulation ${
+            className={`relative ${
               isDragging
-                ? 'shadow-2xl ring-2 ring-emerald-500 rounded-2xl opacity-95 pointer-events-none transition-none cursor-grabbing'
+                ? 'shadow-2xl ring-2 ring-emerald-500 rounded-2xl opacity-95 pointer-events-none transition-none cursor-grabbing touch-none select-none'
                 : isCurrentlyPressing
-                  ? 'scale-[0.99] transition-transform duration-200'
-                  : 'transition-transform duration-200 ease-out'
+                  ? 'scale-[0.99] transition-transform duration-200 touch-pan-y'
+                  : 'transition-transform duration-250 ease-[cubic-bezier(0.2,0,0,1)] will-change-transform touch-pan-y'
             }`}
           >
             {renderItem(item, index, dragHandleProps, isDragging)}

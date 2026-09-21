@@ -2057,7 +2057,7 @@ export default function WalletPage() {
                           onClick={() =>
                             openCategoryTransactionsDrawer(item.category, null, 'category')
                           }
-                          className="p-3 sm:p-3.5 hover:bg-slate-50/80 cursor-pointer transition-colors group touch-manipulation"
+                          className="p-3 sm:p-3.5 hover:bg-slate-50/80 cursor-pointer transition-colors group"
                         >
                           {/* Top Row: Identificação + Ações */}
                           <div className="flex items-start justify-between gap-2 sm:gap-3">
@@ -2632,7 +2632,7 @@ export default function WalletPage() {
                                         'subcategory',
                                       )
                                     }
-                                    className={`py-2 px-2 sm:px-2.5 flex flex-col sm:flex-row sm:items-center justify-between rounded-xl cursor-pointer transition-colors group/sub gap-1.5 sm:gap-3 touch-manipulation ${
+                                    className={`py-2 px-2 sm:px-2.5 flex flex-col sm:flex-row sm:items-center justify-between rounded-xl cursor-pointer transition-colors group/sub gap-1.5 sm:gap-3 ${
                                       isSubDragging ? 'bg-white shadow-md' : 'hover:bg-white'
                                     }`}
                                   >
