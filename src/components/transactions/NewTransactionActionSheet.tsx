@@ -177,7 +177,7 @@ export const NewTransactionActionSheet: React.FC<NewTransactionActionSheetProps>
                 <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-700 shrink-0 ml-2 transition-transform group-hover:translate-x-0.5" />
               </button>
 
-              {/* ITEM 2: LANÇAMENTO POR VOZ / TEXTO COM BADGE 'EM BREVE' */}
+              {/* ITEM 2: LANÇAMENTO POR VOZ / TEXTO COM BADGE 'EM BREVE / PREMIUM' */}
               <button
                 type="button"
                 onClick={handleVoiceTextClick}
@@ -188,12 +188,12 @@ export const NewTransactionActionSheet: React.FC<NewTransactionActionSheetProps>
                     <Mic className="w-5 h-5 text-indigo-600" />
                   </div>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900 transition-colors">
                         Lançamento por Voz / Texto
                       </span>
-                      <span className="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.2 rounded-full">
-                        Em Breve
+                      <span className="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.2 rounded-full whitespace-nowrap">
+                        Em Breve / Premium
                       </span>
                     </div>
                     <p className="text-xs text-slate-400 truncate mt-0.5">
