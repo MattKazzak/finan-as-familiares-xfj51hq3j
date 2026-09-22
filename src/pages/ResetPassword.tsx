@@ -29,7 +29,7 @@ export default function ResetPassword() {
 
   // Document Title conforme requisito
   useEffect(() => {
-    document.title = 'Criar Nova Senha — Curiango'
+    document.title = 'Criar Nova Senha — Curiangoo'
   }, [])
 
   // Checagem de tokens/hashes na URL
@@ -147,7 +147,7 @@ export default function ResetPassword() {
             <KeyRound className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Criar Nova Senha — Curiango
+            Criar Nova Senha — Curiangoo
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-xs">
             Escolha uma nova senha forte para proteger sua conta e as finanças da sua família.
@@ -256,7 +256,7 @@ export default function ResetPassword() {
 
         <div className="mt-8 pt-6 border-t border-slate-100 text-center">
           <p className="text-[11px] text-slate-400">
-            Curiango &bull; Gestão Financeira Familiar com isolamento e segurança.
+            Curiangoo &bull; Gestão Financeira Familiar com isolamento e segurança.
           </p>
         </div>
       </div>

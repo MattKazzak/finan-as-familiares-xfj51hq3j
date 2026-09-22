@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="curiangoo-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064E3B" />
+      <stop offset="50%" stop-color="#047857" />
+      <stop offset="100%" stop-color="#064E3B" />
+    </linearGradient>
+    <linearGradient id="curiangoo-wing" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A7F3D0" />
+      <stop offset="100%" stop-color="#FFFFFF" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#022c22" flood-opacity="0.4" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="108" fill="url(#curiangoo-bg)" />
+
+  <!-- Stylized Curiango / Bird & Wing Icon -->
+  <g filter="url(#shadow)" transform="translate(40, 40)">
+    <!-- Main bird body / sweeping upward wing representing financial ascent -->
+    <!-- Head and beak pointing forward & upward -->
+    <path
+      d="M260 100 C275 100 290 110 298 126 C304 138 304 152 298 164 C308 160 326 156 340 162 C342 163 336 172 324 178 C308 186 292 186 276 182 C252 176 236 156 236 132 C236 114 246 100 260 100 Z"
+      fill="#FFFFFF"
+    />
+    <!-- Eye dot in emerald -->
+    <circle cx="274" cy="132" r="5" fill="#064E3B" />
+
+    <!-- Dynamic soaring wings layered (Curiango in flight) -->
+    <!-- Primary outer wing curve -->
+    <path
+      d="M100 286 C120 200 180 134 268 116 C238 150 216 198 214 252 C212 294 228 326 248 350 C182 346 128 322 100 286 Z"
+      fill="url(#curiangoo-wing)"
+      opacity="0.95"
+    />
+
+    <!-- Secondary middle wing feather -->
+    <path
+      d="M136 304 C158 240 206 188 274 168 C252 196 238 234 240 278 C242 312 258 336 278 354 C224 352 168 338 136 304 Z"
+      fill="#FFFFFF"
+      opacity="0.82"
+    />
+
+    <!-- Tail & lower wing contour -->
+    <path
+      d="M174 322 C200 280 240 240 300 220 C280 244 270 274 274 310 C276 332 292 352 316 364 C264 366 206 352 174 322 Z"
+      fill="#D1FAE5"
+      opacity="0.75"
+    />
+
+    <!-- Ascending accent leaf / coin sprout (representing family wealth growth) -->
+    <path
+      d="M296 210 C340 196 376 220 380 256 C344 264 310 244 296 210 Z"
+      fill="#34D399"
+    />
+  </g>
+</svg>

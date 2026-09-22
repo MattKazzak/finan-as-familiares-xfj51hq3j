@@ -13,6 +13,7 @@ import {
   KeyRound,
   CheckCircle2,
 } from 'lucide-react'
+import { InstallPwaBanner } from '@/components/common/InstallPwaBanner'
 
 type AuthMode = 'login' | 'signup' | 'forgot_password'
 
@@ -342,6 +343,9 @@ export default function Login() {
           </p>
         </div>
       </div>
+
+      {/* Banner de Instalação na Tela de Acesso / Login */}
+      <InstallPwaBanner variant="floating" />
     </div>
   )
 }

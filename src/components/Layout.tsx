@@ -9,6 +9,7 @@ import { ImportStatementDialog } from '@/components/transactions/ImportStatement
 import { RecurringIncomesDialog } from '@/components/wallet/RecurringIncomesDialog'
 import { WhoIsUsingDialog } from '@/components/common/WhoIsUsingDialog'
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
+import { InstallPwaBanner } from '@/components/common/InstallPwaBanner'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { fetchRecurringIncomes, fetchRecurringIncomeOverrides } from '@/services/recurring-incomes'
@@ -225,6 +226,9 @@ export default function Layout() {
         <main className="flex-1 w-full max-w-[1200px] mx-auto p-4 sm:p-6 pb-28 md:pb-8">
           <Outlet />
         </main>
+
+        {/* BANNER EDUCATIVO DE INSTALAÇÃO PWA (POSICIONADO ACIMA DO MENU INFERIOR) */}
+        <InstallPwaBanner variant="bottom-nav" />
 
         {/* BOTTOM NAVIGATION (MOBILE APENAS < 768px) */}
         <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200/80 z-40 px-2 py-1 shadow-lg shadow-slate-900/5">
