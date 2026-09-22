@@ -16,8 +16,11 @@ interface AuthContextType {
   ) => Promise<{ error: any; data?: any }>
   signIn: (email: string, password: string) => Promise<{ error: any }>
   resetPasswordForEmail: (email: string) => Promise<{ error: any }>
+  updatePassword: (password: string) => Promise<{ error: any; data?: any }>
   signOut: () => Promise<{ error: any }>
   loading: boolean
+  isPasswordRecovery: boolean
+  clearPasswordRecovery: () => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -32,22 +35,65 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    // Checa se a URL tem indicativo de recovery (hash `#access_token=...&type=recovery` ou query `?type=recovery`)
+    const hash = window.location.hash || ''
+    const search = window.location.search || ''
+    return (
+      hash.includes('type=recovery') ||
+      search.includes('type=recovery') ||
+      window.location.pathname === '/redefinir-senha'
+    )
+  })
 
   useEffect(() => {
+    // 1. Escuta eventos do Supabase Auth
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, newSession) => {
       // FORBIDDEN: no async/await inside this callback — sync only
-      setSession(session)
-      setUser(session?.user ?? null)
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true)
+      } else if (event === 'SIGNED_OUT') {
+        setIsPasswordRecovery(false)
+      }
+
+      setSession(newSession)
+      setUser(newSession?.user ?? null)
       setLoading(false)
     })
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
+    // 2. Se a URL veio com code PKCE (?code=...), troca o code por sessão caso ainda não trocado
+    const searchParams = new URLSearchParams(window.location.search)
+    const code = searchParams.get('code')
+    if (code) {
+      supabase.auth
+        .exchangeCodeForSession(code)
+        .then(({ data, error }) => {
+          if (!error && data?.session) {
+            setSession(data.session)
+            setUser(data.session.user)
+            // Se estamos em rota de redefinir senha ou veio com recovery flag
+            if (
+              window.location.pathname === '/redefinir-senha' ||
+              searchParams.get('type') === 'recovery'
+            ) {
+              setIsPasswordRecovery(true)
+            }
+          }
+          setLoading(false)
+        })
+        .catch(() => {
+          setLoading(false)
+        })
+    } else {
+      supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+        setSession(initialSession)
+        setUser(initialSession?.user ?? null)
+        setLoading(false)
+      })
+    }
 
     return () => subscription.unsubscribe()
   }, [])
@@ -73,9 +119,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const resetPasswordForEmail = async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/`,
+      redirectTo: `${window.location.origin}/redefinir-senha`,
     })
     return { error }
+  }
+
+  const updatePassword = async (newPassword: string) => {
+    const { data, error } = await supabase.auth.updateUser({ password: newPassword })
+    if (!error) {
+      setIsPasswordRecovery(false)
+    }
+    return { data, error }
+  }
+
+  const clearPasswordRecovery = () => {
+    setIsPasswordRecovery(false)
   }
 
   const signOut = async () => {
@@ -91,8 +149,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signUp,
         signIn,
         resetPasswordForEmail,
+        updatePassword,
         signOut,
         loading,
+        isPasswordRecovery,
+        clearPasswordRecovery,
       }}
     >
       {children}

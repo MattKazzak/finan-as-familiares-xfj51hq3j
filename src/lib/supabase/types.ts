@@ -628,7 +628,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_new_family_workspace: {
+        Args: { p_family_name: string; p_member_name: string }
+        Returns: string
+      }
+      user_belongs_to_family: { Args: { f_id: string }; Returns: boolean }
     }
     Enums: {
       asset_type: 'stock' | 'fii' | 'fixed_income' | 'crypto' | 'treasury' | 'other'

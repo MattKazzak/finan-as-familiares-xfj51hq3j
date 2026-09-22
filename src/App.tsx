@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from '@/hooks/use-auth'
 import { FamilyProvider } from '@/hooks/use-family'
 import Layout from '@/components/Layout'
 import Login from '@/pages/Login'
+import ResetPassword from '@/pages/ResetPassword'
 import Home from '@/pages/Home'
 import Wallet from '@/pages/Wallet'
 import Goals from '@/pages/Goals'
@@ -16,7 +17,7 @@ import { Loader2 } from 'lucide-react'
 
 // Guarda de rota autenticada
 function ProtectedLayout() {
-  const { user, loading } = useAuth()
+  const { user, loading, isPasswordRecovery } = useAuth()
 
   if (loading) {
     return (
@@ -36,6 +37,10 @@ function ProtectedLayout() {
     return <Navigate to="/" replace />
   }
 
+  if (isPasswordRecovery) {
+    return <Navigate to="/redefinir-senha" replace />
+  }
+
   return (
     <FamilyProvider>
       <Layout />
@@ -43,9 +48,9 @@ function ProtectedLayout() {
   )
 }
 
-// Guarda para rota de login (se já estiver logado, redireciona para /inicio)
+// Guarda para rota de login (se já estiver logado, redireciona para /inicio, a menos que esteja em PASSWORD_RECOVERY)
 function LoginRoute() {
-  const { user, loading } = useAuth()
+  const { user, loading, isPasswordRecovery } = useAuth()
 
   if (loading) {
     return (
@@ -53,6 +58,11 @@ function LoginRoute() {
         <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
       </div>
     )
+  }
+
+  // Se o usuário veio pelo link de recuperação de senha, prioriza redirecionar para a redefinição de senha
+  if (isPasswordRecovery) {
+    return <Navigate to="/redefinir-senha" replace />
   }
 
   if (user) {
@@ -71,6 +81,9 @@ const App = () => (
         <Routes>
           {/* Rota pública de login */}
           <Route path="/" element={<LoginRoute />} />
+
+          {/* Rota de redefinição de senha (recuperação) */}
+          <Route path="/redefinir-senha" element={<ResetPassword />} />
 
           {/* Rotas protegidas envolvidas pelo Layout */}
           <Route element={<ProtectedLayout />}>
