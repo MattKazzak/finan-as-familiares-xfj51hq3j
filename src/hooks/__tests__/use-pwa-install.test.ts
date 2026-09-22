@@ -1,8 +1,8 @@
 import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { usePwaInstall } from '../use-pwa-install'
+import { usePwaInstall, getInstallScenario, BeforeInstallPromptEvent } from '../use-pwa-install'
 
-describe('usePwaInstall', () => {
+describe('usePwaInstall & getInstallScenario', () => {
   const STORAGE_KEY = 'curiangoo_pwa_install_dismissed'
 
   beforeEach(() => {
@@ -96,5 +96,78 @@ describe('usePwaInstall', () => {
 
     const { result } = renderHook(() => usePwaInstall())
     expect(result.current.isIos).toBe(true)
+  })
+
+  describe('Cenários de Instalação (getInstallScenario)', () => {
+    it('identifies Scenario A (native) when deferredPrompt is available', () => {
+      const mockPrompt = {
+        prompt: vi.fn(),
+        userChoice: Promise.resolve({ outcome: 'accepted', platform: 'web' }),
+      } as unknown as BeforeInstallPromptEvent
+
+      expect(getInstallScenario(mockPrompt, false)).toBe('native')
+      expect(getInstallScenario(mockPrompt, true)).toBe('native')
+    })
+
+    it('identifies Scenario B (ios) when no deferredPrompt and device is iOS', () => {
+      expect(getInstallScenario(null, true)).toBe('ios')
+    })
+
+    it('identifies Scenario C (manual) when no deferredPrompt and device is NOT iOS', () => {
+      expect(getInstallScenario(null, false)).toBe('manual')
+    })
+  })
+
+  describe('triggerInstall flow', () => {
+    it('executes prompt and cleans deferredPrompt on outcome accepted', async () => {
+      const mockPromptFn = vi.fn().mockResolvedValue(undefined)
+      const mockPromptEvent = {
+        prompt: mockPromptFn,
+        userChoice: Promise.resolve({ outcome: 'accepted', platform: 'web' }),
+        platforms: ['web'],
+      } as unknown as BeforeInstallPromptEvent
+
+      const { result } = renderHook(() => usePwaInstall())
+
+      act(() => {
+        result.current.setDeferredPrompt(mockPromptEvent)
+      })
+
+      expect(result.current.hasNativePrompt).toBe(true)
+
+      let accepted = false
+      await act(async () => {
+        accepted = await result.current.triggerInstall()
+      })
+
+      expect(mockPromptFn).toHaveBeenCalledTimes(1)
+      expect(accepted).toBe(true)
+      expect(result.current.deferredPrompt).toBeNull()
+      expect(result.current.hasNativePrompt).toBe(false)
+    })
+
+    it('handles dismissed user choice cleanly', async () => {
+      const mockPromptFn = vi.fn().mockResolvedValue(undefined)
+      const mockPromptEvent = {
+        prompt: mockPromptFn,
+        userChoice: Promise.resolve({ outcome: 'dismissed', platform: 'web' }),
+        platforms: ['web'],
+      } as unknown as BeforeInstallPromptEvent
+
+      const { result } = renderHook(() => usePwaInstall())
+
+      act(() => {
+        result.current.setDeferredPrompt(mockPromptEvent)
+      })
+
+      let accepted = true
+      await act(async () => {
+        accepted = await result.current.triggerInstall()
+      })
+
+      expect(mockPromptFn).toHaveBeenCalledTimes(1)
+      expect(accepted).toBe(false)
+      expect(result.current.deferredPrompt).toBeNull()
+    })
   })
 })

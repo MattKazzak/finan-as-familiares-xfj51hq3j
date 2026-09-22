@@ -31,7 +31,7 @@ describe('Login / Cadastro Page Brand Header', () => {
 
     const brandImg = screen.getByAltText('Curiangoo')
     expect(brandImg).toBeDefined()
-    expect(brandImg.getAttribute('src')).toBe('/icon.svg')
+    expect(brandImg.getAttribute('src')).toBe('/icon-192.png')
 
     expect(screen.getByRole('heading', { level: 1, name: 'Curiangoo' })).toBeDefined()
     expect(screen.getByText('Finanças Familiares no Prumo')).toBeDefined()
@@ -50,7 +50,7 @@ describe('Login / Cadastro Page Brand Header', () => {
 
     const brandImg = screen.getByAltText('Curiangoo')
     expect(brandImg).toBeDefined()
-    expect(brandImg.getAttribute('src')).toBe('/icon.svg')
+    expect(brandImg.getAttribute('src')).toBe('/icon-192.png')
 
     expect(screen.getByRole('heading', { level: 1, name: 'Curiangoo' })).toBeDefined()
     expect(screen.getByText('Finanças Familiares no Prumo')).toBeDefined()

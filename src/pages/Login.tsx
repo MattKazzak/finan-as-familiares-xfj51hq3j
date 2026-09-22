@@ -140,12 +140,12 @@ export default function Login() {
         <div className="flex flex-col items-center text-center mb-6">
           <div className="w-16 h-16 rounded-2xl bg-[#064E3B] p-1.5 shadow-lg shadow-emerald-950/20 mb-3 flex items-center justify-center overflow-hidden border border-emerald-600/30">
             <img
-              src="/icon.svg"
+              src="/icon-192.png"
               alt="Curiangoo"
-              className="w-full h-full object-contain rounded-xl"
+              className="w-full h-full object-contain rounded-2xl"
               onError={(e) => {
                 e.currentTarget.onerror = null
-                e.currentTarget.src = '/icon-192.png'
+                e.currentTarget.src = '/icon.svg'
               }}
             />
           </div>

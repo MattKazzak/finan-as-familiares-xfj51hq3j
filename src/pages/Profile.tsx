@@ -19,7 +19,6 @@ import {
   Pencil,
   Download,
   Share,
-  PlusSquare,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,7 +26,8 @@ import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { formatBRL, formatNumberBRL, parseBRLToCents } from '@/lib/formatters'
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
-import { Sparkles, Landmark, ArrowUpRight } from 'lucide-react'
+import { InstallInstructionsModal } from '@/components/common/InstallInstructionsModal'
+import { Sparkles, Landmark } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -65,7 +65,7 @@ export default function ProfilePage() {
   } = useFamily()
   const { toast } = useToast()
   const navigate = useNavigate()
-  const { isStandalone, isIos, hasNativePrompt, triggerInstall } = usePwaInstall()
+  const { isStandalone, isIos, hasNativePrompt, deferredPrompt, triggerInstall } = usePwaInstall()
 
   // Estado do modal de instruções PWA (iOS / Outros sem prompt nativo)
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false)
@@ -211,7 +211,9 @@ export default function ProfilePage() {
   }
 
   const handleInstallShortcutClick = async () => {
-    if (!isIos && hasNativePrompt) {
+    // CENÁRIO A: se deferredPrompt existir (Chrome / Edge / Android), dispara imediatamente o prompt nativo
+    // NÃO abre nenhum modal de instruções nesse caso — a janela nativa do sistema assume a tela.
+    if (deferredPrompt) {
       try {
         setIsInstalling(true)
         const accepted = await triggerInstall()
@@ -225,6 +227,8 @@ export default function ProfilePage() {
         setIsInstalling(false)
       }
     } else {
+      // CENÁRIO B (iOS / iPhone / iPad) ou CENÁRIO C (Outros navegadores sem suporte ao prompt direto)
+      // Abre o modal de instruções correspondente dinamicamente
       setIsInstallModalOpen(true)
     }
   }
@@ -564,12 +568,12 @@ export default function ProfilePage() {
             <div className="flex items-start sm:items-center gap-3.5">
               <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 p-1 flex items-center justify-center shrink-0 shadow-inner">
                 <img
-                  src="/icon.svg"
+                  src="/icon-192.png"
                   alt="Curiangoo"
                   className="w-full h-full object-contain rounded-xl"
                   onError={(e) => {
                     e.currentTarget.onerror = null
-                    e.currentTarget.src = '/icon-192.png'
+                    e.currentTarget.src = '/icon.svg'
                   }}
                 />
               </div>
@@ -594,10 +598,20 @@ export default function ProfilePage() {
                   <Loader2 className="w-4 h-4 animate-spin mr-1" />
                   <span>Instalando...</span>
                 </>
-              ) : (
+              ) : hasNativePrompt ? (
                 <>
                   <Download className="w-4 h-4 stroke-[2.5]" />
                   <span>Instalar Agora</span>
+                </>
+              ) : isIos ? (
+                <>
+                  <Share className="w-4 h-4 stroke-[2.5]" />
+                  <span>Como Instalar</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4 stroke-[2.5]" />
+                  <span>Instalar Aplicativo</span>
                 </>
               )}
             </Button>
@@ -823,80 +837,11 @@ export default function ProfilePage() {
       />
 
       {/* DIÁLOGO / MODAL DE INSTRUÇÕES DE INSTALAÇÃO DO PWA */}
-      <Dialog open={isInstallModalOpen} onOpenChange={setIsInstallModalOpen}>
-        <DialogContent className="max-w-sm w-[92vw] rounded-3xl p-6 bg-white border border-slate-100 shadow-2xl">
-          <DialogHeader className="text-center sm:text-center">
-            <div className="mx-auto w-16 h-16 rounded-2xl bg-[#064E3B] p-2 shadow-lg shadow-emerald-950/20 mb-3 flex items-center justify-center border border-emerald-600/30">
-              <img
-                src="/icon.svg"
-                alt="Curiangoo"
-                className="w-full h-full object-contain rounded-xl"
-                onError={(e) => {
-                  e.currentTarget.onerror = null
-                  e.currentTarget.src = '/icon-192.png'
-                }}
-              />
-            </div>
-            <DialogTitle className="text-lg font-extrabold text-slate-900 tracking-tight">
-              Instalar Curiangoo
-            </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500 mt-1">
-              {isIos
-                ? 'Siga os passos abaixo no Safari para adicionar à tela inicial do seu iPhone ou iPad:'
-                : 'Adicione o atalho do Curiangoo à sua tela inicial para usar como um aplicativo:'}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-3 py-2 text-left">
-            <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
-              <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
-                1
-              </div>
-              <div className="text-xs text-slate-700 leading-relaxed">
-                Toque no ícone{' '}
-                <strong className="text-slate-900 font-semibold inline-flex items-center gap-1 bg-white px-1.5 py-0.5 rounded-lg border border-slate-200">
-                  <Share className="w-3.5 h-3.5 text-emerald-700 inline" /> Compartilhar
-                </strong>{' '}
-                (quadrado com seta para cima na barra inferior do Safari).
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200/80">
-              <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
-                2
-              </div>
-              <div className="text-xs text-slate-700 leading-relaxed">
-                Role para baixo e selecione a opção{' '}
-                <strong className="text-emerald-900 font-semibold inline-flex items-center gap-1 bg-white px-1.5 py-0.5 rounded-lg border border-emerald-300">
-                  <PlusSquare className="w-3.5 h-3.5 text-emerald-700 inline" /> Adicionar à Tela de
-                  Início
-                </strong>
-                .
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
-              <div className="w-8 h-8 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
-                3
-              </div>
-              <div className="text-xs text-slate-700 leading-relaxed">
-                Toque em <strong className="text-slate-900 font-semibold">Adicionar</strong> no
-                canto superior direito. O ícone oficial do Curiangoo aparecerá na sua tela inicial!
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="pt-2">
-            <Button
-              type="button"
-              onClick={() => setIsInstallModalOpen(false)}
-              className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold rounded-xl text-xs h-10"
-            >
-              Entendido
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <InstallInstructionsModal
+        open={isInstallModalOpen}
+        onOpenChange={setIsInstallModalOpen}
+        isIos={isIos}
+      />
 
       {/* Rodapé de Versão */}
       <div className="text-center pt-2 pb-4">

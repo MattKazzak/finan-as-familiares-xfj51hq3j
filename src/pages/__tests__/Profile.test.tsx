@@ -1,13 +1,17 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import React from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import ProfilePage from '../Profile'
 
-const mockTriggerInstall = vi.fn()
+const mockTriggerInstall = vi.fn().mockResolvedValue(true)
 let mockIsStandalone = false
 let mockHasNativePrompt = true
 let mockIsIos = false
+let mockDeferredPrompt: unknown = {
+  prompt: vi.fn().mockResolvedValue(undefined),
+  userChoice: Promise.resolve({ outcome: 'accepted', platform: 'web' }),
+}
 
 vi.mock('@/hooks/use-auth', () => ({
   useAuth: () => ({
@@ -39,6 +43,7 @@ vi.mock('@/hooks/use-pwa-install', () => ({
     isStandalone: mockIsStandalone,
     isIos: mockIsIos,
     hasNativePrompt: mockHasNativePrompt,
+    deferredPrompt: mockDeferredPrompt,
     triggerInstall: mockTriggerInstall,
   }),
 }))
@@ -47,12 +52,16 @@ vi.mock('@/components/wallet/ApplyBudgetModelDialog', () => ({
   ApplyBudgetModelDialog: () => null,
 }))
 
-describe('ProfilePage PWA Install Shortcut', () => {
+describe('ProfilePage PWA Install Shortcut - 3 Cenários de Clique', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockIsStandalone = false
     mockHasNativePrompt = true
     mockIsIos = false
+    mockDeferredPrompt = {
+      prompt: vi.fn().mockResolvedValue(undefined),
+      userChoice: Promise.resolve({ outcome: 'accepted', platform: 'web' }),
+    }
   })
 
   it('renders PWA install shortcut card when not standalone', () => {
@@ -80,8 +89,9 @@ describe('ProfilePage PWA Install Shortcut', () => {
     expect(screen.queryByText('📲 Instalar aplicativo no celular')).toBeNull()
   })
 
-  it('triggers native prompt on Android/Chrome when clicked', () => {
+  it('CENÁRIO A (Chrome / Edge / Android): if deferredPrompt exists, executes prompt immediately without opening instructions modal', async () => {
     mockIsStandalone = false
+    mockDeferredPrompt = { prompt: vi.fn(), userChoice: Promise.resolve({ outcome: 'accepted' }) }
     mockHasNativePrompt = true
     mockIsIos = false
 
@@ -95,10 +105,14 @@ describe('ProfilePage PWA Install Shortcut', () => {
     fireEvent.click(installBtn)
 
     expect(mockTriggerInstall).toHaveBeenCalled()
+    // Garante que NENHUM modal de instruções foi aberto nesse cenário
+    expect(screen.queryByText('Instalar no iPhone / iPad')).toBeNull()
+    expect(screen.queryByText(/Toque no ícone de menu com/i)).toBeNull()
   })
 
-  it('opens instructions modal when clicked on iOS or without native prompt', () => {
+  it('CENÁRIO B (iOS / iPhone / iPad): opens iOS specific modal showing Apple icon and Safari instructions', async () => {
     mockIsStandalone = false
+    mockDeferredPrompt = null
     mockHasNativePrompt = false
     mockIsIos = true
 
@@ -108,11 +122,33 @@ describe('ProfilePage PWA Install Shortcut', () => {
       </MemoryRouter>,
     )
 
-    const installBtn = screen.getByRole('button', { name: /Instalar Agora/i })
+    const installBtn = screen.getByRole('button', { name: /Como Instalar/i })
     fireEvent.click(installBtn)
 
-    expect(screen.getByText('Instalar Curiangoo')).toBeDefined()
-    expect(screen.getByText(/Toque no ícone/i)).toBeDefined()
+    expect(mockTriggerInstall).not.toHaveBeenCalled()
+    expect(screen.getByText('Instalar no iPhone / iPad')).toBeDefined()
+    expect(screen.getByText(/Compartilhar/i)).toBeDefined()
     expect(screen.getByText(/Adicionar à Tela de Início/i)).toBeDefined()
+  })
+
+  it('CENÁRIO C (Outros navegadores sem suporte ao prompt direto): opens dynamic instructions for 3-dots menu', async () => {
+    mockIsStandalone = false
+    mockDeferredPrompt = null
+    mockHasNativePrompt = false
+    mockIsIos = false
+
+    render(
+      <MemoryRouter>
+        <ProfilePage />
+      </MemoryRouter>,
+    )
+
+    const installBtn = screen.getByRole('button', { name: /Instalar Aplicativo/i })
+    fireEvent.click(installBtn)
+
+    expect(mockTriggerInstall).not.toHaveBeenCalled()
+    expect(screen.getByText('Instalar Curiangoo')).toBeDefined()
+    expect(screen.getByText(/3 pontinhos/i)).toBeDefined()
+    expect(screen.getByText(/Instalar aplicativo/i)).toBeDefined()
   })
 })
