@@ -138,11 +138,22 @@ export default function Login() {
       <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-7 sm:p-8">
         {/* Logo & Marca */}
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 flex items-center justify-center text-3xl shadow-lg shadow-emerald-700/20 mb-3 text-white">
-            🌱
+          <div className="w-16 h-16 rounded-2xl bg-[#064E3B] p-1.5 shadow-lg shadow-emerald-950/20 mb-3 flex items-center justify-center overflow-hidden border border-emerald-600/30">
+            <img
+              src="/icon.svg"
+              alt="Curiangoo"
+              className="w-full h-full object-contain rounded-xl"
+              onError={(e) => {
+                e.currentTarget.onerror = null
+                e.currentTarget.src = '/icon-192.png'
+              }}
+            />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Finanças da Família</h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-xs">
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Curiangoo</h1>
+          <p className="text-xs sm:text-sm font-medium text-emerald-800/90 mt-0.5">
+            Finanças Familiares no Prumo
+          </p>
+          <p className="text-xs text-slate-500 mt-2 max-w-xs">
             {mode === 'login' &&
               'Acesse sua conta familiar para gerenciar receitas, despesas e investimentos.'}
             {mode === 'signup' &&
