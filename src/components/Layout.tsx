@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { useFamily } from '@/hooks/use-family'
 import { NewTransactionActionSheet } from '@/components/transactions/NewTransactionActionSheet'
-import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
-import { ImportStatementDialog } from '@/components/transactions/ImportStatementDialog'
 import { RecurringIncomesDialog } from '@/components/wallet/RecurringIncomesDialog'
+import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
+import { VoiceTransactionDialog } from '@/components/transactions/VoiceTransactionDialog'
+import { ImportStatementDialog } from '@/components/transactions/ImportStatementDialog'
 import { WhoIsUsingDialog } from '@/components/common/WhoIsUsingDialog'
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
 import { InstallPwaBanner } from '@/components/common/InstallPwaBanner'
@@ -38,12 +39,15 @@ export default function Layout() {
     isImportStatementOpen,
     setIsImportStatementOpen,
     isOnboardingOpen,
+    voiceTransactionData,
+    setVoiceTransactionData,
     setIsOnboardingOpen,
     categories,
     reloadFamily,
   } = useFamily()
 
   // Dados globais de receitas fixas para o modal compartilhado
+  const [isVoiceDialogOpen, setIsVoiceDialogOpen] = useState(false)
   const [globalRecurringIncomes, setGlobalRecurringIncomes] = useState<RecurringIncome[]>([])
   const [globalRecurringOverrides, setGlobalRecurringOverrides] = useState<
     RecurringIncomeOverride[]
@@ -80,7 +84,9 @@ export default function Layout() {
       case '/inicio':
         return 'Visão Geral'
       case '/carteira':
-        return 'Carteira & Orçamentos'
+        return 'Carteira & Extrato'
+      case '/orcamentos':
+        return 'Orçamentos & 3 Baldes'
       case '/metas':
         return 'Planejamento de Metas'
       case '/investimentos':
@@ -306,8 +312,20 @@ export default function Layout() {
         onOpenChange={setIsActionSheetOpen}
         onSelectExpense={() => openNewTransaction('expense')}
         onSelectIncome={() => openNewTransaction('income')}
-        onSelectRecurringIncomes={openRecurringIncomes}
-        onSelectImportStatement={openImportStatement}
+        onSelectVoiceAI={() => setIsVoiceDialogOpen(true)}
+      />
+
+      {/* DIÁLOGO GLOBAL DE LANÇAMENTO POR VOZ COM IA */}
+      <VoiceTransactionDialog
+        open={isVoiceDialogOpen}
+        onOpenChange={setIsVoiceDialogOpen}
+        onOpenManualTransaction={(data) => {
+          setVoiceTransactionData?.(data)
+          openNewTransaction(data.type)
+        }}
+        onSuccess={() => {
+          triggerRefresh()
+        }}
       />
 
       {/* DIÁLOGO GLOBAL DE RECEITAS FIXAS RECORRENTES */}
@@ -324,7 +342,15 @@ export default function Layout() {
       />
 
       {/* DIÁLOGO GLOBAL DE NOVA TRANSAÇÃO */}
-      <NewTransactionDialog open={isNewTransactionOpen} onOpenChange={setIsNewTransactionOpen} />
+      <NewTransactionDialog
+        open={isNewTransactionOpen}
+        onOpenChange={(open) => {
+          setIsNewTransactionOpen(open)
+          if (!open && setVoiceTransactionData) {
+            setVoiceTransactionData(null)
+          }
+        }}
+      />
 
       {/* DIÁLOGO GLOBAL DE IMPORTAÇÃO DE EXTRATO */}
       <ImportStatementDialog open={isImportStatementOpen} onOpenChange={setIsImportStatementOpen} />

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useFamily } from '@/hooks/use-family'
 import {
   fetchTransactions,
@@ -137,8 +138,21 @@ export default function WalletPage() {
     setLastImportSummary,
   } = useFamily()
   const { toast } = useToast()
+  const navigate = useNavigate()
+  const location = useLocation()
 
-  const [activeTab, setActiveTab] = useState<'transacoes' | 'orcamentos'>('transacoes')
+  const isOrcamentosRoute = location.pathname === '/orcamentos'
+  const [activeTab, setActiveTab] = useState<'transacoes' | 'orcamentos'>(() =>
+    isOrcamentosRoute ? 'orcamentos' : 'transacoes',
+  )
+
+  useEffect(() => {
+    if (location.pathname === '/orcamentos') {
+      setActiveTab('orcamentos')
+    } else if (location.pathname === '/carteira') {
+      setActiveTab('transacoes')
+    }
+  }, [location.pathname])
 
   // Mês selecionado no formato Date
   const [currentDate, setCurrentDate] = useState(() => new Date())
@@ -1138,7 +1152,10 @@ export default function WalletPage() {
           <div className="bg-slate-100 p-1 rounded-2xl w-full sm:w-72 grid grid-cols-2">
             <button
               type="button"
-              onClick={() => setActiveTab('transacoes')}
+              onClick={() => {
+                setActiveTab('transacoes')
+                navigate('/carteira', { replace: true })
+              }}
               className={`rounded-xl font-semibold text-xs py-2 transition-all ${
                 activeTab === 'transacoes'
                   ? 'bg-white text-emerald-700 shadow-sm'
@@ -1149,7 +1166,10 @@ export default function WalletPage() {
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('orcamentos')}
+              onClick={() => {
+                setActiveTab('orcamentos')
+                navigate('/orcamentos', { replace: true })
+              }}
               className={`rounded-xl font-semibold text-xs py-2 transition-all ${
                 activeTab === 'orcamentos'
                   ? 'bg-white text-emerald-700 shadow-sm'
@@ -1160,8 +1180,22 @@ export default function WalletPage() {
             </button>
           </div>
 
-          {/* Seletor de Mês Compartilhado */}
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+          {/* Seletor de Mês Compartilhado + Ação de Importar OFX na aba Carteira */}
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
+            {activeTab === 'transacoes' && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={openImportStatement}
+                className="rounded-2xl border-emerald-300 text-emerald-800 bg-emerald-50/80 hover:bg-emerald-100/80 text-xs font-bold gap-1.5 shadow-2xs h-9 px-3"
+                title="Importar e conciliar extrato bancário (OFX)"
+              >
+                <UploadCloud className="w-4 h-4 text-emerald-700 stroke-[2.2]" />
+                <span>📥 Importar OFX</span>
+              </Button>
+            )}
+
             <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-2xl border border-slate-200/80 shadow-sm">
               <button
                 onClick={handlePrevMonth}

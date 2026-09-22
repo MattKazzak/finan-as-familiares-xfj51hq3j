@@ -106,6 +106,7 @@ const App = () => (
           <Route element={<ProtectedLayout />}>
             <Route path="/inicio" element={<Home />} />
             <Route path="/carteira" element={<Wallet />} />
+            <Route path="/orcamentos" element={<Wallet />} />
             <Route path="/metas" element={<Goals />} />
             <Route path="/investimentos" element={<Investments />} />
             <Route path="/perfil" element={<Profile />} />

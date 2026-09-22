@@ -59,6 +59,8 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
     newTransactionDefaultType,
     triggerRefresh,
     openImportStatement,
+    voiceTransactionData,
+    setVoiceTransactionData,
   } = useFamily()
   const { user } = useAuth()
   const { toast } = useToast()

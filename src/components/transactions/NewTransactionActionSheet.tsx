@@ -6,23 +6,16 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet'
-import {
-  ArrowDownRight,
-  ArrowUpRight,
-  RefreshCw,
-  UploadCloud,
-  Mic,
-  ChevronRight,
-} from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { ArrowDownRight, ArrowUpRight, Mic, Sparkles, ChevronRight } from 'lucide-react'
 
 interface NewTransactionActionSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSelectExpense: () => void
   onSelectIncome: () => void
-  onSelectRecurringIncomes: () => void
-  onSelectImportStatement: () => void
+  onSelectVoiceAI: () => void
+  onSelectRecurringIncomes?: () => void
+  onSelectImportStatement?: () => void
 }
 
 export const NewTransactionActionSheet: React.FC<NewTransactionActionSheetProps> = ({
@@ -30,19 +23,8 @@ export const NewTransactionActionSheet: React.FC<NewTransactionActionSheetProps>
   onOpenChange,
   onSelectExpense,
   onSelectIncome,
-  onSelectRecurringIncomes,
-  onSelectImportStatement,
+  onSelectVoiceAI,
 }) => {
-  const { toast } = useToast()
-
-  const handleVoiceTextClick = () => {
-    toast({
-      title: 'Em breve!',
-      description:
-        'O lançamento por voz e inteligência de texto estará disponível em uma próxima atualização.',
-    })
-  }
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -57,13 +39,62 @@ export const NewTransactionActionSheet: React.FC<NewTransactionActionSheetProps>
             O que você deseja registrar?
           </SheetTitle>
           <SheetDescription className="text-xs text-slate-500">
-            Adicione uma transação rápida, configure contas e rendas fixas ou importe extratos.
+            Adicione uma despesa ou receita rapidamente no dia a dia da família.
           </SheetDescription>
         </SheetHeader>
 
-        <div className="space-y-4">
-          {/* DESTAQUE SUPERIOR, LADO A LADO */}
-          <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-3.5">
+          {/* ================= CARD DE DESTAQUE (HERÓI DO MENU) ================= */}
+          <button
+            type="button"
+            onClick={() => {
+              onOpenChange(false)
+              onSelectVoiceAI()
+            }}
+            className="w-full relative group overflow-hidden rounded-2xl bg-[#064E3B] hover:bg-[#053d2e] text-white p-4 sm:p-5 text-left shadow-lg shadow-emerald-950/20 border border-emerald-800 transition-all active:scale-[0.98]"
+          >
+            {/* Efeito de iluminação suave de fundo */}
+            <div className="absolute -top-12 -right-12 w-40 h-40 bg-emerald-400/15 rounded-full blur-2xl pointer-events-none" />
+
+            <div className="flex items-center justify-between gap-3 relative z-10">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-12 h-12 rounded-2xl bg-white/15 text-white flex items-center justify-center shrink-0 border border-white/20 shadow-sm group-hover:scale-105 transition-transform">
+                  <Mic className="w-6 h-6 text-emerald-300 stroke-[2.2]" />
+                </div>
+
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-1.5">
+                      <span>🎤 Falar Lançamento com IA</span>
+                    </span>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/30 text-emerald-200 border border-emerald-400/40 px-2 py-0.5 rounded-full">
+                      Novo
+                    </span>
+                  </div>
+                  <p className="text-xs text-emerald-100/90 mt-1 line-clamp-2 leading-relaxed">
+                    Fale naturalmente: &ldquo;Almoço 45 reais no débito&rdquo; ou &ldquo;Cerveja na
+                    mercearia 60&rdquo;
+                  </p>
+                </div>
+              </div>
+
+              <div className="shrink-0 pl-1 text-emerald-300 group-hover:translate-x-1 transition-transform">
+                <ChevronRight className="w-5 h-5 stroke-[2.5]" />
+              </div>
+            </div>
+
+            {/* Dica interativa no rodapé do herói */}
+            <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-emerald-200/80">
+              <span className="flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-emerald-300" />
+                Interpretação automática de valor, balde e categoria
+              </span>
+              <span className="font-semibold text-emerald-300 underline">Toque para falar →</span>
+            </div>
+          </button>
+
+          {/* ================= AÇÕES MANUAIS (LADO A LADO, COMPACTAS) ================= */}
+          <div className="grid grid-cols-2 gap-3 pt-1">
             {/* CARD 1: NOVA DESPESA */}
             <button
               type="button"
@@ -71,14 +102,16 @@ export const NewTransactionActionSheet: React.FC<NewTransactionActionSheetProps>
                 onOpenChange(false)
                 onSelectExpense()
               }}
-              className="group relative flex flex-col items-start p-4 rounded-2xl bg-gradient-to-br from-red-50 to-rose-50/60 border border-red-200/80 hover:border-red-300 text-left transition-all active:scale-[0.98] shadow-xs hover:shadow-sm"
+              className="group relative flex flex-col items-start p-3.5 rounded-2xl bg-gradient-to-br from-red-50 to-rose-50/60 border border-red-200/80 hover:border-red-300 text-left transition-all active:scale-[0.98] shadow-2xs hover:shadow-sm"
             >
-              <div className="w-11 h-11 rounded-2xl bg-red-500 text-white flex items-center justify-center shadow-md shadow-red-500/25 mb-3 group-hover:scale-105 transition-transform">
-                <ArrowDownRight className="w-6 h-6 stroke-[2.5]" />
+              <div className="w-10 h-10 rounded-2xl bg-red-500 text-white flex items-center justify-center shadow-md shadow-red-500/25 mb-2.5 group-hover:scale-105 transition-transform">
+                <ArrowDownRight className="w-5 h-5 stroke-[2.5]" />
               </div>
-              <span className="text-base font-bold text-slate-900 leading-tight">Nova Despesa</span>
-              <span className="text-[11px] text-slate-500 mt-1 line-clamp-2">
-                Gastos avulsos do dia a dia, compras ou contas pagas.
+              <span className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
+                🔴 Nova Despesa
+              </span>
+              <span className="text-[11px] text-slate-500 mt-1 line-clamp-1">
+                Gasto manual avulso
               </span>
             </button>
 
@@ -89,121 +122,18 @@ export const NewTransactionActionSheet: React.FC<NewTransactionActionSheetProps>
                 onOpenChange(false)
                 onSelectIncome()
               }}
-              className="group relative flex flex-col items-start p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50/60 border border-emerald-200/80 hover:border-emerald-300 text-left transition-all active:scale-[0.98] shadow-xs hover:shadow-sm"
+              className="group relative flex flex-col items-start p-3.5 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50/60 border border-emerald-200/80 hover:border-emerald-300 text-left transition-all active:scale-[0.98] shadow-2xs hover:shadow-sm"
             >
-              <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/25 mb-3 group-hover:scale-105 transition-transform">
-                <ArrowUpRight className="w-6 h-6 stroke-[2.5]" />
+              <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/25 mb-2.5 group-hover:scale-105 transition-transform">
+                <ArrowUpRight className="w-5 h-5 stroke-[2.5]" />
               </div>
-              <span className="text-base font-bold text-slate-900 leading-tight">Nova Receita</span>
-              <span className="text-[11px] text-slate-500 mt-1 line-clamp-2">
-                Entradas avulsas, rendas extras ou reembolsos.
+              <span className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
+                🟢 Nova Receita
+              </span>
+              <span className="text-[11px] text-slate-500 mt-1 line-clamp-1">
+                Entrada manual avulsa
               </span>
             </button>
-          </div>
-
-          {/* SEÇÃO 2: RECORRÊNCIAS E AUTOMAÇÕES */}
-          <div className="space-y-2 pt-1">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                Recorrências e Automações
-              </span>
-              <div className="h-px bg-slate-100 flex-1" />
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                onOpenChange(false)
-                onSelectRecurringIncomes()
-              }}
-              className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-slate-200/80 bg-white hover:bg-emerald-50/50 hover:border-emerald-300/80 transition-all text-left group active:scale-[0.99] shadow-2xs"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-emerald-100/80 text-emerald-800 flex items-center justify-center shrink-0 border border-emerald-200/60 group-hover:scale-105 transition-transform">
-                  <RefreshCw className="w-5 h-5 text-emerald-700" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-bold text-slate-900 group-hover:text-emerald-900 transition-colors">
-                      Contas & Rendas Recorrentes
-                    </span>
-                    <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded-full border border-emerald-200/70">
-                      Mensal
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 truncate mt-0.5">
-                    Gerencie salários, aluguel e contas fixas mensais da família.
-                  </p>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-700 shrink-0 ml-2 transition-transform group-hover:translate-x-0.5" />
-            </button>
-          </div>
-
-          {/* SEÇÃO 3: IMPORTAÇÃO E INTELIGÊNCIA */}
-          <div className="space-y-2 pt-1">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                Importação e Inteligência
-              </span>
-              <div className="h-px bg-slate-100 flex-1" />
-            </div>
-
-            <div className="space-y-2">
-              {/* ITEM 1: IMPORTAR EXTRATO */}
-              <button
-                type="button"
-                onClick={() => {
-                  onOpenChange(false)
-                  onSelectImportStatement()
-                }}
-                className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-slate-200/80 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all text-left group active:scale-[0.99] shadow-2xs"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0 border border-slate-200/70 group-hover:scale-105 transition-transform">
-                    <UploadCloud className="w-5 h-5 text-slate-600" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-sm font-bold text-slate-900 group-hover:text-slate-950 transition-colors">
-                        Importar Extrato
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 truncate mt-0.5">
-                      Arquivo OFX com conciliação automática.
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-700 shrink-0 ml-2 transition-transform group-hover:translate-x-0.5" />
-              </button>
-
-              {/* ITEM 2: LANÇAMENTO POR VOZ / TEXTO COM BADGE 'EM BREVE / PREMIUM' */}
-              <button
-                type="button"
-                onClick={handleVoiceTextClick}
-                className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-slate-200/60 bg-slate-50/70 hover:bg-slate-100/80 transition-all text-left group active:scale-[0.99] shadow-2xs cursor-pointer"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-200/60 group-hover:scale-105 transition-transform">
-                    <Mic className="w-5 h-5 text-indigo-600" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900 transition-colors">
-                        Lançamento por Voz / Texto
-                      </span>
-                      <span className="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.2 rounded-full whitespace-nowrap">
-                        Em Breve / Premium
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-400 truncate mt-0.5">
-                      Fale ou digite naturalmente: &ldquo;Gastei 50 no mercado hoje&rdquo;
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 shrink-0 ml-2 transition-transform group-hover:translate-x-0.5" />
-              </button>
-            </div>
           </div>
         </div>
       </SheetContent>

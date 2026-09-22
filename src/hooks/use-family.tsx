@@ -88,6 +88,14 @@ interface FamilyContextType {
   setIsNewTransactionOpen: (open: boolean) => void
   newTransactionDefaultType: 'income' | 'expense'
   openNewTransaction: (type?: 'income' | 'expense') => void
+  voiceTransactionData?: {
+    type: 'expense' | 'income'
+    amountCents: number
+    description: string
+    categoryId?: string
+    memberId?: string
+  } | null
+  setVoiceTransactionData?: (data: any) => void
   isActionSheetOpen: boolean
   setIsActionSheetOpen: (open: boolean) => void
   openActionSheet: () => void
@@ -135,6 +143,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null) // null = 'Todos'
   const [loading, setLoading] = useState<boolean>(true)
   const [isNewTransactionOpen, setIsNewTransactionOpen] = useState(false)
+  const [voiceTransactionData, setVoiceTransactionData] = useState<any>(null)
   const [isActionSheetOpen, setIsActionSheetOpen] = useState(false)
   const [isRecurringIncomesOpen, setIsRecurringIncomesOpen] = useState(false)
   const [isImportStatementOpen, setIsImportStatementOpen] = useState(false)
@@ -515,6 +524,8 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         setIsNewTransactionOpen,
         newTransactionDefaultType,
         openNewTransaction,
+        voiceTransactionData,
+        setVoiceTransactionData,
         isActionSheetOpen,
         setIsActionSheetOpen,
         openActionSheet,
