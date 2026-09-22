@@ -32,15 +32,33 @@ export default function ResetPassword() {
     document.title = 'Criar Nova Senha — Curiango'
   }, [])
 
+  // Checagem de tokens/hashes na URL
+  const hasRecoveryInUrl = () => {
+    if (typeof window === 'undefined') return false
+    const hash = window.location.hash || ''
+    const search = window.location.search || ''
+    return (
+      hash.includes('type=recovery') ||
+      hash.includes('access_token') ||
+      search.includes('code=') ||
+      search.includes('type=recovery')
+    )
+  }
+
   // Proteção da rota:
-  // Se não estiver carregando, e não houver usuário ou não estiver em recovery, redireciona
+  // Não redireciona se estiver carregando ou se a URL ainda contiver tokens sendo processados
   useEffect(() => {
     if (!loading) {
-      if (!user) {
-        // Sem usuário / sem token de sessão
+      if (hasRecoveryInUrl()) {
+        // Aguarda a troca do token/code pelo supabase client
+        return
+      }
+
+      if (!user && !isPasswordRecovery) {
+        // Sem usuário autenticado e sem indício de recuperação
         navigate('/', { replace: true })
-      } else if (!isPasswordRecovery) {
-        // Usuário logado normal sem fluxo de recuperação de senha
+      } else if (user && !isPasswordRecovery) {
+        // Usuário logado padrão acessando a rota sem estar em recuperação
         navigate('/inicio', { replace: true })
       }
     }
@@ -128,7 +146,9 @@ export default function ResetPassword() {
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 flex items-center justify-center text-3xl shadow-lg shadow-emerald-700/20 mb-3 text-white">
             <KeyRound className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Criar Nova Senha</h1>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+            Criar Nova Senha — Curiango
+          </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-xs">
             Escolha uma nova senha forte para proteger sua conta e as finanças da sua família.
           </p>
@@ -180,10 +200,10 @@ export default function ResetPassword() {
             </div>
           </div>
 
-          {/* Campo Confirme a Nova Senha */}
+          {/* Campo Confirmar Nova Senha */}
           <div>
             <Label htmlFor="confirm-new-password" className="text-xs font-semibold text-slate-700">
-              Confirme a Nova Senha
+              Confirmar Nova Senha
             </Label>
             <div className="relative mt-1">
               <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />

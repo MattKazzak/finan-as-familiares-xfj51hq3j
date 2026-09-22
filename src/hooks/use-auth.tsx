@@ -37,11 +37,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true)
   const [isPasswordRecovery, setIsPasswordRecovery] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false
-    // Checa se a URL tem indicativo de recovery (hash `#access_token=...&type=recovery` ou query `?type=recovery`)
     const hash = window.location.hash || ''
     const search = window.location.search || ''
+    // Detecção abrangente de fluxo de recuperação de senha:
+    // 1. Hash com type=recovery ou access_token (links implícitos ou explícitos do Supabase)
+    // 2. Search query com code= ou type=recovery
+    // 3. Rota direta /redefinir-senha
     return (
       hash.includes('type=recovery') ||
+      hash.includes('access_token') ||
+      search.includes('code=') ||
       search.includes('type=recovery') ||
       window.location.pathname === '/redefinir-senha'
     )
@@ -67,6 +72,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // 2. Se a URL veio com code PKCE (?code=...), troca o code por sessão caso ainda não trocado
     const searchParams = new URLSearchParams(window.location.search)
     const code = searchParams.get('code')
+    const hash = window.location.hash || ''
+
     if (code) {
       supabase.auth
         .exchangeCodeForSession(code)
@@ -74,13 +81,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (!error && data?.session) {
             setSession(data.session)
             setUser(data.session.user)
-            // Se estamos em rota de redefinir senha ou veio com recovery flag
-            if (
-              window.location.pathname === '/redefinir-senha' ||
-              searchParams.get('type') === 'recovery'
-            ) {
-              setIsPasswordRecovery(true)
-            }
+            setIsPasswordRecovery(true)
           }
           setLoading(false)
         })
@@ -88,6 +89,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setLoading(false)
         })
     } else {
+      // Checa se o hash contém type=recovery ou access_token
+      if (hash.includes('type=recovery') || hash.includes('access_token')) {
+        setIsPasswordRecovery(true)
+      }
+
       supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
         setSession(initialSession)
         setUser(initialSession?.user ?? null)

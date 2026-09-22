@@ -15,9 +15,28 @@ import Profile from '@/pages/Profile'
 import NotFound from '@/pages/NotFound'
 import { Loader2 } from 'lucide-react'
 
+// Verifica síncronamente na URL se há indício de recuperação de senha
+function checkIsRecoveryUrl(): boolean {
+  if (typeof window === 'undefined') return false
+  const hash = window.location.hash || ''
+  const search = window.location.search || ''
+  return (
+    hash.includes('type=recovery') ||
+    hash.includes('access_token') ||
+    search.includes('code=') ||
+    search.includes('type=recovery') ||
+    window.location.pathname === '/redefinir-senha'
+  )
+}
+
 // Guarda de rota autenticada
 function ProtectedLayout() {
   const { user, loading, isPasswordRecovery } = useAuth()
+  const isRecoveryUrl = checkIsRecoveryUrl()
+
+  if (isPasswordRecovery || isRecoveryUrl) {
+    return <Navigate to="/redefinir-senha" replace />
+  }
 
   if (loading) {
     return (
@@ -37,10 +56,6 @@ function ProtectedLayout() {
     return <Navigate to="/" replace />
   }
 
-  if (isPasswordRecovery) {
-    return <Navigate to="/redefinir-senha" replace />
-  }
-
   return (
     <FamilyProvider>
       <Layout />
@@ -48,9 +63,16 @@ function ProtectedLayout() {
   )
 }
 
-// Guarda para rota de login (se já estiver logado, redireciona para /inicio, a menos que esteja em PASSWORD_RECOVERY)
+// Guarda para rota de login
 function LoginRoute() {
   const { user, loading, isPasswordRecovery } = useAuth()
+  const isRecoveryUrl = checkIsRecoveryUrl()
+
+  // Se o usuário veio pelo link de recuperação de senha ou a URL contém parâmetros de recuperação,
+  // redireciona IMEDIATAMENTE para /redefinir-senha, antes de checar estado de login ou loading
+  if (isPasswordRecovery || isRecoveryUrl) {
+    return <Navigate to="/redefinir-senha" replace />
+  }
 
   if (loading) {
     return (
@@ -58,11 +80,6 @@ function LoginRoute() {
         <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
       </div>
     )
-  }
-
-  // Se o usuário veio pelo link de recuperação de senha, prioriza redirecionar para a redefinição de senha
-  if (isPasswordRecovery) {
-    return <Navigate to="/redefinir-senha" replace />
   }
 
   if (user) {
@@ -79,11 +96,11 @@ const App = () => (
         <Toaster />
         <Sonner />
         <Routes>
+          {/* Rota pública e dedicada de redefinição de senha */}
+          <Route path="/redefinir-senha" element={<ResetPassword />} />
+
           {/* Rota pública de login */}
           <Route path="/" element={<LoginRoute />} />
-
-          {/* Rota de redefinição de senha (recuperação) */}
-          <Route path="/redefinir-senha" element={<ResetPassword />} />
 
           {/* Rotas protegidas envolvidas pelo Layout */}
           <Route element={<ProtectedLayout />}>
