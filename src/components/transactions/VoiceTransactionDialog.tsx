@@ -441,23 +441,68 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
   const currentDisplaySpeech = textoFalado.trim()
   const aiStatus = parsedResult?.aiStatus || (parsedResult?.amountCents ? 'sucesso' : 'invalido')
+  const processingSource = parsedResult?.processingSource || 'local'
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 sm:max-w-lg shadow-2xl">
         <DialogHeader className="text-left space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
-              <Sparkles className="w-4 h-4 text-emerald-700" />
-            </span>
-            <DialogTitle className="text-lg font-bold text-slate-900 tracking-tight">
-              Lançamento por Voz com IA
-            </DialogTitle>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                <Sparkles className="w-4 h-4 text-emerald-700" />
+              </span>
+              <DialogTitle className="text-lg font-bold text-slate-900 tracking-tight">
+                Lançamento por Voz com IA
+              </DialogTitle>
+            </div>
+
+            {/* Badge discreto da fonte de processamento quando houver resultado */}
+            {parsedResult && !isProcessingAi && (
+              <span
+                className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1 shrink-0 ${
+                  processingSource === 'openai'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200/80 shadow-xs'
+                    : 'bg-amber-50 text-amber-800 border-amber-200/80 shadow-xs'
+                }`}
+              >
+                {processingSource === 'openai' ? (
+                  <>
+                    <Sparkles className="w-3 h-3 text-emerald-600" />
+                    <span>✨ GPT-4o Mini Ativo</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="w-3 h-3 text-amber-600" />
+                    <span>⚠️ Fallback Local</span>
+                  </>
+                )}
+              </span>
+            )}
           </div>
           <DialogDescription className="text-xs text-slate-500">
             Fale naturalmente sua despesa ou receita. O Curiangoo AI extrai valor, balde 50/30/20,
             categoria e subcategoria.
           </DialogDescription>
+
+          {/* Banner de erro da OpenAI / Edge Function quando cair no fallback local com erro */}
+          {parsedResult &&
+            !isProcessingAi &&
+            processingSource === 'local' &&
+            parsedResult.aiError && (
+              <div className="mt-2 text-xs px-3 py-2 rounded-xl border border-amber-300 bg-amber-50/90 text-amber-900 flex items-start gap-2 text-left">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex-1 leading-snug">
+                  <span className="font-bold block text-amber-950">
+                    Aviso da Inteligência Artificial:
+                  </span>
+                  <span className="text-amber-800 break-words">{parsedResult.aiError}</span>
+                  <span className="block text-[11px] text-amber-700/80 mt-0.5">
+                    Processamos seu lançamento via parser local para não interromper seu fluxo.
+                  </span>
+                </div>
+              </div>
+            )}
         </DialogHeader>
 
         {/* ================= ESTADO DE PROCESSAMENTO IA ================= */}

@@ -39,6 +39,7 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({
           status: 'invalido',
           error: 'OPENAI_API_KEY_NOT_CONFIGURED',
+          error_detail: 'Chave OPENAI_API_KEY não configurada no backend Supabase.',
           transacao: null,
           pergunta_clarificacao: null,
           opcoes_sugestao: null,
@@ -244,10 +245,24 @@ Comportamentos esperados:
     if (!openaiRes.ok) {
       const errText = await openaiRes.text()
       console.error('OpenAI API Error:', openaiRes.status, errText)
+      let errorMessage = `Erro OpenAI HTTP ${openaiRes.status}`
+      try {
+        const parsedErr = JSON.parse(errText)
+        if (parsedErr?.error?.message) {
+          errorMessage = `Erro OpenAI: ${parsedErr.error.message} (HTTP ${openaiRes.status})`
+        }
+      } catch {
+        if (errText) {
+          errorMessage = `Erro OpenAI (${openaiRes.status}): ${errText.slice(0, 100)}`
+        }
+      }
+
       return new Response(
         JSON.stringify({
           status: 'invalido',
           error: 'OPENAI_ERROR',
+          error_detail: errorMessage,
+          openai_status: openaiRes.status,
           transacao: null,
           pergunta_clarificacao: null,
           opcoes_sugestao: null,
@@ -292,6 +307,7 @@ Comportamentos esperados:
       JSON.stringify({
         status: 'invalido',
         error: err?.message || 'INTERNAL_ERROR',
+        error_detail: err?.message || 'Erro interno na Edge Function voice-parse',
         transacao: null,
         pergunta_clarificacao: null,
         opcoes_sugestao: null,

@@ -63,6 +63,7 @@ describe('VoiceTransactionDialog', () => {
         subcategoryNameSuggestion: 'Restaurante',
         bucketSuggestion: 'lifestyle',
         confidence: 0.95,
+        processingSource: 'openai',
         aiStatus: 'sucesso',
         clarificationQuestion: null,
         clarificationOptions: null,
@@ -394,6 +395,7 @@ describe('VoiceTransactionDialog', () => {
       categoryNameSuggestion: 'Outro',
       bucketSuggestion: 'lifestyle',
       confidence: 0.7,
+      processingSource: 'openai',
       aiStatus: 'clarificacao',
       clarificationQuestion: 'O que foi Pindamonhangaba?',
       clarificationOptions: ['Transporte / Passagem', 'Alimentação / Doce', 'Lazer / Passeio'],
@@ -439,6 +441,7 @@ describe('VoiceTransactionDialog', () => {
       type: 'expense',
       description: 'abobrinha voadora',
       confidence: 0.1,
+      processingSource: 'openai',
       aiStatus: 'invalido',
       clarificationQuestion: null,
       clarificationOptions: null,
@@ -469,6 +472,75 @@ describe('VoiceTransactionDialog', () => {
         ),
       ).toBeDefined()
       expect(screen.getByText('🎤 Tentar Novamente')).toBeDefined()
+    })
+  })
+
+  it('exibe badge "✨ GPT-4o Mini Ativo" quando a resposta vem da OpenAI', async () => {
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Ex: Almoço 45 reais no débito')
+    fireEvent.change(input, { target: { value: 'Almoço 45 reais' } })
+    fireEvent.click(screen.getByText('Processar com IA'))
+
+    await waitFor(() => {
+      expect(screen.getByText(/✨ GPT-4o Mini Ativo/i)).toBeDefined()
+    })
+  })
+
+  it('exibe badge "⚠️ Fallback Local" e mensagem de erro detalhada quando chamada à OpenAI falha', async () => {
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'Almoço 45 reais',
+      amountCents: 4500,
+      amountFormatted: 'R$ 45,00',
+      type: 'expense',
+      description: 'Almoço',
+      paymentMethod: undefined,
+      categoryNameSuggestion: 'Alimentação',
+      subcategoryNameSuggestion: undefined,
+      bucketSuggestion: 'lifestyle',
+      confidence: 0.8,
+      processingSource: 'local',
+      aiStatus: 'sucesso',
+      clarificationQuestion: null,
+      clarificationOptions: null,
+      friendlyMessage: null,
+      aiError: 'Erro OpenAI: chave inválida ou não configurada (HTTP 401)',
+    })
+
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Ex: Almoço 45 reais no débito')
+    fireEvent.change(input, { target: { value: 'Almoço 45 reais' } })
+    fireEvent.click(screen.getByText('Processar com IA'))
+
+    await waitFor(() => {
+      expect(screen.getByText(/⚠️ Fallback Local/i)).toBeDefined()
+      expect(
+        screen.getByText(/Erro OpenAI: chave inválida ou não configurada \(HTTP 401\)/i),
+      ).toBeDefined()
+      expect(
+        screen.getByText(
+          /Processamos seu lançamento via parser local para não interromper seu fluxo/i,
+        ),
+      ).toBeDefined()
     })
   })
 

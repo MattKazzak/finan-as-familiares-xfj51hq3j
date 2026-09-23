@@ -21,6 +21,9 @@ export interface VoiceAiResponse {
   pergunta_clarificacao: string | null
   opcoes_sugestao: string[] | null
   mensagem_amigavel: string | null
+  error?: string | null
+  error_detail?: string | null
+  openai_status?: number | null
 }
 
 export interface ParsedVoiceTransaction {
@@ -34,11 +37,13 @@ export interface ParsedVoiceTransaction {
   subcategoryNameSuggestion?: string
   bucketSuggestion?: 'essential' | 'lifestyle' | 'goals'
   confidence: number
-  // Campos da IA enriquecidos
+  // Campos da IA enriquecidos e transparência de processamento
+  processingSource?: 'openai' | 'local'
   aiStatus?: VoiceAiStatus
   clarificationQuestion?: string | null
   clarificationOptions?: string[] | null
   friendlyMessage?: string | null
+  aiError?: string | null
 }
 
 // Mapeamento de números por extenso em português
@@ -741,6 +746,7 @@ export function parseVoiceInput(
     categoryNameSuggestion: categoryName,
     bucketSuggestion: bucket,
     confidence: Math.min(confidence, 1.0),
+    processingSource: 'local',
     aiStatus: amountCents > 0 ? 'sucesso' : 'invalido',
     friendlyMessage:
       amountCents > 0
@@ -804,9 +810,11 @@ export function mapAiResponseToParsedTransaction(
     subcategoryNameSuggestion: transacao?.subcategoria || undefined,
     bucketSuggestion: bucket,
     confidence: aiData.status === 'sucesso' ? 0.95 : aiData.status === 'clarificacao' ? 0.7 : 0.2,
+    processingSource: 'openai',
     aiStatus: aiData.status,
     clarificationQuestion: aiData.pergunta_clarificacao,
     clarificationOptions: aiData.opcoes_sugestao,
     friendlyMessage: aiData.mensagem_amigavel,
+    aiError: aiData.error_detail || (aiData.error ? `Erro: ${aiData.error}` : null),
   }
 }
