@@ -66,7 +66,7 @@ describe('VoiceTransactionDialog', () => {
     })
   })
 
-  it('exibe estado visual "Ouvindo... pode falar" quando microfone é ativado', async () => {
+  it('exibe estado visual "Ouvindo... fale agora" quando microfone é ativado', async () => {
     // Mock de SpeechRecognition simples
     class MockSpeechRecognition {
       lang = ''
@@ -96,7 +96,221 @@ describe('VoiceTransactionDialog', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText(/Ouvindo\.\.\. pode falar/i)).toBeDefined()
+      expect(screen.getByText(/Ouvindo\.\.\. fale agora/i)).toBeDefined()
+    })
+  })
+
+  it('configura o SpeechRecognition com pt-BR, continuous=false, interimResults=true e para as faixas de permissão imediatamente', async () => {
+    let capturedRecognitionInstance: any = null
+
+    function MockSpeechRecognition() {
+      const self = {
+        lang: '',
+        continuous: false,
+        interimResults: false,
+        onstart: null as any,
+        onresult: null as any,
+        onerror: null as any,
+        onend: null as any,
+        start() {
+          if (self.onstart) self.onstart()
+        },
+        stop() {
+          if (self.onend) self.onend()
+        },
+        abort() {},
+      }
+      capturedRecognitionInstance = self
+      return self
+    }
+
+    ;(window as any).SpeechRecognition = MockSpeechRecognition
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(capturedRecognitionInstance).toBeTruthy()
+      expect(capturedRecognitionInstance.lang).toBe('pt-BR')
+      expect(capturedRecognitionInstance.continuous).toBe(false)
+      expect(capturedRecognitionInstance.interimResults).toBe(true)
+    })
+
+    // Confirma que as tracks do getUserMedia foram liberadas imediatamente após obter a permissão
+    expect(mockTrackStop).toHaveBeenCalled()
+  })
+
+  it('captura fala em tempo real via onresult com interimResults e atualiza a tela', async () => {
+    let capturedRecognitionInstance: any = null
+
+    function MockSpeechRecognition() {
+      const self = {
+        lang: '',
+        continuous: false,
+        interimResults: false,
+        onstart: null as any,
+        onresult: null as any,
+        onerror: null as any,
+        onend: null as any,
+        start() {
+          if (self.onstart) self.onstart()
+        },
+        stop() {
+          if (self.onend) self.onend()
+        },
+        abort() {},
+      }
+      capturedRecognitionInstance = self
+      return self
+    }
+
+    ;(window as any).SpeechRecognition = MockSpeechRecognition
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(capturedRecognitionInstance).toBeTruthy()
+    })
+
+    // Simula evento onresult com resultados parciais
+    capturedRecognitionInstance.onresult({
+      resultIndex: 0,
+      results: [[{ transcript: 'Almoço 45 reais no débito' }]],
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/Almoço 45 reais no débito/i)).toBeDefined()
+    })
+  })
+
+  it('ao disparar onend ou clicar em Concluir, processa o texto falado final com o parser', async () => {
+    let capturedRecognitionInstance: any = null
+
+    function MockSpeechRecognition() {
+      const self = {
+        lang: '',
+        continuous: false,
+        interimResults: false,
+        onstart: null as any,
+        onresult: null as any,
+        onerror: null as any,
+        onend: null as any,
+        start() {
+          if (self.onstart) self.onstart()
+        },
+        stop() {
+          if (self.onend) self.onend()
+        },
+        abort() {},
+      }
+      capturedRecognitionInstance = self
+      return self
+    }
+
+    ;(window as any).SpeechRecognition = MockSpeechRecognition
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(capturedRecognitionInstance).toBeTruthy()
+    })
+
+    // Simula fala detectada
+    capturedRecognitionInstance.onresult({
+      resultIndex: 0,
+      results: [[{ transcript: 'Almoço 45 reais no débito' }]],
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/Almoço 45 reais no débito/i)).toBeDefined()
+    })
+
+    // Botão Concluir presente
+    const btnConcluir = screen.getByText('Concluir')
+    expect(btnConcluir).toBeDefined()
+
+    // Simula finalização da fala pelo reconhecimento nativo
+    capturedRecognitionInstance.onend()
+
+    // Transição para o estado de confirmação (resumo do parser com R$ 45,00)
+    await waitFor(() => {
+      expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
+      expect(screen.getByText('Ajustar')).toBeDefined()
+      expect(screen.getByText('R$ 45,00')).toBeDefined()
+    })
+  })
+
+  it('exibe mensagem amigável em português quando ocorre onerror no SpeechRecognition (no-speech, network)', async () => {
+    let capturedRecognitionInstance: any = null
+
+    function MockSpeechRecognition() {
+      const self = {
+        lang: '',
+        continuous: false,
+        interimResults: false,
+        onstart: null as any,
+        onresult: null as any,
+        onerror: null as any,
+        onend: null as any,
+        start() {
+          if (self.onstart) self.onstart()
+        },
+        stop() {
+          if (self.onend) self.onend()
+        },
+        abort() {},
+      }
+      capturedRecognitionInstance = self
+      return self
+    }
+
+    ;(window as any).SpeechRecognition = MockSpeechRecognition
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(capturedRecognitionInstance).toBeTruthy()
+    })
+
+    // Simula erro no-speech
+    capturedRecognitionInstance.onerror({ error: 'no-speech' })
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Não consegui ouvir nada. Tente falar mais perto do microfone.'),
+      ).toBeDefined()
+    })
+
+    // Simula erro network
+    capturedRecognitionInstance.onerror({ error: 'network' })
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Problema de conexão. Verifique sua internet e tente de novo.'),
+      ).toBeDefined()
     })
   })
 

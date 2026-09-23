@@ -59,8 +59,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
   // Estados de voz e transcrição
   const [isListening, setIsListening] = useState(false)
-  const [transcript, setTranscript] = useState('')
-  const [interimTranscript, setInterimTranscript] = useState('')
+  const [textoFalado, setTextoFalado] = useState('')
   const [parsedResult, setParsedResult] = useState<ParsedVoiceTransaction | null>(null)
   const [selectedMemberId, setSelectedMemberId] = useState<string>('')
   const [isSaving, setIsSaving] = useState(false)
@@ -133,8 +132,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     (overrideText?: string) => {
       stopListening()
 
-      const textToProcess =
-        overrideText !== undefined ? overrideText : `${transcript} ${interimTranscript}`.trim()
+      const textToProcess = (overrideText !== undefined ? overrideText : textoFalado).trim()
 
       if (!textToProcess) {
         return
@@ -143,7 +141,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       const parsed = parseVoiceInput(textToProcess, categories)
       setParsedResult(parsed)
     },
-    [categories, interimTranscript, stopListening, transcript],
+    [categories, stopListening, textoFalado],
   )
 
   // Timer de ~2.2s de silêncio contínuo para parada automática
@@ -157,7 +155,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     }, 2200)
   }, [handleStopAndProcess])
 
-  // Iniciar reconhecimento de fala nativo (SpeechRecognition) usando a permissão já obtida
+  // Iniciar reconhecimento de fala nativo (SpeechRecognition pt-BR)
   const startSpeechRecognitionFlow = useCallback(
     (SpeechRecognitionClass: any) => {
       try {
@@ -171,9 +169,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
         const recognition = new SpeechRecognitionClass()
         recognition.lang = 'pt-BR'
-        // continuous = false conforme requisito
         recognition.continuous = false
-        recognition.interimResults = true
+        recognition.interimResults = true // Permite ver o texto sendo digitado em tempo real enquanto a pessoa fala
         recognition.maxAlternatives = 1
 
         recognition.onstart = () => {
@@ -182,28 +179,19 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           speechDetectedRef.current = false
         }
 
+        // Evento onresult com iteração exata especificada
         recognition.onresult = (event: any) => {
           speechDetectedRef.current = true
           resetSilenceTimer()
 
-          let currentInterim = ''
-          let currentFinal = ''
-
+          let transcript = ''
           for (let i = event.resultIndex; i < event.results.length; ++i) {
-            const item = event.results[i]
-            if (item.isFinal) {
-              currentFinal += item[0].transcript
-            } else {
-              currentInterim += item[0].transcript
-            }
+            transcript += event.results[i][0].transcript
           }
-
-          if (currentFinal) {
-            setTranscript((prev) => (prev ? `${prev} ${currentFinal}` : currentFinal))
-          }
-          setInterimTranscript(currentInterim)
+          setTextoFalado(transcript)
         }
 
+        // Mensagens de erro amigáveis em português
         recognition.onerror = (event: any) => {
           console.warn('Speech recognition error:', event.error)
           if (
@@ -214,31 +202,27 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             setPermissionStatus('denied')
             setErrorMessage('Acesso ao microfone foi negado.')
           } else if (event.error === 'no-speech') {
-            // Silêncio / sem fala detectada
-            setIsListening(false)
+            setErrorMessage('Não consegui ouvir nada. Tente falar mais perto do microfone.')
           } else if (event.error === 'network') {
-            setErrorMessage(
-              'Falha de conexão com o serviço de voz. Verifique sua internet ou tente novamente.',
-            )
+            setErrorMessage('Problema de conexão. Verifique sua internet e tente de novo.')
+          } else if (event.error === 'audio-capture') {
+            setErrorMessage('Nenhum microfone encontrado ou o dispositivo está bloqueado.')
           } else {
             setErrorMessage('Não conseguimos ouvir com clareza. Tente falar novamente.')
           }
           setIsListening(false)
         }
 
+        // Ao parar de falar (onend), exibe o texto final capturado e envia para a estruturação dos dados
         recognition.onend = () => {
           setIsListening(false)
-          // Se contínuo = false parou e temos transcrição capturada, processar
-          setTranscript((currTranscript) => {
-            setInterimTranscript((currInterim) => {
-              const full = `${currTranscript} ${currInterim}`.trim()
-              if (full && !parsedResult) {
-                const parsed = parseVoiceInput(full, categories)
-                setParsedResult(parsed)
-              }
-              return currInterim
-            })
-            return currTranscript
+          setTextoFalado((currentText) => {
+            const finalClean = currentText.trim()
+            if (finalClean && !parsedResult) {
+              const parsed = parseVoiceInput(finalClean, categories)
+              setParsedResult(parsed)
+            }
+            return currentText
           })
           stopAudioTracks()
         }
@@ -315,63 +299,77 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   )
 
   // Função central: SOLICITAÇÃO ATIVA DE PERMISSÃO (nativa do SO)
-  // const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  // 1. Liberação do Stream de Permissão (Correção do Microfone Preso):
+  // Se utilizar navigator.mediaDevices.getUserMedia para solicitar permissão,
+  // parar e fechar todas as tracks imediatamente após a confirmação:
+  // stream.getTracks().forEach(track => track.stop());
   const requestMicAndStartListening = useCallback(async () => {
     setErrorMessage(null)
     setPermissionStatus('requesting')
 
-    if (!navigator?.mediaDevices?.getUserMedia) {
+    const SpeechRecognitionClass =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+
+    // Se temos getUserMedia, solicitamos a permissão do microfone
+    if (navigator?.mediaDevices?.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        setPermissionStatus('granted')
+
+        if (SpeechRecognitionClass) {
+          // IMPORTANTÍSSIMO: Para o SpeechRecognition receber áudio no Android/Chrome sem conflito,
+          // liberar e fechar IMEDIATAMENTE todas as faixas do stream de verificação de permissão.
+          // A permissão do sistema continua concedida mesmo após parar as tracks!
+          try {
+            stream.getTracks().forEach((track) => track.stop())
+          } catch (trackErr) {
+            console.warn('Erro ao liberar tracks do stream de permissão:', trackErr)
+          }
+          streamRef.current = null
+
+          // Inicia o reconhecimento de voz nativo com canal de áudio totalmente desimpedido
+          startSpeechRecognitionFlow(SpeechRecognitionClass)
+        } else {
+          // Fallback para quando o navegador não tem SpeechRecognition: precisa manter o stream ativo para MediaRecorder
+          streamRef.current = stream
+          startMediaRecorderFallback(stream)
+        }
+      } catch (err: any) {
+        console.warn('Erro ao obter permissão de microfone:', err)
+        stopAudioTracks()
+
+        if (
+          err?.name === 'NotAllowedError' ||
+          err?.name === 'PermissionDeniedError' ||
+          err?.message?.includes?.('Permission denied')
+        ) {
+          setPermissionStatus('denied')
+          setErrorMessage('Permissão para uso do microfone foi negada.')
+        } else if (err?.name === 'NotFoundError' || err?.name === 'DevicesNotFoundError') {
+          setPermissionStatus('unsupported')
+          setErrorMessage('Nenhum microfone foi encontrado no seu aparelho.')
+        } else {
+          setPermissionStatus('denied')
+          setErrorMessage('Não foi possível acessar o microfone. Verifique as configurações.')
+        }
+      }
+    } else if (SpeechRecognitionClass) {
+      // Se não tem mediaDevices mas tem SpeechRecognition nativo
+      setPermissionStatus('granted')
+      startSpeechRecognitionFlow(SpeechRecognitionClass)
+    } else {
       setPermissionStatus('unsupported')
       setErrorMessage(
         'Seu navegador não possui suporte para acesso ao microfone. Use a digitação abaixo.',
       )
       setManualTextMode(true)
-      return
-    }
-
-    try {
-      // 1. Chamada OBRIGATÓRIA ao getUserMedia nativo do SO
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      streamRef.current = stream
-      setPermissionStatus('granted')
-
-      // Verificar suporte a SpeechRecognition
-      const SpeechRecognitionClass =
-        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-
-      if (SpeechRecognitionClass) {
-        // Fluxo com SpeechRecognition nativo
-        startSpeechRecognitionFlow(SpeechRecognitionClass)
-      } else {
-        // Fluxo fallback com MediaRecorder autorizado
-        startMediaRecorderFallback(stream)
-      }
-    } catch (err: any) {
-      console.warn('Erro ao obter permissão de microfone:', err)
-      stopAudioTracks()
-
-      if (
-        err?.name === 'NotAllowedError' ||
-        err?.name === 'PermissionDeniedError' ||
-        err?.message?.includes?.('Permission denied')
-      ) {
-        setPermissionStatus('denied')
-        setErrorMessage('Permissão para uso do microfone foi negada.')
-      } else if (err?.name === 'NotFoundError' || err?.name === 'DevicesNotFoundError') {
-        setPermissionStatus('unsupported')
-        setErrorMessage('Nenhum microfone foi encontrado no seu aparelho.')
-      } else {
-        setPermissionStatus('denied')
-        setErrorMessage('Não foi possível acessar o microfone. Verifique as configurações.')
-      }
     }
   }, [startMediaRecorderFallback, startSpeechRecognitionFlow, stopAudioTracks])
 
   // Resetar e iniciar gravação ao abrir/fechar o modal
   useEffect(() => {
     if (open) {
-      setTranscript('')
-      setInterimTranscript('')
+      setTextoFalado('')
       setParsedResult(null)
       setManualTextMode(false)
       setManualTextInput('')
@@ -480,7 +478,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     })
   }
 
-  const currentDisplaySpeech = `${transcript} ${interimTranscript}`.trim()
+  const currentDisplaySpeech = textoFalado.trim()
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -563,13 +561,13 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                   )}
                 </div>
 
-                {/* Status textual com texto EXATO solicitado: "Ouvindo... pode falar" */}
+                {/* Status textual com texto EXATO solicitado: "Ouvindo... fale agora" */}
                 <div className="flex flex-col items-center gap-1">
                   <span className="text-xs font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
                     {isListening ? (
                       <>
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                        Ouvindo... pode falar
+                        Ouvindo... fale agora
                       </>
                     ) : permissionStatus === 'requesting' ? (
                       'Solicitando permissão...'
@@ -584,7 +582,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                     </span>
                   )}
                 </div>
-
                 {/* Exibição da Transcrição Falada */}
                 <div className="mt-3 min-h-[48px] max-w-sm flex items-center justify-center">
                   {currentDisplaySpeech ? (
@@ -630,15 +627,13 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    setTranscript('')
-                    setInterimTranscript('')
+                    setTextoFalado('')
                     requestMicAndStartListening()
                   }}
                   className="text-xs rounded-xl"
                 >
                   Recomeçar
                 </Button>
-
                 <Button
                   type="button"
                   size="sm"
@@ -652,9 +647,9 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                       Processando...
                     </>
                   ) : (
-                    'Parar e Processar'
+                    'Concluir'
                   )}
-                </Button>
+                </Button>{' '}
               </div>
             )}
 
@@ -728,8 +723,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 type="button"
                 onClick={() => {
                   setParsedResult(null)
-                  setTranscript('')
-                  setInterimTranscript('')
+                  setTextoFalado('')
                   requestMicAndStartListening()
                 }}
                 className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 underline shrink-0"
