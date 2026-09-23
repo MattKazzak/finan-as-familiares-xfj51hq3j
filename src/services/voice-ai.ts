@@ -41,11 +41,16 @@ export async function parseVoiceWithAi({
     })
 
     if (error) {
-      console.warn('Erro ao invocar edge function voice-parse, acionando fallback local:', error)
+      console.warn('Erro ao invocar edge function voice-parse:', error)
       let detailedError = error.message || 'Falha na conexão com a Edge Function'
+      let httpStatus: number | string | null = null
 
       // Se a resposta contiver contexto de erro ou status HTTP da function
       const anyError = error as any
+      if (anyError?.context?.status) {
+        httpStatus = anyError.context.status
+      }
+
       if (anyError?.context?.json) {
         try {
           const bodyJson = await anyError.context.json()
@@ -53,53 +58,86 @@ export async function parseVoiceWithAi({
             detailedError = bodyJson.error_detail
           } else if (bodyJson?.error) {
             detailedError = `Erro OpenAI: ${bodyJson.error}`
+          } else if (bodyJson?.mensagem_amigavel) {
+            detailedError = bodyJson.mensagem_amigavel
           }
         } catch {
-          // ignora
+          // ignora falha de parse
         }
-      } else if (anyError?.context?.status) {
-        detailedError = `Erro Edge Function (HTTP ${anyError.context.status}): ${detailedError}`
       }
 
-      const localParsed = parseVoiceInput(trimmed, categories)
+      const statusTag = httpStatus ? `HTTP ${httpStatus}` : 'Erro na requisição'
+      const aiError = `Falha na IA [${statusTag}]: ${detailedError}`
+      const friendlyMessage = `${aiError}. Toque para tentar novamente.`
+
       return {
-        ...localParsed,
-        processingSource: 'local',
-        aiError: detailedError,
+        rawText: trimmed,
+        amountCents: 0,
+        amountFormatted: 'R$ 0,00',
+        type: 'expense',
+        description: trimmed,
+        confidence: 0,
+        processingSource: 'openai',
+        aiStatus: 'invalido',
+        aiError,
+        friendlyMessage,
       }
     }
 
     if (!data || !data.status) {
-      console.warn('Resposta vazia da edge function voice-parse, acionando fallback local')
-      const localParsed = parseVoiceInput(trimmed, categories)
+      console.warn('Resposta vazia da edge function voice-parse')
+      const aiError = 'Falha na IA [Resposta Vazia]: Resposta vazia ou inválida da Edge Function'
       return {
-        ...localParsed,
-        processingSource: 'local',
-        aiError: 'Resposta vazia ou inválida da Edge Function',
+        rawText: trimmed,
+        amountCents: 0,
+        amountFormatted: 'R$ 0,00',
+        type: 'expense',
+        description: trimmed,
+        confidence: 0,
+        processingSource: 'openai',
+        aiStatus: 'invalido',
+        aiError,
+        friendlyMessage: `${aiError}. Toque para tentar novamente.`,
       }
     }
 
-    // Se a edge function retornou status mas com erro (ex: chave não configurada ou erro OpenAI)
+    // Se a edge function retornou status mas com erro explícito (ex: 500, chave não configurada ou erro OpenAI)
     if (data.error || data.error_detail) {
       const edgeErrorMsg =
         data.error_detail || (data.error === 'OPENAI_ERROR' ? 'Erro na API da OpenAI' : data.error)
-      const localParsed = parseVoiceInput(trimmed, categories)
+      const statusTag = data.openai_status ? `HTTP ${data.openai_status}` : 'Erro Edge Function'
+      const aiError = `Falha na IA [${statusTag}]: ${edgeErrorMsg}`
       return {
-        ...localParsed,
-        processingSource: 'local',
-        aiError: edgeErrorMsg,
+        rawText: trimmed,
+        amountCents: 0,
+        amountFormatted: 'R$ 0,00',
+        type: 'expense',
+        description: trimmed,
+        confidence: 0,
+        processingSource: 'openai',
+        aiStatus: 'invalido',
+        aiError,
+        friendlyMessage: `${aiError}. Toque para tentar novamente.`,
       }
     }
 
     // Sucesso ou clarificação ou inválido retornado da IA com estrutura oficial
     return mapAiResponseToParsedTransaction(data, trimmed)
   } catch (err: any) {
-    console.warn('Exceção ao chamar edge function voice-parse, usando fallback local:', err)
-    const localParsed = parseVoiceInput(trimmed, categories)
+    console.warn('Exceção ao chamar edge function voice-parse:', err)
+    const detailedError = err?.message || 'Exceção ao conectar com a inteligência de voz'
+    const aiError = `Falha na IA [Exceção]: ${detailedError}`
     return {
-      ...localParsed,
-      processingSource: 'local',
-      aiError: err?.message || 'Exceção ao conectar com a inteligência de voz',
+      rawText: trimmed,
+      amountCents: 0,
+      amountFormatted: 'R$ 0,00',
+      type: 'expense',
+      description: trimmed,
+      confidence: 0,
+      processingSource: 'openai',
+      aiStatus: 'invalido',
+      aiError,
+      friendlyMessage: `${aiError}. Toque para tentar novamente.`,
     }
   }
 }

@@ -539,21 +539,16 @@ describe('VoiceTransactionDialog', () => {
   it('exibe alerta vermelho com erro exato retornado quando houver erro de requisição/rede', async () => {
     mockParseVoiceWithAi.mockResolvedValueOnce({
       rawText: 'Almoço 45 reais',
-      amountCents: 4500,
-      amountFormatted: 'R$ 45,00',
+      amountCents: 0,
+      amountFormatted: 'R$ 0,00',
       type: 'expense',
-      description: 'Almoço',
-      paymentMethod: undefined,
-      categoryNameSuggestion: 'Alimentação',
-      subcategoryNameSuggestion: undefined,
-      bucketSuggestion: 'lifestyle',
-      confidence: 0.8,
-      processingSource: 'local',
-      aiStatus: 'sucesso',
-      clarificationQuestion: null,
-      clarificationOptions: null,
-      friendlyMessage: null,
-      aiError: 'Chave OPENAI_API_KEY não configurada no backend Supabase.',
+      description: 'Almoço 45 reais',
+      confidence: 0,
+      processingSource: 'openai',
+      aiStatus: 'invalido',
+      friendlyMessage:
+        'Falha na IA [HTTP 500]: Chave OPENAI_API_KEY não configurada no backend Supabase.. Toque para tentar novamente.',
+      aiError: 'Falha na IA [HTTP 500]: Chave OPENAI_API_KEY não configurada no backend Supabase.',
     })
 
     ;(window as any).SpeechRecognition = undefined
@@ -572,15 +567,201 @@ describe('VoiceTransactionDialog', () => {
     fireEvent.click(screen.getByText('Processar com IA'))
 
     await waitFor(() => {
-      // Alerta vermelho com a mensagem exata de erro
-      const alert = screen.getByRole('alert')
-      expect(alert).toBeDefined()
+      // Alerta com a mensagem exata de erro
       expect(
-        screen.getByText('Chave OPENAI_API_KEY não configurada no backend Supabase.'),
-      ).toBeDefined()
+        screen.getAllByText(
+          'Falha na IA [HTTP 500]: Chave OPENAI_API_KEY não configurada no backend Supabase.',
+        ).length,
+      ).toBeGreaterThanOrEqual(1)
       expect(screen.getByText('Erro de Conexão com IA:')).toBeDefined()
-      // Badge da OpenAI não deve estar visível
+      // Card de erro amigável na tela (aiStatus: invalido)
+      expect(screen.getByTestId('invalid-error-card')).toBeDefined()
+      // Botão Falar Novamente visível
+      expect(screen.getByText('🎤 Falar Novamente')).toBeDefined()
+      // NUNCA exibe confirmação
+      expect(screen.queryByText('✅ Confirmar Lançamento')).toBeNull()
+      // Badge da OpenAI ativa não deve estar visível
       expect(screen.queryByText(/✨ GPT-4o Mini Ativo/i)).toBeNull()
+    })
+  })
+
+  it('BUG 3: Bloqueio rígido — aiStatus === "invalido" NUNCA renderiza confirmação nem ajuste manual', async () => {
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'frase aleatoria sem sentido',
+      amountCents: 0,
+      amountFormatted: 'R$ 0,00',
+      type: 'expense',
+      description: 'frase aleatoria sem sentido',
+      confidence: 0,
+      processingSource: 'openai',
+      aiStatus: 'invalido',
+      friendlyMessage: 'Não consegui identificar uma despesa nessa fala. 😄',
+    })
+
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Ex: Almoço 45 reais no débito')
+    fireEvent.change(input, { target: { value: 'frase aleatoria sem sentido' } })
+    fireEvent.click(screen.getByText('Processar com IA'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Não consegui identificar uma despesa nessa fala. 😄')).toBeDefined()
+      expect(
+        screen.getByText("Dica: Fale o item e o valor, ex: 'Almoço 45 reais no débito'."),
+      ).toBeDefined()
+      expect(screen.getByText('🎤 Falar Novamente')).toBeDefined()
+      expect(screen.queryByText('✅ Confirmar Lançamento')).toBeNull()
+      expect(screen.queryByText('Ajustar')).toBeNull()
+      expect(screen.queryByText('Despesa Detectada')).toBeNull()
+      expect(screen.queryByText('Receita Detectada')).toBeNull()
+    })
+  })
+
+  it('BUG 3: clarificacao renderiza EXCLUSIVAMENTE as opções de pílulas e NÃO a confirmação até o clique', async () => {
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'padaria 15',
+      amountCents: 1500,
+      amountFormatted: 'R$ 15,00',
+      type: 'expense',
+      description: 'Padaria',
+      confidence: 0.7,
+      processingSource: 'openai',
+      aiStatus: 'clarificacao',
+      clarificationQuestion: 'Qual a categoria da Padaria?',
+      clarificationOptions: ['Alimentação / Café da manhã', 'Lazer / Lanche', 'Outro'],
+      friendlyMessage: 'Entendi R$ 15,00! Qual a categoria?',
+    })
+
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Ex: Almoço 45 reais no débito')
+    fireEvent.change(input, { target: { value: 'padaria 15' } })
+    fireEvent.click(screen.getByText('Processar com IA'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Qual a categoria da Padaria?')).toBeDefined()
+      expect(screen.getByText('Alimentação / Café da manhã')).toBeDefined()
+      // Card de confirmação NÃO pode estar aberto ainda
+      expect(screen.queryByText('✅ Confirmar Lançamento')).toBeNull()
+    })
+
+    // Clicando na pílula abre a confirmação
+    fireEvent.click(screen.getByText('Alimentação / Café da manhã'))
+
+    await waitFor(() => {
+      expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
+      expect(screen.getByText('R$ 15,00')).toBeDefined()
+    })
+  })
+
+  it('BUG 1: handleStopAndProcess não reinicia nem aborta o recognition a cada palavra falada (usa latestTranscriptRef)', async () => {
+    let capturedRecognitionInstance: any = null
+    let abortCallCount = 0
+    let startCallCount = 0
+
+    function MockSpeechRecognition() {
+      const self = {
+        lang: '',
+        continuous: false,
+        interimResults: false,
+        maxAlternatives: 1,
+        onstart: null as any,
+        onaudiostart: null as any,
+        onspeechstart: null as any,
+        onresult: null as any,
+        onerror: null as any,
+        onend: null as any,
+        start() {
+          startCallCount++
+          if (self.onstart) self.onstart()
+        },
+        stop() {
+          if (self.onend) self.onend()
+        },
+        abort() {
+          abortCallCount++
+        },
+      }
+      capturedRecognitionInstance = self
+      return self
+    }
+
+    ;(window as any).SpeechRecognition = MockSpeechRecognition
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(capturedRecognitionInstance).toBeTruthy()
+      expect(startCallCount).toBe(1)
+      expect(abortCallCount).toBe(0)
+    })
+
+    // Simular transcrições parciais contínuas (como ocorrem na fala do usuário palavra a palavra)
+    capturedRecognitionInstance.onresult({
+      results: [[{ transcript: 'Almoço' }]],
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/Almoço/i)).toBeDefined()
+    })
+
+    // Não deve abortar nem recriar recognition no meio da fala
+    expect(abortCallCount).toBe(0)
+    expect(startCallCount).toBe(1)
+
+    // Próxima palavra
+    capturedRecognitionInstance.onresult({
+      results: [[{ transcript: 'Almoço 45' }]],
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/Almoço 45/i)).toBeDefined()
+    })
+
+    expect(abortCallCount).toBe(0)
+    expect(startCallCount).toBe(1)
+
+    // Final da fala
+    capturedRecognitionInstance.onresult({
+      results: [[{ transcript: 'Almoço 45 reais no débito' }]],
+    })
+
+    expect(abortCallCount).toBe(0)
+    expect(startCallCount).toBe(1)
+
+    // Quando terminar a fala, chama onend uma única vez
+    capturedRecognitionInstance.onend()
+
+    await waitFor(() => {
+      expect(mockParseVoiceWithAi).toHaveBeenCalledWith(
+        expect.objectContaining({
+          texto: 'Almoço 45 reais no débito',
+        }),
+      )
     })
   })
 

@@ -92,12 +92,15 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     setAudioDetected(false)
   }, [])
 
-  // Parar gravação e disparar interpretação com IA (Edge Function + fallback local)
+  // Parar gravação e disparar interpretação com IA (Edge Function)
+  // BUG 1 CORREÇÃO: usa latestTranscriptRef para acessar o texto atualizado sem depender de textoFalado
   const handleStopAndProcess = useCallback(
     async (overrideText?: string) => {
       stopListening()
 
-      const textToProcess = (overrideText !== undefined ? overrideText : textoFalado).trim()
+      const textToProcess = (
+        overrideText !== undefined ? overrideText : latestTranscriptRef.current
+      ).trim()
 
       if (!textToProcess) {
         return
@@ -117,7 +120,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         setIsProcessingAi(false)
       }
     },
-    [categories, family?.id, stopListening, textoFalado],
+    [categories, family?.id, stopListening],
   )
 
   // Iniciar SpeechRecognition síncrono no evento de clique
@@ -238,6 +241,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   }, [handleStopAndProcess])
 
   // Resetar ao abrir/fechar o modal
+  // BUG 1 CORREÇÃO: este useEffect deve rodar APENAS quando o modal abre/fecha (dependência apenas de open),
+  // sem recriar o recognition a cada re-render ou mudança de membros/startRecording.
   useEffect(() => {
     if (open) {
       setTextoFalado('')
@@ -261,7 +266,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     return () => {
       stopListening()
     }
-  }, [open, currentMember?.id, members, startRecording, stopListening])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   // Submeter modo texto manual
   const handleManualTextSubmit = (e: React.FormEvent) => {
@@ -695,24 +701,50 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         {/* ================= ESTADO 2A: IA IDENTIFICOU "INVALIDO" (RUÍDO / CONVERSA SEM SENTIDO OU SEM VALOR) ================= */}
         {!isProcessingAi && isInvalid && (
           <div className="space-y-4 pt-2 animate-in fade-in-50 duration-200">
-            <div className="bg-amber-50/80 border border-amber-200/90 rounded-2xl p-5 text-center space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto">
-                <HelpCircle className="w-6 h-6 text-amber-700" />
-              </div>
-              <div>
-                <h4 className="text-base font-bold text-amber-950">
-                  Não consegui identificar uma despesa nessa fala. 😄
-                </h4>
-                <p className="text-xs text-amber-900/90 mt-1.5 leading-relaxed font-medium">
-                  Dica: Fale o item e o valor, ex: &apos;Almoço 45 reais no débito&apos;.
-                </p>
-              </div>
-              {parsedResult?.rawText && (
-                <div className="bg-white/80 rounded-xl p-2.5 text-xs text-slate-600 italic border border-amber-100 break-words">
-                  &ldquo;{parsedResult.rawText}&rdquo;
+            {parsedResult?.aiError ? (
+              <div
+                role="alert"
+                data-testid="invalid-error-card"
+                className="bg-rose-50/90 border border-rose-200/90 rounded-2xl p-5 text-center space-y-3"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-800 flex items-center justify-center mx-auto">
+                  <AlertCircle className="w-6 h-6 text-rose-600" />
                 </div>
-              )}
-            </div>
+                <div>
+                  <h4 className="text-base font-bold text-rose-950">
+                    {parsedResult.friendlyMessage || 'Falha na IA'}
+                  </h4>
+                  <p className="text-xs text-rose-900/90 mt-1.5 leading-relaxed font-mono break-words">
+                    {parsedResult.aiError}
+                  </p>
+                </div>
+                {parsedResult?.rawText && (
+                  <div className="bg-white/80 rounded-xl p-2.5 text-xs text-slate-600 italic border border-rose-100 break-words">
+                    &ldquo;{parsedResult.rawText}&rdquo;
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-amber-50/80 border border-amber-200/90 rounded-2xl p-5 text-center space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto">
+                  <HelpCircle className="w-6 h-6 text-amber-700" />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-amber-950">
+                    {parsedResult?.friendlyMessage ||
+                      'Não consegui identificar uma despesa nessa fala. 😄'}
+                  </h4>
+                  <p className="text-xs text-amber-900/90 mt-1.5 leading-relaxed font-medium">
+                    Dica: Fale o item e o valor, ex: &apos;Almoço 45 reais no débito&apos;.
+                  </p>
+                </div>
+                {parsedResult?.rawText && (
+                  <div className="bg-white/80 rounded-xl p-2.5 text-xs text-slate-600 italic border border-amber-100 break-words">
+                    &ldquo;{parsedResult.rawText}&rdquo;
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="flex flex-col gap-2 pt-1">
               <Button
