@@ -143,7 +143,8 @@ describe('voice-ai service (fim do fallback silencioso)', () => {
         transacao: null,
         pergunta_clarificacao: null,
         opcoes_sugestao: null,
-        mensagem_amigavel: 'Não consegui entender esse lançamento financeiro.',
+        mensagem_amigavel:
+          "Não consegui entender esse lançamento financeiro. Tente algo como: 'Almoço 45 reais no débito no restaurante' ou 'supermercado do zé 180 no pix'",
       },
       error: null,
     })
@@ -152,7 +153,9 @@ describe('voice-ai service (fim do fallback silencioso)', () => {
 
     expect(res.aiStatus).toBe('invalido')
     expect(res.amountCents).toBe(0)
-    expect(res.friendlyMessage).toBe('Não consegui entender esse lançamento financeiro.')
+    expect(res.friendlyMessage).toBe(
+      "Não consegui entender esse lançamento financeiro. Tente algo como: 'Almoço 45 reais no débito no restaurante' ou 'supermercado do zé 180 no pix'",
+    )
     expect(res.aiError).toBeNull()
   })
 })

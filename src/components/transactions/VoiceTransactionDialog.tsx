@@ -469,9 +469,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   // Se não é confirmação nem clarificação com valor, qualquer outro resultado é tratado como invalido
   const isInvalid = Boolean(parsedResult) && !isConfirmationAllowed && !isClarification
 
-  const isSuccessFromOpenAi =
-    parsedResult && !parsedResult.aiError && parsedResult.processingSource === 'openai'
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 sm:max-w-lg shadow-2xl">
@@ -485,21 +482,9 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 Lançamento por Voz com IA
               </DialogTitle>
             </div>
-
-            {/* Regra 4: Badge de conexão da IA */}
-            {parsedResult && !isProcessingAi && isSuccessFromOpenAi && (
-              <span
-                data-testid="badge-openai-success"
-                className="text-[11px] font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1 shrink-0 bg-emerald-50 text-emerald-800 border-emerald-200/80 shadow-xs"
-              >
-                <Sparkles className="w-3 h-3 text-emerald-600" />
-                <span>✨ GPT-4o Mini Ativo</span>
-              </span>
-            )}
           </div>
           <DialogDescription className="text-xs text-slate-500">
-            Fale naturalmente sua despesa ou receita. O Curiangoo AI extrai valor, balde 50/30/20,
-            categoria e subcategoria.
+            Fale naturalmente sua despesa ou receita
           </DialogDescription>
 
           {/* Regra 4: Alerta vermelho com erro exato se houver erro de requisição/rede ou da edge function */}
@@ -732,10 +717,11 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 <div>
                   <h4 className="text-base font-bold text-amber-950">
                     {parsedResult?.friendlyMessage ||
-                      'Não consegui identificar uma despesa nessa fala. 😄'}
+                      "Não consegui entender esse lançamento financeiro. Tente algo como: 'Almoço 45 reais no débito no restaurante' ou 'supermercado do zé 180 no pix'"}
                   </h4>
                   <p className="text-xs text-amber-900/90 mt-1.5 leading-relaxed font-medium">
-                    Dica: Fale o item e o valor, ex: &apos;Almoço 45 reais no débito&apos;.
+                    Dica: Fale o item e o valor, ex: &apos;Almoço 45 reais no débito no
+                    restaurante&apos;.
                   </p>
                 </div>
                 {parsedResult?.rawText && (

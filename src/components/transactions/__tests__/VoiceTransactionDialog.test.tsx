@@ -445,7 +445,8 @@ describe('VoiceTransactionDialog', () => {
       aiStatus: 'invalido',
       clarificationQuestion: null,
       clarificationOptions: null,
-      friendlyMessage: 'Não consegui identificar uma despesa nessa fala. 😄',
+      friendlyMessage:
+        "Não consegui entender esse lançamento financeiro. Tente algo como: 'Almoço 45 reais no débito no restaurante' ou 'supermercado do zé 180 no pix'",
     })
 
     ;(window as any).SpeechRecognition = undefined
@@ -465,10 +466,16 @@ describe('VoiceTransactionDialog', () => {
 
     await waitFor(() => {
       // Mensagem exata (Regra 2)
-      expect(screen.getByText('Não consegui identificar uma despesa nessa fala. 😄')).toBeDefined()
+      expect(
+        screen.getByText(
+          "Não consegui entender esse lançamento financeiro. Tente algo como: 'Almoço 45 reais no débito no restaurante' ou 'supermercado do zé 180 no pix'",
+        ),
+      ).toBeDefined()
       // Subtítulo exato (Regra 2)
       expect(
-        screen.getByText("Dica: Fale o item e o valor, ex: 'Almoço 45 reais no débito'."),
+        screen.getByText(
+          "Dica: Fale o item e o valor, ex: 'Almoço 45 reais no débito no restaurante'.",
+        ),
       ).toBeDefined()
       // Botão exato (Regra 2)
       expect(screen.getByText('🎤 Falar Novamente')).toBeDefined()
@@ -510,12 +517,16 @@ describe('VoiceTransactionDialog', () => {
 
     await waitFor(() => {
       // Cai no estado invalido pela guard dupla (status === 'sucesso' && valor > 0)
-      expect(screen.getByText('Não consegui identificar uma despesa nessa fala. 😄')).toBeDefined()
+      expect(
+        screen.getByText(
+          "Não consegui entender esse lançamento financeiro. Tente algo como: 'Almoço 45 reais no débito no restaurante' ou 'supermercado do zé 180 no pix'",
+        ),
+      ).toBeDefined()
       expect(screen.queryByText('✅ Confirmar Lançamento')).toBeNull()
     })
   })
 
-  it('exibe badge "✨ GPT-4o Mini Ativo" quando a resposta vem da OpenAI com sucesso', async () => {
+  it('não exibe badge do modelo de IA (GPT-4o Mini) ao processar com sucesso', async () => {
     ;(window as any).SpeechRecognition = undefined
     ;(window as any).webkitSpeechRecognition = undefined
 
@@ -532,7 +543,8 @@ describe('VoiceTransactionDialog', () => {
     fireEvent.click(screen.getByText('Processar com IA'))
 
     await waitFor(() => {
-      expect(screen.getByText(/✨ GPT-4o Mini Ativo/i)).toBeDefined()
+      expect(screen.queryByTestId('badge-openai-success')).toBeNull()
+      expect(screen.queryByText(/GPT-4o Mini/i)).toBeNull()
     })
   })
 
@@ -580,8 +592,9 @@ describe('VoiceTransactionDialog', () => {
       expect(screen.getByText('🎤 Falar Novamente')).toBeDefined()
       // NUNCA exibe confirmação
       expect(screen.queryByText('✅ Confirmar Lançamento')).toBeNull()
-      // Badge da OpenAI ativa não deve estar visível
-      expect(screen.queryByText(/✨ GPT-4o Mini Ativo/i)).toBeNull()
+      // Badge da OpenAI não existe mais no modal
+      expect(screen.queryByTestId('badge-openai-success')).toBeNull()
+      expect(screen.queryByText(/GPT-4o Mini/i)).toBeNull()
     })
   })
 
@@ -595,7 +608,8 @@ describe('VoiceTransactionDialog', () => {
       confidence: 0,
       processingSource: 'openai',
       aiStatus: 'invalido',
-      friendlyMessage: 'Não consegui identificar uma despesa nessa fala. 😄',
+      friendlyMessage:
+        "Não consegui entender esse lançamento financeiro. Tente algo como: 'Almoço 45 reais no débito no restaurante' ou 'supermercado do zé 180 no pix'",
     })
 
     ;(window as any).SpeechRecognition = undefined
@@ -614,9 +628,15 @@ describe('VoiceTransactionDialog', () => {
     fireEvent.click(screen.getByText('Processar com IA'))
 
     await waitFor(() => {
-      expect(screen.getByText('Não consegui identificar uma despesa nessa fala. 😄')).toBeDefined()
       expect(
-        screen.getByText("Dica: Fale o item e o valor, ex: 'Almoço 45 reais no débito'."),
+        screen.getByText(
+          "Não consegui entender esse lançamento financeiro. Tente algo como: 'Almoço 45 reais no débito no restaurante' ou 'supermercado do zé 180 no pix'",
+        ),
+      ).toBeDefined()
+      expect(
+        screen.getByText(
+          "Dica: Fale o item e o valor, ex: 'Almoço 45 reais no débito no restaurante'.",
+        ),
       ).toBeDefined()
       expect(screen.getByText('🎤 Falar Novamente')).toBeDefined()
       expect(screen.queryByText('✅ Confirmar Lançamento')).toBeNull()

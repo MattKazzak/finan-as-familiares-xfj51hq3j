@@ -741,7 +741,8 @@ export function parseVoiceInput(
 
   if (amountCents <= 0) {
     aiStatus = 'invalido'
-    friendlyMessage = 'Não consegui identificar uma despesa nessa fala. 😄'
+    friendlyMessage =
+      "Não consegui entender esse lançamento financeiro. Tente algo como: 'Almoço 45 reais no débito no restaurante' ou 'supermercado do zé 180 no pix'"
   } else if (!categoryName) {
     // Valor existe, mas o termo/descrição não casou com nenhuma categoria/subcategoria nem termo genérico conhecido
     aiStatus = 'clarificacao'

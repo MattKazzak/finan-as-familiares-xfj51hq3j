@@ -222,7 +222,7 @@ Comportamentos esperados:
    - "transacao": null
    - "pergunta_clarificacao": null
    - "opcoes_sugestao": null
-   - "mensagem_amigavel": Mensagem bem-humorada com dica de uso prática (ex.: "Não consegui entender esse lançamento financeiro. Tente algo como: 'Almoço 45 reais no débito' ou 'Supermercado 180 no pix'").`
+   - "mensagem_amigavel": Mensagem bem-humorada com dica de uso prática (ex.: "Não consegui entender esse lançamento financeiro. Tente algo como: 'Almoço 45 reais no débito no restaurante' ou 'supermercado do zé 180 no pix'").`
 
     // Chamada à API da OpenAI
     const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
