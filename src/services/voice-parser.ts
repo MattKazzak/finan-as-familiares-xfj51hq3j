@@ -3,6 +3,26 @@
  * Converte linguagem natural falada em transação estruturada.
  */
 
+export type VoiceAiStatus = 'sucesso' | 'clarificacao' | 'invalido'
+
+export interface VoiceAiTransaction {
+  descricao: string
+  valor: number | null
+  tipo: 'despesa' | 'receita'
+  balde: string // 'Necessidades Essenciais' | 'Estilo de Vida' | 'Metas & Investimentos' | string
+  categoria: string
+  subcategoria: string
+  metodo_pagamento: string | null
+}
+
+export interface VoiceAiResponse {
+  status: VoiceAiStatus
+  transacao: VoiceAiTransaction | null
+  pergunta_clarificacao: string | null
+  opcoes_sugestao: string[] | null
+  mensagem_amigavel: string | null
+}
+
 export interface ParsedVoiceTransaction {
   rawText: string
   amountCents: number
@@ -11,8 +31,14 @@ export interface ParsedVoiceTransaction {
   description: string
   paymentMethod?: 'pix' | 'debito' | 'credito' | 'dinheiro'
   categoryNameSuggestion?: string
+  subcategoryNameSuggestion?: string
   bucketSuggestion?: 'essential' | 'lifestyle' | 'goals'
   confidence: number
+  // Campos da IA enriquecidos
+  aiStatus?: VoiceAiStatus
+  clarificationQuestion?: string | null
+  clarificationOptions?: string[] | null
+  friendlyMessage?: string | null
 }
 
 // Mapeamento de números por extenso em português
@@ -715,5 +741,72 @@ export function parseVoiceInput(
     categoryNameSuggestion: categoryName,
     bucketSuggestion: bucket,
     confidence: Math.min(confidence, 1.0),
+    aiStatus: amountCents > 0 ? 'sucesso' : 'invalido',
+    friendlyMessage:
+      amountCents > 0
+        ? null
+        : 'Não consegui identificar o valor em reais. Tente falar o valor, ex: "Almoço 45 reais".',
+  }
+}
+
+/**
+ * Normaliza o nome do balde retornado pela IA para o enum interno ('essential' | 'lifestyle' | 'goals')
+ */
+export function normalizeBucketName(
+  baldeText?: string | null,
+): 'essential' | 'lifestyle' | 'goals' {
+  if (!baldeText) return 'lifestyle'
+  const norm = normalizeWord(baldeText)
+  if (norm.includes('essencia') || norm.includes('necessidade')) {
+    return 'essential'
+  }
+  if (norm.includes('meta') || norm.includes('invest')) {
+    return 'goals'
+  }
+  return 'lifestyle'
+}
+
+/**
+ * Converte resposta da Edge Function Voice AI em ParsedVoiceTransaction compatível
+ */
+export function mapAiResponseToParsedTransaction(
+  aiData: VoiceAiResponse,
+  rawText: string,
+): ParsedVoiceTransaction {
+  const transacao = aiData.transacao
+  const amountNumber = transacao?.valor ? Number(transacao.valor) : 0
+  const amountCents = Math.round(amountNumber * 100)
+  const amountFormatted = (amountCents / 100).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  })
+
+  let paymentMethod: 'pix' | 'debito' | 'credito' | 'dinheiro' | undefined
+  if (transacao?.metodo_pagamento) {
+    const pm = normalizeWord(transacao.metodo_pagamento)
+    if (pm.includes('pix')) paymentMethod = 'pix'
+    else if (pm.includes('debito')) paymentMethod = 'debito'
+    else if (pm.includes('credito')) paymentMethod = 'credito'
+    else if (pm.includes('dinheiro') || pm.includes('especie')) paymentMethod = 'dinheiro'
+  }
+
+  const type = transacao?.tipo === 'receita' ? 'income' : 'expense'
+  const bucket = normalizeBucketName(transacao?.balde)
+
+  return {
+    rawText,
+    amountCents,
+    amountFormatted,
+    type,
+    description: transacao?.descricao || rawText,
+    paymentMethod,
+    categoryNameSuggestion: transacao?.categoria || undefined,
+    subcategoryNameSuggestion: transacao?.subcategoria || undefined,
+    bucketSuggestion: bucket,
+    confidence: aiData.status === 'sucesso' ? 0.95 : aiData.status === 'clarificacao' ? 0.7 : 0.2,
+    aiStatus: aiData.status,
+    clarificationQuestion: aiData.pergunta_clarificacao,
+    clarificationOptions: aiData.opcoes_sugestao,
+    friendlyMessage: aiData.mensagem_amigavel,
   }
 }

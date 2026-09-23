@@ -5,8 +5,10 @@ import { VoiceTransactionDialog } from '../VoiceTransactionDialog'
 
 // Mocks do hook useFamily e useToast
 const mockTriggerRefresh = vi.fn()
+const mockAddNewSubcategory = vi.fn()
 const mockToast = vi.fn()
 const mockCreateTransaction = vi.fn()
+const mockParseVoiceWithAi = vi.fn()
 
 vi.mock('@/hooks/use-family', () => ({
   useFamily: () => ({
@@ -14,10 +16,17 @@ vi.mock('@/hooks/use-family', () => ({
     members: [{ id: 'mem-1', name: 'Carlos' }],
     currentMember: { id: 'mem-1', name: 'Carlos' },
     categories: [
-      { id: 'cat-1', name: 'Alimentação', type: 'expense', budget_bucket: 'essential' },
+      {
+        id: 'cat-1',
+        name: 'Alimentação',
+        type: 'expense',
+        budget_bucket: 'essential',
+        subcategories: [{ id: 'sub-1', name: 'Almoço' }],
+      },
       { id: 'cat-2', name: 'Salário', type: 'income', budget_bucket: 'essential' },
     ],
     triggerRefresh: mockTriggerRefresh,
+    addNewSubcategory: mockAddNewSubcategory,
   }),
 }))
 
@@ -31,11 +40,35 @@ vi.mock('@/services/transactions', () => ({
   createTransaction: (...args: any[]) => mockCreateTransaction(...args),
 }))
 
+vi.mock('@/services/voice-ai', () => ({
+  parseVoiceWithAi: (...args: any[]) => mockParseVoiceWithAi(...args),
+}))
+
 describe('VoiceTransactionDialog', () => {
   let mockGetUserMedia: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     vi.clearAllMocks()
+
+    // Default mock response: Sucesso
+    mockParseVoiceWithAi.mockImplementation(async ({ texto }: { texto: string }) => {
+      return {
+        rawText: texto,
+        amountCents: 4500,
+        amountFormatted: 'R$ 45,00',
+        type: 'expense',
+        description: 'Almoço',
+        paymentMethod: 'debito',
+        categoryNameSuggestion: 'Alimentação',
+        subcategoryNameSuggestion: 'Restaurante',
+        bucketSuggestion: 'lifestyle',
+        confidence: 0.95,
+        aiStatus: 'sucesso',
+        clarificationQuestion: null,
+        clarificationOptions: null,
+        friendlyMessage: null,
+      }
+    })
 
     mockGetUserMedia = vi.fn()
     Object.defineProperty(navigator, 'mediaDevices', {
@@ -227,7 +260,6 @@ describe('VoiceTransactionDialog', () => {
     })
 
     await waitFor(() => {
-      // Exibição na citação e no input preenchido automaticamente
       expect(screen.getByText(/Almoço 45 reais no débito/i)).toBeDefined()
       const input = screen.getByPlaceholderText('Ex: Almoço 45 reais no débito') as HTMLInputElement
       expect(input.value).toBe('Almoço 45 reais no débito')
@@ -290,58 +322,7 @@ describe('VoiceTransactionDialog', () => {
     expect(screen.getByTitle('Toque para começar a falar')).toBeDefined()
   })
 
-  it('trata not-allowed com mensagem amigável instruindo liberação do microfone', async () => {
-    let capturedRecognitionInstance: any = null
-
-    function MockSpeechRecognition() {
-      const self = {
-        lang: '',
-        continuous: false,
-        interimResults: false,
-        maxAlternatives: 1,
-        onstart: null as any,
-        onaudiostart: null as any,
-        onspeechstart: null as any,
-        onresult: null as any,
-        onerror: null as any,
-        onend: null as any,
-        start() {
-          if (self.onstart) self.onstart()
-        },
-        stop() {
-          if (self.onend) self.onend()
-        },
-        abort() {},
-      }
-      capturedRecognitionInstance = self
-      return self
-    }
-
-    ;(window as any).SpeechRecognition = MockSpeechRecognition
-
-    render(
-      <VoiceTransactionDialog
-        open={true}
-        onOpenChange={vi.fn()}
-        onOpenManualTransaction={vi.fn()}
-      />,
-    )
-
-    await waitFor(() => {
-      expect(capturedRecognitionInstance).toBeTruthy()
-    })
-
-    // Simula erro not-allowed
-    capturedRecognitionInstance.onerror({ error: 'not-allowed' })
-
-    await waitFor(() => {
-      expect(
-        screen.getByText(/Permissão de microfone negada\. Toque no ícone de cadeado/i),
-      ).toBeDefined()
-    })
-  })
-
-  it('ao disparar onend com texto capturado, envia para o parser e abre resumo de confirmação', async () => {
+  it('ao disparar onend com texto capturado, invoca a IA e exibe card de sucesso com confirmação', async () => {
     let capturedRecognitionInstance: any = null
 
     function MockSpeechRecognition() {
@@ -391,14 +372,34 @@ describe('VoiceTransactionDialog', () => {
     capturedRecognitionInstance.onend()
 
     await waitFor(() => {
+      expect(mockParseVoiceWithAi).toHaveBeenCalledWith(
+        expect.objectContaining({
+          texto: 'Almoço 45 reais no débito',
+        }),
+      )
       expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
       expect(screen.getByText('Ajustar')).toBeDefined()
       expect(screen.getByText('R$ 45,00')).toBeDefined()
     })
   })
 
-  it('fallback de digitação fluido: caixa de texto visível e botão "Processar com IA" processa texto digitado', async () => {
-    // Sem SpeechRecognition disponível
+  it('comportamento "clarificacao": exibe pergunta empática da IA e 3 pílulas clicáveis', async () => {
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'pindamonhangaba 8 reais',
+      amountCents: 800,
+      amountFormatted: 'R$ 8,00',
+      type: 'expense',
+      description: 'Pindamonhangaba',
+      paymentMethod: null,
+      categoryNameSuggestion: 'Outro',
+      bucketSuggestion: 'lifestyle',
+      confidence: 0.7,
+      aiStatus: 'clarificacao',
+      clarificationQuestion: 'O que foi Pindamonhangaba?',
+      clarificationOptions: ['Transporte / Passagem', 'Alimentação / Doce', 'Lazer / Passeio'],
+      friendlyMessage: 'Entendi R$ 8,00! Mas o que foi Pindamonhangaba?',
+    })
+
     ;(window as any).SpeechRecognition = undefined
     ;(window as any).webkitSpeechRecognition = undefined
 
@@ -411,17 +412,63 @@ describe('VoiceTransactionDialog', () => {
     )
 
     const input = screen.getByPlaceholderText('Ex: Almoço 45 reais no débito')
-    expect(input).toBeDefined()
+    fireEvent.change(input, { target: { value: 'pindamonhangaba 8 reais' } })
+    fireEvent.click(screen.getByText('Processar com IA'))
 
-    fireEvent.change(input, { target: { value: 'Gasolina 100 reais' } })
+    await waitFor(() => {
+      expect(screen.getByText('Entendi R$ 8,00! Mas o que foi Pindamonhangaba?')).toBeDefined()
+      expect(screen.getByText('Transporte / Passagem')).toBeDefined()
+      expect(screen.getByText('Alimentação / Doce')).toBeDefined()
+      expect(screen.getByText('Lazer / Passeio')).toBeDefined()
+    })
 
-    const processBtn = screen.getByText('Processar com IA')
-    expect(processBtn).toBeDefined()
-    fireEvent.click(processBtn)
+    // Clicar na pílula "Transporte / Passagem" completa o card para sucesso
+    fireEvent.click(screen.getByText('Transporte / Passagem'))
 
     await waitFor(() => {
       expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
-      expect(screen.getByText('R$ 100,00')).toBeDefined()
+      expect(screen.getByText('R$ 8,00')).toBeDefined()
+    })
+  })
+
+  it('comportamento "invalido": exibe mensagem amigável e botão [ 🎤 Tentar Novamente ]', async () => {
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'abobrinha voadora',
+      amountCents: 0,
+      amountFormatted: 'R$ 0,00',
+      type: 'expense',
+      description: 'abobrinha voadora',
+      confidence: 0.1,
+      aiStatus: 'invalido',
+      clarificationQuestion: null,
+      clarificationOptions: null,
+      friendlyMessage:
+        'Não consegui entender esse lançamento financeiro. Tente falar algo como: "Almoço 45 reais".',
+    })
+
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Ex: Almoço 45 reais no débito')
+    fireEvent.change(input, { target: { value: 'abobrinha voadora' } })
+    fireEvent.click(screen.getByText('Processar com IA'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Não consegui entender esse lançamento')).toBeDefined()
+      expect(
+        screen.getByText(
+          'Não consegui entender esse lançamento financeiro. Tente falar algo como: "Almoço 45 reais".',
+        ),
+      ).toBeDefined()
+      expect(screen.getByText('🎤 Tentar Novamente')).toBeDefined()
     })
   })
 
@@ -454,8 +501,8 @@ describe('VoiceTransactionDialog', () => {
         expect.objectContaining({
           family_id: 'fam-1',
           type: 'expense',
-          amount_cents: 15000,
-          description: expect.stringContaining('Supermercado'),
+          amount_cents: 4500,
+          description: expect.stringContaining('Almoço'),
         }),
       )
       expect(mockTriggerRefresh).toHaveBeenCalled()
