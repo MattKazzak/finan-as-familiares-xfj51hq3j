@@ -730,6 +730,37 @@ export function parseVoiceInput(
     currency: 'BRL',
   })
 
+  // Determinar status do fallback local:
+  // Se amountCents <= 0 -> 'invalido'
+  // Se amountCents > 0 mas não identificou categoria conhecida e a descrição é uma palavra desconhecida -> 'clarificacao'
+  // Caso contrário -> 'sucesso'
+  let aiStatus: VoiceAiStatus = 'invalido'
+  let clarificationQuestion: string | null = null
+  let clarificationOptions: string[] | null = null
+  let friendlyMessage: string | null = null
+
+  if (amountCents <= 0) {
+    aiStatus = 'invalido'
+    friendlyMessage =
+      'Não consegui identificar o valor em reais. Tente falar o valor, ex: "Almoço 45 reais".'
+  } else if (!categoryName) {
+    // Valor existe, mas o termo/descrição não casou com nenhuma categoria/subcategoria nem termo genérico conhecido
+    aiStatus = 'clarificacao'
+    const descFormatted =
+      description && description !== 'Despesa' && description !== 'Receita'
+        ? description.charAt(0).toUpperCase() + description.slice(1)
+        : null
+    clarificationQuestion = descFormatted
+      ? `O que foi ${descFormatted}?`
+      : 'Qual é a categoria desse gasto?'
+    friendlyMessage = descFormatted
+      ? `Entendi ${amountFormatted}! Mas o que foi ${descFormatted}?`
+      : `Entendi ${amountFormatted}! Mas qual foi a categoria deste gasto?`
+    clarificationOptions = ['Transporte / Passagem', 'Alimentação / Outro', 'Outro']
+  } else {
+    aiStatus = 'sucesso'
+  }
+
   // Confiança
   let confidence = 0.5
   if (amountCents > 0) confidence += 0.3
@@ -747,11 +778,10 @@ export function parseVoiceInput(
     bucketSuggestion: bucket,
     confidence: Math.min(confidence, 1.0),
     processingSource: 'local',
-    aiStatus: amountCents > 0 ? 'sucesso' : 'invalido',
-    friendlyMessage:
-      amountCents > 0
-        ? null
-        : 'Não consegui identificar o valor em reais. Tente falar o valor, ex: "Almoço 45 reais".',
+    aiStatus,
+    clarificationQuestion,
+    clarificationOptions,
+    friendlyMessage,
   }
 }
 

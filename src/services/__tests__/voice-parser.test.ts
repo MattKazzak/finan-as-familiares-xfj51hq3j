@@ -93,6 +93,7 @@ describe('voice-parser', () => {
       expect(parsed.amountCents).toBe(6000)
       expect(parsed.type).toBe('expense')
       expect(parsed.description.toLowerCase()).toContain('cerveja')
+      expect(parsed.aiStatus).toBe('sucesso')
     })
 
     it('interpreta números falados por extenso', () => {
@@ -102,6 +103,7 @@ describe('voice-parser', () => {
       expect(parsed.type).toBe('expense')
       expect(parsed.categoryNameSuggestion).toBe('Saúde')
       expect(parsed.bucketSuggestion).toBe('essential')
+      expect(parsed.aiStatus).toBe('sucesso')
     })
 
     it('interpreta receita "Recebi 1500 de salário"', () => {
@@ -109,6 +111,38 @@ describe('voice-parser', () => {
       expect(parsed.amountCents).toBe(150000)
       expect(parsed.type).toBe('income')
       expect(parsed.categoryNameSuggestion).toBe('Salário')
+      expect(parsed.aiStatus).toBe('sucesso')
+    })
+
+    it('classifica frase ambígua com valor ("pindamonhangaba 8 reais") como "clarificacao"', () => {
+      const parsed = parseVoiceInput('pindamonhangaba 8 reais', mockCategories)
+      expect(parsed.amountCents).toBe(800)
+      expect(parsed.amountFormatted).toMatch(/8[,.]00/)
+      expect(parsed.aiStatus).toBe('clarificacao')
+      expect(parsed.clarificationQuestion).toBe('O que foi Pindamonhangaba?')
+      expect(parsed.friendlyMessage).toContain('Entendi')
+      expect(parsed.friendlyMessage).toContain('Pindamonhangaba')
+      expect(parsed.clarificationOptions).toEqual([
+        'Transporte / Passagem',
+        'Alimentação / Outro',
+        'Outro',
+      ])
+      expect(parsed.processingSource).toBe('local')
+    })
+
+    it('classifica "treco 50 reais" como "clarificacao" com 3 pílulas genéricas', () => {
+      const parsed = parseVoiceInput('treco 50 reais', mockCategories)
+      expect(parsed.amountCents).toBe(5000)
+      expect(parsed.aiStatus).toBe('clarificacao')
+      expect(parsed.clarificationQuestion).toBe('O que foi Treco?')
+      expect(parsed.clarificationOptions).toHaveLength(3)
+    })
+
+    it('classifica texto sem valor identificado como "invalido"', () => {
+      const parsed = parseVoiceInput('abobrinha voadora', mockCategories)
+      expect(parsed.amountCents).toBe(0)
+      expect(parsed.aiStatus).toBe('invalido')
+      expect(parsed.friendlyMessage).toContain('Não consegui identificar o valor')
     })
   })
 })

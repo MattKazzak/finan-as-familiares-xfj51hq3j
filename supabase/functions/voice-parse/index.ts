@@ -298,7 +298,22 @@ Comportamentos esperados:
       )
     }
 
-    return new Response(JSON.stringify(parsedAiJson), {
+    // Normalização defensiva da resposta garantindo que os 3 status e campos cheguem intactos
+    const status = ['sucesso', 'clarificacao', 'invalido'].includes(parsedAiJson?.status)
+      ? parsedAiJson.status
+      : 'invalido'
+
+    const sanitizedResponse = {
+      status,
+      transacao: parsedAiJson?.transacao ?? null,
+      pergunta_clarificacao: parsedAiJson?.pergunta_clarificacao ?? null,
+      opcoes_sugestao: Array.isArray(parsedAiJson?.opcoes_sugestao)
+        ? parsedAiJson.opcoes_sugestao
+        : null,
+      mensagem_amigavel: parsedAiJson?.mensagem_amigavel ?? null,
+    }
+
+    return new Response(JSON.stringify(sanitizedResponse), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (err: any) {
