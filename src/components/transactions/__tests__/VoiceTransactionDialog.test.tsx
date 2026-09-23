@@ -433,20 +433,19 @@ describe('VoiceTransactionDialog', () => {
     })
   })
 
-  it('comportamento "invalido": exibe mensagem amigável e botão [ 🎤 Tentar Novamente ]', async () => {
+  it('comportamento "invalido": exibe mensagem exata, subtítulo exato e botão [ 🎤 Falar Novamente ], NUNCA abre confirmação', async () => {
     mockParseVoiceWithAi.mockResolvedValueOnce({
-      rawText: 'abobrinha voadora',
+      rawText: 'GPT ormini falando',
       amountCents: 0,
       amountFormatted: 'R$ 0,00',
       type: 'expense',
-      description: 'abobrinha voadora',
+      description: 'GPT ormini falando',
       confidence: 0.1,
       processingSource: 'openai',
       aiStatus: 'invalido',
       clarificationQuestion: null,
       clarificationOptions: null,
-      friendlyMessage:
-        'Não consegui entender esse lançamento financeiro. Tente falar algo como: "Almoço 45 reais".',
+      friendlyMessage: 'Não consegui identificar uma despesa nessa fala. 😄',
     })
 
     ;(window as any).SpeechRecognition = undefined
@@ -461,21 +460,62 @@ describe('VoiceTransactionDialog', () => {
     )
 
     const input = screen.getByPlaceholderText('Ex: Almoço 45 reais no débito')
-    fireEvent.change(input, { target: { value: 'abobrinha voadora' } })
+    fireEvent.change(input, { target: { value: 'GPT ormini falando' } })
     fireEvent.click(screen.getByText('Processar com IA'))
 
     await waitFor(() => {
-      expect(screen.getByText('Não consegui entender esse lançamento')).toBeDefined()
+      // Mensagem exata (Regra 2)
+      expect(screen.getByText('Não consegui identificar uma despesa nessa fala. 😄')).toBeDefined()
+      // Subtítulo exato (Regra 2)
       expect(
-        screen.getByText(
-          'Não consegui entender esse lançamento financeiro. Tente falar algo como: "Almoço 45 reais".',
-        ),
+        screen.getByText("Dica: Fale o item e o valor, ex: 'Almoço 45 reais no débito'."),
       ).toBeDefined()
-      expect(screen.getByText('🎤 Tentar Novamente')).toBeDefined()
+      // Botão exato (Regra 2)
+      expect(screen.getByText('🎤 Falar Novamente')).toBeDefined()
+      // NUNCA abre a confirmação (Regra 1)
+      expect(screen.queryByText('✅ Confirmar Lançamento')).toBeNull()
+      expect(screen.queryByText('Despesa Detectada')).toBeNull()
+      expect(screen.queryByText('Ajustar')).toBeNull()
     })
   })
 
-  it('exibe badge "✨ GPT-4o Mini Ativo" quando a resposta vem da OpenAI', async () => {
+  it('bloqueia confirmação se a IA retornar status "sucesso" mas com valor zerado/inválido', async () => {
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'Gasolina',
+      amountCents: 0,
+      amountFormatted: 'R$ 0,00',
+      type: 'expense',
+      description: 'Gasolina',
+      confidence: 0.5,
+      processingSource: 'openai',
+      aiStatus: 'sucesso',
+      clarificationQuestion: null,
+      clarificationOptions: null,
+    })
+
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Ex: Almoço 45 reais no débito')
+    fireEvent.change(input, { target: { value: 'Gasolina' } })
+    fireEvent.click(screen.getByText('Processar com IA'))
+
+    await waitFor(() => {
+      // Cai no estado invalido pela guard dupla (status === 'sucesso' && valor > 0)
+      expect(screen.getByText('Não consegui identificar uma despesa nessa fala. 😄')).toBeDefined()
+      expect(screen.queryByText('✅ Confirmar Lançamento')).toBeNull()
+    })
+  })
+
+  it('exibe badge "✨ GPT-4o Mini Ativo" quando a resposta vem da OpenAI com sucesso', async () => {
     ;(window as any).SpeechRecognition = undefined
     ;(window as any).webkitSpeechRecognition = undefined
 
@@ -496,7 +536,7 @@ describe('VoiceTransactionDialog', () => {
     })
   })
 
-  it('exibe badge "⚠️ Fallback Local" e mensagem de erro detalhada quando chamada à OpenAI falha', async () => {
+  it('exibe alerta vermelho com erro exato retornado quando houver erro de requisição/rede', async () => {
     mockParseVoiceWithAi.mockResolvedValueOnce({
       rawText: 'Almoço 45 reais',
       amountCents: 4500,
@@ -513,7 +553,7 @@ describe('VoiceTransactionDialog', () => {
       clarificationQuestion: null,
       clarificationOptions: null,
       friendlyMessage: null,
-      aiError: 'Erro OpenAI: chave inválida ou não configurada (HTTP 401)',
+      aiError: 'Chave OPENAI_API_KEY não configurada no backend Supabase.',
     })
 
     ;(window as any).SpeechRecognition = undefined
@@ -532,15 +572,15 @@ describe('VoiceTransactionDialog', () => {
     fireEvent.click(screen.getByText('Processar com IA'))
 
     await waitFor(() => {
-      expect(screen.getByText(/⚠️ Fallback Local/i)).toBeDefined()
+      // Alerta vermelho com a mensagem exata de erro
+      const alert = screen.getByRole('alert')
+      expect(alert).toBeDefined()
       expect(
-        screen.getByText(/Erro OpenAI: chave inválida ou não configurada \(HTTP 401\)/i),
+        screen.getByText('Chave OPENAI_API_KEY não configurada no backend Supabase.'),
       ).toBeDefined()
-      expect(
-        screen.getByText(
-          /Processamos seu lançamento via parser local para não interromper seu fluxo/i,
-        ),
-      ).toBeDefined()
+      expect(screen.getByText('Erro de Conexão com IA:')).toBeDefined()
+      // Badge da OpenAI não deve estar visível
+      expect(screen.queryByText(/✨ GPT-4o Mini Ativo/i)).toBeNull()
     })
   })
 

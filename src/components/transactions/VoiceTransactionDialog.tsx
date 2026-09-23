@@ -274,6 +274,12 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   const handleSelectClarificationOption = (option: string) => {
     if (!parsedResult) return
 
+    // Só permite transicionar para sucesso se o valor for válido (> 0)
+    if (parsedResult.amountCents <= 0) {
+      setParsedResult((prev) => (prev ? { ...prev, aiStatus: 'invalido' } : null))
+      return
+    }
+
     // Opção pode ser "Categoria / Subcategoria" ou nome simples
     const parts = option.split('/').map((p) => p.trim())
     const catName = parts[0]
@@ -440,8 +446,25 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   }
 
   const currentDisplaySpeech = textoFalado.trim()
-  const aiStatus = parsedResult?.aiStatus || (parsedResult?.amountCents ? 'sucesso' : 'invalido')
-  const processingSource = parsedResult?.processingSource || 'local'
+  // Regra 1: Confirmação só abre se, e SOMENTE SE, a resposta tiver status === 'sucesso' E houver um valor numérico válido (> 0)
+  const isConfirmationAllowed =
+    Boolean(parsedResult) &&
+    parsedResult?.aiStatus === 'sucesso' &&
+    typeof parsedResult?.amountCents === 'number' &&
+    parsedResult.amountCents > 0
+
+  const isClarification =
+    Boolean(parsedResult) &&
+    !isConfirmationAllowed &&
+    parsedResult?.aiStatus === 'clarificacao' &&
+    typeof parsedResult?.amountCents === 'number' &&
+    parsedResult.amountCents > 0
+
+  // Se não é confirmação nem clarificação com valor, qualquer outro resultado é tratado como invalido
+  const isInvalid = Boolean(parsedResult) && !isConfirmationAllowed && !isClarification
+
+  const isSuccessFromOpenAi =
+    parsedResult && !parsedResult.aiError && parsedResult.processingSource === 'openai'
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -457,26 +480,14 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
               </DialogTitle>
             </div>
 
-            {/* Badge discreto da fonte de processamento quando houver resultado */}
-            {parsedResult && !isProcessingAi && (
+            {/* Regra 4: Badge de conexão da IA */}
+            {parsedResult && !isProcessingAi && isSuccessFromOpenAi && (
               <span
-                className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1 shrink-0 ${
-                  processingSource === 'openai'
-                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200/80 shadow-xs'
-                    : 'bg-amber-50 text-amber-800 border-amber-200/80 shadow-xs'
-                }`}
+                data-testid="badge-openai-success"
+                className="text-[11px] font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1 shrink-0 bg-emerald-50 text-emerald-800 border-emerald-200/80 shadow-xs"
               >
-                {processingSource === 'openai' ? (
-                  <>
-                    <Sparkles className="w-3 h-3 text-emerald-600" />
-                    <span>✨ GPT-4o Mini Ativo</span>
-                  </>
-                ) : (
-                  <>
-                    <AlertCircle className="w-3 h-3 text-amber-600" />
-                    <span>⚠️ Fallback Local</span>
-                  </>
-                )}
+                <Sparkles className="w-3 h-3 text-emerald-600" />
+                <span>✨ GPT-4o Mini Ativo</span>
               </span>
             )}
           </div>
@@ -485,24 +496,25 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             categoria e subcategoria.
           </DialogDescription>
 
-          {/* Banner de erro da OpenAI / Edge Function quando cair no fallback local com erro */}
-          {parsedResult &&
-            !isProcessingAi &&
-            processingSource === 'local' &&
-            parsedResult.aiError && (
-              <div className="mt-2 text-xs px-3 py-2 rounded-xl border border-amber-300 bg-amber-50/90 text-amber-900 flex items-start gap-2 text-left">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <div className="flex-1 leading-snug">
-                  <span className="font-bold block text-amber-950">
-                    Aviso da Inteligência Artificial:
-                  </span>
-                  <span className="text-amber-800 break-words">{parsedResult.aiError}</span>
-                  <span className="block text-[11px] text-amber-700/80 mt-0.5">
-                    Processamos seu lançamento via parser local para não interromper seu fluxo.
-                  </span>
-                </div>
+          {/* Regra 4: Alerta vermelho com erro exato se houver erro de requisição/rede ou da edge function */}
+          {parsedResult && !isProcessingAi && parsedResult.aiError && (
+            <div
+              role="alert"
+              data-testid="alert-ai-error"
+              className="mt-2 text-xs px-3 py-2 rounded-xl border border-rose-300 bg-rose-50/95 text-rose-900 flex items-start gap-2 text-left"
+            >
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <div className="flex-1 leading-snug">
+                <span className="font-bold block text-rose-950">Erro de Conexão com IA:</span>
+                <span className="text-rose-800 break-words font-mono text-[11px]">
+                  {parsedResult.aiError}
+                </span>
+                <span className="block text-[11px] text-rose-700/90 mt-0.5">
+                  Fallback local acionado.
+                </span>
               </div>
-            )}
+            </div>
+          )}
         </DialogHeader>
 
         {/* ================= ESTADO DE PROCESSAMENTO IA ================= */}
@@ -680,24 +692,23 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           </div>
         )}
 
-        {/* ================= ESTADO 2A: IA IDENTIFICOU "INVALIDO" (RUÍDO / CONVERSA SEM SENTIDO) ================= */}
-        {!isProcessingAi && parsedResult && aiStatus === 'invalido' && (
+        {/* ================= ESTADO 2A: IA IDENTIFICOU "INVALIDO" (RUÍDO / CONVERSA SEM SENTIDO OU SEM VALOR) ================= */}
+        {!isProcessingAi && isInvalid && (
           <div className="space-y-4 pt-2 animate-in fade-in-50 duration-200">
-            <div className="bg-amber-50/80 border border-amber-200/90 rounded-2xl p-4 text-center space-y-3">
+            <div className="bg-amber-50/80 border border-amber-200/90 rounded-2xl p-5 text-center space-y-3">
               <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto">
                 <HelpCircle className="w-6 h-6 text-amber-700" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-amber-950">
-                  Não consegui entender esse lançamento
+                <h4 className="text-base font-bold text-amber-950">
+                  Não consegui identificar uma despesa nessa fala. 😄
                 </h4>
-                <p className="text-xs text-amber-900/90 mt-1 leading-relaxed">
-                  {parsedResult.friendlyMessage ||
-                    'Ouvi algo sem sentido financeiro ou com ruído. Tente falar um valor e o motivo, como "Almoço 45 reais" ou "Gasolina 100".'}
+                <p className="text-xs text-amber-900/90 mt-1.5 leading-relaxed font-medium">
+                  Dica: Fale o item e o valor, ex: &apos;Almoço 45 reais no débito&apos;.
                 </p>
               </div>
-              {parsedResult.rawText && (
-                <div className="bg-white/70 rounded-xl p-2.5 text-xs text-slate-600 italic border border-amber-100">
+              {parsedResult?.rawText && (
+                <div className="bg-white/80 rounded-xl p-2.5 text-xs text-slate-600 italic border border-amber-100 break-words">
                   &ldquo;{parsedResult.rawText}&rdquo;
                 </div>
               )}
@@ -709,7 +720,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 onClick={handleRetryListening}
                 className="bg-[#064E3B] hover:bg-emerald-900 text-white rounded-xl font-bold text-xs h-11 gap-2 shadow-sm"
               >
-                <Mic className="w-4 h-4 text-emerald-300" />🎤 Tentar Novamente
+                <Mic className="w-4 h-4 text-emerald-300" />🎤 Falar Novamente
               </Button>
               <Button
                 type="button"
@@ -724,7 +735,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         )}
 
         {/* ================= ESTADO 2B: IA IDENTIFICOU "CLARIFICACAO" (AMBÍGUO / GÍRIA) ================= */}
-        {!isProcessingAi && parsedResult && aiStatus === 'clarificacao' && (
+        {!isProcessingAi && isClarification && parsedResult && (
           <div className="space-y-4 pt-2 animate-in fade-in-50 duration-200">
             {/* Mensagem amigável da IA */}
             <div className="bg-gradient-to-br from-indigo-50/90 via-sky-50/70 to-white border border-indigo-200/80 rounded-2xl p-4 space-y-2.5 shadow-sm">
@@ -738,8 +749,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
               </div>
 
               <p className="text-sm font-semibold text-slate-900 leading-snug">
-                {parsedResult.friendlyMessage ||
-                  parsedResult.clarificationQuestion ||
+                {parsedResult.clarificationQuestion ||
+                  parsedResult.friendlyMessage ||
                   'Identifiquei o valor, mas fiquei em dúvida sobre a categoria.'}
               </p>
 
@@ -804,7 +815,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         )}
 
         {/* ================= ESTADO 2C: IA IDENTIFICOU "SUCESSO" (CARD VERDE DE CONFIRMAÇÃO) ================= */}
-        {!isProcessingAi && parsedResult && aiStatus === 'sucesso' && (
+        {!isProcessingAi && isConfirmationAllowed && parsedResult && (
           <div className="space-y-4 pt-1 animate-in fade-in-50 duration-200">
             {/* Frase original dita pelo usuário */}
             <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 flex items-center gap-2.5">

@@ -142,7 +142,14 @@ describe('voice-parser', () => {
       const parsed = parseVoiceInput('abobrinha voadora', mockCategories)
       expect(parsed.amountCents).toBe(0)
       expect(parsed.aiStatus).toBe('invalido')
-      expect(parsed.friendlyMessage).toContain('Não consegui identificar o valor')
+      expect(parsed.friendlyMessage).toBe('Não consegui identificar uma despesa nessa fala. 😄')
+    })
+
+    it('classifica "GPT ormini falando" como "invalido" sem valor', () => {
+      const parsed = parseVoiceInput('GPT ormini falando', mockCategories)
+      expect(parsed.amountCents).toBe(0)
+      expect(parsed.aiStatus).toBe('invalido')
+      expect(parsed.friendlyMessage).toBe('Não consegui identificar uma despesa nessa fala. 😄')
     })
   })
 })

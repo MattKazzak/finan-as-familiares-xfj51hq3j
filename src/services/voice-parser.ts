@@ -741,8 +741,7 @@ export function parseVoiceInput(
 
   if (amountCents <= 0) {
     aiStatus = 'invalido'
-    friendlyMessage =
-      'Não consegui identificar o valor em reais. Tente falar o valor, ex: "Almoço 45 reais".'
+    friendlyMessage = 'Não consegui identificar uma despesa nessa fala. 😄'
   } else if (!categoryName) {
     // Valor existe, mas o termo/descrição não casou com nenhuma categoria/subcategoria nem termo genérico conhecido
     aiStatus = 'clarificacao'
