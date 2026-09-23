@@ -33,16 +33,11 @@ vi.mock('@/services/transactions', () => ({
 
 describe('VoiceTransactionDialog', () => {
   let mockGetUserMedia: ReturnType<typeof vi.fn>
-  let mockTrackStop: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mockTrackStop = vi.fn()
 
-    mockGetUserMedia = vi.fn().mockResolvedValue({
-      getTracks: () => [{ stop: mockTrackStop }, { stop: mockTrackStop }],
-    })
-
+    mockGetUserMedia = vi.fn()
     Object.defineProperty(navigator, 'mediaDevices', {
       value: {
         getUserMedia: mockGetUserMedia,
@@ -52,26 +47,12 @@ describe('VoiceTransactionDialog', () => {
     })
   })
 
-  it('solicita permissão nativa de microfone via getUserMedia({ audio: true }) ao abrir o diálogo', async () => {
-    render(
-      <VoiceTransactionDialog
-        open={true}
-        onOpenChange={vi.fn()}
-        onOpenManualTransaction={vi.fn()}
-      />,
-    )
-
-    await waitFor(() => {
-      expect(mockGetUserMedia).toHaveBeenCalledWith({ audio: true })
-    })
-  })
-
-  it('exibe estado visual "Ouvindo... fale agora" quando microfone é ativado', async () => {
-    // Mock de SpeechRecognition simples
+  it('NÃO chama getUserMedia ao abrir o diálogo nem ao gravar (SpeechRecognition gerencia nativamente)', async () => {
     class MockSpeechRecognition {
       lang = ''
       continuous = false
       interimResults = false
+      maxAlternatives = 1
       onstart: any = null
       onresult: any = null
       onerror: any = null
@@ -95,12 +76,16 @@ describe('VoiceTransactionDialog', () => {
       />,
     )
 
+    // Aguarda montagem
     await waitFor(() => {
       expect(screen.getByText(/Ouvindo\.\.\. fale agora/i)).toBeDefined()
     })
+
+    // Confirma que getUserMedia NUNCA foi chamado
+    expect(mockGetUserMedia).not.toHaveBeenCalled()
   })
 
-  it('configura o SpeechRecognition com pt-BR, continuous=false, interimResults=true e para as faixas de permissão imediatamente', async () => {
+  it('configura o SpeechRecognition com pt-BR, continuous=false, interimResults=true e maxAlternatives=1', async () => {
     let capturedRecognitionInstance: any = null
 
     function MockSpeechRecognition() {
@@ -108,7 +93,10 @@ describe('VoiceTransactionDialog', () => {
         lang: '',
         continuous: false,
         interimResults: false,
+        maxAlternatives: 1,
         onstart: null as any,
+        onaudiostart: null as any,
+        onspeechstart: null as any,
         onresult: null as any,
         onerror: null as any,
         onend: null as any,
@@ -139,13 +127,11 @@ describe('VoiceTransactionDialog', () => {
       expect(capturedRecognitionInstance.lang).toBe('pt-BR')
       expect(capturedRecognitionInstance.continuous).toBe(false)
       expect(capturedRecognitionInstance.interimResults).toBe(true)
+      expect(capturedRecognitionInstance.maxAlternatives).toBe(1)
     })
-
-    // Confirma que as tracks do getUserMedia foram liberadas imediatamente após obter a permissão
-    expect(mockTrackStop).toHaveBeenCalled()
   })
 
-  it('captura fala em tempo real via onresult com interimResults e atualiza a tela', async () => {
+  it('atualiza estado visual para "Gravando som detectado..." quando onaudiostart ou onspeechstart dispara', async () => {
     let capturedRecognitionInstance: any = null
 
     function MockSpeechRecognition() {
@@ -153,7 +139,59 @@ describe('VoiceTransactionDialog', () => {
         lang: '',
         continuous: false,
         interimResults: false,
+        maxAlternatives: 1,
         onstart: null as any,
+        onaudiostart: null as any,
+        onspeechstart: null as any,
+        onresult: null as any,
+        onerror: null as any,
+        onend: null as any,
+        start() {
+          if (self.onstart) self.onstart()
+        },
+        stop() {
+          if (self.onend) self.onend()
+        },
+        abort() {},
+      }
+      capturedRecognitionInstance = self
+      return self
+    }
+
+    ;(window as any).SpeechRecognition = MockSpeechRecognition
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(capturedRecognitionInstance).toBeTruthy()
+    })
+
+    // Dispara onaudiostart
+    capturedRecognitionInstance.onaudiostart()
+
+    await waitFor(() => {
+      expect(screen.getByText('Gravando som detectado...')).toBeDefined()
+    })
+  })
+
+  it('captura fala em tempo real via onresult com Array.from e preenche a caixinha de texto', async () => {
+    let capturedRecognitionInstance: any = null
+
+    function MockSpeechRecognition() {
+      const self = {
+        lang: '',
+        continuous: false,
+        interimResults: false,
+        maxAlternatives: 1,
+        onstart: null as any,
+        onaudiostart: null as any,
+        onspeechstart: null as any,
         onresult: null as any,
         onerror: null as any,
         onend: null as any,
@@ -185,16 +223,18 @@ describe('VoiceTransactionDialog', () => {
 
     // Simula evento onresult com resultados parciais
     capturedRecognitionInstance.onresult({
-      resultIndex: 0,
       results: [[{ transcript: 'Almoço 45 reais no débito' }]],
     })
 
     await waitFor(() => {
+      // Exibição na citação e no input preenchido automaticamente
       expect(screen.getByText(/Almoço 45 reais no débito/i)).toBeDefined()
+      const input = screen.getByPlaceholderText('Ex: Almoço 45 reais no débito') as HTMLInputElement
+      expect(input.value).toBe('Almoço 45 reais no débito')
     })
   })
 
-  it('ao disparar onend ou clicar em Concluir, processa o texto falado final com o parser', async () => {
+  it('trata erro no-speech de forma amigável sem fechar o diálogo e mantendo o microfone re-clicável', async () => {
     let capturedRecognitionInstance: any = null
 
     function MockSpeechRecognition() {
@@ -202,70 +242,10 @@ describe('VoiceTransactionDialog', () => {
         lang: '',
         continuous: false,
         interimResults: false,
+        maxAlternatives: 1,
         onstart: null as any,
-        onresult: null as any,
-        onerror: null as any,
-        onend: null as any,
-        start() {
-          if (self.onstart) self.onstart()
-        },
-        stop() {
-          if (self.onend) self.onend()
-        },
-        abort() {},
-      }
-      capturedRecognitionInstance = self
-      return self
-    }
-
-    ;(window as any).SpeechRecognition = MockSpeechRecognition
-
-    render(
-      <VoiceTransactionDialog
-        open={true}
-        onOpenChange={vi.fn()}
-        onOpenManualTransaction={vi.fn()}
-      />,
-    )
-
-    await waitFor(() => {
-      expect(capturedRecognitionInstance).toBeTruthy()
-    })
-
-    // Simula fala detectada
-    capturedRecognitionInstance.onresult({
-      resultIndex: 0,
-      results: [[{ transcript: 'Almoço 45 reais no débito' }]],
-    })
-
-    await waitFor(() => {
-      expect(screen.getByText(/Almoço 45 reais no débito/i)).toBeDefined()
-    })
-
-    // Botão Concluir presente
-    const btnConcluir = screen.getByText('Concluir')
-    expect(btnConcluir).toBeDefined()
-
-    // Simula finalização da fala pelo reconhecimento nativo
-    capturedRecognitionInstance.onend()
-
-    // Transição para o estado de confirmação (resumo do parser com R$ 45,00)
-    await waitFor(() => {
-      expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
-      expect(screen.getByText('Ajustar')).toBeDefined()
-      expect(screen.getByText('R$ 45,00')).toBeDefined()
-    })
-  })
-
-  it('exibe mensagem amigável em português quando ocorre onerror no SpeechRecognition (no-speech, network)', async () => {
-    let capturedRecognitionInstance: any = null
-
-    function MockSpeechRecognition() {
-      const self = {
-        lang: '',
-        continuous: false,
-        interimResults: false,
-        onstart: null as any,
+        onaudiostart: null as any,
+        onspeechstart: null as any,
         onresult: null as any,
         onerror: null as any,
         onend: null as any,
@@ -300,24 +280,44 @@ describe('VoiceTransactionDialog', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText('Não consegui ouvir nada. Tente falar mais perto do microfone.'),
+        screen.getByText(
+          'Não consegui te ouvir. Toque no microfone novamente e fale um pouco mais perto.',
+        ),
       ).toBeDefined()
     })
 
-    // Simula erro network
-    capturedRecognitionInstance.onerror({ error: 'network' })
-
-    await waitFor(() => {
-      expect(
-        screen.getByText('Problema de conexão. Verifique sua internet e tente de novo.'),
-      ).toBeDefined()
-    })
+    // Diálogo continua aberto e o botão para falar novamente está disponível
+    expect(screen.getByTitle('Toque para começar a falar')).toBeDefined()
   })
 
-  it('exibe botão "Toque aqui para autorizar o microfone e tentar novamente" quando a permissão é negada', async () => {
-    const error = new Error('Permission denied')
-    error.name = 'NotAllowedError'
-    mockGetUserMedia.mockRejectedValueOnce(error)
+  it('trata not-allowed com mensagem amigável instruindo liberação do microfone', async () => {
+    let capturedRecognitionInstance: any = null
+
+    function MockSpeechRecognition() {
+      const self = {
+        lang: '',
+        continuous: false,
+        interimResults: false,
+        maxAlternatives: 1,
+        onstart: null as any,
+        onaudiostart: null as any,
+        onspeechstart: null as any,
+        onresult: null as any,
+        onerror: null as any,
+        onend: null as any,
+        start() {
+          if (self.onstart) self.onstart()
+        },
+        stop() {
+          if (self.onend) self.onend()
+        },
+        abort() {},
+      }
+      capturedRecognitionInstance = self
+      return self
+    }
+
+    ;(window as any).SpeechRecognition = MockSpeechRecognition
 
     render(
       <VoiceTransactionDialog
@@ -328,42 +328,48 @@ describe('VoiceTransactionDialog', () => {
     )
 
     await waitFor(() => {
+      expect(capturedRecognitionInstance).toBeTruthy()
+    })
+
+    // Simula erro not-allowed
+    capturedRecognitionInstance.onerror({ error: 'not-allowed' })
+
+    await waitFor(() => {
       expect(
-        screen.getByText('Toque aqui para autorizar o microfone e tentar novamente'),
+        screen.getByText(/Permissão de microfone negada\. Toque no ícone de cadeado/i),
       ).toBeDefined()
     })
-
-    // Clicar no botão para tentar novamente dispara nova solicitação getUserMedia
-    mockGetUserMedia.mockResolvedValueOnce({
-      getTracks: () => [{ stop: mockTrackStop }],
-    })
-
-    fireEvent.click(screen.getByText('Toque aqui para autorizar o microfone e tentar novamente'))
-
-    await waitFor(() => {
-      expect(mockGetUserMedia).toHaveBeenCalledTimes(2)
-    })
   })
 
-  it('fecha as faixas de áudio (stream.getTracks().forEach(t => t.stop())) ao fechar ou parar', async () => {
-    const { unmount } = render(
-      <VoiceTransactionDialog
-        open={true}
-        onOpenChange={vi.fn()}
-        onOpenManualTransaction={vi.fn()}
-      />,
-    )
+  it('ao disparar onend com texto capturado, envia para o parser e abre resumo de confirmação', async () => {
+    let capturedRecognitionInstance: any = null
 
-    await waitFor(() => {
-      expect(mockGetUserMedia).toHaveBeenCalled()
-    })
+    function MockSpeechRecognition() {
+      const self = {
+        lang: '',
+        continuous: false,
+        interimResults: false,
+        maxAlternatives: 1,
+        onstart: null as any,
+        onaudiostart: null as any,
+        onspeechstart: null as any,
+        onresult: null as any,
+        onerror: null as any,
+        onend: null as any,
+        start() {
+          if (self.onstart) self.onstart()
+        },
+        stop() {
+          if (self.onend) self.onend()
+        },
+        abort() {},
+      }
+      capturedRecognitionInstance = self
+      return self
+    }
 
-    unmount()
+    ;(window as any).SpeechRecognition = MockSpeechRecognition
 
-    expect(mockTrackStop).toHaveBeenCalled()
-  })
-
-  it('permite alternar para digitação com o rótulo "Ou prefere digitar?" como alternativa secundária', async () => {
     render(
       <VoiceTransactionDialog
         open={true}
@@ -372,11 +378,92 @@ describe('VoiceTransactionDialog', () => {
       />,
     )
 
-    const preferTypeBtn = screen.getByText('Ou prefere digitar?')
-    expect(preferTypeBtn).toBeDefined()
+    await waitFor(() => {
+      expect(capturedRecognitionInstance).toBeTruthy()
+    })
 
-    fireEvent.click(preferTypeBtn)
+    // Simula captura de fala
+    capturedRecognitionInstance.onresult({
+      results: [[{ transcript: 'Almoço 45 reais no débito' }]],
+    })
 
-    expect(screen.getByPlaceholderText('Ex: Almoço 45 reais no débito')).toBeDefined()
+    // Simula término da fala
+    capturedRecognitionInstance.onend()
+
+    await waitFor(() => {
+      expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
+      expect(screen.getByText('Ajustar')).toBeDefined()
+      expect(screen.getByText('R$ 45,00')).toBeDefined()
+    })
+  })
+
+  it('fallback de digitação fluido: caixa de texto visível e botão "Processar com IA" processa texto digitado', async () => {
+    // Sem SpeechRecognition disponível
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Ex: Almoço 45 reais no débito')
+    expect(input).toBeDefined()
+
+    fireEvent.change(input, { target: { value: 'Gasolina 100 reais' } })
+
+    const processBtn = screen.getByText('Processar com IA')
+    expect(processBtn).toBeDefined()
+    fireEvent.click(processBtn)
+
+    await waitFor(() => {
+      expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
+      expect(screen.getByText('R$ 100,00')).toBeDefined()
+    })
+  })
+
+  it('salva lançamento via createTransaction quando usuário clica em "✅ Confirmar Lançamento"', async () => {
+    mockCreateTransaction.mockResolvedValueOnce({ id: 'tx-1' })
+
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Ex: Almoço 45 reais no débito')
+    fireEvent.change(input, { target: { value: 'Supermercado 150 reais no débito' } })
+    fireEvent.click(screen.getByText('Processar com IA'))
+
+    await waitFor(() => {
+      expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
+    })
+
+    fireEvent.click(screen.getByText('✅ Confirmar Lançamento'))
+
+    await waitFor(() => {
+      expect(mockCreateTransaction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          family_id: 'fam-1',
+          type: 'expense',
+          amount_cents: 15000,
+          description: expect.stringContaining('Supermercado'),
+        }),
+      )
+      expect(mockTriggerRefresh).toHaveBeenCalled()
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: expect.stringContaining('Lançamento registrado com sucesso'),
+        }),
+      )
+    })
   })
 })

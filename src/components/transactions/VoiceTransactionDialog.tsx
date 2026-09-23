@@ -22,9 +22,6 @@ import {
   CreditCard,
   User,
   PieChart,
-  ShieldAlert,
-  Radio,
-  Loader2,
 } from 'lucide-react'
 import { parseVoiceInput, ParsedVoiceTransaction } from '@/services/voice-parser'
 import { useFamily } from '@/hooks/use-family'
@@ -59,52 +56,23 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
   // Estados de voz e transcrição
   const [isListening, setIsListening] = useState(false)
+  const [audioDetected, setAudioDetected] = useState(false)
   const [textoFalado, setTextoFalado] = useState('')
   const [parsedResult, setParsedResult] = useState<ParsedVoiceTransaction | null>(null)
   const [selectedMemberId, setSelectedMemberId] = useState<string>('')
   const [isSaving, setIsSaving] = useState(false)
 
-  // Modo digitação manual secundário ("Ou prefere digitar?")
-  const [manualTextMode, setManualTextMode] = useState(false)
-  const [manualTextInput, setManualTextInput] = useState('')
-
   // Permissão nativa e status de erro amigável
   const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  // Gravação via MediaRecorder (fallback quando SpeechRecognition não existe)
-  const [isMediaRecording, setIsMediaRecording] = useState(false)
-  const [isProcessingAudio, setIsProcessingAudio] = useState(false)
-
   // Refs de controle
-  const streamRef = useRef<MediaStream | null>(null)
   const recognitionRef = useRef<any>(null)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const audioChunksRef = useRef<Blob[]>([])
-  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const speechDetectedRef = useRef<boolean>(false)
+  const latestTranscriptRef = useRef<string>('')
+  const hadErrorRef = useRef<boolean>(false)
 
-  // Finalizar e fechar todas as faixas do microfone ativas
-  const stopAudioTracks = useCallback(() => {
-    if (streamRef.current) {
-      try {
-        streamRef.current.getTracks().forEach((track) => {
-          track.stop()
-        })
-      } catch (err) {
-        console.warn('Erro ao finalizar faixas de áudio:', err)
-      }
-      streamRef.current = null
-    }
-  }, [])
-
-  // Parar qualquer gravação ativa e limpar timers
+  // Parar gravação ativa
   const stopListening = useCallback(() => {
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current)
-      silenceTimerRef.current = null
-    }
-
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop()
@@ -113,21 +81,11 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       }
       recognitionRef.current = null
     }
-
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      try {
-        mediaRecorderRef.current.stop()
-      } catch {
-        // silenciar erro
-      }
-    }
-
-    stopAudioTracks()
     setIsListening(false)
-    setIsMediaRecording(false)
-  }, [stopAudioTracks])
+    setAudioDetected(false)
+  }, [])
 
-  // Parar gravação e disparar interpretação com o texto capturado
+  // Parar gravação e disparar interpretação com o texto informado ou o texto atual da caixinha
   const handleStopAndProcess = useCallback(
     (overrideText?: string) => {
       stopListening()
@@ -144,240 +102,138 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     [categories, stopListening, textoFalado],
   )
 
-  // Timer de ~2.2s de silêncio contínuo para parada automática
-  const resetSilenceTimer = useCallback(() => {
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current)
+  // Iniciar SpeechRecognition síncrono no evento de clique
+  const startRecording = useCallback(() => {
+    // 1. Limpar estados anteriores
+    setErrorMessage(null)
+    hadErrorRef.current = false
+    setAudioDetected(false)
+
+    // Parar reconhecimento anterior se existir
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort()
+      } catch {
+        // silenciar
+      }
+      recognitionRef.current = null
     }
 
-    silenceTimerRef.current = setTimeout(() => {
-      handleStopAndProcess()
-    }, 2200)
-  }, [handleStopAndProcess])
-
-  // Iniciar reconhecimento de fala nativo (SpeechRecognition pt-BR)
-  const startSpeechRecognitionFlow = useCallback(
-    (SpeechRecognitionClass: any) => {
-      try {
-        if (recognitionRef.current) {
-          try {
-            recognitionRef.current.abort()
-          } catch {
-            // silenciar erro
-          }
-        }
-
-        const recognition = new SpeechRecognitionClass()
-        recognition.lang = 'pt-BR'
-        recognition.continuous = false
-        recognition.interimResults = true // Permite ver o texto sendo digitado em tempo real enquanto a pessoa fala
-        recognition.maxAlternatives = 1
-
-        recognition.onstart = () => {
-          setIsListening(true)
-          setErrorMessage(null)
-          speechDetectedRef.current = false
-        }
-
-        // Evento onresult com iteração exata especificada
-        recognition.onresult = (event: any) => {
-          speechDetectedRef.current = true
-          resetSilenceTimer()
-
-          let transcript = ''
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
-            transcript += event.results[i][0].transcript
-          }
-          setTextoFalado(transcript)
-        }
-
-        // Mensagens de erro amigáveis em português
-        recognition.onerror = (event: any) => {
-          console.warn('Speech recognition error:', event.error)
-          if (
-            event.error === 'not-allowed' ||
-            event.error === 'service-not-allowed' ||
-            event.error === 'permission-denied'
-          ) {
-            setPermissionStatus('denied')
-            setErrorMessage('Acesso ao microfone foi negado.')
-          } else if (event.error === 'no-speech') {
-            setErrorMessage('Não consegui ouvir nada. Tente falar mais perto do microfone.')
-          } else if (event.error === 'network') {
-            setErrorMessage('Problema de conexão. Verifique sua internet e tente de novo.')
-          } else if (event.error === 'audio-capture') {
-            setErrorMessage('Nenhum microfone encontrado ou o dispositivo está bloqueado.')
-          } else {
-            setErrorMessage('Não conseguimos ouvir com clareza. Tente falar novamente.')
-          }
-          setIsListening(false)
-        }
-
-        // Ao parar de falar (onend), exibe o texto final capturado e envia para a estruturação dos dados
-        recognition.onend = () => {
-          setIsListening(false)
-          setTextoFalado((currentText) => {
-            const finalClean = currentText.trim()
-            if (finalClean && !parsedResult) {
-              const parsed = parseVoiceInput(finalClean, categories)
-              setParsedResult(parsed)
-            }
-            return currentText
-          })
-          stopAudioTracks()
-        }
-
-        recognitionRef.current = recognition
-        recognition.start()
-      } catch (err: any) {
-        console.warn('Erro ao inicializar SpeechRecognition:', err)
-        setErrorMessage('Não foi possível iniciar o reconhecimento de voz. Tente novamente.')
-        setIsListening(false)
-        stopAudioTracks()
-      }
-    },
-    [categories, parsedResult, resetSilenceTimer, stopAudioTracks],
-  )
-
-  // Iniciar fallback com MediaRecorder quando SpeechRecognition não existe nativamente
-  const startMediaRecorderFallback = useCallback(
-    (stream: MediaStream) => {
-      try {
-        audioChunksRef.current = []
-
-        // Encontrar mimeType suportado
-        let mimeType = ''
-        if (typeof MediaRecorder !== 'undefined') {
-          if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-            mimeType = 'audio/webm;codecs=opus'
-          } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-            mimeType = 'audio/webm'
-          } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-            mimeType = 'audio/mp4'
-          } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
-            mimeType = 'audio/ogg'
-          }
-        }
-
-        const options = mimeType ? { mimeType } : undefined
-        const mediaRecorder = new MediaRecorder(stream, options)
-
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data && event.data.size > 0) {
-            audioChunksRef.current.push(event.data)
-          }
-        }
-
-        mediaRecorder.onstart = () => {
-          setIsListening(true)
-          setIsMediaRecording(true)
-          setErrorMessage(null)
-          resetSilenceTimer()
-        }
-
-        mediaRecorder.onstop = async () => {
-          setIsListening(false)
-          setIsMediaRecording(false)
-          stopAudioTracks()
-
-          // Fallback gracioso: orientar para digitação com o texto capturado ou campo ativo
-          setIsProcessingAudio(false)
-        }
-
-        mediaRecorderRef.current = mediaRecorder
-        mediaRecorder.start(200)
-      } catch (err) {
-        console.warn('Erro ao iniciar MediaRecorder fallback:', err)
-        setErrorMessage(
-          'Reconhecimento de voz não suportado pelo navegador. Você pode digitar abaixo.',
-        )
-        setManualTextMode(true)
-        stopAudioTracks()
-      }
-    },
-    [resetSilenceTimer, stopAudioTracks],
-  )
-
-  // Função central: SOLICITAÇÃO ATIVA DE PERMISSÃO (nativa do SO)
-  // 1. Liberação do Stream de Permissão (Correção do Microfone Preso):
-  // Se utilizar navigator.mediaDevices.getUserMedia para solicitar permissão,
-  // parar e fechar todas as tracks imediatamente após a confirmação:
-  // stream.getTracks().forEach(track => track.stop());
-  const requestMicAndStartListening = useCallback(async () => {
-    setErrorMessage(null)
-    setPermissionStatus('requesting')
-
-    const SpeechRecognitionClass =
+    const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
 
-    // Se temos getUserMedia, solicitamos a permissão do microfone
-    if (navigator?.mediaDevices?.getUserMedia) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-        setPermissionStatus('granted')
-
-        if (SpeechRecognitionClass) {
-          // IMPORTANTÍSSIMO: Para o SpeechRecognition receber áudio no Android/Chrome sem conflito,
-          // liberar e fechar IMEDIATAMENTE todas as faixas do stream de verificação de permissão.
-          // A permissão do sistema continua concedida mesmo após parar as tracks!
-          try {
-            stream.getTracks().forEach((track) => track.stop())
-          } catch (trackErr) {
-            console.warn('Erro ao liberar tracks do stream de permissão:', trackErr)
-          }
-          streamRef.current = null
-
-          // Inicia o reconhecimento de voz nativo com canal de áudio totalmente desimpedido
-          startSpeechRecognitionFlow(SpeechRecognitionClass)
-        } else {
-          // Fallback para quando o navegador não tem SpeechRecognition: precisa manter o stream ativo para MediaRecorder
-          streamRef.current = stream
-          startMediaRecorderFallback(stream)
-        }
-      } catch (err: any) {
-        console.warn('Erro ao obter permissão de microfone:', err)
-        stopAudioTracks()
-
-        if (
-          err?.name === 'NotAllowedError' ||
-          err?.name === 'PermissionDeniedError' ||
-          err?.message?.includes?.('Permission denied')
-        ) {
-          setPermissionStatus('denied')
-          setErrorMessage('Permissão para uso do microfone foi negada.')
-        } else if (err?.name === 'NotFoundError' || err?.name === 'DevicesNotFoundError') {
-          setPermissionStatus('unsupported')
-          setErrorMessage('Nenhum microfone foi encontrado no seu aparelho.')
-        } else {
-          setPermissionStatus('denied')
-          setErrorMessage('Não foi possível acessar o microfone. Verifique as configurações.')
-        }
-      }
-    } else if (SpeechRecognitionClass) {
-      // Se não tem mediaDevices mas tem SpeechRecognition nativo
-      setPermissionStatus('granted')
-      startSpeechRecognitionFlow(SpeechRecognitionClass)
-    } else {
+    if (!SpeechRecognition) {
       setPermissionStatus('unsupported')
       setErrorMessage(
-        'Seu navegador não possui suporte para acesso ao microfone. Use a digitação abaixo.',
+        'Seu navegador não suporta reconhecimento de voz nativo. Digite abaixo e toque em "Processar com IA".',
       )
-      setManualTextMode(true)
+      setIsListening(false)
+      return
     }
-  }, [startMediaRecorderFallback, startSpeechRecognitionFlow, stopAudioTracks])
 
-  // Resetar e iniciar gravação ao abrir/fechar o modal
+    try {
+      const recognition = new SpeechRecognition()
+      recognition.lang = 'pt-BR'
+      recognition.continuous = false
+      recognition.interimResults = true
+      recognition.maxAlternatives = 1
+
+      recognition.onstart = () => {
+        setIsListening(true)
+        setPermissionStatus('granted')
+        setErrorMessage(null)
+      }
+
+      // 3. Tratamento dos Eventos de Áudio: onaudiostart / onspeechstart
+      recognition.onaudiostart = () => {
+        setAudioDetected(true)
+      }
+      recognition.onspeechstart = () => {
+        setAudioDetected(true)
+      }
+
+      // onresult: captura resultados parciais e finais em tempo real e exibe na tela
+      recognition.onresult = (event: any) => {
+        const transcript = Array.from(event.results)
+          .map((result: any) => result[0].transcript)
+          .join('')
+        latestTranscriptRef.current = transcript
+        setTextoFalado(transcript)
+      }
+
+      // onerror: tratamento amigável sem fechar o diálogo
+      recognition.onerror = (event: any) => {
+        console.warn('SpeechRecognition onerror:', event.error)
+        hadErrorRef.current = true
+        setIsListening(false)
+        setAudioDetected(false)
+
+        if (
+          event.error === 'not-allowed' ||
+          event.error === 'service-not-allowed' ||
+          event.error === 'permission-denied'
+        ) {
+          setPermissionStatus('denied')
+          setErrorMessage(
+            'Permissão de microfone negada. Toque no ícone de cadeado/configurações ao lado do link no navegador e libere o Microfone para este site.',
+          )
+        } else if (event.error === 'no-speech') {
+          setErrorMessage(
+            'Não consegui te ouvir. Toque no microfone novamente e fale um pouco mais perto.',
+          )
+        } else if (event.error === 'network') {
+          setErrorMessage('Problema de conexão. Verifique sua internet e tente novamente.')
+        } else if (event.error === 'audio-capture') {
+          setErrorMessage('Nenhum microfone encontrado ou o áudio do aparelho está bloqueado.')
+        } else {
+          setErrorMessage(
+            'Não consegui entender com clareza. Toque no microfone e tente falar novamente.',
+          )
+        }
+      }
+
+      // onend: se houve texto capturado, envia para o parser e segue confirmação;
+      // se não houve texto e não houve erro, volta ao estado inicial pronto para ouvir de novo (sem fechar)
+      recognition.onend = () => {
+        setIsListening(false)
+        setAudioDetected(false)
+        recognitionRef.current = null
+
+        const finalCapturado = latestTranscriptRef.current.trim()
+        if (finalCapturado && !hadErrorRef.current) {
+          const parsed = parseVoiceInput(finalCapturado, categories)
+          setParsedResult(parsed)
+        }
+      }
+
+      recognitionRef.current = recognition
+      // Disparo imediato e síncrono
+      recognition.start()
+      setIsListening(true)
+    } catch (err: any) {
+      console.warn('Erro síncrono ao iniciar SpeechRecognition:', err)
+      setIsListening(false)
+      setAudioDetected(false)
+      setErrorMessage(
+        'Não foi possível ativar o microfone. Você pode digitar abaixo e processar com IA.',
+      )
+    }
+  }, [categories])
+
+  // Resetar ao abrir/fechar o modal
   useEffect(() => {
     if (open) {
       setTextoFalado('')
+      latestTranscriptRef.current = ''
       setParsedResult(null)
-      setManualTextMode(false)
-      setManualTextInput('')
       setErrorMessage(null)
+      hadErrorRef.current = false
+      setAudioDetected(false)
       setSelectedMemberId(currentMember?.id || members[0]?.id || '')
+      setPermissionStatus('idle')
 
-      // Disparar imediatamente a solicitação de permissão nativa
-      requestMicAndStartListening()
+      // Iniciar escuta síncrona imediatamente ao abrir o diálogo
+      startRecording()
     } else {
       stopListening()
       setPermissionStatus('idle')
@@ -386,13 +242,13 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     return () => {
       stopListening()
     }
-  }, [open, currentMember?.id, members, requestMicAndStartListening, stopListening])
+  }, [open, currentMember?.id, members, startRecording, stopListening])
 
-  // Submeter modo texto manual ("Ou prefere digitar?")
+  // Submeter modo texto manual
   const handleManualTextSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!manualTextInput.trim()) return
-    handleStopAndProcess(manualTextInput.trim())
+    if (!textoFalado.trim()) return
+    handleStopAndProcess(textoFalado.trim())
   }
 
   // Confirmar lançamento diretamente
@@ -501,209 +357,157 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         {/* ================= ESTADO 1: ESCUTANDO / CAPTURA DE ÁUDIO ================= */}
         {!parsedResult ? (
           <div className="space-y-4 pt-2">
-            {/* 1.1 CASO: Permissão Negada (NotAllowedError) */}
-            {permissionStatus === 'denied' && (
-              <div className="flex flex-col items-center justify-center py-6 px-4 bg-rose-50/80 rounded-2xl border border-rose-200 text-center space-y-3">
-                <div className="w-14 h-14 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shadow-inner">
-                  <ShieldAlert className="w-7 h-7" />
-                </div>
-                <div className="space-y-1 max-w-sm">
-                  <h4 className="text-sm font-bold text-rose-950">Acesso ao microfone negado</h4>
-                  <p className="text-xs text-rose-800">
-                    {errorMessage ||
-                      'O Curiangoo precisa da permissão do microfone para ouvir seu lançamento por voz.'}
-                  </p>
-                </div>
-
-                <Button
-                  type="button"
-                  onClick={requestMicAndStartListening}
-                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs h-10 px-4 rounded-xl shadow-sm gap-2 mt-2"
-                >
-                  <Mic className="w-4 h-4" />
-                  Toque aqui para autorizar o microfone e tentar novamente
-                </Button>
-              </div>
-            )}
-
-            {/* 1.2 CASO: Normal (Ouvindo ou pronto para ouvir) */}
-            {permissionStatus !== 'denied' && (
-              <div className="flex flex-col items-center justify-center py-6 px-4 bg-gradient-to-b from-emerald-50/70 to-slate-50 rounded-2xl border border-emerald-100 text-center relative overflow-hidden">
-                {/* Animação de Ondas Sonoras / Pulso Verde */}
-                <div className="relative mb-4 flex items-center justify-center">
-                  {isListening ? (
-                    <>
-                      <div className="absolute w-28 h-28 rounded-full bg-emerald-500/20 animate-ping pointer-events-none" />
-                      <div className="absolute w-24 h-24 rounded-full bg-emerald-500/30 animate-pulse pointer-events-none" />
-                      <button
-                        type="button"
-                        onClick={stopListening}
-                        className="w-16 h-16 rounded-full bg-[#064E3B] text-white flex items-center justify-center shadow-lg shadow-emerald-900/30 z-10 transition-transform active:scale-95"
-                        title="Toque para pausar"
-                      >
-                        <Mic className="w-8 h-8 animate-pulse text-emerald-300" />
-                      </button>
-                    </>
-                  ) : (
+            {/* Bloco Central do Microfone */}
+            <div className="flex flex-col items-center justify-center py-5 px-4 bg-gradient-to-b from-emerald-50/70 to-slate-50 rounded-2xl border border-emerald-100 text-center relative overflow-hidden">
+              {/* Botão de gravação / estado */}
+              <div className="relative mb-3 flex items-center justify-center">
+                {isListening ? (
+                  <>
+                    <div className="absolute w-28 h-28 rounded-full bg-emerald-500/20 animate-ping pointer-events-none" />
+                    <div className="absolute w-24 h-24 rounded-full bg-emerald-500/30 animate-pulse pointer-events-none" />
                     <button
                       type="button"
-                      onClick={requestMicAndStartListening}
-                      disabled={permissionStatus === 'requesting'}
-                      className="w-16 h-16 rounded-full bg-slate-200 text-slate-700 hover:bg-emerald-600 hover:text-white flex items-center justify-center shadow-md transition-all active:scale-95"
-                      title="Toque para começar a falar"
+                      onClick={stopListening}
+                      className="w-16 h-16 rounded-full bg-[#064E3B] text-white flex items-center justify-center shadow-lg shadow-emerald-900/30 z-10 transition-transform active:scale-95"
+                      title="Toque para pausar"
                     >
-                      {permissionStatus === 'requesting' ? (
-                        <Loader2 className="w-7 h-7 animate-spin text-emerald-700" />
-                      ) : (
-                        <MicOff className="w-7 h-7" />
-                      )}
+                      <Mic className="w-8 h-8 animate-pulse text-emerald-300" />
                     </button>
-                  )}
-                </div>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={startRecording}
+                    className="w-16 h-16 rounded-full bg-slate-200 text-slate-700 hover:bg-emerald-600 hover:text-white flex items-center justify-center shadow-md transition-all active:scale-95"
+                    title="Toque para começar a falar"
+                  >
+                    <MicOff className="w-7 h-7" />
+                  </button>
+                )}
+              </div>
 
-                {/* Status textual com texto EXATO solicitado: "Ouvindo... fale agora" */}
-                <div className="flex flex-col items-center gap-1">
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
-                    {isListening ? (
+              {/* Status textual */}
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
+                  {isListening ? (
+                    audioDetected ? (
+                      <>
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Gravando som detectado...
+                      </>
+                    ) : (
                       <>
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                         Ouvindo... fale agora
                       </>
-                    ) : permissionStatus === 'requesting' ? (
-                      'Solicitando permissão...'
-                    ) : (
-                      'Microfone pausado'
+                    )
+                  ) : (
+                    'Microfone pronto — toque para falar'
+                  )}
+                </span>
+              </div>
+
+              {/* Exibição em tempo real do que está sendo falado */}
+              <div className="mt-2.5 min-h-[40px] max-w-sm flex items-center justify-center">
+                {currentDisplaySpeech ? (
+                  <p className="text-sm font-semibold text-slate-800 italic leading-snug break-words px-2">
+                    &ldquo;{currentDisplaySpeech}&rdquo;
+                  </p>
+                ) : (
+                  <p className="text-xs text-slate-400">
+                    Exemplo: &ldquo;Almoço 45 reais no débito&rdquo; ou &ldquo;Cerveja na mercearia
+                    60&rdquo;
+                  </p>
+                )}
+              </div>
+
+              {/* Mensagem amigável de erro se houver (sem fechar o diálogo) */}
+              {errorMessage && (
+                <div
+                  className={`mt-3 text-xs px-3 py-2 rounded-xl border flex items-start gap-2 text-left w-full ${
+                    permissionStatus === 'denied'
+                      ? 'text-rose-900 bg-rose-50 border-rose-200'
+                      : 'text-amber-800 bg-amber-50 border-amber-200'
+                  }`}
+                >
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="leading-relaxed">{errorMessage}</p>
+                    {permissionStatus === 'denied' && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={startRecording}
+                        className="mt-2 text-xs h-7 px-2.5 rounded-lg border-rose-300 text-rose-900 hover:bg-rose-100/60"
+                      >
+                        Tentar novamente
+                      </Button>
                     )}
-                  </span>
-                  {isMediaRecording && (
-                    <span className="text-[10px] text-slate-500 font-medium flex items-center gap-1">
-                      <Radio className="w-3 h-3 text-emerald-600 animate-pulse" />
-                      Captura de áudio de alta fidelidade
-                    </span>
-                  )}
-                </div>
-                {/* Exibição da Transcrição Falada */}
-                <div className="mt-3 min-h-[48px] max-w-sm flex items-center justify-center">
-                  {currentDisplaySpeech ? (
-                    <p className="text-sm font-semibold text-slate-800 italic leading-snug break-words px-2">
-                      &ldquo;{currentDisplaySpeech}&rdquo;
-                    </p>
-                  ) : (
-                    <p className="text-xs text-slate-400">
-                      Exemplo: &ldquo;Almoço 45 reais no débito&rdquo; ou &ldquo;Cerveja na
-                      mercearia 60&rdquo;
-                    </p>
-                  )}
-                </div>
-
-                {/* Mensagem amigável de erro se houver */}
-                {errorMessage && (
-                  <div className="mt-2 text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200 flex items-center gap-1.5">
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                    <span>{errorMessage}</span>
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* Barrinhas de áudio visual verdes animadas quando ouvindo */}
-                {isListening && (
-                  <div className="flex items-center gap-1.5 mt-4">
-                    <span className="w-1 h-3 bg-emerald-500 rounded-full animate-pulse" />
-                    <span className="w-1 h-5 bg-emerald-600 rounded-full animate-bounce delay-75" />
-                    <span className="w-1 h-8 bg-emerald-500 rounded-full animate-pulse delay-100" />
-                    <span className="w-1 h-4 bg-emerald-600 rounded-full animate-bounce delay-150" />
-                    <span className="w-1 h-7 bg-emerald-500 rounded-full animate-pulse delay-200" />
-                    <span className="w-1 h-4 bg-emerald-600 rounded-full animate-bounce delay-100" />
-                    <span className="w-1 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                  </div>
-                )}
-              </div>
-            )}
+              {/* Barrinhas animadas quando capturando áudio */}
+              {isListening && (
+                <div className="flex items-center gap-1.5 mt-3">
+                  <span className="w-1 h-3 bg-emerald-500 rounded-full animate-pulse" />
+                  <span className="w-1 h-5 bg-emerald-600 rounded-full animate-bounce delay-75" />
+                  <span className="w-1 h-8 bg-emerald-500 rounded-full animate-pulse delay-100" />
+                  <span className="w-1 h-4 bg-emerald-600 rounded-full animate-bounce delay-150" />
+                  <span className="w-1 h-7 bg-emerald-500 rounded-full animate-pulse delay-200" />
+                  <span className="w-1 h-4 bg-emerald-600 rounded-full animate-bounce delay-100" />
+                  <span className="w-1 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                </div>
+              )}
+            </div>
 
-            {/* Ações do microfone: Recomeçar e Parar e Processar */}
-            {permissionStatus !== 'denied' && (
-              <div className="flex items-center justify-end gap-2 pt-1">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setTextoFalado('')
-                    requestMicAndStartListening()
-                  }}
-                  className="text-xs rounded-xl"
-                >
-                  Recomeçar
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={!currentDisplaySpeech && !isMediaRecording}
-                  onClick={() => handleStopAndProcess()}
-                  className="bg-[#064E3B] hover:bg-emerald-900 text-white font-bold text-xs rounded-xl shadow-xs"
-                >
-                  {isProcessingAudio ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                      Processando...
-                    </>
-                  ) : (
-                    'Concluir'
-                  )}
-                </Button>{' '}
-              </div>
-            )}
-
-            {/* ALTERNATIVA SECUNDÁRIA: "Ou prefere digitar?" SEMPRE disponível abaixo */}
-            <div className="pt-2 border-t border-slate-100">
-              {!manualTextMode ? (
-                <div className="text-center">
+            {/* 4. FALLBACK DE DIGITAÇÃO FLUIDO:
+                Mantenha a caixinha de texto logo abaixo preenchida com o que foi reconhecido
+                (ou vazia para digitação rápida), permitindo que o usuário aperte "Processar com IA" */}
+            <form
+              onSubmit={handleManualTextSubmit}
+              className="space-y-2 pt-2 border-t border-slate-100"
+            >
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                  <Keyboard className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Texto falado ou digitado</span>
+                </label>
+                {textoFalado && (
                   <button
                     type="button"
                     onClick={() => {
-                      setManualTextMode(true)
+                      setTextoFalado('')
+                      latestTranscriptRef.current = ''
                     }}
-                    className="text-xs text-slate-500 hover:text-slate-800 font-medium inline-flex items-center gap-1.5 transition-colors py-1 px-2 rounded-lg hover:bg-slate-50"
+                    className="text-[11px] text-slate-400 hover:text-slate-600"
                   >
-                    <Keyboard className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Ou prefere digitar?</span>
+                    Limpar
                   </button>
-                </div>
-              ) : (
-                <form onSubmit={handleManualTextSubmit} className="space-y-3 pt-1">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                      <Keyboard className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>Ou prefere digitar?</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setManualTextMode(false)}
-                      className="text-[11px] text-slate-400 hover:text-slate-600 underline"
-                    >
-                      Ocultar digitação
-                    </button>
-                  </div>
+                )}
+              </div>
 
-                  <div className="flex gap-2">
-                    <Input
-                      value={manualTextInput}
-                      onChange={(e) => setManualTextInput(e.target.value)}
-                      placeholder="Ex: Almoço 45 reais no débito"
-                      className="rounded-xl h-10 text-xs bg-white flex-1"
-                      autoFocus
-                    />
-                    <Button
-                      type="submit"
-                      disabled={!manualTextInput.trim()}
-                      className="bg-[#064E3B] hover:bg-emerald-900 text-white rounded-xl font-bold text-xs h-10 px-3.5 gap-1.5 shrink-0"
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      Interpretar
-                    </Button>
-                  </div>
-                </form>
-              )}
-            </div>
+              <div className="flex gap-2">
+                <Input
+                  value={textoFalado}
+                  onChange={(e) => {
+                    setTextoFalado(e.target.value)
+                    latestTranscriptRef.current = e.target.value
+                  }}
+                  placeholder="Ex: Almoço 45 reais no débito"
+                  className="rounded-xl h-10 text-xs bg-white flex-1"
+                />
+                <Button
+                  type="submit"
+                  disabled={!textoFalado.trim()}
+                  className="bg-[#064E3B] hover:bg-emerald-900 text-white rounded-xl font-bold text-xs h-10 px-3.5 gap-1.5 shrink-0 shadow-xs"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Processar com IA
+                </Button>
+              </div>
+            </form>
           </div>
         ) : (
           /* ================= ESTADO 2: RESUMO VISUAL LIMPO (ZERO FRICÇÃO) ================= */
@@ -724,7 +528,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 onClick={() => {
                   setParsedResult(null)
                   setTextoFalado('')
-                  requestMicAndStartListening()
+                  startRecording()
                 }}
                 className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 underline shrink-0"
               >
