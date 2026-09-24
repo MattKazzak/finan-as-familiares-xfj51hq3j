@@ -3,7 +3,7 @@
  * Converte linguagem natural falada em transação estruturada.
  */
 
-export type VoiceAiStatus = 'sucesso' | 'clarificacao' | 'falta_valor' | 'invalido'
+export type VoiceAiStatus = 'sucesso' | 'clarificacao' | 'falta_valor' | 'invalido' | 'consulta'
 
 export interface VoiceAiTransaction {
   descricao: string
@@ -18,6 +18,8 @@ export interface VoiceAiTransaction {
 
 export interface VoiceAiResponse {
   status: VoiceAiStatus
+  tipo_resposta?: 'transacao' | 'consulta'
+  resposta_consulta?: string | null
   transacao: VoiceAiTransaction | null
   pergunta_clarificacao: string | null
   opcoes_sugestao: string[] | null
@@ -42,6 +44,8 @@ export interface ParsedVoiceTransaction {
   // Campos da IA enriquecidos e transparência de processamento
   processingSource?: 'openai' | 'local'
   aiStatus?: VoiceAiStatus
+  tipoResposta?: 'transacao' | 'consulta'
+  respostaConsulta?: string | null
   clarificationQuestion?: string | null
   clarificationOptions?: string[] | null
   friendlyMessage?: string | null
@@ -951,14 +955,17 @@ export function mapAiResponseToParsedTransaction(
     falta_valor: 0.85,
     clarificacao: 0.7,
     invalido: 0.2,
+    consulta: 0.95,
   }
+
+  const isConsulta = aiData.status === 'consulta' || aiData.tipo_resposta === 'consulta'
 
   return {
     rawText,
     amountCents,
     amountFormatted,
     type,
-    description: transacao?.descricao || rawText,
+    description: isConsulta ? rawText : transacao?.descricao || rawText,
     establishment: transacao?.estabelecimento || undefined,
     paymentMethod,
     categoryNameSuggestion: transacao?.categoria || undefined,
@@ -967,6 +974,8 @@ export function mapAiResponseToParsedTransaction(
     confidence: confidenceByStatus[aiData.status] ?? 0.2,
     processingSource: 'openai',
     aiStatus: aiData.status,
+    tipoResposta: isConsulta ? 'consulta' : 'transacao',
+    respostaConsulta: aiData.resposta_consulta || (isConsulta ? aiData.mensagem_amigavel : null),
     clarificationQuestion: aiData.pergunta_clarificacao,
     clarificationOptions: aiData.opcoes_sugestao,
     friendlyMessage: aiData.mensagem_amigavel,

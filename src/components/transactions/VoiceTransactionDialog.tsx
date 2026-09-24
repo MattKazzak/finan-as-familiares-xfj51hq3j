@@ -14,18 +14,15 @@ import {
   Sparkles,
   CheckCircle2,
   SlidersHorizontal,
-  Volume2,
   AlertCircle,
-  Keyboard,
   ArrowDownRight,
   ArrowUpRight,
-  CreditCard,
-  User,
-  PieChart,
+  Send,
+  Loader2,
+  RotateCcw,
   Tag,
   HelpCircle,
-  RotateCcw,
-  Loader2,
+  MessageSquare,
 } from 'lucide-react'
 import { ParsedVoiceTransaction } from '@/services/voice-parser'
 import { parseVoiceWithAi } from '@/services/voice-ai'
@@ -34,6 +31,16 @@ import { useToast } from '@/hooks/use-toast'
 import { createTransaction } from '@/services/transactions'
 import { BUCKET_METADATA } from '@/types/budget-presets'
 import { BudgetBucket } from '@/types/finance'
+
+export interface ChatMessage {
+  id: string
+  sender: 'user' | 'assistant'
+  text: string
+  timestamp: Date
+  cardData?: ParsedVoiceTransaction | null
+  cardType?: 'sucesso' | 'falta_valor' | 'clarificacao' | 'invalido' | 'consulta'
+  aiError?: string | null
+}
 
 interface VoiceTransactionDialogProps {
   open: boolean
@@ -60,12 +67,18 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     useFamily()
   const { toast } = useToast()
 
+  // Mini-Chat: Histórico de mensagens mantido em memória durante a sessão do modal
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [inputVal, setInputVal] = useState('')
+
+  // Estado da transação parcial em 2 turnos (sobrevive a reinícios do microfone e mensagens)
+  const [pendingTransaction, setPendingTransaction] = useState<ParsedVoiceTransaction | null>(null)
+
   // Estados de voz e transcrição
   const [isListening, setIsListening] = useState(false)
   const [audioDetected, setAudioDetected] = useState(false)
   const [textoFalado, setTextoFalado] = useState('')
   const [isProcessingAi, setIsProcessingAi] = useState(false)
-  const [parsedResult, setParsedResult] = useState<ParsedVoiceTransaction | null>(null)
   const [selectedMemberId, setSelectedMemberId] = useState<string>('')
   const [isSaving, setIsSaving] = useState(false)
 
@@ -73,12 +86,13 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  // Estado específico para o fluxo 'falta_valor'
+  // Input de valor rápido no card falta_valor
   const [missingAmountInput, setMissingAmountInput] = useState('')
   const [isListeningForAmountOnly, setIsListeningForAmountOnly] = useState(false)
   const missingAmountInputRef = useRef<HTMLInputElement | null>(null)
 
   // Refs de controle
+  const chatScrollRef = useRef<HTMLDivElement | null>(null)
   const recognitionRef = useRef<any>(null)
   const latestTranscriptRef = useRef<string>('')
   const hadErrorRef = useRef<boolean>(false)
@@ -86,18 +100,31 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   const shouldKeepListeningRef = useRef<boolean>(false)
   const userStoppedManuallyRef = useRef<boolean>(false)
   const isListeningForAmountOnlyRef = useRef<boolean>(false)
-  const parsedResultRef = useRef<ParsedVoiceTransaction | null>(null)
+  const pendingTransactionRef = useRef<ParsedVoiceTransaction | null>(null)
 
   // Manter refs sincronizadas
   useEffect(() => {
-    parsedResultRef.current = parsedResult
-  }, [parsedResult])
+    pendingTransactionRef.current = pendingTransaction
+  }, [pendingTransaction])
 
   useEffect(() => {
     isListeningForAmountOnlyRef.current = isListeningForAmountOnly
   }, [isListeningForAmountOnly])
 
-  // Limpar timer de silêncio
+  // Scroll automático para a última mensagem sempre que o array de mensagens mudar
+  const scrollToBottom = useCallback(() => {
+    setTimeout(() => {
+      if (chatScrollRef.current) {
+        chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight
+      }
+    }, 60)
+  }, [])
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages, isProcessingAi, isListening, textoFalado, scrollToBottom])
+
+  // Limpar timer de silêncio de 3s
   const clearSilenceTimer = useCallback(() => {
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current)
@@ -113,7 +140,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       try {
         recognitionRef.current.stop()
       } catch {
-        // silenciar erro
+        // silenciar
       }
       recognitionRef.current = null
     }
@@ -135,23 +162,22 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     }
   }, [])
 
-  // Mesclar novo valor com transação parcial existente em 'falta_valor'
+  // Mesclar novo valor com transação parcial pendente
   const handleMergeAmountIntoTransaction = useCallback(
     (
       newAmountCents: number,
       paymentMethodOverride?: 'pix' | 'debito' | 'credito' | 'dinheiro',
       mergedCandidate?: Partial<ParsedVoiceTransaction>,
-    ) => {
-      const base = parsedResultRef.current
-      if (!base || newAmountCents <= 0) return
+    ): ParsedVoiceTransaction | null => {
+      const base = pendingTransactionRef.current
+      if (!base || newAmountCents <= 0) return null
 
       const formatted = (newAmountCents / 100).toLocaleString('pt-BR', {
         style: 'currency',
         currency: 'BRL',
       })
 
-      // Preservar sempre a descrição anterior, a não ser que a nova traga uma descrição explícita de item
-      // (e não apenas o valor como "foi 80 reais" ou "80")
+      // Preservar sempre a descrição anterior, exceto se a nova for um item real e não apenas valor
       const candidateDesc = mergedCandidate?.description?.trim()
       const isCandidateDescJustAmount =
         !candidateDesc ||
@@ -183,19 +209,21 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         friendlyMessage: null,
       }
 
-      setParsedResult(merged)
+      setPendingTransaction(merged)
+      pendingTransactionRef.current = merged
       setMissingAmountInput('')
       setIsListeningForAmountOnly(false)
       isListeningForAmountOnlyRef.current = false
+      return merged
     },
     [],
   )
 
-  // Parar gravação e disparar interpretação com IA (Edge Function)
+  // Enviar fala/texto para a IA e adicionar mensagens correspondentes ao chat
   const handleStopAndProcess = useCallback(
     async (overrideText?: string) => {
       const isAmountOnly = isListeningForAmountOnlyRef.current
-      const existingPartial = parsedResultRef.current
+      const existingPartial = pendingTransactionRef.current
 
       stopListening()
 
@@ -206,6 +234,20 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       if (!textToProcess) {
         return
       }
+
+      // Adiciona a fala do usuário como balão à direita no chat
+      const userMsgId = `user-${Date.now()}`
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: userMsgId,
+          sender: 'user',
+          text: textToProcess,
+          timestamp: new Date(),
+        },
+      ])
+      setTextoFalado('')
+      latestTranscriptRef.current = ''
 
       try {
         setIsProcessingAi(true)
@@ -221,10 +263,77 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           contexto_anterior: previousContext,
         })
 
-        // Se tínhamos uma transação parcial pendente (falta_valor ou amount-only)
+        // Caso 1: Consulta rápida (resposta acolhedora da IA sem card de lançamento)
+        if (parsed.aiStatus === 'consulta' || parsed.tipoResposta === 'consulta') {
+          const resposta =
+            parsed.respostaConsulta ||
+            parsed.friendlyMessage ||
+            'Aqui estão as informações solicitadas.'
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `assistant-${Date.now()}`,
+              sender: 'assistant',
+              text: resposta,
+              timestamp: new Date(),
+              cardType: 'consulta',
+            },
+          ])
+          return
+        }
+
+        // Caso 2: Falta de valor (início do fluxo em 2 turnos)
+        if (parsed.aiStatus === 'falta_valor') {
+          setPendingTransaction(parsed)
+          pendingTransactionRef.current = parsed
+
+          const friendlyMsg =
+            parsed.friendlyMessage ||
+            `Entendi: ${parsed.description}${parsed.establishment ? ` em ${parsed.establishment}` : ''}! 🍻 Mas quanto custou?`
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `assistant-${Date.now()}`,
+              sender: 'assistant',
+              text: friendlyMsg,
+              timestamp: new Date(),
+              cardData: parsed,
+              cardType: 'falta_valor',
+            },
+          ])
+          return
+        }
+
+        // Caso 3: Segundo turno — usuário informou o valor após uma transação parcial pendente
         if (existingPartial && (isAmountOnly || existingPartial.aiStatus === 'falta_valor')) {
           if (parsed.amountCents > 0) {
-            handleMergeAmountIntoTransaction(parsed.amountCents, parsed.paymentMethod, parsed)
+            const merged = handleMergeAmountIntoTransaction(
+              parsed.amountCents,
+              parsed.paymentMethod,
+              parsed,
+            )
+
+            const confirmedData = merged || {
+              ...existingPartial,
+              amountCents: parsed.amountCents,
+              amountFormatted: parsed.amountFormatted,
+              aiStatus: 'sucesso' as const,
+            }
+
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `assistant-${Date.now()}`,
+                sender: 'assistant',
+                text: `Perfeito! Registrei o valor de ${parsed.amountFormatted}. Confira abaixo e confirme o lançamento:`,
+                timestamp: new Date(),
+                cardData: confirmedData,
+                cardType: 'sucesso',
+              },
+            ])
+            return
           } else {
             toast({
               title: 'Valor não identificado',
@@ -232,12 +341,92 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 'Não conseguimos identificar o valor falado. Tente digitar ou falar novamente.',
               variant: 'destructive',
             })
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `assistant-${Date.now()}`,
+                sender: 'assistant',
+                text: 'Não consegui identificar o valor em reais. Você pode falar apenas o número (ex: "80 reais") ou digitar abaixo.',
+                timestamp: new Date(),
+                cardData: existingPartial,
+                cardType: 'falta_valor',
+              },
+            ])
+            return
           }
-        } else {
-          setParsedResult(parsed)
         }
+
+        // Caso 4: Transação completa com sucesso logo no primeiro turno
+        if (parsed.aiStatus === 'sucesso' && parsed.amountCents > 0) {
+          setPendingTransaction(parsed)
+          pendingTransactionRef.current = parsed
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `assistant-${Date.now()}`,
+              sender: 'assistant',
+              text: `Entendido! Identifiquei o lançamento de ${parsed.description} (${parsed.amountFormatted}). Toque em confirmar para registrar:`,
+              timestamp: new Date(),
+              cardData: parsed,
+              cardType: 'sucesso',
+            },
+          ])
+          return
+        }
+
+        // Caso 5: Clarificação (valor existe mas descrição/categoria ambígua)
+        if (parsed.aiStatus === 'clarificacao' && parsed.amountCents > 0) {
+          setPendingTransaction(parsed)
+          pendingTransactionRef.current = parsed
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `assistant-${Date.now()}`,
+              sender: 'assistant',
+              text:
+                parsed.clarificationQuestion ||
+                parsed.friendlyMessage ||
+                `Entendi ${parsed.amountFormatted}! Mas qual a categoria deste gasto?`,
+              timestamp: new Date(),
+              cardData: parsed,
+              cardType: 'clarificacao',
+            },
+          ])
+          return
+        }
+
+        // Caso 6: Inválido ou erro
+        const fallbackMsg =
+          parsed.friendlyMessage ||
+          "Não consegui entender esse lançamento financeiro. Tente algo como: 'Almoço 45 reais no débito no restaurante' ou 'supermercado do zé 180 no pix'"
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `assistant-${Date.now()}`,
+            sender: 'assistant',
+            text: fallbackMsg,
+            timestamp: new Date(),
+            cardData: parsed,
+            cardType: 'invalido',
+            aiError: parsed.aiError || null,
+          },
+        ])
       } catch (err: any) {
         console.error('Erro ao processar áudio com IA:', err)
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `assistant-${Date.now()}`,
+            sender: 'assistant',
+            text: 'Ocorreu uma falha ao interpretar seu comando. Tente falar novamente.',
+            timestamp: new Date(),
+            cardType: 'invalido',
+            aiError: err?.message || 'Falha de conexão',
+          },
+        ])
       } finally {
         setIsProcessingAi(false)
       }
@@ -252,15 +441,13 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     ],
   )
 
-  // Iniciar SpeechRecognition síncrono no evento de clique
-  // options?: { forAmountOnly?: boolean }
+  // Iniciar SpeechRecognition nativo com controle estrito de silêncio (3000ms)
   const startRecording = useCallback(
     (options?: { forAmountOnly?: boolean }) => {
       const isForAmount = Boolean(options?.forAmountOnly)
       setIsListeningForAmountOnly(isForAmount)
       isListeningForAmountOnlyRef.current = isForAmount
 
-      // 1. Limpar estados anteriores
       setErrorMessage(null)
       hadErrorRef.current = false
       userStoppedManuallyRef.current = false
@@ -268,7 +455,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       setAudioDetected(false)
       clearSilenceTimer()
 
-      // Parar reconhecimento anterior se existir
       if (recognitionRef.current) {
         try {
           recognitionRef.current.abort()
@@ -284,7 +470,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       if (!SpeechRecognition) {
         setPermissionStatus('unsupported')
         setErrorMessage(
-          'Seu navegador não suporta reconhecimento de voz nativo. Digite abaixo e toque em "Processar com IA".',
+          'Seu navegador não suporta reconhecimento de voz nativo. Digite abaixo e envie para o Copilot.',
         )
         setIsListening(false)
         return
@@ -293,7 +479,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       try {
         const recognition = new SpeechRecognition()
         recognition.lang = 'pt-BR'
-        // MELHORIA 1: continuous = true para não fechar antecipadamente
+        // Contrato 1: continuous = true para escuta contínua no ritmo do usuário
         recognition.continuous = true
         recognition.interimResults = true
         recognition.maxAlternatives = 1
@@ -304,7 +490,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           setErrorMessage(null)
         }
 
-        // Tratamento dos Eventos de Áudio: onaudiostart / onspeechstart
         recognition.onaudiostart = () => {
           setAudioDetected(true)
         }
@@ -312,7 +497,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           setAudioDetected(true)
         }
 
-        // Função para processar quando o silêncio de 3s expira de fato
+        // Função chamada estritamente quando o timer de 3000ms de silêncio expira
         const triggerFinalProcessing = () => {
           clearSilenceTimer()
           shouldKeepListeningRef.current = false
@@ -333,45 +518,10 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             return
           }
 
-          if (isListeningForAmountOnlyRef.current && parsedResultRef.current) {
-            setIsProcessingAi(true)
-            const previousContext = buildPreviousContext(parsedResultRef.current)
-            parseVoiceWithAi({
-              texto: captured,
-              familyId: family?.id,
-              categories,
-              contexto_anterior: previousContext,
-            })
-              .then((amountParsed) => {
-                if (amountParsed.amountCents > 0) {
-                  handleMergeAmountIntoTransaction(
-                    amountParsed.amountCents,
-                    amountParsed.paymentMethod,
-                    amountParsed,
-                  )
-                } else {
-                  toast({
-                    title: 'Valor não identificado',
-                    description:
-                      'Não conseguimos identificar o valor falado. Tente digitar ou falar novamente.',
-                    variant: 'destructive',
-                  })
-                }
-              })
-              .catch((err) => {
-                console.error('Erro ao interpretar áudio de valor:', err)
-              })
-              .finally(() => {
-                setIsProcessingAi(false)
-                setIsListeningForAmountOnly(false)
-                isListeningForAmountOnlyRef.current = false
-              })
-          } else {
-            handleStopAndProcess(captured)
-          }
+          handleStopAndProcess(captured)
         }
 
-        // Função de finalização por timeout de silêncio (3000ms após última fala)
+        // Contrato 1: Temporizador de 3s (3000ms) de silêncio real
         const scheduleSilenceProcessing = () => {
           clearSilenceTimer()
           silenceTimerRef.current = setTimeout(() => {
@@ -379,7 +529,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           }, 3000)
         }
 
-        // onresult: captura resultados parciais e finais em tempo real acumulando em latestTranscriptRef
         recognition.onresult = (event: any) => {
           const transcript = Array.from(event.results)
             .map((result: any) => result[0].transcript)
@@ -387,11 +536,10 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           latestTranscriptRef.current = transcript
           setTextoFalado(transcript)
 
-          // Reiniciar timer humanizado de 3s a cada fala detectada
+          // Reiniciar timer de 3s a cada fala detectada
           scheduleSilenceProcessing()
         }
 
-        // onerror: tratamento amigável sem fechar o diálogo
         recognition.onerror = (event: any) => {
           console.warn('SpeechRecognition onerror:', event.error)
           hadErrorRef.current = true
@@ -425,26 +573,22 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           }
         }
 
-        // onend: se fechamento prematuro pelo navegador mobile antes dos 3s e sem parada manual -> REINICIAR
+        // Contrato 1: onend mobile prematuro — se timer de 3s não expirou e usuário não parou manualmente, REINICIA
         recognition.onend = () => {
-          // (a) Se ainda deve continuar ouvindo (silêncio de 3s NÃO expirou e usuário não parou manualmente nem houve erro)
           if (
             shouldKeepListeningRef.current &&
             !userStoppedManuallyRef.current &&
             !hadErrorRef.current
           ) {
             try {
-              // Reinicia o reconhecimento mantendo o texto acumulado em latestTranscriptRef
               recognition.start()
               setIsListening(true)
               return
             } catch (restartErr) {
-              // Se falhar (ex: InvalidStateError porque já está rodando ou estado travado), continua fluxo normal
               console.warn('Erro ao reiniciar recognition no onend prematuro:', restartErr)
             }
           }
 
-          // (b) Silêncio expirou ou usuário parou manualmente ou erro
           clearSilenceTimer()
           setIsListening(false)
           setAudioDetected(false)
@@ -452,54 +596,17 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
           const finalCapturado = latestTranscriptRef.current.trim()
 
-          // Se a parada foi manual pelo usuário, processa imediatamente o que tiver acumulado
+          // Se a parada foi manual pelo botão do microfone, processa imediatamente
           if (userStoppedManuallyRef.current && finalCapturado && !hadErrorRef.current) {
             userStoppedManuallyRef.current = false
             shouldKeepListeningRef.current = false
-
-            if (isListeningForAmountOnlyRef.current && parsedResultRef.current) {
-              setIsProcessingAi(true)
-              const previousContext = buildPreviousContext(parsedResultRef.current)
-              parseVoiceWithAi({
-                texto: finalCapturado,
-                familyId: family?.id,
-                categories,
-                contexto_anterior: previousContext,
-              })
-                .then((amountParsed) => {
-                  if (amountParsed.amountCents > 0) {
-                    handleMergeAmountIntoTransaction(
-                      amountParsed.amountCents,
-                      amountParsed.paymentMethod,
-                      amountParsed,
-                    )
-                  } else {
-                    toast({
-                      title: 'Valor não identificado',
-                      description:
-                        'Não conseguimos identificar o valor falado. Digite ou fale novamente.',
-                      variant: 'destructive',
-                    })
-                  }
-                })
-                .catch((err) => {
-                  console.error('Erro ao interpretar áudio de valor no onend manual:', err)
-                })
-                .finally(() => {
-                  setIsProcessingAi(false)
-                  setIsListeningForAmountOnly(false)
-                  isListeningForAmountOnlyRef.current = false
-                })
-            } else {
-              handleStopAndProcess(finalCapturado)
-            }
+            handleStopAndProcess(finalCapturado)
           } else if (!shouldKeepListeningRef.current) {
             setIsListeningForAmountOnly(false)
           }
         }
 
         recognitionRef.current = recognition
-        // Disparo imediato e síncrono
         recognition.start()
         setIsListening(true)
       } catch (err: any) {
@@ -510,38 +617,39 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         setAudioDetected(false)
         setIsListeningForAmountOnly(false)
         setErrorMessage(
-          'Não foi possível ativar o microfone. Você pode digitar abaixo e processar com IA.',
+          'Não foi possível ativar o microfone. Você pode digitar abaixo e enviar com o Copilot.',
         )
       }
     },
-    [
-      buildPreviousContext,
-      categories,
-      clearSilenceTimer,
-      family?.id,
-      handleMergeAmountIntoTransaction,
-      handleStopAndProcess,
-      toast,
-    ],
+    [clearSilenceTimer, handleStopAndProcess],
   )
 
   // Auto-foco no input de valor quando entra no estado 'falta_valor'
   useEffect(() => {
-    if (parsedResult?.aiStatus === 'falta_valor') {
+    if (pendingTransaction?.aiStatus === 'falta_valor') {
       const timer = setTimeout(() => {
         missingAmountInputRef.current?.focus()
-      }, 80)
+      }, 100)
       return () => clearTimeout(timer)
     }
-  }, [parsedResult?.aiStatus])
+  }, [pendingTransaction?.aiStatus])
 
-  // Resetar ao abrir/fechar o modal
+  // Iniciar sessão do modal: zera histórico ao abrir e dispara escuta
   useEffect(() => {
     if (open) {
+      setMessages([
+        {
+          id: 'welcome-1',
+          sender: 'assistant',
+          text: 'Olá! Sou o Curiangoo Copilot. 🌿 Você pode falar seus gastos e receitas no seu ritmo ou me fazer uma pergunta rápida (ex: "quanto ainda posso gastar esse mês?").',
+          timestamp: new Date(),
+        },
+      ])
+      setInputVal('')
       setTextoFalado('')
       latestTranscriptRef.current = ''
-      setParsedResult(null)
-      parsedResultRef.current = null
+      setPendingTransaction(null)
+      pendingTransactionRef.current = null
       setErrorMessage(null)
       setMissingAmountInput('')
       setIsListeningForAmountOnly(false)
@@ -554,7 +662,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       setSelectedMemberId(currentMember?.id || members[0]?.id || '')
       setPermissionStatus('idle')
 
-      // Iniciar escuta síncrona imediatamente ao abrir o diálogo
       startRecording()
     } else {
       stopListening()
@@ -562,6 +669,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       setIsProcessingAi(false)
       setMissingAmountInput('')
       setIsListeningForAmountOnly(false)
+      setPendingTransaction(null)
+      pendingTransactionRef.current = null
     }
 
     return () => {
@@ -570,20 +679,22 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  // Submeter modo texto manual
-  const handleManualTextSubmit = (e: React.FormEvent) => {
+  // Submeter modo texto do rodapé do mini-chat
+  const handleChatTextSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     clearSilenceTimer()
-    if (!textoFalado.trim()) return
-    handleStopAndProcess(textoFalado.trim())
+    const textToSend = inputVal.trim()
+    if (!textToSend) return
+    setInputVal('')
+    handleStopAndProcess(textToSend)
   }
 
-  // Confirmar valor digitado no estado 'falta_valor'
+  // Confirmar valor digitado diretamente no card falta_valor
   const handleConfirmMissingAmount = (e?: React.FormEvent) => {
     if (e) e.preventDefault()
-    if (!parsedResult) return
+    const base = pendingTransactionRef.current
+    if (!base) return
 
-    // Converte valor digitado (ex: "45,50" ou "45") para centavos
     const cleaned = missingAmountInput.replace(/[^\d,.]/g, '').replace(',', '.')
     const parsedNumber = parseFloat(cleaned)
     const cents = !isNaN(parsedNumber) && parsedNumber > 0 ? Math.round(parsedNumber * 100) : 0
@@ -597,59 +708,94 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       return
     }
 
-    handleMergeAmountIntoTransaction(cents)
+    // Registra como fala do usuário no chat
+    const userMsgId = `user-${Date.now()}`
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: userMsgId,
+        sender: 'user',
+        text: `R$ ${missingAmountInput}`,
+        timestamp: new Date(),
+      },
+    ])
+
+    const merged = handleMergeAmountIntoTransaction(cents)
+    if (merged) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `assistant-${Date.now()}`,
+          sender: 'assistant',
+          text: `Valor de ${merged.amountFormatted} registrado! Confira o lançamento abaixo:`,
+          timestamp: new Date(),
+          cardData: merged,
+          cardType: 'sucesso',
+        },
+      ])
+    }
   }
 
   // Ação ao clicar em uma opção de sugestão da IA no estado "clarificacao"
-  const handleSelectClarificationOption = (option: string) => {
-    if (!parsedResult) return
+  const handleSelectClarificationOption = (option: string, cardData?: ParsedVoiceTransaction) => {
+    const base = cardData || pendingTransactionRef.current
+    if (!base || base.amountCents <= 0) return
 
-    // Só permite transicionar para sucesso se o valor for válido (> 0)
-    if (parsedResult.amountCents <= 0) {
-      setParsedResult((prev) => (prev ? { ...prev, aiStatus: 'invalido' } : null))
-      return
-    }
-
-    // Opção pode ser "Categoria / Subcategoria" ou nome simples
     const parts = option.split('/').map((p) => p.trim())
     const catName = parts[0]
     const subName = parts[1] || ''
 
-    // Procurar categoria compatível
     const matchedCategory = categories.find(
       (c) =>
-        c.type === parsedResult.type &&
+        c.type === base.type &&
         (c.name.toLowerCase() === catName.toLowerCase() ||
           c.name.toLowerCase().includes(catName.toLowerCase()) ||
           catName.toLowerCase().includes(c.name.toLowerCase())),
     )
 
-    // Atualiza o resultado para o estado de sucesso
-    setParsedResult((prev) => {
-      if (!prev) return null
-      return {
-        ...prev,
-        aiStatus: 'sucesso',
-        categoryNameSuggestion: matchedCategory ? matchedCategory.name : catName,
-        subcategoryNameSuggestion: subName || prev.subcategoryNameSuggestion,
-        bucketSuggestion:
-          (matchedCategory?.budget_bucket as any) ||
-          (catName.toLowerCase().includes('transporte') ||
-          catName.toLowerCase().includes('alimenta') ||
-          catName.toLowerCase().includes('saude')
-            ? 'essential'
-            : 'lifestyle'),
-        confidence: 0.9,
-        clarificationQuestion: null,
-        clarificationOptions: null,
-      }
-    })
+    const updated: ParsedVoiceTransaction = {
+      ...base,
+      aiStatus: 'sucesso',
+      categoryNameSuggestion: matchedCategory ? matchedCategory.name : catName,
+      subcategoryNameSuggestion: subName || base.subcategoryNameSuggestion,
+      bucketSuggestion:
+        (matchedCategory?.budget_bucket as any) ||
+        (catName.toLowerCase().includes('transporte') ||
+        catName.toLowerCase().includes('alimenta') ||
+        catName.toLowerCase().includes('saude')
+          ? 'essential'
+          : 'lifestyle'),
+      confidence: 0.9,
+      clarificationQuestion: null,
+      clarificationOptions: null,
+    }
+
+    setPendingTransaction(updated)
+    pendingTransactionRef.current = updated
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `user-${Date.now()}`,
+        sender: 'user',
+        text: option,
+        timestamp: new Date(),
+      },
+      {
+        id: `assistant-${Date.now() + 1}`,
+        sender: 'assistant',
+        text: `Ótimo! Categoria ${updated.categoryNameSuggestion} selecionada. Pronto para confirmar:`,
+        timestamp: new Date(),
+        cardData: updated,
+        cardType: 'sucesso',
+      },
+    ])
   }
 
   // Tentar novamente (voltar à escuta do zero)
   const handleRetryListening = () => {
-    setParsedResult(null)
-    parsedResultRef.current = null
+    setPendingTransaction(null)
+    pendingTransactionRef.current = null
     setTextoFalado('')
     setMissingAmountInput('')
     setIsListeningForAmountOnly(false)
@@ -657,11 +803,13 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     latestTranscriptRef.current = ''
     startRecording()
   }
-  // Confirmar lançamento diretamente
-  const handleConfirmTransaction = async () => {
-    if (!family || !parsedResult) return
 
-    if (parsedResult.amountCents <= 0) {
+  // Confirmar lançamento diretamente no Supabase
+  const handleConfirmTransaction = async (cardData?: ParsedVoiceTransaction | null) => {
+    const dataToSave = cardData || pendingTransaction
+    if (!family || !dataToSave) return
+
+    if (dataToSave.amountCents <= 0) {
       toast({
         title: 'Valor não identificado',
         description:
@@ -674,36 +822,32 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     try {
       setIsSaving(true)
 
-      // Identificar categoria correspondente
       let targetCategory = categories.find((c) => {
-        if (c.type !== parsedResult.type) return false
-        if (parsedResult.categoryNameSuggestion) {
-          return c.name.toLowerCase() === parsedResult.categoryNameSuggestion.toLowerCase()
+        if (c.type !== dataToSave.type) return false
+        if (dataToSave.categoryNameSuggestion) {
+          return c.name.toLowerCase() === dataToSave.categoryNameSuggestion.toLowerCase()
         }
         return false
       })
 
-      // Se não encontrou exata, tenta parcial
-      if (!targetCategory && parsedResult.categoryNameSuggestion) {
+      if (!targetCategory && dataToSave.categoryNameSuggestion) {
         targetCategory = categories.find(
           (c) =>
-            c.type === parsedResult.type &&
-            (c.name.toLowerCase().includes(parsedResult.categoryNameSuggestion!.toLowerCase()) ||
-              parsedResult.categoryNameSuggestion!.toLowerCase().includes(c.name.toLowerCase())),
+            c.type === dataToSave.type &&
+            (c.name.toLowerCase().includes(dataToSave.categoryNameSuggestion!.toLowerCase()) ||
+              dataToSave.categoryNameSuggestion!.toLowerCase().includes(c.name.toLowerCase())),
         )
       }
 
-      // Se ainda não encontrou, pega a primeira categoria do tipo
       if (!targetCategory) {
-        targetCategory = categories.find((c) => c.type === parsedResult.type)
+        targetCategory = categories.find((c) => c.type === dataToSave.type)
       }
 
       const categoryId = targetCategory?.id || null
       let subcategoryId: string | null = null
 
-      // Se a IA sugeriu subcategoria, verifica se existe ou cria dinamicamente
-      if (targetCategory && parsedResult.subcategoryNameSuggestion) {
-        const subName = parsedResult.subcategoryNameSuggestion.trim()
+      if (targetCategory && dataToSave.subcategoryNameSuggestion) {
+        const subName = dataToSave.subcategoryNameSuggestion.trim()
         const existingSub = targetCategory.subcategories?.find(
           (s) => s.name.toLowerCase() === subName.toLowerCase(),
         )
@@ -729,16 +873,16 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         member_id: memberId,
         category_id: categoryId,
         subcategory_id: subcategoryId,
-        type: parsedResult.type,
-        amount_cents: parsedResult.amountCents,
-        description: parsedResult.description || 'Lançamento por Voz',
+        type: dataToSave.type,
+        amount_cents: dataToSave.amountCents,
+        description: dataToSave.description || 'Lançamento por Voz',
         transaction_date: new Date().toISOString().slice(0, 10),
         status: 'confirmed',
       })
 
       toast({
         title: 'Lançamento registrado com sucesso! 🎉',
-        description: `${parsedResult.description} (${parsedResult.amountFormatted}) adicionado ao saldo da família.`,
+        description: `${dataToSave.description} (${dataToSave.amountFormatted}) adicionado ao saldo da família.`,
       })
 
       triggerRefresh()
@@ -757,773 +901,478 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   }
 
   // Abrir formulário manual já pré-preenchido
-  const handleAdjustManually = () => {
-    if (!parsedResult) return
+  const handleAdjustManually = (cardData?: ParsedVoiceTransaction | null) => {
+    const dataToAdjust = cardData || pendingTransaction
+    if (!dataToAdjust) return
 
     const targetCategory = categories.find((c) => {
-      if (c.type !== parsedResult.type) return false
-      if (parsedResult.categoryNameSuggestion) {
-        return c.name.toLowerCase() === parsedResult.categoryNameSuggestion.toLowerCase()
+      if (c.type !== dataToAdjust.type) return false
+      if (dataToAdjust.categoryNameSuggestion) {
+        return c.name.toLowerCase() === dataToAdjust.categoryNameSuggestion.toLowerCase()
       }
       return false
     })
 
     onOpenChange(false)
     onOpenManualTransaction({
-      type: parsedResult.type,
-      amountCents: parsedResult.amountCents,
-      description: parsedResult.description,
+      type: dataToAdjust.type,
+      amountCents: dataToAdjust.amountCents,
+      description: dataToAdjust.description,
       categoryId: targetCategory?.id,
       memberId: selectedMemberId || currentMember?.id || members[0]?.id,
     })
   }
 
-  const currentDisplaySpeech = textoFalado.trim()
-  // Regra 1: Confirmação só abre se, e SOMENTE SE, a resposta tiver status === 'sucesso' E houver um valor numérico válido (> 0)
-  const isConfirmationAllowed =
-    Boolean(parsedResult) &&
-    parsedResult?.aiStatus === 'sucesso' &&
-    typeof parsedResult?.amountCents === 'number' &&
-    parsedResult.amountCents > 0
+  // Renderizador do Card Verde de Confirmação dentro do Chat
+  const renderSuccessCard = (data: ParsedVoiceTransaction) => {
+    const bucketLabel = data.bucketSuggestion
+      ? BUCKET_METADATA[
+          (data.bucketSuggestion === 'goals'
+            ? 'future'
+            : data.bucketSuggestion === 'essential'
+              ? 'essentials'
+              : data.bucketSuggestion) as BudgetBucket
+        ]?.shortLabel || 'Estilo de Vida'
+      : 'Estilo de Vida'
 
-  // Regra 2: Clarificação com valor existente (> 0)
-  const isClarification =
-    Boolean(parsedResult) &&
-    !isConfirmationAllowed &&
-    parsedResult?.aiStatus === 'clarificacao' &&
-    typeof parsedResult?.amountCents === 'number' &&
-    parsedResult.amountCents > 0
+    return (
+      <div className="mt-2.5 rounded-2xl border border-emerald-300 bg-gradient-to-br from-emerald-50/95 via-teal-50/70 to-white p-3.5 space-y-3 shadow-md">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`w-6 h-6 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-xs ${
+                data.type === 'income' ? 'bg-emerald-600' : 'bg-rose-600'
+              }`}
+            >
+              {data.type === 'income' ? (
+                <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+              ) : (
+                <ArrowDownRight className="w-3.5 h-3.5 stroke-[2.5]" />
+              )}
+            </span>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
+              {data.type === 'income' ? 'Receita Detectada' : 'Despesa Detectada'}
+            </span>
+          </div>
 
-  // Regra 3: Estado falta_valor (item/estabelecimento identificado, mas falta valor)
-  const isMissingAmount =
-    Boolean(parsedResult) &&
-    !isConfirmationAllowed &&
-    !isClarification &&
-    parsedResult?.aiStatus === 'falta_valor'
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+            {Math.round(data.confidence * 100)}% precisão
+          </span>
+        </div>
 
-  // Se não é confirmação, nem clarificação com valor, nem falta_valor, o resultado é inválido
-  const isInvalid =
-    Boolean(parsedResult) && !isConfirmationAllowed && !isClarification && !isMissingAmount
+        <div>
+          <h4 className="text-sm font-bold text-slate-900 leading-snug break-words">
+            {data.description}
+          </h4>
+          <div className="mt-0.5 flex items-baseline gap-2">
+            <span className="text-xl font-extrabold text-slate-900 tabular-nums">
+              {data.amountCents > 0 ? data.amountFormatted : 'R$ 0,00'}
+            </span>
+            <span className="text-[11px] font-medium text-emerald-800">
+              ({data.categoryNameSuggestion || 'Geral'} • {bucketLabel})
+            </span>
+          </div>
+        </div>
+
+        {/* Botões de Ação no próprio balão de chat */}
+        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-emerald-200/70">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => handleAdjustManually(data)}
+            className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-9 gap-1"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            Ajustar
+          </Button>
+
+          <Button
+            type="button"
+            onClick={() => handleConfirmTransaction(data)}
+            disabled={isSaving || data.amountCents <= 0}
+            className="bg-[#064E3B] hover:bg-emerald-900 text-white rounded-xl font-bold text-xs h-9 gap-1.5 shadow-sm transition-all"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+            {isSaving ? 'Salvando...' : '✅ Confirmar Lançamento'}
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // Renderizador do Card falta_valor no Chat
+  const renderMissingAmountCard = (data: ParsedVoiceTransaction) => {
+    const bucketLabel = data.bucketSuggestion
+      ? BUCKET_METADATA[
+          (data.bucketSuggestion === 'goals'
+            ? 'future'
+            : data.bucketSuggestion === 'essential'
+              ? 'essentials'
+              : data.bucketSuggestion) as BudgetBucket
+        ]?.shortLabel || 'Estilo de Vida'
+      : 'Estilo de Vida'
+
+    return (
+      <div className="mt-2.5 rounded-2xl border border-sky-300 bg-gradient-to-br from-sky-50/95 to-white p-3.5 space-y-3 shadow-md">
+        <div className="space-y-1">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-sky-800 block">
+            📝 Item Identificado
+          </span>
+          <h4 className="text-sm font-bold text-slate-900 leading-snug break-words">
+            Entendi: {data.description} em {data.categoryNameSuggestion || bucketLabel}
+          </h4>
+          {data.establishment && (
+            <p className="text-[11px] text-sky-900">
+              Local: <strong>{data.establishment}</strong>
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2 pt-1 border-t border-sky-200">
+          <form onSubmit={handleConfirmMissingAmount} className="flex gap-2">
+            <div className="relative flex-1">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">
+                R$
+              </span>
+              <Input
+                ref={missingAmountInputRef}
+                type="text"
+                inputMode="decimal"
+                placeholder="0,00"
+                value={missingAmountInput}
+                onChange={(e) => setMissingAmountInput(e.target.value)}
+                className="pl-8 text-sm font-bold tabular-nums rounded-xl h-9 bg-white border-slate-300 focus:border-emerald-500"
+                autoFocus
+              />
+            </div>
+            <Button
+              type="submit"
+              disabled={!missingAmountInput.trim()}
+              className="bg-[#064E3B] hover:bg-emerald-900 text-white rounded-xl font-bold text-xs h-9 px-3 shrink-0"
+            >
+              Confirmar
+            </Button>
+          </form>
+
+          <Button
+            type="button"
+            onClick={() => {
+              if (isListening) {
+                userStoppedManuallyRef.current = true
+                shouldKeepListeningRef.current = false
+                clearSilenceTimer()
+                if (recognitionRef.current) {
+                  try {
+                    recognitionRef.current.stop()
+                  } catch {
+                    // silenciar
+                  }
+                }
+              } else {
+                setTextoFalado('')
+                latestTranscriptRef.current = ''
+                startRecording({ forAmountOnly: true })
+              }
+            }}
+            className={`w-full rounded-xl font-bold text-xs h-9 gap-1.5 transition-all ${
+              isListening && isListeningForAmountOnly
+                ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse'
+                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 shadow-xs'
+            }`}
+          >
+            <Mic className="w-3.5 h-3.5 text-emerald-700" />
+            {isListening && isListeningForAmountOnly
+              ? 'Ouvindo valor... fale agora'
+              : '🎤 Falar apenas o valor'}
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // Renderizador do Card clarificacao no Chat
+  const renderClarificationCard = (data: ParsedVoiceTransaction) => {
+    return (
+      <div className="mt-2.5 rounded-2xl border border-indigo-200 bg-indigo-50/70 p-3 space-y-2.5">
+        <p className="text-xs font-semibold text-slate-800 leading-snug">
+          {data.clarificationQuestion || 'Identifiquei o valor! Escolha uma opção para completar:'}
+        </p>
+
+        {data.clarificationOptions && data.clarificationOptions.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            {data.clarificationOptions.map((opcao, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => handleSelectClarificationOption(opcao, data)}
+                className="w-full text-left p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-indigo-50 hover:border-indigo-300 transition-all flex items-center justify-between text-xs font-semibold text-slate-800 group shadow-xs active:scale-[0.99]"
+              >
+                <span className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                  {opcao}
+                </span>
+                <CheckCircle2 className="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-600" />
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="flex gap-2 pt-1">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleRetryListening}
+            className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-[11px] font-semibold h-8 flex-1"
+          >
+            <RotateCcw className="w-3 h-3 mr-1" />
+            Falar de novo
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => handleAdjustManually(data)}
+            className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-[11px] font-semibold h-8 flex-1"
+          >
+            <SlidersHorizontal className="w-3 h-3 mr-1" />
+            Ajustar
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // Renderizador do Card invalido no Chat
+  const renderInvalidCard = (msg: ChatMessage) => {
+    return (
+      <div className="mt-2.5 rounded-2xl border border-amber-200 bg-amber-50/80 p-3 text-left space-y-2">
+        {msg.aiError ? (
+          <div
+            role="alert"
+            data-testid="invalid-error-card"
+            className="border border-rose-200 rounded-xl bg-rose-50 p-2.5 text-xs text-rose-900"
+          >
+            <span className="font-bold block text-rose-950">Erro de Conexão com IA:</span>
+            <span className="font-mono text-[11px] break-words">{msg.aiError}</span>
+          </div>
+        ) : (
+          <p className="text-xs text-amber-900 leading-relaxed font-medium">
+            Dica: Fale o item e o valor, ex: &apos;Almoço 45 reais no débito no restaurante&apos;.
+          </p>
+        )}
+
+        <Button
+          type="button"
+          onClick={handleRetryListening}
+          className="bg-[#064E3B] hover:bg-emerald-900 text-white rounded-xl font-bold text-xs h-9 gap-1.5 w-full shadow-xs"
+        >
+          <Mic className="w-3.5 h-3.5 text-emerald-300" />🎤 Falar Novamente
+        </Button>
+      </div>
+    )
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 sm:max-w-lg shadow-2xl">
-        <DialogHeader className="text-left space-y-1">
+      <DialogContent className="rounded-3xl border border-slate-200/90 bg-white p-4 sm:p-5 sm:max-w-md md:max-w-lg shadow-2xl flex flex-col max-h-[90vh] h-[640px]">
+        {/* Header do Copilot */}
+        <DialogHeader className="text-left space-y-0.5 pb-2 border-b border-slate-100 shrink-0">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
                 <Sparkles className="w-4 h-4 text-emerald-700" />
               </span>
-              <DialogTitle className="text-lg font-bold text-slate-900 tracking-tight">
-                Lançamento por Voz com IA
-              </DialogTitle>
+              <div>
+                <DialogTitle className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-1.5">
+                  Curiangoo Copilot
+                  <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                    Mini-Chat IA
+                  </span>
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500">
+                  Fale lançamentos ou faça perguntas sobre suas finanças
+                </DialogDescription>
+              </div>
+            </div>
+
+            {/* Seletor de Membro */}
+            <div className="flex items-center gap-1 text-xs">
+              <select
+                value={selectedMemberId}
+                onChange={(e) => setSelectedMemberId(e.target.value)}
+                className="text-[11px] font-semibold text-slate-700 bg-slate-100 border border-slate-200 rounded-lg px-2 py-1 cursor-pointer"
+                title="Membro responsável"
+              >
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
-          <DialogDescription className="text-xs text-slate-500">
-            Fale naturalmente sua despesa ou receita
-          </DialogDescription>
 
-          {/* Regra 4: Alerta vermelho com erro exato se houver erro de requisição/rede ou da edge function */}
-          {parsedResult && !isProcessingAi && parsedResult.aiError && (
+          {/* Alerta de erro da Edge Function se houver */}
+          {errorMessage && (
             <div
               role="alert"
               data-testid="alert-ai-error"
-              className="mt-2 text-xs px-3 py-2 rounded-xl border border-rose-300 bg-rose-50/95 text-rose-900 flex items-start gap-2 text-left"
+              className="mt-2 text-xs px-3 py-1.5 rounded-xl border border-rose-300 bg-rose-50 text-rose-900 flex items-start gap-1.5 text-left"
             >
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-              <div className="flex-1 leading-snug">
-                <span className="font-bold block text-rose-950">Erro de Conexão com IA:</span>
-                <span className="text-rose-800 break-words font-mono text-[11px]">
-                  {parsedResult.aiError}
-                </span>
-                <span className="block text-[11px] text-rose-700/90 mt-0.5">
-                  Fallback local acionado.
-                </span>
-              </div>
+              <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+              <p className="text-[11px] leading-tight font-medium">{errorMessage}</p>
             </div>
           )}
         </DialogHeader>
 
-        {/* ================= ESTADO DE PROCESSAMENTO IA ================= */}
-        {isProcessingAi && (
-          <div className="py-8 px-4 flex flex-col items-center justify-center text-center space-y-3 bg-emerald-50/50 rounded-2xl border border-emerald-100">
-            <div className="relative">
-              <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-800 animate-spin">
-                <Loader2 className="w-7 h-7 text-emerald-700" />
-              </div>
-              <Sparkles className="w-4 h-4 text-emerald-600 absolute -top-1 -right-1 animate-pulse" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-slate-800">
-                Curiangoo AI analisando seu áudio...
-              </p>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Identificando valor, categoria e balde orçamentário
-              </p>
-            </div>
-          </div>
-        )}
+        {/* ================= CORPO DO MINI-CHAT: HISTÓRICO DE MENSAGENS ================= */}
+        <div
+          ref={chatScrollRef}
+          className="flex-1 overflow-y-auto pr-1 py-3 space-y-3 scroll-smooth text-xs"
+        >
+          {messages.map((msg) => {
+            const isUser = msg.sender === 'user'
 
-        {/* ================= ESTADO 1: ESCUTANDO / CAPTURA DE ÁUDIO ================= */}
-        {!isProcessingAi && !parsedResult && (
-          <div className="space-y-4 pt-2">
-            {/* Bloco Central do Microfone */}
-            <div className="flex flex-col items-center justify-center py-5 px-4 bg-gradient-to-b from-emerald-50/70 to-slate-50 rounded-2xl border border-emerald-100 text-center relative overflow-hidden">
-              {/* Botão de gravação / estado */}
-              <div className="relative mb-3 flex items-center justify-center">
-                {isListening ? (
-                  <>
-                    <div className="absolute w-28 h-28 rounded-full bg-emerald-500/20 animate-ping pointer-events-none" />
-                    <div className="absolute w-24 h-24 rounded-full bg-emerald-500/30 animate-pulse pointer-events-none" />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // Usuário clicou no microfone para parar/concluir manualmente
-                        userStoppedManuallyRef.current = true
-                        shouldKeepListeningRef.current = false
-                        clearSilenceTimer()
-                        if (recognitionRef.current) {
-                          try {
-                            recognitionRef.current.stop()
-                          } catch {
-                            // silenciar
-                          }
-                        } else {
-                          const captured = latestTranscriptRef.current.trim()
-                          if (captured) {
-                            handleStopAndProcess(captured)
-                          } else {
-                            stopListening()
-                          }
-                        }
-                      }}
-                      className="w-16 h-16 rounded-full bg-[#064E3B] text-white flex items-center justify-center shadow-lg shadow-emerald-900/30 z-10 transition-transform active:scale-95"
-                      title="Toque para concluir"
-                    >
-                      <Mic className="w-8 h-8 animate-pulse text-emerald-300" />
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => startRecording()}
-                    className="w-16 h-16 rounded-full bg-slate-200 text-slate-700 hover:bg-emerald-600 hover:text-white flex items-center justify-center shadow-md transition-all active:scale-95"
-                    title="Toque para começar a falar"
-                  >
-                    <MicOff className="w-7 h-7" />
-                  </button>
-                )}
-              </div>
-
-              {/* Status textual */}
-              <div className="flex flex-col items-center gap-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
-                  {isListening ? (
-                    audioDetected ? (
-                      <>
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                        Ouvindo... pode falar no seu ritmo
-                      </>
-                    ) : (
-                      <>
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                        Ouvindo... pode falar no seu ritmo
-                      </>
-                    )
-                  ) : (
-                    'Microfone pronto — toque para falar'
-                  )}{' '}
-                </span>
-              </div>
-
-              {/* Exibição em tempo real do que está sendo falado */}
-              <div className="mt-2.5 min-h-[40px] max-w-sm flex items-center justify-center">
-                {currentDisplaySpeech ? (
-                  <p className="text-sm font-semibold text-slate-800 italic leading-snug break-words px-2">
-                    &ldquo;{currentDisplaySpeech}&rdquo;
-                  </p>
-                ) : (
-                  <p className="text-xs text-slate-400">
-                    Exemplo: &ldquo;Almoço 45 reais no débito&rdquo; ou &ldquo;Carregando celular
-                    145&rdquo;
-                  </p>
-                )}
-              </div>
-
-              {/* Mensagem amigável de erro se houver (sem fechar o diálogo) */}
-              {errorMessage && (
+            return (
+              <div
+                key={msg.id}
+                className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} animate-in fade-in-50 duration-150`}
+              >
+                {/* Balão de Mensagem */}
                 <div
-                  className={`mt-3 text-xs px-3 py-2 rounded-xl border flex items-start gap-2 text-left w-full ${
-                    permissionStatus === 'denied'
-                      ? 'text-rose-900 bg-rose-50 border-rose-200'
-                      : 'text-amber-800 bg-amber-50 border-amber-200'
+                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 shadow-xs ${
+                    isUser
+                      ? 'bg-[#064E3B] text-white rounded-br-xs'
+                      : 'bg-slate-100 text-slate-900 rounded-bl-xs border border-slate-200/80'
                   }`}
                 >
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="leading-relaxed">{errorMessage}</p>
-                    {permissionStatus === 'denied' && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => startRecording()}
-                        className="mt-2 text-xs h-7 px-2.5 rounded-lg border-rose-300 text-rose-900 hover:bg-rose-100/60"
-                      >
-                        Tentar novamente
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              )}
+                  <p className="text-xs leading-relaxed whitespace-pre-wrap">{msg.text}</p>
 
-              {/* Barrinhas animadas quando capturando áudio */}
-              {isListening && (
-                <div className="flex items-center gap-1.5 mt-3">
-                  <span className="w-1 h-3 bg-emerald-500 rounded-full animate-pulse" />
-                  <span className="w-1 h-5 bg-emerald-600 rounded-full animate-bounce delay-75" />
-                  <span className="w-1 h-8 bg-emerald-500 rounded-full animate-pulse delay-100" />
-                  <span className="w-1 h-4 bg-emerald-600 rounded-full animate-bounce delay-150" />
-                  <span className="w-1 h-7 bg-emerald-500 rounded-full animate-pulse delay-200" />
-                  <span className="w-1 h-4 bg-emerald-600 rounded-full animate-bounce delay-100" />
-                  <span className="w-1 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                  {/* Cards Contextuais acoplados ao balão do assistente */}
+                  {!isUser &&
+                    msg.cardType === 'sucesso' &&
+                    msg.cardData &&
+                    renderSuccessCard(msg.cardData)}
+
+                  {!isUser &&
+                    msg.cardType === 'falta_valor' &&
+                    msg.cardData &&
+                    renderMissingAmountCard(msg.cardData)}
+
+                  {!isUser &&
+                    msg.cardType === 'clarificacao' &&
+                    msg.cardData &&
+                    renderClarificationCard(msg.cardData)}
+
+                  {!isUser && msg.cardType === 'invalido' && renderInvalidCard(msg)}
                 </div>
-              )}
+              </div>
+            )
+          })}
+
+          {/* Indicador de carregamento / IA processando */}
+          {isProcessingAi && (
+            <div className="flex items-start gap-2 animate-in fade-in duration-200">
+              <div className="bg-slate-100 border border-slate-200/80 text-slate-700 rounded-2xl rounded-bl-xs px-3.5 py-2.5 flex items-center gap-2 shadow-xs">
+                <Loader2 className="w-3.5 h-3.5 text-emerald-700 animate-spin" />
+                <span className="text-xs font-semibold">Curiangoo Copilot pensando...</span>
+              </div>
             </div>
+          )}
 
-            {/* Fallback de digitação fluido */}
-            <form
-              onSubmit={handleManualTextSubmit}
-              className="space-y-2 pt-2 border-t border-slate-100"
-            >
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                  <Keyboard className="w-3.5 h-3.5 text-emerald-700" />
-                  <span>Texto falado ou digitado</span>
-                </label>
-                {textoFalado && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTextoFalado('')
-                      latestTranscriptRef.current = ''
-                    }}
-                    className="text-[11px] text-slate-400 hover:text-slate-600"
-                  >
-                    Limpar
-                  </button>
-                )}
+          {/* Transcrição em tempo real do microfone dentro do chat */}
+          {isListening && textoFalado.trim() && (
+            <div className="flex items-end justify-end animate-in fade-in duration-100">
+              <div className="bg-emerald-900/80 text-emerald-100 rounded-2xl rounded-br-xs px-3 py-2 italic text-xs max-w-[80%] border border-emerald-700">
+                &ldquo;{textoFalado.trim()}&rdquo;
               </div>
-
-              <div className="flex gap-2">
-                <Input
-                  value={textoFalado}
-                  onChange={(e) => {
-                    setTextoFalado(e.target.value)
-                    latestTranscriptRef.current = e.target.value
-                  }}
-                  placeholder="Ex: Almoço 45 reais no débito"
-                  className="rounded-xl h-10 text-xs bg-white flex-1"
-                />
-                <Button
-                  type="submit"
-                  disabled={!textoFalado.trim()}
-                  className="bg-[#064E3B] hover:bg-emerald-900 text-white rounded-xl font-bold text-xs h-10 px-3.5 gap-1.5 shrink-0 shadow-xs"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Processar com IA
-                </Button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* ================= ESTADO 2A: IA IDENTIFICOU "INVALIDO" (RUÍDO / CONVERSA SEM SENTIDO OU SEM VALOR) ================= */}
-        {!isProcessingAi && isInvalid && (
-          <div className="space-y-4 pt-2 animate-in fade-in-50 duration-200">
-            {parsedResult?.aiError ? (
-              <div
-                role="alert"
-                data-testid="invalid-error-card"
-                className="bg-rose-50/90 border border-rose-200/90 rounded-2xl p-5 text-center space-y-3"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-800 flex items-center justify-center mx-auto">
-                  <AlertCircle className="w-6 h-6 text-rose-600" />
-                </div>
-                <div>
-                  <h4 className="text-base font-bold text-rose-950">
-                    {parsedResult.friendlyMessage || 'Falha na IA'}
-                  </h4>
-                  <p className="text-xs text-rose-900/90 mt-1.5 leading-relaxed font-mono break-words">
-                    {parsedResult.aiError}
-                  </p>
-                </div>
-                {parsedResult?.rawText && (
-                  <div className="bg-white/80 rounded-xl p-2.5 text-xs text-slate-600 italic border border-rose-100 break-words">
-                    &ldquo;{parsedResult.rawText}&rdquo;
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="bg-amber-50/80 border border-amber-200/90 rounded-2xl p-5 text-center space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto">
-                  <HelpCircle className="w-6 h-6 text-amber-700" />
-                </div>
-                <div>
-                  <h4 className="text-base font-bold text-amber-950">
-                    {parsedResult?.friendlyMessage ||
-                      "Não consegui entender esse lançamento financeiro. Tente algo como: 'Almoço 45 reais no débito no restaurante' ou 'supermercado do zé 180 no pix'"}
-                  </h4>
-                  <p className="text-xs text-amber-900/90 mt-1.5 leading-relaxed font-medium">
-                    Dica: Fale o item e o valor, ex: &apos;Almoço 45 reais no débito no
-                    restaurante&apos;.
-                  </p>
-                </div>
-                {parsedResult?.rawText && (
-                  <div className="bg-white/80 rounded-xl p-2.5 text-xs text-slate-600 italic border border-amber-100 break-words">
-                    &ldquo;{parsedResult.rawText}&rdquo;
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="flex flex-col gap-2 pt-1">
-              <Button
-                type="button"
-                onClick={handleRetryListening}
-                className="bg-[#064E3B] hover:bg-emerald-900 text-white rounded-xl font-bold text-xs h-11 gap-2 shadow-sm"
-              >
-                <Mic className="w-4 h-4 text-emerald-300" />🎤 Falar Novamente
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => onOpenChange(false)}
-                className="text-xs text-slate-500 hover:text-slate-700 h-9"
-              >
-                Cancelar
-              </Button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* ================= ESTADO 2B: IA IDENTIFICOU "CLARIFICACAO" (AMBÍGUO / GÍRIA) ================= */}
-        {!isProcessingAi && isClarification && parsedResult && (
-          <div className="space-y-4 pt-2 animate-in fade-in-50 duration-200">
-            {/* Mensagem amigável da IA */}
-            <div className="bg-gradient-to-br from-indigo-50/90 via-sky-50/70 to-white border border-indigo-200/80 rounded-2xl p-4 space-y-2.5 shadow-sm">
-              <div className="flex items-center gap-2">
-                <span className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
-                  <Sparkles className="w-4 h-4" />
-                </span>
-                <span className="text-xs font-bold uppercase tracking-wider text-indigo-900">
-                  Quase lá! Preciso de um detalhe
-                </span>
-              </div>
-
-              <p className="text-sm font-semibold text-slate-900 leading-snug">
-                {parsedResult.clarificationQuestion ||
-                  parsedResult.friendlyMessage ||
-                  'Identifiquei o valor, mas fiquei em dúvida sobre a categoria.'}
-              </p>
-
-              {parsedResult.amountCents > 0 && (
-                <div className="pt-1 flex items-baseline gap-2">
-                  <span className="text-xs text-slate-500 font-medium">Valor reconhecido:</span>
-                  <span className="text-base font-extrabold text-slate-900 tabular-nums">
-                    {parsedResult.amountFormatted}
+        {/* ================= RODAPÉ FIXO: CONTROLES SEMPRE VISÍVEIS ================= */}
+        <div className="pt-2 border-t border-slate-100 shrink-0 space-y-2">
+          {/* Status do microfone */}
+          <div className="flex items-center justify-between text-[11px] px-1 text-slate-500">
+            <span className="flex items-center gap-1.5 font-medium">
+              {isListening ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-emerald-800 font-bold">
+                    Ouvindo... pode falar no seu ritmo
                   </span>
-                </div>
+                </>
+              ) : (
+                <span className="text-slate-400">Microfone pronto</span>
               )}
-            </div>
+            </span>
 
-            {/* Pílulas de Sugestão clicáveis (exatamente 3 opções rápidas) */}
-            {parsedResult.clarificationOptions && parsedResult.clarificationOptions.length > 0 && (
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <Tag className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Escolha uma opção para completar:</span>
-                </label>
-                <div className="flex flex-col gap-2">
-                  {parsedResult.clarificationOptions.map((opcao, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      onClick={() => handleSelectClarificationOption(opcao)}
-                      className="w-full text-left p-3 rounded-xl border border-slate-200 bg-white hover:bg-indigo-50/70 hover:border-indigo-300 transition-all flex items-center justify-between text-xs font-semibold text-slate-800 group shadow-xs active:scale-[0.99]"
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-indigo-500 group-hover:scale-125 transition-transform" />
-                        {opcao}
-                      </span>
-                      <CheckCircle2 className="w-4 h-4 text-slate-300 group-hover:text-indigo-600 transition-colors" />
-                    </button>
-                  ))}
-                </div>
-              </div>
+            {isListening && (
+              <span className="text-[10px] text-slate-400">Pausa de 3s envia automaticamente</span>
             )}
-
-            {/* Ações secundárias */}
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleRetryListening}
-                className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10 gap-1.5"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                Falar de novo
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleAdjustManually}
-                className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10 gap-1.5"
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                Ajustar manual
-              </Button>
-            </div>
           </div>
-        )}
 
-        {/* ================= ESTADO 2B-2: IA IDENTIFICOU "FALTA_VALOR" (CONTEXTO PRESERVADO, PERGUNTAR QUANTO CUSTOU) ================= */}
-        {!isProcessingAi && isMissingAmount && parsedResult && (
-          <div className="space-y-4 pt-2 animate-in fade-in-50 duration-200">
-            {/* Card no formato: "Entendi: [descricao] em [categoria/balde]" */}
-            {(() => {
-              const bucketLabel = parsedResult.bucketSuggestion
-                ? BUCKET_METADATA[
-                    (parsedResult.bucketSuggestion === 'goals'
-                      ? 'future'
-                      : parsedResult.bucketSuggestion === 'essential'
-                        ? 'essentials'
-                        : parsedResult.bucketSuggestion) as BudgetBucket
-                  ]?.shortLabel || 'Estilo de Vida'
-                : 'Estilo de Vida'
-              const categoryOrBucket = parsedResult.categoryNameSuggestion
-                ? `${parsedResult.categoryNameSuggestion} (${bucketLabel})`
-                : bucketLabel
-
-              return (
-                <div className="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50/90 via-blue-50/50 to-white p-4 space-y-2.5 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800 flex items-center gap-1.5">
-                      <span>📝 Item Identificado</span>
-                    </span>
-                    {parsedResult.categoryNameSuggestion && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-900 border border-sky-200">
-                        {parsedResult.categoryNameSuggestion}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="space-y-1">
-                    <h4 className="text-base font-bold text-slate-900 leading-snug break-words">
-                      Entendi: {parsedResult.description} em {categoryOrBucket}
-                    </h4>
-                    {parsedResult.establishment &&
-                      parsedResult.establishment.toLowerCase() !==
-                        parsedResult.description.toLowerCase() && (
-                        <p className="text-xs text-sky-900 font-medium">
-                          Local: <strong>{parsedResult.establishment}</strong>
-                        </p>
-                      )}
-                  </div>
-                </div>
-              )
-            })()}
-
-            {/* Pergunta "Quanto custou?" com 2 caminhos rápidos */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3.5 shadow-xs">
-              <div className="flex items-center gap-2">
-                <span className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
-                  <Sparkles className="w-4 h-4 text-emerald-700" />
-                </span>
-                <div>
-                  <h4 className="text-sm font-bold text-slate-900">Quanto custou?</h4>
-                  <p className="text-xs text-slate-500">Escolha digitar ou falar apenas o valor</p>
-                </div>
-              </div>
-
-              {/* CAMINHO A: Digitação de valor com máscara e foco automático */}
-              <form onSubmit={handleConfirmMissingAmount} className="space-y-2">
-                <label className="text-[11px] font-semibold text-slate-600 block">
-                  Digite o valor:
-                </label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">
-                      R$
-                    </span>
-                    <Input
-                      ref={missingAmountInputRef}
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0,00"
-                      value={missingAmountInput}
-                      onChange={(e) => setMissingAmountInput(e.target.value)}
-                      className="pl-10 text-base font-bold tabular-nums rounded-xl h-10 bg-slate-50 border-slate-200 focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
-                      autoFocus
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    disabled={!missingAmountInput.trim()}
-                    className="bg-[#064E3B] hover:bg-emerald-900 text-white rounded-xl font-bold text-xs h-10 px-3.5 gap-1.5 shrink-0"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
-                    Confirmar Valor
-                  </Button>
-                </div>
-              </form>
-
-              {/* Divisor */}
-              <div className="relative flex py-1 items-center">
-                <div className="flex-grow border-t border-slate-200" />
-                <span className="flex-shrink mx-2 text-[10px] uppercase font-bold text-slate-400">
-                  ou fale apenas o valor
-                </span>
-                <div className="flex-grow border-t border-slate-200" />
-              </div>
-
-              {/* CAMINHO B: Microfone contextual [ 🎤 Falar apenas o valor ] */}
-              <div className="space-y-2">
-                <Button
+          {/* Linha de Ação: Microfone Central + Campo de Digitação */}
+          <div className="flex items-center gap-2">
+            {/* Botão Central de Microfone */}
+            <div className="relative shrink-0">
+              {isListening ? (
+                <button
                   type="button"
                   onClick={() => {
-                    if (isListening) {
-                      userStoppedManuallyRef.current = true
-                      shouldKeepListeningRef.current = false
-                      clearSilenceTimer()
-                      if (recognitionRef.current) {
-                        try {
-                          recognitionRef.current.stop()
-                        } catch {
-                          // silenciar
-                        }
+                    userStoppedManuallyRef.current = true
+                    shouldKeepListeningRef.current = false
+                    clearSilenceTimer()
+                    if (recognitionRef.current) {
+                      try {
+                        recognitionRef.current.stop()
+                      } catch {
+                        // silenciar
                       }
                     } else {
-                      setTextoFalado('')
-                      latestTranscriptRef.current = ''
-                      startRecording({ forAmountOnly: true })
+                      const captured = latestTranscriptRef.current.trim()
+                      if (captured) {
+                        handleStopAndProcess(captured)
+                      } else {
+                        stopListening()
+                      }
                     }
                   }}
-                  className={`w-full rounded-xl font-bold text-xs h-11 gap-2 transition-all ${
-                    isListening && isListeningForAmountOnly
-                      ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse'
-                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 shadow-xs'
-                  }`}
+                  className="w-11 h-11 rounded-2xl bg-[#064E3B] text-white flex items-center justify-center shadow-md shadow-emerald-900/30 transition-transform active:scale-95 animate-pulse"
+                  title="Toque para concluir"
                 >
-                  <Mic className="w-4 h-4 text-emerald-700" />
-                  {isListening && isListeningForAmountOnly
-                    ? 'Ouvindo valor... fale agora (toque para pausar)'
-                    : '🎤 Falar apenas o valor'}
-                </Button>
-
-                {isListening && isListeningForAmountOnly && (
-                  <p className="text-[11px] text-center text-emerald-700 font-medium animate-pulse">
-                    Ex: &ldquo;18 reais no débito&rdquo; ou &ldquo;45 no pix&rdquo;
-                  </p>
-                )}
-              </div>
+                  <Mic className="w-5 h-5 text-emerald-300" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => startRecording()}
+                  className="w-11 h-11 rounded-2xl bg-slate-100 border border-slate-300 text-slate-700 hover:bg-emerald-600 hover:text-white flex items-center justify-center shadow-xs transition-all active:scale-95"
+                  title="Toque para começar a falar"
+                >
+                  <MicOff className="w-5 h-5" />
+                </button>
+              )}
             </div>
 
-            {/* Ações de escape */}
-            <div className="flex justify-between items-center pt-1">
+            {/* Input de Texto + Botão Enviar */}
+            <form onSubmit={handleChatTextSubmit} className="flex-1 flex items-center gap-1.5">
+              <Input
+                value={inputVal}
+                onChange={(e) => setInputVal(e.target.value)}
+                placeholder="Fale no microfone ou digite aqui..."
+                className="rounded-2xl h-11 text-xs bg-slate-50 border-slate-200 focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+              />
               <Button
-                type="button"
-                variant="ghost"
-                onClick={handleRetryListening}
-                className="text-xs text-slate-500 hover:text-slate-700 h-9 gap-1.5"
+                type="submit"
+                disabled={!inputVal.trim() || isProcessingAi}
+                className="bg-[#064E3B] hover:bg-emerald-900 text-white rounded-2xl font-bold text-xs h-11 px-3.5 gap-1 shrink-0 shadow-xs"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
-                Falar frase inteira de novo
+                <Send className="w-3.5 h-3.5" />
+                <span>Enviar</span>
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => onOpenChange(false)}
-                className="text-xs text-slate-400 hover:text-slate-600 h-9"
-              >
-                Cancelar
-              </Button>
-            </div>
+            </form>
           </div>
-        )}
-
-        {/* ================= ESTADO 2C: IA IDENTIFICOU "SUCESSO" (CARD VERDE DE CONFIRMAÇÃO) ================= */}
-        {!isProcessingAi && isConfirmationAllowed && parsedResult && (
-          <div className="space-y-4 pt-1 animate-in fade-in-50 duration-200">
-            {/* Frase original dita pelo usuário */}
-            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 flex items-center gap-2.5">
-              <Volume2 className="w-4 h-4 text-emerald-700 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Você disse
-                </span>
-                <p className="text-xs font-medium text-slate-800 truncate">
-                  &ldquo;{parsedResult.rawText}&rdquo;
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleRetryListening}
-                className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 underline shrink-0"
-              >
-                Falar de novo
-              </button>
-            </div>
-
-            {/* CARD HERO VERDE DE CONFIRMAÇÃO COM DADOS */}
-            <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/90 via-teal-50/50 to-white p-4 space-y-3.5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`w-7 h-7 rounded-xl flex items-center justify-center text-white font-bold text-xs shadow-xs ${
-                      parsedResult.type === 'income' ? 'bg-emerald-600' : 'bg-rose-600'
-                    }`}
-                  >
-                    {parsedResult.type === 'income' ? (
-                      <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
-                    ) : (
-                      <ArrowDownRight className="w-4 h-4 stroke-[2.5]" />
-                    )}
-                  </span>
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                    {parsedResult.type === 'income' ? 'Receita Detectada' : 'Despesa Detectada'}
-                  </span>
-                </div>
-
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  {Math.round(parsedResult.confidence * 100)}% precisão
-                </span>
-              </div>
-
-              {/* Descrição e Valor Gigante */}
-              <div>
-                <h4 className="text-lg font-bold text-slate-900 leading-snug break-words">
-                  {parsedResult.description}
-                </h4>
-                <div className="mt-1 flex items-baseline gap-2">
-                  <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 tabular-nums">
-                    {parsedResult.amountCents > 0 ? parsedResult.amountFormatted : 'R$ 0,00'}
-                  </span>
-                  {parsedResult.amountCents === 0 && (
-                    <span className="text-[11px] font-semibold text-rose-600">
-                      (Valor não identificado — toque em Ajustar)
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Chips de Metadados Inteligentes (Balde, Categoria, Pagamento, Membro) */}
-              <div className="pt-2 border-t border-emerald-200/60 grid grid-cols-2 gap-2 text-xs">
-                {/* 1. Balde dos 3 Baldes */}
-                <div className="bg-white/80 border border-slate-200/70 rounded-xl p-2.5">
-                  <div className="flex items-center gap-1.5 text-slate-500 text-[10px] uppercase font-bold tracking-wider">
-                    <PieChart className="w-3 h-3 text-emerald-700" />
-                    <span>Balde Orçamentário</span>
-                  </div>
-                  <div className="mt-1">
-                    {parsedResult.bucketSuggestion ? (
-                      <span
-                        className={`text-xs font-bold px-1.5 py-0.5 rounded-md inline-block ${
-                          BUCKET_METADATA[
-                            (parsedResult.bucketSuggestion === 'goals'
-                              ? 'future'
-                              : parsedResult.bucketSuggestion === 'essential'
-                                ? 'essentials'
-                                : parsedResult.bucketSuggestion) as BudgetBucket
-                          ]?.bgLight || 'bg-slate-100 text-slate-700'
-                        }`}
-                      >
-                        {BUCKET_METADATA[
-                          (parsedResult.bucketSuggestion === 'goals'
-                            ? 'future'
-                            : parsedResult.bucketSuggestion === 'essential'
-                              ? 'essentials'
-                              : parsedResult.bucketSuggestion) as BudgetBucket
-                        ]?.shortLabel || 'Estilo de Vida'}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-slate-500 font-medium">Estilo de Vida</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* 2. Categoria e Subcategoria Sugerida */}
-                <div className="bg-white/80 border border-slate-200/70 rounded-xl p-2.5">
-                  <div className="flex items-center gap-1.5 text-slate-500 text-[10px] uppercase font-bold tracking-wider">
-                    <Sparkles className="w-3 h-3 text-emerald-700" />
-                    <span>Categoria</span>
-                  </div>
-                  <div className="mt-1 font-bold text-xs text-slate-800 truncate">
-                    {parsedResult.categoryNameSuggestion || 'Geral / Outros'}
-                  </div>
-                  {parsedResult.subcategoryNameSuggestion && (
-                    <div className="text-[10px] text-slate-500 truncate mt-0.5 font-medium">
-                      ↳ {parsedResult.subcategoryNameSuggestion}
-                    </div>
-                  )}
-                </div>
-
-                {/* 3. Método de Pagamento */}
-                <div className="bg-white/80 border border-slate-200/70 rounded-xl p-2.5">
-                  <div className="flex items-center gap-1.5 text-slate-500 text-[10px] uppercase font-bold tracking-wider">
-                    <CreditCard className="w-3 h-3 text-emerald-700" />
-                    <span>Pagamento</span>
-                  </div>
-                  <div className="mt-1 font-bold text-xs text-slate-800 capitalize">
-                    {parsedResult.paymentMethod || 'Não especificado'}
-                  </div>
-                </div>
-
-                {/* 4. Membro Familiar Atribuído */}
-                <div className="bg-white/80 border border-slate-200/70 rounded-xl p-2.5">
-                  <div className="flex items-center gap-1.5 text-slate-500 text-[10px] uppercase font-bold tracking-wider">
-                    <User className="w-3 h-3 text-emerald-700" />
-                    <span>Membro</span>
-                  </div>
-                  <select
-                    value={selectedMemberId}
-                    onChange={(e) => setSelectedMemberId(e.target.value)}
-                    className="mt-1 w-full text-xs font-bold text-slate-800 bg-transparent border-0 p-0 focus:ring-0 cursor-pointer"
-                  >
-                    {members.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* BOTÕES DE AÇÃO: [ Ajustar ] e [ ✅ Confirmar Lançamento ] */}
-            <div className="grid grid-cols-2 gap-2.5 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleAdjustManually}
-                className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-11 gap-1.5"
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-                Ajustar
-              </Button>
-
-              <Button
-                type="button"
-                onClick={handleConfirmTransaction}
-                disabled={isSaving || parsedResult.amountCents <= 0}
-                className="bg-[#064E3B] hover:bg-emerald-900 text-white rounded-xl font-bold text-xs h-11 gap-2 shadow-sm transition-all"
-              >
-                <CheckCircle2 className="w-4 h-4 text-emerald-300" />
-                {isSaving ? 'Salvando...' : '✅ Confirmar Lançamento'}
-              </Button>
-            </div>
-          </div>
-        )}
+        </div>
       </DialogContent>
     </Dialog>
   )
