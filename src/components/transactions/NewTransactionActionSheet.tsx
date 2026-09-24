@@ -67,8 +67,8 @@ export const NewTransactionActionSheet: React.FC<NewTransactionActionSheetProps>
                     Falar Lançamento com IA
                   </span>
                   <p className="text-xs text-emerald-100/90 mt-1 line-clamp-2 leading-relaxed">
-                    Fale naturalmente: &ldquo;Almoço 45 reais no débito&rdquo; ou &ldquo;Cerveja na
-                    mercearia 60&rdquo;
+                    Fale naturalmente: &ldquo;Almoço, 45 reais, no débito&rdquo; ou &ldquo;Cerveja
+                    na mercearia, 60 reais&rdquo;.
                   </p>
                 </div>
               </div>
