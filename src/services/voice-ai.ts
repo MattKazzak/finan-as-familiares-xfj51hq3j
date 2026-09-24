@@ -13,6 +13,9 @@ export interface VoiceAiPreviousContext {
   subcategoria?: string
   balde?: string
   tipo?: 'despesa' | 'receita'
+  valor?: number | null
+  status?: string | null
+  opcoes_sugestao?: string[] | null
 }
 
 export interface CategoryPayloadInput {

@@ -231,5 +231,78 @@ describe('voice-parser', () => {
       expect(parsed.paymentMethod).toBe('debito')
       expect(parsed.categoryNameSuggestion).toBe('Alimentação / Lazer')
     })
+
+    describe('Modo Consultor e Perguntas Reflexivas com Clarificação Pendente', () => {
+      const pendingContexto = {
+        descricao: 'Manicure',
+        valor: 297.5,
+        balde: 'lifestyle',
+        tipo: 'despesa' as const,
+        status: 'clarificacao_categoria',
+        opcoes_sugestao: [
+          'Cuidados Pessoais (Estilo de Vida)',
+          'Manicure › dentro de Lazer (Estilo de Vida)',
+        ],
+      }
+
+      it('(a) "qual faz mais sentido?" com clarificação pendente NÃO vira categoria e dispara resposta consultiva mantendo a transação intacta', () => {
+        const parsed = parseVoiceInput('Qual faz mais sentido?', mockCategories, pendingContexto)
+
+        // NÃO pode virar categoria e não pode virar sucesso direto
+        expect(parsed.categoryNameSuggestion).not.toBe('Qual faz mais sentido?')
+        expect(parsed.categoryNameSuggestion).toBeUndefined()
+        expect(parsed.aiStatus).toBe('clarificacao_categoria')
+        expect(parsed.tipoResposta).toBe('consultoria_categoria')
+        expect(parsed.intencao).toBe('consultiva')
+
+        // Transação original de R$ 297,50 mantida intacta
+        expect(parsed.amountCents).toBe(29750)
+        expect(parsed.description).toBe('Manicure')
+
+        // Resposta consultiva explicando a melhor prática 50/30/20 e pílulas preservadas
+        expect(parsed.friendlyMessage).toContain('Recomendo')
+        expect(parsed.friendlyMessage).toContain('50/30/20')
+        expect(parsed.clarificationOptions).toHaveLength(2)
+      })
+
+      it('outras frases de dúvida/metalinguagem ("o que você acha?", "me ajuda a escolher", "tanto faz") NÃO viram categoria', () => {
+        const duvidas = [
+          'O que você acha?',
+          'Qual a diferença?',
+          'Me ajuda a escolher',
+          'Tanto faz',
+          'Não sei qual escolher',
+        ]
+
+        for (const frase of duvidas) {
+          const parsed = parseVoiceInput(frase, mockCategories, pendingContexto)
+          expect(parsed.categoryNameSuggestion).not.toBe(frase)
+          expect(parsed.aiStatus).toBe('clarificacao_categoria')
+          expect(parsed.tipoResposta).toBe('consultoria_categoria')
+          expect(parsed.amountCents).toBe(29750)
+        }
+      })
+
+      it('(b) "fechado em cuidados pessoais" aplica a escolha e monta o card com status sucesso', () => {
+        const parsed = parseVoiceInput(
+          'fechado em cuidados pessoais',
+          mockCategories,
+          pendingContexto,
+        )
+
+        expect(parsed.aiStatus).toBe('sucesso')
+        expect(parsed.amountCents).toBe(29750)
+        expect(parsed.categoryNameSuggestion?.toLowerCase()).toContain('cuidados pessoais')
+        expect(parsed.description).toBe('Manicure')
+      })
+
+      it('"pode ser essa" ou "a primeira" seleciona a opção correspondente', () => {
+        const parsed = parseVoiceInput('a primeira', mockCategories, pendingContexto)
+
+        expect(parsed.aiStatus).toBe('sucesso')
+        expect(parsed.amountCents).toBe(29750)
+        expect(parsed.categoryNameSuggestion).toBe('Cuidados Pessoais (Estilo de Vida)')
+      })
+    })
   })
 })

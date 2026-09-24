@@ -9,6 +9,9 @@ interface PreviousContextPayload {
   subcategoria?: string
   balde?: string
   tipo?: 'despesa' | 'receita'
+  valor?: number | null
+  status?: string | null
+  opcoes_sugestao?: string[] | null
 }
 
 interface CategoryPayloadItem {
@@ -344,19 +347,62 @@ DADOS FINANCEIROS REAIS DA FAMÍLIA (MÊS ATUAL: ${currentMonthStr.slice(0, 7)})
 
     const previousContext = body.contexto_anterior
     let previousContextPrompt = ''
-    if (previousContext && (previousContext.descricao || previousContext.categoria)) {
+    if (
+      previousContext &&
+      (previousContext.descricao ||
+        previousContext.categoria ||
+        previousContext.valor ||
+        previousContext.status)
+    ) {
+      const valorStr =
+        previousContext.valor !== undefined && previousContext.valor !== null
+          ? `R$ ${Number(previousContext.valor).toFixed(2).replace('.', ',')}`
+          : 'Não informado'
+      const opcoesStr =
+        Array.isArray(previousContext.opcoes_sugestao) && previousContext.opcoes_sugestao.length > 0
+          ? previousContext.opcoes_sugestao.map((o) => `"${o}"`).join(', ')
+          : 'Nenhuma'
+
       previousContextPrompt = `
-CONTEXTO ANTERIOR DE UMA TRANSAÇÃO PARCIAL PENDENTE:
+CONTEXTO ANTERIOR DE UMA TRANSAÇÃO EM ANDAMENTO NA SESSÃO:
 - Descrição anterior: "${previousContext.descricao || ''}"
 - Estabelecimento anterior: "${previousContext.estabelecimento || ''}"
+- Valor anterior: ${valorStr}
 - Categoria anterior: "${previousContext.categoria || ''}"
 - Subcategoria anterior: "${previousContext.subcategoria || ''}"
 - Balde anterior: "${previousContext.balde || ''}"
 - Tipo anterior: "${previousContext.tipo || 'despesa'}"
+- Status anterior: "${previousContext.status || ''}"
+- Opções de sugestão oferecidas anteriormente: [${opcoesStr}]
 
-INSTRUÇÃO CRÍTICA PARA CONTEXTO ANTERIOR:
-Se 'contexto_anterior' for fornecido e o usuário estiver informando apenas o valor ou forma de pagamento (ex: 'foi 80 reais', '80 no debito', '45 reais', 'paguei no pix 50', '80'), MESCLE as informações e retorne status 'sucesso' com a descrição do contexto anterior e o novo valor identificado.
-Preserve a descrição, categoria, subcategoria, balde e estabelecimento anteriores, atualizando o valor e o método de pagamento conforme a nova fala.
+INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTENÇÃO:
+1. SE O STATUS ANTERIOR FOR 'clarificacao_categoria' (ou se havia opções de categoria sugeridas em aberto):
+   O usuário está em diálogo sobre como organizar a despesa "${previousContext.descricao || 'anterior'}" (${valorStr}).
+   Você DEVE AVALIAR RIGOROSAMENTE A INTENÇÃO da mensagem do usuário:
+
+   A) INTENÇÃO CONSULTIVA / DÚVIDA / METACONVERSA / PERGUNTA REFLEXIVA:
+      - Exemplos: "Qual faz mais sentido?", "O que você acha?", "Qual a diferença?", "Me ajuda a escolher", "Tanto faz", "Não sei", "Qual você recomenda?", "O que é melhor?", "Por que separar?", "Explica pra mim".
+      - REGRA INVIOLÁVEL: NUNCA, SOB NENHUMA HIPÓTESE, assuma que respostas de dúvida, aconselhamento ou metalinguagem são nomes de categorias! Frases como "Qual faz mais sentido?" JAMAIS devem ser salvas ou criadas como nome de categoria!
+      - Comportamento no Modo Consultor Financeiro da Família:
+        * "status": "clarificacao_categoria"
+        * "tipo_resposta": "consultoria_categoria"
+        * "intencao": "consultiva"
+        * "transacao": Mantenha a transação pendente original INTACTA (mesma descrição "${previousContext.descricao || ''}", mesmo valor ${previousContext.valor || 'null'}, mesmo balde "${previousContext.balde || 'Estilo de Vida'}", mesmo tipo "${previousContext.tipo || 'despesa'}").
+        * "opcoes_sugestao": Mantenha EXATAMENTE as mesmas 2 opções sugeridas anteriormente ([${opcoesStr}]) para o usuário poder clicar.
+        * "mensagem_amigavel": Responda de forma consultiva, didática e empática, aplicando a melhor prática do orçamento 50/30/20 ao caso concreto. Explique por que separar estética/bem-estar ou itens específicos dos passeios e lazer geral ajuda a enxergar o orçamento real da família no fim do mês. Termine a resposta oferecendo as opções com clareza, no formato: "Recomendo '[Opção Recomendada]'! Assim você separa o que é estética/bem-estar dos passeios de 'Lazer' (restaurantes, viagens), facilitando enxergar seu orçamento real no fim do mês. Quer que eu vincule em [Opção A] ou prefere deixar tudo em [Opção B] mesmo?"
+        * "pergunta_clarificacao": "Quer que eu vincule na opção recomendada ou prefere a outra?"
+
+   B) INTENÇÃO DE ESCOLHA / CONFIRMAÇÃO DE CATEGORIA:
+      - Exemplos: "fechado em cuidados pessoais", "pode ser essa", "pode ser cuidados pessoais", "prefiro lazer", "coloca em lazer", "cuidados pessoais", "a primeira", "a segunda", "pode ser a primeira".
+      - Comportamento:
+        * "status": "sucesso"
+        * "tipo_resposta": "transacao"
+        * "intencao": "escolha_categoria"
+        * "transacao": Preencha a transação completa aplicando a categoria escolhida (e subcategoria correspondente), preservando a descrição "${previousContext.descricao || ''}", o valor ${previousContext.valor || 'null'} e o balde correspondente.
+        * "mensagem_amigavel": "Perfeito! Vinculei em [Categoria Escolhida]. Confira os detalhes e confirme o lançamento:"
+
+2. SE O STATUS ANTERIOR FOR 'falta_valor':
+   Se o usuário estiver informando apenas o valor ou forma de pagamento (ex: 'foi 80 reais', '80 no debito', '45 reais', 'paguei no pix 50', '80'), MESCLE as informações e retorne status 'sucesso' com a descrição do contexto anterior e o novo valor identificado.
 `
     }
 
@@ -551,12 +597,21 @@ Comportamentos esperados:
     const status = validStatuses.includes(parsedAiJson?.status) ? parsedAiJson.status : 'invalido'
 
     const isConsulta = status === 'consulta' || parsedAiJson?.tipo_resposta === 'consulta'
+    const isConsultoriaCategoria =
+      parsedAiJson?.tipo_resposta === 'consultoria_categoria' ||
+      parsedAiJson?.intencao === 'consultiva'
+
     const respostaConsulta =
       parsedAiJson?.resposta_consulta || (isConsulta ? parsedAiJson?.mensagem_amigavel : null)
 
     const sanitizedResponse = {
       status,
-      tipo_resposta: isConsulta ? 'consulta' : 'transacao',
+      tipo_resposta: isConsulta
+        ? 'consulta'
+        : isConsultoriaCategoria
+          ? 'consultoria_categoria'
+          : 'transacao',
+      intencao: parsedAiJson?.intencao ?? (isConsultoriaCategoria ? 'consultiva' : null),
       resposta_consulta: respostaConsulta,
       transacao: isConsulta ? null : (parsedAiJson?.transacao ?? null),
       pergunta_clarificacao: parsedAiJson?.pergunta_clarificacao ?? null,

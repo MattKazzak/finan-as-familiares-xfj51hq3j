@@ -24,7 +24,8 @@ export interface VoiceAiTransaction {
 
 export interface VoiceAiResponse {
   status: VoiceAiStatus
-  tipo_resposta?: 'transacao' | 'consulta'
+  tipo_resposta?: 'transacao' | 'consulta' | 'consultoria_categoria'
+  intencao?: 'consultiva' | 'escolha_categoria' | 'consulta' | 'transacao' | string | null
   resposta_consulta?: string | null
   transacao: VoiceAiTransaction | null
   pergunta_clarificacao: string | null
@@ -50,7 +51,8 @@ export interface ParsedVoiceTransaction {
   // Campos da IA enriquecidos e transparência de processamento
   processingSource?: 'openai' | 'local'
   aiStatus?: VoiceAiStatus
-  tipoResposta?: 'transacao' | 'consulta'
+  tipoResposta?: 'transacao' | 'consulta' | 'consultoria_categoria'
+  intencao?: 'consultiva' | 'escolha_categoria' | 'consulta' | 'transacao' | string | null
   respostaConsulta?: string | null
   clarificationQuestion?: string | null
   clarificationOptions?: string[] | null
@@ -767,6 +769,83 @@ export interface LocalParsePreviousContext {
   subcategoria?: string
   balde?: string
   tipo?: 'despesa' | 'receita'
+  valor?: number | null
+  status?: string | null
+  opcoes_sugestao?: string[] | null
+}
+
+/**
+ * Detecta se a mensagem é uma pergunta de dúvida, reflexiva ou metaconversa (ex: "Qual faz mais sentido?", "O que você acha?")
+ * NUNCA deve ser interpretada como nome de categoria!
+ */
+export function isConsultativeOrReflectiveQuestion(text: string): boolean {
+  const norm = normalizeWord(text)
+  const patterns = [
+    /qual\s+(faz\s+mais\s+sentido|voce\s+acha|escolho|recomenda|e\s+melhor|a\s+diferenca|seria\s+melhor)/,
+    /o\s+que\s+(voce\s+acha|e\s+melhor|faz\s+sentido|recomenda)/,
+    /me\s+ajuda(\s+a\s+escolher)?/,
+    /nao\s+sei(\s+qual)?/,
+    /tanto\s+faz/,
+    /qual\s+a\s+diferenca/,
+    /por\s+que\s+separar/,
+    /onde\s+(fica\s+melhor|e\s+melhor)/,
+    /qual\s+das\s+duas/,
+    /como\s+funciona/,
+    /qual\s+opcao/,
+    /qual\s+sugere/,
+  ]
+
+  return patterns.some((regex) => regex.test(norm))
+}
+
+/**
+ * Detecta confirmação ou escolha de categoria em linguagem natural (ex: "fechado em cuidados pessoais", "pode ser essa", "pode ser cuidados pessoais")
+ */
+export function extractCategoryChoiceIntent(
+  text: string,
+  options?: string[] | null,
+): { isChoice: boolean; chosenOption?: string; cleanCategoryName?: string } {
+  const norm = normalizeWord(text)
+
+  // Prefixos comuns de escolha
+  const choicePrefixRegex =
+    /^(fechado\s+em|pode\s+ser\s+(em\s+)?|coloca\s+em\s+|prefiro\s+|deixa\s+em\s+|vincula\s+em\s+|quero\s+|escolho\s+|vai\s+de\s+|marca\s+como\s+)/i
+
+  // Se houver opções disponíveis
+  if (options && options.length > 0) {
+    // Escolha por ordem: "a primeira", "a segunda", "a 1", "a 2", "a opção 1", etc.
+    if (/\b(a\s+primeira|primeira\s+opcao|opcao\s+1|primeira)\b/i.test(norm)) {
+      return { isChoice: true, chosenOption: options[0] }
+    }
+    if (/\b(a\s+segunda|segunda\s+opcao|opcao\s+2|segunda)\b/i.test(norm) && options.length > 1) {
+      return { isChoice: true, chosenOption: options[1] }
+    }
+
+    // Match direto com uma das opções (mesmo com prefixos)
+    for (const opt of options) {
+      const optNorm = normalizeWord(opt)
+      // Se a fala contém o nome da opção ou partes significativas (ex: "cuidados pessoais")
+      // Extrair nomes simples de dentro da opção
+      const parts = opt
+        .split(/[›>(/]/)
+        .map((p) => normalizeWord(p.trim()))
+        .filter(Boolean)
+      const matchesAnyPart = parts.some((part) => part.length >= 4 && norm.includes(part))
+
+      if (norm.includes(optNorm) || optNorm.includes(norm) || matchesAnyPart) {
+        return { isChoice: true, chosenOption: opt }
+      }
+    }
+  }
+
+  if (choicePrefixRegex.test(text.trim())) {
+    const cleaned = text.trim().replace(choicePrefixRegex, '').trim()
+    if (cleaned.length > 0) {
+      return { isChoice: true, cleanCategoryName: cleaned }
+    }
+  }
+
+  return { isChoice: false }
 }
 
 /**
@@ -864,6 +943,79 @@ export function parseVoiceInput(
       : contextoAnterior?.tipo === 'despesa'
         ? 'expense'
         : type
+
+  // Se houver contexto anterior com clarificação de categoria em aberto:
+  // Avaliar rigorosamente a intenção do usuário antes de mexer em categorias!
+  if (
+    contextoAnterior &&
+    (contextoAnterior.status === 'clarificacao_categoria' ||
+      (contextoAnterior.opcoes_sugestao && contextoAnterior.opcoes_sugestao.length > 0))
+  ) {
+    const pendingAmountCents =
+      contextoAnterior.valor !== undefined && contextoAnterior.valor !== null
+        ? Math.round(Number(contextoAnterior.valor) * 100)
+        : amountCents
+    const pendingFormatted = (pendingAmountCents / 100).toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    })
+
+    // CASO A: Usuário fez uma pergunta de dúvida/metaconversa/consultiva
+    if (isConsultativeOrReflectiveQuestion(trimmed)) {
+      const options = contextoAnterior.opcoes_sugestao || []
+      const optA = options[0] || 'Cuidados Pessoais'
+      const optB = options[1] || 'Lazer'
+
+      const friendlyMsg = `Recomendo '${optA}'! Assim você separa o que é estética/bem-estar dos passeios de '${optB}' (restaurantes, viagens), facilitando enxergar seu orçamento real (Regra 50/30/20) no fim do mês. Quer que eu vincule em ${optA} ou prefere deixar tudo em ${optB} mesmo?`
+
+      return {
+        rawText,
+        amountCents: pendingAmountCents,
+        amountFormatted: pendingFormatted,
+        type: effectiveType,
+        description: contextoAnterior.descricao || description,
+        establishment: contextoAnterior.estabelecimento || undefined,
+        paymentMethod: method,
+        categoryNameSuggestion: contextoAnterior.categoria || undefined,
+        subcategoryNameSuggestion: contextoAnterior.subcategoria || undefined,
+        bucketSuggestion: normalizeBucketName(contextoAnterior.balde),
+        confidence: 0.95,
+        processingSource: 'local',
+        aiStatus: 'clarificacao_categoria',
+        tipoResposta: 'consultoria_categoria',
+        intencao: 'consultiva',
+        clarificationQuestion: 'Onde prefere organizar esse lançamento?',
+        clarificationOptions: options,
+        friendlyMessage: friendlyMsg,
+      }
+    }
+
+    // CASO B: Escolha de categoria pelo usuário
+    const choice = extractCategoryChoiceIntent(trimmed, contextoAnterior.opcoes_sugestao)
+    if (choice.isChoice) {
+      const resolvedChoiceStr = choice.chosenOption || choice.cleanCategoryName || trimmed
+      return {
+        rawText,
+        amountCents: pendingAmountCents,
+        amountFormatted: pendingFormatted,
+        type: effectiveType,
+        description: contextoAnterior.descricao || description,
+        establishment: contextoAnterior.estabelecimento || undefined,
+        paymentMethod: method,
+        categoryNameSuggestion: resolvedChoiceStr,
+        subcategoryNameSuggestion: contextoAnterior.subcategoria || undefined,
+        bucketSuggestion: normalizeBucketName(contextoAnterior.balde),
+        confidence: 0.95,
+        processingSource: 'local',
+        aiStatus: 'sucesso',
+        tipoResposta: 'transacao',
+        intencao: 'escolha_categoria',
+        clarificationQuestion: null,
+        clarificationOptions: null,
+        friendlyMessage: `Perfeito! Vinculei em "${resolvedChoiceStr}". Confira o lançamento abaixo:`,
+      }
+    }
+  }
 
   // 5. Categoria & Balde
   const { categoryName, bucket, subcategoryName } = suggestCategoryAndBucket(
@@ -1027,6 +1179,8 @@ export function mapAiResponseToParsedTransaction(
   }
 
   const isConsulta = aiData.status === 'consulta' || aiData.tipo_resposta === 'consulta'
+  const isConsultoria =
+    aiData.tipo_resposta === 'consultoria_categoria' || aiData.intencao === 'consultiva'
 
   return {
     rawText,
@@ -1042,7 +1196,8 @@ export function mapAiResponseToParsedTransaction(
     confidence: confidenceByStatus[aiData.status] ?? 0.2,
     processingSource: 'openai',
     aiStatus: aiData.status,
-    tipoResposta: isConsulta ? 'consulta' : 'transacao',
+    tipoResposta: isConsulta ? 'consulta' : isConsultoria ? 'consultoria_categoria' : 'transacao',
+    intencao: aiData.intencao,
     respostaConsulta: aiData.resposta_consulta || (isConsulta ? aiData.mensagem_amigavel : null),
     clarificationQuestion: aiData.pergunta_clarificacao,
     clarificationOptions: aiData.opcoes_sugestao,

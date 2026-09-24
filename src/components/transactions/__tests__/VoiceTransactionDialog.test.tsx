@@ -1046,6 +1046,184 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     })
   })
 
+  it('(a) "Qual faz mais sentido?" com clarificação pendente NÃO vira categoria, exibe resposta consultiva 50/30/20 e mantém pílulas e pendingTransaction intacta', async () => {
+    // 1º turno: fala que gera clarificacao_categoria
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'Manicure 297 e 50',
+      amountCents: 29750,
+      amountFormatted: 'R$ 297,50',
+      type: 'expense',
+      description: 'Manicure',
+      confidence: 0.85,
+      processingSource: 'openai',
+      aiStatus: 'clarificacao_categoria',
+      categoryNameSuggestion: null,
+      subcategoryNameSuggestion: 'Manicure',
+      bucketSuggestion: 'lifestyle',
+      clarificationQuestion: 'Onde prefere organizar esse lançamento?',
+      clarificationOptions: [
+        'Cuidados Pessoais (Estilo de Vida)',
+        'Manicure › dentro de Lazer (Estilo de Vida)',
+      ],
+      friendlyMessage: 'Identifiquei R$ 297,50! Onde prefere organizar esse gasto?',
+    })
+
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Fale no microfone ou digite aqui...')
+    fireEvent.change(input, { target: { value: 'Manicure 297 e 50' } })
+    fireEvent.click(screen.getByText('Enviar'))
+
+    await waitFor(() => {
+      expect(screen.getByText(/Identifiquei R\$ 297,50!/i)).toBeDefined()
+      expect(screen.getByText('Cuidados Pessoais (Estilo de Vida)')).toBeDefined()
+      expect(screen.getByText('Manicure › dentro de Lazer (Estilo de Vida)')).toBeDefined()
+      // Card verde AINDA NÃO deve aparecer
+      expect(screen.queryByText('✅ Confirmar Lançamento')).toBeNull()
+    })
+
+    // 2º turno: O usuário faz uma pergunta reflexiva / dúvida "Qual faz mais sentido?"
+    mockParseVoiceWithAi.mockImplementationOnce(async ({ texto, contexto_anterior }) => {
+      expect(texto).toBe('Qual faz mais sentido?')
+      expect(contexto_anterior).toEqual(
+        expect.objectContaining({
+          descricao: 'Manicure',
+          valor: 297.5,
+          status: 'clarificacao_categoria',
+        }),
+      )
+
+      return {
+        rawText: texto,
+        amountCents: 29750,
+        amountFormatted: 'R$ 297,50',
+        type: 'expense',
+        description: 'Manicure',
+        confidence: 0.95,
+        processingSource: 'openai',
+        aiStatus: 'clarificacao_categoria',
+        tipoResposta: 'consultoria_categoria',
+        intencao: 'consultiva',
+        clarificationOptions: [
+          'Cuidados Pessoais (Estilo de Vida)',
+          'Manicure › dentro de Lazer (Estilo de Vida)',
+        ],
+        friendlyMessage:
+          "Recomendo 'Cuidados Pessoais'! Assim você separa o que é estética/bem-estar dos passeios de 'Lazer' (restaurantes, viagens), facilitando enxergar seu orçamento real no fim do mês. Quer que eu vincule em Cuidados Pessoais ou prefere deixar tudo em Lazer mesmo?",
+      }
+    })
+
+    fireEvent.change(input, { target: { value: 'Qual faz mais sentido?' } })
+    fireEvent.click(screen.getByText('Enviar'))
+
+    await waitFor(() => {
+      // Fala do usuário aparece no chat
+      expect(screen.getByText('Qual faz mais sentido?')).toBeDefined()
+      // Resposta consultiva didática do assistente
+      expect(
+        screen.getByText(
+          /Recomendo 'Cuidados Pessoais'! Assim você separa o que é estética\/bem-estar dos passeios de 'Lazer'/i,
+        ),
+      ).toBeDefined()
+      // JAMAIS cria ou exibe categoria com o texto "Qual faz mais sentido?"
+      expect(mockAddNewCategory).not.toHaveBeenCalledWith(
+        expect.stringMatching(/Qual faz mais sentido/i),
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+      )
+      // Mantém as pílulas interativas clicáveis disponíveis
+      expect(screen.getAllByText('Cuidados Pessoais (Estilo de Vida)').length).toBeGreaterThan(0)
+      // O Card Verde de confirmação AINDA NÃO deve ser montado (usuário ainda não bateu o martelo)
+      expect(screen.queryByText('✅ Confirmar Lançamento')).toBeNull()
+    })
+  })
+
+  it('(b) "fechado em cuidados pessoais" após turno consultivo aplica a escolha e monta o card verde', async () => {
+    // 1º turno: clarificacao_categoria inicial
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'Manicure 297 e 50',
+      amountCents: 29750,
+      amountFormatted: 'R$ 297,50',
+      type: 'expense',
+      description: 'Manicure',
+      confidence: 0.85,
+      processingSource: 'openai',
+      aiStatus: 'clarificacao_categoria',
+      categoryNameSuggestion: null,
+      subcategoryNameSuggestion: 'Manicure',
+      bucketSuggestion: 'lifestyle',
+      clarificationQuestion: 'Onde prefere organizar esse lançamento?',
+      clarificationOptions: [
+        'Cuidados Pessoais (Estilo de Vida)',
+        'Manicure › dentro de Lazer (Estilo de Vida)',
+      ],
+      friendlyMessage: 'Identifiquei R$ 297,50!',
+    })
+
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Fale no microfone ou digite aqui...')
+    fireEvent.change(input, { target: { value: 'Manicure 297 e 50' } })
+    fireEvent.click(screen.getByText('Enviar'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Cuidados Pessoais (Estilo de Vida)')).toBeDefined()
+    })
+
+    // 2º turno: O usuário decide "fechado em cuidados pessoais"
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'fechado em cuidados pessoais',
+      amountCents: 29750,
+      amountFormatted: 'R$ 297,50',
+      type: 'expense',
+      description: 'Manicure',
+      confidence: 0.95,
+      processingSource: 'openai',
+      aiStatus: 'sucesso',
+      tipoResposta: 'transacao',
+      intencao: 'escolha_categoria',
+      categoryNameSuggestion: 'Cuidados Pessoais (Estilo de Vida)',
+      bucketSuggestion: 'lifestyle',
+    })
+
+    mockAddNewCategory.mockResolvedValueOnce({
+      id: 'cat-cuidados',
+      name: 'Cuidados Pessoais',
+      type: 'expense',
+      budget_bucket: 'lifestyle',
+    })
+
+    fireEvent.change(input, { target: { value: 'fechado em cuidados pessoais' } })
+    fireEvent.click(screen.getByText('Enviar'))
+
+    await waitFor(() => {
+      // Agora sim: card verde montado após decisão final
+      expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
+      expect(screen.getByText('R$ 297,50')).toBeDefined()
+      expect(screen.getByText('Manicure')).toBeDefined()
+    })
+  })
+
   it('fluxo de padrão ouro clarificacao_categoria: sugere pílulas, persiste categoria e exibe card verde pronto para confirmar', async () => {
     mockAddNewCategory.mockResolvedValueOnce({
       id: 'cat-cuidados-pessoais',

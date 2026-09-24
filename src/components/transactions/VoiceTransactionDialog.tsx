@@ -171,6 +171,9 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       subcategoria: base.subcategoryNameSuggestion,
       balde: base.bucketSuggestion,
       tipo: base.type === 'income' ? ('receita' as const) : ('despesa' as const),
+      valor: base.amountCents > 0 ? base.amountCents / 100 : null,
+      status: base.aiStatus,
+      opcoes_sugestao: base.clarificationOptions,
     }
   }, [])
 
@@ -265,7 +268,10 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       try {
         setIsProcessingAi(true)
         const previousContext =
-          isAmountOnly || existingPartial?.aiStatus === 'falta_valor'
+          isAmountOnly ||
+          existingPartial?.aiStatus === 'falta_valor' ||
+          existingPartial?.aiStatus === 'clarificacao_categoria' ||
+          existingPartial?.aiStatus === 'clarificacao'
             ? buildPreviousContext(existingPartial)
             : null
 
@@ -385,25 +391,80 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           }
         }
 
-        // Caso 4: Transação pendente em clarificação de categoria esperando escolha do usuário
-        if (
-          existingPartial &&
-          existingPartial.aiStatus === 'clarificacao_categoria' &&
-          parsed.amountCents <= 0
-        ) {
-          // O usuário falou/digitou uma categoria qualquer em resposta à pergunta da IA
-          await handleApplyAndPersistCategory(textToProcess, existingPartial)
+        // Caso 4: Resposta Consultiva da IA / Pergunta reflexiva enquanto em clarificação de categoria
+        // "NUNCA assuma que uma resposta do usuário é o nome de uma categoria sem antes avaliar a intenção da mensagem"
+        // Frases de dúvida/metaconversa ("Qual faz mais sentido?", "O que você acha?") NUNCA devem virar nome de categoria!
+        const isConsultingResponse =
+          parsed.tipoResposta === 'consultoria_categoria' ||
+          parsed.intencao === 'consultiva' ||
+          (existingPartial &&
+            existingPartial.aiStatus === 'clarificacao_categoria' &&
+            parsed.aiStatus === 'clarificacao_categoria' &&
+            !parsed.categoryNameSuggestion)
+
+        if (isConsultingResponse) {
+          // Mantém a transação pendente original intacta na memória da sessão
+          const preservedOptions =
+            parsed.clarificationOptions && parsed.clarificationOptions.length > 0
+              ? parsed.clarificationOptions
+              : existingPartial?.clarificationOptions || []
+
+          const updatedPending: ParsedVoiceTransaction = {
+            ...(existingPartial || parsed),
+            // Preserva a transação original intacta
+            amountCents: existingPartial?.amountCents || parsed.amountCents,
+            amountFormatted: existingPartial?.amountFormatted || parsed.amountFormatted,
+            description: existingPartial?.description || parsed.description,
+            clarificationOptions: preservedOptions,
+            aiStatus: 'clarificacao_categoria',
+          }
+
+          setPendingTransaction(updatedPending)
+          pendingTransactionRef.current = updatedPending
+
+          const consultMsg =
+            parsed.friendlyMessage ||
+            parsed.respostaConsulta ||
+            `Recomendo organizar de forma separada dos gastos gerais, mantendo a regra 50/30/20 visível.`
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `assistant-${Date.now()}`,
+              sender: 'assistant',
+              text: consultMsg,
+              timestamp: new Date(),
+              cardData: updatedPending,
+              cardType: 'clarificacao_categoria',
+            },
+          ])
           return
         }
 
-        // Caso 5: Status 'clarificacao_categoria' vindo da IA (Human-in-the-Loop padrão ouro)
+        // Caso 5: Escolha ou confirmação de categoria enquanto havia clarificação de categoria pendente
+        if (
+          existingPartial &&
+          existingPartial.aiStatus === 'clarificacao_categoria' &&
+          (parsed.intencao === 'escolha_categoria' ||
+            parsed.categoryNameSuggestion ||
+            parsed.amountCents <= 0)
+        ) {
+          const categoryChoiceToApply =
+            parsed.categoryNameSuggestion ||
+            (parsed.intencao === 'escolha_categoria' ? parsed.description : textToProcess)
+
+          await handleApplyAndPersistCategory(categoryChoiceToApply, existingPartial)
+          return
+        }
+
+        // Caso 6: Status 'clarificacao_categoria' vindo da IA (Human-in-the-Loop padrão ouro)
         if (parsed.aiStatus === 'clarificacao_categoria' && parsed.amountCents > 0) {
           setPendingTransaction(parsed)
           pendingTransactionRef.current = parsed
 
           const friendlyMsg =
             parsed.friendlyMessage ||
-            `Identifiquei ${parsed.amountFormatted}! Mas ainda não temos essa categoria cadastrada. Onde prefere organizar?`
+            `Identifiquei ${parsed.amountFormatted}! Onde prefere organizar esse gasto?`
 
           setMessages((prev) => [
             ...prev,
@@ -864,10 +925,45 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   // Extrai nome limpo da categoria, subcategoria e balde a partir de strings como:
   // "Manicure › dentro de Lazer (Estilo de Vida)" ou "Cuidados Pessoais (Estilo de Vida)" ou "Transporte / Passagem"
   const parseCategoryOptionString = useCallback(
-    (rawOption: string, fallbackBucket?: 'essential' | 'lifestyle' | 'goals') => {
+    (
+      rawOption: string,
+      fallbackBucket?: 'essential' | 'lifestyle' | 'goals',
+      availableOptions?: string[] | null,
+    ) => {
       let catName = rawOption.trim()
       let bucket: 'essential' | 'lifestyle' | 'goals' = fallbackBucket || 'lifestyle'
       let subName: string | undefined
+
+      // Remover prefixos comuns de confirmação se houver (ex: "fechado em cuidados pessoais", "pode ser em lazer")
+      catName = catName
+        .replace(
+          /^(fechado\s+em|pode\s+ser\s+(em\s+)?|coloca\s+em\s+|prefiro\s+|quero\s+|vincula\s+em\s+|marca\s+como\s+)/i,
+          '',
+        )
+        .trim()
+
+      // Se o usuário falou algo curto e existe em availableOptions, tenta casar
+      if (availableOptions && availableOptions.length > 0) {
+        // Se falou "a primeira" / "primeira"
+        if (/^(a\s+primeira|primeira\s+opcao|opcao\s+1)$/i.test(catName)) {
+          catName = availableOptions[0]
+        } else if (
+          /^(a\s+segunda|segunda\s+opcao|opcao\s+2)$/i.test(catName) &&
+          availableOptions.length > 1
+        ) {
+          catName = availableOptions[1]
+        } else {
+          // Busca nas opções se há correspondência parcial
+          const matchedOpt = availableOptions.find(
+            (opt) =>
+              opt.toLowerCase().includes(catName.toLowerCase()) ||
+              catName.toLowerCase().includes(opt.toLowerCase()),
+          )
+          if (matchedOpt) {
+            catName = matchedOpt
+          }
+        }
+      }
 
       // Extrair o balde entre parênteses no final, ex: "(Estilo de Vida)"
       const parenMatch = catName.match(/^(.*?)\s*\((.*?)\)$/)
@@ -909,7 +1005,11 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         categoryName: cleanCatName,
         bucket: resolvedBucket,
         subcategoryName,
-      } = parseCategoryOptionString(rawCategoryChoice, base.bucketSuggestion)
+      } = parseCategoryOptionString(
+        rawCategoryChoice,
+        base.bucketSuggestion,
+        base.clarificationOptions,
+      )
 
       // 1. Procurar se já existe categoria cadastrada com esse nome
       let matchedCategory = categories.find(
