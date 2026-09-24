@@ -63,14 +63,9 @@ export const NewTransactionActionSheet: React.FC<NewTransactionActionSheetProps>
                 </div>
 
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-1.5">
-                      <span>Falar Lançamento com IA</span>
-                    </span>
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/30 text-emerald-200 border border-emerald-400/40 px-2 py-0.5 rounded-full">
-                      Novo
-                    </span>
-                  </div>
+                  <span className="text-base sm:text-lg font-bold text-white tracking-tight">
+                    Falar Lançamento com IA
+                  </span>
                   <p className="text-xs text-emerald-100/90 mt-1 line-clamp-2 leading-relaxed">
                     Fale naturalmente: &ldquo;Almoço 45 reais no débito&rdquo; ou &ldquo;Cerveja na
                     mercearia 60&rdquo;
