@@ -1643,9 +1643,9 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                   }`}
                   title={`Selecionar: ${item.label}`}
                 >
-                  <span className="flex items-center gap-2 min-w-0">
+                  <span className="flex items-center gap-2 min-w-0 flex-1">
                     <span
-                      className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs shrink-0 ${
+                      className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs shrink-0 self-start mt-0.5 sm:self-center sm:mt-0 ${
                         isExistente
                           ? 'bg-emerald-100 text-emerald-800 group-hover:bg-white group-hover:text-emerald-700'
                           : 'bg-violet-100 text-violet-800 group-hover:bg-white group-hover:text-violet-700'
@@ -1657,10 +1657,10 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                         <Sparkles className="w-3.5 h-3.5" />
                       )}
                     </span>
-                    <span className="truncate">{item.label}</span>
+                    <span className="break-words leading-snug">{item.label}</span>
                   </span>
                   <CheckCircle2
-                    className={`w-3.5 h-3.5 shrink-0 transition-colors ${
+                    className={`w-3.5 h-3.5 shrink-0 transition-colors self-start mt-1 sm:self-center sm:mt-0 ${
                       isExistente
                         ? 'text-emerald-500 group-hover:text-white'
                         : 'text-violet-500 group-hover:text-white'
