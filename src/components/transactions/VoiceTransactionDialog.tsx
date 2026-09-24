@@ -481,9 +481,23 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           setPendingTransaction(parsed)
           pendingTransactionRef.current = parsed
 
-          const friendlyMsg =
-            parsed.friendlyMessage ||
-            `Identifiquei ${parsed.amountFormatted}! Onde prefere organizar esse gasto?`
+          // Composição com fallback inteligente: sempre inclui a descrição do gasto antes do valor
+          const desc = (parsed.description || existingPartial?.description || '').trim()
+          let friendlyMsg = parsed.friendlyMessage
+
+          if (!friendlyMsg) {
+            friendlyMsg =
+              desc && desc !== 'Despesa' && desc !== 'Receita'
+                ? `Identifiquei ${desc} ${parsed.amountFormatted}! Onde prefere organizar esse gasto?`
+                : `Identifiquei ${parsed.amountFormatted}! Onde prefere organizar esse gasto?`
+          } else if (desc && desc !== 'Despesa' && desc !== 'Receita') {
+            // Se a mensagem amigável não contiver a descrição do item, recompõe no formato padrão ouro
+            const descLower = desc.toLowerCase()
+            const msgLower = friendlyMsg.toLowerCase()
+            if (!msgLower.includes(descLower)) {
+              friendlyMsg = `Identifiquei ${desc} ${parsed.amountFormatted}! Onde prefere organizar esse gasto?`
+            }
+          }
 
           setMessages((prev) => [
             ...prev,

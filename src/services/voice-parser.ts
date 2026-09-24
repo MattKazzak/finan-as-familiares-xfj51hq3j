@@ -1221,9 +1221,12 @@ export function parseVoiceInput(
     clarificationQuestion = descFormatted
       ? `O que foi ${descFormatted}?`
       : 'Qual é a categoria desse gasto?'
+    // Se o termo/descrição for claro mas não casar com categoria cadastrada, ou se for ambíguo:
+    // Mantém o formato padrão amigável citando o item e o valor quando houver descrição
     friendlyMessage = descFormatted
-      ? `Entendi ${amountFormatted}! Mas o que foi ${descFormatted}?`
-      : `Entendi ${amountFormatted}! Mas qual foi a categoria deste gasto?`
+      ? `Identifiquei ${descFormatted} ${amountFormatted}! Onde prefere organizar esse gasto?`
+      : `Identifiquei ${amountFormatted}! Onde prefere organizar esse gasto?`
+
     // Verificar se existe alguma categoria compatível
     const hasExistingLazer = categories.some((c) => /lazer|estilo/i.test(c.name))
     if (hasExistingLazer) {

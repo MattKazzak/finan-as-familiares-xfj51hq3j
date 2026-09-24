@@ -462,7 +462,7 @@ REGRAS SEMÂNTICAS CRÍTICAS, DISTINÇÃO VISUAL E VERDADE SOBRE O QUE JÁ ESTÁ
   - O status DEVE SER OBRIGATORIAMENTE "clarificacao_categoria".
   - "tipo_resposta": "transacao"
   - "transacao": preencha a transação com descrição, valor (float positivo em reais), tipo ("despesa" ou "receita"), balde correto, subcategoria provisória (ex: "Manicure") e categoria nula ou provisória.
-  - "mensagem_amigavel": "Identifiquei R$ [VALOR]! Onde prefere organizar esse gasto?"
+  - "mensagem_amigavel": "Identifiquei [descrição do gasto/item] R$ [VALOR]! Onde prefere organizar esse gasto?" (ex: "Identifiquei manicure R$ 267,00! Onde prefere organizar esse gasto?")
   - "pergunta_clarificacao": "Onde prefere organizar esse lançamento?"
   - "opcoes_sugestao": lista de objetos com tipo ("existente" ou "nova"), rotulo com emoji (📁 ou ✨), categoria, subcategoria e balde.
 
@@ -518,7 +518,7 @@ Comportamentos esperados:
    - "status": "clarificacao_categoria"
    - "tipo_resposta": "transacao"
    - "transacao": preencha descricao, valor, balde correto, subcategoria provisória.
-   - "mensagem_amigavel": "Identifiquei R$ [VALOR]! Onde prefere organizar?"
+   - "mensagem_amigavel": "Identifiquei [descrição do gasto/item] R$ [VALOR]! Onde prefere organizar esse gasto?" (ex: "Identifiquei manicure R$ 140,00! Onde prefere organizar esse gasto?")
    - "opcoes_sugestao": DUAS opções pertinentes. Se existir categoria da família compatível no mesmo balde, ofereça encaixar como subcategoria dela (ex: "Manicure › dentro de Lazer (Estilo de Vida)") e a outra como categoria nova (ex: "Cuidados Pessoais (Estilo de Vida)").
 
 4. "falta_valor" (LANÇAMENTO SEM VALOR):

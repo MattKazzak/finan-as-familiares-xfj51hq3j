@@ -1098,7 +1098,9 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     fireEvent.click(screen.getByText('Enviar'))
 
     await waitFor(() => {
-      expect(screen.getByText(/Identifiquei R\$ 297,50!/i)).toBeDefined()
+      expect(
+        screen.getByText(/Identifiquei Manicure R\$ 297,50! Onde prefere organizar esse gasto\?/i),
+      ).toBeDefined()
       expect(screen.getByText('Cuidados Pessoais (Estilo de Vida)')).toBeDefined()
       expect(screen.getByText('Manicure › dentro de Lazer (Estilo de Vida)')).toBeDefined()
       // Card verde AINDA NÃO deve aparecer
@@ -1285,7 +1287,7 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Identifiquei R\$ 140,00! Mas ainda não temos essa categoria cadastrada/i),
+        screen.getByText(/Identifiquei Manicure R\$ 140,00! Onde prefere organizar esse gasto\?/i),
       ).toBeDefined()
       // Pílulas clicáveis exibidas
       expect(screen.getByText('Cuidados Pessoais (Estilo de Vida)')).toBeDefined()
@@ -1623,6 +1625,92 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     await waitFor(() => {
       expect(screen.getByText(/Usando categoria existente "Lazer"/i)).toBeDefined()
       expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
+    })
+  })
+
+  it('formata mensagem de clarificacao_categoria incluindo a descrição e o valor mesmo quando IA retorna mensagem sem a descrição', async () => {
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'manicure 267',
+      amountCents: 26700,
+      amountFormatted: 'R$ 267,00',
+      type: 'expense',
+      description: 'manicure',
+      confidence: 0.88,
+      processingSource: 'openai',
+      aiStatus: 'clarificacao_categoria',
+      categoryNameSuggestion: null,
+      subcategoryNameSuggestion: 'manicure',
+      bucketSuggestion: 'lifestyle',
+      clarificationQuestion: 'Onde prefere organizar esse lançamento?',
+      clarificationOptions: [
+        'Cuidados Pessoais (Estilo de Vida)',
+        'Manicure › dentro de Lazer (Estilo de Vida)',
+      ],
+      // Simula resposta antiga da IA onde não vinha a descrição do gasto
+      friendlyMessage: 'Identifiquei R$ 267,00! Onde prefere organizar esse gasto?',
+    })
+
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Fale no microfone ou digite aqui...')
+    fireEvent.change(input, { target: { value: 'manicure 267' } })
+    fireEvent.click(screen.getByText('Enviar'))
+
+    await waitFor(() => {
+      // O balão no mini-chat deve exibir "Identifiquei manicure R$ 267,00! Onde prefere organizar esse gasto?"
+      expect(
+        screen.getByText('Identifiquei manicure R$ 267,00! Onde prefere organizar esse gasto?'),
+      ).toBeDefined()
+      expect(screen.getByText('Cuidados Pessoais (Estilo de Vida)')).toBeDefined()
+    })
+  })
+
+  it('formata mensagem de clarificacao_categoria com descrição e valor quando friendlyMessage está vazia', async () => {
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'tatuagem 350',
+      amountCents: 35000,
+      amountFormatted: 'R$ 350,00',
+      type: 'expense',
+      description: 'tatuagem',
+      confidence: 0.88,
+      processingSource: 'openai',
+      aiStatus: 'clarificacao_categoria',
+      categoryNameSuggestion: null,
+      subcategoryNameSuggestion: 'tatuagem',
+      bucketSuggestion: 'lifestyle',
+      clarificationQuestion: 'Onde prefere organizar esse lançamento?',
+      clarificationOptions: ['Arte Corporal (Estilo de Vida)', 'Lazer (Estilo de Vida)'],
+      friendlyMessage: '',
+    })
+
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Fale no microfone ou digite aqui...')
+    fireEvent.change(input, { target: { value: 'tatuagem 350' } })
+    fireEvent.click(screen.getByText('Enviar'))
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Identifiquei tatuagem R$ 350,00! Onde prefere organizar esse gasto?'),
+      ).toBeDefined()
     })
   })
 })

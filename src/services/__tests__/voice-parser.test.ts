@@ -171,14 +171,15 @@ describe('voice-parser', () => {
       expect(parsed.aiStatus).toBe('sucesso')
     })
 
-    it('classifica frase ambígua com valor ("pindamonhangaba 8 reais") como "clarificacao"', () => {
+    it('classifica frase ambígua com valor ("pindamonhangaba 8 reais") como "clarificacao" e inclui descrição e valor na mensagem amigável', () => {
       const parsed = parseVoiceInput('pindamonhangaba 8 reais', mockCategories)
       expect(parsed.amountCents).toBe(800)
       expect(parsed.amountFormatted).toMatch(/8[,.]00/)
       expect(parsed.aiStatus).toBe('clarificacao')
       expect(parsed.clarificationQuestion).toBe('O que foi Pindamonhangaba?')
-      expect(parsed.friendlyMessage).toContain('Entendi')
-      expect(parsed.friendlyMessage).toContain('Pindamonhangaba')
+      expect(parsed.friendlyMessage).toContain('Identifiquei Pindamonhangaba')
+      expect(parsed.friendlyMessage).toContain('8,00')
+      expect(parsed.friendlyMessage).toContain('Onde prefere organizar esse gasto?')
       expect(parsed.clarificationOptions).toEqual([
         'Transporte / Passagem',
         'Alimentação / Outro',
