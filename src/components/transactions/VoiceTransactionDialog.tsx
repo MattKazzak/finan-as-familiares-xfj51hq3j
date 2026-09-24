@@ -869,7 +869,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         {
           id: 'welcome-1',
           sender: 'assistant',
-          text: 'Olá! Sou o Curiangoo Copilot. 🐦 Você pode falar seus gastos e receitas no seu ritmo — exemplo: almoço 35 reais no restaurante do Zé — ou me fazer uma pergunta rápida (ex: "quanto ainda posso gastar esse mês?").',
+          text: "Olá! Eu sou o Curiangoo Copilot, seu assistente financeiro. Registre receitas e despesas por voz, no seu ritmo — por exemplo: 'almoço, 35 reais, no Restaurante do Zé'. Você também pode consultar informações como: 'quanto ainda posso gastar este mês?'.",
           timestamp: new Date(),
         },
       ])
@@ -1771,7 +1771,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 >
                   {msg.id === 'welcome-1' ? (
                     <p className="text-xs leading-relaxed whitespace-pre-wrap">
-                      Olá! Sou o Curiangoo Copilot.{' '}
+                      Olá! Eu sou o Curiangoo Copilot, seu assistente financeiro.{' '}
                       <span
                         className="inline-flex items-center justify-center align-middle mx-0.5 w-4 h-4 rounded-full bg-[#064E3B] p-0.5 shadow-xs border border-emerald-500/30 overflow-hidden shrink-0"
                         title="Curiangoo"
@@ -1788,9 +1788,9 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                         />
                         <Bird className="w-2.5 h-2.5 text-white hidden" />
                       </span>{' '}
-                      Você pode falar seus gastos e receitas no seu ritmo — exemplo: almoço 35 reais
-                      no restaurante do Zé — ou me fazer uma pergunta rápida (ex: &ldquo;quanto
-                      ainda posso gastar esse mês?&rdquo;).
+                      Registre receitas e despesas por voz, no seu ritmo — por exemplo:
+                      &apos;almoço, 35 reais, no Restaurante do Zé&apos;. Você também pode consultar
+                      informações como: &apos;quanto ainda posso gastar este mês?&apos;.
                     </p>
                   ) : (
                     <p className="text-xs leading-relaxed whitespace-pre-wrap">{msg.text}</p>
