@@ -717,12 +717,26 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
       results: [[{ transcript: 'Gasolina 100 reais' }]],
     })
 
-    // Avança 2.5s: ainda não deve processar
-    vi.advanceTimersByTime(2500)
+    // Logo após falar, a contagem regressiva inicia em 3s
+    expect(screen.getByTestId('silence-countdown-badge')).toBeDefined()
+    expect(screen.getByTestId('mic-countdown-pill').textContent).toBe('3')
+
+    // Avança 1s: deve descer para 2s
+    vi.advanceTimersByTime(1000)
+    expect(screen.getByTestId('mic-countdown-pill').textContent).toBe('2')
     expect(mockParseVoiceWithAi).not.toHaveBeenCalled()
 
-    // Avança mais 600ms (total > 3000ms de silêncio real)
+    // Avança mais 1s: deve descer para 1s
+    vi.advanceTimersByTime(1000)
+    expect(screen.getByTestId('mic-countdown-pill').textContent).toBe('1')
+    expect(mockParseVoiceWithAi).not.toHaveBeenCalled()
+
+    // Avança mais 600ms (total 2600ms): ainda não deve processar
     vi.advanceTimersByTime(600)
+    expect(mockParseVoiceWithAi).not.toHaveBeenCalled()
+
+    // Avança mais 500ms (total > 3000ms de silêncio real)
+    vi.advanceTimersByTime(500)
 
     expect(mockParseVoiceWithAi).toHaveBeenCalledWith(
       expect.objectContaining({

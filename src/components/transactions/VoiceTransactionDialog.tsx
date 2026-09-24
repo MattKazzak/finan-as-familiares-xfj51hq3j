@@ -102,6 +102,11 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   const [isListeningForAmountOnly, setIsListeningForAmountOnly] = useState(false)
   const missingAmountInputRef = useRef<HTMLInputElement | null>(null)
 
+  // Contagem regressiva visual do temporizador de silêncio (3s -> 2s -> 1s)
+  const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null)
+  const silenceEndTimestampRef = useRef<number | null>(null)
+  const countdownIntervalRef = useRef<any>(null)
+
   // Refs de controle
   const chatScrollRef = useRef<HTMLDivElement | null>(null)
   const recognitionRef = useRef<any>(null)
@@ -135,12 +140,18 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     scrollToBottom()
   }, [messages, isProcessingAi, isListening, textoFalado, scrollToBottom])
 
-  // Limpar timer de silêncio de 3s
+  // Limpar timer de silêncio e contagem regressiva
   const clearSilenceTimer = useCallback(() => {
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current)
       silenceTimerRef.current = null
     }
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current)
+      countdownIntervalRef.current = null
+    }
+    silenceEndTimestampRef.current = null
+    setSecondsRemaining(null)
   }, [])
 
   // Parar gravação ativa de forma segura
@@ -651,6 +662,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           setIsListening(true)
           setPermissionStatus('granted')
           setErrorMessage(null)
+          // Inicia contagem regressiva de silêncio inicial de 3s logo que o microfone começa a ouvir
+          scheduleSilenceProcessing()
         }
 
         recognition.onaudiostart = () => {
@@ -688,12 +701,33 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           handleStopAndProcess(captured)
         }
 
-        // Temporizador de 3s (3000ms) de silêncio real
+        // Temporizador de 3s (3000ms) de silêncio real com contagem regressiva visual
         const scheduleSilenceProcessing = () => {
           clearSilenceTimer()
+
+          const durationMs = 3000
+          const endTime = Date.now() + durationMs
+          silenceEndTimestampRef.current = endTime
+          setSecondsRemaining(3)
+
+          countdownIntervalRef.current = setInterval(() => {
+            const now = Date.now()
+            const diffMs = endTime - now
+            if (diffMs <= 0) {
+              setSecondsRemaining(1)
+              if (countdownIntervalRef.current) {
+                clearInterval(countdownIntervalRef.current)
+                countdownIntervalRef.current = null
+              }
+            } else {
+              const secs = Math.ceil(diffMs / 1000)
+              setSecondsRemaining(Math.min(3, Math.max(1, secs)))
+            }
+          }, 100)
+
           silenceTimerRef.current = setTimeout(() => {
             triggerFinalProcessing()
-          }, 3000)
+          }, durationMs)
         }
 
         recognition.onresult = (event: any) => {
@@ -1508,9 +1542,18 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             }`}
           >
             <Mic className="w-3.5 h-3.5 text-emerald-700" />
-            {isListening && isListeningForAmountOnly
-              ? 'Ouvindo valor... fale agora'
-              : '🎤 Falar apenas o valor'}
+            {isListening && isListeningForAmountOnly ? (
+              <span className="flex items-center gap-1.5">
+                <span>Ouvindo valor... fale agora</span>
+                {secondsRemaining !== null && (
+                  <span className="bg-white/25 px-1.5 py-0.5 rounded-full font-mono text-[10px]">
+                    {secondsRemaining}s
+                  </span>
+                )}
+              </span>
+            ) : (
+              '🎤 Falar apenas o valor'
+            )}
           </Button>
         </div>
       </div>
@@ -1803,7 +1846,17 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             <span className="flex items-center gap-1.5 font-medium">
               {isListening ? (
                 <>
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span
+                    className={`w-2 h-2 rounded-full transition-colors duration-300 ${
+                      secondsRemaining === 3
+                        ? 'bg-emerald-500 animate-pulse'
+                        : secondsRemaining === 2
+                          ? 'bg-emerald-400'
+                          : secondsRemaining === 1
+                            ? 'bg-slate-400'
+                            : 'bg-emerald-500 animate-pulse'
+                    }`}
+                  />
                   <span className="text-emerald-800 font-bold">
                     Ouvindo... pode falar no seu ritmo
                   </span>
@@ -1814,13 +1867,30 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             </span>
 
             {isListening && (
-              <span className="text-[10px] text-slate-400">Pausa de 3s envia automaticamente</span>
+              <div className="flex items-center gap-1.5">
+                {secondsRemaining !== null && (
+                  <span
+                    data-testid="silence-countdown-badge"
+                    className={`inline-flex items-center gap-1 font-mono text-[11px] font-bold px-1.5 py-0.5 rounded-full transition-all duration-300 ${
+                      secondsRemaining === 3
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 scale-100'
+                        : secondsRemaining === 2
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 scale-95 opacity-90'
+                          : 'bg-slate-200 text-slate-600 border border-slate-300 scale-90 opacity-75'
+                    }`}
+                    title={`Enviando em ${secondsRemaining}s`}
+                  >
+                    <span>{secondsRemaining}s</span>
+                  </span>
+                )}
+                <span className="text-[10px] text-slate-400">Pausa envia automaticamente</span>
+              </div>
             )}
           </div>
 
           {/* Linha de Ação: Microfone Central + Campo de Digitação */}
           <div className="flex items-center gap-2">
-            {/* Botão Central de Microfone */}
+            {/* Botão Central de Microfone com Badge/Anel de Contagem Regressiva */}
             <div className="relative shrink-0">
               {isListening ? (
                 <button
@@ -1846,10 +1916,37 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                       stopListening()
                     }
                   }}
-                  className="w-11 h-11 rounded-2xl bg-[#064E3B] text-white flex items-center justify-center shadow-md shadow-emerald-900/30 transition-transform active:scale-95 animate-pulse"
+                  className={`relative w-11 h-11 rounded-2xl flex items-center justify-center shadow-md transition-all duration-300 active:scale-95 ${
+                    secondsRemaining === 3
+                      ? 'bg-[#064E3B] text-white shadow-emerald-900/30 animate-pulse'
+                      : secondsRemaining === 2
+                        ? 'bg-emerald-800 text-white shadow-emerald-900/20'
+                        : secondsRemaining === 1
+                          ? 'bg-slate-600 text-slate-200 shadow-slate-900/10'
+                          : 'bg-[#064E3B] text-white shadow-emerald-900/30 animate-pulse'
+                  }`}
                   title="Toque para concluir"
                 >
-                  <Mic className="w-5 h-5 text-emerald-300" />
+                  <Mic
+                    className={`w-5 h-5 transition-colors duration-300 ${
+                      secondsRemaining === 1 ? 'text-slate-300' : 'text-emerald-300'
+                    }`}
+                  />
+                  {secondsRemaining !== null && (
+                    <span
+                      key={secondsRemaining}
+                      data-testid="mic-countdown-pill"
+                      className={`absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold font-mono flex items-center justify-center shadow-xs transition-all duration-300 animate-in zoom-in-75 ${
+                        secondsRemaining === 3
+                          ? 'bg-emerald-500 text-white ring-2 ring-white scale-100'
+                          : secondsRemaining === 2
+                            ? 'bg-emerald-400 text-white ring-2 ring-white scale-95 opacity-90'
+                            : 'bg-slate-500 text-slate-100 ring-2 ring-white scale-90 opacity-80'
+                      }`}
+                    >
+                      {secondsRemaining}
+                    </span>
+                  )}
                 </button>
               ) : (
                 <button
