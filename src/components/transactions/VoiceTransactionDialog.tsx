@@ -13,16 +13,12 @@ import {
   MicOff,
   Sparkles,
   CheckCircle2,
-  SlidersHorizontal,
   AlertCircle,
   ArrowDownRight,
   ArrowUpRight,
   Send,
   Loader2,
-  RotateCcw,
   Tag,
-  HelpCircle,
-  MessageSquare,
   Bird,
 } from 'lucide-react'
 import { ParsedVoiceTransaction } from '@/services/voice-parser'
@@ -280,6 +276,22 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           contexto_anterior: previousContext,
         })
 
+        // Atalho conversacional: Se usuário falar/digitar "confirmar" / "confirma" com transação pronta pendente
+        const isConfirmIntent =
+          /^(confirmar|confirma|confirmado|pode confirmar|salvar|salva|gravar|grava|sim|ok|fechado|feito|confirme)$/i.test(
+            textToProcess.replace(/[.!?]/g, '').trim(),
+          )
+
+        if (
+          isConfirmIntent &&
+          existingPartial &&
+          existingPartial.amountCents > 0 &&
+          existingPartial.aiStatus === 'sucesso'
+        ) {
+          await handleConfirmTransaction(existingPartial)
+          return
+        }
+
         // Caso 1: Consulta rápida (resposta acolhedora da IA sem card de lançamento)
         if (parsed.aiStatus === 'consulta' || parsed.tipoResposta === 'consulta') {
           const resposta =
@@ -407,19 +419,50 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           return
         }
 
-        // Caso 6: Transação completa com sucesso logo no primeiro turno
+        // Caso 6: Transação completa com sucesso logo no primeiro turno OU edição conversacional de transação pendente
         if (parsed.aiStatus === 'sucesso' && parsed.amountCents > 0) {
-          setPendingTransaction(parsed)
-          pendingTransactionRef.current = parsed
+          let finalParsed = parsed
+
+          // Se já existia uma transação pendente pronta, mescla edições conversacionais parciais
+          // Exemplo: fala "na verdade foi 100 reais" ou "coloca em lazer"
+          if (existingPartial && existingPartial.amountCents > 0) {
+            const isCorrectionOnlyAmount =
+              /^(na verdade|muda|corrige|altera|foi|era|coloca|para|sao|são)\b/i.test(
+                textToProcess,
+              ) || parsed.description.toLowerCase().includes('na verdade')
+
+            const mergedDesc = isCorrectionOnlyAmount
+              ? existingPartial.description
+              : parsed.description || existingPartial.description
+
+            finalParsed = {
+              ...existingPartial,
+              ...parsed,
+              description: mergedDesc,
+              categoryNameSuggestion:
+                parsed.categoryNameSuggestion || existingPartial.categoryNameSuggestion,
+              subcategoryNameSuggestion:
+                parsed.subcategoryNameSuggestion || existingPartial.subcategoryNameSuggestion,
+              bucketSuggestion: parsed.bucketSuggestion || existingPartial.bucketSuggestion,
+            }
+          }
+
+          setPendingTransaction(finalParsed)
+          pendingTransactionRef.current = finalParsed
+
+          const isUpdate = Boolean(existingPartial && existingPartial.amountCents > 0)
+          const introMsg = isUpdate
+            ? `Atualizado! Identifiquei o ajuste para ${finalParsed.description} (${finalParsed.amountFormatted}). Confira e confirme o lançamento:`
+            : `Entendido! Identifiquei o lançamento de ${finalParsed.description} (${finalParsed.amountFormatted}). Toque em confirmar para registrar:`
 
           setMessages((prev) => [
             ...prev,
             {
               id: `assistant-${Date.now()}`,
               sender: 'assistant',
-              text: `Entendido! Identifiquei o lançamento de ${parsed.description} (${parsed.amountFormatted}). Toque em confirmar para registrar:`,
+              text: introMsg,
               timestamp: new Date(),
-              cardData: parsed,
+              cardData: finalParsed,
               cardType: 'sucesso',
             },
           ])
@@ -818,14 +861,15 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     }
   }
 
-  // Extrai nome limpo da categoria e balde a partir de strings como "Cuidados Pessoais (Estilo de Vida)"
+  // Extrai nome limpo da categoria, subcategoria e balde a partir de strings como:
+  // "Manicure › dentro de Lazer (Estilo de Vida)" ou "Cuidados Pessoais (Estilo de Vida)" ou "Transporte / Passagem"
   const parseCategoryOptionString = useCallback(
     (rawOption: string, fallbackBucket?: 'essential' | 'lifestyle' | 'goals') => {
       let catName = rawOption.trim()
       let bucket: 'essential' | 'lifestyle' | 'goals' = fallbackBucket || 'lifestyle'
       let subName: string | undefined
 
-      // Verifica se possui parênteses com o balde, ex: "Cuidados Pessoais (Estilo de Vida)"
+      // Extrair o balde entre parênteses no final, ex: "(Estilo de Vida)"
       const parenMatch = catName.match(/^(.*?)\s*\((.*?)\)$/)
       if (parenMatch) {
         catName = parenMatch[1].trim()
@@ -837,6 +881,13 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         } else {
           bucket = 'lifestyle'
         }
+      }
+
+      // Tratar formato de subcategoria encaixada: "Manicure › dentro de Lazer" ou "Manicure > dentro de Lazer"
+      const subNestedMatch = catName.match(/^(.*?)\s*(?:›|>)\s*(?:dentro\s+de\s+)?(.*?)$/i)
+      if (subNestedMatch) {
+        subName = subNestedMatch[1].trim()
+        catName = subNestedMatch[2].trim()
       } else if (catName.includes('/')) {
         const parts = catName.split('/').map((p) => p.trim())
         catName = parts[0]
@@ -948,7 +999,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     handleApplyAndPersistCategory(option, cardData)
   }
 
-  // Tentar novamente (voltar à escuta do zero)
+  // Reiniciar escuta para tentar novamente (usado pelo card inválido)
   const handleRetryListening = () => {
     setPendingTransaction(null)
     pendingTransactionRef.current = null
@@ -970,7 +1021,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       toast({
         title: 'Valor não identificado',
         description:
-          'Não conseguimos identificar o valor em reais. Toque em "Ajustar" para preencher.',
+          'Não conseguimos identificar o valor em reais. Fale ou digite o valor no chat.',
         variant: 'destructive',
       })
       return
@@ -1055,29 +1106,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     } finally {
       setIsSaving(false)
     }
-  }
-
-  // Abrir formulário manual já pré-preenchido
-  const handleAdjustManually = (cardData?: ParsedVoiceTransaction | null) => {
-    const dataToAdjust = cardData || pendingTransaction
-    if (!dataToAdjust) return
-
-    const targetCategory = categories.find((c) => {
-      if (c.type !== dataToAdjust.type) return false
-      if (dataToAdjust.categoryNameSuggestion) {
-        return c.name.toLowerCase() === dataToAdjust.categoryNameSuggestion.toLowerCase()
-      }
-      return false
-    })
-
-    onOpenChange(false)
-    onOpenManualTransaction({
-      type: dataToAdjust.type,
-      amountCents: dataToAdjust.amountCents,
-      description: dataToAdjust.description,
-      categoryId: targetCategory?.id,
-      memberId: selectedMemberId || currentMember?.id || members[0]?.id,
-    })
   }
 
   // Renderizador do Card Verde de Confirmação dentro do Chat
@@ -1181,24 +1209,14 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         </div>
 
         {/* Botões de Ação no próprio balão de chat */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-emerald-200/70">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => handleAdjustManually(data)}
-            className="w-full rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10 gap-1.5 order-2 sm:order-1"
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-            Ajustar
-          </Button>
-
+        <div className="pt-1 border-t border-emerald-200/70">
           <Button
             type="button"
             onClick={() => handleConfirmTransaction(data)}
             disabled={isSaving || data.amountCents <= 0}
-            className="w-full bg-[#064E3B] hover:bg-emerald-900 text-white rounded-xl font-bold text-xs h-10 gap-1.5 shadow-sm transition-all order-1 sm:order-2"
+            className="w-full bg-[#064E3B] hover:bg-emerald-900 text-white rounded-xl font-bold text-xs h-11 gap-1.5 shadow-sm transition-all active:scale-[0.99]"
           >
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-300 shrink-0" />
             <span className="truncate">{isSaving ? 'Salvando...' : '✅ Confirmar Lançamento'}</span>
           </Button>
         </div>
@@ -1353,27 +1371,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         <p className="text-[10px] text-slate-500 italic">
           Toque em uma opção ou fale/digite outra categoria abaixo.
         </p>
-
-        <div className="flex gap-2 pt-1 border-t border-indigo-100">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleRetryListening}
-            className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-[11px] font-semibold h-8 flex-1"
-          >
-            <RotateCcw className="w-3 h-3 mr-1" />
-            Falar de novo
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => handleAdjustManually(data)}
-            className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-[11px] font-semibold h-8 flex-1"
-          >
-            <SlidersHorizontal className="w-3 h-3 mr-1" />
-            Ajustar
-          </Button>
-        </div>
       </div>
     )
   }

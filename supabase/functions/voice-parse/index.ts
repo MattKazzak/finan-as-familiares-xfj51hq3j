@@ -380,18 +380,25 @@ ${categoriesContext || 'Nenhuma categoria específica cadastrada ainda.'}
 Membros da família cadastrados:
 ${membersContext || 'Membro padrão'}
 
-REGRAS SEMÂNTICAS CRÍTICAS DE CATEGORIZAÇÃO:
-1. SERVIÇOS PESSOAIS, BELEZA, LAZER OU COMPRAS NUNCA DEVEM SER ALOCADOS EM CATEGORIAS FIXAS (como "Moradia", "Contas Fixas", "Saúde Básica" ou "Educação Básica").
-   Exemplos: Manicure, cabeleireiro, massagem, unhas, depilação, barbearia, compras de roupas, maquiagem, cinema pertencem SEMPRE a "Estilo de Vida" (ex: "Cuidados Pessoais" ou "Lazer & Beleza"), NUNCA a "Moradia" ou "Saúde".
-2. SE A DESPESA FOR CLARA COM VALOR (ex: "Manicure 140 reais", "Corte de cabelo 80", "Massagem 150"), MAS NÃO EXISTIR UMA CATEGORIA EXATA CADASTRADA NA FAMÍLIA:
-   - A IA NUNCA deve criar a categoria silenciosamente nem chutar uma categoria inadequada (por exemplo, jamais jogar Manicure em Saúde ou Moradia).
-   - O status DEVE SER OBRIGATORIAMENTE "clarificacao_categoria".
-   - "tipo_resposta": "transacao"
-   - "transacao": preencha a transação com a descrição ("Manicure"), valor (140.0), tipo ("despesa"), balde ("Estilo de Vida"), subcategoria provisória (ex: "Manicure") e categoria nula ou provisória.
-   - "mensagem_amigavel": exatamente no espírito: "Identifiquei R$ 140,00! Mas ainda não temos essa categoria cadastrada. Onde prefere organizar?"
-   - "pergunta_clarificacao": "Onde prefere organizar essa categoria?"
-   - "opcoes_sugestao": exatamente DUAS sugestões pertinentes com seus respectivos baldes entre parênteses, priorizando o balde correto (ex: ["Cuidados Pessoais (Estilo de Vida)", "Lazer & Beleza (Estilo de Vida)"]).
-
+REGRAS SEMÂNTICAS CRÍTICAS E PRIORIZAÇÃO REAL DE CATEGORIAS DA FAMÍLIA:
+1. PRIORIDADE ABSOLUTA PARA SUBCATEGORIAS DE CATEGORIAS EXISTENTES:
+  - A IA deve SEMPRE verificar primeiro se o gasto cabe como SUBCATEGORIA de uma categoria existente da família.
+  - Exemplo: se a família já possui a categoria "Lazer" (ou "Estilo de Vida" / "Alimentação"), e o usuário fala "manicure 140 reais", a IA deve primeiro considerar perguntar se ele quer encaixar "Manicure" como subcategoria de "Lazer" antes de inventar uma categoria principal nova.
+  - Exemplo 2: se a família tem "Transporte" e o usuário fala "troca de óleo 200 reais", deve encaixar em "Transporte" (subcategoria: "Troca de óleo") como "sucesso".
+2. REGRA DE CRIAÇÃO DE NOVA CATEGORIA:
+  - Só sugira criar uma categoria principal nova se realmente NÃO houver nenhuma categoria compatível no mesmo balde (50/30/20: Necessidades Essenciais / Estilo de Vida / Metas & Investimentos).
+3. SERVIÇOS PESSOAIS, BELEZA, LAZER OU COMPRAS NUNCA DEVEM SER ALOCADOS EM CATEGORIAS FIXAS:
+  - Exemplos: Manicure, cabeleireiro, massagem, unhas, depilação, barbearia, compras de roupas, maquiagem, cinema pertencem SEMPRE a "Estilo de Vida", NUNCA a "Moradia", "Contas Fixas", "Saúde Básica" ou "Educação Básica".
+4. SE A DESPESA FOR CLARA COM VALOR, MAS NÃO HOUVER UMA CATEGORIA/SUBCATEGORIA DIRETA JÁ DEFINIDA:
+  - O status DEVE SER OBRIGATORIAMENTE "clarificacao_categoria".
+  - "tipo_resposta": "transacao"
+  - "transacao": preencha a transação com descrição, valor (float positivo em reais), tipo ("despesa" ou "receita"), balde correto, subcategoria provisória (ex: "Manicure") e categoria nula ou provisória.
+  - "mensagem_amigavel": "Identifiquei R$ [VALOR]! Onde prefere organizar esse gasto?"
+  - "pergunta_clarificacao": "Onde prefere organizar esse lançamento?"
+  - "opcoes_sugestao": exatamente DUAS sugestões pertinentes refletindo a priorização:
+    * Se houver categoria existente da família compatível no mesmo balde: uma das opções DEVE ser encaixar como subcategoria dela no formato: "[Nome do Item] › dentro de [Categoria Existente] ([Balde])" (ex: "Manicure › dentro de Lazer (Estilo de Vida)").
+    * A segunda opção pode ser uma categoria nova pertinente com seu balde (ex: "Cuidados Pessoais (Estilo de Vida)").
+    * Se não houver categoria existente compatível no mesmo balde, apresente duas sugestões de novas categorias pertinentes com seus respectivos baldes entre parênteses.
 Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido (response_format: json_object) com o seguinte esquema:
 {
   "status": "sucesso" | "clarificacao" | "clarificacao_categoria" | "falta_valor" | "invalido" | "consulta",
@@ -432,13 +439,13 @@ Comportamentos esperados:
    - "subcategoria": use existente ou crie uma inteligente e específica.
    - "balde": classifique rigorosamente entre "Necessidades Essenciais", "Estilo de Vida" ou "Metas & Investimentos".
 
-3. "clarificacao_categoria" (LANÇAMENTO CLARO, MAS CATEGORIA NÃO CADASTRADA):
-   - O usuário falou um gasto com valor compreensível (ex: "Manicure 140 reais", "Tatuagem 300 reais", "Personal trainer 200"), porém NÃO existe uma categoria cadastrada na família que corresponda especificamente a esse gasto.
+3. "clarificacao_categoria" (LANÇAMENTO CLARO, MAS CATEGORIA NÃO CADASTRADA DIRETAMENTE):
+   - O usuário falou um gasto com valor compreensível (ex: "Manicure 140 reais", "Tatuagem 300 reais", "Personal trainer 200"), e não há correspondência direta com nenhuma categoria/subcategoria existente, OU há oportunidade de encaixar como subcategoria de uma categoria existente da família.
    - "status": "clarificacao_categoria"
    - "tipo_resposta": "transacao"
-   - "transacao": preencha descricao, valor, balde correto, subcategoria, e deixe o usuário confirmar a nova categoria.
-   - "mensagem_amigavel": "Identifiquei R$ [VALOR]! Mas ainda não temos essa categoria cadastrada. Onde prefere organizar?"
-   - "opcoes_sugestao": DUAS opções pertinentes com seus respectivos baldes entre parênteses, ex: ["Cuidados Pessoais (Estilo de Vida)", "Lazer & Beleza (Estilo de Vida)"].
+   - "transacao": preencha descricao, valor, balde correto, subcategoria provisória.
+   - "mensagem_amigavel": "Identifiquei R$ [VALOR]! Onde prefere organizar?"
+   - "opcoes_sugestao": DUAS opções pertinentes. Se existir categoria da família compatível no mesmo balde, ofereça encaixar como subcategoria dela (ex: "Manicure › dentro de Lazer (Estilo de Vida)") e a outra como categoria nova (ex: "Cuidados Pessoais (Estilo de Vida)").
 
 4. "falta_valor" (LANÇAMENTO SEM VALOR):
    - O usuário citou um item ou compra claro (ex: "uma caixa de cerveja na parada certa", "almoço no restaurante", "gasolina no posto"), mas NÃO disse o valor monetário.

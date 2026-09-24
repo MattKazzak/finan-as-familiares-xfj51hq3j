@@ -329,9 +329,10 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
       )
       // Balão do usuário à direita com o texto falado
       expect(screen.getByText('Almoço 45 reais no débito')).toBeDefined()
-      // Card verde com botões [ Confirmar Lançamento ] e [ Ajustar ]
+      // Card verde com botão [ Confirmar Lançamento ] e SEM botões 'Ajustar' ou 'Falar de novo'
       expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
-      expect(screen.getByText('Ajustar')).toBeDefined()
+      expect(screen.queryByText('Ajustar')).toBeNull()
+      expect(screen.queryByText('Falar de novo')).toBeNull()
       expect(screen.getByText('R$ 45,00')).toBeDefined()
     })
   })
@@ -1117,6 +1118,159 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
       expect(screen.getByText('Manicure')).toBeDefined()
       expect(screen.getByText('R$ 140,00')).toBeDefined()
       expect(screen.getByText(/Cuidados Pessoais/i)).toBeDefined()
+    })
+  })
+
+  it('ausência dos botões isolados "Falar de novo" e "Ajustar" no modal do chat', async () => {
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'Manicure 140 reais',
+      amountCents: 14000,
+      amountFormatted: 'R$ 140,00',
+      type: 'expense',
+      description: 'Manicure',
+      confidence: 0.85,
+      processingSource: 'openai',
+      aiStatus: 'clarificacao_categoria',
+      categoryNameSuggestion: null,
+      subcategoryNameSuggestion: 'Manicure',
+      bucketSuggestion: 'lifestyle',
+      clarificationQuestion: 'Onde prefere organizar essa categoria?',
+      clarificationOptions: [
+        'Manicure › dentro de Lazer (Estilo de Vida)',
+        'Cuidados Pessoais (Estilo de Vida)',
+      ],
+      friendlyMessage: 'Identifiquei R$ 140,00! Onde prefere organizar?',
+    })
+
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Fale no microfone ou digite aqui...')
+    fireEvent.change(input, { target: { value: 'Manicure 140 reais' } })
+    fireEvent.click(screen.getByText('Enviar'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Manicure › dentro de Lazer (Estilo de Vida)')).toBeDefined()
+      // Botões 'Falar de novo' e 'Ajustar' NÃO devem existir no card de clarificação
+      expect(screen.queryByText('Falar de novo')).toBeNull()
+      expect(screen.queryByText('Ajustar')).toBeNull()
+    })
+  })
+
+  it('edição conversacional da transação pendente: digitar nova mensagem atualiza o card pendente', async () => {
+    // 1º lançamento
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'Almoço 80 reais',
+      amountCents: 8000,
+      amountFormatted: 'R$ 80,00',
+      type: 'expense',
+      description: 'Almoço',
+      categoryNameSuggestion: 'Alimentação',
+      bucketSuggestion: 'essential',
+      confidence: 0.95,
+      processingSource: 'openai',
+      aiStatus: 'sucesso',
+    })
+
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Fale no microfone ou digite aqui...')
+    fireEvent.change(input, { target: { value: 'Almoço 80 reais' } })
+    fireEvent.click(screen.getByText('Enviar'))
+
+    await waitFor(() => {
+      expect(screen.getByText('R$ 80,00')).toBeDefined()
+      expect(screen.getByText('Almoço')).toBeDefined()
+    })
+
+    // Usuário corrige conversacionalmente: "na verdade foi 100 reais"
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'na verdade foi 100 reais',
+      amountCents: 10000,
+      amountFormatted: 'R$ 100,00',
+      type: 'expense',
+      description: 'na verdade foi 100 reais',
+      confidence: 0.95,
+      processingSource: 'openai',
+      aiStatus: 'sucesso',
+    })
+
+    fireEvent.change(input, { target: { value: 'na verdade foi 100 reais' } })
+    fireEvent.click(screen.getByText('Enviar'))
+
+    await waitFor(() => {
+      // O valor foi atualizado para R$ 100,00 preservando a descrição do gasto
+      expect(screen.getByText('R$ 100,00')).toBeDefined()
+      expect(screen.getByText(/Atualizado! Identifiquei o ajuste/i)).toBeDefined()
+    })
+  })
+
+  it('atalho conversacional de confirmação: falar ou digitar "confirmar" salva a transação pendente', async () => {
+    mockCreateTransaction.mockResolvedValueOnce({ id: 'tx-confirm-1' })
+
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'Almoço 50 reais',
+      amountCents: 5000,
+      amountFormatted: 'R$ 50,00',
+      type: 'expense',
+      description: 'Almoço',
+      categoryNameSuggestion: 'Alimentação',
+      bucketSuggestion: 'essential',
+      confidence: 0.95,
+      processingSource: 'openai',
+      aiStatus: 'sucesso',
+    })
+
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Fale no microfone ou digite aqui...')
+    fireEvent.change(input, { target: { value: 'Almoço 50 reais' } })
+    fireEvent.click(screen.getByText('Enviar'))
+
+    await waitFor(() => {
+      expect(screen.getByText('R$ 50,00')).toBeDefined()
+    })
+
+    // Usuário digita "confirmar" no chat
+    fireEvent.change(input, { target: { value: 'confirmar' } })
+    fireEvent.click(screen.getByText('Enviar'))
+
+    await waitFor(() => {
+      expect(mockCreateTransaction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          family_id: 'fam-1',
+          type: 'expense',
+          amount_cents: 5000,
+          description: 'Almoço',
+        }),
+      )
+      expect(mockTriggerRefresh).toHaveBeenCalled()
     })
   })
 

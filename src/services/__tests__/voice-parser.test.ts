@@ -74,11 +74,48 @@ describe('voice-parser', () => {
 
   describe('parseVoiceInput (interpretação completa)', () => {
     const mockCategories = [
-      { id: '1', name: 'Alimentação', type: 'expense', budget_bucket: 'essential' },
-      { id: '2', name: 'Lazer', type: 'expense', budget_bucket: 'lifestyle' },
-      { id: '3', name: 'Saúde', type: 'expense', budget_bucket: 'essential' },
-      { id: '4', name: 'Salário', type: 'income', budget_bucket: 'essential' },
+      {
+        id: '1',
+        name: 'Alimentação',
+        type: 'expense',
+        budget_bucket: 'essential',
+        subcategories: [
+          { id: 'sub-1', name: 'Supermercado' },
+          { id: 'sub-2', name: 'Restaurante' },
+        ],
+      },
+      {
+        id: '2',
+        name: 'Lazer',
+        type: 'expense',
+        budget_bucket: 'lifestyle',
+        subcategories: [
+          { id: 'sub-3', name: 'Cinema' },
+          { id: 'sub-4', name: 'Viagem' },
+        ],
+      },
+      { id: '3', name: 'Saúde', type: 'expense', budget_bucket: 'essential', subcategories: [] },
+      { id: '4', name: 'Salário', type: 'income', budget_bucket: 'essential', subcategories: [] },
     ]
+
+    it('priorização: encaixa "manicure" em categoria existente "Lazer" como subcategoria antes de criar nova categoria', () => {
+      const parsed = parseVoiceInput('Manicure 140 reais', mockCategories)
+      expect(parsed.amountCents).toBe(14000)
+      expect(parsed.categoryNameSuggestion).toBe('Lazer')
+      expect(parsed.subcategoryNameSuggestion).toBe('Manicure')
+      expect(parsed.bucketSuggestion).toBe('lifestyle')
+      expect(parsed.aiStatus).toBe('sucesso')
+    })
+
+    it('priorização: identifica subcategoria já existente na família', () => {
+      const parsed = parseVoiceInput('Fui ao cinema 60 reais no crédito', mockCategories)
+      expect(parsed.amountCents).toBe(6000)
+      expect(parsed.categoryNameSuggestion).toBe('Lazer')
+      expect(parsed.subcategoryNameSuggestion).toBe('Cinema')
+      expect(parsed.bucketSuggestion).toBe('lifestyle')
+      expect(parsed.paymentMethod).toBe('credito')
+      expect(parsed.aiStatus).toBe('sucesso')
+    })
 
     it('interpreta "Almoço 45 reais no débito"', () => {
       const parsed = parseVoiceInput('Almoço 45 reais no débito', mockCategories)

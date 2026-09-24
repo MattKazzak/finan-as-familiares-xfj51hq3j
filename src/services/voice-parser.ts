@@ -466,21 +466,62 @@ export function extractTransactionType(text: string): {
 /**
  * Sugere categoria e balde com base em palavras-chave inteligentes
  */
+export interface CategoryWithSubcategoriesInput {
+  id: string
+  name: string
+  type: string
+  budget_bucket?: string | null
+  subcategories?: Array<{ id: string; name: string }>
+}
+
 export function suggestCategoryAndBucket(
   description: string,
-  categories: Array<{ id: string; name: string; type: string; budget_bucket?: string | null }>,
+  categories: Array<CategoryWithSubcategoriesInput>,
 ): {
   categoryName?: string
   categoryId?: string
+  subcategoryName?: string
   bucket?: 'essential' | 'lifestyle' | 'goals'
+  isExistingSubcategory?: boolean
 } {
   const norm = normalizeWord(description)
 
-  // Mapeamentos comuns em pt-BR
+  // 1. PRIORIDADE ABSOLUTA: Procurar se o termo falado casa diretamente com uma SUBCATEGORIA já existente de qualquer categoria da família
+  for (const cat of categories) {
+    if (cat.subcategories && cat.subcategories.length > 0) {
+      for (const sub of cat.subcategories) {
+        const subNorm = normalizeWord(sub.name)
+        if (subNorm && (norm.includes(subNorm) || subNorm.includes(norm))) {
+          return {
+            categoryName: cat.name,
+            categoryId: cat.id,
+            subcategoryName: sub.name,
+            bucket: normalizeBucketName(cat.budget_bucket),
+            isExistingSubcategory: true,
+          }
+        }
+      }
+    }
+  }
+
+  // 2. Procurar nas categorias do usuário por correspondência direta de nome
+  for (const cat of categories) {
+    const catNorm = normalizeWord(cat.name)
+    if (catNorm && (norm.includes(catNorm) || catNorm.includes(norm))) {
+      return {
+        categoryName: cat.name,
+        categoryId: cat.id,
+        bucket: normalizeBucketName(cat.budget_bucket),
+      }
+    }
+  }
+
+  // Mapeamentos semânticos comuns em pt-BR (respeitando que beleza/estética/lazer nunca vão para fixo)
   const KEYWORD_MAP: Array<{
     keywords: string[]
     defaultCategory: string
     bucket: 'essential' | 'lifestyle' | 'goals'
+    candidateExistingCategories?: string[]
   }> = [
     // Essencial
     {
@@ -602,9 +643,16 @@ export function suggestCategoryAndBucket(
         'salao',
         'barbearia',
         'corte de cabelo',
+        'manicure',
+        'pedicure',
+        'unhas',
+        'depilacao',
+        'massagem',
+        'estetica',
       ],
       defaultCategory: 'Cuidados Pessoais',
       bucket: 'lifestyle',
+      candidateExistingCategories: ['Lazer', 'Estilo de Vida', 'Cuidados Pessoais', 'Beleza'],
     },
     {
       keywords: [
@@ -653,23 +701,33 @@ export function suggestCategoryAndBucket(
     },
   ]
 
-  // 1. Procurar nas categorias do usuário por correspondência direta de nome
-  for (const cat of categories) {
-    const catNorm = normalizeWord(cat.name)
-    if (norm.includes(catNorm) || catNorm.includes(norm)) {
-      return {
-        categoryName: cat.name,
-        categoryId: cat.id,
-        bucket: (cat.budget_bucket as any) || 'lifestyle',
-      }
-    }
-  }
-
-  // 2. Procurar pelo KEYWORD_MAP
+  // 3. Procurar pelo KEYWORD_MAP respeitando priorização de categorias existentes da família
   for (const entry of KEYWORD_MAP) {
     for (const kw of entry.keywords) {
       if (new RegExp(`\\b${normalizeWord(kw)}\\b`, 'i').test(norm)) {
-        // Encontrar categoria do usuário que melhor case com o defaultCategory ou keywords
+        // Primeiro: verificar se a família já tem alguma categoria compatível no mesmo balde (ex: família tem "Lazer", gasto é "manicure")
+        if (entry.candidateExistingCategories && entry.candidateExistingCategories.length > 0) {
+          const compatibleExisting = categories.find((c) => {
+            const cNorm = normalizeWord(c.name)
+            const cBucket = normalizeBucketName(c.budget_bucket)
+            if (cBucket !== entry.bucket) return false
+            return entry.candidateExistingCategories!.some((cand) =>
+              cNorm.includes(normalizeWord(cand)),
+            )
+          })
+
+          if (compatibleExisting) {
+            // Sugere a categoria existente da família e usa a palavra-chave como subcategoria
+            return {
+              categoryName: compatibleExisting.name,
+              categoryId: compatibleExisting.id,
+              subcategoryName: kw.charAt(0).toUpperCase() + kw.slice(1),
+              bucket: normalizeBucketName(compatibleExisting.budget_bucket),
+            }
+          }
+        }
+
+        // Segundo: Encontrar categoria da família que melhor case com o defaultCategory ou keywords
         const matchedUserCat = categories.find((c) => {
           const cNameNorm = normalizeWord(c.name)
           return (
@@ -682,12 +740,14 @@ export function suggestCategoryAndBucket(
           return {
             categoryName: matchedUserCat.name,
             categoryId: matchedUserCat.id,
-            bucket: (matchedUserCat.budget_bucket as any) || entry.bucket,
+            subcategoryName: kw.charAt(0).toUpperCase() + kw.slice(1),
+            bucket: normalizeBucketName(matchedUserCat.budget_bucket),
           }
         }
 
         return {
           categoryName: entry.defaultCategory,
+          subcategoryName: kw.charAt(0).toUpperCase() + kw.slice(1),
           bucket: entry.bucket,
         }
       }
@@ -714,7 +774,13 @@ export interface LocalParsePreviousContext {
  */
 export function parseVoiceInput(
   rawText: string,
-  categories: Array<{ id: string; name: string; type: string; budget_bucket?: string | null }> = [],
+  categories: Array<{
+    id: string
+    name: string
+    type: string
+    budget_bucket?: string | null
+    subcategories?: Array<{ id: string; name: string }>
+  }> = [],
   contextoAnterior?: LocalParsePreviousContext | null,
 ): ParsedVoiceTransaction {
   const trimmed = rawText.trim()
@@ -800,7 +866,7 @@ export function parseVoiceInput(
         : type
 
   // 5. Categoria & Balde
-  const { categoryName, bucket } = suggestCategoryAndBucket(
+  const { categoryName, bucket, subcategoryName } = suggestCategoryAndBucket(
     `${description} ${rawText}`,
     categories.filter((c) => c.type === effectiveType),
   )
@@ -830,7 +896,7 @@ export function parseVoiceInput(
       establishment: finalEstablishment || undefined,
       paymentMethod: method,
       categoryNameSuggestion: finalCategory,
-      subcategoryNameSuggestion: finalSubcategory,
+      subcategoryNameSuggestion: finalSubcategory || subcategoryName,
       bucketSuggestion: finalBucket,
       confidence: 0.95,
       processingSource: 'local',
@@ -842,12 +908,6 @@ export function parseVoiceInput(
   }
 
   // Determinar status do fallback local:
-  // Se amountCents <= 0:
-  //   - Se identificou categoria OU estabelecimento OU item reconhecível -> 'falta_valor'
-  //   - Senão -> 'invalido'
-  // Se amountCents > 0:
-  //   - Se não identificou categoria conhecida e a descrição é desconhecida -> 'clarificacao'
-  //   - Caso contrário -> 'sucesso'
   let aiStatus: VoiceAiStatus = 'invalido'
   let clarificationQuestion: string | null = null
   let clarificationOptions: string[] | null = null
@@ -902,6 +962,7 @@ export function parseVoiceInput(
     establishment,
     paymentMethod: method,
     categoryNameSuggestion: categoryName,
+    subcategoryNameSuggestion: subcategoryName,
     bucketSuggestion: bucket,
     confidence: Math.min(confidence, 1.0),
     processingSource: 'local',
