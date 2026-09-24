@@ -65,7 +65,7 @@ export const NewTransactionActionSheet: React.FC<NewTransactionActionSheetProps>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-1.5">
-                      <span>🎤 Falar Lançamento com IA</span>
+                      <span>Falar Lançamento com IA</span>
                     </span>
                     <span className="text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/30 text-emerald-200 border border-emerald-400/40 px-2 py-0.5 rounded-full">
                       Novo
