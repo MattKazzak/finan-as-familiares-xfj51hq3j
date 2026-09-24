@@ -184,9 +184,10 @@ ${membersContext || 'Membro padrão'}
 
 Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido (response_format: json_object) com o seguinte esquema:
 {
-  "status": "sucesso" | "clarificacao" | "invalido",
+  "status": "sucesso" | "clarificacao" | "falta_valor" | "invalido",
   "transacao": {
     "descricao": string,
+    "estabelecimento": string | null,
     "valor": number | null,
     "tipo": "despesa" | "receita",
     "balde": "Necessidades Essenciais" | "Estilo de Vida" | "Metas & Investimentos",
@@ -202,7 +203,7 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido (response_format: jso
 Comportamentos esperados:
 1. "sucesso":
    - O usuário falou um gasto ou receita compreensível com valor (ex.: "almoço 45 reais no débito", "carregando celular 145", "comprei pão 12 reais no pix", "salário de 5000 caiu").
-   - Preencha todos os campos da "transacao". O campo "valor" deve ser um float positivo em reais (ex: 45.0 ou 145.5).
+   - Preencha todos os campos da "transacao". O campo "valor" deve ser um float positivo em reais (ex: 45.0 ou 145.5). Preencha "estabelecimento" caso mencionado.
    - "categoria": use uma categoria existente da família se aplicável ou sugira a mais adequada (ex: "Alimentação", "Lazer", "Transporte", "Moradia", "Saúde").
    - "subcategoria": use uma existente ou crie uma subcategoria inteligente e específica (ex.: se categoria for "Alimentação", subcategoria pode ser "Almoço", "Supermercado", "Padaria", "Delivery").
    - "balde": classifique rigorosamente entre "Necessidades Essenciais", "Estilo de Vida" ou "Metas & Investimentos".
@@ -210,15 +211,30 @@ Comportamentos esperados:
    - "opcoes_sugestao": null
    - "mensagem_amigavel": null
 
-2. "clarificacao":
+2. "falta_valor":
+   - O usuário descreveu claramente um item comprado, serviço ou estabelecimento comercial (ex.: "2 pacotes de peta no supermercado", "2 caixas de cerveja na mercearia do zé", "remédio na farmácia", "gasolina no posto"), MAS NÃO mencionou o valor monetário.
+   - NUNCA classifique como "invalido"! Preserve o contexto preenchendo a "transacao" parcial:
+     * "descricao": o item ou serviço (ex: "2 pacotes de peta no supermercado", "2 caixas de cerveja")
+     * "estabelecimento": o local identificado se houver (ex: "Supermercado", "Mercearia do Zé", "Farmácia")
+     * "valor": null
+     * "tipo": "despesa" (ou "receita" se for o caso)
+     * "categoria": categoria sugerida (ex: "Alimentação", "Saúde", "Transporte")
+     * "subcategoria": subcategoria sugerida
+     * "balde": balde orçamentário correspondente
+     * "metodo_pagamento": método se mencionado, ou null
+   - "pergunta_clarificacao": "Quanto custou?"
+   - "mensagem_amigavel": "Entendi o que você comprou! Quanto custou?"
+   - "opcoes_sugestao": null
+
+3. "clarificacao":
    - Há um valor monetário identificado, mas o termo ou contexto é ambíguo, gíria local desconhecida ou nome genérico sem clareza (ex.: "pindamonhangaba 8 reais", "treco 50 reais", "coisa 25").
    - NÃO CHUTE! Preencha "transacao" com o valor numérico identificado e os campos que puder deduzir, mas retorne:
    - "pergunta_clarificacao": Uma pergunta direta e gentil (ex.: "O que foi Pindamonhangaba?")
    - "mensagem_amigavel": Mensagem empática (ex.: "Entendi R$ 8,00! Mas o que foi Pindamonhangaba?")
    - "opcoes_sugestao": Exatamente 3 opções rápidas e práticas para o usuário tocar (ex.: ["Transporte / Passagem", "Alimentação / Doce", "Outro"]).
 
-3. "invalido":
-   - Ruído, conversa solta, cumprimento sem transação, texto sem sentido financeiro ou piadas (ex.: "abobrinha voadora", "olá bom dia", "teste 1 2 3", "hoje o dia está bonito").
+4. "invalido":
+   - Ruído, conversa solta, cumprimento sem transação, texto sem sentido financeiro, sem item nem valor ou piadas (ex.: "abobrinha voadora", "olá bom dia", "teste 1 2 3", "hoje o dia está bonito").
    - "transacao": null
    - "pergunta_clarificacao": null
    - "opcoes_sugestao": null
@@ -298,8 +314,10 @@ Comportamentos esperados:
       )
     }
 
-    // Normalização defensiva da resposta garantindo que os 3 status e campos cheguem intactos
-    const status = ['sucesso', 'clarificacao', 'invalido'].includes(parsedAiJson?.status)
+    // Normalização defensiva da resposta garantindo que os 4 status e campos cheguem intactos
+    const status = ['sucesso', 'clarificacao', 'falta_valor', 'invalido'].includes(
+      parsedAiJson?.status,
+    )
       ? parsedAiJson.status
       : 'invalido'
 

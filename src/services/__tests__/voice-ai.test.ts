@@ -158,4 +158,37 @@ describe('voice-ai service (fim do fallback silencioso)', () => {
     )
     expect(res.aiError).toBeNull()
   })
+
+  it('quando a Edge Function responder com status "falta_valor", mapeia transação parcial sem valor', async () => {
+    vi.mocked(supabase.functions.invoke).mockResolvedValueOnce({
+      data: {
+        status: 'falta_valor',
+        transacao: {
+          descricao: '2 pacotes de peta',
+          estabelecimento: 'Supermercado',
+          valor: null,
+          tipo: 'despesa',
+          balde: 'Necessidades Essenciais',
+          categoria: 'Alimentação',
+          subcategoria: 'Supermercado',
+          metodo_pagamento: null,
+        },
+        pergunta_clarificacao: 'Quanto custou?',
+        opcoes_sugestao: null,
+        mensagem_amigavel: 'Entendi o que você comprou! Quanto custou?',
+      },
+      error: null,
+    })
+
+    const res = await parseVoiceWithAi({ texto: '2 pacotes de peta no supermercado' })
+
+    expect(res.aiStatus).toBe('falta_valor')
+    expect(res.amountCents).toBe(0)
+    expect(res.description).toBe('2 pacotes de peta')
+    expect(res.establishment).toBe('Supermercado')
+    expect(res.categoryNameSuggestion).toBe('Alimentação')
+    expect(res.clarificationQuestion).toBe('Quanto custou?')
+    expect(res.friendlyMessage).toContain('Quanto custou?')
+    expect(res.aiError).toBeNull()
+  })
 })

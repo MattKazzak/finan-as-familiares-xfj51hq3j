@@ -96,6 +96,25 @@ describe('voice-parser', () => {
       expect(parsed.aiStatus).toBe('sucesso')
     })
 
+    it('classifica fala com item/estabelecimento mas sem valor como "falta_valor"', () => {
+      const res1 = parseVoiceInput('2 pacotes de peta no supermercado', mockCategories)
+      expect(res1.amountCents).toBe(0)
+      expect(res1.aiStatus).toBe('falta_valor')
+      expect(res1.clarificationQuestion).toBe('Quanto custou?')
+      expect(res1.establishment).toBe('Supermercado')
+      expect(res1.categoryNameSuggestion).toBe('Alimentação')
+
+      const res2 = parseVoiceInput('2 caixas de cerveja na mercearia do zé', mockCategories)
+      expect(res2.amountCents).toBe(0)
+      expect(res2.aiStatus).toBe('falta_valor')
+      expect(res2.establishment?.toLowerCase()).toContain('mercearia')
+
+      const res3 = parseVoiceInput('remédio na farmácia', mockCategories)
+      expect(res3.amountCents).toBe(0)
+      expect(res3.aiStatus).toBe('falta_valor')
+      expect(res3.categoryNameSuggestion).toBe('Saúde')
+    })
+
     it('interpreta números falados por extenso', () => {
       const parsed = parseVoiceInput('oitenta e cinco reais na farmácia no pix', mockCategories)
       expect(parsed.amountCents).toBe(8500)

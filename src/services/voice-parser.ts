@@ -3,10 +3,11 @@
  * Converte linguagem natural falada em transação estruturada.
  */
 
-export type VoiceAiStatus = 'sucesso' | 'clarificacao' | 'invalido'
+export type VoiceAiStatus = 'sucesso' | 'clarificacao' | 'falta_valor' | 'invalido'
 
 export interface VoiceAiTransaction {
   descricao: string
+  estabelecimento?: string | null
   valor: number | null
   tipo: 'despesa' | 'receita'
   balde: string // 'Necessidades Essenciais' | 'Estilo de Vida' | 'Metas & Investimentos' | string
@@ -32,6 +33,7 @@ export interface ParsedVoiceTransaction {
   amountFormatted: string
   type: 'expense' | 'income'
   description: string
+  establishment?: string
   paymentMethod?: 'pix' | 'debito' | 'credito' | 'dinheiro'
   categoryNameSuggestion?: string
   subcategoryNameSuggestion?: string
@@ -730,19 +732,83 @@ export function parseVoiceInput(
     currency: 'BRL',
   })
 
+  // Lista de palavras de estabelecimento / comércio comuns para detecção inteligente
+  const ESTABLISHMENT_WORDS = [
+    'supermercado',
+    'mercado',
+    'mercearia',
+    'padaria',
+    'farmacia',
+    'drogaria',
+    'restaurante',
+    'lanchonete',
+    'pizzaria',
+    'bar',
+    'boteco',
+    'posto',
+    'acougue',
+    'feira',
+    'sacolao',
+    'hortifruti',
+    'loja',
+    'shopping',
+    'oficina',
+    'petshop',
+    'salao',
+    'barbearia',
+    'clinica',
+    'hospital',
+    'otica',
+  ]
+
+  // Extrair estabelecimento se mencionado na descrição
+  let establishment: string | undefined
+  const rawLower = normalizeWord(rawText)
+  for (const est of ESTABLISHMENT_WORDS) {
+    if (new RegExp(`\\b${est}\\b`, 'i').test(rawLower)) {
+      // Tentar capturar nome composto como "mercearia do zé" ou "supermercado são paulo"
+      const estRegex = new RegExp(
+        `\\b(${est}(?:\\s+(?:do|da|de|dos|das|sao|santa|são)\\s+[a-zA-Zá-úÁ-Ú]+)?)\\b`,
+        'i',
+      )
+      const estMatch = rawText.match(estRegex)
+      if (estMatch) {
+        establishment = estMatch[1].charAt(0).toUpperCase() + estMatch[1].slice(1)
+      } else {
+        establishment = est.charAt(0).toUpperCase() + est.slice(1)
+      }
+      break
+    }
+  }
+
   // Determinar status do fallback local:
-  // Se amountCents <= 0 -> 'invalido'
-  // Se amountCents > 0 mas não identificou categoria conhecida e a descrição é uma palavra desconhecida -> 'clarificacao'
-  // Caso contrário -> 'sucesso'
+  // Se amountCents <= 0:
+  //   - Se identificou categoria OU estabelecimento OU item reconhecível -> 'falta_valor'
+  //   - Senão -> 'invalido'
+  // Se amountCents > 0:
+  //   - Se não identificou categoria conhecida e a descrição é desconhecida -> 'clarificacao'
+  //   - Caso contrário -> 'sucesso'
   let aiStatus: VoiceAiStatus = 'invalido'
   let clarificationQuestion: string | null = null
   let clarificationOptions: string[] | null = null
   let friendlyMessage: string | null = null
 
   if (amountCents <= 0) {
-    aiStatus = 'invalido'
-    friendlyMessage =
-      "Não consegui entender esse lançamento financeiro. Tente algo como: 'Almoço 45 reais no débito no restaurante' ou 'supermercado do zé 180 no pix'"
+    const hasRecognizableContext = Boolean(
+      categoryName ||
+      establishment ||
+      ESTABLISHMENT_WORDS.some((est) => new RegExp(`\\b${est}\\b`, 'i').test(rawLower)),
+    )
+
+    if (hasRecognizableContext) {
+      aiStatus = 'falta_valor'
+      clarificationQuestion = 'Quanto custou?'
+      friendlyMessage = 'Entendi o que você comprou! Quanto custou?'
+    } else {
+      aiStatus = 'invalido'
+      friendlyMessage =
+        "Não consegui entender esse lançamento financeiro. Tente algo como: 'Almoço 45 reais no débito no restaurante' ou 'supermercado do zé 180 no pix'"
+    }
   } else if (!categoryName) {
     // Valor existe, mas o termo/descrição não casou com nenhuma categoria/subcategoria nem termo genérico conhecido
     aiStatus = 'clarificacao'
@@ -773,6 +839,7 @@ export function parseVoiceInput(
     amountFormatted,
     type,
     description,
+    establishment,
     paymentMethod: method,
     categoryNameSuggestion: categoryName,
     bucketSuggestion: bucket,
@@ -829,17 +896,25 @@ export function mapAiResponseToParsedTransaction(
   const type = transacao?.tipo === 'receita' ? 'income' : 'expense'
   const bucket = normalizeBucketName(transacao?.balde)
 
+  const confidenceByStatus = {
+    sucesso: 0.95,
+    falta_valor: 0.85,
+    clarificacao: 0.7,
+    invalido: 0.2,
+  }
+
   return {
     rawText,
     amountCents,
     amountFormatted,
     type,
     description: transacao?.descricao || rawText,
+    establishment: transacao?.estabelecimento || undefined,
     paymentMethod,
     categoryNameSuggestion: transacao?.categoria || undefined,
     subcategoryNameSuggestion: transacao?.subcategoria || undefined,
     bucketSuggestion: bucket,
-    confidence: aiData.status === 'sucesso' ? 0.95 : aiData.status === 'clarificacao' ? 0.7 : 0.2,
+    confidence: confidenceByStatus[aiData.status] ?? 0.2,
     processingSource: 'openai',
     aiStatus: aiData.status,
     clarificationQuestion: aiData.pergunta_clarificacao,

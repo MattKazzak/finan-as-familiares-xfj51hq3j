@@ -112,14 +112,14 @@ describe('VoiceTransactionDialog', () => {
 
     // Aguarda montagem
     await waitFor(() => {
-      expect(screen.getByText(/Ouvindo\.\.\. fale agora/i)).toBeDefined()
+      expect(screen.getByText(/Ouvindo\.\.\. pode falar no seu ritmo/i)).toBeDefined()
     })
 
     // Confirma que getUserMedia NUNCA foi chamado
     expect(mockGetUserMedia).not.toHaveBeenCalled()
   })
 
-  it('configura o SpeechRecognition com pt-BR, continuous=false, interimResults=true e maxAlternatives=1', async () => {
+  it('configura o SpeechRecognition com pt-BR, continuous=true, interimResults=true e maxAlternatives=1', async () => {
     let capturedRecognitionInstance: any = null
 
     function MockSpeechRecognition() {
@@ -159,19 +159,19 @@ describe('VoiceTransactionDialog', () => {
     await waitFor(() => {
       expect(capturedRecognitionInstance).toBeTruthy()
       expect(capturedRecognitionInstance.lang).toBe('pt-BR')
-      expect(capturedRecognitionInstance.continuous).toBe(false)
+      expect(capturedRecognitionInstance.continuous).toBe(true)
       expect(capturedRecognitionInstance.interimResults).toBe(true)
       expect(capturedRecognitionInstance.maxAlternatives).toBe(1)
     })
   })
 
-  it('atualiza estado visual para "Gravando som detectado..." quando onaudiostart ou onspeechstart dispara', async () => {
+  it('exibe mensagem humanizada "Ouvindo... pode falar no seu ritmo" quando gravando', async () => {
     let capturedRecognitionInstance: any = null
 
     function MockSpeechRecognition() {
       const self = {
         lang: '',
-        continuous: false,
+        continuous: true,
         interimResults: false,
         maxAlternatives: 1,
         onstart: null as any,
@@ -210,7 +210,7 @@ describe('VoiceTransactionDialog', () => {
     capturedRecognitionInstance.onaudiostart()
 
     await waitFor(() => {
-      expect(screen.getByText('Gravando som detectado...')).toBeDefined()
+      expect(screen.getByText('Ouvindo... pode falar no seu ritmo')).toBeDefined()
     })
   })
 
@@ -782,6 +782,61 @@ describe('VoiceTransactionDialog', () => {
           texto: 'Almoço 45 reais no débito',
         }),
       )
+    })
+  })
+
+  it('comportamento "falta_valor": exibe card do que foi entendido, pergunta "Quanto custou?" e permite mesclar valor digitado', async () => {
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: '2 pacotes de peta no supermercado',
+      amountCents: 0,
+      amountFormatted: 'R$ 0,00',
+      type: 'expense',
+      description: '2 pacotes de peta',
+      establishment: 'Supermercado',
+      confidence: 0.85,
+      processingSource: 'openai',
+      aiStatus: 'falta_valor',
+      categoryNameSuggestion: 'Alimentação',
+      clarificationQuestion: 'Quanto custou?',
+      friendlyMessage: 'Entendi o que você comprou! Quanto custou?',
+    })
+
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Ex: Almoço 45 reais no débito')
+    fireEvent.change(input, { target: { value: '2 pacotes de peta no supermercado' } })
+    fireEvent.click(screen.getByText('Processar com IA'))
+
+    await waitFor(() => {
+      // Exibe card com o que já foi entendido
+      expect(screen.getByText('2 pacotes de peta')).toBeDefined()
+      expect(screen.getByText('Supermercado')).toBeDefined()
+      expect(screen.getByText('Quanto custou?')).toBeDefined()
+      expect(screen.getByText('Confirmar Valor')).toBeDefined()
+      expect(screen.getByText('🎤 Falar apenas o valor')).toBeDefined()
+      // Confirmação geral NÃO abre ainda
+      expect(screen.queryByText('✅ Confirmar Lançamento')).toBeNull()
+    })
+
+    // Preenche o valor digitado (ex: "18,50")
+    const amountInput = screen.getByPlaceholderText('0,00')
+    fireEvent.change(amountInput, { target: { value: '18,50' } })
+    fireEvent.click(screen.getByText('Confirmar Valor'))
+
+    await waitFor(() => {
+      // Agora abre a tela de confirmação com valor mesclado
+      expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
+      expect(screen.getByText('2 pacotes de peta')).toBeDefined()
+      expect(screen.getByText(/18,50/)).toBeDefined()
     })
   })
 

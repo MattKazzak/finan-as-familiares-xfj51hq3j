@@ -73,13 +73,38 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
+  // Estado específico para o fluxo 'falta_valor'
+  const [missingAmountInput, setMissingAmountInput] = useState('')
+  const [isListeningForAmountOnly, setIsListeningForAmountOnly] = useState(false)
+
   // Refs de controle
   const recognitionRef = useRef<any>(null)
   const latestTranscriptRef = useRef<string>('')
   const hadErrorRef = useRef<boolean>(false)
+  const silenceTimerRef = useRef<any>(null)
+  const isListeningForAmountOnlyRef = useRef<boolean>(false)
+  const parsedResultRef = useRef<ParsedVoiceTransaction | null>(null)
+
+  // Manter refs sincronizadas
+  useEffect(() => {
+    parsedResultRef.current = parsedResult
+  }, [parsedResult])
+
+  useEffect(() => {
+    isListeningForAmountOnlyRef.current = isListeningForAmountOnly
+  }, [isListeningForAmountOnly])
+
+  // Limpar timer de silêncio
+  const clearSilenceTimer = useCallback(() => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current)
+      silenceTimerRef.current = null
+    }
+  }, [])
 
   // Parar gravação ativa
   const stopListening = useCallback(() => {
+    clearSilenceTimer()
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop()
@@ -90,7 +115,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     }
     setIsListening(false)
     setAudioDetected(false)
-  }, [])
+    setIsListeningForAmountOnly(false)
+  }, [clearSilenceTimer])
 
   // Parar gravação e disparar interpretação com IA (Edge Function)
   // BUG 1 CORREÇÃO: usa latestTranscriptRef para acessar o texto atualizado sem depender de textoFalado
@@ -123,122 +149,253 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     [categories, family?.id, stopListening],
   )
 
+  // Mesclar novo valor com transação parcial existente em 'falta_valor'
+  const handleMergeAmountIntoTransaction = useCallback(
+    (newAmountCents: number, paymentMethodOverride?: 'pix' | 'debito' | 'credito' | 'dinheiro') => {
+      const base = parsedResultRef.current
+      if (!base || newAmountCents <= 0) return
+
+      const formatted = (newAmountCents / 100).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      })
+
+      setParsedResult({
+        ...base,
+        amountCents: newAmountCents,
+        amountFormatted: formatted,
+        paymentMethod: paymentMethodOverride || base.paymentMethod,
+        aiStatus: 'sucesso',
+        confidence: 0.95,
+        clarificationQuestion: null,
+        clarificationOptions: null,
+        friendlyMessage: null,
+      })
+      setMissingAmountInput('')
+      setIsListeningForAmountOnly(false)
+    },
+    [],
+  )
+
   // Iniciar SpeechRecognition síncrono no evento de clique
-  const startRecording = useCallback(() => {
-    // 1. Limpar estados anteriores
-    setErrorMessage(null)
-    hadErrorRef.current = false
-    setAudioDetected(false)
+  // options?: { forAmountOnly?: boolean }
+  const startRecording = useCallback(
+    (options?: { forAmountOnly?: boolean }) => {
+      const isForAmount = Boolean(options?.forAmountOnly)
+      setIsListeningForAmountOnly(isForAmount)
+      isListeningForAmountOnlyRef.current = isForAmount
 
-    // Parar reconhecimento anterior se existir
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort()
-      } catch {
-        // silenciar
-      }
-      recognitionRef.current = null
-    }
-
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-
-    if (!SpeechRecognition) {
-      setPermissionStatus('unsupported')
-      setErrorMessage(
-        'Seu navegador não suporta reconhecimento de voz nativo. Digite abaixo e toque em "Processar com IA".',
-      )
-      setIsListening(false)
-      return
-    }
-
-    try {
-      const recognition = new SpeechRecognition()
-      recognition.lang = 'pt-BR'
-      recognition.continuous = false
-      recognition.interimResults = true
-      recognition.maxAlternatives = 1
-
-      recognition.onstart = () => {
-        setIsListening(true)
-        setPermissionStatus('granted')
-        setErrorMessage(null)
-      }
-
-      // Tratamento dos Eventos de Áudio: onaudiostart / onspeechstart
-      recognition.onaudiostart = () => {
-        setAudioDetected(true)
-      }
-      recognition.onspeechstart = () => {
-        setAudioDetected(true)
-      }
-
-      // onresult: captura resultados parciais e finais em tempo real e exibe na tela
-      recognition.onresult = (event: any) => {
-        const transcript = Array.from(event.results)
-          .map((result: any) => result[0].transcript)
-          .join('')
-        latestTranscriptRef.current = transcript
-        setTextoFalado(transcript)
-      }
-
-      // onerror: tratamento amigável sem fechar o diálogo
-      recognition.onerror = (event: any) => {
-        console.warn('SpeechRecognition onerror:', event.error)
-        hadErrorRef.current = true
-        setIsListening(false)
-        setAudioDetected(false)
-
-        if (
-          event.error === 'not-allowed' ||
-          event.error === 'service-not-allowed' ||
-          event.error === 'permission-denied'
-        ) {
-          setPermissionStatus('denied')
-          setErrorMessage(
-            'Permissão de microfone negada. Toque no ícone de cadeado/configurações ao lado do link no navegador e libere o Microfone para este site.',
-          )
-        } else if (event.error === 'no-speech') {
-          setErrorMessage(
-            'Não consegui te ouvir. Toque no microfone novamente e fale um pouco mais perto.',
-          )
-        } else if (event.error === 'network') {
-          setErrorMessage('Problema de conexão. Verifique sua internet e tente novamente.')
-        } else if (event.error === 'audio-capture') {
-          setErrorMessage('Nenhum microfone encontrado ou o áudio do aparelho está bloqueado.')
-        } else {
-          setErrorMessage(
-            'Não consegui entender com clareza. Toque no microfone e tente falar novamente.',
-          )
-        }
-      }
-
-      // onend: se houve texto capturado, envia para a IA e segue confirmação;
-      // se não houve texto e não houve erro, volta ao estado inicial pronto para ouvir de novo (sem fechar)
-      recognition.onend = () => {
-        setIsListening(false)
-        setAudioDetected(false)
-        recognitionRef.current = null
-
-        const finalCapturado = latestTranscriptRef.current.trim()
-        if (finalCapturado && !hadErrorRef.current) {
-          handleStopAndProcess(finalCapturado)
-        }
-      }
-
-      recognitionRef.current = recognition
-      // Disparo imediato e síncrono
-      recognition.start()
-      setIsListening(true)
-    } catch (err: any) {
-      console.warn('Erro síncrono ao iniciar SpeechRecognition:', err)
-      setIsListening(false)
+      // 1. Limpar estados anteriores
+      setErrorMessage(null)
+      hadErrorRef.current = false
       setAudioDetected(false)
-      setErrorMessage(
-        'Não foi possível ativar o microfone. Você pode digitar abaixo e processar com IA.',
-      )
-    }
-  }, [handleStopAndProcess])
+      clearSilenceTimer()
+
+      // Parar reconhecimento anterior se existir
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort()
+        } catch {
+          // silenciar
+        }
+        recognitionRef.current = null
+      }
+
+      const SpeechRecognition =
+        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+
+      if (!SpeechRecognition) {
+        setPermissionStatus('unsupported')
+        setErrorMessage(
+          'Seu navegador não suporta reconhecimento de voz nativo. Digite abaixo e toque em "Processar com IA".',
+        )
+        setIsListening(false)
+        return
+      }
+
+      try {
+        const recognition = new SpeechRecognition()
+        recognition.lang = 'pt-BR'
+        // MELHORIA 1: continuous = true para não fechar antecipadamente
+        recognition.continuous = true
+        recognition.interimResults = true
+        recognition.maxAlternatives = 1
+
+        recognition.onstart = () => {
+          setIsListening(true)
+          setPermissionStatus('granted')
+          setErrorMessage(null)
+        }
+
+        // Tratamento dos Eventos de Áudio: onaudiostart / onspeechstart
+        recognition.onaudiostart = () => {
+          setAudioDetected(true)
+        }
+        recognition.onspeechstart = () => {
+          setAudioDetected(true)
+        }
+
+        // Função de finalização por timeout de silêncio (2.8s ~ 3.0s após última fala)
+        const scheduleSilenceProcessing = () => {
+          clearSilenceTimer()
+          silenceTimerRef.current = setTimeout(() => {
+            const captured = latestTranscriptRef.current.trim()
+            if (captured) {
+              if (isListeningForAmountOnlyRef.current && parsedResultRef.current) {
+                // Processar apenas valor e mesclar
+                stopListening()
+                setIsProcessingAi(true)
+                parseVoiceWithAi({
+                  texto: captured,
+                  familyId: family?.id,
+                  categories,
+                })
+                  .then((amountParsed) => {
+                    if (amountParsed.amountCents > 0) {
+                      handleMergeAmountIntoTransaction(
+                        amountParsed.amountCents,
+                        amountParsed.paymentMethod,
+                      )
+                    } else {
+                      // Não detectou valor válido
+                      toast({
+                        title: 'Valor não identificado',
+                        description:
+                          'Não conseguimos identificar o valor falado. Tente digitar ou falar novamente.',
+                        variant: 'destructive',
+                      })
+                    }
+                  })
+                  .catch((err) => {
+                    console.error('Erro ao interpretar áudio de valor:', err)
+                  })
+                  .finally(() => {
+                    setIsProcessingAi(false)
+                  })
+              } else {
+                handleStopAndProcess(captured)
+              }
+            }
+          }, 2900)
+        }
+
+        // onresult: captura resultados parciais e finais em tempo real e reinicia timer de silêncio
+        recognition.onresult = (event: any) => {
+          const transcript = Array.from(event.results)
+            .map((result: any) => result[0].transcript)
+            .join('')
+          latestTranscriptRef.current = transcript
+          setTextoFalado(transcript)
+
+          // Reiniciar timer humanizado a cada fala detectada
+          scheduleSilenceProcessing()
+        }
+
+        // onerror: tratamento amigável sem fechar o diálogo
+        recognition.onerror = (event: any) => {
+          console.warn('SpeechRecognition onerror:', event.error)
+          clearSilenceTimer()
+          hadErrorRef.current = true
+          setIsListening(false)
+          setAudioDetected(false)
+          setIsListeningForAmountOnly(false)
+
+          if (
+            event.error === 'not-allowed' ||
+            event.error === 'service-not-allowed' ||
+            event.error === 'permission-denied'
+          ) {
+            setPermissionStatus('denied')
+            setErrorMessage(
+              'Permissão de microfone negada. Toque no ícone de cadeado/configurações ao lado do link no navegador e libere o Microfone para este site.',
+            )
+          } else if (event.error === 'no-speech') {
+            setErrorMessage(
+              'Não consegui te ouvir. Toque no microfone novamente e fale um pouco mais perto.',
+            )
+          } else if (event.error === 'network') {
+            setErrorMessage('Problema de conexão. Verifique sua internet e tente novamente.')
+          } else if (event.error === 'audio-capture') {
+            setErrorMessage('Nenhum microfone encontrado ou o áudio do aparelho está bloqueado.')
+          } else {
+            setErrorMessage(
+              'Não consegui entender com clareza. Toque no microfone e tente falar novamente.',
+            )
+          }
+        }
+
+        // onend: se houve texto capturado, envia para a IA e segue confirmação;
+        // se não houve texto e não houve erro, volta ao estado inicial pronto para ouvir de novo (sem fechar)
+        recognition.onend = () => {
+          clearSilenceTimer()
+          setIsListening(false)
+          setAudioDetected(false)
+          recognitionRef.current = null
+
+          const finalCapturado = latestTranscriptRef.current.trim()
+          if (finalCapturado && !hadErrorRef.current) {
+            if (isListeningForAmountOnlyRef.current && parsedResultRef.current) {
+              setIsProcessingAi(true)
+              parseVoiceWithAi({
+                texto: finalCapturado,
+                familyId: family?.id,
+                categories,
+              })
+                .then((amountParsed) => {
+                  if (amountParsed.amountCents > 0) {
+                    handleMergeAmountIntoTransaction(
+                      amountParsed.amountCents,
+                      amountParsed.paymentMethod,
+                    )
+                  } else {
+                    toast({
+                      title: 'Valor não identificado',
+                      description:
+                        'Não conseguimos identificar o valor falado. Digite ou fale novamente.',
+                      variant: 'destructive',
+                    })
+                  }
+                })
+                .catch((err) => {
+                  console.error('Erro ao interpretar áudio de valor no onend:', err)
+                })
+                .finally(() => {
+                  setIsProcessingAi(false)
+                  setIsListeningForAmountOnly(false)
+                })
+            } else {
+              handleStopAndProcess(finalCapturado)
+            }
+          } else {
+            setIsListeningForAmountOnly(false)
+          }
+        }
+
+        recognitionRef.current = recognition
+        // Disparo imediato e síncrono
+        recognition.start()
+        setIsListening(true)
+      } catch (err: any) {
+        console.warn('Erro síncrono ao iniciar SpeechRecognition:', err)
+        clearSilenceTimer()
+        setIsListening(false)
+        setAudioDetected(false)
+        setIsListeningForAmountOnly(false)
+        setErrorMessage(
+          'Não foi possível ativar o microfone. Você pode digitar abaixo e processar com IA.',
+        )
+      }
+    },
+    [
+      categories,
+      clearSilenceTimer,
+      family?.id,
+      handleMergeAmountIntoTransaction,
+      handleStopAndProcess,
+      stopListening,
+      toast,
+    ],
+  )
 
   // Resetar ao abrir/fechar o modal
   // BUG 1 CORREÇÃO: este useEffect deve rodar APENAS quando o modal abre/fecha (dependência apenas de open),
@@ -249,6 +406,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       latestTranscriptRef.current = ''
       setParsedResult(null)
       setErrorMessage(null)
+      setMissingAmountInput('')
+      setIsListeningForAmountOnly(false)
       hadErrorRef.current = false
       setAudioDetected(false)
       setIsProcessingAi(false)
@@ -261,6 +420,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       stopListening()
       setPermissionStatus('idle')
       setIsProcessingAi(false)
+      setMissingAmountInput('')
+      setIsListeningForAmountOnly(false)
     }
 
     return () => {
@@ -272,8 +433,31 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   // Submeter modo texto manual
   const handleManualTextSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    clearSilenceTimer()
     if (!textoFalado.trim()) return
     handleStopAndProcess(textoFalado.trim())
+  }
+
+  // Confirmar valor digitado no estado 'falta_valor'
+  const handleConfirmMissingAmount = (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!parsedResult) return
+
+    // Converte valor digitado (ex: "45,50" ou "45") para centavos
+    const cleaned = missingAmountInput.replace(/[^\d,.]/g, '').replace(',', '.')
+    const parsedNumber = parseFloat(cleaned)
+    const cents = !isNaN(parsedNumber) && parsedNumber > 0 ? Math.round(parsedNumber * 100) : 0
+
+    if (cents <= 0) {
+      toast({
+        title: 'Valor inválido',
+        description: 'Digite um valor em reais maior que zero.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    handleMergeAmountIntoTransaction(cents)
   }
 
   // Ação ao clicar em uma opção de sugestão da IA no estado "clarificacao"
@@ -326,6 +510,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   const handleRetryListening = () => {
     setParsedResult(null)
     setTextoFalado('')
+    setMissingAmountInput('')
+    setIsListeningForAmountOnly(false)
     latestTranscriptRef.current = ''
     startRecording()
   }
@@ -459,6 +645,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     typeof parsedResult?.amountCents === 'number' &&
     parsedResult.amountCents > 0
 
+  // Regra 2: Clarificação com valor existente (> 0)
   const isClarification =
     Boolean(parsedResult) &&
     !isConfirmationAllowed &&
@@ -466,8 +653,16 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     typeof parsedResult?.amountCents === 'number' &&
     parsedResult.amountCents > 0
 
-  // Se não é confirmação nem clarificação com valor, qualquer outro resultado é tratado como invalido
-  const isInvalid = Boolean(parsedResult) && !isConfirmationAllowed && !isClarification
+  // Regra 3: Estado falta_valor (item/estabelecimento identificado, mas falta valor)
+  const isMissingAmount =
+    Boolean(parsedResult) &&
+    !isConfirmationAllowed &&
+    !isClarification &&
+    parsedResult?.aiStatus === 'falta_valor'
+
+  // Se não é confirmação, nem clarificação com valor, nem falta_valor, o resultado é inválido
+  const isInvalid =
+    Boolean(parsedResult) && !isConfirmationAllowed && !isClarification && !isMissingAmount
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -551,7 +746,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 ) : (
                   <button
                     type="button"
-                    onClick={startRecording}
+                    onClick={() => startRecording()}
                     className="w-16 h-16 rounded-full bg-slate-200 text-slate-700 hover:bg-emerald-600 hover:text-white flex items-center justify-center shadow-md transition-all active:scale-95"
                     title="Toque para começar a falar"
                   >
@@ -567,17 +762,17 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                     audioDetected ? (
                       <>
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                        Gravando som detectado...
+                        Ouvindo... pode falar no seu ritmo
                       </>
                     ) : (
                       <>
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                        Ouvindo... fale agora
+                        Ouvindo... pode falar no seu ritmo
                       </>
                     )
                   ) : (
                     'Microfone pronto — toque para falar'
-                  )}
+                  )}{' '}
                 </span>
               </div>
 
@@ -612,7 +807,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={startRecording}
+                        onClick={() => startRecording()}
                         className="mt-2 text-xs h-7 px-2.5 rounded-lg border-rose-300 text-rose-900 hover:bg-rose-100/60"
                       >
                         Tentar novamente
@@ -827,6 +1022,144 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
               >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
                 Ajustar manual
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* ================= ESTADO 2B-2: IA IDENTIFICOU "FALTA_VALOR" (CONTEXTO PRESERVADO, PERGUNTAR QUANTO CUSTOU) ================= */}
+        {!isProcessingAi && isMissingAmount && parsedResult && (
+          <div className="space-y-4 pt-2 animate-in fade-in-50 duration-200">
+            {/* Card com o que já foi entendido */}
+            <div className="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50/90 via-blue-50/50 to-white p-4 space-y-2.5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800 flex items-center gap-1.5">
+                  <span>📝 Item ou Local Identificado</span>
+                </span>
+                {parsedResult.categoryNameSuggestion && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-900 border border-sky-200">
+                    {parsedResult.categoryNameSuggestion}
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <h4 className="text-base font-bold text-slate-900 leading-snug break-words">
+                  {parsedResult.description}
+                </h4>
+                {parsedResult.establishment &&
+                  parsedResult.establishment.toLowerCase() !==
+                    parsedResult.description.toLowerCase() && (
+                    <p className="text-xs text-sky-900 font-medium">
+                      Local: <strong>{parsedResult.establishment}</strong>
+                    </p>
+                  )}
+              </div>
+            </div>
+
+            {/* Pergunta "Quanto custou?" com 2 caminhos rápidos */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3.5 shadow-xs">
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                  <Sparkles className="w-4 h-4 text-emerald-700" />
+                </span>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">Quanto custou?</h4>
+                  <p className="text-xs text-slate-500">Escolha digitar ou falar apenas o valor</p>
+                </div>
+              </div>
+
+              {/* CAMINHO A: Digitação de valor */}
+              <form onSubmit={handleConfirmMissingAmount} className="space-y-2">
+                <label className="text-[11px] font-semibold text-slate-600 block">
+                  Digite o valor:
+                </label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">
+                      R$
+                    </span>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={missingAmountInput}
+                      onChange={(e) => setMissingAmountInput(e.target.value)}
+                      className="pl-10 text-base font-bold tabular-nums rounded-xl h-10 bg-slate-50 border-slate-200"
+                      autoFocus
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={!missingAmountInput.trim()}
+                    className="bg-[#064E3B] hover:bg-emerald-900 text-white rounded-xl font-bold text-xs h-10 px-3.5 gap-1.5 shrink-0"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+                    Confirmar Valor
+                  </Button>
+                </div>
+              </form>
+
+              {/* Divisor */}
+              <div className="relative flex py-1 items-center">
+                <div className="flex-grow border-t border-slate-200" />
+                <span className="flex-shrink mx-2 text-[10px] uppercase font-bold text-slate-400">
+                  ou fale apenas o valor
+                </span>
+                <div className="flex-grow border-t border-slate-200" />
+              </div>
+
+              {/* CAMINHO B: Microfone contextual [ 🎤 Falar apenas o valor ] */}
+              <div className="space-y-2">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (isListening) {
+                      stopListening()
+                    } else {
+                      setTextoFalado('')
+                      latestTranscriptRef.current = ''
+                      startRecording({ forAmountOnly: true })
+                    }
+                  }}
+                  className={`w-full rounded-xl font-bold text-xs h-11 gap-2 transition-all ${
+                    isListening && isListeningForAmountOnly
+                      ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse'
+                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 shadow-xs'
+                  }`}
+                >
+                  <Mic className="w-4 h-4 text-emerald-700" />
+                  {isListening && isListeningForAmountOnly
+                    ? 'Ouvindo valor... fale agora (toque para pausar)'
+                    : '🎤 Falar apenas o valor'}
+                </Button>
+
+                {isListening && isListeningForAmountOnly && (
+                  <p className="text-[11px] text-center text-emerald-700 font-medium animate-pulse">
+                    Ex: &ldquo;18 reais no débito&rdquo; ou &ldquo;45 no pix&rdquo;
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Ações de escape */}
+            <div className="flex justify-between items-center pt-1">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleRetryListening}
+                className="text-xs text-slate-500 hover:text-slate-700 h-9 gap-1.5"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Falar frase inteira de novo
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => onOpenChange(false)}
+                className="text-xs text-slate-400 hover:text-slate-600 h-9"
+              >
+                Cancelar
               </Button>
             </div>
           </div>
