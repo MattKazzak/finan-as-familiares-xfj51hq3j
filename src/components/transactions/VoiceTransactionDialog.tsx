@@ -20,8 +20,9 @@ import {
   Loader2,
   Tag,
   Bird,
+  Folder,
 } from 'lucide-react'
-import { ParsedVoiceTransaction } from '@/services/voice-parser'
+import { ParsedVoiceTransaction, StructuredSuggestionOption } from '@/services/voice-parser'
 import { parseVoiceWithAi } from '@/services/voice-ai'
 import { useFamily } from '@/hooks/use-family'
 import { useToast } from '@/hooks/use-toast'
@@ -173,7 +174,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       tipo: base.type === 'income' ? ('receita' as const) : ('despesa' as const),
       valor: base.amountCents > 0 ? base.amountCents / 100 : null,
       status: base.aiStatus,
-      opcoes_sugestao: base.clarificationOptions,
+      opcoes_sugestao: base.structuredOptions || base.clarificationOptions,
+      opcoes_estruturadas: base.structuredOptions || null,
     }
   }, [])
 
@@ -409,6 +411,11 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
               ? parsed.clarificationOptions
               : existingPartial?.clarificationOptions || []
 
+          const preservedStructured =
+            parsed.structuredOptions && parsed.structuredOptions.length > 0
+              ? parsed.structuredOptions
+              : existingPartial?.structuredOptions || null
+
           const updatedPending: ParsedVoiceTransaction = {
             ...(existingPartial || parsed),
             // Preserva a transação original intacta
@@ -416,6 +423,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             amountFormatted: existingPartial?.amountFormatted || parsed.amountFormatted,
             description: existingPartial?.description || parsed.description,
             clarificationOptions: preservedOptions,
+            structuredOptions: preservedStructured,
             aiStatus: 'clarificacao_categoria',
           }
 
@@ -922,20 +930,47 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     }
   }
 
-  // Extrai nome limpo da categoria, subcategoria e balde a partir de strings como:
-  // "Manicure › dentro de Lazer (Estilo de Vida)" ou "Cuidados Pessoais (Estilo de Vida)" ou "Transporte / Passagem"
+  // Extrai nome limpo da categoria, subcategoria, balde e tipo de opção (existente vs nova)
+  // a partir de strings como:
+  // "📁 Usar existente: Lazer › subcategoria Manicure"
+  // "✨ Criar nova: Cuidados Pessoais (Estilo de Vida)"
+  // "Manicure › dentro de Lazer (Estilo de Vida)" ou "Cuidados Pessoais (Estilo de Vida)"
   const parseCategoryOptionString = useCallback(
     (
       rawOption: string,
       fallbackBucket?: 'essential' | 'lifestyle' | 'goals',
       availableOptions?: string[] | null,
+      structuredOptions?: StructuredSuggestionOption[] | null,
     ) => {
-      let catName = rawOption.trim()
-      let bucket: 'essential' | 'lifestyle' | 'goals' = fallbackBucket || 'lifestyle'
-      let subName: string | undefined
+      let rawClean = rawOption.trim()
+
+      // Se temos structuredOptions, tentar match direto pelo rotulo ou categoria
+      if (structuredOptions && structuredOptions.length > 0) {
+        const matched = structuredOptions.find(
+          (s) =>
+            s.rotulo.toLowerCase() === rawClean.toLowerCase() ||
+            rawClean.toLowerCase().includes(s.rotulo.toLowerCase()) ||
+            s.categoria.toLowerCase() === rawClean.toLowerCase(),
+        )
+        if (matched) {
+          let b: 'essential' | 'lifestyle' | 'goals' = fallbackBucket || 'lifestyle'
+          if (matched.balde) {
+            const low = matched.balde.toLowerCase()
+            if (low.includes('essencia') || low.includes('necessidade')) b = 'essential'
+            else if (low.includes('meta') || low.includes('invest')) b = 'goals'
+            else b = 'lifestyle'
+          }
+          return {
+            categoryName: matched.categoria,
+            subcategoryName: matched.subcategoria || undefined,
+            bucket: b,
+            optionType: matched.tipo,
+          }
+        }
+      }
 
       // Remover prefixos comuns de confirmação se houver (ex: "fechado em cuidados pessoais", "pode ser em lazer")
-      catName = catName
+      rawClean = rawClean
         .replace(
           /^(fechado\s+em|pode\s+ser\s+(em\s+)?|coloca\s+em\s+|prefiro\s+|quero\s+|vincula\s+em\s+|marca\s+como\s+)/i,
           '',
@@ -944,26 +979,42 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
       // Se o usuário falou algo curto e existe em availableOptions, tenta casar
       if (availableOptions && availableOptions.length > 0) {
-        // Se falou "a primeira" / "primeira"
-        if (/^(a\s+primeira|primeira\s+opcao|opcao\s+1)$/i.test(catName)) {
-          catName = availableOptions[0]
+        if (/^(a\s+primeira|primeira\s+opcao|opcao\s+1)$/i.test(rawClean)) {
+          rawClean = availableOptions[0]
         } else if (
-          /^(a\s+segunda|segunda\s+opcao|opcao\s+2)$/i.test(catName) &&
+          /^(a\s+segunda|segunda\s+opcao|opcao\s+2)$/i.test(rawClean) &&
           availableOptions.length > 1
         ) {
-          catName = availableOptions[1]
+          rawClean = availableOptions[1]
         } else {
-          // Busca nas opções se há correspondência parcial
           const matchedOpt = availableOptions.find(
             (opt) =>
-              opt.toLowerCase().includes(catName.toLowerCase()) ||
-              catName.toLowerCase().includes(opt.toLowerCase()),
+              opt.toLowerCase().includes(rawClean.toLowerCase()) ||
+              rawClean.toLowerCase().includes(opt.toLowerCase()),
           )
           if (matchedOpt) {
-            catName = matchedOpt
+            rawClean = matchedOpt
           }
         }
       }
+
+      // Detectar se é existente ou nova com base no prefixo
+      const isExistente =
+        rawClean.startsWith('📁') ||
+        rawClean.toLowerCase().includes('usar existente') ||
+        rawClean.toLowerCase().includes('› dentro de') ||
+        rawClean.toLowerCase().includes('subcategoria')
+
+      const optionType: 'existente' | 'nova' = isExistente ? 'existente' : 'nova'
+
+      // Limpar emojis e tags
+      let catName = rawClean
+        .replace(/^[📁✨]\s*/, '')
+        .replace(/^(usar\s+existente|criar\s+nova)\s*:\s*/i, '')
+        .trim()
+
+      let bucket: 'essential' | 'lifestyle' | 'goals' = fallbackBucket || 'lifestyle'
+      let subName: string | undefined
 
       // Extrair o balde entre parênteses no final, ex: "(Estilo de Vida)"
       const parenMatch = catName.match(/^(.*?)\s*\((.*?)\)$/)
@@ -979,37 +1030,66 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         }
       }
 
-      // Tratar formato de subcategoria encaixada: "Manicure › dentro de Lazer" ou "Manicure > dentro de Lazer"
-      const subNestedMatch = catName.match(/^(.*?)\s*(?:›|>)\s*(?:dentro\s+de\s+)?(.*?)$/i)
-      if (subNestedMatch) {
-        subName = subNestedMatch[1].trim()
-        catName = subNestedMatch[2].trim()
+      // Tratar formato: "Lazer › subcategoria Manicure"
+      const subNestedMatch1 = catName.match(/^(.*?)\s*(?:›|>)\s*(?:subcategoria\s+)?(.*?)$/i)
+      // Tratar formato: "Manicure › dentro de Lazer"
+      const subNestedMatch2 = catName.match(/^(.*?)\s*(?:›|>)\s*dentro\s+de\s+(.*?)$/i)
+
+      if (subNestedMatch2) {
+        subName = subNestedMatch2[1].trim()
+        catName = subNestedMatch2[2].trim()
+      } else if (subNestedMatch1) {
+        // Ex: "Lazer › subcategoria Manicure" -> catName = Lazer, subName = Manicure
+        catName = subNestedMatch1[1].trim()
+        subName = subNestedMatch1[2].trim()
       } else if (catName.includes('/')) {
         const parts = catName.split('/').map((p) => p.trim())
         catName = parts[0]
         subName = parts[1] || undefined
       }
 
-      return { categoryName: catName, bucket, subcategoryName: subName }
+      return { categoryName: catName, bucket, subcategoryName: subName, optionType }
     },
     [],
   )
 
   // Aplica a categoria e persiste a nova estrutura para a família (Human-in-the-Loop)
   const handleApplyAndPersistCategory = useCallback(
-    async (rawCategoryChoice: string, cardData?: ParsedVoiceTransaction | null) => {
+    async (
+      rawCategoryChoice: string,
+      cardData?: ParsedVoiceTransaction | null,
+      structuredOption?: StructuredSuggestionOption | null,
+    ) => {
       const base = cardData || pendingTransactionRef.current
       if (!base || base.amountCents <= 0) return
 
-      const {
-        categoryName: cleanCatName,
-        bucket: resolvedBucket,
-        subcategoryName,
-      } = parseCategoryOptionString(
-        rawCategoryChoice,
-        base.bucketSuggestion,
-        base.clarificationOptions,
-      )
+      let cleanCatName = ''
+      let resolvedBucket: 'essential' | 'lifestyle' | 'goals' = base.bucketSuggestion || 'lifestyle'
+      let subcategoryName: string | undefined
+      let optionType: 'existente' | 'nova' = 'nova'
+
+      if (structuredOption) {
+        cleanCatName = structuredOption.categoria
+        subcategoryName = structuredOption.subcategoria || undefined
+        optionType = structuredOption.tipo
+        if (structuredOption.balde) {
+          const low = structuredOption.balde.toLowerCase()
+          if (low.includes('essencia') || low.includes('necessidade')) resolvedBucket = 'essential'
+          else if (low.includes('meta') || low.includes('invest')) resolvedBucket = 'goals'
+          else resolvedBucket = 'lifestyle'
+        }
+      } else {
+        const parsed = parseCategoryOptionString(
+          rawCategoryChoice,
+          base.bucketSuggestion,
+          base.clarificationOptions,
+          base.structuredOptions,
+        )
+        cleanCatName = parsed.categoryName
+        resolvedBucket = parsed.bucket
+        subcategoryName = parsed.subcategoryName
+        optionType = parsed.optionType
+      }
 
       // 1. Procurar se já existe categoria cadastrada com esse nome
       let matchedCategory = categories.find(
@@ -1020,7 +1100,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             cleanCatName.toLowerCase().includes(c.name.toLowerCase())),
       )
 
-      // 2. Se não existir, persistir imediatamente no banco de dados para a família
+      // 2. Se for explicitamente criação de nova categoria OU se não existir, persistir no banco para a família
+      let wasCreated = false
       if (!matchedCategory && family?.id) {
         try {
           const mappedBucket =
@@ -1038,6 +1119,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             mappedBucket,
           )
           matchedCategory = createdCategory
+          wasCreated = true
         } catch (catErr) {
           console.warn('Erro ao persistir nova categoria para a família:', catErr)
         }
@@ -1067,11 +1149,17 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         confidence: 0.95,
         clarificationQuestion: null,
         clarificationOptions: null,
+        structuredOptions: null,
         friendlyMessage: null,
       }
 
       setPendingTransaction(updated)
       pendingTransactionRef.current = updated
+
+      const feedbackMsg =
+        optionType === 'existente' || (!wasCreated && matchedCategory)
+          ? `Perfeito! Usando categoria existente "${updated.categoryNameSuggestion}"${finalSubName ? ` (subcategoria: ${finalSubName})` : ''}. Pronto para confirmar o lançamento:`
+          : `Ótimo! Categoria "${updated.categoryNameSuggestion}" criada e vinculada. Pronto para confirmar o lançamento:`
 
       setMessages((prev) => [
         ...prev,
@@ -1084,7 +1172,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         {
           id: `assistant-${Date.now() + 1}`,
           sender: 'assistant',
-          text: `Ótimo! Categoria "${updated.categoryNameSuggestion}" adicionada e vinculada. Pronto para confirmar o lançamento:`,
+          text: feedbackMsg,
           timestamp: new Date(),
           cardData: updated,
           cardType: 'sucesso',
@@ -1095,8 +1183,12 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   )
 
   // Ação ao clicar em uma opção de sugestão da IA no estado "clarificacao" ou "clarificacao_categoria"
-  const handleSelectClarificationOption = (option: string, cardData?: ParsedVoiceTransaction) => {
-    handleApplyAndPersistCategory(option, cardData)
+  const handleSelectClarificationOption = (
+    option: string,
+    cardData?: ParsedVoiceTransaction,
+    structuredOpt?: StructuredSuggestionOption | null,
+  ) => {
+    handleApplyAndPersistCategory(option, cardData, structuredOpt)
   }
 
   // Reiniciar escuta para tentar novamente (usado pelo card inválido)
@@ -1432,6 +1524,35 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       ? 'Onde prefere organizar essa despesa?'
       : data.clarificationQuestion || 'Identifiquei o valor! Escolha uma opção para completar:'
 
+    // Mapeamento estruturado das opções disponíveis (para renderizar com ícone de pasta/brilho)
+    const optionsToRender: Array<{
+      raw: string
+      label: string
+      tipo: 'existente' | 'nova'
+      structured?: StructuredSuggestionOption | null
+    }> = (data.clarificationOptions || []).map((opcao, idx) => {
+      const structured = data.structuredOptions && data.structuredOptions[idx]
+      if (structured) {
+        return {
+          raw: opcao,
+          label: structured.rotulo || opcao,
+          tipo: structured.tipo,
+          structured,
+        }
+      }
+      const isExistente =
+        opcao.startsWith('📁') ||
+        opcao.toLowerCase().includes('usar existente') ||
+        opcao.toLowerCase().includes('› dentro de') ||
+        opcao.toLowerCase().includes('subcategoria')
+      return {
+        raw: opcao,
+        label: opcao,
+        tipo: isExistente ? 'existente' : 'nova',
+        structured: null,
+      }
+    })
+
     return (
       <div className="mt-2.5 rounded-2xl border border-indigo-200/90 bg-gradient-to-br from-indigo-50/90 via-sky-50/50 to-white p-3 sm:p-3.5 space-y-3 shadow-sm text-left">
         <div className="space-y-1">
@@ -1440,31 +1561,57 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
               <Tag className="w-3 h-3" />
             </span>
             <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-900">
-              {isCategoryClarification ? 'Nova Categoria Sugerida' : 'Clarificação Necessária'}
+              {isCategoryClarification ? 'Organização de Categoria' : 'Clarificação Necessária'}
             </span>
           </div>
 
           <p className="text-xs font-semibold text-slate-800 leading-snug">{titleText}</p>
         </div>
 
-        {/* Pílulas interativas clicáveis com sugestões da IA */}
-        {data.clarificationOptions && data.clarificationOptions.length > 0 && (
-          <div className="flex flex-col sm:flex-row flex-wrap gap-2 pt-0.5">
-            {data.clarificationOptions.map((opcao, index) => (
-              <button
-                key={index}
-                type="button"
-                onClick={() => handleSelectClarificationOption(opcao, data)}
-                className="inline-flex items-center justify-between gap-2 px-3 py-2 rounded-xl border border-indigo-200 bg-white hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all text-xs font-semibold text-indigo-950 shadow-xs group active:scale-[0.98] cursor-pointer"
-                title={`Selecionar: ${opcao}`}
-              >
-                <span className="flex items-center gap-1.5 truncate">
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 group-hover:bg-white shrink-0" />
-                  <span className="truncate">{opcao}</span>
-                </span>
-                <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400 group-hover:text-white shrink-0" />
-              </button>
-            ))}
+        {/* Pílulas interativas clicáveis com sugestões da IA e distinção visual existente vs nova */}
+        {optionsToRender.length > 0 && (
+          <div className="flex flex-col gap-2 pt-0.5">
+            {optionsToRender.map((item, index) => {
+              const isExistente = item.tipo === 'existente'
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  data-testid={`category-option-${item.tipo}-${index}`}
+                  onClick={() => handleSelectClarificationOption(item.raw, data, item.structured)}
+                  className={`inline-flex items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-xl border transition-all text-xs font-semibold shadow-xs group active:scale-[0.98] cursor-pointer text-left w-full ${
+                    isExistente
+                      ? 'border-emerald-300 bg-emerald-50/60 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 text-emerald-950'
+                      : 'border-violet-300 bg-violet-50/60 hover:bg-violet-600 hover:text-white hover:border-violet-600 text-violet-950'
+                  }`}
+                  title={`Selecionar: ${item.label}`}
+                >
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span
+                      className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs shrink-0 ${
+                        isExistente
+                          ? 'bg-emerald-100 text-emerald-800 group-hover:bg-white group-hover:text-emerald-700'
+                          : 'bg-violet-100 text-violet-800 group-hover:bg-white group-hover:text-violet-700'
+                      }`}
+                    >
+                      {isExistente ? (
+                        <Folder className="w-3.5 h-3.5 fill-current" />
+                      ) : (
+                        <Sparkles className="w-3.5 h-3.5" />
+                      )}
+                    </span>
+                    <span className="truncate">{item.label}</span>
+                  </span>
+                  <CheckCircle2
+                    className={`w-3.5 h-3.5 shrink-0 transition-colors ${
+                      isExistente
+                        ? 'text-emerald-500 group-hover:text-white'
+                        : 'text-violet-500 group-hover:text-white'
+                    }`}
+                  />
+                </button>
+              )
+            })}
           </div>
         )}
 

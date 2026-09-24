@@ -11,7 +11,7 @@ interface PreviousContextPayload {
   tipo?: 'despesa' | 'receita'
   valor?: number | null
   status?: string | null
-  opcoes_sugestao?: string[] | null
+  opcoes_sugestao?: any[] | null
 }
 
 interface CategoryPayloadItem {
@@ -360,7 +360,9 @@ DADOS FINANCEIROS REAIS DA FAMÍLIA (MÊS ATUAL: ${currentMonthStr.slice(0, 7)})
           : 'Não informado'
       const opcoesStr =
         Array.isArray(previousContext.opcoes_sugestao) && previousContext.opcoes_sugestao.length > 0
-          ? previousContext.opcoes_sugestao.map((o) => `"${o}"`).join(', ')
+          ? previousContext.opcoes_sugestao
+              .map((o) => (typeof o === 'string' ? `"${o}"` : `"${o?.rotulo || o?.categoria}"`))
+              .join(', ')
           : 'Nenhuma'
 
       previousContextPrompt = `
@@ -377,35 +379,45 @@ CONTEXTO ANTERIOR DE UMA TRANSAÇÃO EM ANDAMENTO NA SESSÃO:
 
 INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTENÇÃO:
 1. SE O STATUS ANTERIOR FOR 'clarificacao_categoria' (ou se havia opções de categoria sugeridas em aberto):
-   O usuário está em diálogo sobre como organizar a despesa "${previousContext.descricao || 'anterior'}" (${valorStr}).
-   Você DEVE AVALIAR RIGOROSAMENTE A INTENÇÃO da mensagem do usuário:
+  O usuário está em diálogo sobre como organizar a despesa "${previousContext.descricao || 'anterior'}" (${valorStr}).
+  Você DEVE AVALIAR RIGOROSAMENTE A INTENÇÃO da mensagem do usuário:
 
-   A) INTENÇÃO CONSULTIVA / DÚVIDA / METACONVERSA / PERGUNTA REFLEXIVA:
-      - Exemplos: "Qual faz mais sentido?", "O que você acha?", "Qual a diferença?", "Me ajuda a escolher", "Tanto faz", "Não sei", "Qual você recomenda?", "O que é melhor?", "Por que separar?", "Explica pra mim".
-      - REGRA INVIOLÁVEL: NUNCA, SOB NENHUMA HIPÓTESE, assuma que respostas de dúvida, aconselhamento ou metalinguagem são nomes de categorias! Frases como "Qual faz mais sentido?" JAMAIS devem ser salvas ou criadas como nome de categoria!
-      - Comportamento no Modo Consultor Financeiro da Família:
-        * "status": "clarificacao_categoria"
-        * "tipo_resposta": "consultoria_categoria"
-        * "intencao": "consultiva"
-        * "transacao": Mantenha a transação pendente original INTACTA (mesma descrição "${previousContext.descricao || ''}", mesmo valor ${previousContext.valor || 'null'}, mesmo balde "${previousContext.balde || 'Estilo de Vida'}", mesmo tipo "${previousContext.tipo || 'despesa'}").
-        * "opcoes_sugestao": Mantenha EXATAMENTE as mesmas 2 opções sugeridas anteriormente ([${opcoesStr}]) para o usuário poder clicar.
-        * "mensagem_amigavel": Responda de forma consultiva, didática e empática, aplicando a melhor prática do orçamento 50/30/20 ao caso concreto. Explique por que separar estética/bem-estar ou itens específicos dos passeios e lazer geral ajuda a enxergar o orçamento real da família no fim do mês. Termine a resposta oferecendo as opções com clareza, no formato: "Recomendo '[Opção Recomendada]'! Assim você separa o que é estética/bem-estar dos passeios de 'Lazer' (restaurantes, viagens), facilitando enxergar seu orçamento real no fim do mês. Quer que eu vincule em [Opção A] ou prefere deixar tudo em [Opção B] mesmo?"
-        * "pergunta_clarificacao": "Quer que eu vincule na opção recomendada ou prefere a outra?"
+  A) PERGUNTAS SOBRE EXISTÊNCIA DE CATEGORIA NO CATÁLOGO REAL:
+     - Exemplos: "Nós temos essa categoria?", "Já temos essa categoria cadastrada?", "Essa categoria já existe?", "A gente tem essa categoria?", "Já tá cadastrada?".
+     - REGRA ABSOLUTA DE VERDADE E PRECISÃO: Verifique ESTRITAMENTE a lista de "Categorias e Subcategorias cadastradas no perfil da família" abaixo.
+       * Se a categoria NÃO estiver explicitamente cadastrada nessa lista, JAMAIS AFIRME QUE ELA JÁ EXISTE!
+       * Responda de forma honesta, transparente e prestativa no espírito:
+         "Ainda não temos essa categoria cadastrada! Ela é uma sugestão que posso criar agora mesmo para deixar seus gastos de estética organizados. O que você prefere: criar a categoria nova 'Cuidados Pessoais' ou encaixar dentro da existente 'Lazer'?"
+       * "status": "clarificacao_categoria"
+       * "tipo_resposta": "consultoria_categoria"
+       * "intencao": "consultiva"
+       * Mantenha a transação pendente intacta e as opções estruturadas disponíveis nas pílulas.
 
-   B) INTENÇÃO DE ESCOLHA / CONFIRMAÇÃO DE CATEGORIA:
-      - Exemplos: "fechado em cuidados pessoais", "pode ser essa", "pode ser cuidados pessoais", "prefiro lazer", "coloca em lazer", "cuidados pessoais", "a primeira", "a segunda", "pode ser a primeira".
-      - Comportamento:
-        * "status": "sucesso"
-        * "tipo_resposta": "transacao"
-        * "intencao": "escolha_categoria"
-        * "transacao": Preencha a transação completa aplicando a categoria escolhida (e subcategoria correspondente), preservando a descrição "${previousContext.descricao || ''}", o valor ${previousContext.valor || 'null'} e o balde correspondente.
-        * "mensagem_amigavel": "Perfeito! Vinculei em [Categoria Escolhida]. Confira os detalhes e confirme o lançamento:"
+  B) INTENÇÃO CONSULTIVA / DÚVIDA / METACONVERSA / PERGUNTA REFLEXIVA:
+     - Exemplos: "Qual faz mais sentido?", "O que você acha?", "Qual a diferença?", "Me ajuda a escolher", "Tanto faz", "Não sei", "Qual você recomenda?", "O que é melhor?", "Por que separar?", "Explica pra mim".
+     - REGRA INVIOLÁVEL: NUNCA, SOB NENHUMA HIPÓTESE, assuma que respostas de dúvida, aconselhamento ou metalinguagem são nomes de categorias! Frases como "Qual faz mais sentido?" JAMAIS devem ser salvas ou criadas como nome de categoria!
+     - Comportamento no Modo Consultor Financeiro da Família:
+       * "status": "clarificacao_categoria"
+       * "tipo_resposta": "consultoria_categoria"
+       * "intencao": "consultiva"
+       * "transacao": Mantenha a transação pendente original INTACTA (mesma descrição "${previousContext.descricao || ''}", mesmo valor ${previousContext.valor || 'null'}, mesmo balde "${previousContext.balde || 'Estilo de Vida'}", mesmo tipo "${previousContext.tipo || 'despesa'}").
+       * "opcoes_sugestao": Mantenha as opções sugeridas no formato estruturado especificado abaixo.
+       * "mensagem_amigavel": Responda de forma consultiva, didática e empática, aplicando a melhor prática do orçamento 50/30/20 ao caso concreto. Explique por que separar estética/bem-estar ou itens específicos dos passeios e lazer geral ajuda a enxergar o orçamento real da família no fim do mês. Termine a resposta oferecendo as opções com clareza.
+       * "pergunta_clarificacao": "Quer que eu vincule na opção recomendada ou prefere a outra?"
+
+  C) INTENÇÃO DE ESCOLHA / CONFIRMAÇÃO DE CATEGORIA:
+     - Exemplos: "fechado em cuidados pessoais", "pode ser essa", "pode ser cuidados pessoais", "prefiro lazer", "coloca em lazer", "cuidados pessoais", "a primeira", "a segunda", "pode ser a primeira".
+     - Comportamento:
+       * "status": "sucesso"
+       * "tipo_resposta": "transacao"
+       * "intencao": "escolha_categoria"
+       * "transacao": Preencha a transação completa aplicando a categoria escolhida (e subcategoria correspondente), preservando a descrição "${previousContext.descricao || ''}", o valor ${previousContext.valor || 'null'} e o balde correspondente.
+       * "mensagem_amigavel": "Perfeito! Vinculei em [Categoria Escolhida]. Confira os detalhes e confirme o lançamento:"
 
 2. SE O STATUS ANTERIOR FOR 'falta_valor':
-   Se o usuário estiver informando apenas o valor ou forma de pagamento (ex: 'foi 80 reais', '80 no debito', '45 reais', 'paguei no pix 50', '80'), MESCLE as informações e retorne status 'sucesso' com a descrição do contexto anterior e o novo valor identificado.
+  Se o usuário estiver informando apenas o valor ou forma de pagamento (ex: 'foi 80 reais', '80 no debito', '45 reais', 'paguei no pix 50', '80'), MESCLE as informações e retorne status 'sucesso' com a descrição do contexto anterior e o novo valor identificado.
 `
     }
-
     const systemPrompt = `Você é o Curiangoo AI (Curiangoo Copilot), assistente financeiro inteligente do app Curiangoo para famílias brasileiras (Regra 50/30/20).
 Seu papel é duplo:
 1. PROCESSAR LANÇAMENTOS (fala/texto de gastos ou receitas) transformando-os em transação financeira com empatia e precisão.
@@ -426,29 +438,39 @@ ${categoriesContext || 'Nenhuma categoria específica cadastrada ainda.'}
 Membros da família cadastrados:
 ${membersContext || 'Membro padrão'}
 
-REGRAS SEMÂNTICAS CRÍTICAS E PRIORIZAÇÃO REAL DE CATEGORIAS DA FAMÍLIA:
-1. PRIORIDADE ABSOLUTA PARA SUBCATEGORIAS DE CATEGORIAS EXISTENTES:
-  - A IA deve SEMPRE verificar primeiro se o gasto cabe como SUBCATEGORIA de uma categoria existente da família.
-  - Exemplo: se a família já possui a categoria "Lazer" (ou "Estilo de Vida" / "Alimentação"), e o usuário fala "manicure 140 reais", a IA deve primeiro considerar perguntar se ele quer encaixar "Manicure" como subcategoria de "Lazer" antes de inventar uma categoria principal nova.
-  - Exemplo 2: se a família tem "Transporte" e o usuário fala "troca de óleo 200 reais", deve encaixar em "Transporte" (subcategoria: "Troca de óleo") como "sucesso".
-2. REGRA DE CRIAÇÃO DE NOVA CATEGORIA:
-  - Só sugira criar uma categoria principal nova se realmente NÃO houver nenhuma categoria compatível no mesmo balde (50/30/20: Necessidades Essenciais / Estilo de Vida / Metas & Investimentos).
+REGRAS SEMÂNTICAS CRÍTICAS, DISTINÇÃO VISUAL E VERDADE SOBRE O QUE JÁ ESTÁ CADASTRADO:
+1. CHECAGEM ESTRITA DA LISTA REAL DE CATEGORIAS DA FAMÍLIA:
+  - Verifique ESTRITAMENTE a lista de "Categorias e Subcategorias cadastradas no perfil da família".
+  - Se a categoria ou subcategoria NÃO estiver nessa lista, ela NÃO existe ainda no banco de dados. A IA JAMAIS deve dizer ou sugerir que ela já está cadastrada.
+  - Quando o usuário perguntar "Nós temos essa categoria?", responda honestamente e prestativo:
+    "Ainda não temos essa categoria cadastrada! Ela é uma sugestão que posso criar agora mesmo para deixar seus gastos de estética organizados. O que você prefere: criar a categoria nova 'Cuidados Pessoais' ou encaixar dentro da existente 'Lazer'?"
+
+2. DISTINÇÃO VISUAL CLARA ENTRE "USAR EXISTENTE" E "CRIAR NOVA CATEGORIA" NAS OPÇÕES:
+  - As opções de clarificação (campo "opcoes_sugestao") devem explicitar no rótulo e carregar estruturadamente se a opção reaproveita uma categoria que a família JÁ possui ou se vai CRIAR uma nova:
+    * Se reaproveita categoria existente:
+      - Formato do rótulo: "📁 Usar existente: [Categoria] › subcategoria [Subcategoria]" (ex: "📁 Usar existente: Lazer › subcategoria Manicure")
+      - tipo: "existente"
+    * Se cria nova categoria:
+      - Formato do rótulo: "✨ Criar nova: [Nome da Nova Categoria] ([Balde])" (ex: "✨ Criar nova: Cuidados Pessoais (Estilo de Vida)")
+      - tipo: "nova"
+  - Sempre que houver uma categoria existente compatível no mesmo balde (ex: Lazer), dê a opção "📁 Usar existente" combinada com a opção "✨ Criar nova".
+
 3. SERVIÇOS PESSOAIS, BELEZA, LAZER OU COMPRAS NUNCA DEVEM SER ALOCADOS EM CATEGORIAS FIXAS:
   - Exemplos: Manicure, cabeleireiro, massagem, unhas, depilação, barbearia, compras de roupas, maquiagem, cinema pertencem SEMPRE a "Estilo de Vida", NUNCA a "Moradia", "Contas Fixas", "Saúde Básica" ou "Educação Básica".
+
 4. SE A DESPESA FOR CLARA COM VALOR, MAS NÃO HOUVER UMA CATEGORIA/SUBCATEGORIA DIRETA JÁ DEFINIDA:
   - O status DEVE SER OBRIGATORIAMENTE "clarificacao_categoria".
   - "tipo_resposta": "transacao"
   - "transacao": preencha a transação com descrição, valor (float positivo em reais), tipo ("despesa" ou "receita"), balde correto, subcategoria provisória (ex: "Manicure") e categoria nula ou provisória.
   - "mensagem_amigavel": "Identifiquei R$ [VALOR]! Onde prefere organizar esse gasto?"
   - "pergunta_clarificacao": "Onde prefere organizar esse lançamento?"
-  - "opcoes_sugestao": exatamente DUAS sugestões pertinentes refletindo a priorização:
-    * Se houver categoria existente da família compatível no mesmo balde: uma das opções DEVE ser encaixar como subcategoria dela no formato: "[Nome do Item] › dentro de [Categoria Existente] ([Balde])" (ex: "Manicure › dentro de Lazer (Estilo de Vida)").
-    * A segunda opção pode ser uma categoria nova pertinente com seu balde (ex: "Cuidados Pessoais (Estilo de Vida)").
-    * Se não houver categoria existente compatível no mesmo balde, apresente duas sugestões de novas categorias pertinentes com seus respectivos baldes entre parênteses.
+  - "opcoes_sugestao": lista de objetos com tipo ("existente" ou "nova"), rotulo com emoji (📁 ou ✨), categoria, subcategoria e balde.
+
 Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido (response_format: json_object) com o seguinte esquema:
 {
   "status": "sucesso" | "clarificacao" | "clarificacao_categoria" | "falta_valor" | "invalido" | "consulta",
-  "tipo_resposta": "transacao" | "consulta",
+  "tipo_resposta": "transacao" | "consulta" | "consultoria_categoria",
+  "intencao": "consultiva" | "escolha_categoria" | "consulta" | "transacao" | null,
   "resposta_consulta": string | null,
   "transacao": {
     "descricao": string,
@@ -461,7 +483,13 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido (response_format: jso
     "metodo_pagamento": "pix" | "debito" | "credito" | "dinheiro" | null
   } | null,
   "pergunta_clarificacao": string | null,
-  "opcoes_sugestao": string[] | null,
+  "opcoes_sugestao": Array<{
+    "tipo": "existente" | "nova",
+    "rotulo": string,
+    "categoria": string,
+    "subcategoria": string | null,
+    "balde": string | null
+  }> | string[] | null,
   "mensagem_amigavel": string | null
 }
 
@@ -604,6 +632,49 @@ Comportamentos esperados:
     const respostaConsulta =
       parsedAiJson?.resposta_consulta || (isConsulta ? parsedAiJson?.mensagem_amigavel : null)
 
+    // Normalização das opções estruturadas para garantir rótulos com ícones e metadados
+    let normalizedOptions: any[] | null = null
+    if (Array.isArray(parsedAiJson?.opcoes_sugestao)) {
+      normalizedOptions = parsedAiJson.opcoes_sugestao.map((opt: any) => {
+        if (typeof opt === 'string') {
+          const isExistente =
+            opt.toLowerCase().includes('usar existente') ||
+            opt.toLowerCase().includes('existente') ||
+            opt.includes('📁') ||
+            opt.includes('› dentro de')
+          const cleanText = opt.replace(/^[📁✨]\s*/, '').trim()
+          return {
+            tipo: isExistente ? 'existente' : 'nova',
+            rotulo:
+              opt.startsWith('📁') || opt.startsWith('✨')
+                ? opt
+                : isExistente
+                  ? `📁 Usar existente: ${cleanText}`
+                  : `✨ Criar nova: ${cleanText}`,
+            categoria: cleanText,
+            subcategoria: null,
+            balde: null,
+          }
+        }
+        const tipo = opt?.tipo === 'existente' ? 'existente' : 'nova'
+        let rotulo = opt?.rotulo || ''
+        if (!rotulo) {
+          if (tipo === 'existente') {
+            rotulo = `📁 Usar existente: ${opt.categoria || 'Geral'}${opt.subcategoria ? ` › subcategoria ${opt.subcategoria}` : ''}`
+          } else {
+            rotulo = `✨ Criar nova: ${opt.categoria || 'Geral'}${opt.balde ? ` (${opt.balde})` : ''}`
+          }
+        }
+        return {
+          tipo,
+          rotulo,
+          categoria: opt.categoria || '',
+          subcategoria: opt.subcategoria || null,
+          balde: opt.balde || null,
+        }
+      })
+    }
+
     const sanitizedResponse = {
       status,
       tipo_resposta: isConsulta
@@ -615,12 +686,9 @@ Comportamentos esperados:
       resposta_consulta: respostaConsulta,
       transacao: isConsulta ? null : (parsedAiJson?.transacao ?? null),
       pergunta_clarificacao: parsedAiJson?.pergunta_clarificacao ?? null,
-      opcoes_sugestao: Array.isArray(parsedAiJson?.opcoes_sugestao)
-        ? parsedAiJson.opcoes_sugestao
-        : null,
+      opcoes_sugestao: normalizedOptions,
       mensagem_amigavel: parsedAiJson?.mensagem_amigavel ?? respostaConsulta ?? null,
     }
-
     return new Response(JSON.stringify(sanitizedResponse), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

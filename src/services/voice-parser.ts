@@ -22,6 +22,20 @@ export interface VoiceAiTransaction {
   metodo_pagamento: string | null
 }
 
+export type SuggestionOptionType = 'existente' | 'nova'
+
+export interface StructuredSuggestionOption {
+  tipo: SuggestionOptionType // 'existente' (categoria/subcategoria já no catálogo) vs 'nova' (categoria nova a ser criada)
+  rotulo: string // Texto da pílula com ícone, ex: "📁 Usar existente: Lazer › subcategoria Manicure" ou "✨ Criar nova: Cuidados Pessoais (Estilo de Vida)"
+  categoria: string // Nome da categoria principal (existente ou a criar)
+  subcategoria?: string | null // Subcategoria existente ou provisória
+  balde?: string | null // Balde correspondente ('Necessidades Essenciais', 'Estilo de Vida', 'Metas & Investimentos' ou chave)
+  categoria_id?: string | null // ID se categoria existente
+  subcategoria_id?: string | null // ID se subcategoria existente
+}
+
+export type VoiceAiSuggestionItem = string | StructuredSuggestionOption
+
 export interface VoiceAiResponse {
   status: VoiceAiStatus
   tipo_resposta?: 'transacao' | 'consulta' | 'consultoria_categoria'
@@ -29,7 +43,8 @@ export interface VoiceAiResponse {
   resposta_consulta?: string | null
   transacao: VoiceAiTransaction | null
   pergunta_clarificacao: string | null
-  opcoes_sugestao: string[] | null
+  opcoes_sugestao: VoiceAiSuggestionItem[] | null
+  opcoes_estruturadas?: StructuredSuggestionOption[] | null
   mensagem_amigavel: string | null
   error?: string | null
   error_detail?: string | null
@@ -56,6 +71,7 @@ export interface ParsedVoiceTransaction {
   respostaConsulta?: string | null
   clarificationQuestion?: string | null
   clarificationOptions?: string[] | null
+  structuredOptions?: StructuredSuggestionOption[] | null
   friendlyMessage?: string | null
   aiError?: string | null
 }
@@ -771,7 +787,56 @@ export interface LocalParsePreviousContext {
   tipo?: 'despesa' | 'receita'
   valor?: number | null
   status?: string | null
-  opcoes_sugestao?: string[] | null
+  opcoes_sugestao?: any[] | null
+  opcoes_estruturadas?: StructuredSuggestionOption[] | null
+}
+
+/**
+ * Detecta se o usuário está perguntando se uma categoria já existe no catálogo da família.
+ * Exemplos: "Nós temos essa categoria?", "Essa categoria já existe?", "Já temos essa categoria cadastrada?"
+ */
+export function isAskingIfCategoryExists(text: string): boolean {
+  const norm = normalizeWord(text)
+  const patterns = [
+    /temos\s+essa\s+categoria/,
+    /temos\s+a\s+categoria/,
+    /essa\s+categoria\s+ja\s+existe/,
+    /essa\s+categoria\s+existe/,
+    /ja\s+temos\s+essa\s+categoria/,
+    /ja\s+temos\s+essa/,
+    /ja\s+esta\s+cadastrada/,
+    /ja\s+ta\s+cadastrada/,
+    /categoria\s+ja\s+cadastrada/,
+    /a\s+gente\s+tem\s+essa/,
+    /tem\s+essa\s+categoria/,
+    /existe\s+essa\s+categoria/,
+  ]
+  return patterns.some((p) => p.test(norm))
+}
+
+/**
+ * Helper para verificar honestamente se uma categoria ou subcategoria de fato consta na lista da família.
+ */
+export function categoryExistsInFamilyList(
+  categoryName: string,
+  categories: Array<
+    CategoryWithSubcategoriesInput | { id?: string; name: string; subcategories?: any[] }
+  >,
+): boolean {
+  const norm = normalizeWord(categoryName)
+  if (!norm) return false
+  return categories.some((c) => {
+    const cNorm = normalizeWord(c.name)
+    if (cNorm === norm || cNorm.includes(norm) || norm.includes(cNorm)) return true
+    if (c.subcategories && Array.isArray(c.subcategories)) {
+      return c.subcategories.some((s: any) => {
+        const sName = typeof s === 'string' ? s : s?.name || ''
+        const sNorm = normalizeWord(sName)
+        return sNorm && (sNorm === norm || sNorm.includes(norm) || norm.includes(sNorm))
+      })
+    }
+    return false
+  })
 }
 
 /**
@@ -803,7 +868,7 @@ export function isConsultativeOrReflectiveQuestion(text: string): boolean {
  */
 export function extractCategoryChoiceIntent(
   text: string,
-  options?: string[] | null,
+  options?: any[] | null,
 ): { isChoice: boolean; chosenOption?: string; cleanCategoryName?: string } {
   const norm = normalizeWord(text)
 
@@ -811,26 +876,34 @@ export function extractCategoryChoiceIntent(
   const choicePrefixRegex =
     /^(fechado\s+em|pode\s+ser\s+(em\s+)?|coloca\s+em\s+|prefiro\s+|deixa\s+em\s+|vincula\s+em\s+|quero\s+|escolho\s+|vai\s+de\s+|marca\s+como\s+)/i
 
+  const stringOptions: string[] = (options || []).map((opt) =>
+    typeof opt === 'string' ? opt : opt?.rotulo || opt?.categoria || '',
+  )
+
   // Se houver opções disponíveis
-  if (options && options.length > 0) {
+  if (stringOptions.length > 0) {
     // Escolha por ordem: "a primeira", "a segunda", "a 1", "a 2", "a opção 1", etc.
     if (/\b(a\s+primeira|primeira\s+opcao|opcao\s+1|primeira)\b/i.test(norm)) {
-      return { isChoice: true, chosenOption: options[0] }
+      return { isChoice: true, chosenOption: stringOptions[0] }
     }
-    if (/\b(a\s+segunda|segunda\s+opcao|opcao\s+2|segunda)\b/i.test(norm) && options.length > 1) {
-      return { isChoice: true, chosenOption: options[1] }
+    if (
+      /\b(a\s+segunda|segunda\s+opcao|opcao\s+2|segunda)\b/i.test(norm) &&
+      stringOptions.length > 1
+    ) {
+      return { isChoice: true, chosenOption: stringOptions[1] }
     }
 
     // Match direto com uma das opções (mesmo com prefixos)
-    for (const opt of options) {
+    for (const opt of stringOptions) {
       const optNorm = normalizeWord(opt)
       // Se a fala contém o nome da opção ou partes significativas (ex: "cuidados pessoais")
-      // Extrair nomes simples de dentro da opção
-      const parts = opt
+      // Extrair nomes simples de dentro da opção (removendo prefixos como 📁 Usar existente: ou ✨ Criar nova:)
+      const cleanOpt = opt.replace(/^[📁✨]\s*(usar\s+existente|criar\s+nova)\s*:\s*/i, '').trim()
+      const parts = cleanOpt
         .split(/[›>(/]/)
         .map((p) => normalizeWord(p.trim()))
-        .filter(Boolean)
-      const matchesAnyPart = parts.some((part) => part.length >= 4 && norm.includes(part))
+        .filter((p) => p.length >= 3)
+      const matchesAnyPart = parts.some((part) => norm.includes(part))
 
       if (norm.includes(optNorm) || optNorm.includes(norm) || matchesAnyPart) {
         return { isChoice: true, chosenOption: opt }
@@ -960,11 +1033,66 @@ export function parseVoiceInput(
       currency: 'BRL',
     })
 
+    // CASO A0: Usuário perguntando se a categoria já existe no catálogo da família
+    if (isAskingIfCategoryExists(trimmed)) {
+      // Checar estritamente a lista de categorias reais
+      const targetCategoryName =
+        contextoAnterior.categoria ||
+        (contextoAnterior.opcoes_sugestao && contextoAnterior.opcoes_sugestao[0]
+          ? typeof contextoAnterior.opcoes_sugestao[0] === 'string'
+            ? contextoAnterior.opcoes_sugestao[0]
+            : contextoAnterior.opcoes_sugestao[0].categoria
+          : 'Cuidados Pessoais')
+
+      const cleanCatTarget = targetCategoryName
+        .replace(/^[📁✨]\s*(usar\s+existente|criar\s+nova)\s*:\s*/i, '')
+        .split(/[›>(/]/)[0]
+        .trim()
+
+      const existsInDb = categoryExistsInFamilyList(cleanCatTarget, categories)
+
+      let friendlyMsg = ''
+      if (existsInDb) {
+        friendlyMsg = `Sim! Nós já temos a categoria '${cleanCatTarget}' cadastrada no perfil da família. Posso vincular diretamente nela!`
+      } else {
+        friendlyMsg = `Ainda não temos essa categoria cadastrada! Ela é uma sugestão que posso criar agora mesmo para deixar seus gastos de estética organizados. O que você prefere: criar a categoria nova '${cleanCatTarget}' ou encaixar dentro da existente 'Lazer'?`
+      }
+
+      const stringOptions = (contextoAnterior.opcoes_sugestao || []).map((o) =>
+        typeof o === 'string' ? o : o?.rotulo || o?.categoria || '',
+      )
+
+      return {
+        rawText,
+        amountCents: pendingAmountCents,
+        amountFormatted: pendingFormatted,
+        type: effectiveType,
+        description: contextoAnterior.descricao || description,
+        establishment: contextoAnterior.estabelecimento || undefined,
+        paymentMethod: method,
+        categoryNameSuggestion: contextoAnterior.categoria || undefined,
+        subcategoryNameSuggestion: contextoAnterior.subcategoria || undefined,
+        bucketSuggestion: normalizeBucketName(contextoAnterior.balde),
+        confidence: 0.95,
+        processingSource: 'local',
+        aiStatus: 'clarificacao_categoria',
+        tipoResposta: 'consultoria_categoria',
+        intencao: 'consultiva',
+        clarificationQuestion: 'O que você prefere?',
+        clarificationOptions: stringOptions,
+        structuredOptions: (contextoAnterior.opcoes_estruturadas as any) || null,
+        friendlyMessage: friendlyMsg,
+      }
+    }
+
     // CASO A: Usuário fez uma pergunta de dúvida/metaconversa/consultiva
     if (isConsultativeOrReflectiveQuestion(trimmed)) {
-      const options = contextoAnterior.opcoes_sugestao || []
-      const optA = options[0] || 'Cuidados Pessoais'
-      const optB = options[1] || 'Lazer'
+      const rawOptions = contextoAnterior.opcoes_sugestao || []
+      const stringOptions = rawOptions.map((o) =>
+        typeof o === 'string' ? o : o?.rotulo || o?.categoria || '',
+      )
+      const optA = stringOptions[0] || '✨ Criar nova: Cuidados Pessoais (Estilo de Vida)'
+      const optB = stringOptions[1] || '📁 Usar existente: Lazer'
 
       const friendlyMsg = `Recomendo '${optA}'! Assim você separa o que é estética/bem-estar dos passeios de '${optB}' (restaurantes, viagens), facilitando enxergar seu orçamento real (Regra 50/30/20) no fim do mês. Quer que eu vincule em ${optA} ou prefere deixar tudo em ${optB} mesmo?`
 
@@ -985,7 +1113,8 @@ export function parseVoiceInput(
         tipoResposta: 'consultoria_categoria',
         intencao: 'consultiva',
         clarificationQuestion: 'Onde prefere organizar esse lançamento?',
-        clarificationOptions: options,
+        clarificationOptions: stringOptions,
+        structuredOptions: (contextoAnterior.opcoes_estruturadas as any) || null,
         friendlyMessage: friendlyMsg,
       }
     }
@@ -1063,6 +1192,7 @@ export function parseVoiceInput(
   let aiStatus: VoiceAiStatus = 'invalido'
   let clarificationQuestion: string | null = null
   let clarificationOptions: string[] | null = null
+  let structuredOptions: StructuredSuggestionOption[] | null = null
   let friendlyMessage: string | null = null
 
   if (amountCents <= 0) {
@@ -1094,7 +1224,29 @@ export function parseVoiceInput(
     friendlyMessage = descFormatted
       ? `Entendi ${amountFormatted}! Mas o que foi ${descFormatted}?`
       : `Entendi ${amountFormatted}! Mas qual foi a categoria deste gasto?`
-    clarificationOptions = ['Transporte / Passagem', 'Alimentação / Outro', 'Outro']
+    // Verificar se existe alguma categoria compatível
+    const hasExistingLazer = categories.some((c) => /lazer|estilo/i.test(c.name))
+    if (hasExistingLazer) {
+      structuredOptions = [
+        {
+          tipo: 'existente',
+          rotulo: '📁 Usar existente: Lazer › subcategoria Outros',
+          categoria: 'Lazer',
+          subcategoria: 'Outros',
+          balde: 'lifestyle',
+        },
+        {
+          tipo: 'nova',
+          rotulo: '✨ Criar nova: Despesas Gerais (Estilo de Vida)',
+          categoria: 'Despesas Gerais',
+          subcategoria: null,
+          balde: 'lifestyle',
+        },
+      ]
+      clarificationOptions = structuredOptions.map((s) => s.rotulo)
+    } else {
+      clarificationOptions = ['Transporte / Passagem', 'Alimentação / Outro', 'Outro']
+    }
   } else {
     aiStatus = 'sucesso'
   }
@@ -1121,6 +1273,7 @@ export function parseVoiceInput(
     aiStatus,
     clarificationQuestion,
     clarificationOptions,
+    structuredOptions,
     friendlyMessage,
   }
 }
@@ -1182,6 +1335,54 @@ export function mapAiResponseToParsedTransaction(
   const isConsultoria =
     aiData.tipo_resposta === 'consultoria_categoria' || aiData.intencao === 'consultiva'
 
+  // Normalização de opções de sugestão para formato string[] e structuredOptions
+  let clarificationOptions: string[] | null = null
+  let structuredOptions: StructuredSuggestionOption[] | null = null
+
+  if (Array.isArray(aiData.opcoes_sugestao) && aiData.opcoes_sugestao.length > 0) {
+    structuredOptions = aiData.opcoes_sugestao.map((opt: any) => {
+      if (typeof opt === 'string') {
+        const isExistente =
+          opt.toLowerCase().includes('usar existente') ||
+          opt.toLowerCase().includes('existente') ||
+          opt.includes('📁') ||
+          opt.includes('› dentro de')
+        const cleanText = opt
+          .replace(/^[📁✨]\s*(usar\s+existente|criar\s+nova)\s*:\s*/i, '')
+          .trim()
+        return {
+          tipo: isExistente ? 'existente' : 'nova',
+          rotulo:
+            opt.startsWith('📁') || opt.startsWith('✨')
+              ? opt
+              : isExistente
+                ? `📁 Usar existente: ${cleanText}`
+                : `✨ Criar nova: ${cleanText}`,
+          categoria: cleanText,
+          subcategoria: null,
+          balde: null,
+        }
+      }
+      const tipo = opt?.tipo === 'existente' ? 'existente' : 'nova'
+      let rotulo = opt?.rotulo || ''
+      if (!rotulo) {
+        if (tipo === 'existente') {
+          rotulo = `📁 Usar existente: ${opt.categoria || 'Geral'}${opt.subcategoria ? ` › subcategoria ${opt.subcategoria}` : ''}`
+        } else {
+          rotulo = `✨ Criar nova: ${opt.categoria || 'Geral'}${opt.balde ? ` (${opt.balde})` : ''}`
+        }
+      }
+      return {
+        tipo,
+        rotulo,
+        categoria: opt.categoria || '',
+        subcategoria: opt.subcategoria || null,
+        balde: opt.balde || null,
+      }
+    })
+    clarificationOptions = structuredOptions.map((s) => s.rotulo)
+  }
+
   return {
     rawText,
     amountCents,
@@ -1200,7 +1401,8 @@ export function mapAiResponseToParsedTransaction(
     intencao: aiData.intencao,
     respostaConsulta: aiData.resposta_consulta || (isConsulta ? aiData.mensagem_amigavel : null),
     clarificationQuestion: aiData.pergunta_clarificacao,
-    clarificationOptions: aiData.opcoes_sugestao,
+    clarificationOptions,
+    structuredOptions,
     friendlyMessage: aiData.mensagem_amigavel,
     aiError: aiData.error_detail || (aiData.error ? `Erro: ${aiData.error}` : null),
   }

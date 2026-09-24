@@ -5,6 +5,7 @@ import {
   extractPaymentMethod,
   extractTransactionType,
   parseVoiceInput,
+  mapAiResponseToParsedTransaction,
 } from '../voice-parser'
 
 describe('voice-parser', () => {
@@ -302,6 +303,84 @@ describe('voice-parser', () => {
         expect(parsed.aiStatus).toBe('sucesso')
         expect(parsed.amountCents).toBe(29750)
         expect(parsed.categoryNameSuggestion).toBe('Cuidados Pessoais (Estilo de Vida)')
+      })
+
+      it('(c) transparência e verdade: quando o usuário pergunta "Nós temos essa categoria?", a IA responde honestamente checando a lista real', () => {
+        // Categoria 'Cuidados Pessoais' NÃO está cadastrada na família (só Alimentação, Transporte, Lazer)
+        const parsed = parseVoiceInput('Nós temos essa categoria?', mockCategories, pendingContexto)
+
+        expect(parsed.aiStatus).toBe('clarificacao_categoria')
+        expect(parsed.tipoResposta).toBe('consultoria_categoria')
+        expect(parsed.intencao).toBe('consultiva')
+        // Preserva a transação pendente intacta
+        expect(parsed.amountCents).toBe(29750)
+        expect(parsed.description).toBe('Manicure')
+        // Resposta honesta indicando que ainda não temos cadastrada e oferecendo criar ou usar existente
+        expect(parsed.friendlyMessage).toContain('Ainda não temos essa categoria cadastrada')
+        expect(parsed.friendlyMessage).toContain('sugestão que posso criar')
+        expect(parsed.friendlyMessage).toContain('Lazer')
+      })
+
+      it('(d) se a categoria já constar na lista real da família, confirma que já existe', () => {
+        const contextoComLazer = {
+          ...pendingContexto,
+          categoria: 'Lazer',
+        }
+        const parsed = parseVoiceInput(
+          'Já temos essa categoria cadastrada?',
+          mockCategories,
+          contextoComLazer,
+        )
+
+        expect(parsed.friendlyMessage).toContain('já temos a categoria')
+        expect(parsed.amountCents).toBe(29750)
+      })
+    })
+
+    describe('Pílulas estruturadas com distinção "Usar existente" vs "Criar nova"', () => {
+      it('converte opções da IA em itens estruturados com rótulos e tipo ("existente" | "nova")', () => {
+        const rawAiData = {
+          status: 'clarificacao_categoria' as const,
+          tipo_resposta: 'transacao' as const,
+          transacao: {
+            descricao: 'Manicure',
+            estabelecimento: null,
+            valor: 98,
+            tipo: 'despesa' as const,
+            balde: 'Estilo de Vida' as const,
+            categoria: null,
+            subcategoria: 'Manicure',
+            metodo_pagamento: null,
+          },
+          pergunta_clarificacao: 'Onde prefere organizar esse gasto?',
+          opcoes_sugestao: [
+            {
+              tipo: 'existente' as const,
+              rotulo: '📁 Usar existente: Lazer › subcategoria Manicure',
+              categoria: 'Lazer',
+              subcategoria: 'Manicure',
+              balde: 'Estilo de Vida',
+            },
+            {
+              tipo: 'nova' as const,
+              rotulo: '✨ Criar nova: Cuidados Pessoais (Estilo de Vida)',
+              categoria: 'Cuidados Pessoais',
+              subcategoria: null,
+              balde: 'Estilo de Vida',
+            },
+          ],
+          mensagem_amigavel: 'Identifiquei R$ 98,00! Onde prefere organizar?',
+        }
+
+        const enriched = mapAiResponseToParsedTransaction(rawAiData, 'manicure 98 reais')
+
+        expect(enriched.structuredOptions).toBeDefined()
+        expect(enriched.structuredOptions?.length).toBe(2)
+        expect(enriched.structuredOptions?.[0].tipo).toBe('existente')
+        expect(enriched.structuredOptions?.[0].rotulo).toContain('📁 Usar existente:')
+        expect(enriched.structuredOptions?.[1].tipo).toBe('nova')
+        expect(enriched.structuredOptions?.[1].rotulo).toContain('✨ Criar nova:')
+        expect(enriched.clarificationOptions?.[0]).toContain('📁 Usar existente')
       })
     })
   })

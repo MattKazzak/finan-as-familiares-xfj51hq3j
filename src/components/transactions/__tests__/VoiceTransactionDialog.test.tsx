@@ -1492,4 +1492,123 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
       )
     })
   })
+
+  it('exibe pílulas com distinção visual entre "📁 Usar existente" e "✨ Criar nova" e preserva transação pendente', async () => {
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'Manicure 98 reais',
+      amountCents: 9800,
+      amountFormatted: 'R$ 98,00',
+      type: 'expense',
+      description: 'Manicure',
+      confidence: 0.9,
+      processingSource: 'openai',
+      aiStatus: 'clarificacao_categoria',
+      categoryNameSuggestion: null,
+      subcategoryNameSuggestion: 'Manicure',
+      bucketSuggestion: 'lifestyle',
+      clarificationQuestion: 'Onde prefere organizar essa despesa?',
+      clarificationOptions: [
+        '📁 Usar existente: Lazer › subcategoria Manicure',
+        '✨ Criar nova: Cuidados Pessoais (Estilo de Vida)',
+      ],
+      structuredOptions: [
+        {
+          tipo: 'existente',
+          rotulo: '📁 Usar existente: Lazer › subcategoria Manicure',
+          categoria: 'Lazer',
+          subcategoria: 'Manicure',
+          balde: 'Estilo de Vida',
+        },
+        {
+          tipo: 'nova',
+          rotulo: '✨ Criar nova: Cuidados Pessoais (Estilo de Vida)',
+          categoria: 'Cuidados Pessoais',
+          subcategoria: null,
+          balde: 'Estilo de Vida',
+        },
+      ],
+      friendlyMessage: 'Identifiquei R$ 98,00! Onde prefere organizar?',
+    })
+
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Fale no microfone ou digite aqui...')
+    fireEvent.change(input, { target: { value: 'Manicure 98 reais' } })
+    fireEvent.click(screen.getByText('Enviar'))
+
+    await waitFor(() => {
+      // Pílula com Usar Existente
+      const pillExistente = screen.getByTestId('category-option-existente-0')
+      expect(pillExistente).toBeDefined()
+      expect(pillExistente.textContent).toContain('📁 Usar existente: Lazer')
+
+      // Pílula com Criar Nova
+      const pillNova = screen.getByTestId('category-option-nova-1')
+      expect(pillNova).toBeDefined()
+      expect(pillNova.textContent).toContain('✨ Criar nova: Cuidados Pessoais')
+    })
+
+    // Usuário pergunta: "Nós temos essa categoria?"
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'Nós temos essa categoria?',
+      amountCents: 9800,
+      amountFormatted: 'R$ 98,00',
+      type: 'expense',
+      description: 'Manicure',
+      confidence: 0.95,
+      processingSource: 'openai',
+      aiStatus: 'clarificacao_categoria',
+      tipoResposta: 'consultoria_categoria',
+      intencao: 'consultiva',
+      clarificationQuestion: 'O que você prefere?',
+      clarificationOptions: [
+        '📁 Usar existente: Lazer › subcategoria Manicure',
+        '✨ Criar nova: Cuidados Pessoais (Estilo de Vida)',
+      ],
+      structuredOptions: [
+        {
+          tipo: 'existente',
+          rotulo: '📁 Usar existente: Lazer › subcategoria Manicure',
+          categoria: 'Lazer',
+          subcategoria: 'Manicure',
+          balde: 'Estilo de Vida',
+        },
+        {
+          tipo: 'nova',
+          rotulo: '✨ Criar nova: Cuidados Pessoais (Estilo de Vida)',
+          categoria: 'Cuidados Pessoais',
+          subcategoria: null,
+          balde: 'Estilo de Vida',
+        },
+      ],
+      friendlyMessage:
+        "Ainda não temos essa categoria cadastrada! Ela é uma sugestão que posso criar agora mesmo para deixar seus gastos de estética organizados. O que você prefere: criar a categoria nova 'Cuidados Pessoais' ou encaixar dentro da existente 'Lazer'?",
+    })
+
+    fireEvent.change(input, { target: { value: 'Nós temos essa categoria?' } })
+    fireEvent.click(screen.getByText('Enviar'))
+
+    await waitFor(() => {
+      expect(screen.getByText(/Ainda não temos essa categoria cadastrada/i)).toBeDefined()
+      // Mantém a opção existente e a nova na tela
+      expect(screen.getByTestId('category-option-existente-0')).toBeDefined()
+    })
+
+    // Ao clicar na opção existente, reaproveita a categoria Lazer e prepara confirmação
+    fireEvent.click(screen.getByTestId('category-option-existente-0'))
+
+    await waitFor(() => {
+      expect(screen.getByText(/Usando categoria existente "Lazer"/i)).toBeDefined()
+      expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
+    })
+  })
 })
