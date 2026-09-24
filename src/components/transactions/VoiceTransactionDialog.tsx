@@ -97,7 +97,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   const latestTranscriptRef = useRef<string>('')
   const hadErrorRef = useRef<boolean>(false)
   const silenceTimerRef = useRef<any>(null)
-  const shouldKeepListeningRef = useRef<boolean>(false)
   const userStoppedManuallyRef = useRef<boolean>(false)
   const isListeningForAmountOnlyRef = useRef<boolean>(false)
   const pendingTransactionRef = useRef<ParsedVoiceTransaction | null>(null)
@@ -135,7 +134,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   // Parar gravação ativa
   const stopListening = useCallback(() => {
     clearSilenceTimer()
-    shouldKeepListeningRef.current = false
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop()
@@ -147,6 +145,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     setIsListening(false)
     setAudioDetected(false)
     setIsListeningForAmountOnly(false)
+    isListeningForAmountOnlyRef.current = false
   }, [clearSilenceTimer])
 
   // Helper para construir contexto_anterior a partir de transação parcial pendente
@@ -451,7 +450,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       setErrorMessage(null)
       hadErrorRef.current = false
       userStoppedManuallyRef.current = false
-      shouldKeepListeningRef.current = true
       setAudioDetected(false)
       clearSilenceTimer()
 
@@ -500,7 +498,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         // Função chamada estritamente quando o timer de 3000ms de silêncio expira
         const triggerFinalProcessing = () => {
           clearSilenceTimer()
-          shouldKeepListeningRef.current = false
 
           if (recognitionRef.current) {
             try {
@@ -508,6 +505,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             } catch {
               // silenciar
             }
+            recognitionRef.current = null
           }
           setIsListening(false)
           setAudioDetected(false)
@@ -515,13 +513,14 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           const captured = latestTranscriptRef.current.trim()
           if (!captured) {
             setIsListeningForAmountOnly(false)
+            isListeningForAmountOnlyRef.current = false
             return
           }
 
           handleStopAndProcess(captured)
         }
 
-        // Contrato 1: Temporizador de 3s (3000ms) de silêncio real
+        // Temporizador de 3s (3000ms) de silêncio real
         const scheduleSilenceProcessing = () => {
           clearSilenceTimer()
           silenceTimerRef.current = setTimeout(() => {
@@ -543,11 +542,11 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         recognition.onerror = (event: any) => {
           console.warn('SpeechRecognition onerror:', event.error)
           hadErrorRef.current = true
-          shouldKeepListeningRef.current = false
           clearSilenceTimer()
           setIsListening(false)
           setAudioDetected(false)
           setIsListeningForAmountOnly(false)
+          isListeningForAmountOnlyRef.current = false
 
           if (
             event.error === 'not-allowed' ||
@@ -573,22 +572,9 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           }
         }
 
-        // Contrato 1: onend mobile prematuro — se timer de 3s não expirou e usuário não parou manualmente, REINICIA
+        // Ao encerrar a escuta: NUNCA reinicia automaticamente.
+        // O microfone permanece desligado em repouso. Se houver texto capturado pendente, processa.
         recognition.onend = () => {
-          if (
-            shouldKeepListeningRef.current &&
-            !userStoppedManuallyRef.current &&
-            !hadErrorRef.current
-          ) {
-            try {
-              recognition.start()
-              setIsListening(true)
-              return
-            } catch (restartErr) {
-              console.warn('Erro ao reiniciar recognition no onend prematuro:', restartErr)
-            }
-          }
-
           clearSilenceTimer()
           setIsListening(false)
           setAudioDetected(false)
@@ -596,13 +582,12 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
           const finalCapturado = latestTranscriptRef.current.trim()
 
-          // Se a parada foi manual pelo botão do microfone, processa imediatamente
-          if (userStoppedManuallyRef.current && finalCapturado && !hadErrorRef.current) {
+          if (finalCapturado && !hadErrorRef.current) {
             userStoppedManuallyRef.current = false
-            shouldKeepListeningRef.current = false
             handleStopAndProcess(finalCapturado)
-          } else if (!shouldKeepListeningRef.current) {
+          } else {
             setIsListeningForAmountOnly(false)
+            isListeningForAmountOnlyRef.current = false
           }
         }
 
@@ -612,10 +597,10 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       } catch (err: any) {
         console.warn('Erro síncrono ao iniciar SpeechRecognition:', err)
         clearSilenceTimer()
-        shouldKeepListeningRef.current = false
         setIsListening(false)
         setAudioDetected(false)
         setIsListeningForAmountOnly(false)
+        isListeningForAmountOnlyRef.current = false
         setErrorMessage(
           'Não foi possível ativar o microfone. Você pode digitar abaixo e enviar com o Copilot.',
         )
@@ -656,7 +641,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       isListeningForAmountOnlyRef.current = false
       hadErrorRef.current = false
       userStoppedManuallyRef.current = false
-      shouldKeepListeningRef.current = false
       setAudioDetected(false)
       setIsProcessingAi(false)
       setSelectedMemberId(currentMember?.id || members[0]?.id || '')
@@ -1059,14 +1043,23 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             onClick={() => {
               if (isListening) {
                 userStoppedManuallyRef.current = true
-                shouldKeepListeningRef.current = false
                 clearSilenceTimer()
+                const captured = latestTranscriptRef.current.trim()
                 if (recognitionRef.current) {
                   try {
                     recognitionRef.current.stop()
                   } catch {
                     // silenciar
                   }
+                  recognitionRef.current = null
+                }
+                setIsListening(false)
+                setAudioDetected(false)
+                if (captured) {
+                  handleStopAndProcess(captured)
+                } else {
+                  setIsListeningForAmountOnly(false)
+                  isListeningForAmountOnlyRef.current = false
                 }
               } else {
                 setTextoFalado('')
@@ -1320,21 +1313,22 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                   type="button"
                   onClick={() => {
                     userStoppedManuallyRef.current = true
-                    shouldKeepListeningRef.current = false
                     clearSilenceTimer()
+                    const captured = latestTranscriptRef.current.trim()
                     if (recognitionRef.current) {
                       try {
                         recognitionRef.current.stop()
                       } catch {
                         // silenciar
                       }
+                      recognitionRef.current = null
+                    }
+                    setIsListening(false)
+                    setAudioDetected(false)
+                    if (captured) {
+                      handleStopAndProcess(captured)
                     } else {
-                      const captured = latestTranscriptRef.current.trim()
-                      if (captured) {
-                        handleStopAndProcess(captured)
-                      } else {
-                        stopListening()
-                      }
+                      stopListening()
                     }
                   }}
                   className="w-11 h-11 rounded-2xl bg-[#064E3B] text-white flex items-center justify-center shadow-md shadow-emerald-900/30 transition-transform active:scale-95 animate-pulse"

@@ -424,7 +424,94 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     })
   })
 
-  it('mobile: onend prematuro pelo navegador REINICIA o recognition e NÃO processa antes dos 3s de silêncio reais', async () => {
+  it('eliminação do loop: onend NÃO reinicia o recognition automaticamente (permanece em repouso após encerramento)', async () => {
+    let capturedRecognitionInstance: any = null
+    let startCallCount = 0
+
+    function MockSpeechRecognition() {
+      const self = {
+        lang: '',
+        continuous: false,
+        interimResults: false,
+        maxAlternatives: 1,
+        onstart: null as any,
+        onaudiostart: null as any,
+        onspeechstart: null as any,
+        onresult: null as any,
+        onerror: null as any,
+        onend: null as any,
+        start() {
+          startCallCount++
+          if (self.onstart) self.onstart()
+        },
+        stop() {
+          if (self.onend) self.onend()
+        },
+        abort() {},
+      }
+      capturedRecognitionInstance = self
+      return self
+    }
+
+    ;(window as any).SpeechRecognition = MockSpeechRecognition
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(capturedRecognitionInstance).toBeTruthy()
+      // Disparo inicial único ao abrir o modal
+      expect(startCallCount).toBe(1)
+    })
+
+    // Usuário fala frase
+    capturedRecognitionInstance.onresult({
+      results: [[{ transcript: 'Almoço 35 reais' }]],
+    })
+
+    // Navegador dispara onend (ex: fim de fala natural)
+    capturedRecognitionInstance.onend()
+
+    // O recognition NUNCA deve ser reiniciado automaticamente (startCallCount permanece 1)
+    expect(startCallCount).toBe(1)
+
+    // O texto foi enviado para a IA
+    await waitFor(() => {
+      expect(mockParseVoiceWithAi).toHaveBeenCalledWith(
+        expect.objectContaining({
+          texto: 'Almoço 35 reais',
+        }),
+      )
+    })
+
+    // Após resposta da IA, o microfone permanece em repouso
+    expect(startCallCount).toBe(1)
+    expect(screen.getByText('Microfone pronto')).toBeDefined()
+    expect(screen.getByTitle('Toque para começar a falar')).toBeDefined()
+  })
+
+  it('no modo "Falar apenas o valor", ao concluir a fala encerra definitivamente sem reiniciar recognition', async () => {
+    // Começa com uma transação em falta_valor
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'almoço no centro',
+      amountCents: 0,
+      amountFormatted: 'R$ 0,00',
+      type: 'expense',
+      description: 'Almoço no centro',
+      confidence: 0.85,
+      processingSource: 'openai',
+      aiStatus: 'falta_valor',
+      categoryNameSuggestion: 'Alimentação',
+      bucketSuggestion: 'essential',
+      clarificationQuestion: 'Quanto custou?',
+      friendlyMessage: 'Entendi o almoço! Quanto custou?',
+    })
+
     let capturedRecognitionInstance: any = null
     let startCallCount = 0
 
@@ -468,27 +555,57 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
       expect(startCallCount).toBe(1)
     })
 
-    // Usuário fala primeiro fragmento
+    // Usuário fala primeiro comando sem valor
     capturedRecognitionInstance.onresult({
-      results: [[{ transcript: 'uma caixa de cerveja' }]],
+      results: [[{ transcript: 'almoço no centro' }]],
     })
-
-    // Navegador mobile dispara onend prematuramente (pausa curta de 1s de respiração do usuário)
     capturedRecognitionInstance.onend()
 
-    // O recognition deve ter sido reiniciado sem perder o transcript acumulado
+    await waitFor(() => {
+      expect(screen.getByText('🎤 Falar apenas o valor')).toBeDefined()
+    })
+
+    // Mock para a resposta da IA com o valor
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: '45 reais',
+      amountCents: 4500,
+      amountFormatted: 'R$ 45,00',
+      type: 'expense',
+      description: 'Almoço no centro',
+      confidence: 0.95,
+      processingSource: 'openai',
+      aiStatus: 'sucesso',
+      categoryNameSuggestion: 'Alimentação',
+      bucketSuggestion: 'essential',
+    })
+
+    // Usuário clica no botão "Falar apenas o valor"
+    const amountOnlyBtn = screen.getByText('🎤 Falar apenas o valor')
+    fireEvent.click(amountOnlyBtn)
+
+    // O microfone foi reativado pelo clique explícito do usuário (startCallCount = 2)
     expect(startCallCount).toBe(2)
-    // NÃO deve ter chamado a IA prematuramente
-    expect(mockParseVoiceWithAi).not.toHaveBeenCalled()
 
-    // Usuário continua falando
+    // Usuário fala "45 reais"
     capturedRecognitionInstance.onresult({
-      results: [[{ transcript: 'uma caixa de cerveja 80 reais' }]],
+      results: [[{ transcript: '45 reais' }]],
     })
 
+    // Dispara onend (silêncio/fim de fala)
     capturedRecognitionInstance.onend()
-    expect(startCallCount).toBe(3)
-    expect(mockParseVoiceWithAi).not.toHaveBeenCalled()
+
+    // NÃO deve ter reiniciar automaticamente: startCallCount continua 2
+    expect(startCallCount).toBe(2)
+
+    await waitFor(() => {
+      // Card verde exibido com o valor mesclado
+      expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
+      expect(screen.getByText('R$ 45,00')).toBeDefined()
+    })
+
+    // Microfone permanece em repouso
+    expect(startCallCount).toBe(2)
+    expect(screen.getByText('Microfone pronto')).toBeDefined()
   })
 
   it('processa somente após 3s de silêncio reais (silenceTimerRef 3000ms)', async () => {
