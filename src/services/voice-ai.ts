@@ -15,10 +15,24 @@ export interface VoiceAiPreviousContext {
   tipo?: 'despesa' | 'receita'
 }
 
+export interface CategoryPayloadInput {
+  id?: string
+  name: string
+  type: string
+  budget_bucket?: string | null
+  subcategories?: Array<{ id?: string; name: string }>
+}
+
 export interface ParseVoiceWithAiOptions {
   texto: string
   familyId?: string
-  categories?: Array<{ id: string; name: string; type: string; budget_bucket?: string | null }>
+  categories?: Array<{
+    id: string
+    name: string
+    type: string
+    budget_bucket?: string | null
+    subcategories?: Array<{ id: string; name: string }>
+  }>
   contexto_anterior?: VoiceAiPreviousContext | null
 }
 
@@ -47,11 +61,20 @@ export async function parseVoiceWithAi({
   }
 
   try {
+    const serializedCategories = categories.map((c) => ({
+      id: c.id,
+      name: c.name,
+      type: c.type,
+      budget_bucket: c.budget_bucket,
+      subcategories: (c.subcategories || []).map((s) => ({ id: s.id, name: s.name })),
+    }))
+
     const { data, error } = await supabase.functions.invoke<VoiceAiResponse>('voice-parse', {
       body: {
         texto: trimmed,
         familyId,
         contexto_anterior: contexto_anterior || null,
+        categorias: serializedCategories.length > 0 ? serializedCategories : null,
       },
     })
 

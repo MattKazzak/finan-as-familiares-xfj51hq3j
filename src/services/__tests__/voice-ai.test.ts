@@ -192,13 +192,10 @@ describe('voice-ai service (fim do fallback silencioso)', () => {
     expect(res.aiError).toBeNull()
   })
 
-  it('aceita e mapeia formalmente os 4 status suportados pela IA: sucesso, clarificacao, falta_valor, invalido', async () => {
-    const statuses: Array<'sucesso' | 'clarificacao' | 'falta_valor' | 'invalido'> = [
-      'sucesso',
-      'clarificacao',
-      'falta_valor',
-      'invalido',
-    ]
+  it('aceita e mapeia formalmente todos os status suportados pela IA, incluindo clarificacao_categoria', async () => {
+    const statuses: Array<
+      'sucesso' | 'clarificacao' | 'clarificacao_categoria' | 'falta_valor' | 'invalido'
+    > = ['sucesso', 'clarificacao', 'clarificacao_categoria', 'falta_valor', 'invalido']
 
     for (const status of statuses) {
       vi.mocked(supabase.functions.invoke).mockResolvedValueOnce({
@@ -279,6 +276,7 @@ describe('voice-ai service (fim do fallback silencioso)', () => {
         texto: 'foi 80 reais no debito',
         familyId: 'fam-1',
         contexto_anterior: previousContext,
+        categorias: null,
       },
     })
     expect(res.aiStatus).toBe('sucesso')

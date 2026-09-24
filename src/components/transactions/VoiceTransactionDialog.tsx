@@ -39,7 +39,13 @@ export interface ChatMessage {
   text: string
   timestamp: Date
   cardData?: ParsedVoiceTransaction | null
-  cardType?: 'sucesso' | 'falta_valor' | 'clarificacao' | 'invalido' | 'consulta'
+  cardType?:
+    | 'sucesso'
+    | 'falta_valor'
+    | 'clarificacao'
+    | 'clarificacao_categoria'
+    | 'invalido'
+    | 'consulta'
   aiError?: string | null
 }
 
@@ -64,8 +70,15 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   onOpenManualTransaction,
   onSuccess,
 }) => {
-  const { family, members, currentMember, categories, triggerRefresh, addNewSubcategory } =
-    useFamily()
+  const {
+    family,
+    members,
+    currentMember,
+    categories,
+    triggerRefresh,
+    addNewCategory,
+    addNewSubcategory,
+  } = useFamily()
   const { toast } = useToast()
 
   // Mini-Chat: Histórico de mensagens mantido em memória durante a sessão do modal
@@ -360,7 +373,41 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           }
         }
 
-        // Caso 4: Transação completa com sucesso logo no primeiro turno
+        // Caso 4: Transação pendente em clarificação de categoria esperando escolha do usuário
+        if (
+          existingPartial &&
+          existingPartial.aiStatus === 'clarificacao_categoria' &&
+          parsed.amountCents <= 0
+        ) {
+          // O usuário falou/digitou uma categoria qualquer em resposta à pergunta da IA
+          await handleApplyAndPersistCategory(textToProcess, existingPartial)
+          return
+        }
+
+        // Caso 5: Status 'clarificacao_categoria' vindo da IA (Human-in-the-Loop padrão ouro)
+        if (parsed.aiStatus === 'clarificacao_categoria' && parsed.amountCents > 0) {
+          setPendingTransaction(parsed)
+          pendingTransactionRef.current = parsed
+
+          const friendlyMsg =
+            parsed.friendlyMessage ||
+            `Identifiquei ${parsed.amountFormatted}! Mas ainda não temos essa categoria cadastrada. Onde prefere organizar?`
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `assistant-${Date.now()}`,
+              sender: 'assistant',
+              text: friendlyMsg,
+              timestamp: new Date(),
+              cardData: parsed,
+              cardType: 'clarificacao_categoria',
+            },
+          ])
+          return
+        }
+
+        // Caso 6: Transação completa com sucesso logo no primeiro turno
         if (parsed.aiStatus === 'sucesso' && parsed.amountCents > 0) {
           setPendingTransaction(parsed)
           pendingTransactionRef.current = parsed
@@ -379,7 +426,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           return
         }
 
-        // Caso 5: Clarificação (valor existe mas descrição/categoria ambígua)
+        // Caso 7: Clarificação tradicional (valor existe mas descrição/termo totalmente ambíguo)
         if (parsed.aiStatus === 'clarificacao' && parsed.amountCents > 0) {
           setPendingTransaction(parsed)
           pendingTransactionRef.current = parsed
@@ -401,7 +448,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           return
         }
 
-        // Caso 6: Inválido ou erro
+        // Caso 8: Inválido ou erro
         const fallbackMsg =
           parsed.friendlyMessage ||
           "Não consegui entender esse lançamento financeiro. Tente algo como: 'Almoço 45 reais no débito no restaurante' ou 'supermercado do zé 180 no pix'"
@@ -771,60 +818,134 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     }
   }
 
-  // Ação ao clicar em uma opção de sugestão da IA no estado "clarificacao"
+  // Extrai nome limpo da categoria e balde a partir de strings como "Cuidados Pessoais (Estilo de Vida)"
+  const parseCategoryOptionString = useCallback(
+    (rawOption: string, fallbackBucket?: 'essential' | 'lifestyle' | 'goals') => {
+      let catName = rawOption.trim()
+      let bucket: 'essential' | 'lifestyle' | 'goals' = fallbackBucket || 'lifestyle'
+      let subName: string | undefined
+
+      // Verifica se possui parênteses com o balde, ex: "Cuidados Pessoais (Estilo de Vida)"
+      const parenMatch = catName.match(/^(.*?)\s*\((.*?)\)$/)
+      if (parenMatch) {
+        catName = parenMatch[1].trim()
+        const rawBucketInside = parenMatch[2].toLowerCase()
+        if (rawBucketInside.includes('essencia') || rawBucketInside.includes('necessidade')) {
+          bucket = 'essential'
+        } else if (rawBucketInside.includes('meta') || rawBucketInside.includes('invest')) {
+          bucket = 'goals'
+        } else {
+          bucket = 'lifestyle'
+        }
+      } else if (catName.includes('/')) {
+        const parts = catName.split('/').map((p) => p.trim())
+        catName = parts[0]
+        subName = parts[1] || undefined
+      }
+
+      return { categoryName: catName, bucket, subcategoryName: subName }
+    },
+    [],
+  )
+
+  // Aplica a categoria e persiste a nova estrutura para a família (Human-in-the-Loop)
+  const handleApplyAndPersistCategory = useCallback(
+    async (rawCategoryChoice: string, cardData?: ParsedVoiceTransaction | null) => {
+      const base = cardData || pendingTransactionRef.current
+      if (!base || base.amountCents <= 0) return
+
+      const {
+        categoryName: cleanCatName,
+        bucket: resolvedBucket,
+        subcategoryName,
+      } = parseCategoryOptionString(rawCategoryChoice, base.bucketSuggestion)
+
+      // 1. Procurar se já existe categoria cadastrada com esse nome
+      let matchedCategory = categories.find(
+        (c) =>
+          c.type === base.type &&
+          (c.name.toLowerCase() === cleanCatName.toLowerCase() ||
+            c.name.toLowerCase().includes(cleanCatName.toLowerCase()) ||
+            cleanCatName.toLowerCase().includes(c.name.toLowerCase())),
+      )
+
+      // 2. Se não existir, persistir imediatamente no banco de dados para a família
+      if (!matchedCategory && family?.id) {
+        try {
+          const mappedBucket =
+            resolvedBucket === 'goals'
+              ? 'future'
+              : resolvedBucket === 'essential'
+                ? 'essentials'
+                : 'lifestyle'
+
+          const createdCategory = await addNewCategory(
+            cleanCatName,
+            base.type,
+            '#64748B',
+            'Tag',
+            mappedBucket,
+          )
+          matchedCategory = createdCategory
+        } catch (catErr) {
+          console.warn('Erro ao persistir nova categoria para a família:', catErr)
+        }
+      }
+
+      // Se houver subcategoria a associar/persistir
+      const finalSubName = subcategoryName || base.subcategoryNameSuggestion
+      if (matchedCategory && finalSubName) {
+        const existingSub = matchedCategory.subcategories?.find(
+          (s) => s.name.toLowerCase() === finalSubName.toLowerCase(),
+        )
+        if (!existingSub) {
+          try {
+            await addNewSubcategory(matchedCategory.id, finalSubName)
+          } catch (subErr) {
+            console.warn('Erro ao persistir subcategoria:', subErr)
+          }
+        }
+      }
+
+      const updated: ParsedVoiceTransaction = {
+        ...base,
+        aiStatus: 'sucesso',
+        categoryNameSuggestion: matchedCategory ? matchedCategory.name : cleanCatName,
+        subcategoryNameSuggestion: finalSubName,
+        bucketSuggestion: (matchedCategory?.budget_bucket as any) || resolvedBucket,
+        confidence: 0.95,
+        clarificationQuestion: null,
+        clarificationOptions: null,
+        friendlyMessage: null,
+      }
+
+      setPendingTransaction(updated)
+      pendingTransactionRef.current = updated
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `user-${Date.now()}`,
+          sender: 'user',
+          text: rawCategoryChoice,
+          timestamp: new Date(),
+        },
+        {
+          id: `assistant-${Date.now() + 1}`,
+          sender: 'assistant',
+          text: `Ótimo! Categoria "${updated.categoryNameSuggestion}" adicionada e vinculada. Pronto para confirmar o lançamento:`,
+          timestamp: new Date(),
+          cardData: updated,
+          cardType: 'sucesso',
+        },
+      ])
+    },
+    [addNewCategory, addNewSubcategory, categories, family?.id, parseCategoryOptionString],
+  )
+
+  // Ação ao clicar em uma opção de sugestão da IA no estado "clarificacao" ou "clarificacao_categoria"
   const handleSelectClarificationOption = (option: string, cardData?: ParsedVoiceTransaction) => {
-    const base = cardData || pendingTransactionRef.current
-    if (!base || base.amountCents <= 0) return
-
-    const parts = option.split('/').map((p) => p.trim())
-    const catName = parts[0]
-    const subName = parts[1] || ''
-
-    const matchedCategory = categories.find(
-      (c) =>
-        c.type === base.type &&
-        (c.name.toLowerCase() === catName.toLowerCase() ||
-          c.name.toLowerCase().includes(catName.toLowerCase()) ||
-          catName.toLowerCase().includes(c.name.toLowerCase())),
-    )
-
-    const updated: ParsedVoiceTransaction = {
-      ...base,
-      aiStatus: 'sucesso',
-      categoryNameSuggestion: matchedCategory ? matchedCategory.name : catName,
-      subcategoryNameSuggestion: subName || base.subcategoryNameSuggestion,
-      bucketSuggestion:
-        (matchedCategory?.budget_bucket as any) ||
-        (catName.toLowerCase().includes('transporte') ||
-        catName.toLowerCase().includes('alimenta') ||
-        catName.toLowerCase().includes('saude')
-          ? 'essential'
-          : 'lifestyle'),
-      confidence: 0.9,
-      clarificationQuestion: null,
-      clarificationOptions: null,
-    }
-
-    setPendingTransaction(updated)
-    pendingTransactionRef.current = updated
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `user-${Date.now()}`,
-        sender: 'user',
-        text: option,
-        timestamp: new Date(),
-      },
-      {
-        id: `assistant-${Date.now() + 1}`,
-        sender: 'assistant',
-        text: `Ótimo! Categoria ${updated.categoryNameSuggestion} selecionada. Pronto para confirmar:`,
-        timestamp: new Date(),
-        cardData: updated,
-        cardType: 'sucesso',
-      },
-    ])
+    handleApplyAndPersistCategory(option, cardData)
   }
 
   // Tentar novamente (voltar à escuta do zero)
@@ -1186,34 +1307,54 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     )
   }
 
-  // Renderizador do Card clarificacao no Chat
-  const renderClarificationCard = (data: ParsedVoiceTransaction) => {
-    return (
-      <div className="mt-2.5 rounded-2xl border border-indigo-200 bg-indigo-50/70 p-3 space-y-2.5">
-        <p className="text-xs font-semibold text-slate-800 leading-snug">
-          {data.clarificationQuestion || 'Identifiquei o valor! Escolha uma opção para completar:'}
-        </p>
+  // Renderizador do Card clarificacao_categoria e clarificacao no Chat com pílulas interativas
+  const renderClarificationCategoryCard = (data: ParsedVoiceTransaction) => {
+    const isCategoryClarification = data.aiStatus === 'clarificacao_categoria'
+    const titleText = isCategoryClarification
+      ? 'Onde prefere organizar essa despesa?'
+      : data.clarificationQuestion || 'Identifiquei o valor! Escolha uma opção para completar:'
 
+    return (
+      <div className="mt-2.5 rounded-2xl border border-indigo-200/90 bg-gradient-to-br from-indigo-50/90 via-sky-50/50 to-white p-3 sm:p-3.5 space-y-3 shadow-sm text-left">
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5">
+            <span className="w-5 h-5 rounded-md bg-indigo-600 text-white flex items-center justify-center font-bold text-[10px] shadow-xs">
+              <Tag className="w-3 h-3" />
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-900">
+              {isCategoryClarification ? 'Nova Categoria Sugerida' : 'Clarificação Necessária'}
+            </span>
+          </div>
+
+          <p className="text-xs font-semibold text-slate-800 leading-snug">{titleText}</p>
+        </div>
+
+        {/* Pílulas interativas clicáveis com sugestões da IA */}
         {data.clarificationOptions && data.clarificationOptions.length > 0 && (
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2 pt-0.5">
             {data.clarificationOptions.map((opcao, index) => (
               <button
                 key={index}
                 type="button"
                 onClick={() => handleSelectClarificationOption(opcao, data)}
-                className="w-full text-left p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-indigo-50 hover:border-indigo-300 transition-all flex items-center justify-between text-xs font-semibold text-slate-800 group shadow-xs active:scale-[0.99]"
+                className="inline-flex items-center justify-between gap-2 px-3 py-2 rounded-xl border border-indigo-200 bg-white hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all text-xs font-semibold text-indigo-950 shadow-xs group active:scale-[0.98] cursor-pointer"
+                title={`Selecionar: ${opcao}`}
               >
-                <span className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                  {opcao}
+                <span className="flex items-center gap-1.5 truncate">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 group-hover:bg-white shrink-0" />
+                  <span className="truncate">{opcao}</span>
                 </span>
-                <CheckCircle2 className="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-600" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400 group-hover:text-white shrink-0" />
               </button>
             ))}
           </div>
         )}
 
-        <div className="flex gap-2 pt-1">
+        <p className="text-[10px] text-slate-500 italic">
+          Toque em uma opção ou fale/digite outra categoria abaixo.
+        </p>
+
+        <div className="flex gap-2 pt-1 border-t border-indigo-100">
           <Button
             type="button"
             variant="outline"
@@ -1380,9 +1521,10 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                     renderMissingAmountCard(msg.cardData)}
 
                   {!isUser &&
-                    msg.cardType === 'clarificacao' &&
+                    (msg.cardType === 'clarificacao' ||
+                      msg.cardType === 'clarificacao_categoria') &&
                     msg.cardData &&
-                    renderClarificationCard(msg.cardData)}
+                    renderClarificationCategoryCard(msg.cardData)}
 
                   {!isUser && msg.cardType === 'invalido' && renderInvalidCard(msg)}
                 </div>

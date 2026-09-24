@@ -5,6 +5,7 @@ import { VoiceTransactionDialog } from '../VoiceTransactionDialog'
 
 // Mocks do hook useFamily e useToast
 const mockTriggerRefresh = vi.fn()
+const mockAddNewCategory = vi.fn()
 const mockAddNewSubcategory = vi.fn()
 const mockToast = vi.fn()
 const mockCreateTransaction = vi.fn()
@@ -26,6 +27,7 @@ vi.mock('@/hooks/use-family', () => ({
       { id: 'cat-2', name: 'Salário', type: 'income', budget_bucket: 'essential' },
     ],
     triggerRefresh: mockTriggerRefresh,
+    addNewCategory: mockAddNewCategory,
     addNewSubcategory: mockAddNewSubcategory,
   }),
 }))
@@ -1040,6 +1042,81 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
           texto: 'testar mesclar em duas falas',
         }),
       )
+    })
+  })
+
+  it('fluxo de padrão ouro clarificacao_categoria: sugere pílulas, persiste categoria e exibe card verde pronto para confirmar', async () => {
+    mockAddNewCategory.mockResolvedValueOnce({
+      id: 'cat-cuidados-pessoais',
+      name: 'Cuidados Pessoais',
+      type: 'expense',
+      budget_bucket: 'lifestyle',
+      subcategories: [],
+    })
+
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'Manicure 140 reais',
+      amountCents: 14000,
+      amountFormatted: 'R$ 140,00',
+      type: 'expense',
+      description: 'Manicure',
+      confidence: 0.85,
+      processingSource: 'openai',
+      aiStatus: 'clarificacao_categoria',
+      categoryNameSuggestion: null,
+      subcategoryNameSuggestion: 'Manicure',
+      bucketSuggestion: 'lifestyle',
+      clarificationQuestion: 'Onde prefere organizar essa categoria?',
+      clarificationOptions: [
+        'Cuidados Pessoais (Estilo de Vida)',
+        'Lazer & Beleza (Estilo de Vida)',
+      ],
+      friendlyMessage:
+        'Identifiquei R$ 140,00! Mas ainda não temos essa categoria cadastrada. Onde prefere organizar?',
+    })
+
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Fale no microfone ou digite aqui...')
+    fireEvent.change(input, { target: { value: 'Manicure 140 reais' } })
+    fireEvent.click(screen.getByText('Enviar'))
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Identifiquei R\$ 140,00! Mas ainda não temos essa categoria cadastrada/i),
+      ).toBeDefined()
+      // Pílulas clicáveis exibidas
+      expect(screen.getByText('Cuidados Pessoais (Estilo de Vida)')).toBeDefined()
+      expect(screen.getByText('Lazer & Beleza (Estilo de Vida)')).toBeDefined()
+    })
+
+    // Usuário clica na pílula "Cuidados Pessoais (Estilo de Vida)"
+    fireEvent.click(screen.getByText('Cuidados Pessoais (Estilo de Vida)'))
+
+    await waitFor(() => {
+      // 1. A nova categoria deve ter sido persistida para a família
+      expect(mockAddNewCategory).toHaveBeenCalledWith(
+        'Cuidados Pessoais',
+        'expense',
+        '#64748B',
+        'Tag',
+        'lifestyle',
+      )
+
+      // 2. Card verde de confirmação aparece imediatamente preenchido
+      expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
+      expect(screen.getByText('Manicure')).toBeDefined()
+      expect(screen.getByText('R$ 140,00')).toBeDefined()
+      expect(screen.getByText(/Cuidados Pessoais/i)).toBeDefined()
     })
   })
 

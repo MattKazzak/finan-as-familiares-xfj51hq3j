@@ -3,7 +3,13 @@
  * Converte linguagem natural falada em transação estruturada.
  */
 
-export type VoiceAiStatus = 'sucesso' | 'clarificacao' | 'falta_valor' | 'invalido' | 'consulta'
+export type VoiceAiStatus =
+  | 'sucesso'
+  | 'clarificacao'
+  | 'clarificacao_categoria'
+  | 'falta_valor'
+  | 'invalido'
+  | 'consulta'
 
 export interface VoiceAiTransaction {
   descricao: string
@@ -11,8 +17,8 @@ export interface VoiceAiTransaction {
   valor: number | null
   tipo: 'despesa' | 'receita'
   balde: string // 'Necessidades Essenciais' | 'Estilo de Vida' | 'Metas & Investimentos' | string
-  categoria: string
-  subcategoria: string
+  categoria: string | null
+  subcategoria: string | null
   metodo_pagamento: string | null
 }
 
@@ -950,10 +956,11 @@ export function mapAiResponseToParsedTransaction(
   const type = transacao?.tipo === 'receita' ? 'income' : 'expense'
   const bucket = normalizeBucketName(transacao?.balde)
 
-  const confidenceByStatus = {
+  const confidenceByStatus: Record<VoiceAiStatus, number> = {
     sucesso: 0.95,
     falta_valor: 0.85,
     clarificacao: 0.7,
+    clarificacao_categoria: 0.85,
     invalido: 0.2,
     consulta: 0.95,
   }

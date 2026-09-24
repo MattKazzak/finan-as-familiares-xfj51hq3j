@@ -11,10 +11,19 @@ interface PreviousContextPayload {
   tipo?: 'despesa' | 'receita'
 }
 
+interface CategoryPayloadItem {
+  id?: string
+  name: string
+  type: string
+  budget_bucket?: string | null
+  subcategories?: Array<{ id?: string; name: string }>
+}
+
 interface RequestPayload {
   texto?: string
   familyId?: string
   contexto_anterior?: PreviousContextPayload | null
+  categorias?: CategoryPayloadItem[] | null
 }
 
 function formatCentsToBRL(cents: number): string {
@@ -169,16 +178,28 @@ Deno.serve(async (req: Request) => {
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
     const sevenDaysAgoStr = sevenDaysAgo.toISOString().slice(0, 10)
 
-    // Buscar categorias e subcategorias
-    let categoriesQuery = supabase
-      .from('transaction_categories')
-      .select('id, name, type, budget_bucket, transaction_subcategories(id, name)')
-      .order('sort_order', { ascending: true })
+    // Buscar categorias e subcategorias (se não vierem completas no body ou mesclar)
+    let categoriesList: any[] = []
+    if (Array.isArray(body.categorias) && body.categorias.length > 0) {
+      categoriesList = body.categorias.map((c) => ({
+        id: c.id,
+        name: c.name,
+        type: c.type,
+        budget_bucket: c.budget_bucket,
+        transaction_subcategories: (c.subcategories || []).map((s) => ({ id: s.id, name: s.name })),
+      }))
+    } else {
+      let categoriesQuery = supabase
+        .from('transaction_categories')
+        .select('id, name, type, budget_bucket, transaction_subcategories(id, name)')
+        .order('sort_order', { ascending: true })
 
-    if (targetFamilyId) {
-      categoriesQuery = categoriesQuery.eq('family_id', targetFamilyId)
+      if (targetFamilyId) {
+        categoriesQuery = categoriesQuery.eq('family_id', targetFamilyId)
+      }
+      const { data: categoriesData } = await categoriesQuery
+      categoriesList = categoriesData || []
     }
-    const { data: categoriesData } = await categoriesQuery
 
     // Buscar membros da família
     let membersQuery = supabase.from('family_members').select('id, name, is_admin')
@@ -310,9 +331,11 @@ DADOS FINANCEIROS REAIS DA FAMÍLIA (MÊS ATUAL: ${currentMonthStr.slice(0, 7)})
 `
 
     // Formatar categorias e subcategorias para o System Prompt
-    const categoriesContext = (categoriesData || [])
+    const categoriesContext = (categoriesList || [])
       .map((cat: any) => {
-        const subs = (cat.transaction_subcategories || []).map((s: any) => s.name).join(', ')
+        const subs = (cat.transaction_subcategories || [])
+          .map((s: any) => s.name || (s as any))
+          .join(', ')
         return `- Categoria: "${cat.name}" (Tipo: ${cat.type}, Balde: ${cat.budget_bucket || 'lifestyle'}${subs ? `, Subcategorias existentes: [${subs}]` : ''})`
       })
       .join('\n')
@@ -357,9 +380,21 @@ ${categoriesContext || 'Nenhuma categoria específica cadastrada ainda.'}
 Membros da família cadastrados:
 ${membersContext || 'Membro padrão'}
 
+REGRAS SEMÂNTICAS CRÍTICAS DE CATEGORIZAÇÃO:
+1. SERVIÇOS PESSOAIS, BELEZA, LAZER OU COMPRAS NUNCA DEVEM SER ALOCADOS EM CATEGORIAS FIXAS (como "Moradia", "Contas Fixas", "Saúde Básica" ou "Educação Básica").
+   Exemplos: Manicure, cabeleireiro, massagem, unhas, depilação, barbearia, compras de roupas, maquiagem, cinema pertencem SEMPRE a "Estilo de Vida" (ex: "Cuidados Pessoais" ou "Lazer & Beleza"), NUNCA a "Moradia" ou "Saúde".
+2. SE A DESPESA FOR CLARA COM VALOR (ex: "Manicure 140 reais", "Corte de cabelo 80", "Massagem 150"), MAS NÃO EXISTIR UMA CATEGORIA EXATA CADASTRADA NA FAMÍLIA:
+   - A IA NUNCA deve criar a categoria silenciosamente nem chutar uma categoria inadequada (por exemplo, jamais jogar Manicure em Saúde ou Moradia).
+   - O status DEVE SER OBRIGATORIAMENTE "clarificacao_categoria".
+   - "tipo_resposta": "transacao"
+   - "transacao": preencha a transação com a descrição ("Manicure"), valor (140.0), tipo ("despesa"), balde ("Estilo de Vida"), subcategoria provisória (ex: "Manicure") e categoria nula ou provisória.
+   - "mensagem_amigavel": exatamente no espírito: "Identifiquei R$ 140,00! Mas ainda não temos essa categoria cadastrada. Onde prefere organizar?"
+   - "pergunta_clarificacao": "Onde prefere organizar essa categoria?"
+   - "opcoes_sugestao": exatamente DUAS sugestões pertinentes com seus respectivos baldes entre parênteses, priorizando o balde correto (ex: ["Cuidados Pessoais (Estilo de Vida)", "Lazer & Beleza (Estilo de Vida)"]).
+
 Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido (response_format: json_object) com o seguinte esquema:
 {
-  "status": "sucesso" | "clarificacao" | "falta_valor" | "invalido" | "consulta",
+  "status": "sucesso" | "clarificacao" | "clarificacao_categoria" | "falta_valor" | "invalido" | "consulta",
   "tipo_resposta": "transacao" | "consulta",
   "resposta_consulta": string | null,
   "transacao": {
@@ -368,8 +403,8 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido (response_format: jso
     "valor": number | null,
     "tipo": "despesa" | "receita",
     "balde": "Necessidades Essenciais" | "Estilo de Vida" | "Metas & Investimentos",
-    "categoria": string,
-    "subcategoria": string,
+    "categoria": string | null,
+    "subcategoria": string | null,
     "metodo_pagamento": "pix" | "debito" | "credito" | "dinheiro" | null
   } | null,
   "pergunta_clarificacao": string | null,
@@ -387,16 +422,25 @@ Comportamentos esperados:
    - "mensagem_amigavel": O mesmo texto de resposta amigável.
    - NUNCA crie card de despesa para consultas.
 
-2. "sucesso" (LANÇAMENTO COM VALOR):
+2. "sucesso" (LANÇAMENTO COM VALOR E CATEGORIA JÁ EXISTENTE OU CLARA):
    - O usuário falou um gasto ou receita com valor (ex.: "almoço 45 reais no débito", "duas cervejas 80 reais", "salário de 5000 caiu").
+   - A categoria correspondente JÁ CONSTA nas categorias cadastradas da família acima.
    - "status": "sucesso"
    - "tipo_resposta": "transacao"
    - Preencha todos os campos da "transacao". O campo "valor" deve ser um float positivo em reais (ex: 45.0 ou 80.0). Preencha "estabelecimento" se houver.
-   - "categoria": use uma existente ou sugira a mais adequada.
+   - "categoria": nome exato de categoria existente ou compatível.
    - "subcategoria": use existente ou crie uma inteligente e específica.
    - "balde": classifique rigorosamente entre "Necessidades Essenciais", "Estilo de Vida" ou "Metas & Investimentos".
 
-3. "falta_valor" (LANÇAMENTO SEM VALOR):
+3. "clarificacao_categoria" (LANÇAMENTO CLARO, MAS CATEGORIA NÃO CADASTRADA):
+   - O usuário falou um gasto com valor compreensível (ex: "Manicure 140 reais", "Tatuagem 300 reais", "Personal trainer 200"), porém NÃO existe uma categoria cadastrada na família que corresponda especificamente a esse gasto.
+   - "status": "clarificacao_categoria"
+   - "tipo_resposta": "transacao"
+   - "transacao": preencha descricao, valor, balde correto, subcategoria, e deixe o usuário confirmar a nova categoria.
+   - "mensagem_amigavel": "Identifiquei R$ [VALOR]! Mas ainda não temos essa categoria cadastrada. Onde prefere organizar?"
+   - "opcoes_sugestao": DUAS opções pertinentes com seus respectivos baldes entre parênteses, ex: ["Cuidados Pessoais (Estilo de Vida)", "Lazer & Beleza (Estilo de Vida)"].
+
+4. "falta_valor" (LANÇAMENTO SEM VALOR):
    - O usuário citou um item ou compra claro (ex: "uma caixa de cerveja na parada certa", "almoço no restaurante", "gasolina no posto"), mas NÃO disse o valor monetário.
    - "status": "falta_valor"
    - "tipo_resposta": "transacao"
@@ -404,13 +448,13 @@ Comportamentos esperados:
    - "pergunta_clarificacao": "Quanto custou?"
    - "mensagem_amigavel": "Entendi: [Item]! Mas quanto custou?"
 
-4. "clarificacao" (VALOR EXISTE, MAS DESCRIÇÃO AMBÍGUA):
-   - Há um valor monetário identificado, mas o termo é ambíguo ou gíria (ex: "pindamonhangaba 8 reais").
+5. "clarificacao" (VALOR EXISTE, MAS DESCRIÇÃO TOTALMENTE AMBÍGUA OU GÍRIA):
+   - Há um valor monetário identificado, mas o termo é ambíguo ou gíria sem sentido financeiro reconhecível (ex: "pindamonhangaba 8 reais").
    - "status": "clarificacao"
    - "tipo_resposta": "transacao"
    - Preencha o valor na transacao, elabore "pergunta_clarificacao" e exatamente 3 "opcoes_sugestao".
 
-5. "invalido":
+6. "invalido":
    - Ruído, conversa desconexa sem sentido financeiro nem pergunta.
    - "status": "invalido"`
 
@@ -489,7 +533,14 @@ Comportamentos esperados:
     }
 
     // Normalização defensiva da resposta garantindo que os status e campos cheguem intactos
-    const validStatuses = ['sucesso', 'clarificacao', 'falta_valor', 'invalido', 'consulta']
+    const validStatuses = [
+      'sucesso',
+      'clarificacao',
+      'clarificacao_categoria',
+      'falta_valor',
+      'invalido',
+      'consulta',
+    ]
     const status = validStatuses.includes(parsedAiJson?.status) ? parsedAiJson.status : 'invalido'
 
     const isConsulta = status === 'consulta' || parsedAiJson?.tipo_resposta === 'consulta'
