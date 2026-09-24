@@ -95,12 +95,13 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   const chatScrollRef = useRef<HTMLDivElement | null>(null)
   const recognitionRef = useRef<any>(null)
   const latestTranscriptRef = useRef<string>('')
+  // Buffers dedicados para evitar duplicações cumulativas de interimResults e reinícios
+  const finalBufferRef = useRef<string>('')
   const hadErrorRef = useRef<boolean>(false)
   const silenceTimerRef = useRef<any>(null)
   const userStoppedManuallyRef = useRef<boolean>(false)
   const isListeningForAmountOnlyRef = useRef<boolean>(false)
   const pendingTransactionRef = useRef<ParsedVoiceTransaction | null>(null)
-
   // Manter refs sincronizadas
   useEffect(() => {
     pendingTransactionRef.current = pendingTransaction
@@ -249,6 +250,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       ])
       setTextoFalado('')
       latestTranscriptRef.current = ''
+      finalBufferRef.current = ''
 
       try {
         setIsProcessingAi(true)
@@ -535,11 +537,44 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         }
 
         recognition.onresult = (event: any) => {
-          const transcript = Array.from(event.results)
-            .map((result: any) => result[0].transcript)
-            .join('')
-          latestTranscriptRef.current = transcript
-          setTextoFalado(transcript)
+          // Separa os resultados da sessão atual entre finalizados (isFinal === true)
+          // e segmento provisório (interim/não-final) corrente.
+          let sessionFinal = ''
+          let sessionInterim = ''
+
+          if (event.results) {
+            for (let i = 0; i < event.results.length; i++) {
+              const res = event.results[i]
+              const transcriptPiece = res[0]?.transcript || ''
+              if (res.isFinal) {
+                sessionFinal = sessionFinal
+                  ? `${sessionFinal} ${transcriptPiece.trim()}`
+                  : transcriptPiece.trim()
+              } else {
+                sessionInterim = sessionInterim
+                  ? `${sessionInterim} ${transcriptPiece.trim()}`
+                  : transcriptPiece.trim()
+              }
+            }
+          }
+
+          // Combina o buffer de sessões anteriores com os finais desta sessão
+          let combinedFinal = finalBufferRef.current.trim()
+          if (sessionFinal) {
+            combinedFinal = combinedFinal ? `${combinedFinal} ${sessionFinal}` : sessionFinal
+          }
+
+          // O texto completo atual é o buffer final acumulado + o segmento provisório corrente (sempre substituído)
+          let fullTranscript = combinedFinal
+          if (sessionInterim) {
+            fullTranscript = fullTranscript ? `${fullTranscript} ${sessionInterim}` : sessionInterim
+          }
+
+          // Remove espaços múltiplos
+          fullTranscript = fullTranscript.replace(/\s+/g, ' ').trim()
+
+          latestTranscriptRef.current = fullTranscript
+          setTextoFalado(fullTranscript)
 
           // Reiniciar timer de 3s a cada fala detectada
           scheduleSilenceProcessing()
@@ -586,6 +621,13 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           recognitionRef.current = null
           setIsListening(false)
           setAudioDetected(false)
+
+          // Ao encerrar a sessão de reconhecimento atual, congela o que já foi capturado no finalBufferRef
+          // Isso garante que se o recognition reabrir/reiniciar sem o usuário ter cancelado,
+          // o texto já falado é preservado e não se perde nem se duplica
+          if (latestTranscriptRef.current.trim()) {
+            finalBufferRef.current = latestTranscriptRef.current.trim()
+          }
 
           const finalCapturado = latestTranscriptRef.current.trim()
 
@@ -640,6 +682,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       setInputVal('')
       setTextoFalado('')
       latestTranscriptRef.current = ''
+      finalBufferRef.current = ''
       setPendingTransaction(null)
       pendingTransactionRef.current = null
       setErrorMessage(null)
@@ -792,6 +835,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     setIsListeningForAmountOnly(false)
     isListeningForAmountOnlyRef.current = false
     latestTranscriptRef.current = ''
+    finalBufferRef.current = ''
     startRecording()
   }
 
@@ -1072,6 +1116,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
               } else {
                 setTextoFalado('')
                 latestTranscriptRef.current = ''
+                finalBufferRef.current = ''
                 startRecording({ forAmountOnly: true })
               }
             }}

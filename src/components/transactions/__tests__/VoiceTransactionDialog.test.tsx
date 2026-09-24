@@ -864,6 +864,185 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     })
   })
 
+  it('não duplica nem repete trechos cumulativos durante a fala (interim substituído e final cumulativo sem repetição)', async () => {
+    let capturedRecognitionInstance: any = null
+
+    function MockSpeechRecognition() {
+      const self = {
+        lang: '',
+        continuous: false,
+        interimResults: true,
+        maxAlternatives: 1,
+        onstart: null as any,
+        onaudiostart: null as any,
+        onspeechstart: null as any,
+        onresult: null as any,
+        onerror: null as any,
+        onend: null as any,
+        start() {
+          if (self.onstart) self.onstart()
+        },
+        stop() {
+          if (self.onend) self.onend()
+        },
+        abort() {},
+      }
+      capturedRecognitionInstance = self
+      return self
+    }
+
+    ;(window as any).SpeechRecognition = MockSpeechRecognition
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(capturedRecognitionInstance).toBeTruthy()
+    })
+
+    // Simula a sequência exata de eventos reportada no bug:
+    // "testar" -> "testar mesado" -> "testar mesclado em" -> "testar mesclado em duas falas"
+    // Com interimResults = true, o navegador dispara sucessivos eventos com o mesmo índice ou adicionando
+    capturedRecognitionInstance.onresult({
+      results: [Object.assign([{ transcript: 'testar' }], { isFinal: false })],
+    })
+
+    // Em tempo real deve exibir provisoriamente "testar"
+    await waitFor(() => {
+      expect(screen.getByText('“testar”')).toBeDefined()
+    })
+
+    capturedRecognitionInstance.onresult({
+      results: [Object.assign([{ transcript: 'testar mesado' }], { isFinal: false })],
+    })
+
+    // Substituiu o provisório, não duplicou "testartestar"
+    await waitFor(() => {
+      expect(screen.getByText('“testar mesado”')).toBeDefined()
+      expect(screen.queryByText(/testartestar/i)).toBeNull()
+    })
+
+    capturedRecognitionInstance.onresult({
+      results: [Object.assign([{ transcript: 'testar mesclado em' }], { isFinal: false })],
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('“testar mesclado em”')).toBeDefined()
+    })
+
+    // Finalização do trecho completo pelo navegador
+    capturedRecognitionInstance.onresult({
+      results: [
+        Object.assign([{ transcript: 'testar mesclado em duas falas' }], { isFinal: true }),
+      ],
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('“testar mesclado em duas falas”')).toBeDefined()
+      expect(screen.queryByText(/testartestartestar/i)).toBeNull()
+      expect(screen.queryByText(/mesado/i)).toBeNull()
+    })
+
+    // Conclusão manual do usuário
+    const micButton = screen.getByTitle('Toque para concluir')
+    fireEvent.click(micButton)
+
+    await waitFor(() => {
+      expect(mockParseVoiceWithAi).toHaveBeenCalledWith(
+        expect.objectContaining({
+          texto: 'testar mesclado em duas falas',
+        }),
+      )
+    })
+  })
+
+  it('preserva texto anterior sem duplicações quando o recognition reinicia/reabre na mesma escuta', async () => {
+    let capturedRecognitionInstance: any = null
+
+    function MockSpeechRecognition() {
+      const self = {
+        lang: '',
+        continuous: false,
+        interimResults: true,
+        maxAlternatives: 1,
+        onstart: null as any,
+        onaudiostart: null as any,
+        onspeechstart: null as any,
+        onresult: null as any,
+        onerror: null as any,
+        onend: null as any,
+        start() {
+          if (self.onstart) self.onstart()
+        },
+        stop() {
+          if (self.onend) self.onend()
+        },
+        abort() {},
+      }
+      capturedRecognitionInstance = self
+      return self
+    }
+
+    ;(window as any).SpeechRecognition = MockSpeechRecognition
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(capturedRecognitionInstance).toBeTruthy()
+    })
+
+    // Sessão 1: fala a primeira parte com isFinal = true
+    capturedRecognitionInstance.onresult({
+      results: [Object.assign([{ transcript: 'testar mesclar' }], { isFinal: true })],
+    })
+
+    // O navegador dispara onend (ex: oscilação ou pausa no mobile)
+    // O texto foi armazenado no buffer
+    capturedRecognitionInstance.onend()
+
+    // O usuário retoma a fala clicando no microfone para continuar
+    const startMicBtn = screen.getByTitle('Toque para começar a falar')
+    fireEvent.click(startMicBtn)
+
+    // Sessão 2: nova instância ou nova rodada de resultados com interim seguido de final
+    capturedRecognitionInstance.onresult({
+      results: [Object.assign([{ transcript: 'em duas falas' }], { isFinal: false })],
+    })
+
+    // Na tela em tempo real deve unir a primeira parte finalizada com o provisório atual
+    await waitFor(() => {
+      expect(screen.getByText('“testar mesclar em duas falas”')).toBeDefined()
+    })
+
+    // Finaliza a segunda parte
+    capturedRecognitionInstance.onresult({
+      results: [Object.assign([{ transcript: 'em duas falas' }], { isFinal: true })],
+    })
+
+    // Conclusão
+    const micButton = screen.getByTitle('Toque para concluir')
+    fireEvent.click(micButton)
+
+    await waitFor(() => {
+      expect(mockParseVoiceWithAi).toHaveBeenCalledWith(
+        expect.objectContaining({
+          texto: 'testar mesclar em duas falas',
+        }),
+      )
+    })
+  })
+
   it('salva transação e fecha modal quando o usuário clica em [ ✅ Confirmar Lançamento ]', async () => {
     mockCreateTransaction.mockResolvedValueOnce({ id: 'tx-1' })
 
