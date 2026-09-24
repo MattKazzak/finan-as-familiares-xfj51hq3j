@@ -87,7 +87,7 @@ export const NewTransactionActionSheet: React.FC<NewTransactionActionSheetProps>
             <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-emerald-200/80">
               <span className="flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-emerald-300" />
-                Interpretação automática de valor, balde e categoria
+                Interpretação inteligente
               </span>
               <span className="font-semibold text-emerald-300 underline">Toque para falar →</span>
             </div>
