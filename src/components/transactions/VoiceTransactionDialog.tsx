@@ -961,62 +961,111 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
   // Renderizador do Card Verde de Confirmação dentro do Chat
   const renderSuccessCard = (data: ParsedVoiceTransaction) => {
-    const bucketLabel = data.bucketSuggestion
-      ? BUCKET_METADATA[
-          (data.bucketSuggestion === 'goals'
-            ? 'future'
-            : data.bucketSuggestion === 'essential'
-              ? 'essentials'
-              : data.bucketSuggestion) as BudgetBucket
-        ]?.shortLabel || 'Estilo de Vida'
-      : 'Estilo de Vida'
+    const bucketKey = (
+      data.bucketSuggestion === 'goals'
+        ? 'future'
+        : data.bucketSuggestion === 'essential'
+          ? 'essentials'
+          : data.bucketSuggestion || 'lifestyle'
+    ) as BudgetBucket
+    const bucketInfo = BUCKET_METADATA[bucketKey]
+    const bucketLabel = bucketInfo?.shortLabel || 'Estilo de Vida'
+    const categoryName = data.categoryNameSuggestion || 'Geral'
+    const isExpense = data.type !== 'income'
 
     return (
-      <div className="mt-2.5 rounded-2xl border border-emerald-300 bg-gradient-to-br from-emerald-50/95 via-teal-50/70 to-white p-3.5 space-y-3 shadow-md">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
+      <div className="mt-2.5 w-full rounded-2xl border border-emerald-300/80 bg-gradient-to-br from-emerald-50/95 via-teal-50/60 to-white p-3 sm:p-3.5 space-y-3 shadow-md text-left overflow-hidden">
+        {/* Cabeçalho: Tipo à esquerda + Precisão à direita */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
             <span
-              className={`w-6 h-6 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-xs ${
-                data.type === 'income' ? 'bg-emerald-600' : 'bg-rose-600'
+              className={`w-6 h-6 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-xs shrink-0 ${
+                isExpense ? 'bg-rose-600' : 'bg-emerald-600'
               }`}
             >
-              {data.type === 'income' ? (
-                <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
-              ) : (
+              {isExpense ? (
                 <ArrowDownRight className="w-3.5 h-3.5 stroke-[2.5]" />
+              ) : (
+                <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
               )}
             </span>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
-              {data.type === 'income' ? 'Receita Detectada' : 'Despesa Detectada'}
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 truncate">
+              {isExpense ? 'Despesa Detectada' : 'Receita Detectada'}
             </span>
           </div>
 
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0 whitespace-nowrap">
             {Math.round(data.confidence * 100)}% precisão
           </span>
         </div>
 
-        <div>
-          <h4 className="text-sm font-bold text-slate-900 leading-snug break-words">
-            {data.description}
-          </h4>
-          <div className="mt-0.5 flex items-baseline gap-2">
-            <span className="text-xl font-extrabold text-slate-900 tabular-nums">
+        {/* Bloco Central Mobile-First: Descrição, Valor em Destaque e Categorização Clara */}
+        <div className="space-y-2.5 rounded-xl bg-white/85 p-2.5 sm:p-3 border border-emerald-200/70 shadow-xs">
+          {/* Título / Descrição */}
+          <div className="space-y-0.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 block">
+              Descrição
+            </span>
+            <h4 className="text-sm font-bold text-slate-900 leading-snug break-words">
+              {data.description}
+            </h4>
+            {data.establishment && (
+              <p className="text-[11px] text-slate-500 break-words">
+                Local: <strong className="text-slate-700">{data.establishment}</strong>
+              </p>
+            )}
+          </div>
+
+          {/* Valor em destaque próprio */}
+          <div className="pt-2 border-t border-slate-100 flex flex-col">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+              Valor
+            </span>
+            <span
+              className={`text-2xl font-black tabular-nums tracking-tight break-words ${
+                isExpense ? 'text-slate-950' : 'text-emerald-700'
+              }`}
+            >
               {data.amountCents > 0 ? data.amountFormatted : 'R$ 0,00'}
             </span>
-            <span className="text-[11px] font-medium text-emerald-800">
-              ({data.categoryNameSuggestion || 'Geral'} • {bucketLabel})
+          </div>
+
+          {/* Categoria e Balde bem visíveis em linhas/chips dedicados */}
+          <div className="pt-2 border-t border-slate-100 space-y-1.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 block">
+              Classificação Orçamentária
             </span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {/* Chip da Categoria */}
+              <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-100/90 text-[#064E3B] border border-emerald-300/80 max-w-full">
+                <Tag className="w-3 h-3 shrink-0 text-emerald-700" />
+                <span className="truncate" title={categoryName}>
+                  {categoryName}
+                  {data.subcategoryNameSuggestion ? ` › ${data.subcategoryNameSuggestion}` : ''}
+                </span>
+              </span>
+
+              {/* Chip do Balde Orçamentário */}
+              <span
+                className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg border max-w-full ${
+                  bucketInfo?.bgLight || 'bg-amber-50 text-amber-800 border-amber-200'
+                }`}
+                title={`Balde: ${bucketInfo?.name || bucketLabel}`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0 opacity-80" />
+                <span className="truncate">{bucketLabel}</span>
+              </span>
+            </div>
           </div>
         </div>
 
         {/* Botões de Ação no próprio balão de chat */}
-        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-emerald-200/70">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-emerald-200/70">
           <Button
             type="button"
             variant="outline"
             onClick={() => handleAdjustManually(data)}
-            className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-9 gap-1"
+            className="w-full rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10 gap-1.5 order-2 sm:order-1"
           >
             <SlidersHorizontal className="w-3.5 h-3.5" />
             Ajustar
@@ -1026,10 +1075,10 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             type="button"
             onClick={() => handleConfirmTransaction(data)}
             disabled={isSaving || data.amountCents <= 0}
-            className="bg-[#064E3B] hover:bg-emerald-900 text-white rounded-xl font-bold text-xs h-9 gap-1.5 shadow-sm transition-all"
+            className="w-full bg-[#064E3B] hover:bg-emerald-900 text-white rounded-xl font-bold text-xs h-10 gap-1.5 shadow-sm transition-all order-1 sm:order-2"
           >
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
-            {isSaving ? 'Salvando...' : '✅ Confirmar Lançamento'}
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
+            <span className="truncate">{isSaving ? 'Salvando...' : '✅ Confirmar Lançamento'}</span>
           </Button>
         </div>
       </div>
