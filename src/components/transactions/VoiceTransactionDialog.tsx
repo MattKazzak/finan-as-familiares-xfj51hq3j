@@ -76,12 +76,15 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   // Estado específico para o fluxo 'falta_valor'
   const [missingAmountInput, setMissingAmountInput] = useState('')
   const [isListeningForAmountOnly, setIsListeningForAmountOnly] = useState(false)
+  const missingAmountInputRef = useRef<HTMLInputElement | null>(null)
 
   // Refs de controle
   const recognitionRef = useRef<any>(null)
   const latestTranscriptRef = useRef<string>('')
   const hadErrorRef = useRef<boolean>(false)
   const silenceTimerRef = useRef<any>(null)
+  const shouldKeepListeningRef = useRef<boolean>(false)
+  const userStoppedManuallyRef = useRef<boolean>(false)
   const isListeningForAmountOnlyRef = useRef<boolean>(false)
   const parsedResultRef = useRef<ParsedVoiceTransaction | null>(null)
 
@@ -105,6 +108,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   // Parar gravação ativa
   const stopListening = useCallback(() => {
     clearSilenceTimer()
+    shouldKeepListeningRef.current = false
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop()
@@ -119,7 +123,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   }, [clearSilenceTimer])
 
   // Parar gravação e disparar interpretação com IA (Edge Function)
-  // BUG 1 CORREÇÃO: usa latestTranscriptRef para acessar o texto atualizado sem depender de textoFalado
   const handleStopAndProcess = useCallback(
     async (overrideText?: string) => {
       stopListening()
@@ -188,6 +191,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       // 1. Limpar estados anteriores
       setErrorMessage(null)
       hadErrorRef.current = false
+      userStoppedManuallyRef.current = false
+      shouldKeepListeningRef.current = true
       setAudioDetected(false)
       clearSilenceTimer()
 
@@ -235,51 +240,70 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           setAudioDetected(true)
         }
 
-        // Função de finalização por timeout de silêncio (2.8s ~ 3.0s após última fala)
+        // Função para processar quando o silêncio de 3s expira de fato
+        const triggerFinalProcessing = () => {
+          clearSilenceTimer()
+          shouldKeepListeningRef.current = false
+
+          if (recognitionRef.current) {
+            try {
+              recognitionRef.current.stop()
+            } catch {
+              // silenciar
+            }
+          }
+          setIsListening(false)
+          setAudioDetected(false)
+
+          const captured = latestTranscriptRef.current.trim()
+          if (!captured) {
+            setIsListeningForAmountOnly(false)
+            return
+          }
+
+          if (isListeningForAmountOnlyRef.current && parsedResultRef.current) {
+            setIsProcessingAi(true)
+            parseVoiceWithAi({
+              texto: captured,
+              familyId: family?.id,
+              categories,
+            })
+              .then((amountParsed) => {
+                if (amountParsed.amountCents > 0) {
+                  handleMergeAmountIntoTransaction(
+                    amountParsed.amountCents,
+                    amountParsed.paymentMethod,
+                  )
+                } else {
+                  toast({
+                    title: 'Valor não identificado',
+                    description:
+                      'Não conseguimos identificar o valor falado. Tente digitar ou falar novamente.',
+                    variant: 'destructive',
+                  })
+                }
+              })
+              .catch((err) => {
+                console.error('Erro ao interpretar áudio de valor:', err)
+              })
+              .finally(() => {
+                setIsProcessingAi(false)
+                setIsListeningForAmountOnly(false)
+              })
+          } else {
+            handleStopAndProcess(captured)
+          }
+        }
+
+        // Função de finalização por timeout de silêncio (3000ms após última fala)
         const scheduleSilenceProcessing = () => {
           clearSilenceTimer()
           silenceTimerRef.current = setTimeout(() => {
-            const captured = latestTranscriptRef.current.trim()
-            if (captured) {
-              if (isListeningForAmountOnlyRef.current && parsedResultRef.current) {
-                // Processar apenas valor e mesclar
-                stopListening()
-                setIsProcessingAi(true)
-                parseVoiceWithAi({
-                  texto: captured,
-                  familyId: family?.id,
-                  categories,
-                })
-                  .then((amountParsed) => {
-                    if (amountParsed.amountCents > 0) {
-                      handleMergeAmountIntoTransaction(
-                        amountParsed.amountCents,
-                        amountParsed.paymentMethod,
-                      )
-                    } else {
-                      // Não detectou valor válido
-                      toast({
-                        title: 'Valor não identificado',
-                        description:
-                          'Não conseguimos identificar o valor falado. Tente digitar ou falar novamente.',
-                        variant: 'destructive',
-                      })
-                    }
-                  })
-                  .catch((err) => {
-                    console.error('Erro ao interpretar áudio de valor:', err)
-                  })
-                  .finally(() => {
-                    setIsProcessingAi(false)
-                  })
-              } else {
-                handleStopAndProcess(captured)
-              }
-            }
-          }, 2900)
+            triggerFinalProcessing()
+          }, 3000)
         }
 
-        // onresult: captura resultados parciais e finais em tempo real e reinicia timer de silêncio
+        // onresult: captura resultados parciais e finais em tempo real acumulando em latestTranscriptRef
         recognition.onresult = (event: any) => {
           const transcript = Array.from(event.results)
             .map((result: any) => result[0].transcript)
@@ -287,15 +311,16 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           latestTranscriptRef.current = transcript
           setTextoFalado(transcript)
 
-          // Reiniciar timer humanizado a cada fala detectada
+          // Reiniciar timer humanizado de 3s a cada fala detectada
           scheduleSilenceProcessing()
         }
 
         // onerror: tratamento amigável sem fechar o diálogo
         recognition.onerror = (event: any) => {
           console.warn('SpeechRecognition onerror:', event.error)
-          clearSilenceTimer()
           hadErrorRef.current = true
+          shouldKeepListeningRef.current = false
+          clearSilenceTimer()
           setIsListening(false)
           setAudioDetected(false)
           setIsListeningForAmountOnly(false)
@@ -324,16 +349,38 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           }
         }
 
-        // onend: se houve texto capturado, envia para a IA e segue confirmação;
-        // se não houve texto e não houve erro, volta ao estado inicial pronto para ouvir de novo (sem fechar)
+        // onend: se fechamento prematuro pelo navegador mobile antes dos 3s e sem parada manual -> REINICIAR
         recognition.onend = () => {
+          // (a) Se ainda deve continuar ouvindo (silêncio de 3s NÃO expirou e usuário não parou manualmente nem houve erro)
+          if (
+            shouldKeepListeningRef.current &&
+            !userStoppedManuallyRef.current &&
+            !hadErrorRef.current
+          ) {
+            try {
+              // Reinicia o reconhecimento mantendo o texto acumulado em latestTranscriptRef
+              recognition.start()
+              setIsListening(true)
+              return
+            } catch (restartErr) {
+              // Se falhar (ex: InvalidStateError porque já está rodando ou estado travado), continua fluxo normal
+              console.warn('Erro ao reiniciar recognition no onend prematuro:', restartErr)
+            }
+          }
+
+          // (b) Silêncio expirou ou usuário parou manualmente ou erro
           clearSilenceTimer()
           setIsListening(false)
           setAudioDetected(false)
           recognitionRef.current = null
 
           const finalCapturado = latestTranscriptRef.current.trim()
-          if (finalCapturado && !hadErrorRef.current) {
+
+          // Se a parada foi manual pelo usuário, processa imediatamente o que tiver acumulado
+          if (userStoppedManuallyRef.current && finalCapturado && !hadErrorRef.current) {
+            userStoppedManuallyRef.current = false
+            shouldKeepListeningRef.current = false
+
             if (isListeningForAmountOnlyRef.current && parsedResultRef.current) {
               setIsProcessingAi(true)
               parseVoiceWithAi({
@@ -357,7 +404,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                   }
                 })
                 .catch((err) => {
-                  console.error('Erro ao interpretar áudio de valor no onend:', err)
+                  console.error('Erro ao interpretar áudio de valor no onend manual:', err)
                 })
                 .finally(() => {
                   setIsProcessingAi(false)
@@ -366,7 +413,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             } else {
               handleStopAndProcess(finalCapturado)
             }
-          } else {
+          } else if (!shouldKeepListeningRef.current) {
             setIsListeningForAmountOnly(false)
           }
         }
@@ -378,6 +425,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       } catch (err: any) {
         console.warn('Erro síncrono ao iniciar SpeechRecognition:', err)
         clearSilenceTimer()
+        shouldKeepListeningRef.current = false
         setIsListening(false)
         setAudioDetected(false)
         setIsListeningForAmountOnly(false)
@@ -392,14 +440,21 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       family?.id,
       handleMergeAmountIntoTransaction,
       handleStopAndProcess,
-      stopListening,
       toast,
     ],
   )
 
+  // Auto-foco no input de valor quando entra no estado 'falta_valor'
+  useEffect(() => {
+    if (parsedResult?.aiStatus === 'falta_valor') {
+      const timer = setTimeout(() => {
+        missingAmountInputRef.current?.focus()
+      }, 80)
+      return () => clearTimeout(timer)
+    }
+  }, [parsedResult?.aiStatus])
+
   // Resetar ao abrir/fechar o modal
-  // BUG 1 CORREÇÃO: este useEffect deve rodar APENAS quando o modal abre/fecha (dependência apenas de open),
-  // sem recriar o recognition a cada re-render ou mudança de membros/startRecording.
   useEffect(() => {
     if (open) {
       setTextoFalado('')
@@ -409,6 +464,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       setMissingAmountInput('')
       setIsListeningForAmountOnly(false)
       hadErrorRef.current = false
+      userStoppedManuallyRef.current = false
+      shouldKeepListeningRef.current = false
       setAudioDetected(false)
       setIsProcessingAi(false)
       setSelectedMemberId(currentMember?.id || members[0]?.id || '')
@@ -736,9 +793,28 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                     <div className="absolute w-24 h-24 rounded-full bg-emerald-500/30 animate-pulse pointer-events-none" />
                     <button
                       type="button"
-                      onClick={stopListening}
+                      onClick={() => {
+                        // Usuário clicou no microfone para parar/concluir manualmente
+                        userStoppedManuallyRef.current = true
+                        shouldKeepListeningRef.current = false
+                        clearSilenceTimer()
+                        if (recognitionRef.current) {
+                          try {
+                            recognitionRef.current.stop()
+                          } catch {
+                            // silenciar
+                          }
+                        } else {
+                          const captured = latestTranscriptRef.current.trim()
+                          if (captured) {
+                            handleStopAndProcess(captured)
+                          } else {
+                            stopListening()
+                          }
+                        }
+                      }}
                       className="w-16 h-16 rounded-full bg-[#064E3B] text-white flex items-center justify-center shadow-lg shadow-emerald-900/30 z-10 transition-transform active:scale-95"
-                      title="Toque para pausar"
+                      title="Toque para concluir"
                     >
                       <Mic className="w-8 h-8 animate-pulse text-emerald-300" />
                     </button>
@@ -1030,32 +1106,49 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         {/* ================= ESTADO 2B-2: IA IDENTIFICOU "FALTA_VALOR" (CONTEXTO PRESERVADO, PERGUNTAR QUANTO CUSTOU) ================= */}
         {!isProcessingAi && isMissingAmount && parsedResult && (
           <div className="space-y-4 pt-2 animate-in fade-in-50 duration-200">
-            {/* Card com o que já foi entendido */}
-            <div className="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50/90 via-blue-50/50 to-white p-4 space-y-2.5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800 flex items-center gap-1.5">
-                  <span>📝 Item ou Local Identificado</span>
-                </span>
-                {parsedResult.categoryNameSuggestion && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-900 border border-sky-200">
-                    {parsedResult.categoryNameSuggestion}
-                  </span>
-                )}
-              </div>
+            {/* Card no formato: "Entendi: [descricao] em [categoria/balde]" */}
+            {(() => {
+              const bucketLabel = parsedResult.bucketSuggestion
+                ? BUCKET_METADATA[
+                    (parsedResult.bucketSuggestion === 'goals'
+                      ? 'future'
+                      : parsedResult.bucketSuggestion === 'essential'
+                        ? 'essentials'
+                        : parsedResult.bucketSuggestion) as BudgetBucket
+                  ]?.shortLabel || 'Estilo de Vida'
+                : 'Estilo de Vida'
+              const categoryOrBucket = parsedResult.categoryNameSuggestion
+                ? `${parsedResult.categoryNameSuggestion} (${bucketLabel})`
+                : bucketLabel
 
-              <div className="space-y-1">
-                <h4 className="text-base font-bold text-slate-900 leading-snug break-words">
-                  {parsedResult.description}
-                </h4>
-                {parsedResult.establishment &&
-                  parsedResult.establishment.toLowerCase() !==
-                    parsedResult.description.toLowerCase() && (
-                    <p className="text-xs text-sky-900 font-medium">
-                      Local: <strong>{parsedResult.establishment}</strong>
-                    </p>
-                  )}
-              </div>
-            </div>
+              return (
+                <div className="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50/90 via-blue-50/50 to-white p-4 space-y-2.5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800 flex items-center gap-1.5">
+                      <span>📝 Item Identificado</span>
+                    </span>
+                    {parsedResult.categoryNameSuggestion && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-900 border border-sky-200">
+                        {parsedResult.categoryNameSuggestion}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <h4 className="text-base font-bold text-slate-900 leading-snug break-words">
+                      Entendi: {parsedResult.description} em {categoryOrBucket}
+                    </h4>
+                    {parsedResult.establishment &&
+                      parsedResult.establishment.toLowerCase() !==
+                        parsedResult.description.toLowerCase() && (
+                        <p className="text-xs text-sky-900 font-medium">
+                          Local: <strong>{parsedResult.establishment}</strong>
+                        </p>
+                      )}
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Pergunta "Quanto custou?" com 2 caminhos rápidos */}
             <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3.5 shadow-xs">
@@ -1069,7 +1162,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 </div>
               </div>
 
-              {/* CAMINHO A: Digitação de valor */}
+              {/* CAMINHO A: Digitação de valor com máscara e foco automático */}
               <form onSubmit={handleConfirmMissingAmount} className="space-y-2">
                 <label className="text-[11px] font-semibold text-slate-600 block">
                   Digite o valor:
@@ -1080,12 +1173,13 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                       R$
                     </span>
                     <Input
+                      ref={missingAmountInputRef}
                       type="text"
                       inputMode="decimal"
                       placeholder="0,00"
                       value={missingAmountInput}
                       onChange={(e) => setMissingAmountInput(e.target.value)}
-                      className="pl-10 text-base font-bold tabular-nums rounded-xl h-10 bg-slate-50 border-slate-200"
+                      className="pl-10 text-base font-bold tabular-nums rounded-xl h-10 bg-slate-50 border-slate-200 focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
                       autoFocus
                     />
                   </div>
@@ -1115,7 +1209,16 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                   type="button"
                   onClick={() => {
                     if (isListening) {
-                      stopListening()
+                      userStoppedManuallyRef.current = true
+                      shouldKeepListeningRef.current = false
+                      clearSilenceTimer()
+                      if (recognitionRef.current) {
+                        try {
+                          recognitionRef.current.stop()
+                        } catch {
+                          // silenciar
+                        }
+                      }
                     } else {
                       setTextoFalado('')
                       latestTranscriptRef.current = ''

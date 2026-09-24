@@ -191,4 +191,50 @@ describe('voice-ai service (fim do fallback silencioso)', () => {
     expect(res.friendlyMessage).toContain('Quanto custou?')
     expect(res.aiError).toBeNull()
   })
+
+  it('aceita e mapeia formalmente os 4 status suportados pela IA: sucesso, clarificacao, falta_valor, invalido', async () => {
+    const statuses: Array<'sucesso' | 'clarificacao' | 'falta_valor' | 'invalido'> = [
+      'sucesso',
+      'clarificacao',
+      'falta_valor',
+      'invalido',
+    ]
+
+    for (const status of statuses) {
+      vi.mocked(supabase.functions.invoke).mockResolvedValueOnce({
+        data: {
+          status,
+          transacao:
+            status === 'sucesso'
+              ? {
+                  descricao: 'Teste',
+                  valor: 50,
+                  tipo: 'despesa',
+                  balde: 'Estilo de Vida',
+                  categoria: 'Lazer',
+                  subcategoria: 'Cinema',
+                  metodo_pagamento: 'pix',
+                }
+              : status === 'falta_valor'
+                ? {
+                    descricao: 'Gasolina no posto',
+                    valor: null,
+                    tipo: 'despesa',
+                    balde: 'Necessidades Essenciais',
+                    categoria: 'Transporte',
+                    subcategoria: 'Combustível',
+                    metodo_pagamento: null,
+                  }
+                : null,
+          pergunta_clarificacao: status === 'falta_valor' ? 'Quanto custou?' : null,
+          opcoes_sugestao: null,
+          mensagem_amigavel: 'ok',
+        },
+        error: null,
+      })
+
+      const res = await parseVoiceWithAi({ texto: 'teste' })
+      expect(res.aiStatus).toBe(status)
+    }
+  })
 })

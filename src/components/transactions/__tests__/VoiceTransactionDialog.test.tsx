@@ -323,7 +323,7 @@ describe('VoiceTransactionDialog', () => {
     expect(screen.getByTitle('Toque para começar a falar')).toBeDefined()
   })
 
-  it('ao disparar onend com texto capturado, invoca a IA e exibe card de sucesso com confirmação', async () => {
+  it('ao disparar onend com texto capturado via parada manual do microfone, invoca a IA e exibe card de sucesso com confirmação', async () => {
     let capturedRecognitionInstance: any = null
 
     function MockSpeechRecognition() {
@@ -369,8 +369,9 @@ describe('VoiceTransactionDialog', () => {
       results: [[{ transcript: 'Almoço 45 reais no débito' }]],
     })
 
-    // Simula término da fala
-    capturedRecognitionInstance.onend()
+    // Usuário clica no botão do microfone para concluir a fala (parada manual)
+    const micButton = screen.getByTitle('Toque para concluir')
+    fireEvent.click(micButton)
 
     await waitFor(() => {
       expect(mockParseVoiceWithAi).toHaveBeenCalledWith(
@@ -773,8 +774,9 @@ describe('VoiceTransactionDialog', () => {
     expect(abortCallCount).toBe(0)
     expect(startCallCount).toBe(1)
 
-    // Quando terminar a fala, chama onend uma única vez
-    capturedRecognitionInstance.onend()
+    // Quando o usuário conclui clicando no microfone
+    const micButton = screen.getByTitle('Toque para concluir')
+    fireEvent.click(micButton)
 
     await waitFor(() => {
       expect(mockParseVoiceWithAi).toHaveBeenCalledWith(
@@ -817,8 +819,8 @@ describe('VoiceTransactionDialog', () => {
     fireEvent.click(screen.getByText('Processar com IA'))
 
     await waitFor(() => {
-      // Exibe card com o que já foi entendido
-      expect(screen.getByText('2 pacotes de peta')).toBeDefined()
+      // Exibe card com o que já foi entendido no formato "Entendi: [descricao] em [categoria/balde]"
+      expect(screen.getByText(/Entendi:\s*2 pacotes de peta\s*em\s*Alimentação/i)).toBeDefined()
       expect(screen.getByText('Supermercado')).toBeDefined()
       expect(screen.getByText('Quanto custou?')).toBeDefined()
       expect(screen.getByText('Confirmar Valor')).toBeDefined()
@@ -879,6 +881,237 @@ describe('VoiceTransactionDialog', () => {
           title: expect.stringContaining('Lançamento registrado com sucesso'),
         }),
       )
+    })
+  })
+
+  it('mobile: onend prematuro pelo navegador REINICIA o recognition e NÃO chama handleStopAndProcess antes do silêncio expirar', async () => {
+    let capturedRecognitionInstance: any = null
+    let startCallCount = 0
+
+    function MockSpeechRecognition() {
+      const self = {
+        lang: '',
+        continuous: false,
+        interimResults: false,
+        maxAlternatives: 1,
+        onstart: null as any,
+        onaudiostart: null as any,
+        onspeechstart: null as any,
+        onresult: null as any,
+        onerror: null as any,
+        onend: null as any,
+        start() {
+          startCallCount++
+          if (self.onstart) self.onstart()
+        },
+        stop() {
+          if (self.onend) self.onend()
+        },
+        abort() {},
+      }
+      capturedRecognitionInstance = self
+      return self
+    }
+
+    ;(window as any).SpeechRecognition = MockSpeechRecognition
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(capturedRecognitionInstance).toBeTruthy()
+      expect(startCallCount).toBe(1)
+    })
+
+    // Usuário fala primeiro fragmento
+    capturedRecognitionInstance.onresult({
+      results: [[{ transcript: 'uma caixa de cerveja' }]],
+    })
+
+    // Navegador mobile dispara onend prematuramente (pausa curta de respiração do usuário, sem expirar o timer de 3s)
+    capturedRecognitionInstance.onend()
+
+    // Deve ter reiniciado o recognition (startCallCount aumentou para 2)
+    expect(startCallCount).toBe(2)
+    // NÃO deve ter chamado a IA prematuramente
+    expect(mockParseVoiceWithAi).not.toHaveBeenCalled()
+
+    // Usuário continua falando no microfone reiniciado
+    capturedRecognitionInstance.onresult({
+      results: [[{ transcript: 'uma caixa de cerveja 80 reais' }]],
+    })
+
+    // Novo onend prematuro
+    capturedRecognitionInstance.onend()
+    expect(startCallCount).toBe(3)
+    expect(mockParseVoiceWithAi).not.toHaveBeenCalled()
+  })
+
+  it('processa somente após 3s de silêncio reais', async () => {
+    vi.useFakeTimers()
+    let capturedRecognitionInstance: any = null
+
+    function MockSpeechRecognition() {
+      const self = {
+        lang: '',
+        continuous: false,
+        interimResults: false,
+        maxAlternatives: 1,
+        onstart: null as any,
+        onaudiostart: null as any,
+        onspeechstart: null as any,
+        onresult: null as any,
+        onerror: null as any,
+        onend: null as any,
+        start() {
+          if (self.onstart) self.onstart()
+        },
+        stop() {
+          if (self.onend) self.onend()
+        },
+        abort() {},
+      }
+      capturedRecognitionInstance = self
+      return self
+    }
+
+    ;(window as any).SpeechRecognition = MockSpeechRecognition
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    expect(capturedRecognitionInstance).toBeTruthy()
+
+    // Fala do usuário
+    capturedRecognitionInstance.onresult({
+      results: [[{ transcript: 'Gasolina 100 reais' }]],
+    })
+
+    // Avança 2.5s: ainda não deve processar
+    vi.advanceTimersByTime(2500)
+    expect(mockParseVoiceWithAi).not.toHaveBeenCalled()
+
+    // Avança mais 600ms (totalizando > 3000ms de silêncio real)
+    vi.advanceTimersByTime(600)
+
+    expect(mockParseVoiceWithAi).toHaveBeenCalledWith(
+      expect.objectContaining({
+        texto: 'Gasolina 100 reais',
+      }),
+    )
+
+    vi.useRealTimers()
+  })
+
+  it('modo isListeningForAmountOnly no estado falta_valor: captura áudio de valor e faz merge preservando descrição original', async () => {
+    let capturedRecognitionInstance: any = null
+
+    function MockSpeechRecognition() {
+      const self = {
+        lang: '',
+        continuous: false,
+        interimResults: false,
+        maxAlternatives: 1,
+        onstart: null as any,
+        onaudiostart: null as any,
+        onspeechstart: null as any,
+        onresult: null as any,
+        onerror: null as any,
+        onend: null as any,
+        start() {
+          if (self.onstart) self.onstart()
+        },
+        stop() {
+          if (self.onend) self.onend()
+        },
+        abort() {},
+      }
+      capturedRecognitionInstance = self
+      return self
+    }
+
+    ;(window as any).SpeechRecognition = MockSpeechRecognition
+
+    // Resposta inicial de 'falta_valor'
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'uma caixa de cerveja na mercearia',
+      amountCents: 0,
+      amountFormatted: 'R$ 0,00',
+      type: 'expense',
+      description: 'Uma caixa de cerveja',
+      establishment: 'Mercearia',
+      confidence: 0.85,
+      processingSource: 'openai',
+      aiStatus: 'falta_valor',
+      categoryNameSuggestion: 'Estilo de Vida',
+      bucketSuggestion: 'lifestyle',
+      clarificationQuestion: 'Quanto custou?',
+      friendlyMessage: 'Entendi o que você comprou! Quanto custou?',
+    })
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    // Enviar texto manual para simular primeira resposta de falta_valor
+    const input = screen.getByPlaceholderText('Ex: Almoço 45 reais no débito')
+    fireEvent.change(input, { target: { value: 'uma caixa de cerveja na mercearia' } })
+    fireEvent.click(screen.getByText('Processar com IA'))
+
+    await waitFor(() => {
+      expect(screen.getByText(/Entendi:\s*Uma caixa de cerveja/i)).toBeDefined()
+      expect(screen.getByText('🎤 Falar apenas o valor')).toBeDefined()
+    })
+
+    // Mock para a interpretação do valor falado (ex: "80 reais no pix")
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: '80 reais no pix',
+      amountCents: 8000,
+      amountFormatted: 'R$ 80,00',
+      type: 'expense',
+      description: '80 reais',
+      paymentMethod: 'pix',
+      confidence: 0.95,
+      processingSource: 'openai',
+      aiStatus: 'sucesso',
+    })
+
+    // Usuário clica no botão [ 🎤 Falar apenas o valor ]
+    const speakAmountButton = screen.getByText('🎤 Falar apenas o valor')
+    fireEvent.click(speakAmountButton)
+
+    await waitFor(() => {
+      expect(capturedRecognitionInstance).toBeTruthy()
+    })
+
+    // Simula captura da fala do valor
+    capturedRecognitionInstance.onresult({
+      results: [[{ transcript: '80 reais no pix' }]],
+    })
+
+    // Usuário clica no microfone para parar ou para manualmente
+    fireEvent.click(screen.getByText(/Ouvindo valor\.\.\. fale agora/i))
+
+    await waitFor(() => {
+      // Verifica merge: descrição original 'Uma caixa de cerveja' preservada, e valor 80,00 adicionado
+      expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
+      expect(screen.getByText('Uma caixa de cerveja')).toBeDefined()
+      expect(screen.getByText('R$ 80,00')).toBeDefined()
+      expect(screen.getByText('pix')).toBeDefined()
     })
   })
 })

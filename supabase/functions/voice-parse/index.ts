@@ -212,15 +212,15 @@ Comportamentos esperados:
    - "mensagem_amigavel": null
 
 2. "falta_valor":
-   - O usuário descreveu claramente um item comprado, serviço ou estabelecimento comercial (ex.: "2 pacotes de peta no supermercado", "2 caixas de cerveja na mercearia do zé", "remédio na farmácia", "gasolina no posto"), MAS NÃO mencionou o valor monetário.
+   - Se o usuário citar um item, compra, receita ou local claro (ex: "uma caixa de cerveja", "almoço no restaurante", "gasolina no posto", "remédio na farmácia"), mas NÃO disser o valor monetário: retorne status 'falta_valor', preenchendo a 'transacao' com descricao, categoria/balde estimados e valor: null.
    - NUNCA classifique como "invalido"! Preserve o contexto preenchendo a "transacao" parcial:
-     * "descricao": o item ou serviço (ex: "2 pacotes de peta no supermercado", "2 caixas de cerveja")
-     * "estabelecimento": o local identificado se houver (ex: "Supermercado", "Mercearia do Zé", "Farmácia")
+     * "descricao": o item, serviço ou receita clara (ex: "Uma caixa de cerveja", "Almoço no restaurante", "Gasolina no posto")
+     * "estabelecimento": o local identificado se houver (ex: "Restaurante", "Posto", "Farmácia", "Mercearia do Zé")
      * "valor": null
      * "tipo": "despesa" (ou "receita" se for o caso)
      * "categoria": categoria sugerida (ex: "Alimentação", "Saúde", "Transporte")
-     * "subcategoria": subcategoria sugerida
-     * "balde": balde orçamentário correspondente
+     * "subcategoria": subcategoria sugerida (ex: "Bebidas", "Almoço", "Combustível")
+     * "balde": balde orçamentário correspondente ("Necessidades Essenciais", "Estilo de Vida" ou "Metas & Investimentos")
      * "metodo_pagamento": método se mencionado, ou null
    - "pergunta_clarificacao": "Quanto custou?"
    - "mensagem_amigavel": "Entendi o que você comprou! Quanto custou?"
