@@ -131,16 +131,18 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     }
   }, [])
 
-  // Parar gravação ativa
+  // Parar gravação ativa de forma segura
   const stopListening = useCallback(() => {
     clearSilenceTimer()
-    if (recognitionRef.current) {
+    const activeRecognition = recognitionRef.current
+    recognitionRef.current = null
+
+    if (activeRecognition) {
       try {
-        recognitionRef.current.stop()
+        activeRecognition.stop()
       } catch {
-        // silenciar
+        // silenciar caso já tenha sido finalizado
       }
-      recognitionRef.current = null
     }
     setIsListening(false)
     setAudioDetected(false)
@@ -477,8 +479,9 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       try {
         const recognition = new SpeechRecognition()
         recognition.lang = 'pt-BR'
-        // Contrato 1: continuous = true para escuta contínua no ritmo do usuário
-        recognition.continuous = true
+        // continuous = false: evita ciclo contínuo de restart/reciclagem de áudio no Chrome Android e Safari iOS
+        // interimResults = true: mantém a transcrição em tempo real na tela enquanto o usuário fala
+        recognition.continuous = false
         recognition.interimResults = true
         recognition.maxAlternatives = 1
 
@@ -499,14 +502,17 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         const triggerFinalProcessing = () => {
           clearSilenceTimer()
 
-          if (recognitionRef.current) {
+          // Só solicita parada se houver sessão ativa
+          const active = recognitionRef.current
+          recognitionRef.current = null
+          if (active) {
             try {
-              recognitionRef.current.stop()
+              active.stop()
             } catch {
               // silenciar
             }
-            recognitionRef.current = null
           }
+
           setIsListening(false)
           setAudioDetected(false)
 
@@ -543,6 +549,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           console.warn('SpeechRecognition onerror:', event.error)
           hadErrorRef.current = true
           clearSilenceTimer()
+          recognitionRef.current = null
           setIsListening(false)
           setAudioDetected(false)
           setIsListeningForAmountOnly(false)
@@ -573,12 +580,12 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         }
 
         // Ao encerrar a escuta: NUNCA reinicia automaticamente.
-        // O microfone permanece desligado em repouso. Se houver texto capturado pendente, processa.
+        // O microfone permanece desligado em repouso definitivo.
         recognition.onend = () => {
           clearSilenceTimer()
+          recognitionRef.current = null
           setIsListening(false)
           setAudioDetected(false)
-          recognitionRef.current = null
 
           const finalCapturado = latestTranscriptRef.current.trim()
 
@@ -1045,13 +1052,14 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 userStoppedManuallyRef.current = true
                 clearSilenceTimer()
                 const captured = latestTranscriptRef.current.trim()
-                if (recognitionRef.current) {
+                const active = recognitionRef.current
+                recognitionRef.current = null
+                if (active) {
                   try {
-                    recognitionRef.current.stop()
+                    active.stop()
                   } catch {
                     // silenciar
                   }
-                  recognitionRef.current = null
                 }
                 setIsListening(false)
                 setAudioDetected(false)
@@ -1315,13 +1323,14 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                     userStoppedManuallyRef.current = true
                     clearSilenceTimer()
                     const captured = latestTranscriptRef.current.trim()
-                    if (recognitionRef.current) {
+                    const active = recognitionRef.current
+                    recognitionRef.current = null
+                    if (active) {
                       try {
-                        recognitionRef.current.stop()
+                        active.stop()
                       } catch {
                         // silenciar
                       }
-                      recognitionRef.current = null
                     }
                     setIsListening(false)
                     setAudioDetected(false)

@@ -117,13 +117,13 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     expect(mockGetUserMedia).not.toHaveBeenCalled()
   })
 
-  it('configura o SpeechRecognition com pt-BR, continuous=true, interimResults=true e maxAlternatives=1', async () => {
+  it('configura o SpeechRecognition com pt-BR, continuous=false (evita loop no mobile), interimResults=true e maxAlternatives=1', async () => {
     let capturedRecognitionInstance: any = null
 
     function MockSpeechRecognition() {
       const self = {
         lang: '',
-        continuous: false,
+        continuous: true,
         interimResults: false,
         maxAlternatives: 1,
         onstart: null as any,
@@ -157,7 +157,7 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     await waitFor(() => {
       expect(capturedRecognitionInstance).toBeTruthy()
       expect(capturedRecognitionInstance.lang).toBe('pt-BR')
-      expect(capturedRecognitionInstance.continuous).toBe(true)
+      expect(capturedRecognitionInstance.continuous).toBe(false)
       expect(capturedRecognitionInstance.interimResults).toBe(true)
       expect(capturedRecognitionInstance.maxAlternatives).toBe(1)
     })
@@ -604,6 +604,68 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     })
 
     // Microfone permanece em repouso
+    expect(startCallCount).toBe(2)
+    expect(screen.getByText('Microfone pronto')).toBeDefined()
+  })
+
+  it('garante que nenhum start() é disparado a partir de onend ou timers automáticos (apenas toque explícito ou abertura inicial)', async () => {
+    let capturedRecognitionInstance: any = null
+    let startCallCount = 0
+
+    function MockSpeechRecognition() {
+      const self = {
+        lang: '',
+        continuous: false,
+        interimResults: false,
+        maxAlternatives: 1,
+        onstart: null as any,
+        onaudiostart: null as any,
+        onspeechstart: null as any,
+        onresult: null as any,
+        onerror: null as any,
+        onend: null as any,
+        start() {
+          startCallCount++
+          if (self.onstart) self.onstart()
+        },
+        stop() {
+          if (self.onend) self.onend()
+        },
+        abort() {},
+      }
+      capturedRecognitionInstance = self
+      return self
+    }
+
+    ;(window as any).SpeechRecognition = MockSpeechRecognition
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(capturedRecognitionInstance).toBeTruthy()
+      expect(startCallCount).toBe(1)
+    })
+
+    // Disparar erro ou onend sem texto
+    capturedRecognitionInstance.onend()
+
+    // Garantir que permanece em 1 chamada (sem religamento)
+    expect(startCallCount).toBe(1)
+    expect(screen.getByText('Microfone pronto')).toBeDefined()
+
+    // Ao clicar explicitamente no botão de microfone desligado, dispara nova gravação
+    const startMicBtn = screen.getByTitle('Toque para começar a falar')
+    fireEvent.click(startMicBtn)
+    expect(startCallCount).toBe(2)
+
+    // Encerra novamente
+    capturedRecognitionInstance.onend()
     expect(startCallCount).toBe(2)
     expect(screen.getByText('Microfone pronto')).toBeDefined()
   })
