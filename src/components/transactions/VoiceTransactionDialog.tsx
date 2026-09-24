@@ -23,6 +23,7 @@ import {
   Tag,
   HelpCircle,
   MessageSquare,
+  Bird,
 } from 'lucide-react'
 import { ParsedVoiceTransaction } from '@/services/voice-parser'
 import { parseVoiceWithAi } from '@/services/voice-ai'
@@ -675,7 +676,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         {
           id: 'welcome-1',
           sender: 'assistant',
-          text: 'Olá! Sou o Curiangoo Copilot. 🌿 Você pode falar seus gastos e receitas no seu ritmo ou me fazer uma pergunta rápida (ex: "quanto ainda posso gastar esse mês?").',
+          text: 'Olá! Sou o Curiangoo Copilot. 🐦 Você pode falar seus gastos e receitas no seu ritmo — exemplo: almoço 35 reais no restaurante do Zé — ou me fazer uma pergunta rápida (ex: "quanto ainda posso gastar esse mês?").',
           timestamp: new Date(),
         },
       ])
@@ -1291,7 +1292,32 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                       : 'bg-slate-100 text-slate-900 rounded-bl-xs border border-slate-200/80'
                   }`}
                 >
-                  <p className="text-xs leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                  {msg.id === 'welcome-1' ? (
+                    <p className="text-xs leading-relaxed whitespace-pre-wrap">
+                      Olá! Sou o Curiangoo Copilot.{' '}
+                      <span
+                        className="inline-flex items-center justify-center align-middle mx-0.5 w-4 h-4 rounded-full bg-[#064E3B] p-0.5 shadow-xs border border-emerald-500/30 overflow-hidden shrink-0"
+                        title="Curiangoo"
+                      >
+                        <img
+                          src="/icon.svg"
+                          alt="Curiangoo"
+                          className="w-full h-full object-contain rounded-full"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement
+                            if (fallback) fallback.style.display = 'inline-block'
+                          }}
+                        />
+                        <Bird className="w-2.5 h-2.5 text-white hidden" />
+                      </span>{' '}
+                      Você pode falar seus gastos e receitas no seu ritmo — exemplo: almoço 35 reais
+                      no restaurante do Zé — ou me fazer uma pergunta rápida (ex: &ldquo;quanto
+                      ainda posso gastar esse mês?&rdquo;).
+                    </p>
+                  ) : (
+                    <p className="text-xs leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                  )}
 
                   {/* Cards Contextuais acoplados ao balão do assistente */}
                   {!isUser &&
