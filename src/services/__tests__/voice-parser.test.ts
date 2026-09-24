@@ -174,5 +174,25 @@ describe('voice-parser', () => {
         "Não consegui entender esse lançamento financeiro. Tente algo como: 'Almoço 45 reais no débito no restaurante' ou 'supermercado do zé 180 no pix'",
       )
     })
+
+    it('quando contextoAnterior é fornecido e a fala informa apenas valor/método, mescla e retorna sucesso', () => {
+      const contextoAnterior = {
+        descricao: 'Duas caixas de cerveja',
+        estabelecimento: 'Parada Certa',
+        categoria: 'Alimentação / Lazer',
+        subcategoria: 'Bebidas',
+        balde: 'lifestyle',
+        tipo: 'despesa' as const,
+      }
+
+      const parsed = parseVoiceInput('foi 80 reais no debito', mockCategories, contextoAnterior)
+
+      expect(parsed.aiStatus).toBe('sucesso')
+      expect(parsed.amountCents).toBe(8000)
+      expect(parsed.description).toBe('Duas caixas de cerveja')
+      expect(parsed.establishment).toBe('Parada Certa')
+      expect(parsed.paymentMethod).toBe('debito')
+      expect(parsed.categoryNameSuggestion).toBe('Alimentação / Lazer')
+    })
   })
 })

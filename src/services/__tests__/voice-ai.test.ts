@@ -237,4 +237,53 @@ describe('voice-ai service (fim do fallback silencioso)', () => {
       expect(res.aiStatus).toBe(status)
     }
   })
+
+  it('propaga contexto_anterior no payload para a Edge Function', async () => {
+    vi.mocked(supabase.functions.invoke).mockResolvedValueOnce({
+      data: {
+        status: 'sucesso',
+        transacao: {
+          descricao: 'duas caixas de cerveja',
+          estabelecimento: 'Parada Certa',
+          valor: 80,
+          tipo: 'despesa',
+          balde: 'Estilo de Vida',
+          categoria: 'Alimentação / Lazer',
+          subcategoria: 'Bebidas',
+          metodo_pagamento: 'debito',
+        },
+        pergunta_clarificacao: null,
+        opcoes_sugestao: null,
+        mensagem_amigavel: null,
+      },
+      error: null,
+    })
+
+    const previousContext = {
+      descricao: 'duas caixas de cerveja',
+      estabelecimento: 'Parada Certa',
+      categoria: 'Alimentação / Lazer',
+      subcategoria: 'Bebidas',
+      balde: 'lifestyle',
+      tipo: 'despesa' as const,
+    }
+
+    const res = await parseVoiceWithAi({
+      texto: 'foi 80 reais no debito',
+      familyId: 'fam-1',
+      contexto_anterior: previousContext,
+    })
+
+    expect(supabase.functions.invoke).toHaveBeenCalledWith('voice-parse', {
+      body: {
+        texto: 'foi 80 reais no debito',
+        familyId: 'fam-1',
+        contexto_anterior: previousContext,
+      },
+    })
+    expect(res.aiStatus).toBe('sucesso')
+    expect(res.description).toBe('duas caixas de cerveja')
+    expect(res.amountCents).toBe(8000)
+    expect(res.paymentMethod).toBe('debito')
+  })
 })

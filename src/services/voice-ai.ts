@@ -6,10 +6,20 @@ import {
   parseVoiceInput,
 } from './voice-parser'
 
+export interface VoiceAiPreviousContext {
+  descricao?: string
+  estabelecimento?: string | null
+  categoria?: string
+  subcategoria?: string
+  balde?: string
+  tipo?: 'despesa' | 'receita'
+}
+
 export interface ParseVoiceWithAiOptions {
   texto: string
   familyId?: string
   categories?: Array<{ id: string; name: string; type: string; budget_bucket?: string | null }>
+  contexto_anterior?: VoiceAiPreviousContext | null
 }
 
 /**
@@ -20,6 +30,7 @@ export async function parseVoiceWithAi({
   texto,
   familyId,
   categories = [],
+  contexto_anterior,
 }: ParseVoiceWithAiOptions): Promise<ParsedVoiceTransaction> {
   const trimmed = texto.trim()
   if (!trimmed) {
@@ -37,7 +48,11 @@ export async function parseVoiceWithAi({
 
   try {
     const { data, error } = await supabase.functions.invoke<VoiceAiResponse>('voice-parse', {
-      body: { texto: trimmed, familyId },
+      body: {
+        texto: trimmed,
+        familyId,
+        contexto_anterior: contexto_anterior || null,
+      },
     })
 
     if (error) {

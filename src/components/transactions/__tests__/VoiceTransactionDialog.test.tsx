@@ -832,7 +832,7 @@ describe('VoiceTransactionDialog', () => {
     // Preenche o valor digitado (ex: "18,50")
     const amountInput = screen.getByPlaceholderText('0,00')
     fireEvent.change(amountInput, { target: { value: '18,50' } })
-    fireEvent.click(screen.getByText('Confirmar Valor'))
+    fireEvent.click(screen.getByText('Confirmar'))
 
     await waitFor(() => {
       // Agora abre a tela de confirmação com valor mesclado
@@ -1112,6 +1112,182 @@ describe('VoiceTransactionDialog', () => {
       expect(screen.getByText('Uma caixa de cerveja')).toBeDefined()
       expect(screen.getByText('R$ 80,00')).toBeDefined()
       expect(screen.getByText('pix')).toBeDefined()
+    })
+  })
+
+  it('cenário exato relatado pelo usuário: "duas caixas de cerveja", falta_valor, usuário fala "foi 80 reais", mescla e não esquece a cerveja', async () => {
+    // 1. Primeira fala: "duas caixas de cerveja na parada certa" -> falta_valor
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'duas caixas de cerveja na parada certa',
+      amountCents: 0,
+      amountFormatted: 'R$ 0,00',
+      type: 'expense',
+      description: 'Duas caixas de cerveja',
+      establishment: 'Parada Certa',
+      confidence: 0.85,
+      processingSource: 'openai',
+      aiStatus: 'falta_valor',
+      categoryNameSuggestion: 'Alimentação',
+      subcategoryNameSuggestion: 'Bebidas',
+      bucketSuggestion: 'lifestyle',
+      clarificationQuestion: 'Quanto custou?',
+      friendlyMessage: 'Entendi o que você comprou! Quanto custou?',
+    })
+
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Ex: Almoço 45 reais no débito')
+    fireEvent.change(input, { target: { value: 'duas caixas de cerveja na parada certa' } })
+    fireEvent.click(screen.getByText('Processar com IA'))
+
+    await waitFor(() => {
+      expect(screen.getByText(/Entendi:\s*Duas caixas de cerveja/i)).toBeDefined()
+      expect(screen.getByText('Quanto custou?')).toBeDefined()
+    })
+
+    // 2. Segunda fala: usuário responde "foi 80 reais" (simulado via IA com contexto_anterior repassado)
+    mockParseVoiceWithAi.mockImplementationOnce(async ({ texto, contexto_anterior }) => {
+      expect(contexto_anterior).toEqual(
+        expect.objectContaining({
+          descricao: 'Duas caixas de cerveja',
+          estabelecimento: 'Parada Certa',
+        }),
+      )
+      // A IA agora mescla e retorna sucesso com a descrição do contexto anterior
+      return {
+        rawText: texto,
+        amountCents: 8000,
+        amountFormatted: 'R$ 80,00',
+        type: 'expense',
+        description: contexto_anterior?.descricao || '80 reais',
+        establishment: contexto_anterior?.estabelecimento || undefined,
+        categoryNameSuggestion: contexto_anterior?.categoria || 'Alimentação',
+        subcategoryNameSuggestion: contexto_anterior?.subcategoria || 'Bebidas',
+        bucketSuggestion: 'lifestyle',
+        confidence: 0.95,
+        processingSource: 'openai',
+        aiStatus: 'sucesso',
+      }
+    })
+
+    // Digita "foi 80 reais" ou fala no microfone do modal falta_valor
+    // Vamos simular a chamada de handleStopAndProcess com "foi 80 reais"
+    // No dialog, o input de texto manual ainda pode ser acionado ou via mic
+    // Simulamos via form de texto de valor digitando e clicando em Confirmar
+    const amountInput = screen.getByPlaceholderText('0,00')
+    fireEvent.change(amountInput, { target: { value: '80' } })
+    fireEvent.click(screen.getByText('Confirmar'))
+
+    await waitFor(() => {
+      expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
+      expect(screen.getByText('Duas caixas de cerveja')).toBeDefined()
+      expect(screen.getByText('R$ 80,00')).toBeDefined()
+    })
+  })
+
+  it('quando o segundo áudio vier com descrição genérica de valor ("foi 80 reais"), a descrição prévia NUNCA é substituída', async () => {
+    let capturedRecognitionInstance: any = null
+
+    function MockSpeechRecognition() {
+      const self = {
+        lang: '',
+        continuous: false,
+        interimResults: false,
+        maxAlternatives: 1,
+        onstart: null as any,
+        onaudiostart: null as any,
+        onspeechstart: null as any,
+        onresult: null as any,
+        onerror: null as any,
+        onend: null as any,
+        start() {
+          if (self.onstart) self.onstart()
+        },
+        stop() {
+          if (self.onend) self.onend()
+        },
+        abort() {},
+      }
+      capturedRecognitionInstance = self
+      return self
+    }
+
+    ;(window as any).SpeechRecognition = MockSpeechRecognition
+
+    // Resposta inicial falta_valor
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'duas caixas de cerveja',
+      amountCents: 0,
+      amountFormatted: 'R$ 0,00',
+      type: 'expense',
+      description: 'Duas caixas de cerveja',
+      establishment: 'Parada Certa',
+      confidence: 0.85,
+      processingSource: 'openai',
+      aiStatus: 'falta_valor',
+      categoryNameSuggestion: 'Alimentação',
+      subcategoryNameSuggestion: 'Bebidas',
+      bucketSuggestion: 'lifestyle',
+      clarificationQuestion: 'Quanto custou?',
+      friendlyMessage: 'Entendi o que você comprou! Quanto custou?',
+    })
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Ex: Almoço 45 reais no débito')
+    fireEvent.change(input, { target: { value: 'duas caixas de cerveja' } })
+    fireEvent.click(screen.getByText('Processar com IA'))
+
+    await waitFor(() => {
+      expect(screen.getByText(/Entendi:\s*Duas caixas de cerveja/i)).toBeDefined()
+      expect(screen.getByText('🎤 Falar apenas o valor')).toBeDefined()
+    })
+
+    // Resposta da IA com descrição vazia ou "80 reais" (caso a IA retorne descrição apenas do valor)
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'foi 80 reais',
+      amountCents: 8000,
+      amountFormatted: 'R$ 80,00',
+      type: 'expense',
+      description: 'foi 80 reais', // Descrição que não deve sobrescrever "Duas caixas de cerveja"
+      confidence: 0.9,
+      processingSource: 'openai',
+      aiStatus: 'sucesso',
+    })
+
+    // Usuário clica em [ 🎤 Falar apenas o valor ]
+    fireEvent.click(screen.getByText('🎤 Falar apenas o valor'))
+
+    await waitFor(() => {
+      expect(capturedRecognitionInstance).toBeTruthy()
+    })
+
+    capturedRecognitionInstance.onresult({
+      results: [[{ transcript: 'foi 80 reais' }]],
+    })
+
+    fireEvent.click(screen.getByText(/Ouvindo valor\.\.\. fale agora/i))
+
+    await waitFor(() => {
+      // Deve ter preservado "Duas caixas de cerveja", e NÃO "foi 80 reais"
+      expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
+      expect(screen.getByText('Duas caixas de cerveja')).toBeDefined()
+      expect(screen.getByText('R$ 80,00')).toBeDefined()
     })
   })
 })

@@ -2,9 +2,19 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
+interface PreviousContextPayload {
+  descricao?: string
+  estabelecimento?: string | null
+  categoria?: string
+  subcategoria?: string
+  balde?: string
+  tipo?: 'despesa' | 'receita'
+}
+
 interface RequestPayload {
   texto?: string
   familyId?: string
+  contexto_anterior?: PreviousContextPayload | null
 }
 
 Deno.serve(async (req: Request) => {
@@ -168,9 +178,27 @@ Deno.serve(async (req: Request) => {
 
     const membersContext = (membersData || []).map((m: any) => `"${m.name}"`).join(', ')
 
+    const previousContext = body.contexto_anterior
+    let previousContextPrompt = ''
+    if (previousContext && (previousContext.descricao || previousContext.categoria)) {
+      previousContextPrompt = `
+CONTEXTO ANTERIOR DE UMA TRANSAÇÃO PARCIAL PENDENTE:
+- Descrição anterior: "${previousContext.descricao || ''}"
+- Estabelecimento anterior: "${previousContext.estabelecimento || ''}"
+- Categoria anterior: "${previousContext.categoria || ''}"
+- Subcategoria anterior: "${previousContext.subcategoria || ''}"
+- Balde anterior: "${previousContext.balde || ''}"
+- Tipo anterior: "${previousContext.tipo || 'despesa'}"
+
+INSTRUÇÃO CRÍTICA PARA CONTEXTO ANTERIOR:
+Se 'contexto_anterior' for fornecido e o usuário estiver informando apenas o valor ou forma de pagamento (ex: 'foi 80 reais', '80 no debito', '45 reais', 'paguei no pix 50'), MESCLE as informações e retorne status 'sucesso' com a descrição do contexto anterior e o novo valor identificado.
+Preserve a descrição, categoria, subcategoria, balde e estabelecimento anteriores, atualizando o valor e o método de pagamento conforme a nova fala.
+`
+    }
+
     const systemPrompt = `Você é o Curiangoo AI, assistente financeiro inteligente do app Curiangoo para famílias brasileiras (Regra 50/30/20).
 Seu objetivo é analisar a frase falada ou digitada pelo usuário e transformá-la em uma transação financeira estruturada com extrema empatia e precisão.
-
+${previousContextPrompt}
 Metodologia de 3 Baldes Orçamentários:
 1. "Necessidades Essenciais" (50%): moradia, aluguel, condomínio, luz, água, internet, supermercado, feira, açougue, saúde, remédios, plano de saúde, educação, transporte, combustível, Uber essencial, escola dos filhos.
 2. "Estilo de Vida" (30%): restaurantes, almoço fora, bar, cerveja, pizza, hambúrguer, lanches, delivery/iFood, cinema, passeios, lazer, viagens, compras de roupas, cuidados pessoais, streaming (Netflix, Spotify), jogos.

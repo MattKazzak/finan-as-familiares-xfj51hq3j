@@ -690,9 +690,22 @@ export function suggestCategoryAndBucket(
 /**
  * Função principal que processa a frase falada completa
  */
+export interface LocalParsePreviousContext {
+  descricao?: string
+  estabelecimento?: string | null
+  categoria?: string
+  subcategoria?: string
+  balde?: string
+  tipo?: 'despesa' | 'receita'
+}
+
+/**
+ * Função principal que processa a frase falada completa
+ */
 export function parseVoiceInput(
   rawText: string,
   categories: Array<{ id: string; name: string; type: string; budget_bucket?: string | null }> = [],
+  contextoAnterior?: LocalParsePreviousContext | null,
 ): ParsedVoiceTransaction {
   const trimmed = rawText.trim()
 
@@ -719,18 +732,6 @@ export function parseVoiceInput(
   } else {
     description = type === 'income' ? 'Receita' : 'Despesa'
   }
-
-  // 5. Categoria & Balde
-  const { categoryName, bucket } = suggestCategoryAndBucket(
-    `${description} ${rawText}`,
-    categories.filter((c) => c.type === type),
-  )
-
-  // Formatação em BRL
-  const amountFormatted = (amountCents / 100).toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  })
 
   // Lista de palavras de estabelecimento / comércio comuns para detecção inteligente
   const ESTABLISHMENT_WORDS = [
@@ -778,6 +779,55 @@ export function parseVoiceInput(
         establishment = est.charAt(0).toUpperCase() + est.slice(1)
       }
       break
+    }
+  }
+
+  const effectiveType =
+    contextoAnterior?.tipo === 'receita'
+      ? 'income'
+      : contextoAnterior?.tipo === 'despesa'
+        ? 'expense'
+        : type
+
+  // 5. Categoria & Balde
+  const { categoryName, bucket } = suggestCategoryAndBucket(
+    `${description} ${rawText}`,
+    categories.filter((c) => c.type === effectiveType),
+  )
+
+  // Formatação em BRL
+  const amountFormatted = (amountCents / 100).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  })
+
+  // Se houver contexto anterior com valor identificado na nova fala (ex: "foi 80 reais", "80 no pix")
+  if (contextoAnterior && amountCents > 0) {
+    const finalDesc = contextoAnterior.descricao || description
+    const finalEstablishment = contextoAnterior.estabelecimento || establishment
+    const finalCategory = contextoAnterior.categoria || categoryName
+    const finalSubcategory = contextoAnterior.subcategoria
+    const finalBucket = contextoAnterior.balde
+      ? normalizeBucketName(contextoAnterior.balde)
+      : bucket || 'lifestyle'
+
+    return {
+      rawText,
+      amountCents,
+      amountFormatted,
+      type: effectiveType,
+      description: finalDesc,
+      establishment: finalEstablishment || undefined,
+      paymentMethod: method,
+      categoryNameSuggestion: finalCategory,
+      subcategoryNameSuggestion: finalSubcategory,
+      bucketSuggestion: finalBucket,
+      confidence: 0.95,
+      processingSource: 'local',
+      aiStatus: 'sucesso',
+      clarificationQuestion: null,
+      clarificationOptions: null,
+      friendlyMessage: null,
     }
   }
 

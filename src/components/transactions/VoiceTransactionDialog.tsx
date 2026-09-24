@@ -122,9 +122,81 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     setIsListeningForAmountOnly(false)
   }, [clearSilenceTimer])
 
+  // Helper para construir contexto_anterior a partir de transação parcial pendente
+  const buildPreviousContext = useCallback((base: ParsedVoiceTransaction | null) => {
+    if (!base) return null
+    return {
+      descricao: base.description,
+      estabelecimento: base.establishment || null,
+      categoria: base.categoryNameSuggestion,
+      subcategoria: base.subcategoryNameSuggestion,
+      balde: base.bucketSuggestion,
+      tipo: base.type === 'income' ? ('receita' as const) : ('despesa' as const),
+    }
+  }, [])
+
+  // Mesclar novo valor com transação parcial existente em 'falta_valor'
+  const handleMergeAmountIntoTransaction = useCallback(
+    (
+      newAmountCents: number,
+      paymentMethodOverride?: 'pix' | 'debito' | 'credito' | 'dinheiro',
+      mergedCandidate?: Partial<ParsedVoiceTransaction>,
+    ) => {
+      const base = parsedResultRef.current
+      if (!base || newAmountCents <= 0) return
+
+      const formatted = (newAmountCents / 100).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      })
+
+      // Preservar sempre a descrição anterior, a não ser que a nova traga uma descrição explícita de item
+      // (e não apenas o valor como "foi 80 reais" ou "80")
+      const candidateDesc = mergedCandidate?.description?.trim()
+      const isCandidateDescJustAmount =
+        !candidateDesc ||
+        /^(\d+|r\$|reais|real|foi|no|na|via|pix|debito|débito|credito|crédito|dinheiro|\s)+$/i.test(
+          candidateDesc,
+        )
+
+      const finalDescription =
+        !isCandidateDescJustAmount && candidateDesc ? candidateDesc : base.description
+
+      const merged: ParsedVoiceTransaction = {
+        ...base,
+        ...mergedCandidate,
+        amountCents: newAmountCents,
+        amountFormatted: formatted,
+        description: finalDescription,
+        establishment: mergedCandidate?.establishment || base.establishment,
+        categoryNameSuggestion:
+          mergedCandidate?.categoryNameSuggestion || base.categoryNameSuggestion,
+        subcategoryNameSuggestion:
+          mergedCandidate?.subcategoryNameSuggestion || base.subcategoryNameSuggestion,
+        bucketSuggestion: mergedCandidate?.bucketSuggestion || base.bucketSuggestion,
+        paymentMethod:
+          paymentMethodOverride || mergedCandidate?.paymentMethod || base.paymentMethod,
+        aiStatus: 'sucesso',
+        confidence: 0.95,
+        clarificationQuestion: null,
+        clarificationOptions: null,
+        friendlyMessage: null,
+      }
+
+      setParsedResult(merged)
+      setMissingAmountInput('')
+      setIsListeningForAmountOnly(false)
+      isListeningForAmountOnlyRef.current = false
+    },
+    [],
+  )
+
   // Parar gravação e disparar interpretação com IA (Edge Function)
   const handleStopAndProcess = useCallback(
     async (overrideText?: string) => {
+      const isAmountOnly = isListeningForAmountOnlyRef.current
+      const existingPartial = parsedResultRef.current
+
       stopListening()
 
       const textToProcess = (
@@ -137,47 +209,47 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
       try {
         setIsProcessingAi(true)
+        const previousContext =
+          isAmountOnly || existingPartial?.aiStatus === 'falta_valor'
+            ? buildPreviousContext(existingPartial)
+            : null
+
         const parsed = await parseVoiceWithAi({
           texto: textToProcess,
           familyId: family?.id,
           categories,
+          contexto_anterior: previousContext,
         })
-        setParsedResult(parsed)
+
+        // Se tínhamos uma transação parcial pendente (falta_valor ou amount-only)
+        if (existingPartial && (isAmountOnly || existingPartial.aiStatus === 'falta_valor')) {
+          if (parsed.amountCents > 0) {
+            handleMergeAmountIntoTransaction(parsed.amountCents, parsed.paymentMethod, parsed)
+          } else {
+            toast({
+              title: 'Valor não identificado',
+              description:
+                'Não conseguimos identificar o valor falado. Tente digitar ou falar novamente.',
+              variant: 'destructive',
+            })
+          }
+        } else {
+          setParsedResult(parsed)
+        }
       } catch (err: any) {
         console.error('Erro ao processar áudio com IA:', err)
       } finally {
         setIsProcessingAi(false)
       }
     },
-    [categories, family?.id, stopListening],
-  )
-
-  // Mesclar novo valor com transação parcial existente em 'falta_valor'
-  const handleMergeAmountIntoTransaction = useCallback(
-    (newAmountCents: number, paymentMethodOverride?: 'pix' | 'debito' | 'credito' | 'dinheiro') => {
-      const base = parsedResultRef.current
-      if (!base || newAmountCents <= 0) return
-
-      const formatted = (newAmountCents / 100).toLocaleString('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      })
-
-      setParsedResult({
-        ...base,
-        amountCents: newAmountCents,
-        amountFormatted: formatted,
-        paymentMethod: paymentMethodOverride || base.paymentMethod,
-        aiStatus: 'sucesso',
-        confidence: 0.95,
-        clarificationQuestion: null,
-        clarificationOptions: null,
-        friendlyMessage: null,
-      })
-      setMissingAmountInput('')
-      setIsListeningForAmountOnly(false)
-    },
-    [],
+    [
+      buildPreviousContext,
+      categories,
+      family?.id,
+      handleMergeAmountIntoTransaction,
+      stopListening,
+      toast,
+    ],
   )
 
   // Iniciar SpeechRecognition síncrono no evento de clique
@@ -263,16 +335,19 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
           if (isListeningForAmountOnlyRef.current && parsedResultRef.current) {
             setIsProcessingAi(true)
+            const previousContext = buildPreviousContext(parsedResultRef.current)
             parseVoiceWithAi({
               texto: captured,
               familyId: family?.id,
               categories,
+              contexto_anterior: previousContext,
             })
               .then((amountParsed) => {
                 if (amountParsed.amountCents > 0) {
                   handleMergeAmountIntoTransaction(
                     amountParsed.amountCents,
                     amountParsed.paymentMethod,
+                    amountParsed,
                   )
                 } else {
                   toast({
@@ -289,6 +364,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
               .finally(() => {
                 setIsProcessingAi(false)
                 setIsListeningForAmountOnly(false)
+                isListeningForAmountOnlyRef.current = false
               })
           } else {
             handleStopAndProcess(captured)
@@ -383,16 +459,19 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
             if (isListeningForAmountOnlyRef.current && parsedResultRef.current) {
               setIsProcessingAi(true)
+              const previousContext = buildPreviousContext(parsedResultRef.current)
               parseVoiceWithAi({
                 texto: finalCapturado,
                 familyId: family?.id,
                 categories,
+                contexto_anterior: previousContext,
               })
                 .then((amountParsed) => {
                   if (amountParsed.amountCents > 0) {
                     handleMergeAmountIntoTransaction(
                       amountParsed.amountCents,
                       amountParsed.paymentMethod,
+                      amountParsed,
                     )
                   } else {
                     toast({
@@ -409,6 +488,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 .finally(() => {
                   setIsProcessingAi(false)
                   setIsListeningForAmountOnly(false)
+                  isListeningForAmountOnlyRef.current = false
                 })
             } else {
               handleStopAndProcess(finalCapturado)
@@ -435,6 +515,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       }
     },
     [
+      buildPreviousContext,
       categories,
       clearSilenceTimer,
       family?.id,
@@ -460,9 +541,11 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       setTextoFalado('')
       latestTranscriptRef.current = ''
       setParsedResult(null)
+      parsedResultRef.current = null
       setErrorMessage(null)
       setMissingAmountInput('')
       setIsListeningForAmountOnly(false)
+      isListeningForAmountOnlyRef.current = false
       hadErrorRef.current = false
       userStoppedManuallyRef.current = false
       shouldKeepListeningRef.current = false
@@ -563,16 +646,17 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     })
   }
 
-  // Tentar novamente (voltar à escuta)
+  // Tentar novamente (voltar à escuta do zero)
   const handleRetryListening = () => {
     setParsedResult(null)
+    parsedResultRef.current = null
     setTextoFalado('')
     setMissingAmountInput('')
     setIsListeningForAmountOnly(false)
+    isListeningForAmountOnlyRef.current = false
     latestTranscriptRef.current = ''
     startRecording()
   }
-
   // Confirmar lançamento diretamente
   const handleConfirmTransaction = async () => {
     if (!family || !parsedResult) return
