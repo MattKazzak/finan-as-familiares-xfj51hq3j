@@ -32,6 +32,7 @@ import {
   ChevronRight,
   AlertCircle,
   Users,
+  Calendar,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -626,13 +627,13 @@ export default function Home() {
                     setSelectedTx(tx)
                     setIsDetailOpen(true)
                   }}
-                  className="flex items-center justify-between gap-3 py-3 px-2 sm:px-2.5 hover:bg-slate-50/90 rounded-2xl cursor-pointer transition-colors group"
+                  className="flex items-start sm:items-center justify-between gap-3 py-3 px-2 sm:px-2.5 hover:bg-slate-50/90 rounded-2xl cursor-pointer transition-colors group"
                 >
                   {/* Bloco Esquerda: Ícone + Textos */}
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
                     {/* Ícone de Categoria */}
                     <div
-                      className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center text-white shadow-sm shrink-0"
+                      className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center text-white shadow-sm shrink-0 mt-0.5 sm:mt-0"
                       style={{
                         backgroundColor: tx.category?.color || (isIncome ? '#10B981' : '#64748B'),
                       }}
@@ -665,23 +666,34 @@ export default function Home() {
                         ) : null}
                       </div>
 
-                      {/* Linha 2: Metadados alinhados em uma linha única (membro, categoria, data) */}
-                      <div className="flex items-center gap-1.5 sm:gap-2 mt-1 min-w-0 text-[11px] text-slate-500 overflow-hidden">
+                      {/* Linha 2: Metadados responsivos (Wrap amigável no mobile para não esmagar nada) */}
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 min-w-0 text-[11px] sm:text-xs">
+                        {/* DATA com ícone de calendário explícito - sempre legível e identificável */}
+                        <span
+                          className="inline-flex items-center gap-1 font-medium text-slate-600 bg-slate-100/80 px-1.5 py-0.5 rounded-md shrink-0 text-[11px] capitalize"
+                          title={`Data: ${item.transactionDate}`}
+                        >
+                          <Calendar className="w-3 h-3 text-slate-500 shrink-0" />
+                          <span>{formatRelativeDate(item.transactionDate)}</span>
+                        </span>
+
+                        <span className="text-slate-300 shrink-0 hidden xs:inline">•</span>
+
                         {/* Chip do membro */}
-                        <span className="inline-flex items-center gap-1 font-medium bg-slate-100 px-1.5 py-0.5 rounded-md shrink-0 text-[10px] sm:text-[11px]">
+                        <span className="inline-flex items-center gap-1 font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded-md shrink-0 text-[11px]">
                           <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[7px] font-bold shrink-0">
                             {tx.member?.name?.charAt(0).toUpperCase() || 'M'}
                           </span>
-                          <span className="max-w-[70px] sm:max-w-[100px] truncate">
+                          <span className="max-w-[120px] sm:max-w-[150px] truncate">
                             {tx.member?.name || 'Membro'}
                           </span>
                         </span>
 
-                        <span className="text-slate-300 shrink-0">•</span>
+                        <span className="text-slate-300 shrink-0 hidden xs:inline">•</span>
 
                         {/* Categoria / Subcategoria ou Pendente */}
                         {tx.category ? (
-                          <span className="truncate min-w-0 font-medium text-slate-500 text-[11px]">
+                          <span className="font-medium text-slate-500 text-[11px] break-words">
                             <span>{tx.category.name}</span>
                             {tx.subcategory && (
                               <span className="text-emerald-700 font-semibold ml-1">
@@ -694,19 +706,12 @@ export default function Home() {
                             Pendente
                           </span>
                         )}
-
-                        <span className="text-slate-300 shrink-0">•</span>
-
-                        {/* Data relativa da parcela mais recente */}
-                        <span className="text-[10px] sm:text-[11px] text-slate-400 capitalize shrink-0 whitespace-nowrap">
-                          {formatRelativeDate(item.transactionDate)}
-                        </span>
                       </div>
                     </div>
                   </div>
 
                   {/* Bloco Direita: Valor alinhado e estável */}
-                  <div className="text-right shrink-0 pl-1">
+                  <div className="text-right shrink-0 pl-1 pt-0.5 sm:pt-0">
                     <span
                       className={`font-bold text-xs sm:text-sm md:text-base tabular-nums whitespace-nowrap ${
                         isIncome ? 'text-emerald-600' : 'text-red-600'
