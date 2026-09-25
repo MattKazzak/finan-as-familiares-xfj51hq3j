@@ -1,17 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFamily } from '@/hooks/use-family'
-import {
-  fetchTransactions,
-  fetchDefaultBudgets,
-  fetchMonthBudgetOverrides,
-} from '@/services/transactions'
-import {
-  fetchRecurringIncomes,
-  fetchRecurringIncomeOverrides,
-  processAutoRecurringIncomes,
-} from '@/services/recurring-incomes'
-import type { RecurringIncome, RecurringIncomeOverride } from '@/types/finance'
+import { fetchTransactions } from '@/services/transactions'
+import { processAutoRecurringIncomes } from '@/services/recurring-incomes'
 import {
   formatBRL,
   formatFamilyDisplayName,
@@ -25,7 +16,7 @@ import { NewTransactionDialog } from '@/components/transactions/NewTransactionDi
 import { formatTransactionTitle, groupInstallmentTransactions } from '@/services/installments'
 import { deleteTransaction } from '@/services/transactions'
 import { useToast } from '@/hooks/use-toast'
-import type { Transaction, Budget } from '@/types/finance'
+import type { Transaction } from '@/types/finance'
 import {
   TrendingUp,
   TrendingDown,
@@ -60,9 +51,6 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [totalBudgetLimit, setTotalBudgetLimit] = useState<number>(0)
-  const [recurringIncomes, setRecurringIncomes] = useState<RecurringIncome[]>([])
-  const [recurringOverrides, setRecurringOverrides] = useState<RecurringIncomeOverride[]>([])
 
   // Diálogo de detalhe e edição
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null)
@@ -88,64 +76,11 @@ export default function Home() {
         console.warn('Erro ao auto-lançar receitas fixas no Início:', autoErr)
       }
 
-      const [allTx, defBgs, overrides, recIncomes, recOverrides] = await Promise.all([
-        fetchTransactions({
-          familyId: family.id,
-          memberId: selectedMemberId,
-        }),
-        fetchDefaultBudgets(family.id),
-        fetchMonthBudgetOverrides(family.id, currentMonthStr),
-        fetchRecurringIncomes(family.id),
-        fetchRecurringIncomeOverrides(family.id, currentMonthStr),
-      ])
+      const allTx = await fetchTransactions({
+        familyId: family.id,
+        memberId: selectedMemberId,
+      })
       setTransactions(allTx)
-      setRecurringIncomes(recIncomes)
-      setRecurringOverrides(recOverrides)
-
-      // Calcular o teto orçamentário efetivo respeitando a agregação por categoria/subcategorias
-      // 1. Mapear overrides e padrões tanto de categoria quanto de subcategoria
-      const overrideCatMap = new Map<string, number>()
-      const overrideSubMap = new Map<string, number>()
-      overrides.forEach((o) => {
-        if (o.subcategory_id) {
-          overrideSubMap.set(o.subcategory_id, o.amount_cents)
-        } else {
-          overrideCatMap.set(o.category_id, o.amount_cents)
-        }
-      })
-
-      const defCatMap = new Map<string, number>()
-      const defSubMap = new Map<string, number>()
-      defBgs.forEach((d) => {
-        if (d.subcategory_id) {
-          defSubMap.set(d.subcategory_id, d.amount_cents)
-        } else {
-          defCatMap.set(d.category_id, d.amount_cents)
-        }
-      })
-
-      // 2. Para cada categoria de despesa, se houver tetos em subcategorias usa a soma delas; senão usa o teto do pai
-      let sumLimits = 0
-      const expenseCats = categories.filter((c) => c.type === 'expense')
-      expenseCats.forEach((cat) => {
-        let subcatsLimitSum = 0
-        const subcats = cat.subcategories || []
-        subcats.forEach((sub) => {
-          if (overrideSubMap.has(sub.id)) {
-            subcatsLimitSum += overrideSubMap.get(sub.id)!
-          } else if (defSubMap.has(sub.id)) {
-            subcatsLimitSum += defSubMap.get(sub.id)!
-          }
-        })
-
-        const explicitLimitCents = overrideCatMap.has(cat.id)
-          ? overrideCatMap.get(cat.id)!
-          : defCatMap.get(cat.id) || 0
-
-        const catLimit = subcatsLimitSum > 0 ? subcatsLimitSum : explicitLimitCents
-        sumLimits += catLimit
-      })
-      setTotalBudgetLimit(sumLimits)
     } catch (err: any) {
       console.error('Erro ao carregar dados do início:', err)
       toast({
@@ -320,46 +255,6 @@ export default function Home() {
     }
   }, [family?.monthly_net_income_cents, transactions, currentMonthStr, categoryBucketMap])
 
-  // Cálculo do orçamento total do mês (mantido para compatibilidade e previsão de custo de vida)
-  const { totalBudgetSpentCents, totalBudgetLimitCents, budgetPercent } = useMemo(() => {
-    let spent = 0
-    transactions.forEach((tx) => {
-      if (tx.type === 'expense' && tx.transaction_date.slice(0, 7) === currentMonthStr) {
-        spent += tx.amount_cents
-      }
-    })
-
-    const limit = totalBudgetLimit
-    const pct = limit > 0 ? Math.min(Math.round((spent / limit) * 100), 100) : 0
-
-    return {
-      totalBudgetSpentCents: spent,
-      totalBudgetLimitCents: limit,
-      budgetPercent: pct,
-    }
-  }, [totalBudgetLimit, transactions, currentMonthStr])
-
-  // Previsão de Custo de Vida (Receitas Fixas Recorrentes vs Tetos de Gastos)
-  const homeForecast = useMemo(() => {
-    const overrideMap = new Map<string, number>()
-    recurringOverrides.forEach((o) => overrideMap.set(o.recurring_income_id, o.amount_cents))
-
-    let totalPlannedIncomeCents = 0
-    recurringIncomes.forEach((rec) => {
-      if (rec.active && (rec.type || 'income') === 'income') {
-        const amt = overrideMap.has(rec.id) ? overrideMap.get(rec.id)! : rec.amount_cents
-        totalPlannedIncomeCents += amt
-      }
-    })
-
-    const netForecast = totalPlannedIncomeCents - totalBudgetLimitCents
-    return {
-      totalPlannedIncomeCents,
-      netForecast,
-      count: recurringIncomes.filter((r) => r.active && (r.type || 'income') === 'income').length,
-    }
-  }, [recurringIncomes, recurringOverrides, totalBudgetLimitCents])
-
   // Transações recentes agrupadas estilo banco (compras parceladas agrupadas em linha única)
   const recentItems = useMemo(() => {
     // Para a lista de "Últimos lançamentos", passamos todas as transações (incluindo grupos de parcelamento)
@@ -474,74 +369,6 @@ export default function Home() {
           )
         })}
       </div>
-
-      {/* PREVISÃO DE CUSTO DE VIDA (RECEITA FIXA VS TETOS COMPROMETIDOS) */}
-      {homeForecast.totalPlannedIncomeCents > 0 || totalBudgetLimitCents > 0 ? (
-        <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 text-white rounded-3xl p-5 sm:p-6 border border-slate-800 shadow-md">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs uppercase font-bold tracking-wider text-slate-300">
-                Previsão Mensal da Família · Custo de Vida
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => navigate('/carteira')}
-              className="text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold underline self-start sm:self-auto transition-colors"
-            >
-              Ver na Carteira →
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-300 block">
-                Receita Fixa Prevista
-              </span>
-              <span className="text-base sm:text-lg font-bold text-white tabular-nums mt-0.5 block">
-                {formatBRL(homeForecast.totalPlannedIncomeCents)}
-              </span>
-              <span className="text-[10px] text-slate-400 mt-0.5 block">
-                {homeForecast.count} receita(s) fixa(s)
-              </span>
-            </div>
-
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-amber-300 block">
-                Tetos Comprometidos
-              </span>
-              <span className="text-base sm:text-lg font-bold text-white tabular-nums mt-0.5 block">
-                {formatBRL(totalBudgetLimitCents)}
-              </span>
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Orçamento de despesas</span>
-            </div>
-
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-300 block">
-                O Que Sobra (Previsão)
-              </span>
-              {(() => {
-                const isPositive = homeForecast.netForecast >= 0
-                return (
-                  <>
-                    <span
-                      className={`text-base sm:text-lg font-extrabold tabular-nums mt-0.5 block ${
-                        isPositive ? 'text-emerald-400' : 'text-red-400'
-                      }`}
-                    >
-                      {isPositive ? '+' : '−'} {formatBRL(Math.abs(homeForecast.netForecast))}
-                    </span>
-                    <span className="text-[10px] text-slate-400 mt-0.5 block">
-                      {isPositive ? 'Margem livre do mês' : 'Tetos acima da receita'}
-                    </span>
-                  </>
-                )
-              })()}
-            </div>
-          </div>
-        </div>
-      ) : null}
 
       {/* 3. Grid Principal (Card Hero de Saldo + Card Orçamento) */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
