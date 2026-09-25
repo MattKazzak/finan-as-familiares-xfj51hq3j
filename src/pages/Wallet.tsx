@@ -2206,7 +2206,7 @@ export default function WalletPage() {
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent
                                     align="end"
-                                    className="w-48 rounded-2xl shadow-xl p-1.5 text-xs"
+                                    className="w-48 max-w-[calc(100vw-2rem)] rounded-2xl shadow-xl p-1.5 text-xs"
                                   >
                                     <CategoryEditorPopover
                                       category={item.category}
