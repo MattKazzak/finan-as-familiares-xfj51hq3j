@@ -78,6 +78,7 @@ import {
   MoreVertical,
   GripVertical,
   GraduationCap,
+  Repeat,
 } from 'lucide-react'
 import { SortableList } from '@/components/common/SortableList'
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
@@ -443,37 +444,6 @@ export default function WalletPage() {
       monthNetCents: income - expense,
     }
   }, [filteredTransactions])
-
-  // Previsão do Mês: Receitas Fixas Recorrentes vs Tetos de Despesa Orçados
-  const forecastData = useMemo(() => {
-    const overrideMap = new Map<string, number>()
-    recurringOverrides.forEach((o) => overrideMap.set(o.recurring_income_id, o.amount_cents))
-
-    // Soma das receitas fixas ativas (usando override deste mês se houver)
-    let totalPlannedIncomeCents = 0
-    let totalPlannedExpenseCents = 0
-    recurringIncomes.forEach((rec) => {
-      if (rec.active) {
-        const amt = overrideMap.has(rec.id) ? overrideMap.get(rec.id)! : rec.amount_cents
-        if ((rec.type || 'income') === 'income') {
-          totalPlannedIncomeCents += amt
-        } else {
-          totalPlannedExpenseCents += amt
-        }
-      }
-    })
-
-    return {
-      totalPlannedIncomeCents,
-      totalPlannedExpenseCents,
-      totalRecurringCount: recurringIncomes.filter((r) => r.active).length,
-      incomeRecurringCount: recurringIncomes.filter(
-        (r) => r.active && (r.type || 'income') === 'income',
-      ).length,
-      expenseRecurringCount: recurringIncomes.filter((r) => r.active && r.type === 'expense')
-        .length,
-    }
-  }, [recurringIncomes, recurringOverrides])
 
   // Agrupamento por dia ("Hoje", "Ontem", "17 de março")
   const groupedTransactions = useMemo(() => {
@@ -1679,7 +1649,16 @@ export default function WalletPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsRecurringIncomesOpen(true)}
+                  className="rounded-xl text-xs font-semibold gap-1.5 border-slate-200 text-slate-700 bg-white hover:bg-slate-50 h-8 shadow-xs"
+                >
+                  <Repeat className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Contas & rendas fixas</span>
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -1734,77 +1713,6 @@ export default function WalletPage() {
                 categoryList={categoryBudgetData.list}
                 onOpenModelDialog={() => setIsApplyModelOpen(true)}
               />
-            ) : null}
-
-            {/* CARD DE PREVISÃO DE CUSTO DE VIDA (RECEITAS FIXAS VS TETOS COMPROMETIDOS) */}
-            {forecastData.totalPlannedIncomeCents > 0 || categoryBudgetData.totalBudget > 0 ? (
-              <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-md border border-slate-800 relative overflow-hidden">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-xs uppercase font-bold tracking-wider text-slate-300">
-                      Previsão de Custo de Vida · {formatMonthYear(currentDate)}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsRecurringIncomesOpen(true)}
-                    className="text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold underline self-start sm:self-auto transition-colors"
-                  >
-                    Gerenciar contas & rendas fixas ({forecastData.totalRecurringCount})
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                  <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
-                    <span className="text-[11px] uppercase tracking-wider text-emerald-300 font-bold block">
-                      Receita Fixa Prevista
-                    </span>
-                    <span className="text-lg sm:text-xl font-bold tabular-nums text-white mt-0.5 block">
-                      {formatBRL(forecastData.totalPlannedIncomeCents)}
-                    </span>
-                    <span className="text-[10px] text-slate-400 mt-0.5 block">
-                      {forecastData.totalRecurringCount} receita(s) recorrente(s)
-                    </span>
-                  </div>
-
-                  <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
-                    <span className="text-[11px] uppercase tracking-wider text-amber-300 font-bold block">
-                      Despesas Comprometidas
-                    </span>
-                    <span className="text-lg sm:text-xl font-bold tabular-nums text-white mt-0.5 block">
-                      {formatBRL(categoryBudgetData.totalBudget)}
-                    </span>
-                    <span className="text-[10px] text-slate-400 mt-0.5 block">
-                      Soma dos tetos de gastos
-                    </span>
-                  </div>
-
-                  <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
-                    <span className="text-[11px] uppercase tracking-wider text-slate-300 font-bold block">
-                      Previsão do que Sobra
-                    </span>
-                    {(() => {
-                      const netForecast =
-                        forecastData.totalPlannedIncomeCents - categoryBudgetData.totalBudget
-                      const isPositive = netForecast >= 0
-                      return (
-                        <>
-                          <span
-                            className={`text-lg sm:text-xl font-extrabold tabular-nums mt-0.5 block ${
-                              isPositive ? 'text-emerald-400' : 'text-red-400'
-                            }`}
-                          >
-                            {isPositive ? '+' : '−'} {formatBRL(Math.abs(netForecast))}
-                          </span>
-                          <span className="text-[10px] text-slate-400 mt-0.5 block">
-                            {isPositive ? 'Margem livre projetada' : 'Orçamento excede receitas'}
-                          </span>
-                        </>
-                      )
-                    })()}
-                  </div>
-                </div>
-              </div>
             ) : null}
 
             {/* Card Geral de Orçamento Recorrente / Projeção */}
