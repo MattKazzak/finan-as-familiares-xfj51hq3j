@@ -1,8 +1,9 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import React from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import Home from '../Home'
+import * as transactionsService from '@/services/transactions'
 
 const mockNavigate = vi.fn()
 vi.mock('react-router-dom', async () => {
@@ -19,10 +20,11 @@ let mockFamily: any = {
   monthly_net_income_cents: 600000, // R$ 6.000,00 -> 50% = R$ 3.000, 30% = R$ 1.800, 20% = R$ 1.200
 }
 
-const mockCategories = [
+let mockCategories: any[] = [
   { id: 'cat-1', name: 'Moradia', type: 'expense', budget_bucket: 'essentials' },
   { id: 'cat-2', name: 'Lazer', type: 'expense', budget_bucket: 'lifestyle' },
   { id: 'cat-3', name: 'Reserva', type: 'expense', budget_bucket: 'future' },
+  { id: 'cat-salario', name: 'Salário', type: 'income', budget_bucket: 'essentials' },
 ]
 
 const todayStr = new Date().toISOString().slice(0, 7) + '-10'
@@ -183,5 +185,160 @@ describe('Home Page - Card Orçamento em 3 Baldes (50/30/20)', () => {
     ).toBeDefined()
     // Mostra tetos como 0,00 sem travar ou quebrar
     expect(screen.getAllByText(/\/ R\$\s*0,00/).length).toBe(3)
+  })
+
+  describe('Rótulo Visual Inteligente de Receitas', () => {
+    it('caso (a): monthIncomeCents === 0 e plannedIncomeCents > 0 exibe R$ 0,00, badge de previsto e micro-ação', async () => {
+      mockFamily = {
+        id: 'fam-1',
+        name: 'Silva',
+        monthly_net_income_cents: 800000, // R$ 8.000,00 previsto
+      }
+      // Nenhuma transação de receita no mês
+      vi.mocked(transactionsService.fetchTransactions).mockResolvedValue([])
+
+      render(
+        <MemoryRouter>
+          <Home />
+        </MemoryRouter>,
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Receitas do Mês')).toBeDefined()
+      })
+
+      // Valor realizado zerado
+      expect(screen.getByText('R$ 0,00')).toBeDefined()
+
+      // Badge/texto sutil com o previsto
+      expect(screen.getByText('(Previsto: R$ 8.000,00)')).toBeDefined()
+
+      // Linha de apoio e micro-ação
+      expect(screen.getByText('Aguardando entradas do mês')).toBeDefined()
+      const salaryBtn = screen.getByRole('button', { name: '[Registrar salário]' })
+      expect(salaryBtn).toBeDefined()
+
+      // Clicar em "Registrar salário" abre o diálogo com dados pré-preenchidos
+      fireEvent.click(salaryBtn)
+      await waitFor(() => {
+        expect(screen.getByText('Nova Transação')).toBeDefined()
+        expect(screen.getByDisplayValue('Salário mensal')).toBeDefined()
+        expect(screen.getByDisplayValue('8.000,00')).toBeDefined()
+      })
+    })
+
+    it('caso (b.1): monthIncomeCents > 0 e menor que plannedIncomeCents exibe meta discreta "de {previsto}"', async () => {
+      mockFamily = {
+        id: 'fam-1',
+        name: 'Silva',
+        monthly_net_income_cents: 600000, // R$ 6.000,00 previsto
+      }
+      const currentMonth = new Date().toISOString().slice(0, 7)
+      vi.mocked(transactionsService.fetchTransactions).mockResolvedValue([
+        {
+          id: 'tx-inc-partial',
+          family_id: 'fam-1',
+          member_id: 'm-1',
+          category_id: 'cat-salario',
+          amount_cents: 300000, // R$ 3.000,00 realizado
+          type: 'income',
+          status: 'confirmed',
+          description: 'Adiantamento',
+          transaction_date: `${currentMonth}-05`,
+          created_at: `${currentMonth}-05T12:00:00Z`,
+        },
+      ])
+
+      render(
+        <MemoryRouter>
+          <Home />
+        </MemoryRouter>,
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Receitas do Mês')).toBeDefined()
+      })
+
+      expect(screen.getByText('R$ 3.000,00')).toBeDefined()
+      expect(screen.getByText('de R$ 6.000,00')).toBeDefined()
+      expect(screen.queryByText('Aguardando entradas do mês')).toBeNull()
+      expect(screen.queryByText('✓ Previsto atingido')).toBeNull()
+    })
+
+    it('caso (b.2): monthIncomeCents >= plannedIncomeCents exibe "✓ Previsto atingido"', async () => {
+      mockFamily = {
+        id: 'fam-1',
+        name: 'Silva',
+        monthly_net_income_cents: 600000, // R$ 6.000,00 previsto
+      }
+      const currentMonth = new Date().toISOString().slice(0, 7)
+      vi.mocked(transactionsService.fetchTransactions).mockResolvedValue([
+        {
+          id: 'tx-inc-full',
+          family_id: 'fam-1',
+          member_id: 'm-1',
+          category_id: 'cat-salario',
+          amount_cents: 600000, // R$ 6.000,00 realizado
+          type: 'income',
+          status: 'confirmed',
+          description: 'Salário integral',
+          transaction_date: `${currentMonth}-05`,
+          created_at: `${currentMonth}-05T12:00:00Z`,
+        },
+      ])
+
+      render(
+        <MemoryRouter>
+          <Home />
+        </MemoryRouter>,
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Receitas do Mês')).toBeDefined()
+      })
+
+      expect(screen.getByText('R$ 6.000,00')).toBeDefined()
+      expect(screen.getByText('✓ Previsto atingido')).toBeDefined()
+      expect(screen.queryByText(/de R\$/)).toBeNull()
+      expect(screen.queryByText('Aguardando entradas do mês')).toBeNull()
+    })
+
+    it('caso (c): plannedIncomeCents === 0 mantém o comportamento atual (só valor realizado)', async () => {
+      mockFamily = {
+        id: 'fam-1',
+        name: 'Silva',
+        monthly_net_income_cents: 0, // Sem previsão definida
+      }
+      const currentMonth = new Date().toISOString().slice(0, 7)
+      vi.mocked(transactionsService.fetchTransactions).mockResolvedValue([
+        {
+          id: 'tx-inc-only',
+          family_id: 'fam-1',
+          member_id: 'm-1',
+          category_id: 'cat-salario',
+          amount_cents: 250000,
+          type: 'income',
+          status: 'confirmed',
+          description: 'Receita avulsa',
+          transaction_date: `${currentMonth}-02`,
+          created_at: `${currentMonth}-02T12:00:00Z`,
+        },
+      ])
+
+      render(
+        <MemoryRouter>
+          <Home />
+        </MemoryRouter>,
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Receitas do Mês')).toBeDefined()
+      })
+
+      expect(screen.getByText('R$ 2.500,00')).toBeDefined()
+      expect(screen.queryByText(/Previsto/)).toBeNull()
+      expect(screen.queryByText('Aguardando entradas do mês')).toBeNull()
+      expect(screen.queryByText('[Registrar salário]')).toBeNull()
+    })
   })
 })
