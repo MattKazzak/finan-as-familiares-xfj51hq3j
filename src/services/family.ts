@@ -1,13 +1,15 @@
 // Serviço de dados da Família, Membros e Categorias
 import { supabase } from '@/lib/supabase/client'
+import { normalizeFamilyName } from '@/lib/formatters'
 import type { Family, FamilyMember, TransactionCategory } from '@/types/finance'
 
 export async function createNewFamilyWorkspace(
   familyName?: string,
   memberName?: string,
 ): Promise<string> {
+  const cleanFamilyName = familyName ? normalizeFamilyName(familyName) : ''
   const { data, error } = await (supabase as any).rpc('create_new_family_workspace', {
-    p_family_name: familyName || 'Minha Família',
+    p_family_name: cleanFamilyName || 'Minha Família',
     p_member_name: memberName || 'Principal',
   })
 
@@ -37,7 +39,7 @@ export async function fetchFamilyData() {
   // Se o usuário não possui uma família criada ainda, cria automaticamente o workspace padrão
   if (!family) {
     const rawName = (user.user_metadata?.name as string) || ''
-    const fallbackFamilyName = rawName ? `Família ${rawName}` : 'Minha Família'
+    const fallbackFamilyName = rawName ? normalizeFamilyName(rawName) : 'Minha Família'
     const fallbackMemberName = rawName || user.email?.split('@')[0] || 'Principal'
 
     try {
@@ -149,9 +151,14 @@ export async function updateFamilyDetails(
   familyId: string,
   updates: { name?: string; avatar_url?: string | null; monthly_net_income_cents?: number | null },
 ) {
+  const payload = { ...updates }
+  if (payload.name !== undefined) {
+    payload.name = normalizeFamilyName(payload.name)
+  }
+
   const { data, error } = await (supabase as any)
     .from('families')
-    .update(updates)
+    .update(payload)
     .eq('id', familyId)
     .select()
     .single()
