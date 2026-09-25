@@ -14,6 +14,7 @@ import { OnboardingWizardDialog } from '@/components/wallet/OnboardingWizardDial
 import { InstallPwaBanner } from '@/components/common/InstallPwaBanner'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { formatFamilyDisplayName } from '@/lib/formatters'
 import { fetchRecurringIncomes, fetchRecurringIncomeOverrides } from '@/services/recurring-incomes'
 import type { RecurringIncome, RecurringIncomeOverride } from '@/types/finance'
 
@@ -127,7 +128,7 @@ export default function Layout() {
           <div className="overflow-hidden">
             <h1 className="font-bold text-sm text-slate-900 truncate">Finanças da Família</h1>
             <p className="text-xs text-slate-500 truncate">
-              {family ? `Família ${family.name}` : 'Controle Conjunto'}
+              {family ? formatFamilyDisplayName(family.name) : 'Controle Conjunto'}
             </p>
           </div>
         </div>

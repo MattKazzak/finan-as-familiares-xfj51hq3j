@@ -12,7 +12,12 @@ import {
   processAutoRecurringIncomes,
 } from '@/services/recurring-incomes'
 import type { RecurringIncome, RecurringIncomeOverride } from '@/types/finance'
-import { formatBRL, formatFullDate, formatRelativeDate } from '@/lib/formatters'
+import {
+  formatBRL,
+  formatFamilyDisplayName,
+  formatFullDate,
+  formatRelativeDate,
+} from '@/lib/formatters'
 import { CountUp } from '@/components/common/CountUp'
 import { CategoryIcon } from '@/components/common/CategoryIcon'
 import { TransactionDetailDialog } from '@/components/transactions/TransactionDetailDialog'
@@ -312,7 +317,7 @@ export default function Home() {
           <p className="text-xs sm:text-sm text-slate-500 capitalize mt-0.5">
             {formatFullDate(new Date())} •{' '}
             <span className="font-semibold text-emerald-800">
-              Família {family?.name || 'Silva'}
+              {formatFamilyDisplayName(family?.name, 'Silva')}
             </span>
           </p>
         </div>

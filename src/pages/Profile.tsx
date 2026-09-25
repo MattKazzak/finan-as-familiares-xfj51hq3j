@@ -24,7 +24,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { formatBRL, formatNumberBRL, parseBRLToCents } from '@/lib/formatters'
+import {
+  formatBRL,
+  formatFamilyDisplayName,
+  formatNumberBRL,
+  parseBRLToCents,
+} from '@/lib/formatters'
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
 import { InstallInstructionsModal } from '@/components/common/InstallInstructionsModal'
 import { Sparkles, Landmark } from 'lucide-react'
@@ -273,7 +278,7 @@ export default function ProfilePage() {
             </span>
             <div className="flex items-center gap-2">
               <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white truncate">
-                Família {family?.name || 'Silva'}
+                {formatFamilyDisplayName(family?.name, 'Silva')}
               </h2>
               <button
                 type="button"

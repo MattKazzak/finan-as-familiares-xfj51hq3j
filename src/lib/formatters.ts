@@ -126,3 +126,58 @@ export function formatDeadline(dateStr: string): string {
     return dateStr
   }
 }
+
+/**
+ * Normaliza o nome da família removendo prefixos redundantes "Família" ou "Familia" do início
+ * Ex.: "Família Matheus" -> "Matheus"
+ *      "Familia Silva" -> "Silva"
+ *      "Matheus" -> "Matheus"
+ */
+export function normalizeFamilyName(rawName?: string | null): string {
+  if (!rawName) return ''
+  const trimmed = rawName.trim()
+  // Remove prefixo "Família " ou "Familia " repetido no início (case-insensitive)
+  const cleaned = trimmed.replace(/^(?:fam[íi]lia\s*)+/i, '').trim()
+  return cleaned || trimmed
+}
+
+/**
+ * Formata o nome de exibição da família garantindo que a palavra "Família"
+ * nunca apareça duplicada.
+ * Se o nome for omitido ou vazio, usa fallback padrão ("Família Silva").
+ * Se o nome já começa com "Família" (case-insensitive), mantém com capitalização correta.
+ * Caso contrário, adiciona o prefixo "Família {nome}".
+ *
+ * Exemplos:
+ *   formatFamilyDisplayName("Família Matheus") => "Família Matheus"
+ *   formatFamilyDisplayName("Familia Matheus") => "Família Matheus"
+ *   formatFamilyDisplayName("Matheus")         => "Família Matheus"
+ *   formatFamilyDisplayName("Silva")           => "Família Silva"
+ *   formatFamilyDisplayName("Família Silva")   => "Família Silva"
+ *   formatFamilyDisplayName(undefined)         => "Família Silva"
+ */
+export function formatFamilyDisplayName(
+  rawName?: string | null,
+  fallback: string = 'Silva',
+): string {
+  const trimmed = (rawName || '').trim()
+  if (!trimmed) {
+    // Se o fallback já vier com "Família", respeita; senão prefixa
+    if (/^fam[íi]lia\b/i.test(fallback.trim())) {
+      const cleanFallback = fallback.trim().replace(/^fam[íi]lia\s*/i, '')
+      return cleanFallback ? `Família ${cleanFallback}` : 'Família'
+    }
+    return `Família ${fallback.trim()}`
+  }
+
+  // Verifica se o nome já começa com "Família" ou "Familia" (case-insensitive)
+  const match = trimmed.match(/^fam[íi]lia\s*(.*)$/i)
+  if (match) {
+    const remainder = match[1].trim()
+    // Pode haver casos onde o usuário salvou "Família Família Matheus" anteriormente
+    const fullyCleaned = normalizeFamilyName(remainder)
+    return fullyCleaned ? `Família ${fullyCleaned}` : 'Família'
+  }
+
+  return `Família ${trimmed}`
+}
