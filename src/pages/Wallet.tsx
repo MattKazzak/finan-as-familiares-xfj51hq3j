@@ -1180,22 +1180,8 @@ export default function WalletPage() {
             </button>
           </div>
 
-          {/* Seletor de Mês Compartilhado + Ação de Importar OFX na aba Carteira */}
+          {/* Seletor de Mês Compartilhado na aba Carteira */}
           <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
-            {activeTab === 'transacoes' && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={openImportStatement}
-                className="rounded-2xl border-emerald-300 text-emerald-800 bg-emerald-50/80 hover:bg-emerald-100/80 text-xs font-bold gap-1.5 shadow-2xs h-9 px-3"
-                title="Importar e conciliar extrato bancário (OFX)"
-              >
-                <UploadCloud className="w-4 h-4 text-emerald-700 stroke-[2.2]" />
-                <span>📥 Importar OFX</span>
-              </Button>
-            )}
-
             <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-2xl border border-slate-200/80 shadow-sm">
               <button
                 onClick={handlePrevMonth}
