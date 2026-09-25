@@ -314,7 +314,7 @@ export default function Home() {
               <span className="text-[9px]">▾</span>
             </button>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 capitalize mt-0.5">
+          <p className="text-xs sm:text-sm text-slate-500 capitalize mt-0.5 break-words [text-wrap:balance]">
             {formatFullDate(new Date())} •{' '}
             <span className="font-semibold text-emerald-800">
               {formatFamilyDisplayName(family?.name, 'Silva')}

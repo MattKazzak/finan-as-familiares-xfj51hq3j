@@ -185,4 +185,17 @@ describe('ProfilePage PWA Install Shortcut - 3 Cenários de Clique', () => {
     expect(screen.getByText(/3 pontinhos/i)).toBeDefined()
     expect(screen.getByText(/Instalar aplicativo/i)).toBeDefined()
   })
+
+  it('renderiza o título da família sem classe truncate e com quebra responsiva', () => {
+    render(
+      <MemoryRouter>
+        <ProfilePage />
+      </MemoryRouter>,
+    )
+
+    const titleEl = screen.getByRole('heading', { level: 2, name: 'Família Silva' })
+    expect(titleEl).toBeDefined()
+    expect(titleEl.className).not.toContain('truncate')
+    expect(titleEl.className).toContain('break-words')
+  })
 })

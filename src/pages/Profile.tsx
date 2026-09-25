@@ -244,9 +244,9 @@ export default function ProfilePage() {
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* 1. Card da Família (Hero Editável) */}
       <div className="bg-gradient-to-br from-[#059669] to-[#0F766E] rounded-3xl p-6 sm:p-7 text-white shadow-xl shadow-emerald-950/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden group">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 min-w-0 flex-1">
           {/* Avatar Interativo com Troca de Imagem / Inicial */}
-          <div className="relative group/avatar">
+          <div className="relative group/avatar shrink-0">
             <Avatar className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/20 backdrop-blur-sm border-2 border-white/30 text-white font-black text-2xl sm:text-3xl shadow-lg shrink-0 overflow-hidden">
               {family?.avatar_url && (
                 <AvatarImage
@@ -272,24 +272,24 @@ export default function ProfilePage() {
             </button>
           </div>
 
-          <div className="overflow-hidden">
+          <div className="min-w-0 flex-1">
             <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-100/90 block">
               Família Registrada
             </span>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white truncate">
+            <div className="flex items-baseline gap-2 flex-wrap sm:flex-nowrap">
+              <h2 className="text-lg sm:text-2xl font-black tracking-tight text-white leading-tight break-words [text-wrap:balance]">
                 {formatFamilyDisplayName(family?.name, 'Silva')}
               </h2>
               <button
                 type="button"
                 onClick={openEditFamilyDialog}
-                className="p-1 hover:bg-white/20 rounded-lg text-emerald-100 hover:text-white transition-colors"
+                className="p-1 hover:bg-white/20 rounded-lg text-emerald-100 hover:text-white transition-colors shrink-0 self-center"
                 title="Editar nome da família"
               >
                 <Pencil className="w-3.5 h-3.5" />
               </button>
             </div>
-            <p className="text-xs text-emerald-100/80 mt-0.5 truncate">
+            <p className="text-xs text-emerald-100/80 mt-1 truncate">
               Conta: {user?.email || 'Usuário'}
             </p>
           </div>
@@ -299,7 +299,7 @@ export default function ProfilePage() {
           onClick={openEditFamilyDialog}
           variant="secondary"
           size="sm"
-          className="bg-white/15 hover:bg-white/25 text-white border border-white/20 text-xs font-semibold rounded-xl self-start sm:self-center shadow-sm"
+          className="bg-white/15 hover:bg-white/25 text-white border border-white/20 text-xs font-semibold rounded-xl self-start sm:self-center shadow-sm shrink-0"
         >
           <Pencil className="w-3.5 h-3.5 mr-1.5" />
           Editar Família
@@ -853,7 +853,7 @@ export default function ProfilePage() {
       {/* Rodapé de Versão */}
       <div className="text-center pt-2 pb-4">
         <span className="text-[11px] text-slate-400 font-medium">
-          Versão 0.0.17 • Finanças Familiares
+          Versão 0.0.124 • Finanças Familiares
         </span>
       </div>
 

@@ -125,9 +125,12 @@ export default function Layout() {
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center text-white font-bold shadow-md shadow-emerald-900/10">
             <span className="text-lg">💰</span>
           </div>
-          <div className="overflow-hidden">
+          <div className="min-w-0 flex-1">
             <h1 className="font-bold text-sm text-slate-900 truncate">Finanças da Família</h1>
-            <p className="text-xs text-slate-500 truncate">
+            <p
+              className="text-xs text-slate-500 break-words line-clamp-2 leading-tight"
+              title={family ? formatFamilyDisplayName(family.name) : 'Controle Conjunto'}
+            >
               {family ? formatFamilyDisplayName(family.name) : 'Controle Conjunto'}
             </p>
           </div>
