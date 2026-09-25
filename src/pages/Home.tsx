@@ -303,23 +303,23 @@ export default function Home() {
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       {/* 1. Header Saudação + Pull-to-refresh */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+      <div className="flex items-start sm:items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight break-words">
               Olá, {currentMember?.name || 'Família'}! 👋
             </h1>
             <button
               type="button"
               onClick={openWhoIsUsing}
-              className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-full transition-colors flex items-center gap-1 border border-emerald-200/60"
+              className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-full transition-colors flex items-center gap-1 border border-emerald-200/60 shrink-0 cursor-pointer active:scale-95"
               title="Trocar quem está usando"
             >
               <span>Trocar</span>
               <span className="text-[9px]">▾</span>
             </button>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 capitalize mt-0.5 break-words [text-wrap:balance]">
+          <p className="text-xs sm:text-sm text-slate-500 capitalize mt-1 break-words leading-tight">
             {formatFullDate(new Date())} •{' '}
             <span className="font-semibold text-emerald-800">
               {formatFamilyDisplayName(family?.name, 'Silva')}
@@ -330,7 +330,7 @@ export default function Home() {
         <button
           onClick={handlePullToRefresh}
           disabled={refreshing}
-          className="p-2 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition-all active:scale-95"
+          className="p-2 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition-all active:scale-95 shrink-0"
           title="Atualizar dados"
         >
           <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin text-emerald-600' : ''}`} />
@@ -338,17 +338,17 @@ export default function Home() {
       </div>
 
       {/* 2. Filtro Horizontal de Membros (Chips) */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
         <button
           type="button"
           onClick={() => setSelectedMemberId(null)}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
             selectedMemberId === null
               ? 'bg-emerald-700 text-white shadow-sm ring-2 ring-emerald-600/30'
               : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
           }`}
         >
-          <Users className="w-3.5 h-3.5" />
+          <Users className="w-3.5 h-3.5 shrink-0" />
           Todos
         </button>
         {members.map((m) => {
@@ -358,13 +358,13 @@ export default function Home() {
               key={m.id}
               type="button"
               onClick={() => setSelectedMemberId(m.id)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
                 isSelected
                   ? 'bg-emerald-700 text-white shadow-sm ring-2 ring-emerald-600/30'
                   : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
               }`}
             >
-              <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[9px] font-bold">
+              <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[9px] font-bold shrink-0">
                 {m.name.charAt(0).toUpperCase()}
               </span>
               {m.name}
@@ -376,17 +376,17 @@ export default function Home() {
       {/* 3. Grid Principal (Card Hero de Saldo + Card Orçamento) */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
         {/* CARD HERO SALDO TOTAL (Desktop 8 col) */}
-        <div className="md:col-span-8 bg-gradient-to-br from-[#059669] to-[#0F766E] rounded-3xl p-6 sm:p-7 text-white shadow-xl shadow-emerald-950/15 relative overflow-hidden transition-all hover:shadow-2xl">
+        <div className="md:col-span-8 bg-gradient-to-br from-[#059669] to-[#0F766E] rounded-3xl p-5 sm:p-7 text-white shadow-xl shadow-emerald-950/15 relative overflow-hidden transition-all hover:shadow-2xl">
           {/* Efeito de luz decorativo */}
           <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
 
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
             <span className="text-xs uppercase font-bold tracking-wider text-emerald-100">
               Saldo Total da Família
             </span>
             {trendPercentage !== 0 && (
               <div
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold shrink-0 ${
                   trendPercentage > 0
                     ? 'bg-emerald-400/20 text-emerald-100'
                     : 'bg-red-400/20 text-red-200'
@@ -407,36 +407,36 @@ export default function Home() {
           {loading ? (
             <Skeleton className="h-10 w-48 bg-white/20 rounded-lg my-2" />
           ) : (
-            <div className="text-3xl sm:text-4xl font-extrabold tracking-tight tabular-nums my-2">
+            <div className="text-2xl sm:text-4xl font-extrabold tracking-tight tabular-nums my-2 break-words">
               <CountUp end={totalBalanceCents} formatter={(v) => formatBRL(v)} />
             </div>
           )}
 
-          <p className="text-xs text-emerald-100/90 mb-5">
+          <p className="text-xs text-emerald-100/90 mb-4 sm:mb-5">
             {selectedMemberId
               ? `Filtrado por: ${members.find((m) => m.id === selectedMemberId)?.name}`
               : 'Consolidado de todos os membros'}
           </p>
 
-          {/* Chips Receitas e Despesas do Mês */}
-          <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/15">
+          {/* Chips Receitas e Despesas do Mês: empilhados no mobile (< sm), 2 colunas a partir de sm: */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-white/15">
             {/* Bloco Receitas do Mês */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3 flex flex-col justify-between gap-1.5 min-w-0">
-              <div className="flex items-start gap-2.5 min-w-0">
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between gap-2 min-w-0">
+              <div className="flex items-start gap-2.5 sm:gap-3 min-w-0">
                 <div className="w-8 h-8 rounded-xl bg-emerald-400/20 flex items-center justify-center text-emerald-200 shrink-0 mt-0.5">
                   <ArrowUpRight className="w-5 h-5 stroke-[2.5]" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-100/90 block truncate">
+                  <span className="text-[10px] sm:text-[11px] uppercase font-bold tracking-wider text-emerald-100/90 block truncate">
                     Receitas do Mês
                   </span>
-                  <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-                    <span className="text-sm sm:text-base font-bold text-white tabular-nums">
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 mt-0.5">
+                    <span className="text-base sm:text-lg font-bold text-white tabular-nums break-words">
                       {formatBRL(monthIncomeCents)}
                     </span>
                     {/* Cenário (a): zero e previsto > 0 -> badge/texto sutil (Previsto: ...) */}
                     {monthIncomeCents === 0 && plannedIncomeCents > 0 && (
-                      <span className="text-[10px] sm:text-[11px] font-medium text-emerald-100/80 whitespace-nowrap">
+                      <span className="text-xs sm:text-[11px] font-medium text-emerald-100/90 break-words">
                         (Previsto: {formatBRL(plannedIncomeCents)})
                       </span>
                     )}
@@ -444,7 +444,7 @@ export default function Home() {
                     {monthIncomeCents > 0 &&
                       plannedIncomeCents > 0 &&
                       monthIncomeCents < plannedIncomeCents && (
-                        <span className="text-[10px] sm:text-[11px] font-medium text-emerald-100/80 whitespace-nowrap">
+                        <span className="text-xs sm:text-[11px] font-medium text-emerald-100/90 break-words">
                           de {formatBRL(plannedIncomeCents)}
                         </span>
                       )}
@@ -452,7 +452,7 @@ export default function Home() {
                     {monthIncomeCents > 0 &&
                       plannedIncomeCents > 0 &&
                       monthIncomeCents >= plannedIncomeCents && (
-                        <span className="text-[10px] sm:text-[11px] font-bold text-emerald-200 whitespace-nowrap">
+                        <span className="text-xs sm:text-[11px] font-bold text-emerald-200 break-words">
                           ✓ Previsto atingido
                         </span>
                       )}
@@ -462,9 +462,9 @@ export default function Home() {
 
               {/* Linha de apoio acolhedora quando zero entradas e há previsão cadastrada */}
               {monthIncomeCents === 0 && plannedIncomeCents > 0 && (
-                <div className="pt-1 border-t border-white/10 text-[10px] sm:text-[11px] text-emerald-100/90 flex flex-wrap items-center gap-1 leading-tight">
+                <div className="pt-1.5 border-t border-white/10 text-xs sm:text-[11px] text-emerald-100/95 flex flex-wrap items-center gap-1.5 leading-snug">
                   <span>Aguardando entradas do mês</span>
-                  <span className="opacity-60">·</span>
+                  <span className="opacity-60 hidden xs:inline">·</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -485,7 +485,7 @@ export default function Home() {
                         initialDescription: 'Salário mensal',
                       })
                     }}
-                    className="font-bold underline underline-offset-2 hover:text-white transition-colors cursor-pointer text-emerald-50"
+                    className="font-bold underline underline-offset-4 hover:text-white transition-colors cursor-pointer text-emerald-50 active:scale-95 py-0.5"
                   >
                     [Registrar salário]
                   </button>
@@ -494,15 +494,15 @@ export default function Home() {
             </div>
 
             {/* Bloco Despesas do Mês */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3 flex items-start gap-2.5 min-w-0">
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3 sm:p-3.5 flex items-start gap-2.5 sm:gap-3 min-w-0">
               <div className="w-8 h-8 rounded-xl bg-rose-400/20 flex items-center justify-center text-rose-200 shrink-0 mt-0.5">
                 <ArrowDownRight className="w-5 h-5 stroke-[2.5]" />
               </div>
               <div className="min-w-0 flex-1 overflow-hidden">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-100/90 block truncate">
+                <span className="text-[10px] sm:text-[11px] uppercase font-bold tracking-wider text-emerald-100/90 block truncate">
                   Despesas do Mês
                 </span>
-                <span className="text-sm sm:text-base font-bold text-white tabular-nums truncate block">
+                <span className="text-base sm:text-lg font-bold text-white tabular-nums truncate block mt-0.5">
                   {formatBRL(monthExpenseCents)}
                 </span>
               </div>
@@ -511,25 +511,25 @@ export default function Home() {
         </div>
 
         {/* CARD ORÇAMENTO EM 3 BALDES (Desktop 4 col) */}
-        <div className="md:col-span-4 bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+        <div className="md:col-span-4 bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div>
             {/* Header do Card */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-base shadow-2xs">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-base shadow-2xs shrink-0">
                   ⚖️
                 </div>
-                <div>
-                  <h3 className="font-bold text-sm text-slate-900 leading-tight">
+                <div className="min-w-0">
+                  <h3 className="font-bold text-sm text-slate-900 leading-tight truncate">
                     Orçamento em 3 Baldes
                   </h3>
-                  <span className="text-[10px] text-slate-400 font-medium">
+                  <span className="text-[10px] text-slate-400 font-medium block">
                     Modelo 50 / 30 / 20
                   </span>
                 </div>
               </div>
               {bucketsData.hasIncomeConfigured && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 tabular-nums">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 tabular-nums shrink-0">
                   {formatBRL(bucketsData.netIncomeCents)}/mês
                 </span>
               )}
@@ -558,9 +558,9 @@ export default function Home() {
               </div>
 
               {bucketsData.hasIncomeConfigured ? (
-                <div className="flex items-baseline justify-between gap-2 mt-1">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 mt-1">
                   <span
-                    className={`text-lg sm:text-xl font-black tracking-tight tabular-nums ${
+                    className={`text-lg sm:text-xl font-black tracking-tight tabular-nums break-words ${
                       bucketsData.lifestyle.availableCents >= 0 ? 'text-amber-900' : 'text-rose-600'
                     }`}
                   >
@@ -584,13 +584,13 @@ export default function Home() {
             <div className="space-y-3.5">
               {/* Balde 1: 🛡️ Necessidades (50%) - Cor Azul / Índigo */}
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-xs">
                   <span className="font-semibold text-slate-700 flex items-center gap-1">
                     <span>🛡️</span>
                     <span className="font-bold text-slate-800">Necessidades</span>
                     <span className="text-[10px] text-slate-400 font-medium">(50%)</span>
                   </span>
-                  <span className="font-bold text-slate-700 tabular-nums text-[11px]">
+                  <span className="font-bold text-slate-700 tabular-nums text-[11px] break-words">
                     {formatBRL(bucketsData.essentials.spentCents)}
                     <span className="text-slate-400 font-normal">
                       {' '}
@@ -609,9 +609,9 @@ export default function Home() {
                 </div>
 
                 <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
-                  <span>Moradia, mercado, saúde, contas</span>
+                  <span className="truncate mr-1">Moradia, mercado, saúde, contas</span>
                   <span
-                    className={`font-semibold tabular-nums ${
+                    className={`font-semibold tabular-nums shrink-0 ${
                       bucketsData.essentials.isOver ? 'text-rose-600 font-bold' : 'text-slate-500'
                     }`}
                   >
@@ -622,13 +622,13 @@ export default function Home() {
 
               {/* Balde 2: 🏖️ Estilo de Vida (30%) - Cor Âmbar / Violeta */}
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-xs">
                   <span className="font-semibold text-slate-700 flex items-center gap-1">
                     <span>🏖️</span>
                     <span className="font-bold text-slate-800">Estilo de Vida</span>
                     <span className="text-[10px] text-slate-400 font-medium">(30%)</span>
                   </span>
-                  <span className="font-bold text-slate-700 tabular-nums text-[11px]">
+                  <span className="font-bold text-slate-700 tabular-nums text-[11px] break-words">
                     {formatBRL(bucketsData.lifestyle.spentCents)}
                     <span className="text-slate-400 font-normal">
                       {' '}
@@ -647,9 +647,9 @@ export default function Home() {
                 </div>
 
                 <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
-                  <span>Lazer, refeições fora, compras</span>
+                  <span className="truncate mr-1">Lazer, refeições fora, compras</span>
                   <span
-                    className={`font-semibold tabular-nums ${
+                    className={`font-semibold tabular-nums shrink-0 ${
                       bucketsData.lifestyle.isOver ? 'text-rose-600 font-bold' : 'text-slate-500'
                     }`}
                   >
@@ -660,13 +660,13 @@ export default function Home() {
 
               {/* Balde 3: 🎯 Futuro & Metas (20%) - Cor Esmeralda */}
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-xs">
                   <span className="font-semibold text-slate-700 flex items-center gap-1">
                     <span>🎯</span>
                     <span className="font-bold text-slate-800">Futuro & Metas</span>
                     <span className="text-[10px] text-slate-400 font-medium">(20%)</span>
                   </span>
-                  <span className="font-bold text-slate-700 tabular-nums text-[11px]">
+                  <span className="font-bold text-slate-700 tabular-nums text-[11px] break-words">
                     {formatBRL(bucketsData.future.spentCents)}
                     <span className="text-slate-400 font-normal">
                       {' '}
@@ -685,8 +685,8 @@ export default function Home() {
                 </div>
 
                 <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
-                  <span>Reserva, metas, investimentos</span>
-                  <span className="font-semibold text-slate-500 tabular-nums">
+                  <span className="truncate mr-1">Reserva, metas, investimentos</span>
+                  <span className="font-semibold text-slate-500 tabular-nums shrink-0">
                     {bucketsData.future.percent}%
                   </span>
                 </div>
@@ -707,18 +707,20 @@ export default function Home() {
       </div>
 
       {/* 4. Seção Últimas Transações */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="font-bold text-base text-slate-900">Últimas Transações</h3>
-            <p className="text-xs text-slate-500">Histórico recente de receitas e despesas</p>
+      <div className="bg-white rounded-3xl border border-slate-200/80 p-4 sm:p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-4 gap-2">
+          <div className="min-w-0">
+            <h3 className="font-bold text-base text-slate-900 truncate">Últimas Transações</h3>
+            <p className="text-xs text-slate-500 truncate">
+              Histórico recente de receitas e despesas
+            </p>
           </div>
           <Button
             variant="ghost"
             onClick={() => navigate('/carteira')}
-            className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 rounded-xl p-2"
+            className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 rounded-xl px-2.5 py-1.5 shrink-0 h-auto"
           >
-            Ver todas
+            <span>Ver todas</span>
             <ChevronRight className="w-4 h-4 ml-1" />
           </Button>
         </div>
