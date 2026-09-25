@@ -10,6 +10,7 @@ import { VoiceTransactionDialog } from '@/components/transactions/VoiceTransacti
 import { ImportStatementDialog } from '@/components/transactions/ImportStatementDialog'
 import { WhoIsUsingDialog } from '@/components/common/WhoIsUsingDialog'
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
+import { OnboardingWizardDialog } from '@/components/wallet/OnboardingWizardDialog'
 import { InstallPwaBanner } from '@/components/common/InstallPwaBanner'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -358,8 +359,8 @@ export default function Layout() {
       {/* DIÁLOGO GLOBAL QUEM ESTÁ USANDO */}
       <WhoIsUsingDialog open={isWhoIsUsingOpen} onOpenChange={setIsWhoIsUsingOpen} />
 
-      {/* DIÁLOGO GLOBAL DE ONBOARDING AUTOMÁTICO (Passo 1: Renda Líquida -> Passo 2: Perfil 3 Baldes -> Passo 3: Conferir & Aplicar) */}
-      <ApplyBudgetModelDialog
+      {/* DIÁLOGO GLOBAL DE ONBOARDING AUTOMÁTICO (OnboardingWizardDialog: Renda Mensal Familiar -> Seu Orçamento em 3 Caixas) */}
+      <OnboardingWizardDialog
         open={isOnboardingOpen}
         onOpenChange={(open) => {
           setIsOnboardingOpen(open)
@@ -368,7 +369,6 @@ export default function Layout() {
           }
         }}
         family={family}
-        categories={categories}
         onSuccess={async () => {
           if (family?.id) {
             sessionStorage.setItem(`onboarding_dismissed_${family.id}`, 'true')

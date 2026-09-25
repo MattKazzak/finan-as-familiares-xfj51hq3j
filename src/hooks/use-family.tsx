@@ -231,20 +231,21 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [loading, members, family?.monthly_net_income_cents])
 
-  // Iniciar automaticamente o fluxo de Onboarding se a família não tiver renda líquida cadastrada
-  // ou se nunca tiver completado o setup inicial
+  // Iniciar automaticamente o fluxo de Onboarding (OnboardingWizardDialog)
+  // Gatilho: Se family.monthly_net_income_cents for nulo/zero OU a família não possuir categorias cadastradas
   useEffect(() => {
-    if (
-      !loading &&
-      family &&
-      (!family.monthly_net_income_cents || family.monthly_net_income_cents <= 0)
-    ) {
-      const onboardingDismissed = sessionStorage.getItem(`onboarding_dismissed_${family.id}`)
-      if (!onboardingDismissed) {
-        setIsOnboardingOpen(true)
+    if (!loading && family) {
+      const hasNoIncome = !family.monthly_net_income_cents || family.monthly_net_income_cents <= 0
+      const hasNoCategories = !categories || categories.length === 0
+
+      if (hasNoIncome || hasNoCategories) {
+        const onboardingDismissed = sessionStorage.getItem(`onboarding_dismissed_${family.id}`)
+        if (!onboardingDismissed) {
+          setIsOnboardingOpen(true)
+        }
       }
     }
-  }, [loading, family])
+  }, [loading, family, categories])
 
   const updateFamily = async (updates: {
     name?: string
