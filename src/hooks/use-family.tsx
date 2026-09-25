@@ -87,7 +87,33 @@ interface FamilyContextType {
   isNewTransactionOpen: boolean
   setIsNewTransactionOpen: (open: boolean) => void
   newTransactionDefaultType: 'income' | 'expense'
-  openNewTransaction: (type?: 'income' | 'expense') => void
+  newTransactionPrefill?: {
+    initialType?: 'income' | 'expense'
+    initialCategoryId?: string
+    initialSubcategoryId?: string
+    initialAmountCents?: number
+    initialDescription?: string
+    initialMemberId?: string
+  } | null
+  openNewTransaction: (
+    typeOrPrefill?:
+      | 'income'
+      | 'expense'
+      | {
+          initialType?: 'income' | 'expense'
+          type?: 'income' | 'expense'
+          initialCategoryId?: string
+          categoryId?: string
+          initialSubcategoryId?: string
+          subcategoryId?: string
+          initialAmountCents?: number
+          amountCents?: number
+          initialDescription?: string
+          description?: string
+          initialMemberId?: string
+          memberId?: string
+        },
+  ) => void
   voiceTransactionData?: {
     type: 'expense' | 'income'
     amountCents: number
@@ -152,6 +178,14 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   const [newTransactionDefaultType, setNewTransactionDefaultType] = useState<'income' | 'expense'>(
     'expense',
   )
+  const [newTransactionPrefill, setNewTransactionPrefill] = useState<{
+    initialType?: 'income' | 'expense'
+    initialCategoryId?: string
+    initialSubcategoryId?: string
+    initialAmountCents?: number
+    initialDescription?: string
+    initialMemberId?: string
+  } | null>(null)
   const [lastImportSummary, setLastImportSummary] = useState<{
     total: number
     categorized: number
@@ -457,9 +491,43 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: 'Sucesso', description: 'Subcategoria removida.' })
   }
 
-  const openNewTransaction = (type: 'income' | 'expense' = 'expense') => {
+  const openNewTransaction = (
+    typeOrPrefill?:
+      | 'income'
+      | 'expense'
+      | {
+          initialType?: 'income' | 'expense'
+          type?: 'income' | 'expense'
+          initialCategoryId?: string
+          categoryId?: string
+          initialSubcategoryId?: string
+          subcategoryId?: string
+          initialAmountCents?: number
+          amountCents?: number
+          initialDescription?: string
+          description?: string
+          initialMemberId?: string
+          memberId?: string
+        },
+  ) => {
     setIsActionSheetOpen(false)
-    setNewTransactionDefaultType(type)
+    if (typeof typeOrPrefill === 'object' && typeOrPrefill !== null) {
+      const targetType: 'income' | 'expense' =
+        typeOrPrefill.initialType || typeOrPrefill.type || 'expense'
+      setNewTransactionDefaultType(targetType)
+      setNewTransactionPrefill({
+        initialType: targetType,
+        initialCategoryId: typeOrPrefill.initialCategoryId || typeOrPrefill.categoryId,
+        initialSubcategoryId: typeOrPrefill.initialSubcategoryId || typeOrPrefill.subcategoryId,
+        initialAmountCents: typeOrPrefill.initialAmountCents ?? typeOrPrefill.amountCents,
+        initialDescription: typeOrPrefill.initialDescription || typeOrPrefill.description,
+        initialMemberId: typeOrPrefill.initialMemberId || typeOrPrefill.memberId,
+      })
+    } else {
+      const targetType: 'income' | 'expense' = typeOrPrefill === 'income' ? 'income' : 'expense'
+      setNewTransactionDefaultType(targetType)
+      setNewTransactionPrefill(null)
+    }
     setIsNewTransactionOpen(true)
   }
 
@@ -524,6 +592,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         isNewTransactionOpen,
         setIsNewTransactionOpen,
         newTransactionDefaultType,
+        newTransactionPrefill,
         openNewTransaction,
         voiceTransactionData,
         setVoiceTransactionData,

@@ -103,6 +103,9 @@ export default function Home() {
     loadData()
   }
 
+  // Renda líquida prevista da família
+  const plannedIncomeCents = family?.monthly_net_income_cents || 0
+
   // Cálculos de saldo total acumulado e métricas do mês
   const { totalBalanceCents, monthIncomeCents, monthExpenseCents, trendPercentage } =
     useMemo(() => {
@@ -417,26 +420,86 @@ export default function Home() {
 
           {/* Chips Receitas e Despesas do Mês */}
           <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/15">
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-emerald-400/20 flex items-center justify-center text-emerald-200">
-                <ArrowUpRight className="w-5 h-5 stroke-[2.5]" />
+            {/* Bloco Receitas do Mês */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3 flex flex-col justify-between gap-1.5 min-w-0">
+              <div className="flex items-start gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-emerald-400/20 flex items-center justify-center text-emerald-200 shrink-0 mt-0.5">
+                  <ArrowUpRight className="w-5 h-5 stroke-[2.5]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-100/90 block truncate">
+                    Receitas do Mês
+                  </span>
+                  <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+                    <span className="text-sm sm:text-base font-bold text-white tabular-nums">
+                      {formatBRL(monthIncomeCents)}
+                    </span>
+                    {/* Cenário (a): zero e previsto > 0 -> badge/texto sutil (Previsto: ...) */}
+                    {monthIncomeCents === 0 && plannedIncomeCents > 0 && (
+                      <span className="text-[10px] sm:text-[11px] font-medium text-emerald-100/80 whitespace-nowrap">
+                        (Previsto: {formatBRL(plannedIncomeCents)})
+                      </span>
+                    )}
+                    {/* Cenário (b.1): parcial (realizado < previsto) -> de {previsto} */}
+                    {monthIncomeCents > 0 &&
+                      plannedIncomeCents > 0 &&
+                      monthIncomeCents < plannedIncomeCents && (
+                        <span className="text-[10px] sm:text-[11px] font-medium text-emerald-100/80 whitespace-nowrap">
+                          de {formatBRL(plannedIncomeCents)}
+                        </span>
+                      )}
+                    {/* Cenário (b.2): atingido ou superado -> ✓ Previsto atingido */}
+                    {monthIncomeCents > 0 &&
+                      plannedIncomeCents > 0 &&
+                      monthIncomeCents >= plannedIncomeCents && (
+                        <span className="text-[10px] sm:text-[11px] font-bold text-emerald-200 whitespace-nowrap">
+                          ✓ Previsto atingido
+                        </span>
+                      )}
+                  </div>
+                </div>
               </div>
-              <div className="overflow-hidden">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-100/90 block">
-                  Receitas do Mês
-                </span>
-                <span className="text-sm sm:text-base font-bold text-white tabular-nums truncate block">
-                  {formatBRL(monthIncomeCents)}
-                </span>
-              </div>
+
+              {/* Linha de apoio acolhedora quando zero entradas e há previsão cadastrada */}
+              {monthIncomeCents === 0 && plannedIncomeCents > 0 && (
+                <div className="pt-1 border-t border-white/10 text-[10px] sm:text-[11px] text-emerald-100/90 flex flex-wrap items-center gap-1 leading-tight">
+                  <span>Aguardando entradas do mês</span>
+                  <span className="opacity-60">·</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const salaryCategory = categories.find((c) => {
+                        const nameLower = (c.name || '').toLowerCase()
+                        return (
+                          c.type === 'income' &&
+                          (nameLower.includes('salário') ||
+                            nameLower.includes('salario') ||
+                            nameLower.includes('remunera') ||
+                            nameLower.includes('renda'))
+                        )
+                      })
+                      openNewTransaction({
+                        initialType: 'income',
+                        initialCategoryId: salaryCategory?.id,
+                        initialAmountCents: plannedIncomeCents,
+                        initialDescription: 'Salário mensal',
+                      })
+                    }}
+                    className="font-bold underline underline-offset-2 hover:text-white transition-colors cursor-pointer text-emerald-50"
+                  >
+                    [Registrar salário]
+                  </button>
+                </div>
+              )}
             </div>
 
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-rose-400/20 flex items-center justify-center text-rose-200">
+            {/* Bloco Despesas do Mês */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3 flex items-start gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-rose-400/20 flex items-center justify-center text-rose-200 shrink-0 mt-0.5">
                 <ArrowDownRight className="w-5 h-5 stroke-[2.5]" />
               </div>
-              <div className="overflow-hidden">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-100/90 block">
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-100/90 block truncate">
                   Despesas do Mês
                 </span>
                 <span className="text-sm sm:text-base font-bold text-white tabular-nums truncate block">

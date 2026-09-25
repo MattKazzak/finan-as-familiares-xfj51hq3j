@@ -14,6 +14,8 @@ vi.mock('react-router-dom', async () => {
   }
 })
 
+const mockOpenNewTransaction = vi.fn()
+
 let mockFamily: any = {
   id: 'fam-1',
   name: 'Silva',
@@ -74,7 +76,7 @@ vi.mock('@/hooks/use-family', () => ({
     openWhoIsUsing: vi.fn(),
     selectedMemberId: null,
     setSelectedMemberId: vi.fn(),
-    openNewTransaction: vi.fn(),
+    openNewTransaction: mockOpenNewTransaction,
     refreshTrigger: 0,
     triggerRefresh: vi.fn(),
   }),
@@ -218,12 +220,13 @@ describe('Home Page - Card Orçamento em 3 Baldes (50/30/20)', () => {
       const salaryBtn = screen.getByRole('button', { name: '[Registrar salário]' })
       expect(salaryBtn).toBeDefined()
 
-      // Clicar em "Registrar salário" abre o diálogo com dados pré-preenchidos
+      // Clicar em "Registrar salário" chama openNewTransaction com preenchimento pré-configurado
       fireEvent.click(salaryBtn)
-      await waitFor(() => {
-        expect(screen.getByText('Nova Transação')).toBeDefined()
-        expect(screen.getByDisplayValue('Salário mensal')).toBeDefined()
-        expect(screen.getByDisplayValue('8.000,00')).toBeDefined()
+      expect(mockOpenNewTransaction).toHaveBeenCalledWith({
+        initialType: 'income',
+        initialCategoryId: 'cat-salario',
+        initialAmountCents: 800000,
+        initialDescription: 'Salário mensal',
       })
     })
 

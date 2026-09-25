@@ -39,11 +39,26 @@ import {
   Plus,
 } from 'lucide-react'
 
-interface NewTransactionDialogProps {
+export interface NewTransactionPrefill {
+  initialType?: 'income' | 'expense'
+  initialCategoryId?: string
+  initialSubcategoryId?: string
+  initialAmountCents?: number
+  initialDescription?: string
+  initialMemberId?: string
+}
+
+export interface NewTransactionDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   editingTransaction?: Transaction | null
   onSuccess?: () => void
+  initialType?: 'income' | 'expense'
+  initialCategoryId?: string
+  initialSubcategoryId?: string
+  initialAmountCents?: number
+  initialDescription?: string
+  initialMemberId?: string
 }
 
 export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
@@ -51,12 +66,19 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
   onOpenChange,
   editingTransaction,
   onSuccess,
+  initialType,
+  initialCategoryId,
+  initialSubcategoryId,
+  initialAmountCents,
+  initialDescription,
+  initialMemberId,
 }) => {
   const {
     family,
     members,
     categories,
     newTransactionDefaultType,
+    newTransactionPrefill,
     triggerRefresh,
     openImportStatement,
     voiceTransactionData,
@@ -65,12 +87,28 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
   const { user } = useAuth()
   const { toast } = useToast()
 
-  const [type, setType] = useState<'income' | 'expense'>(newTransactionDefaultType)
-  const [description, setDescription] = useState('')
-  const [amountStr, setAmountStr] = useState('')
-  const [memberId, setMemberId] = useState('')
-  const [categoryId, setCategoryId] = useState<string>('none')
-  const [subcategoryId, setSubcategoryId] = useState<string>('none')
+  const [type, setType] = useState<'income' | 'expense'>(
+    initialType || newTransactionPrefill?.initialType || newTransactionDefaultType || 'expense',
+  )
+  const [description, setDescription] = useState(
+    initialDescription || newTransactionPrefill?.initialDescription || '',
+  )
+  const [amountStr, setAmountStr] = useState(
+    initialAmountCents !== undefined
+      ? formatNumberBRL(initialAmountCents)
+      : newTransactionPrefill?.initialAmountCents !== undefined
+        ? formatNumberBRL(newTransactionPrefill.initialAmountCents)
+        : '',
+  )
+  const [memberId, setMemberId] = useState(
+    initialMemberId || newTransactionPrefill?.initialMemberId || '',
+  )
+  const [categoryId, setCategoryId] = useState<string>(
+    initialCategoryId || newTransactionPrefill?.initialCategoryId || 'none',
+  )
+  const [subcategoryId, setSubcategoryId] = useState<string>(
+    initialSubcategoryId || newTransactionPrefill?.initialSubcategoryId || 'none',
+  )
   const [transactionDate, setTransactionDate] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -81,6 +119,8 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
   const [amountMode, setAmountMode] = useState<'per_installment' | 'total'>('per_installment')
 
   useEffect(() => {
+    if (!open) return
+
     if (editingTransaction) {
       setType(editingTransaction.type)
       setDescription(editingTransaction.description || '')
@@ -92,22 +132,44 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
       setInstallmentsCount(editingTransaction.installment_total || 1)
       setAmountMode('per_installment')
     } else {
-      setType(newTransactionDefaultType)
-      setDescription('')
-      setAmountStr('')
-      // Padrão primeiro membro
-      if (members.length > 0 && !memberId) {
-        setMemberId(members[0].id)
-      }
-      setCategoryId('none')
-      setSubcategoryId('none')
+      const effectiveType =
+        initialType ?? newTransactionPrefill?.initialType ?? newTransactionDefaultType ?? 'expense'
+      const effectiveDesc = initialDescription ?? newTransactionPrefill?.initialDescription ?? ''
+      const effectiveAmountCents = initialAmountCents ?? newTransactionPrefill?.initialAmountCents
+      const effectiveMember =
+        initialMemberId ??
+        newTransactionPrefill?.initialMemberId ??
+        (members.length > 0 ? members[0].id : '')
+      const effectiveCategory =
+        initialCategoryId ?? newTransactionPrefill?.initialCategoryId ?? 'none'
+      const effectiveSubcategory =
+        initialSubcategoryId ?? newTransactionPrefill?.initialSubcategoryId ?? 'none'
+
+      setType(effectiveType)
+      setDescription(effectiveDesc)
+      setAmountStr(effectiveAmountCents !== undefined ? formatNumberBRL(effectiveAmountCents) : '')
+      setMemberId(effectiveMember)
+      setCategoryId(effectiveCategory)
+      setSubcategoryId(effectiveSubcategory)
       setTransactionDate(new Date().toISOString().slice(0, 10))
       setInstallmentsCount(1)
       setAmountMode('per_installment')
     }
     setRememberRule(true)
     setErrorMsg(null)
-  }, [editingTransaction, newTransactionDefaultType, open, members])
+  }, [
+    open,
+    editingTransaction,
+    initialType,
+    initialCategoryId,
+    initialSubcategoryId,
+    initialAmountCents,
+    initialDescription,
+    initialMemberId,
+    newTransactionDefaultType,
+    newTransactionPrefill,
+    members,
+  ])
 
   // Subcategorias disponíveis para a categoria selecionada
   const selectedCategoryObj = categories.find((c) => c.id === categoryId)
