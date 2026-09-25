@@ -148,6 +148,9 @@ describe('Fluxo de Reenvio de E-mail de Confirmação', () => {
     })
     expect(resendBtn).toBeDefined()
 
+    // O texto desnecessário foi removido do alerta
+    expect(screen.queryByText(/Não encontrou o link de confirmação\?/i)).toBeNull()
+
     // O erro vermelho genérico NÃO deve aparecer
     expect(screen.queryByText('E-mail ou senha incorretos.')).toBeNull()
   })

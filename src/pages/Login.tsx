@@ -294,36 +294,33 @@ export default function Login() {
           {isEmailUnconfirmed && (
             <div
               data-testid="email-not-confirmed-alert"
-              className="p-3.5 text-xs bg-amber-50 border border-amber-200 text-amber-900 rounded-xl font-medium animate-fade-in leading-relaxed space-y-2.5 shadow-xs"
+              className="p-3.5 sm:p-4 text-xs bg-amber-50 border border-amber-200 text-amber-900 rounded-xl font-medium animate-fade-in leading-relaxed space-y-3 shadow-xs w-full"
             >
-              <div className="flex items-start gap-2">
+              <div className="flex items-start gap-2.5">
                 <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <span className="font-semibold text-amber-950">
+                <span className="font-semibold text-amber-950 leading-snug">
                   Seu cadastro ainda não foi ativado. Verifique seu e-mail.
                 </span>
               </div>
-              <div className="pt-1 border-t border-amber-200/60 flex items-center justify-between gap-2">
-                <p className="text-[11px] text-amber-800/90 leading-tight">
-                  Não encontrou o link de confirmação?
-                </p>
+              <div className="pt-2 border-t border-amber-200/60 flex flex-col sm:flex-row sm:justify-end">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={handleResendConfirmation}
                   disabled={resendingEmail || resendCooldown > 0}
-                  className="h-8 px-3 text-xs font-semibold bg-white hover:bg-amber-100/80 text-amber-900 border-amber-300 hover:border-amber-400 shrink-0 shadow-2xs"
+                  className="w-full sm:w-auto h-9 sm:h-8 px-3.5 text-xs font-semibold bg-white hover:bg-amber-100/80 text-amber-900 border-amber-300 hover:border-amber-400 shadow-2xs transition-all justify-center"
                 >
                   {resendingEmail ? (
                     <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5 shrink-0" />
                       Enviando...
                     </>
                   ) : resendCooldown > 0 ? (
                     <span>Reenviar em {resendCooldown}s</span>
                   ) : (
                     <>
-                      <Send className="w-3.5 h-3.5 mr-1.5 text-amber-700" />
+                      <Send className="w-3.5 h-3.5 mr-1.5 text-amber-700 shrink-0" />
                       Reenviar E-mail de Confirmação
                     </>
                   )}
