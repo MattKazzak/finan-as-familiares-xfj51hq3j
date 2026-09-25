@@ -428,69 +428,71 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* 2. Seletor 'Quem está usando?' por Aparelho */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
-              <Smartphone className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-bold text-base text-slate-900">
-                Quem está usando este aparelho?
-              </h3>
-              <p className="text-xs text-slate-500">
-                Alterne para personalizar a saudação "Olá, {currentMember?.name || 'Nome'}!" neste
-                dispositivo.
-              </p>
+      {/* 2. Seletor 'Quem está usando?' por Aparelho (apenas quando houver 2 ou mais membros) */}
+      {members.length > 1 && (
+        <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+                <Smartphone className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-slate-900">
+                  Quem está usando este aparelho?
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Alterne para personalizar a saudação "Olá, {currentMember?.name || 'Nome'}!" neste
+                  dispositivo.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-1">
-          {members.map((member) => {
-            const isSelected = (activeMemberId || currentMember?.id) === member.id
-            return (
-              <button
-                key={member.id}
-                type="button"
-                onClick={() => {
-                  setActiveMemberId(member.id)
-                  toast({
-                    title: `Olá, ${member.name}!`,
-                    description: 'Perfil ativo atualizado neste dispositivo.',
-                  })
-                }}
-                className={`p-3 rounded-2xl border text-left flex items-center justify-between transition-all ${
-                  isSelected
-                    ? 'border-emerald-600 bg-emerald-50/70 shadow-sm ring-2 ring-emerald-600/20'
-                    : 'border-slate-200/80 hover:bg-slate-50 hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center gap-2.5 overflow-hidden">
-                  <Avatar className="w-8 h-8 border border-emerald-200 shrink-0">
-                    <AvatarFallback className="bg-gradient-to-tr from-emerald-600 to-teal-700 text-white font-bold text-xs">
-                      {member.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="overflow-hidden">
-                    <p className="font-bold text-xs text-slate-900 truncate">{member.name}</p>
-                    <p className="text-[10px] text-slate-500 truncate">
-                      {member.is_admin ? 'Administrador' : 'Membro'}
-                    </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-1">
+            {members.map((member) => {
+              const isSelected = (activeMemberId || currentMember?.id) === member.id
+              return (
+                <button
+                  key={member.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveMemberId(member.id)
+                    toast({
+                      title: `Olá, ${member.name}!`,
+                      description: 'Perfil ativo atualizado neste dispositivo.',
+                    })
+                  }}
+                  className={`p-3 rounded-2xl border text-left flex items-center justify-between transition-all ${
+                    isSelected
+                      ? 'border-emerald-600 bg-emerald-50/70 shadow-sm ring-2 ring-emerald-600/20'
+                      : 'border-slate-200/80 hover:bg-slate-50 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 overflow-hidden">
+                    <Avatar className="w-8 h-8 border border-emerald-200 shrink-0">
+                      <AvatarFallback className="bg-gradient-to-tr from-emerald-600 to-teal-700 text-white font-bold text-xs">
+                        {member.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="overflow-hidden">
+                      <p className="font-bold text-xs text-slate-900 truncate">{member.name}</p>
+                      <p className="text-[10px] text-slate-500 truncate">
+                        {member.is_admin ? 'Administrador' : 'Membro'}
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                {isSelected && (
-                  <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs shadow-sm shrink-0">
-                    <Check className="w-3 h-3 stroke-[3]" />
-                  </span>
-                )}
-              </button>
-            )
-          })}
+                  {isSelected && (
+                    <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs shadow-sm shrink-0">
+                      <Check className="w-3 h-3 stroke-[3]" />
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 3. Membros da Família */}
       <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm">

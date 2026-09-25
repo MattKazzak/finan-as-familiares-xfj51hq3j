@@ -20,13 +20,15 @@ vi.mock('@/hooks/use-auth', () => ({
   }),
 }))
 
+let mockMembers = [{ id: 'm-1', name: 'Lucas', is_admin: true }]
+
 vi.mock('@/hooks/use-family', () => ({
   useFamily: () => ({
     family: { id: 'f-1', name: 'Silva', monthly_net_income_cents: 800000, avatar_url: null },
-    members: [{ id: 'm-1', name: 'Lucas', is_admin: true }],
+    members: mockMembers,
     categories: [],
-    currentMember: { id: 'm-1', name: 'Lucas', is_admin: true },
-    activeMemberId: 'm-1',
+    currentMember: mockMembers[0] || null,
+    activeMemberId: mockMembers[0]?.id || null,
     setActiveMemberId: vi.fn(),
     openWhoIsUsing: vi.fn(),
     addMember: vi.fn(),
@@ -62,6 +64,38 @@ describe('ProfilePage PWA Install Shortcut - 3 Cenários de Clique', () => {
       prompt: vi.fn().mockResolvedValue(undefined),
       userChoice: Promise.resolve({ outcome: 'accepted', platform: 'web' }),
     }
+    mockMembers = [{ id: 'm-1', name: 'Lucas', is_admin: true }]
+  })
+
+  it('esconde o quadro "Quem está usando este aparelho?" quando há apenas 1 membro', () => {
+    mockMembers = [{ id: 'm-1', name: 'Lucas', is_admin: true }]
+
+    render(
+      <MemoryRouter>
+        <ProfilePage />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByText('Quem está usando este aparelho?')).toBeNull()
+    expect(screen.queryByText(/Alterne para personalizar a saudação/i)).toBeNull()
+  })
+
+  it('exibe o quadro "Quem está usando este aparelho?" quando a família possui 2 ou mais membros', () => {
+    mockMembers = [
+      { id: 'm-1', name: 'Lucas', is_admin: true },
+      { id: 'm-2', name: 'Beatriz', is_admin: false },
+    ]
+
+    render(
+      <MemoryRouter>
+        <ProfilePage />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('Quem está usando este aparelho?')).toBeDefined()
+    expect(screen.getByText(/Alterne para personalizar a saudação/i)).toBeDefined()
+    expect(screen.getByText('Lucas')).toBeDefined()
+    expect(screen.getByText('Beatriz')).toBeDefined()
   })
 
   it('renders PWA install shortcut card when not standalone', () => {
