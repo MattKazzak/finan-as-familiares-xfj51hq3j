@@ -32,15 +32,26 @@ export default function ResetPassword() {
     document.title = 'Criar Nova Senha — Curiangoo'
   }, [])
 
-  // Checagem de tokens/hashes na URL
+  // Checagem de tokens/hashes na URL para recuperação de senha (distinguindo de confirmação de cadastro)
   const hasRecoveryInUrl = () => {
     if (typeof window === 'undefined') return false
     const hash = window.location.hash || ''
     const search = window.location.search || ''
+    const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash)
+    const searchParams = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search)
+
+    const isSignup =
+      hashParams.get('type') === 'signup' ||
+      searchParams.get('type') === 'signup' ||
+      hash.includes('type=signup') ||
+      search.includes('type=signup')
+
+    if (isSignup) return false
+
     return (
+      hashParams.get('type') === 'recovery' ||
+      searchParams.get('type') === 'recovery' ||
       hash.includes('type=recovery') ||
-      hash.includes('access_token') ||
-      search.includes('code=') ||
       search.includes('type=recovery')
     )
   }

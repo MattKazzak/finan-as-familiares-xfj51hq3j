@@ -81,7 +81,7 @@ export default function Login() {
         type: 'signup',
         email: targetEmail,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/inicio`,
         },
       })
 

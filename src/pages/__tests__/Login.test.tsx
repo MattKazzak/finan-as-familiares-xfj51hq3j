@@ -193,13 +193,13 @@ describe('Fluxo de Reenvio de E-mail de Confirmação', () => {
       fireEvent.click(resendBtn)
     })
 
-    // Verifica que supabase.auth.resend foi chamado com os dados corretos
+    // Verifica que supabase.auth.resend foi chamado com os dados corretos e emailRedirectTo apontando para /inicio
     expect(mockResend).toHaveBeenCalledWith({
       type: 'signup',
       email: 'teste@curiangoo.com',
-      options: expect.objectContaining({
-        emailRedirectTo: expect.any(String),
-      }),
+      options: {
+        emailRedirectTo: `${window.location.origin}/inicio`,
+      },
     })
 
     // Verifica toast de sucesso

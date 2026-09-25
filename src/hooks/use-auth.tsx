@@ -40,16 +40,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (typeof window === 'undefined') return false
     const hash = window.location.hash || ''
     const search = window.location.search || ''
-    // Detecção abrangente de fluxo de recuperação de senha:
-    // 1. Hash com type=recovery ou access_token (links implícitos ou explícitos do Supabase)
-    // 2. Search query com code= ou type=recovery
-    // 3. Rota direta /redefinir-senha
+    const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash)
+    const searchParams = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search)
+
+    const isRecoveryType =
+      hashParams.get('type') === 'recovery' || searchParams.get('type') === 'recovery'
+    const isSignupType =
+      hashParams.get('type') === 'signup' ||
+      searchParams.get('type') === 'signup' ||
+      hashParams.get('type') === 'email_change' ||
+      searchParams.get('type') === 'email_change'
+
+    // Se é explicitamente signup/confirmação, NUNCA é recuperação
+    if (isSignupType) return false
+    if (isRecoveryType) return true
+
+    // Rota direta de redefinição
     return (
-      hash.includes('type=recovery') ||
-      hash.includes('access_token') ||
-      search.includes('code=') ||
-      search.includes('type=recovery') ||
-      window.location.pathname === '/redefinir-senha'
+      window.location.pathname === '/redefinir-senha' ||
+      window.location.pathname === '/reset-password'
     )
   })
 
@@ -63,6 +72,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsPasswordRecovery(true)
       } else if (event === 'SIGNED_OUT') {
         setIsPasswordRecovery(false)
+      } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+        // Se entrou ou atualizou usuário, verificar se foi por confirmação de cadastro
+        const hash = window.location.hash || ''
+        const search = window.location.search || ''
+        const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash)
+        const searchParams = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search)
+        const isSignup =
+          hashParams.get('type') === 'signup' ||
+          searchParams.get('type') === 'signup' ||
+          hash.includes('type=signup') ||
+          search.includes('type=signup')
+
+        if (isSignup) {
+          setIsPasswordRecovery(false)
+        }
       }
 
       setSession(newSession)
@@ -71,9 +95,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     })
 
     // 2. Se a URL veio com code PKCE (?code=...), troca o code por sessão caso ainda não trocado
-    const searchParams = new URLSearchParams(window.location.search)
+    const search = window.location.search || ''
+    const searchParams = new URLSearchParams(search)
     const code = searchParams.get('code')
     const hash = window.location.hash || ''
+    const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash)
+
+    const isExplicitRecovery =
+      searchParams.get('type') === 'recovery' ||
+      hashParams.get('type') === 'recovery' ||
+      hash.includes('type=recovery') ||
+      search.includes('type=recovery')
+
+    const isExplicitSignup =
+      searchParams.get('type') === 'signup' ||
+      hashParams.get('type') === 'signup' ||
+      hash.includes('type=signup') ||
+      search.includes('type=signup')
 
     if (code) {
       supabase.auth
@@ -82,7 +120,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (!error && data?.session) {
             setSession(data.session)
             setUser(data.session.user)
-            setIsPasswordRecovery(true)
+            // Apenas marca recovery se foi explicitamente solicitado recovery e NÃO signup
+            if (isExplicitRecovery && !isExplicitSignup) {
+              setIsPasswordRecovery(true)
+            } else {
+              setIsPasswordRecovery(false)
+            }
           }
           setLoading(false)
         })
@@ -90,9 +133,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setLoading(false)
         })
     } else {
-      // Checa se o hash contém type=recovery ou access_token
-      if (hash.includes('type=recovery') || hash.includes('access_token')) {
+      // Checa se o hash ou search contém type=recovery (e não signup)
+      if (isExplicitRecovery && !isExplicitSignup) {
         setIsPasswordRecovery(true)
+      } else if (isExplicitSignup) {
+        setIsPasswordRecovery(false)
       }
 
       supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
@@ -110,7 +155,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/`,
+        emailRedirectTo: `${window.location.origin}/inicio`,
         data: {
           name: options?.name?.trim() || '',
         },
@@ -148,7 +193,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       type: 'signup',
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/`,
+        emailRedirectTo: `${window.location.origin}/inicio`,
       },
     })
     return { error }

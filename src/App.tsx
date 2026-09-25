@@ -15,17 +15,33 @@ import Profile from '@/pages/Profile'
 import NotFound from '@/pages/NotFound'
 import { Loader2 } from 'lucide-react'
 
-// Verifica síncronamente na URL se há indício de recuperação de senha
+// Verifica síncronamente na URL se há indício de recuperação de senha (distinguindo estritamente de signup)
 function checkIsRecoveryUrl(): boolean {
   if (typeof window === 'undefined') return false
   const hash = window.location.hash || ''
   const search = window.location.search || ''
-  return (
+  const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash)
+  const searchParams = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search)
+
+  // Se a URL contém type=signup ou type=email_change, NUNCA é recuperação de senha!
+  const isSignup =
+    hashParams.get('type') === 'signup' ||
+    searchParams.get('type') === 'signup' ||
+    hash.includes('type=signup') ||
+    search.includes('type=signup')
+
+  if (isSignup) return false
+
+  const isRecovery =
+    hashParams.get('type') === 'recovery' ||
+    searchParams.get('type') === 'recovery' ||
     hash.includes('type=recovery') ||
-    hash.includes('access_token') ||
-    search.includes('code=') ||
-    search.includes('type=recovery') ||
-    window.location.pathname === '/redefinir-senha'
+    search.includes('type=recovery')
+
+  return (
+    isRecovery ||
+    window.location.pathname === '/redefinir-senha' ||
+    window.location.pathname === '/reset-password'
   )
 }
 
@@ -96,8 +112,9 @@ const App = () => (
         <Toaster />
         <Sonner />
         <Routes>
-          {/* Rota pública e dedicada de redefinição de senha */}
+          {/* Rotas públicas e dedicadas de redefinição de senha */}
           <Route path="/redefinir-senha" element={<ResetPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Rota pública de login */}
           <Route path="/" element={<LoginRoute />} />
