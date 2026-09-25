@@ -1,6 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
+import { supabase } from '@/lib/supabase/client'
+import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,13 +14,29 @@ import {
   ArrowLeft,
   KeyRound,
   CheckCircle2,
+  AlertCircle,
+  Send,
 } from 'lucide-react'
 import { InstallPwaBanner } from '@/components/common/InstallPwaBanner'
 
 type AuthMode = 'login' | 'signup' | 'forgot_password'
 
+function isEmailNotConfirmedError(error: any): boolean {
+  if (!error) return false
+  const msg = (error.message || '').toLowerCase()
+  const code = (error.code || error.error_code || error.status || '').toString().toLowerCase()
+  return (
+    msg.includes('email not confirmed') ||
+    msg.includes('email_not_confirmed') ||
+    code.includes('email_not_confirmed') ||
+    msg.includes('e-mail não confirmado') ||
+    msg.includes('não confirmado')
+  )
+}
+
 export default function Login() {
   const { signIn, signUp, resetPasswordForEmail } = useAuth()
+  const { toast } = useToast()
   const navigate = useNavigate()
 
   const [mode, setMode] = useState<AuthMode>('login')
@@ -30,10 +48,75 @@ export default function Login() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
+  // Estado para fluxo de e-mail não confirmado
+  const [isEmailUnconfirmed, setIsEmailUnconfirmed] = useState(false)
+  const [resendingEmail, setResendingEmail] = useState(false)
+  const [resendCooldown, setResendCooldown] = useState(0)
+
+  // Gerenciamento do temporizador de cooldown de 60s
+  useEffect(() => {
+    if (resendCooldown <= 0) return
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0))
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [resendCooldown])
+
+  const handleResendConfirmation = async () => {
+    const targetEmail = email.trim()
+    if (!targetEmail) {
+      toast({
+        title: 'E-mail obrigatório',
+        description: 'Por favor, informe seu e-mail no formulário para reenviar a confirmação.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (resendCooldown > 0 || resendingEmail) return
+
+    try {
+      setResendingEmail(true)
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: targetEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+        },
+      })
+
+      if (error) {
+        toast({
+          title: 'Não foi possível reenviar',
+          description:
+            error.message ||
+            'Ocorreu um erro ao reenviar o e-mail de ativação. Tente novamente mais tarde.',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      setResendCooldown(60)
+      toast({
+        title: 'E-mail enviado!',
+        description: 'Novo link de ativação enviado! Confira sua caixa de entrada e o spam.',
+      })
+    } catch {
+      toast({
+        title: 'Erro de conexão',
+        description: 'Falha ao conectar com o serviço de autenticação. Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setResendingEmail(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMessage(null)
     setSuccessMessage(null)
+    setIsEmailUnconfirmed(false)
 
     if (mode === 'forgot_password') {
       if (!email.trim()) {
@@ -116,6 +199,10 @@ export default function Login() {
       setLoading(true)
       const { error } = await signIn(email.trim(), password)
       if (error) {
+        if (isEmailNotConfirmedError(error)) {
+          setIsEmailUnconfirmed(true)
+          return
+        }
         setErrorMessage('E-mail ou senha incorretos.')
         return
       }
@@ -131,6 +218,7 @@ export default function Login() {
     setMode(newMode)
     setErrorMessage(null)
     setSuccessMessage(null)
+    setIsEmailUnconfirmed(false)
   }
 
   return (
@@ -194,13 +282,61 @@ export default function Login() {
         {/* Formulário */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {errorMessage && (
-            <div className="p-3 text-xs bg-red-50 border border-red-200 text-red-700 rounded-xl font-medium animate-fade-in leading-relaxed">
+            <div
+              data-testid="login-error-message"
+              className="p-3 text-xs bg-red-50 border border-red-200 text-red-700 rounded-xl font-medium animate-fade-in leading-relaxed"
+            >
               {errorMessage}
             </div>
           )}
 
+          {/* Alerta diferenciado para e-mail não ativado com botão de reenvio */}
+          {isEmailUnconfirmed && (
+            <div
+              data-testid="email-not-confirmed-alert"
+              className="p-3.5 text-xs bg-amber-50 border border-amber-200 text-amber-900 rounded-xl font-medium animate-fade-in leading-relaxed space-y-2.5 shadow-xs"
+            >
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <span className="font-semibold text-amber-950">
+                  Seu cadastro ainda não foi ativado. Verifique seu e-mail.
+                </span>
+              </div>
+              <div className="pt-1 border-t border-amber-200/60 flex items-center justify-between gap-2">
+                <p className="text-[11px] text-amber-800/90 leading-tight">
+                  Não encontrou o link de confirmação?
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResendConfirmation}
+                  disabled={resendingEmail || resendCooldown > 0}
+                  className="h-8 px-3 text-xs font-semibold bg-white hover:bg-amber-100/80 text-amber-900 border-amber-300 hover:border-amber-400 shrink-0 shadow-2xs"
+                >
+                  {resendingEmail ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                      Enviando...
+                    </>
+                  ) : resendCooldown > 0 ? (
+                    <span>Reenviar em {resendCooldown}s</span>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5 mr-1.5 text-amber-700" />
+                      Reenviar E-mail de Confirmação
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+
           {successMessage && (
-            <div className="p-3 text-xs bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl font-medium animate-fade-in flex items-start gap-2 leading-relaxed">
+            <div
+              data-testid="login-success-message"
+              className="p-3 text-xs bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl font-medium animate-fade-in flex items-start gap-2 leading-relaxed"
+            >
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
               <span>{successMessage}</span>
             </div>

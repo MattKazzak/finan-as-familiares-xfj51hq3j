@@ -17,6 +17,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>
   resetPasswordForEmail: (email: string) => Promise<{ error: any }>
   updatePassword: (password: string) => Promise<{ error: any; data?: any }>
+  resendConfirmationEmail: (email: string) => Promise<{ error: any }>
   signOut: () => Promise<{ error: any }>
   loading: boolean
   isPasswordRecovery: boolean
@@ -142,6 +143,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsPasswordRecovery(false)
   }
 
+  const resendConfirmationEmail = async (email: string) => {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/`,
+      },
+    })
+    return { error }
+  }
+
   const signOut = async () => {
     const { error } = await supabase.auth.signOut()
     return { error }
@@ -156,6 +168,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signIn,
         resetPasswordForEmail,
         updatePassword,
+        resendConfirmationEmail,
         signOut,
         loading,
         isPasswordRecovery,
