@@ -237,7 +237,7 @@ describe('Installment parser & generator', () => {
       // Expected: 3 items (Flavios consolidated, Hifly consolidated, Supermercado normal)
       expect(grouped.length).toBe(3)
 
-      // 1. Flavios Calcados
+      // 1. Flavios Calcados (mais recente: 2027-06-01)
       const flavios = grouped[0]
       expect(flavios.isGroup).toBe(true)
       expect(flavios.baseDescription).toBe('Flavios Calcados')
@@ -247,7 +247,7 @@ describe('Installment parser & generator', () => {
       expect(flavios.amountCents).toBe(30145)
       expect(flavios.transactionDate).toBe('2027-06-01')
 
-      // 2. Hifly Goiania
+      // 2. Hifly Goiania (data: 2027-02-01)
       const hifly = grouped[1]
       expect(hifly.isGroup).toBe(true)
       expect(hifly.baseDescription).toBe('Hifly Goiania')
@@ -256,11 +256,69 @@ describe('Installment parser & generator', () => {
       expect(hifly.installmentCount).toBe(1)
       expect(hifly.amountCents).toBe(10330)
 
-      // 3. Regular transaction
+      // 3. Regular transaction (data: 2026-08-10)
       const carrefour = grouped[2]
       expect(carrefour.isGroup).toBe(false)
       expect(carrefour.baseDescription).toBe('Supermercado Carrefour')
       expect(carrefour.amountCents).toBe(15420)
+    })
+
+    it('orders grouped result in descending order by transactionDate even if input is unordered', () => {
+      // Simula caso real reportado: transação de ontem inserida depois de transações futuras/passadas
+      const mockTxs = [
+        {
+          id: 'old-parc',
+          member_id: 'm-1',
+          description: 'Hifly Goiania - Parcela 1/6 (06/06)',
+          is_installment: true,
+          installment_number: 6,
+          installment_total: 6,
+          transaction_date: '2025-02-01',
+          amount_cents: 10000,
+        },
+        {
+          id: 'manicure-ontem',
+          member_id: 'm-1',
+          description: 'Manicure',
+          is_installment: false,
+          transaction_date: '2026-03-29',
+          amount_cents: 8000,
+        },
+        {
+          id: 'padaria-hoje',
+          member_id: 'm-1',
+          description: 'Padaria',
+          is_installment: false,
+          transaction_date: '2026-03-30',
+          amount_cents: 2500,
+        },
+        {
+          id: 'futuro-parc',
+          member_id: 'm-1',
+          description: 'Geladeira 01/10',
+          is_installment: true,
+          installment_number: 1,
+          installment_total: 10,
+          transaction_date: '2026-03-28',
+          amount_cents: 20000,
+        },
+      ]
+
+      const grouped = groupInstallmentTransactions(mockTxs)
+
+      // Ordem esperada: Padaria (2026-03-30) > Manicure (2026-03-29) > Geladeira (2026-03-28) > Hifly (2025-02-01)
+      expect(grouped.map((g) => g.baseDescription)).toEqual([
+        'Padaria',
+        'Manicure',
+        'Geladeira',
+        'Hifly Goiania',
+      ])
+      expect(grouped.map((g) => g.transactionDate)).toEqual([
+        '2026-03-30',
+        '2026-03-29',
+        '2026-03-28',
+        '2025-02-01',
+      ])
     })
 
     it('groups installments even without installment_group_id if cleanDescription and member match', () => {

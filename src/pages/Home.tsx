@@ -249,10 +249,13 @@ export default function Home() {
 
   // Transações recentes agrupadas estilo banco (compras parceladas agrupadas em linha única)
   const recentItems = useMemo(() => {
-    // Agrupa todas as transações da família/filtro mantendo a ordenação por data recente
+    // Agrupa todas as transações da família/filtro mantendo a ordenação por data recente (mais recente primeiro)
     const grouped = groupInstallmentTransactions(transactions)
-    // Mostra as primeiras 7 linhas consolidadas na Home
-    return grouped.slice(0, 7)
+    // Mostra as primeiras 7 linhas consolidadas na Home ordenadas por data decrescente
+    return grouped
+      .slice()
+      .sort((a, b) => b.transactionDate.localeCompare(a.transactionDate))
+      .slice(0, 7)
   }, [transactions])
 
   const handleDelete = async (tx: Transaction) => {

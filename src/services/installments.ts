@@ -368,8 +368,8 @@ export function groupInstallmentTransactions<
     }
   }
 
-  // Monta o array final ordenado pela aparição
-  return orderedGroupKeys.map((key) => {
+  // Monta o array de itens consolidando cada grupo e identificando sua parcela/data mais recente
+  const groupedItems = orderedGroupKeys.map((key) => {
     const group = groupsMap.get(key)!
     const txs = group.transactions
 
@@ -414,4 +414,9 @@ export function groupInstallmentTransactions<
       transactionDate: mostRecentTx.transaction_date,
     }
   })
+
+  // Ordena os itens finais em ordem decrescente de data (mais recente primeiro)
+  groupedItems.sort((a, b) => b.transactionDate.localeCompare(a.transactionDate))
+
+  return groupedItems
 }
