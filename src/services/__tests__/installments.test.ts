@@ -264,7 +264,7 @@ describe('Installment parser & generator', () => {
     })
 
     it('orders grouped result in descending order by transactionDate even if input is unordered', () => {
-      // Simula caso real reportado: transação de ontem inserida depois de transações futuras/passadas
+      // Simula caso real reportado: transação de ontem inserida depois de transações passadas
       const mockTxs = [
         {
           id: 'old-parc',
@@ -319,6 +319,130 @@ describe('Installment parser & generator', () => {
         '2026-03-28',
         '2025-02-01',
       ])
+    })
+
+    it('simulates Home recent transactions bug: filters future projected installments so manicure of yesterday appears at #1', () => {
+      // Cenário real exato do bug report:
+      // Transação confirmada de Manicure (2026-09-24)
+      // Cerveja Amstel confirmada (2026-09-23)
+      // Flavios Calcados: parcela 1 (2026-09-01, confirmed), parcelas 2..10 (2026-10-01..2027-06-01, projected)
+      // Hifly Goiania: parcela 1 (2026-09-01, confirmed), parcelas 2..6 (2026-10-01..2027-02-01, projected)
+      // Cantelle: parcela 1 (2026-08-11, confirmed), parcela 2 (2026-09-11, projected)
+      const allTransactions = [
+        // Projeções futuras de Flavios Calcados (até junho 2027)
+        {
+          id: 'flavios-10',
+          member_id: 'm-1',
+          description: 'Flavios Calcados - Parcela 1/10 (10/10)',
+          is_installment: true,
+          installment_number: 10,
+          installment_total: 10,
+          installment_group_id: 'grp-flavios',
+          transaction_date: '2027-06-01',
+          amount_cents: 30145,
+          status: 'projected' as const,
+        },
+        {
+          id: 'flavios-1',
+          member_id: 'm-1',
+          description: 'Flavios Calcados - Parcela 1/10',
+          is_installment: true,
+          installment_number: 1,
+          installment_total: 10,
+          installment_group_id: 'grp-flavios',
+          transaction_date: '2026-09-01',
+          amount_cents: 30145,
+          status: 'confirmed' as const,
+        },
+        // Projeções futuras de Hifly Goiania (até fevereiro 2027)
+        {
+          id: 'hifly-6',
+          member_id: 'm-1',
+          description: 'Hifly Goiania - Parcela 1/6 (06/06)',
+          is_installment: true,
+          installment_number: 6,
+          installment_total: 6,
+          installment_group_id: 'grp-hifly',
+          transaction_date: '2027-02-01',
+          amount_cents: 10330,
+          status: 'projected' as const,
+        },
+        {
+          id: 'hifly-1',
+          member_id: 'm-1',
+          description: 'Hifly Goiania - Parcela 1/6',
+          is_installment: true,
+          installment_number: 1,
+          installment_total: 6,
+          installment_group_id: 'grp-hifly',
+          transaction_date: '2026-09-01',
+          amount_cents: 10330,
+          status: 'confirmed' as const,
+        },
+        // Cantelle: parcela 2 foi em 11 de set (já passada em relação a 25/09)
+        {
+          id: 'cantelle-2',
+          member_id: 'm-1',
+          description: 'Wwwemba*Emb*Cantelle - Parcela 1/2 (02/02)',
+          is_installment: true,
+          installment_number: 2,
+          installment_total: 2,
+          installment_group_id: 'grp-cantelle',
+          transaction_date: '2026-09-11',
+          amount_cents: 7111,
+          status: 'projected' as const,
+        },
+        // Manicure de ontem (2026-09-24)
+        {
+          id: 'tx-manicure',
+          member_id: 'm-1',
+          description: 'manicure',
+          is_installment: false,
+          transaction_date: '2026-09-24',
+          amount_cents: 14000,
+          status: 'confirmed' as const,
+        },
+        // Cerveja de 23 de set
+        {
+          id: 'tx-amstel',
+          member_id: 'm-1',
+          description: 'Três caixas de cerveja Amstel',
+          is_installment: false,
+          transaction_date: '2026-09-23',
+          amount_cents: 12000,
+          status: 'confirmed' as const,
+        },
+      ]
+
+      // Simulando o filtro aplicado na Home para a data de hoje (2026-09-25)
+      const simulatedToday = '2026-09-25'
+      const pastAndCurrent = allTransactions.filter(
+        (tx) => tx.status !== 'projected' || tx.transaction_date <= simulatedToday,
+      )
+
+      const grouped = groupInstallmentTransactions(pastAndCurrent)
+      const top7 = grouped
+        .slice()
+        .sort((a, b) => b.transactionDate.localeCompare(a.transactionDate))
+        .slice(0, 7)
+
+      // Manicure DEVE estar na 1ª posição!
+      expect(top7[0].baseDescription).toBe('manicure')
+      expect(top7[0].transactionDate).toBe('2026-09-24')
+
+      // Cerveja Amstel DEVE estar na 2ª posição
+      expect(top7[1].baseDescription).toBe('Três caixas de cerveja Amstel')
+      expect(top7[1].transactionDate).toBe('2026-09-23')
+
+      // Cantelle (11 de set) DEVE estar antes das de 1 de set
+      expect(top7[2].baseDescription).toBe('Wwwemba*Emb*Cantelle')
+      expect(top7[2].transactionDate).toBe('2026-09-11')
+
+      // E nem Flavios nem Hifly aparecem com datas de 2027 no topo
+      const flaviosItem = top7.find((item) => item.baseDescription === 'Flavios Calcados')
+      expect(flaviosItem).toBeDefined()
+      expect(flaviosItem?.transactionDate).toBe('2026-09-01')
+      expect(flaviosItem?.currentInstallment).toBe(1)
     })
 
     it('groups installments even without installment_group_id if cleanDescription and member match', () => {

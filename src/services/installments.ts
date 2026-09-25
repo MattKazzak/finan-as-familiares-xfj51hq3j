@@ -378,10 +378,16 @@ export function groupInstallmentTransactions<
       !!txs[0].is_installment ||
       (!!txs[0].description && /\bparc(?:ela)?\b/i.test(txs[0].description || ''))
 
-    // Ordena transações do grupo para pegar a mais recente (data desc, installment_number desc)
+    // Ordena transações do grupo para pegar a mais recente:
+    // Preferência 1: data mais recente (b.transaction_date vs a.transaction_date)
+    // Preferência 2: transação confirmada sobre projetada (em caso de mesma data)
+    // Preferência 3: maior installment_number
     txs.sort((a, b) => {
       const dateCmp = b.transaction_date.localeCompare(a.transaction_date)
       if (dateCmp !== 0) return dateCmp
+      const statusA = a.status === 'confirmed' ? 1 : 0
+      const statusB = b.status === 'confirmed' ? 1 : 0
+      if (statusB !== statusA) return statusB - statusA
       const numA = a.installment_number || 0
       const numB = b.installment_number || 0
       return numB - numA

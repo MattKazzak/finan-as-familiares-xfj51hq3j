@@ -249,8 +249,14 @@ export default function Home() {
 
   // Transações recentes agrupadas estilo banco (compras parceladas agrupadas em linha única)
   const recentItems = useMemo(() => {
-    // Agrupa todas as transações da família/filtro mantendo a ordenação por data recente (mais recente primeiro)
-    const grouped = groupInstallmentTransactions(transactions)
+    // Para a lista de "Últimos lançamentos", consideramos apenas transações já confirmadas
+    // ou lançadas até a data de hoje (evita que projeções futuras fiquem no topo da lista recente)
+    const todayStr = new Date().toISOString().slice(0, 10)
+    const pastAndCurrentTransactions = transactions.filter(
+      (tx) => tx.status !== 'projected' || tx.transaction_date <= todayStr,
+    )
+    // Agrupa as compras parceladas mantendo a consolidação em linha única
+    const grouped = groupInstallmentTransactions(pastAndCurrentTransactions)
     // Mostra as primeiras 7 linhas consolidadas na Home ordenadas por data decrescente
     return grouped
       .slice()
