@@ -20,6 +20,7 @@ export interface GroupedTransactionItem {
   transactions: any[] // Transaction[]
   amountCents: number // Valor da parcela mais recente
   transactionDate: string // Data da parcela mais recente
+  createdAt?: string
 }
 
 /**
@@ -299,6 +300,10 @@ export function generateInstallmentTransactions(params: GenerateInstallmentsPara
  * são condensadas em uma única linha, mostrando a parcela mais recente, descrição limpa completa
  * e métricas consolidadas.
  */
+export interface GroupInstallmentOptions {
+  referenceDate?: string // YYYY-MM-DD para determinar parcelas vigentes vs futuras
+}
+
 export function groupInstallmentTransactions<
   T extends {
     id: string
@@ -311,10 +316,13 @@ export function groupInstallmentTransactions<
     transaction_date: string
     amount_cents: number
     status?: string | null
+    created_at?: string | null
     category?: { name?: string } | null
   },
->(transactions: T[]): GroupedTransactionItem[] {
+>(transactions: T[], options?: GroupInstallmentOptions): GroupedTransactionItem[] {
   if (!transactions || transactions.length === 0) return []
+
+  const referenceDate = options?.referenceDate || new Date().toISOString().slice(0, 10)
 
   const groupsMap = new Map<
     string,
@@ -368,7 +376,7 @@ export function groupInstallmentTransactions<
     }
   }
 
-  // Monta o array de itens consolidando cada grupo e identificando sua parcela/data mais recente
+  // Monta o array de itens consolidando cada grupo e identificando sua parcela/data relevante
   const groupedItems = orderedGroupKeys.map((key) => {
     const group = groupsMap.get(key)!
     const txs = group.transactions
@@ -378,51 +386,106 @@ export function groupInstallmentTransactions<
       !!txs[0].is_installment ||
       (!!txs[0].description && /\bparc(?:ela)?\b/i.test(txs[0].description || ''))
 
-    // Ordena transações do grupo para pegar a mais recente:
-    // Preferência 1: data mais recente (b.transaction_date vs a.transaction_date)
-    // Preferência 2: transação confirmada sobre projetada (em caso de mesma data)
-    // Preferência 3: maior installment_number
-    txs.sort((a, b) => {
-      const dateCmp = b.transaction_date.localeCompare(a.transaction_date)
-      if (dateCmp !== 0) return dateCmp
-      const statusA = a.status === 'confirmed' ? 1 : 0
-      const statusB = b.status === 'confirmed' ? 1 : 0
-      if (statusB !== statusA) return statusB - statusA
-      const numA = a.installment_number || 0
-      const numB = b.installment_number || 0
-      return numB - numA
-    })
+    if (!isInstallmentTx) {
+      const singleTx = txs[0]
+      return {
+        id: singleTx.id,
+        isGroup: false,
+        baseDescription: group.baseDescription,
+        currentInstallment: 1,
+        totalInstallments: 1,
+        installmentCount: 1,
+        representativeTx: singleTx,
+        transactions: txs,
+        amountCents: singleTx.amount_cents,
+        transactionDate: singleTx.transaction_date,
+        createdAt: singleTx.created_at || undefined,
+      }
+    }
 
-    const mostRecentTx = txs[0]
+    // Para compras parceladas:
+    // A transação representativa NÃO deve ser uma parcela futura (status 'projected' com data futura),
+    // pois isso faria compras parceladas iniciadas há meses subirem indevidamente ao topo da lista recente
+    // e mostraria datas de 2027 e número de parcela futuro (ex: 10/10).
+    //
+    // Hierarquia de seleção da parcela representativa:
+    // 1. A parcela atingida/vigente mais recente:
+    //    - transações com status 'confirmed' OU transaction_date <= referenceDate
+    //    - ordenadas da mais recente para a mais antiga (transaction_date desc, installment_number desc)
+    // 2. Se TODAS as parcelas do grupo forem futuras e nenhuma estiver confirmada ainda (ex: compra futura que começa mês que vem):
+    //    - escolhe a primeira parcela futura (a mais próxima no tempo: transaction_date asc, installment_number asc)
 
-    let current = mostRecentTx.installment_number || 1
-    let total = mostRecentTx.installment_total || Math.max(current, txs.length)
+    const reachedTxs = txs.filter(
+      (t) => t.status === 'confirmed' || t.transaction_date <= referenceDate,
+    )
+
+    let representativeTx: T
+
+    if (reachedTxs.length > 0) {
+      reachedTxs.sort((a, b) => {
+        const dateCmp = b.transaction_date.localeCompare(a.transaction_date)
+        if (dateCmp !== 0) return dateCmp
+        const statusA = a.status === 'confirmed' ? 1 : 0
+        const statusB = b.status === 'confirmed' ? 1 : 0
+        if (statusB !== statusA) return statusB - statusA
+        const numA = a.installment_number || 0
+        const numB = b.installment_number || 0
+        return numB - numA
+      })
+      representativeTx = reachedTxs[0]
+    } else {
+      const futureTxs = [...txs].sort((a, b) => {
+        const dateCmp = a.transaction_date.localeCompare(b.transaction_date)
+        if (dateCmp !== 0) return dateCmp
+        const numA = a.installment_number || 0
+        const numB = b.installment_number || 0
+        return numA - numB
+      })
+      representativeTx = futureTxs[0]
+    }
+
+    let current = representativeTx.installment_number || 1
+    const maxTotalKnown = Math.max(
+      ...txs.map((t) => t.installment_total || 0),
+      ...txs.map((t) => t.installment_number || 0),
+      txs.length,
+      current,
+    )
+    let total = representativeTx.installment_total || maxTotalKnown
 
     // Se não tinha installment_number no objeto, tenta extrair da descrição
-    if (!mostRecentTx.installment_number && mostRecentTx.description) {
-      const parsed = parseInstallmentFromDescription(mostRecentTx.description)
+    if (!representativeTx.installment_number && representativeTx.description) {
+      const parsed = parseInstallmentFromDescription(representativeTx.description)
       if (parsed.isInstallment) {
         current = parsed.current
-        total = parsed.total
+        total = Math.max(total, parsed.total)
       }
     }
 
     return {
-      id: mostRecentTx.id,
-      isGroup: isInstallmentTx,
+      id: representativeTx.id,
+      isGroup: true,
       baseDescription: group.baseDescription,
       currentInstallment: current,
       totalInstallments: total,
       installmentCount: txs.length,
-      representativeTx: mostRecentTx,
+      representativeTx,
       transactions: txs,
-      amountCents: mostRecentTx.amount_cents,
-      transactionDate: mostRecentTx.transaction_date,
+      amountCents: representativeTx.amount_cents,
+      transactionDate: representativeTx.transaction_date,
+      createdAt: representativeTx.created_at || undefined,
     }
   })
 
   // Ordena os itens finais em ordem decrescente de data (mais recente primeiro)
-  groupedItems.sort((a, b) => b.transactionDate.localeCompare(a.transactionDate))
+  // Desempate por created_at desc (quando disponível)
+  groupedItems.sort((a, b) => {
+    const dateCmp = b.transactionDate.localeCompare(a.transactionDate)
+    if (dateCmp !== 0) return dateCmp
+    const createdA = a.createdAt || ''
+    const createdB = b.createdAt || ''
+    return createdB.localeCompare(createdA)
+  })
 
   return groupedItems
 }

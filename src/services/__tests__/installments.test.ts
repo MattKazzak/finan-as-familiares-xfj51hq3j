@@ -183,6 +183,7 @@ describe('Installment parser & generator', () => {
           installment_group_id: 'grp-flavios',
           transaction_date: '2027-06-01',
           amount_cents: 30145,
+          status: 'projected' as const,
           type: 'expense' as const,
         },
         {
@@ -195,6 +196,7 @@ describe('Installment parser & generator', () => {
           installment_group_id: 'grp-flavios',
           transaction_date: '2027-05-01',
           amount_cents: 30145,
+          status: 'projected' as const,
           type: 'expense' as const,
         },
         {
@@ -207,6 +209,7 @@ describe('Installment parser & generator', () => {
           installment_group_id: 'grp-flavios',
           transaction_date: '2027-04-01',
           amount_cents: 30145,
+          status: 'projected' as const,
           type: 'expense' as const,
         },
         {
@@ -219,6 +222,7 @@ describe('Installment parser & generator', () => {
           installment_group_id: 'grp-hifly',
           transaction_date: '2027-02-01',
           amount_cents: 10330,
+          status: 'projected' as const,
           type: 'expense' as const,
         },
         {
@@ -228,38 +232,33 @@ describe('Installment parser & generator', () => {
           is_installment: false,
           transaction_date: '2026-08-10',
           amount_cents: 15420,
+          status: 'confirmed' as const,
           type: 'expense' as const,
         },
       ]
 
-      const grouped = groupInstallmentTransactions(mockTxs)
+      // Quando todas as parcelas são futuras, seleciona a mais próxima (tx-8 para Flavios)
+      const grouped = groupInstallmentTransactions(mockTxs, { referenceDate: '2026-09-25' })
 
       // Expected: 3 items (Flavios consolidated, Hifly consolidated, Supermercado normal)
       expect(grouped.length).toBe(3)
 
-      // 1. Flavios Calcados (mais recente: 2027-06-01)
-      const flavios = grouped[0]
+      const flavios = grouped.find((g) => g.baseDescription === 'Flavios Calcados')!
       expect(flavios.isGroup).toBe(true)
-      expect(flavios.baseDescription).toBe('Flavios Calcados')
-      expect(flavios.currentInstallment).toBe(10)
+      expect(flavios.currentInstallment).toBe(8) // a parcela futura mais próxima
       expect(flavios.totalInstallments).toBe(10)
       expect(flavios.installmentCount).toBe(3)
       expect(flavios.amountCents).toBe(30145)
-      expect(flavios.transactionDate).toBe('2027-06-01')
+      expect(flavios.transactionDate).toBe('2027-04-01')
 
-      // 2. Hifly Goiania (data: 2027-02-01)
-      const hifly = grouped[1]
+      const hifly = grouped.find((g) => g.baseDescription === 'Hifly Goiania')!
       expect(hifly.isGroup).toBe(true)
-      expect(hifly.baseDescription).toBe('Hifly Goiania')
       expect(hifly.currentInstallment).toBe(6)
       expect(hifly.totalInstallments).toBe(6)
-      expect(hifly.installmentCount).toBe(1)
       expect(hifly.amountCents).toBe(10330)
 
-      // 3. Regular transaction (data: 2026-08-10)
-      const carrefour = grouped[2]
+      const carrefour = grouped.find((g) => g.baseDescription === 'Supermercado Carrefour')!
       expect(carrefour.isGroup).toBe(false)
-      expect(carrefour.baseDescription).toBe('Supermercado Carrefour')
       expect(carrefour.amountCents).toBe(15420)
     })
 
@@ -321,17 +320,21 @@ describe('Installment parser & generator', () => {
       ])
     })
 
-    it('simulates Home recent transactions bug: filters future projected installments so manicure of yesterday appears at #1', () => {
-      // Cenário real exato do bug report:
-      // Transação confirmada de Manicure (2026-09-24)
-      // Cerveja Amstel confirmada (2026-09-23)
-      // Flavios Calcados: parcela 1 (2026-09-01, confirmed), parcelas 2..10 (2026-10-01..2027-06-01, projected)
-      // Hifly Goiania: parcela 1 (2026-09-01, confirmed), parcelas 2..6 (2026-10-01..2027-02-01, projected)
+    it('simulates exact real user report: manicure of yesterday at #1, Amstel #2, Cantelle #3, Flavios & Hifly at the bottom with reached installment 1/X and date 1 set', () => {
+      // Cenário real completo do banco de dados finanças familiares:
+      // manicure: 2026-09-24, created 19:15
+      // Amstel: 2026-09-23, created 20:59
+      // Carregando: 2026-09-23, created 12:07
       // Cantelle: parcela 1 (2026-08-11, confirmed), parcela 2 (2026-09-11, projected)
-      const allTransactions = [
-        // Projeções futuras de Flavios Calcados (até junho 2027)
+      // Emporio Marista: 2026-09-03
+      // Flavios Calcados: parcela 1 (2026-09-01, confirmed) ... parcela 10 (2027-06-01, projected)
+      // Hifly Goiania: parcela 1 (2026-09-01, confirmed) ... parcela 6 (2027-02-01, projected)
+      const simulatedToday = '2026-09-25'
+
+      const allRealTransactions = [
+        // Flavios 1 a 10
         {
-          id: 'flavios-10',
+          id: 'f-10',
           member_id: 'm-1',
           description: 'Flavios Calcados - Parcela 1/10 (10/10)',
           is_installment: true,
@@ -341,9 +344,23 @@ describe('Installment parser & generator', () => {
           transaction_date: '2027-06-01',
           amount_cents: 30145,
           status: 'projected' as const,
+          created_at: '2026-09-21T13:11:10Z',
         },
         {
-          id: 'flavios-1',
+          id: 'f-2',
+          member_id: 'm-1',
+          description: 'Flavios Calcados - Parcela 1/10 (02/10)',
+          is_installment: true,
+          installment_number: 2,
+          installment_total: 10,
+          installment_group_id: 'grp-flavios',
+          transaction_date: '2026-10-01',
+          amount_cents: 30145,
+          status: 'projected' as const,
+          created_at: '2026-09-21T13:11:10Z',
+        },
+        {
+          id: 'f-1',
           member_id: 'm-1',
           description: 'Flavios Calcados - Parcela 1/10',
           is_installment: true,
@@ -353,10 +370,11 @@ describe('Installment parser & generator', () => {
           transaction_date: '2026-09-01',
           amount_cents: 30145,
           status: 'confirmed' as const,
+          created_at: '2026-09-21T13:11:10Z',
         },
-        // Projeções futuras de Hifly Goiania (até fevereiro 2027)
+        // Hifly 1 a 6
         {
-          id: 'hifly-6',
+          id: 'h-6',
           member_id: 'm-1',
           description: 'Hifly Goiania - Parcela 1/6 (06/06)',
           is_installment: true,
@@ -366,9 +384,10 @@ describe('Installment parser & generator', () => {
           transaction_date: '2027-02-01',
           amount_cents: 10330,
           status: 'projected' as const,
+          created_at: '2026-09-21T13:11:10Z',
         },
         {
-          id: 'hifly-1',
+          id: 'h-1',
           member_id: 'm-1',
           description: 'Hifly Goiania - Parcela 1/6',
           is_installment: true,
@@ -378,10 +397,11 @@ describe('Installment parser & generator', () => {
           transaction_date: '2026-09-01',
           amount_cents: 10330,
           status: 'confirmed' as const,
+          created_at: '2026-09-21T13:11:10Z',
         },
-        // Cantelle: parcela 2 foi em 11 de set (já passada em relação a 25/09)
+        // Cantelle 1 e 2
         {
-          id: 'cantelle-2',
+          id: 'c-2',
           member_id: 'm-1',
           description: 'Wwwemba*Emb*Cantelle - Parcela 1/2 (02/02)',
           is_installment: true,
@@ -391,6 +411,20 @@ describe('Installment parser & generator', () => {
           transaction_date: '2026-09-11',
           amount_cents: 7111,
           status: 'projected' as const,
+          created_at: '2026-09-21T13:11:10Z',
+        },
+        {
+          id: 'c-1',
+          member_id: 'm-1',
+          description: 'Wwwemba*Emb*Cantelle - Parcela 1/2',
+          is_installment: true,
+          installment_number: 1,
+          installment_total: 2,
+          installment_group_id: 'grp-cantelle',
+          transaction_date: '2026-08-11',
+          amount_cents: 7111,
+          status: 'confirmed' as const,
+          created_at: '2026-09-21T13:11:10Z',
         },
         // Manicure de ontem (2026-09-24)
         {
@@ -401,8 +435,9 @@ describe('Installment parser & generator', () => {
           transaction_date: '2026-09-24',
           amount_cents: 14000,
           status: 'confirmed' as const,
+          created_at: '2026-09-24T19:15:26Z',
         },
-        // Cerveja de 23 de set
+        // Cerveja Amstel (2026-09-23 20:59)
         {
           id: 'tx-amstel',
           member_id: 'm-1',
@@ -411,38 +446,77 @@ describe('Installment parser & generator', () => {
           transaction_date: '2026-09-23',
           amount_cents: 12000,
           status: 'confirmed' as const,
+          created_at: '2026-09-23T20:59:06Z',
+        },
+        // Carregando (2026-09-23 12:07)
+        {
+          id: 'tx-carregando',
+          member_id: 'm-1',
+          description: 'Carregando',
+          is_installment: false,
+          transaction_date: '2026-09-23',
+          amount_cents: 14500,
+          status: 'confirmed' as const,
+          created_at: '2026-09-23T12:07:24Z',
+        },
+        // Emporio Marista (2026-09-03)
+        {
+          id: 'tx-marista',
+          member_id: 'm-1',
+          description: 'Emporio Marista',
+          is_installment: false,
+          transaction_date: '2026-09-03',
+          amount_cents: 1775,
+          status: 'confirmed' as const,
+          created_at: '2026-09-21T13:11:10Z',
         },
       ]
 
-      // Simulando o filtro aplicado na Home para a data de hoje (2026-09-25)
-      const simulatedToday = '2026-09-25'
-      const pastAndCurrent = allTransactions.filter(
-        (tx) => tx.status !== 'projected' || tx.transaction_date <= simulatedToday,
-      )
+      const grouped = groupInstallmentTransactions(allRealTransactions, {
+        referenceDate: simulatedToday,
+      })
 
-      const grouped = groupInstallmentTransactions(pastAndCurrent)
-      const top7 = grouped
-        .slice()
-        .sort((a, b) => b.transactionDate.localeCompare(a.transactionDate))
+      // Ordenação final esperada na Home
+      const homeList = grouped
+        .filter(
+          (g) => g.representativeTx?.status !== 'projected' || g.transactionDate <= simulatedToday,
+        )
         .slice(0, 7)
 
-      // Manicure DEVE estar na 1ª posição!
-      expect(top7[0].baseDescription).toBe('manicure')
-      expect(top7[0].transactionDate).toBe('2026-09-24')
+      // 1. Manicure (2026-09-24) no topo absoluto!
+      expect(homeList[0].baseDescription).toBe('manicure')
+      expect(homeList[0].transactionDate).toBe('2026-09-24')
 
-      // Cerveja Amstel DEVE estar na 2ª posição
-      expect(top7[1].baseDescription).toBe('Três caixas de cerveja Amstel')
-      expect(top7[1].transactionDate).toBe('2026-09-23')
+      // 2. Três caixas de cerveja Amstel (2026-09-23 20:59)
+      expect(homeList[1].baseDescription).toBe('Três caixas de cerveja Amstel')
+      expect(homeList[1].transactionDate).toBe('2026-09-23')
 
-      // Cantelle (11 de set) DEVE estar antes das de 1 de set
-      expect(top7[2].baseDescription).toBe('Wwwemba*Emb*Cantelle')
-      expect(top7[2].transactionDate).toBe('2026-09-11')
+      // 3. Carregando (2026-09-23 12:07, desempate correto por created_at)
+      expect(homeList[2].baseDescription).toBe('Carregando')
+      expect(homeList[2].transactionDate).toBe('2026-09-23')
 
-      // E nem Flavios nem Hifly aparecem com datas de 2027 no topo
-      const flaviosItem = top7.find((item) => item.baseDescription === 'Flavios Calcados')
+      // 4. Cantelle (2026-09-11 - parcela 2/2 já atingida pois 11/09 <= 25/09)
+      expect(homeList[3].baseDescription).toBe('Wwwemba*Emb*Cantelle')
+      expect(homeList[3].transactionDate).toBe('2026-09-11')
+      expect(homeList[3].currentInstallment).toBe(2)
+      expect(homeList[3].totalInstallments).toBe(2)
+
+      // 5. Emporio Marista (2026-09-03)
+      expect(homeList[4].baseDescription).toBe('Emporio Marista')
+      expect(homeList[4].transactionDate).toBe('2026-09-03')
+
+      // 6 e 7. Flavios Calcados e Hifly Goiania (ambos parcela 1 com data 2026-09-01)
+      const flaviosItem = homeList.find((g) => g.baseDescription === 'Flavios Calcados')!
       expect(flaviosItem).toBeDefined()
-      expect(flaviosItem?.transactionDate).toBe('2026-09-01')
-      expect(flaviosItem?.currentInstallment).toBe(1)
+      expect(flaviosItem.transactionDate).toBe('2026-09-01')
+      expect(flaviosItem.currentInstallment).toBe(1)
+      expect(flaviosItem.totalInstallments).toBe(10)
+
+      const hiflyItem = homeList.find((g) => g.baseDescription === 'Hifly Goiania')!
+      expect(hiflyItem).toBeDefined()
+      expect(hiflyItem.transactionDate).toBe('2026-09-01')
+      expect(hiflyItem.currentInstallment).toBe(1)
+      expect(hiflyItem.totalInstallments).toBe(6)
     })
 
     it('groups installments even without installment_group_id if cleanDescription and member match', () => {

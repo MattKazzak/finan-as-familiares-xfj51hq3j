@@ -249,18 +249,29 @@ export default function Home() {
 
   // Transações recentes agrupadas estilo banco (compras parceladas agrupadas em linha única)
   const recentItems = useMemo(() => {
-    // Para a lista de "Últimos lançamentos", consideramos apenas transações já confirmadas
-    // ou lançadas até a data de hoje (evita que projeções futuras fiquem no topo da lista recente)
+    // Para a lista de "Últimos lançamentos", passamos todas as transações (incluindo grupos de parcelamento)
+    // para groupInstallmentTransactions com a data de referência hoje. A função consolida o grupo todo
+    // (inclusive sabendo o total de parcelas 10/10) e seleciona como representante a parcela
+    // já atingida/confirmada mais recente (ex: 1/10 em 01/09/2026), sem que parcelas futuras de 2027
+    // empurrem o parcelamento para o topo.
     const todayStr = new Date().toISOString().slice(0, 10)
-    const pastAndCurrentTransactions = transactions.filter(
-      (tx) => tx.status !== 'projected' || tx.transaction_date <= todayStr,
+    const grouped = groupInstallmentTransactions(transactions, { referenceDate: todayStr })
+
+    // Filtra para garantir que apenas itens com data <= todayStr ou confirmados apareçam na Home
+    const reachedItems = grouped.filter(
+      (item) => item.representativeTx?.status !== 'projected' || item.transactionDate <= todayStr,
     )
-    // Agrupa as compras parceladas mantendo a consolidação em linha única
-    const grouped = groupInstallmentTransactions(pastAndCurrentTransactions)
-    // Mostra as primeiras 7 linhas consolidadas na Home ordenadas por data decrescente
-    return grouped
+
+    // Mostra as primeiras 7 linhas consolidadas na Home ordenadas por data decrescente (com desempate por created_at)
+    return reachedItems
       .slice()
-      .sort((a, b) => b.transactionDate.localeCompare(a.transactionDate))
+      .sort((a, b) => {
+        const dateCmp = b.transactionDate.localeCompare(a.transactionDate)
+        if (dateCmp !== 0) return dateCmp
+        const createdA = a.createdAt || a.representativeTx?.created_at || ''
+        const createdB = b.createdAt || b.representativeTx?.created_at || ''
+        return createdB.localeCompare(createdA)
+      })
       .slice(0, 7)
   }, [transactions])
 
