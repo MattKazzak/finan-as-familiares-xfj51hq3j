@@ -2301,21 +2301,6 @@ export default function WalletPage() {
                                         }
                                       }}
                                     />
-                                    <DropdownMenuItem
-                                      onSelect={(e) => {
-                                        e.preventDefault()
-                                        const cat = item.category
-                                        setCategoryForNewSubcat(cat)
-                                        setNewSubcatName('')
-                                        setTimeout(() => {
-                                          setIsNewSubcatDialogOpen(true)
-                                        }, 0)
-                                      }}
-                                      className="gap-2 py-2 rounded-xl cursor-pointer text-emerald-700 focus:text-emerald-800"
-                                    >
-                                      <Plus className="w-3.5 h-3.5 text-emerald-600" />
-                                      <span>Nova subcategoria</span>
-                                    </DropdownMenuItem>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem
                                       onSelect={(e) => {
