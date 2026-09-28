@@ -81,6 +81,8 @@ interface CategoryEditorPopoverProps {
   title?: string
   defaultType?: 'income' | 'expense'
   initialLimitCents?: number
+  bucketsSummary?: Record<string, { budgetCents: number; spentCents?: number }>
+  family?: any
 }
 export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
   category,
@@ -91,9 +93,12 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
   title,
   defaultType = 'expense',
   initialLimitCents,
+  bucketsSummary,
+  family: familyProp,
 }) => {
   const isMobile = useIsMobile()
-  const { family } = useFamily()
+  const { family: familyContext } = useFamily()
+  const family = familyProp || familyContext
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
   const isControlled = controlledOpen !== undefined
   const open = isControlled ? controlledOpen : uncontrolledOpen
@@ -354,6 +359,88 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
               ? `Teto individual fixado em ${formatBRL(parsedBudgetCents)}.`
               : 'Consumo livre do saldo do balde (sem teto individual). Esta categoria consumirá o saldo livre do balde orçamentário sem limite individual.'}
           </p>
+
+          {/* Faixa de folga do balde orçamentário */}
+          {(() => {
+            let bucketKey: 'essentials' | 'lifestyle' | 'future' = 'lifestyle'
+            const currentBucket = budgetBucket || category?.budget_bucket
+            if (
+              currentBucket === 'essentials' ||
+              currentBucket === 'lifestyle' ||
+              currentBucket === 'future'
+            ) {
+              bucketKey = currentBucket
+            } else if (name || category?.name) {
+              const catNameLower = (name || category?.name || '').toLowerCase()
+              if (
+                catNameLower.includes('moradia') ||
+                catNameLower.includes('alimenta') ||
+                catNameLower.includes('saúde') ||
+                catNameLower.includes('saude') ||
+                catNameLower.includes('transporte') ||
+                catNameLower.includes('serviço') ||
+                catNameLower.includes('servico')
+              ) {
+                bucketKey = 'essentials'
+              } else if (
+                catNameLower.includes('reserva') ||
+                catNameLower.includes('invest') ||
+                catNameLower.includes('meta')
+              ) {
+                bucketKey = 'future'
+              }
+            }
+
+            const netIncomeCents = family?.monthly_net_income_cents || 0
+            const targetRatio =
+              bucketKey === 'essentials' ? 0.5 : bucketKey === 'lifestyle' ? 0.3 : 0.2
+            const bucketMetaCents = Math.round(netIncomeCents * targetRatio)
+            const currentBucketBudgetCents = bucketsSummary?.[bucketKey]?.budgetCents || 0
+            const freeInBudgetCents = bucketMetaCents - currentBucketBudgetCents
+
+            if (freeInBudgetCents > 0) {
+              return (
+                <div className="p-3 bg-emerald-50 border border-emerald-200/90 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-emerald-900 mt-1">
+                  <div className="text-xs">
+                    <span className="font-bold flex items-center gap-1">
+                      <span>✨</span>
+                      <span>{formatBRL(freeInBudgetCents)} livres no balde</span>
+                    </span>
+                    <p className="text-[11px] text-emerald-700 mt-0.5">
+                      Você pode somar essa folga ao teto desta categoria.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const currentCents = parseBRLToCents(budgetAmountStr) || 0
+                      const newTotalCents = currentCents + freeInBudgetCents
+                      setBudgetAmountStr(formatNumberBRL(newTotalCents))
+                    }}
+                    className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl transition-all shadow-xs shrink-0 cursor-pointer active:scale-95 self-start sm:self-auto touch-manipulation"
+                  >
+                    + Somar ao teto
+                  </button>
+                </div>
+              )
+            }
+
+            if (freeInBudgetCents === 0) {
+              return (
+                <div className="p-2.5 rounded-xl bg-slate-100/90 border border-slate-200 text-slate-700 flex items-center gap-2 text-xs font-medium mt-1">
+                  <span className="text-emerald-600 font-bold">✓</span>
+                  <span>Cota 100% alocada no balde</span>
+                </div>
+              )
+            }
+
+            return (
+              <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-center gap-2 text-xs font-medium mt-1">
+                <span className="text-amber-600 font-bold">⚠️</span>
+                <span>{formatBRL(Math.abs(freeInBudgetCents))} acima da meta do balde</span>
+              </div>
+            )
+          })()}
         </div>
       )}
 
