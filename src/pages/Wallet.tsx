@@ -284,6 +284,9 @@ export default function WalletPage() {
     {},
   )
 
+  // Nota de metodologia recolhida por padrão
+  const [isMethodologyExpanded, setIsMethodologyExpanded] = useState(false)
+
   // ID da transação pendente atualmente aberta no accordion (apenas 1 por vez)
   const [expandedPendingTxId, setExpandedPendingTxId] = useState<string | null>(null)
 
@@ -1813,14 +1816,45 @@ export default function WalletPage() {
                     Clique na linha para definir teto. Use o lápis para editar, o + para criar
                     subcategoria e a lixeira para excluir.
                   </p>
-                  <p className="flex items-start gap-1.5 text-[11px] text-slate-500/90 leading-relaxed mt-1.5">
-                    <Info className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                    <span>
-                      Essa taxonomia de categorias foi desenhada respeitando a Pesquisa de
-                      Orçamentos Familiares (POF) do IBGE e o comportamento real de consumo do
-                      Brasil moderno.
-                    </span>
-                  </p>
+                  <div className="mt-1.5 max-w-full">
+                    <button
+                      type="button"
+                      onClick={() => setIsMethodologyExpanded((prev) => !prev)}
+                      aria-expanded={isMethodologyExpanded}
+                      aria-label={
+                        isMethodologyExpanded
+                          ? 'Recolher nota de metodologia'
+                          : 'Expandir nota de metodologia'
+                      }
+                      title={
+                        isMethodologyExpanded
+                          ? 'Clique para recolher nota de metodologia'
+                          : 'Clique para expandir nota de metodologia completa'
+                      }
+                      className="group flex items-start gap-1.5 text-left text-[11px] leading-relaxed cursor-pointer select-none max-w-full w-full rounded-md p-0.5 -m-0.5 hover:bg-slate-50/80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-300 transition-colors"
+                    >
+                      <span
+                        className="inline-flex items-center justify-center w-4 h-4 rounded-full text-slate-400 group-hover:text-slate-600 group-hover:bg-slate-200/60 shrink-0 mt-0.5 transition-colors"
+                        aria-hidden="true"
+                        title={
+                          isMethodologyExpanded
+                            ? 'Clique para recolher nota de metodologia'
+                            : 'Clique para ver metodologia completa'
+                        }
+                      >
+                        <Info className="w-3.5 h-3.5" />
+                      </span>
+                      <span
+                        className={`min-w-0 flex-1 transition-all duration-200 text-slate-500/90 group-hover:text-slate-700 ${
+                          isMethodologyExpanded ? 'break-words whitespace-normal' : 'truncate block'
+                        }`}
+                      >
+                        Essa taxonomia de categorias foi desenhada respeitando a Pesquisa de
+                        Orçamentos Familiares (POF) do IBGE e o comportamento real de consumo do
+                        Brasil moderno.
+                      </span>
+                    </button>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 self-start sm:self-auto">
                   <CategoryEditorPopover
