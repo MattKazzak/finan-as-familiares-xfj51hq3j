@@ -81,8 +81,6 @@ import {
   Repeat,
   Info,
   Lightbulb,
-  SlidersHorizontal,
-  Receipt,
 } from 'lucide-react'
 import { SortableList } from '@/components/common/SortableList'
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
@@ -1995,14 +1993,7 @@ export default function WalletPage() {
                         {/* Bloco da Categoria Pai */}
                         <div
                           onClick={() =>
-                            openBudgetEditor(
-                              item.category.id,
-                              null,
-                              item.defaultLimitCents,
-                              item.limitCents,
-                              item.hasOverride,
-                              item.category.percent_default,
-                            )
+                            openCategoryTransactionsDrawer(item.category, null, 'category')
                           }
                           className="p-3 sm:p-3.5 hover:bg-slate-50/80 cursor-pointer transition-colors group select-none touch-manipulation"
                         >
@@ -2034,25 +2025,6 @@ export default function WalletPage() {
 
                                   {/* Badges em linha flexível abaixo do nome */}
                                   <div className="flex items-center flex-wrap gap-1.5 mt-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        openBudgetEditor(
-                                          item.category.id,
-                                          null,
-                                          item.defaultLimitCents,
-                                          item.limitCents,
-                                          item.hasOverride,
-                                          item.category.percent_default,
-                                        )
-                                      }}
-                                      className="min-h-[40px] px-3 py-1.5 text-xs font-semibold rounded-xl text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/90 border border-slate-300/80 inline-flex items-center gap-1.5 shrink-0 transition-all active:scale-95 touch-manipulation shadow-2xs"
-                                      title="Editar teto da categoria"
-                                    >
-                                      <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500" />
-                                      <span>Orçamento</span>
-                                    </button>
                                     {item.category.budget_bucket && (
                                       <span
                                         className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md shrink-0 leading-none whitespace-nowrap ${
@@ -2658,26 +2630,6 @@ export default function WalletPage() {
                                         className="flex sm:hidden items-center gap-1 shrink-0"
                                         onClick={(e) => e.stopPropagation()}
                                       >
-                                        {/* Pílula Orçamento da subcategoria */}
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation()
-                                            openBudgetEditor(
-                                              item.category.id,
-                                              subItem.subcategory.id,
-                                              subItem.defaultLimitCents,
-                                              subItem.limitCents,
-                                              subItem.hasOverride,
-                                              null,
-                                            )
-                                          }}
-                                          className="text-[9px] font-semibold px-2 py-0.5 rounded-full text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 transition-colors shrink-0"
-                                          title="Editar teto da subcategoria"
-                                        >
-                                          Orçamento
-                                        </button>
-
                                         {/* Lápis: Renomear subcategoria E definir/editar teto orçamentário */}
                                         <SubcategoryEditorPopover
                                           subcategory={subItem.subcategory}
@@ -2803,26 +2755,6 @@ export default function WalletPage() {
                                         className="hidden sm:flex items-center gap-1 shrink-0"
                                         onClick={(e) => e.stopPropagation()}
                                       >
-                                        {/* Pílula Orçamento da subcategoria */}
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation()
-                                            openBudgetEditor(
-                                              item.category.id,
-                                              subItem.subcategory.id,
-                                              subItem.defaultLimitCents,
-                                              subItem.limitCents,
-                                              subItem.hasOverride,
-                                              null,
-                                            )
-                                          }}
-                                          className="text-[9px] font-semibold px-2 py-0.5 rounded-full text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 transition-colors shrink-0"
-                                          title="Editar teto da subcategoria"
-                                        >
-                                          Orçamento
-                                        </button>
-
                                         {/* Lápis: Renomear subcategoria E definir/editar teto orçamentário */}
                                         <SubcategoryEditorPopover
                                           subcategory={subItem.subcategory}
