@@ -679,7 +679,7 @@ export async function seedStandardizedCategoriesAndApplyPlan({
           budget_bucket: catDef.bucket,
           icon: catDef.icon,
           color: catDef.color,
-          sort_order: maxSortOrder,
+          sort_order: i + 1,
         })
         .select()
         .single()
@@ -705,11 +705,18 @@ export async function seedStandardizedCategoriesAndApplyPlan({
         createdCategoriesCount += 1
       }
     } else {
-      // Se já existia mas não tinha bucket ou bucket diferente, atualiza
+      // Se já existia, atualiza budget_bucket ou sort_order caso estejam divergentes
+      const updates: any = {}
       if (!categoryRecord.budget_bucket || categoryRecord.budget_bucket !== catDef.bucket) {
+        updates.budget_bucket = catDef.bucket
+      }
+      if (categoryRecord.sort_order === undefined || categoryRecord.sort_order === null) {
+        updates.sort_order = i + 1
+      }
+      if (Object.keys(updates).length > 0) {
         await (supabase as any)
           .from('transaction_categories')
-          .update({ budget_bucket: catDef.bucket })
+          .update(updates)
           .eq('id', categoryRecord.id)
       }
     }

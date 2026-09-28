@@ -33,6 +33,18 @@ describe('Seed de Categorias Padronizadas e Onboarding', () => {
     expect(categoryNames.length).toBe(14)
   })
 
+  it('verifica que a árvore padronizada possui exatamente as subcategorias e keywords esperadas', () => {
+    const categoriesWithSubs = STANDARDIZED_CATEGORIES_TREE.filter(
+      (c) => c.subcategories.length > 0,
+    )
+    expect(categoriesWithSubs.length).toBe(14)
+    const totalSubcategories = STANDARDIZED_CATEGORIES_TREE.reduce(
+      (acc, c) => acc + c.subcategories.length,
+      0,
+    )
+    expect(totalSubcategories).toBe(55)
+  })
+
   it('verifica as subcategorias de moradia, transporte e alimentação', () => {
     const moradia = STANDARDIZED_CATEGORIES_TREE.find((c) => c.name === 'Moradia')
     expect(moradia).toBeDefined()
