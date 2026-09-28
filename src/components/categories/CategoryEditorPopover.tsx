@@ -158,6 +158,13 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
   const bucketBudgetCents = selectedBucketData?.budgetCents ?? 0
   const bucketSpentCents = selectedBucketData?.spentCents ?? 0
   const freeInBudgetCents = Math.max(0, bucketBudgetCents - bucketSpentCents)
+  const maxCategoryLimitCents = parsedBudgetCents + freeInBudgetCents
+
+  // Metadados do balde selecionado para o card de folga
+  const selectedBucketOption = BUCKET_OPTIONS.find((opt) => opt.id === budgetBucket)
+  const bucketTargetPercent =
+    budgetBucket === 'essentials' ? '50%' : budgetBucket === 'lifestyle' ? '30%' : '20%'
+  const BucketIconComp = selectedBucketOption?.icon || Home
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -360,40 +367,80 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
               </span>
             </div>
           </div>
-          <p className="text-[10px] text-slate-500 leading-tight">
-            {parsedBudgetCents > 0
-              ? `Teto individual fixado em ${formatBRL(parsedBudgetCents)}.`
-              : 'Consumo livre do saldo do balde (sem teto individual). Esta categoria consumirá o saldo livre do balde orçamentário sem limite individual.'}
-          </p>
+          {/* Harmonização: linha única limpa sem frases soltas repetindo o mesmo valor */}
+          <div className="flex items-center justify-between gap-2 text-[10px] text-slate-500 leading-tight">
+            {parsedBudgetCents > 0 ? (
+              <span>
+                Teto fixado em{' '}
+                <strong className="font-semibold text-slate-700 tabular-nums">
+                  {formatBRL(parsedBudgetCents)}
+                </strong>
+                {netIncome > 0 && calculatedPercent !== null ? (
+                  <span className="text-emerald-700 font-medium">
+                    {' '}
+                    ({calculatedPercent}% da renda)
+                  </span>
+                ) : null}
+              </span>
+            ) : (
+              <span>Consumo livre do saldo do balde (sem teto individual).</span>
+            )}
+          </div>
 
-          {/* Faixa de folga no balde com botão "+ Somar ao teto" */}
+          {/* Card refinado de folga do balde (Slate / Emerald suave) */}
           {freeInBudgetCents > 0 && (
-            <div className="mt-2 p-2.5 bg-emerald-50 border border-emerald-200/90 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-emerald-900">
-              <div className="text-xs min-w-0">
-                <span className="font-bold flex items-center gap-1.5 leading-snug">
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>{formatBRL(freeInBudgetCents)} livres no balde</span>
+            <div className="mt-2.5 p-3 rounded-2xl bg-gradient-to-br from-slate-50 via-emerald-50/40 to-slate-50 border border-slate-200/90 shadow-2xs space-y-2.5 text-slate-800">
+              {/* Cabeçalho do Card */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <div className="w-5 h-5 rounded-md bg-emerald-100/80 text-emerald-800 flex items-center justify-center shrink-0">
+                    <BucketIconComp className="w-3 h-3" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-900 truncate">
+                    Cota de {selectedBucketOption?.label || 'Essenciais'} (Meta{' '}
+                    {bucketTargetPercent})
+                  </span>
+                </div>
+                <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100/90 px-1.5 py-0.5 rounded-full shrink-0">
+                  <Sparkles className="w-2.5 h-2.5" />
+                  Disponível
                 </span>
-                <p className="text-[11px] text-emerald-700 mt-0.5 leading-tight">
-                  Você pode somar essa folga ao teto desta categoria.
-                </p>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const currentCents = parseBRLToCents(budgetAmountStr) || 0
-                  const newTotalCents = currentCents + freeInBudgetCents
-                  setBudgetAmountStr(formatNumberBRL(newTotalCents))
-                }}
-                className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl transition-all shadow-xs shrink-0 cursor-pointer active:scale-95 self-stretch sm:self-auto text-center touch-manipulation"
-              >
-                + Somar ao teto
-              </button>
+
+              {/* Informação Principal */}
+              <div className="text-xs text-slate-700 leading-snug">
+                <span className="font-bold text-slate-900 tabular-nums">
+                  {formatBRL(freeInBudgetCents)}
+                </span>{' '}
+                <span>disponíveis para distribuir neste balde.</span>
+              </div>
+
+              {/* Texto de Apoio Consultivo */}
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                Este teto pode chegar até{' '}
+                <strong className="font-semibold text-emerald-800 tabular-nums">
+                  {formatBRL(maxCategoryLimitCents)}
+                </strong>{' '}
+                mantendo o balde dentro da meta sugerida da família.
+              </p>
+
+              {/* Ação Rápida (sutil pílula/contorno) */}
+              <div className="pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBudgetAmountStr(formatNumberBRL(maxCategoryLimitCents))
+                  }}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-emerald-800 hover:text-emerald-900 bg-white hover:bg-emerald-50/60 border border-emerald-300/80 hover:border-emerald-400 px-3 py-1.5 rounded-xl transition-all shadow-2xs hover:shadow-xs active:scale-[0.98] cursor-pointer touch-manipulation text-center"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>Alocar saldo restante ({formatBRL(maxCategoryLimitCents)})</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
       )}
-
       {/* Paleta de Cores */}
       <div className="space-y-1">
         <Label className="text-[11px] font-semibold text-slate-600">Cor</Label>
