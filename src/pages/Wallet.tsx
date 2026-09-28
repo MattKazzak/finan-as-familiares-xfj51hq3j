@@ -79,6 +79,7 @@ import {
   GripVertical,
   GraduationCap,
   Repeat,
+  Info,
 } from 'lucide-react'
 import { SortableList } from '@/components/common/SortableList'
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
@@ -1811,6 +1812,14 @@ export default function WalletPage() {
                   <p className="text-xs text-slate-500">
                     Clique na linha para definir teto. Use o lápis para editar, o + para criar
                     subcategoria e a lixeira para excluir.
+                  </p>
+                  <p className="flex items-start gap-1.5 text-[11px] text-slate-500/90 leading-relaxed mt-1.5">
+                    <Info className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                    <span>
+                      Essa taxonomia de categorias foi desenhada respeitando a Pesquisa de
+                      Orçamentos Familiares (POF) do IBGE e o comportamento real de consumo do
+                      Brasil moderno.
+                    </span>
                   </p>
                 </div>
                 <div className="flex items-center gap-2 self-start sm:self-auto">
