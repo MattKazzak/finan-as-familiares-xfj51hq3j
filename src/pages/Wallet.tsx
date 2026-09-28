@@ -2575,13 +2575,10 @@ export default function WalletPage() {
                                   <div
                                     key={`budget-sub-${subItem.subcategory.id}`}
                                     onClick={() =>
-                                      openBudgetEditor(
-                                        item.category.id,
-                                        subItem.subcategory.id,
-                                        subItem.defaultLimitCents,
-                                        subItem.limitCents,
-                                        subItem.hasOverride,
-                                        null,
+                                      openCategoryTransactionsDrawer(
+                                        item.category,
+                                        subItem.subcategory,
+                                        'subcategory',
                                       )
                                     }
                                     className={`py-2 px-2 sm:px-2.5 flex flex-col sm:flex-row sm:items-center justify-between rounded-xl cursor-pointer transition-colors group/sub gap-1.5 sm:gap-3 touch-manipulation ${
@@ -3284,7 +3281,7 @@ export default function WalletPage() {
             const bucketMetaCents = Math.round(netIncomeCents * targetRatio)
             const currentBucketBudgetCents =
               categoryBudgetData.bucketsSummary[bucketKey]?.budgetCents || 0
-            const freeInBudgetCents = bucketMetaCents - currentBucketBudgetCents
+            const freeInBudgetCents = Math.max(0, bucketMetaCents - currentBucketBudgetCents)
 
             return (
               <form onSubmit={handleSaveBudgetForm} className="space-y-4">
@@ -3412,8 +3409,8 @@ export default function WalletPage() {
                     {freeInBudgetCents > 0 && (
                       <div className="mt-2.5 p-3 bg-emerald-50 border border-emerald-200/90 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-emerald-900">
                         <div className="text-xs">
-                          <span className="font-bold flex items-center gap-1">
-                            <span>✨</span>
+                          <span className="font-bold flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                             <span>{formatBRL(freeInBudgetCents)} livres no balde</span>
                           </span>
                           <p className="text-[11px] text-emerald-700 mt-0.5">
@@ -3527,8 +3524,8 @@ export default function WalletPage() {
                     {freeInBudgetCents > 0 && (
                       <div className="mt-2.5 p-3 bg-emerald-50 border border-emerald-200/90 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-emerald-900">
                         <div className="text-xs">
-                          <span className="font-bold flex items-center gap-1">
-                            <span>✨</span>
+                          <span className="font-bold flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                             <span>{formatBRL(freeInBudgetCents)} livres no balde</span>
                           </span>
                           <p className="text-[11px] text-emerald-700 mt-0.5">
