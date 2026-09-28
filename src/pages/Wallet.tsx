@@ -184,21 +184,6 @@ export default function WalletPage() {
     'category' | 'direct' | 'subcategory'
   >('category')
 
-  // Estados para disparar ações a partir de itens do menu dropdown mobile
-  const [isCategoryEditorOpen, setIsCategoryEditorOpen] = useState(false)
-  const [categoryToEdit, setCategoryToEdit] = useState<TransactionCategory | null>(null)
-  const [categoryEditorName, setCategoryEditorName] = useState('')
-  const [categoryEditorType, setCategoryEditorType] = useState<'income' | 'expense'>('expense')
-  const [categoryEditorColor, setCategoryEditorColor] = useState('#3B82F6')
-  const [categoryEditorIcon, setCategoryEditorIcon] = useState('Tag')
-  const [categoryEditorBucket, setCategoryEditorBucket] = useState<BudgetBucket>('essentials')
-  const [savingCategoryEditor, setSavingCategoryEditor] = useState(false)
-
-  const [isNewSubcatDialogOpen, setIsNewSubcatDialogOpen] = useState(false)
-  const [categoryForNewSubcat, setCategoryForNewSubcat] = useState<TransactionCategory | null>(null)
-  const [newSubcatName, setNewSubcatName] = useState('')
-  const [savingNewSubcat, setSavingNewSubcat] = useState(false)
-
   // Estados de confirmação para exclusão inline com verificação de uso no banco
   const [categoryToDelete, setCategoryToDelete] = useState<TransactionCategory | null>(null)
   const [categoryUsageCount, setCategoryUsageCount] = useState<number>(0)
@@ -2100,20 +2085,6 @@ export default function WalletPage() {
 
                             {/* Coluna de Ações + Chevron (alinhamento no topo, nunca sobrepondo texto) */}
                             <div className="flex items-center gap-1 sm:gap-2 shrink-0 self-start mt-0.5">
-                              {/* Botão dedicado para Ver Extrato/Transações da Categoria */}
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  openCategoryTransactionsDrawer(item.category, null, 'category')
-                                }}
-                                className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200/80 sm:border-transparent transition-all min-h-[40px] min-w-[40px] touch-manipulation cursor-pointer"
-                                title="Ver transações da categoria"
-                                aria-label={`Ver transações de ${item.category.name}`}
-                              >
-                                <Receipt className="w-4 h-4 text-slate-600 hover:text-emerald-700" />
-                              </button>
-
                               {/* AÇÕES DE GESTÃO: Desktop (barra com 3 botões em cápsula limpa) */}
                               <div
                                 className="hidden md:flex items-center gap-0.5 bg-slate-100/70 p-0.5 rounded-xl border border-slate-200/60 shrink-0"
@@ -2670,24 +2641,6 @@ export default function WalletPage() {
                                         className="flex sm:hidden items-center gap-1 shrink-0"
                                         onClick={(e) => e.stopPropagation()}
                                       >
-                                        {/* Botão de Extrato/Transações da Subcategoria */}
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation()
-                                            openCategoryTransactionsDrawer(
-                                              item.category,
-                                              subItem.subcategory,
-                                              'subcategory',
-                                            )
-                                          }}
-                                          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-all min-h-[40px] min-w-[40px] touch-manipulation cursor-pointer"
-                                          title="Ver transações da subcategoria"
-                                          aria-label={`Ver transações de ${subItem.subcategory.name}`}
-                                        >
-                                          <Receipt className="w-3.5 h-3.5" />
-                                        </button>
-
                                         {/* Pílula Orçamento da subcategoria */}
                                         <button
                                           type="button"
@@ -2702,11 +2655,10 @@ export default function WalletPage() {
                                               null,
                                             )
                                           }}
-                                          className="min-h-[40px] px-2.5 py-1 text-[11px] font-semibold rounded-xl text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 inline-flex items-center gap-1 shrink-0 transition-all active:scale-95 touch-manipulation shadow-2xs"
+                                          className="text-[9px] font-semibold px-2 py-0.5 rounded-full text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 transition-colors shrink-0"
                                           title="Editar teto da subcategoria"
                                         >
-                                          <SlidersHorizontal className="w-3 h-3 text-slate-500" />
-                                          <span>Orçamento</span>
+                                          Orçamento
                                         </button>
 
                                         {/* Lápis: Renomear subcategoria E definir/editar teto orçamentário */}
@@ -2834,24 +2786,6 @@ export default function WalletPage() {
                                         className="hidden sm:flex items-center gap-1 shrink-0"
                                         onClick={(e) => e.stopPropagation()}
                                       >
-                                        {/* Botão de Extrato/Transações da Subcategoria */}
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation()
-                                            openCategoryTransactionsDrawer(
-                                              item.category,
-                                              subItem.subcategory,
-                                              'subcategory',
-                                            )
-                                          }}
-                                          className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-all min-h-[36px] min-w-[36px] touch-manipulation cursor-pointer"
-                                          title="Ver transações da subcategoria"
-                                          aria-label={`Ver transações de ${subItem.subcategory.name}`}
-                                        >
-                                          <Receipt className="w-3.5 h-3.5" />
-                                        </button>
-
                                         {/* Pílula Orçamento da subcategoria */}
                                         <button
                                           type="button"
@@ -2866,11 +2800,10 @@ export default function WalletPage() {
                                               null,
                                             )
                                           }}
-                                          className="min-h-[36px] px-2.5 py-1 text-xs font-semibold rounded-xl text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 inline-flex items-center gap-1 shrink-0 transition-all active:scale-95 touch-manipulation shadow-2xs"
+                                          className="text-[9px] font-semibold px-2 py-0.5 rounded-full text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 transition-colors shrink-0"
                                           title="Editar teto da subcategoria"
                                         >
-                                          <SlidersHorizontal className="w-3 h-3 text-slate-500" />
-                                          <span>Orçamento</span>
+                                          Orçamento
                                         </button>
 
                                         {/* Lápis: Renomear subcategoria E definir/editar teto orçamentário */}
@@ -3404,59 +3337,6 @@ export default function WalletPage() {
               categoryBudgetData.bucketsSummary[bucketKey]?.budgetCents || 0
             const freeInBudgetCents = bucketMetaCents - currentBucketBudgetCents
 
-            const renderBucketFreeState = () => {
-              if (freeInBudgetCents > 0) {
-                return (
-                  <div className="mt-2.5 p-3 bg-emerald-50 border border-emerald-200/90 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-emerald-900">
-                    <div className="text-xs">
-                      <span className="font-bold flex items-center gap-1">
-                        <span>✨</span>
-                        <span>{formatBRL(freeInBudgetCents)} livres no balde</span>
-                      </span>
-                      <p className="text-[11px] text-emerald-700 mt-0.5">
-                        Você pode somar essa folga ao teto desta categoria.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const currentCents =
-                          parseBRLToCents(
-                            isEditingOnlyThisMonth ? monthAmountStr : defaultAmountStr,
-                          ) || 0
-                        const newTotalCents = currentCents + freeInBudgetCents
-                        const formatted = formatNumberBRL(newTotalCents)
-                        if (isEditingOnlyThisMonth) {
-                          setMonthAmountStr(formatted)
-                        } else {
-                          setDefaultAmountStr(formatted)
-                        }
-                      }}
-                      className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl transition-all shadow-xs shrink-0 cursor-pointer active:scale-95 self-start sm:self-auto touch-manipulation"
-                    >
-                      + Somar ao teto
-                    </button>
-                  </div>
-                )
-              }
-
-              if (freeInBudgetCents === 0) {
-                return (
-                  <div className="mt-2.5 p-2.5 rounded-xl bg-slate-100/90 border border-slate-200 text-slate-700 flex items-center gap-2 text-xs font-medium">
-                    <span className="text-emerald-600 font-bold">✓</span>
-                    <span>Cota 100% alocada no balde</span>
-                  </div>
-                )
-              }
-
-              return (
-                <div className="mt-2.5 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-center gap-2 text-xs font-medium">
-                  <span className="text-amber-600 font-bold">⚠️</span>
-                  <span>{formatBRL(Math.abs(freeInBudgetCents))} acima da meta do balde</span>
-                </div>
-              )
-            }
-
             return (
               <form onSubmit={handleSaveBudgetForm} className="space-y-4">
                 {/* Identificação Categoria/Subcategoria */}
@@ -3579,7 +3459,31 @@ export default function WalletPage() {
                       )}
                     </div>
 
-                    {renderBucketFreeState()}
+                    {/* Faixa de folga no balde (apenas quando freeInBudgetCents > 0) */}
+                    {freeInBudgetCents > 0 && (
+                      <div className="mt-2.5 p-3 bg-emerald-50 border border-emerald-200/90 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-emerald-900">
+                        <div className="text-xs">
+                          <span className="font-bold flex items-center gap-1">
+                            <span>✨</span>
+                            <span>{formatBRL(freeInBudgetCents)} livres no balde</span>
+                          </span>
+                          <p className="text-[11px] text-emerald-700 mt-0.5">
+                            Você pode somar essa folga ao teto desta categoria.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const currentCents = parseBRLToCents(defaultAmountStr) || 0
+                            const newTotalCents = currentCents + freeInBudgetCents
+                            setDefaultAmountStr(formatNumberBRL(newTotalCents))
+                          }}
+                          className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl transition-all shadow-xs shrink-0 cursor-pointer active:scale-95 self-start sm:self-auto touch-manipulation"
+                        >
+                          + Somar ao teto
+                        </button>
+                      </div>
+                    )}
 
                     <p className="text-[11px] text-slate-500">
                       O percentual é calculado dinamicamente com base na renda líquida familiar (
@@ -3670,7 +3574,31 @@ export default function WalletPage() {
                       </button>
                     </div>
 
-                    {renderBucketFreeState()}
+                    {/* Faixa de folga no balde (apenas quando freeInBudgetCents > 0) */}
+                    {freeInBudgetCents > 0 && (
+                      <div className="mt-2.5 p-3 bg-emerald-50 border border-emerald-200/90 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-emerald-900">
+                        <div className="text-xs">
+                          <span className="font-bold flex items-center gap-1">
+                            <span>✨</span>
+                            <span>{formatBRL(freeInBudgetCents)} livres no balde</span>
+                          </span>
+                          <p className="text-[11px] text-emerald-700 mt-0.5">
+                            Você pode somar essa folga ao teto desta categoria.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const currentCents = parseBRLToCents(monthAmountStr) || 0
+                            const newTotalCents = currentCents + freeInBudgetCents
+                            setMonthAmountStr(formatNumberBRL(newTotalCents))
+                          }}
+                          className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl transition-all shadow-xs shrink-0 cursor-pointer active:scale-95 self-start sm:self-auto touch-manipulation"
+                        >
+                          + Somar ao teto
+                        </button>
+                      </div>
+                    )}
 
                     {/* Dica existente de Cota Liberada quando o valor é zero ou vazio */}
                     {(() => {
