@@ -446,6 +446,44 @@ export function BudgetOverviewCard({
                   )}
                 </div>
 
+                {/* Badge informativa de alocação de cota vs meta da renda */}
+                {(() => {
+                  if (netIncomeCents <= 0) return null
+                  const targetPercent =
+                    cfg.key === 'essentials' ? 50 : cfg.key === 'lifestyle' ? 30 : 20
+                  const metaCents = Math.round(netIncomeCents * (targetPercent / 100))
+
+                  if (data.budgetCents < metaCents) {
+                    const diff = metaCents - data.budgetCents
+                    return (
+                      <div className="mt-1.5 flex items-center">
+                        <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 leading-tight break-words">
+                          ✨ + {formatBRL(diff)} livres para alocar
+                        </span>
+                      </div>
+                    )
+                  }
+
+                  if (data.budgetCents === metaCents) {
+                    return (
+                      <div className="mt-1.5 flex items-center">
+                        <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/80 leading-tight">
+                          ✓ Cota 100% alocada
+                        </span>
+                      </div>
+                    )
+                  }
+
+                  const diff = data.budgetCents - metaCents
+                  return (
+                    <div className="mt-1.5 flex items-center">
+                      <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/80 leading-tight break-words">
+                        ⚠️ {formatBRL(diff)} acima da meta de {targetPercent}%
+                      </span>
+                    </div>
+                  )
+                })()}
+
                 {/* Subtítulo informativo leve sobre as categorias que compõem o balde */}
                 <p className="text-[10px] text-slate-500 mt-1 line-clamp-1 leading-normal">
                   {cfg.sublabel}

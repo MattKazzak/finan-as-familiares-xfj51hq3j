@@ -80,6 +80,7 @@ import {
   GraduationCap,
   Repeat,
   Info,
+  Lightbulb,
 } from 'lucide-react'
 import { SortableList } from '@/components/common/SortableList'
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
@@ -2068,7 +2069,7 @@ export default function WalletPage() {
 
                                       return (
                                         <span className="text-[9px] sm:text-[10px] font-medium text-slate-500 bg-slate-100 border border-slate-200/80 px-1.5 py-0.5 rounded-md shrink-0 leading-none whitespace-nowrap">
-                                          Consumo livre do saldo do balde
+                                          Sem teto próprio · Cota livre no balde
                                         </span>
                                       )
                                     })()}
@@ -2391,11 +2392,18 @@ export default function WalletPage() {
                                   {formatBRL(item.spentCents)}
                                 </span>
                                 <span className="text-slate-400 text-xs">de</span>
-                                <span className="text-slate-600 font-medium">
-                                  {item.limitCents > 0
-                                    ? formatBRL(item.limitCents)
-                                    : 'Consumo livre do saldo do balde'}
-                                </span>
+                                {item.limitCents > 0 ? (
+                                  <span className="text-slate-600 font-medium">
+                                    {formatBRL(item.limitCents)}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-baseline gap-1 flex-wrap">
+                                    <span className="text-slate-600 font-medium">R$ 0,00</span>
+                                    <span className="text-[11px] text-slate-400 font-normal">
+                                      (Sem teto alocado)
+                                    </span>
+                                  </span>
+                                )}
                               </div>
 
                               {/* Percentual ou Marcador */}
@@ -3340,6 +3348,18 @@ export default function WalletPage() {
                       O percentual é calculado dinamicamente com base na renda líquida familiar (
                       {formatBRL(family?.monthly_net_income_cents || 0)}).
                     </p>
+
+                    {/* Dica consultiva ao zerar teto */}
+                    {parseBRLToCents(defaultAmountStr) === 0 ? (
+                      <div className="p-2.5 rounded-xl bg-emerald-50/60 border border-emerald-200/60 flex items-start gap-2">
+                        <Lightbulb className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                        <p className="text-[11px] text-emerald-900 leading-relaxed">
+                          <strong className="font-semibold">💡 Cota Liberada:</strong> Ao zerar esta
+                          categoria, o valor fica livre no seu balde para reforçar outras despesas
+                          essenciais (como Moradia) ou ser transferido para suas Metas.
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
 
@@ -3403,6 +3423,18 @@ export default function WalletPage() {
                         <span>Tornar padrão de todos os meses</span>
                       </button>
                     </div>
+
+                    {/* Dica consultiva ao zerar teto pontual */}
+                    {parseBRLToCents(monthAmountStr) === 0 ? (
+                      <div className="p-2.5 rounded-xl bg-emerald-50/60 border border-emerald-200/60 flex items-start gap-2">
+                        <Lightbulb className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                        <p className="text-[11px] text-emerald-900 leading-relaxed">
+                          <strong className="font-semibold">💡 Cota Liberada:</strong> Ao zerar esta
+                          categoria, o valor fica livre no seu balde para reforçar outras despesas
+                          essenciais (como Moradia) ou ser transferido para suas Metas.
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
 
