@@ -3378,27 +3378,33 @@ export default function WalletPage() {
                       )}
                     </div>
 
-                    {/* Faixa de saldo livre do balde: exibição imediata e garantida se freeInBudgetCents > 0 */}
                     {freeInBudgetCents > 0 && (
-                      <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl p-3 my-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <p className="text-xs leading-snug">
-                            ✨ Você possui{' '}
-                            <strong className="font-bold tabular-nums">
-                              {formatBRL(freeInBudgetCents)}
-                            </strong>{' '}
-                            livres neste balde.
+                      <div className="mt-2.5 p-3 bg-emerald-50 border border-emerald-200/90 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-emerald-900">
+                        <div className="text-xs">
+                          <span className="font-bold flex items-center gap-1">
+                            <span>✨</span>
+                            <span>{formatBRL(freeInBudgetCents)} livres no balde</span>
+                          </span>
+                          <p className="text-[11px] text-emerald-700 mt-0.5">
+                            Você pode somar essa folga ao teto desta categoria.
                           </p>
                         </div>
                         <button
                           type="button"
                           onClick={() => {
-                            const currentInputCents = parseBRLToCents(defaultAmountStr)
-                            const nextCents = currentInputCents + freeInBudgetCents
-                            setDefaultAmountStr(formatNumberBRL(nextCents))
+                            const currentCents =
+                              parseBRLToCents(
+                                isEditingOnlyThisMonth ? monthAmountStr : defaultAmountStr,
+                              ) || 0
+                            const newTotalCents = currentCents + freeInBudgetCents
+                            const formatted = formatNumberBRL(newTotalCents)
+                            if (isEditingOnlyThisMonth) {
+                              setMonthAmountStr(formatted)
+                            } else {
+                              setDefaultAmountStr(formatted)
+                            }
                           }}
-                          className="self-start sm:self-auto shrink-0 inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs active:scale-95 transition-all"
+                          className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl transition-all shadow-xs shrink-0 cursor-pointer active:scale-95 self-start sm:self-auto"
                         >
                           + Somar ao teto
                         </button>
@@ -3494,27 +3500,33 @@ export default function WalletPage() {
                       </button>
                     </div>
 
-                    {/* Faixa de saldo livre do balde: exibição imediata e garantida se freeInBudgetCents > 0 */}
                     {freeInBudgetCents > 0 && (
-                      <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl p-3 my-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <p className="text-xs leading-snug">
-                            ✨ Você possui{' '}
-                            <strong className="font-bold tabular-nums">
-                              {formatBRL(freeInBudgetCents)}
-                            </strong>{' '}
-                            livres neste balde.
+                      <div className="mt-2.5 p-3 bg-emerald-50 border border-emerald-200/90 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-emerald-900">
+                        <div className="text-xs">
+                          <span className="font-bold flex items-center gap-1">
+                            <span>✨</span>
+                            <span>{formatBRL(freeInBudgetCents)} livres no balde</span>
+                          </span>
+                          <p className="text-[11px] text-emerald-700 mt-0.5">
+                            Você pode somar essa folga ao teto desta categoria.
                           </p>
                         </div>
                         <button
                           type="button"
                           onClick={() => {
-                            const currentInputCents = parseBRLToCents(monthAmountStr)
-                            const nextCents = currentInputCents + freeInBudgetCents
-                            setMonthAmountStr(formatNumberBRL(nextCents))
+                            const currentCents =
+                              parseBRLToCents(
+                                isEditingOnlyThisMonth ? monthAmountStr : defaultAmountStr,
+                              ) || 0
+                            const newTotalCents = currentCents + freeInBudgetCents
+                            const formatted = formatNumberBRL(newTotalCents)
+                            if (isEditingOnlyThisMonth) {
+                              setMonthAmountStr(formatted)
+                            } else {
+                              setDefaultAmountStr(formatted)
+                            }
                           }}
-                          className="self-start sm:self-auto shrink-0 inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs active:scale-95 transition-all"
+                          className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl transition-all shadow-xs shrink-0 cursor-pointer active:scale-95 self-start sm:self-auto"
                         >
                           + Somar ao teto
                         </button>
