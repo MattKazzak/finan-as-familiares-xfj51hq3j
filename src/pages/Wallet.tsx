@@ -3251,10 +3251,10 @@ export default function WalletPage() {
             const netIncomeCents = family?.monthly_net_income_cents || 0
             const targetRatio =
               bucketKey === 'essentials' ? 0.5 : bucketKey === 'lifestyle' ? 0.3 : 0.2
-            const metaDoBalde = Math.round(netIncomeCents * targetRatio)
+            const bucketMetaCents = Math.round(netIncomeCents * targetRatio)
             const currentBucketBudgetCents =
               categoryBudgetData.bucketsSummary[bucketKey]?.budgetCents || 0
-            const bucketFreeCents = metaDoBalde - currentBucketBudgetCents
+            const freeInBudgetCents = Math.max(0, bucketMetaCents - currentBucketBudgetCents)
 
             return (
               <form onSubmit={handleSaveBudgetForm} className="space-y-4">
@@ -3378,12 +3378,39 @@ export default function WalletPage() {
                       )}
                     </div>
 
+                    {/* Faixa de saldo livre do balde: exibição imediata e garantida se freeInBudgetCents > 0 */}
+                    {freeInBudgetCents > 0 && (
+                      <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl p-3 my-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <p className="text-xs leading-snug">
+                            ✨ Você possui{' '}
+                            <strong className="font-bold tabular-nums">
+                              {formatBRL(freeInBudgetCents)}
+                            </strong>{' '}
+                            livres neste balde.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const currentInputCents = parseBRLToCents(defaultAmountStr)
+                            const nextCents = currentInputCents + freeInBudgetCents
+                            setDefaultAmountStr(formatNumberBRL(nextCents))
+                          }}
+                          className="self-start sm:self-auto shrink-0 inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs active:scale-95 transition-all"
+                        >
+                          + Somar ao teto
+                        </button>
+                      </div>
+                    )}
+
                     <p className="text-[11px] text-slate-500">
                       O percentual é calculado dinamicamente com base na renda líquida familiar (
                       {formatBRL(family?.monthly_net_income_cents || 0)}).
                     </p>
 
-                    {/* Feedback inteligente: Saldo livre para alocação com botão inline OU Cota liberada ao zerar */}
+                    {/* Dica existente de Cota Liberada quando o valor é zero ou vazio */}
                     {(() => {
                       const cents = parseBRLToCents(defaultAmountStr)
                       const isZeroOrEmpty = !defaultAmountStr.trim() || cents === 0
@@ -3397,34 +3424,6 @@ export default function WalletPage() {
                               esta categoria, o valor fica disponível no balde para reforçar outras
                               despesas ou acelerar suas Metas.
                             </p>
-                          </div>
-                        )
-                      }
-
-                      if (bucketFreeCents > 0) {
-                        return (
-                          <div className="p-2.5 rounded-xl bg-emerald-50/80 border border-emerald-200/80 text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                            <div className="flex items-start gap-2">
-                              <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                              <p className="text-[11px] text-emerald-900 leading-relaxed">
-                                ✨ Você possui{' '}
-                                <strong className="font-bold tabular-nums">
-                                  {formatBRL(bucketFreeCents)}
-                                </strong>{' '}
-                                livres para alocar neste balde.
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const currentInputCents = parseBRLToCents(defaultAmountStr)
-                                const nextCents = currentInputCents + bucketFreeCents
-                                setDefaultAmountStr(formatNumberBRL(nextCents))
-                              }}
-                              className="self-start sm:self-auto shrink-0 inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs active:scale-95 transition-all"
-                            >
-                              + Somar ao teto
-                            </button>
                           </div>
                         )
                       }
@@ -3495,7 +3494,34 @@ export default function WalletPage() {
                       </button>
                     </div>
 
-                    {/* Feedback inteligente: Saldo livre para alocação com botão inline OU Cota liberada ao zerar */}
+                    {/* Faixa de saldo livre do balde: exibição imediata e garantida se freeInBudgetCents > 0 */}
+                    {freeInBudgetCents > 0 && (
+                      <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl p-3 my-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <p className="text-xs leading-snug">
+                            ✨ Você possui{' '}
+                            <strong className="font-bold tabular-nums">
+                              {formatBRL(freeInBudgetCents)}
+                            </strong>{' '}
+                            livres neste balde.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const currentInputCents = parseBRLToCents(monthAmountStr)
+                            const nextCents = currentInputCents + freeInBudgetCents
+                            setMonthAmountStr(formatNumberBRL(nextCents))
+                          }}
+                          className="self-start sm:self-auto shrink-0 inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs active:scale-95 transition-all"
+                        >
+                          + Somar ao teto
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Dica existente de Cota Liberada quando o valor é zero ou vazio */}
                     {(() => {
                       const cents = parseBRLToCents(monthAmountStr)
                       const isZeroOrEmpty = !monthAmountStr.trim() || cents === 0
@@ -3509,34 +3535,6 @@ export default function WalletPage() {
                               esta categoria, o valor fica disponível no balde para reforçar outras
                               despesas ou acelerar suas Metas.
                             </p>
-                          </div>
-                        )
-                      }
-
-                      if (bucketFreeCents > 0) {
-                        return (
-                          <div className="p-2.5 rounded-xl bg-emerald-50/80 border border-emerald-200/80 text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                            <div className="flex items-start gap-2">
-                              <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                              <p className="text-[11px] text-emerald-900 leading-relaxed">
-                                ✨ Você possui{' '}
-                                <strong className="font-bold tabular-nums">
-                                  {formatBRL(bucketFreeCents)}
-                                </strong>{' '}
-                                livres para alocar neste balde.
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const currentInputCents = parseBRLToCents(monthAmountStr)
-                                const nextCents = currentInputCents + bucketFreeCents
-                                setMonthAmountStr(formatNumberBRL(nextCents))
-                              }}
-                              className="self-start sm:self-auto shrink-0 inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs active:scale-95 transition-all"
-                            >
-                              + Somar ao teto
-                            </button>
                           </div>
                         )
                       }
