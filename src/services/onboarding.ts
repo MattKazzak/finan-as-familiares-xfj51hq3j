@@ -3,6 +3,13 @@ import { BudgetBucket } from '@/types/finance'
 import { upsertDefaultBudget } from '@/services/transactions'
 import { updateFamilyDetails } from '@/services/family'
 
+export interface CategorySubcategorySeed {
+  name: string
+  icon?: string
+  color?: string
+  keywords?: string[]
+}
+
 export interface CategorySeedDefinition {
   name: string
   bucket: BudgetBucket
@@ -10,210 +17,560 @@ export interface CategorySeedDefinition {
   color: string
   type: 'expense'
   suggestedPercent: number // Percentual padrão sugerido dentro da renda total para o modelo 50/30/20
-  subcategories: Array<{
-    name: string
-    icon?: string
-    color?: string
-  }>
+  subcategories: CategorySubcategorySeed[]
 }
 
 /**
- * Árvore padronizada de Categorias e Subcategorias especificada para o Curiangoo:
+ * Taxonomia Padrão Ouro 50/30/20 Oficial do Curiangoo:
+ * EXATAMENTE 14 categorias mestras distribuídas nos 3 baldes (5 essentials, 6 lifestyle, 3 future).
  *
- * Balde 'essentials' (Necessidades - 50%):
- * - Moradia: Aluguel/Financiamento, Condomínio, Energia, Água, Gás, Internet/Telefone, Manutenção
- * - Alimentação Básica: Supermercado, Hortifruti & Feira, Açougue, Padaria
- * - Transporte: Combustível, Transporte Público, Aplicativos (Uber/99), Manutenção & Seguro, Estacionamento
- * - Saúde: Farmácia & Remédios, Consultas & Exames, Plano de Saúde, Odontologia
- * - Educação: Mensalidades, Material Escolar, Cursos
+ * Balde: Necessidades (50% - essentials):
+ * 1. Moradia (Ícone: Home, Cor: Índigo #6366F1)
+ *    Subcategorias: Aluguel / Condomínio, Energia Elétrica, Água & Saneamento, Gás, Internet & Fixo, Manutenção da Casa
+ *    Keywords: aluguel, condominio, enel, sabesp, cpfl, luz, agua, comgas, vivo fibra, claro residencial
+ * 2. Alimentação Básica (Ícone: ShoppingCart, Cor: Esmeralda #10B981)
+ *    Subcategorias: Supermercado, Açougue & Peixaria, Hortifruti & Feira, Padaria do Dia a Dia
+ *    Keywords: carrefour, assai, pao de acucar, atacadao, mercadinho, feira, acougue, swift, hortifruti
+ * 3. Transporte Obrigatório (Ícone: Car, Cor: Azul #3B82F6)
+ *    Subcategorias: Combustível, Transporte Público & Bilhete, Aplicativos do Dia a Dia (Uber/99), Estacionamento & Pedágio, Seguro & IPVA, Manutenção Básica
+ *    Keywords: posto, shell, ipiranga, uber, 99, metro, sptrans, pedagio, sem parar, posto ipiranga
+ * 4. Saúde & Cuidados Médicos (Ícone: HeartPulse, Cor: Vermelho/Rosa #EF4444)
+ *    Subcategorias: Plano de Saúde, Farmácia & Medicamentos, Consultas & Exames, Odontologia
+ *    Keywords: drogasil, droga raia, pague menos, unimed, bradesco saude, laboratorio, fleury, dentista, farmacia
+ * 5. Educação Obrigatória (Ícone: GraduationCap, Cor: Violeta #8B5CF6)
+ *    Subcategorias: Mensalidade Escolar / Faculdade, Material & Uniformes, Transporte Escolar
+ *    Keywords: escola, colegio, faculdade, mensalidade, papelaria, van escolar
  *
- * Balde 'lifestyle' (Estilo de Vida - 30%):
- * - Lazer & Gastronomia: Restaurantes, Bares, Delivery, Cinema & Passeios
- * - Cuidados Pessoais & Estética: Salão/Barbearia, Manicure & Estética, Cosméticos
- * - Compras & Desejos: Vestuário & Calçados, Eletrônicos & Casa, Presentes, Hábitos Pessoais
- * - Assinaturas & Serviços: Streaming, Música, Softwares
- * - Pets: Ração, Veterinário & Vacinas, Higiene & Acessórios
+ * Balde: Estilo de Vida (30% - lifestyle):
+ * 6. Gastronomia & Delivery (Ícone: Utensils, Cor: Âmbar #F59E0B)
+ *    Subcategorias: Restaurantes & Bares, Delivery (iFood/Rappi), Cafeterias & Lanches Rápidos
+ *    Keywords: ifood, rappi, mcdonalds, outback, burger king, bar, choperia, cafeteria, starbucks, restaurante
+ * 7. Lazer & Passeios (Ícone: Ticket, Cor: Laranja #F97316)
+ *    Subcategorias: Cinema, Shows & Eventos, Viagens & Hospedagem, Passeios de Fim de Semana
+ *    Keywords: cinemark, ingresso.com, sympla, airbnb, hotel, booking, passagem aerea, azul, gol, latam
+ * 8. Cuidados Pessoais & Bem-estar (Ícone: Sparkles, Cor: Rosa #EC4899)
+ *    Subcategorias: Barbearia / Salão de Beleza, Manicure & Estética, Cosméticos & Perfumaria, Academia & Esportes
+ *    Keywords: smart fit, academia, boticario, sephora, salao, barbearia, natura, estetica
+ * 9. Assinaturas & Conectividade (Ícone: Tv, Cor: Roxo #7C3AED)
+ *    Subcategorias: Streaming de Vídeo & Música, Softwares & Apps, Clubes de Assinatura
+ *    Keywords: netflix, spotify, amazon prime, youtube premium, hbo, max, disney, apple, google one
+ * 10. Compras & Vestuário (Ícone: ShoppingBag, Cor: Amarelo escuro #D97706)
+ *     Subcategorias: Roupas & Calçados, Eletrônicos & Gadgets, Decoração & Utilidades, Presentes
+ *     Keywords: zara, renner, riachuelo, shein, shopee, mercado livre, amazon compras
+ * 11. Pets (Ícone: PawPrint, Cor: Verde claro #84CC16)
+ *     Subcategorias: Ração & Petiscos, Veterinário & Vacinas, Banho, Tosa & Acessórios
+ *     Keywords: petz, cobasi, pet shop, veterinario, royal canin, premier pet
  *
- * Balde 'future' (Futuro & Metas - 20%):
- * - Reserva de Emergência: Aporte da Reserva
- * - Investimentos & Aposentadoria: Aportes, Previdência
- * - Grandes Projetos: Metas Gerais
+ * Balde: Futuro & Metas (20% - future):
+ * 12. Reserva de Emergência (Ícone: ShieldCheck, Cor: Esmeralda #10B981)
+ *     Subcategorias: Aportes na Reserva, Resgates Emergenciais
+ *     Keywords: tesouro selic, cdb liquidez diaria, reserva, caixinha nubank
+ * 13. Metas & Grandes Sonhos (Ícone: Target, Cor: Ciano #06B6D4)
+ *     Subcategorias: Troca de Carro, Casa Própria, Viagem Internacional, Reforma
+ *     Keywords: fundo viagem, entrada apto, consorcio, meta
+ * 14. Investimentos de Longo Prazo (Ícone: TrendingUp, Cor: Verde #059669)
+ *     Subcategorias: Previdência Privada, Ações & Fundos Imobiliários, Aposentadoria
+ *     Keywords: xp investimentos, btg, inter invest, previdencia, tesouro ipca
  */
 export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
-  // Essentials (Necessidades) -> Soma sugerida dos percentuais = 50%
+  // Essentials (Necessidades - 50%)
   {
     name: 'Moradia',
     bucket: 'essentials',
     icon: 'Home',
-    color: '#6366F1', // Indigo
+    color: '#6366F1', // Índigo
     type: 'expense',
     suggestedPercent: 20,
     subcategories: [
-      { name: 'Aluguel/Financiamento', icon: 'Home' },
-      { name: 'Condomínio', icon: 'Building' },
-      { name: 'Energia', icon: 'Zap' },
-      { name: 'Água', icon: 'Droplets' },
-      { name: 'Gás', icon: 'Flame' },
-      { name: 'Internet/Telefone', icon: 'Wifi' },
-      { name: 'Manutenção', icon: 'Wrench' },
+      {
+        name: 'Aluguel / Condomínio',
+        icon: 'Home',
+        keywords: ['aluguel', 'condominio', 'imobiliaria', 'quintoandar', 'quinto andar'],
+      },
+      {
+        name: 'Energia Elétrica',
+        icon: 'Zap',
+        keywords: ['enel', 'cpfl', 'luz', 'energia', 'light', 'cemig', 'copel', 'eletricidade'],
+      },
+      {
+        name: 'Água & Saneamento',
+        icon: 'Droplets',
+        keywords: ['sabesp', 'agua', 'copasa', 'sanepar', 'cedae', 'saneamento'],
+      },
+      {
+        name: 'Gás',
+        icon: 'Flame',
+        keywords: ['comgas', 'gas', 'ultragaz', 'supergasbras', 'botijao'],
+      },
+      {
+        name: 'Internet & Fixo',
+        icon: 'Wifi',
+        keywords: ['vivo fibra', 'claro residencial', 'internet', 'fibra', 'banda larga'],
+      },
+      {
+        name: 'Manutenção da Casa',
+        icon: 'Wrench',
+        keywords: ['manutencao', 'reparo', 'encanador', 'eletricista', 'marcenaria', 'pintura'],
+      },
     ],
   },
   {
     name: 'Alimentação Básica',
     bucket: 'essentials',
     icon: 'ShoppingCart',
-    color: '#F59E0B', // Amber
+    color: '#10B981', // Esmeralda
     type: 'expense',
     suggestedPercent: 14,
     subcategories: [
-      { name: 'Supermercado', icon: 'ShoppingCart' },
-      { name: 'Hortifruti & Feira', icon: 'Apple' },
-      { name: 'Açougue', icon: 'Beef' },
-      { name: 'Padaria', icon: 'Coffee' },
+      {
+        name: 'Supermercado',
+        icon: 'ShoppingCart',
+        keywords: [
+          'carrefour',
+          'assai',
+          'pao de acucar',
+          'atacadao',
+          'mercadinho',
+          'mercado',
+          'supermercado',
+          'sams club',
+          'dia brasil',
+        ],
+      },
+      {
+        name: 'Açougue & Peixaria',
+        icon: 'Beef',
+        keywords: ['acougue', 'swift', 'peixaria', 'carnes'],
+      },
+      {
+        name: 'Hortifruti & Feira',
+        icon: 'Apple',
+        keywords: ['hortifruti', 'feira', 'sacolao', 'quitanda', 'frutas'],
+      },
+      {
+        name: 'Padaria do Dia a Dia',
+        icon: 'Coffee',
+        keywords: ['padaria', 'panificadora', 'pao do dia'],
+      },
     ],
   },
   {
-    name: 'Transporte',
+    name: 'Transporte Obrigatório',
     bucket: 'essentials',
     icon: 'Car',
-    color: '#3B82F6', // Blue
+    color: '#3B82F6', // Azul
     type: 'expense',
     suggestedPercent: 8,
     subcategories: [
-      { name: 'Combustível', icon: 'Fuel' },
-      { name: 'Transporte Público', icon: 'Bus' },
-      { name: 'Aplicativos (Uber/99)', icon: 'Car' },
-      { name: 'Manutenção & Seguro', icon: 'ShieldAlert' },
-      { name: 'Estacionamento', icon: 'CircleParking' },
+      {
+        name: 'Combustível',
+        icon: 'Fuel',
+        keywords: [
+          'posto',
+          'posto ipiranga',
+          'shell',
+          'ipiranga',
+          'gasolina',
+          'etanol',
+          'diesel',
+          'combustivel',
+        ],
+      },
+      {
+        name: 'Transporte Público & Bilhete',
+        icon: 'Bus',
+        keywords: ['metro', 'sptrans', 'bilhete unico', 'cptm', 'onibus'],
+      },
+      {
+        name: 'Aplicativos do Dia a Dia (Uber/99)',
+        icon: 'Car',
+        keywords: ['uber', '99', '99app', '99 pop', '99 taxi', 'cabify', 'indrive'],
+      },
+      {
+        name: 'Estacionamento & Pedágio',
+        icon: 'CircleParking',
+        keywords: ['pedagio', 'sem parar', 'conectcar', 'veloe', 'estapar', 'estacionamento'],
+      },
+      {
+        name: 'Seguro & IPVA',
+        icon: 'ShieldAlert',
+        keywords: ['ipva', 'seguro auto', 'dpvat', 'licenciamento'],
+      },
+      {
+        name: 'Manutenção Básica',
+        icon: 'Wrench',
+        keywords: ['oficina mecanica', 'auto pecas', 'pneu', 'troca de oleo', 'alinhamento'],
+      },
     ],
   },
   {
-    name: 'Saúde',
+    name: 'Saúde & Cuidados Médicos',
     bucket: 'essentials',
     icon: 'HeartPulse',
-    color: '#EF4444', // Red
+    color: '#EF4444', // Vermelho/Rosa
     type: 'expense',
     suggestedPercent: 5,
     subcategories: [
-      { name: 'Farmácia & Remédios', icon: 'Pill' },
-      { name: 'Consultas & Exames', icon: 'Stethoscope' },
-      { name: 'Plano de Saúde', icon: 'Shield' },
-      { name: 'Odontologia', icon: 'Smile' },
+      {
+        name: 'Plano de Saúde',
+        icon: 'Shield',
+        keywords: ['unimed', 'bradesco saude', 'sulamerica saude', 'amil', 'notredame', 'hapvida'],
+      },
+      {
+        name: 'Farmácia & Medicamentos',
+        icon: 'Pill',
+        keywords: [
+          'drogasil',
+          'droga raia',
+          'pague menos',
+          'farmacia',
+          'drogaria',
+          'panvel',
+          'ultrafarma',
+        ],
+      },
+      {
+        name: 'Consultas & Exames',
+        icon: 'Stethoscope',
+        keywords: ['laboratorio', 'fleury', 'dasa', 'lavoisier', 'consulta medica', 'clinica'],
+      },
+      {
+        name: 'Odontologia',
+        icon: 'Smile',
+        keywords: ['dentista', 'odonto', 'ortodontia'],
+      },
     ],
   },
   {
-    name: 'Educação',
+    name: 'Educação Obrigatória',
     bucket: 'essentials',
     icon: 'GraduationCap',
-    color: '#8B5CF6', // Purple
+    color: '#8B5CF6', // Violeta
     type: 'expense',
     suggestedPercent: 3,
     subcategories: [
-      { name: 'Mensalidades', icon: 'GraduationCap' },
-      { name: 'Material Escolar', icon: 'BookOpen' },
-      { name: 'Cursos', icon: 'Award' },
+      {
+        name: 'Mensalidade Escolar / Faculdade',
+        icon: 'GraduationCap',
+        keywords: ['escola', 'colegio', 'faculdade', 'mensalidade', 'universidade'],
+      },
+      {
+        name: 'Material & Uniformes',
+        icon: 'BookOpen',
+        keywords: ['papelaria', 'kalunga', 'material escolar', 'uniforme', 'livros escolares'],
+      },
+      {
+        name: 'Transporte Escolar',
+        icon: 'Bus',
+        keywords: ['van escolar', 'transporte escolar'],
+      },
     ],
   },
 
-  // Lifestyle (Estilo de Vida) -> Soma sugerida dos percentuais = 30%
+  // Lifestyle (Estilo de Vida - 30%)
   {
-    name: 'Lazer & Gastronomia',
+    name: 'Gastronomia & Delivery',
     bucket: 'lifestyle',
-    icon: 'UtensilsCrossed',
-    color: '#EC4899', // Pink
+    icon: 'Utensils',
+    color: '#F59E0B', // Âmbar
     type: 'expense',
     suggestedPercent: 10,
     subcategories: [
-      { name: 'Restaurantes', icon: 'Utensils' },
-      { name: 'Bares', icon: 'Wine' },
-      { name: 'Delivery', icon: 'Bike' },
-      { name: 'Cinema & Passeios', icon: 'Film' },
+      {
+        name: 'Restaurantes & Bares',
+        icon: 'Utensils',
+        keywords: [
+          'outback',
+          'bar',
+          'choperia',
+          'restaurante',
+          'churrascaria',
+          'pizzaria',
+          'boteco',
+        ],
+      },
+      {
+        name: 'Delivery (iFood/Rappi)',
+        icon: 'Bike',
+        keywords: ['ifood', 'rappi', 'aiqfome', 'uber eats'],
+      },
+      {
+        name: 'Cafeterias & Lanches Rápidos',
+        icon: 'Coffee',
+        keywords: [
+          'mcdonalds',
+          'burger king',
+          'cafeteria',
+          'starbucks',
+          'subway',
+          'cacau show',
+          'kopenhagen',
+        ],
+      },
     ],
   },
   {
-    name: 'Cuidados Pessoais & Estética',
+    name: 'Lazer & Passeios',
+    bucket: 'lifestyle',
+    icon: 'Ticket',
+    color: '#F97316', // Laranja
+    type: 'expense',
+    suggestedPercent: 5,
+    subcategories: [
+      {
+        name: 'Cinema',
+        icon: 'Film',
+        keywords: ['cinemark', 'ingresso.com', 'kinoplex', 'uci', 'cinema'],
+      },
+      {
+        name: 'Shows & Eventos',
+        icon: 'Ticket',
+        keywords: ['sympla', 'eventim', 'show', 'teatro', 'evento'],
+      },
+      {
+        name: 'Viagens & Hospedagem',
+        icon: 'Plane',
+        keywords: [
+          'airbnb',
+          'hotel',
+          'booking',
+          'passagem aerea',
+          'azul',
+          'gol',
+          'latam',
+          'decolar',
+          'pousada',
+        ],
+      },
+      {
+        name: 'Passeios de Fim de Semana',
+        icon: 'Sun',
+        keywords: ['passeio', 'parque', 'clube', 'resort'],
+      },
+    ],
+  },
+  {
+    name: 'Cuidados Pessoais & Bem-estar',
     bucket: 'lifestyle',
     icon: 'Sparkles',
-    color: '#F43F5E', // Rose
+    color: '#EC4899', // Rosa
     type: 'expense',
-    suggestedPercent: 6,
+    suggestedPercent: 5,
     subcategories: [
-      { name: 'Salão/Barbearia', icon: 'Scissors' },
-      { name: 'Manicure & Estética', icon: 'Sparkles' },
-      { name: 'Cosméticos', icon: 'Package' },
+      {
+        name: 'Barbearia / Salão de Beleza',
+        icon: 'Scissors',
+        keywords: ['salao', 'barbearia', 'cabelereiro'],
+      },
+      {
+        name: 'Manicure & Estética',
+        icon: 'Sparkles',
+        keywords: ['estetica', 'manicure', 'pedicure', 'depilacao', 'spa'],
+      },
+      {
+        name: 'Cosméticos & Perfumaria',
+        icon: 'Package',
+        keywords: ['boticario', 'sephora', 'natura', 'cosmeticos', 'perfumaria'],
+      },
+      {
+        name: 'Academia & Esportes',
+        icon: 'Activity',
+        keywords: ['smart fit', 'academia', 'bluefit', 'gympass', 'totalpass', 'crossfit'],
+      },
     ],
   },
   {
-    name: 'Compras & Desejos',
-    bucket: 'lifestyle',
-    icon: 'ShoppingBag',
-    color: '#14B8A6', // Teal
-    type: 'expense',
-    suggestedPercent: 6,
-    subcategories: [
-      { name: 'Vestuário & Calçados', icon: 'Shirt' },
-      { name: 'Eletrônicos & Casa', icon: 'Laptop' },
-      { name: 'Presentes', icon: 'Gift' },
-      { name: 'Hábitos Pessoais', icon: 'Smile' },
-    ],
-  },
-  {
-    name: 'Assinaturas & Serviços',
+    name: 'Assinaturas & Conectividade',
     bucket: 'lifestyle',
     icon: 'Tv',
-    color: '#06B6D4', // Cyan
+    color: '#7C3AED', // Roxo
+    type: 'expense',
+    suggestedPercent: 3,
+    subcategories: [
+      {
+        name: 'Streaming de Vídeo & Música',
+        icon: 'Tv',
+        keywords: [
+          'netflix',
+          'spotify',
+          'amazon prime',
+          'youtube premium',
+          'hbo',
+          'max',
+          'disney',
+          'globoplay',
+          'deezer',
+          'prime video',
+        ],
+      },
+      {
+        name: 'Softwares & Apps',
+        icon: 'Terminal',
+        keywords: ['apple', 'google one', 'icloud', 'chatgpt', 'openai', 'canva', 'microsoft'],
+      },
+      {
+        name: 'Clubes de Assinatura',
+        icon: 'Sparkles',
+        keywords: ['clube de assinatura', 'wine', 'tag livros'],
+      },
+    ],
+  },
+  {
+    name: 'Compras & Vestuário',
+    bucket: 'lifestyle',
+    icon: 'ShoppingBag',
+    color: '#D97706', // Amarelo escuro
     type: 'expense',
     suggestedPercent: 4,
     subcategories: [
-      { name: 'Streaming', icon: 'Tv' },
-      { name: 'Música', icon: 'Headphones' },
-      { name: 'Softwares', icon: 'Terminal' },
+      {
+        name: 'Roupas & Calçados',
+        icon: 'Shirt',
+        keywords: [
+          'zara',
+          'renner',
+          'riachuelo',
+          'shein',
+          'shopee',
+          'c&a',
+          'hering',
+          'centauro',
+          'calcados',
+        ],
+      },
+      {
+        name: 'Eletrônicos & Gadgets',
+        icon: 'Laptop',
+        keywords: [
+          'mercado livre',
+          'amazon compras',
+          'magalu',
+          'magazine luiza',
+          'fast shop',
+          'kabum',
+        ],
+      },
+      {
+        name: 'Decoração & Utilidades',
+        icon: 'Home',
+        keywords: ['camicado', 'tok&stok', 'leroy merlin', 'utilidades', 'decoracao'],
+      },
+      {
+        name: 'Presentes',
+        icon: 'Gift',
+        keywords: ['presente', 'presentes', 'aniversario'],
+      },
     ],
   },
   {
     name: 'Pets',
     bucket: 'lifestyle',
     icon: 'PawPrint',
-    color: '#EAB308', // Yellow
+    color: '#84CC16', // Verde claro
     type: 'expense',
-    suggestedPercent: 4,
+    suggestedPercent: 3,
     subcategories: [
-      { name: 'Ração', icon: 'Utensils' },
-      { name: 'Veterinário & Vacinas', icon: 'HeartPulse' },
-      { name: 'Higiene & Acessórios', icon: 'Sparkles' },
+      {
+        name: 'Ração & Petiscos',
+        icon: 'Utensils',
+        keywords: ['royal canin', 'premier pet', 'racao', 'petiscos'],
+      },
+      {
+        name: 'Veterinário & Vacinas',
+        icon: 'HeartPulse',
+        keywords: ['veterinario', 'vacina pet', 'clinica vet'],
+      },
+      {
+        name: 'Banho, Tosa & Acessórios',
+        icon: 'Sparkles',
+        keywords: ['petz', 'cobasi', 'pet shop', 'banho e tosa'],
+      },
     ],
   },
 
-  // Future (Futuro & Metas) -> Soma sugerida dos percentuais = 20%
+  // Future & Metas (20% - future)
   {
     name: 'Reserva de Emergência',
     bucket: 'future',
     icon: 'ShieldCheck',
-    color: '#10B981', // Emerald
+    color: '#10B981', // Esmeralda
     type: 'expense',
     suggestedPercent: 10,
-    subcategories: [{ name: 'Aporte da Reserva', icon: 'ShieldCheck' }],
-  },
-  {
-    name: 'Investimentos & Aposentadoria',
-    bucket: 'future',
-    icon: 'TrendingUp',
-    color: '#059669', // Dark Emerald
-    type: 'expense',
-    suggestedPercent: 6,
     subcategories: [
-      { name: 'Aportes', icon: 'TrendingUp' },
-      { name: 'Previdência', icon: 'Landmark' },
+      {
+        name: 'Aportes na Reserva',
+        icon: 'ShieldCheck',
+        keywords: ['tesouro selic', 'cdb liquidez diaria', 'reserva', 'caixinha nubank'],
+      },
+      {
+        name: 'Resgates Emergenciais',
+        icon: 'ArrowDownRight',
+        keywords: ['resgate reserva', 'emergencia resgate'],
+      },
     ],
   },
   {
-    name: 'Grandes Projetos',
+    name: 'Metas & Grandes Sonhos',
     bucket: 'future',
     icon: 'Target',
-    color: '#0D9488', // Teal Dark
+    color: '#06B6D4', // Ciano
     type: 'expense',
     suggestedPercent: 4,
-    subcategories: [{ name: 'Metas Gerais', icon: 'Target' }],
+    subcategories: [
+      {
+        name: 'Troca de Carro',
+        icon: 'Car',
+        keywords: ['consorcio', 'troca de carro', 'carro novo'],
+      },
+      {
+        name: 'Casa Própria',
+        icon: 'Home',
+        keywords: ['entrada apto', 'casa propria', 'financiamento imovel'],
+      },
+      {
+        name: 'Viagem Internacional',
+        icon: 'Plane',
+        keywords: ['fundo viagem', 'viagem internacional', 'euro', 'dolar'],
+      },
+      {
+        name: 'Reforma',
+        icon: 'Wrench',
+        keywords: ['meta', 'reforma', 'obra da casa'],
+      },
+    ],
+  },
+  {
+    name: 'Investimentos de Longo Prazo',
+    bucket: 'future',
+    icon: 'TrendingUp',
+    color: '#059669', // Verde
+    type: 'expense',
+    suggestedPercent: 6,
+    subcategories: [
+      {
+        name: 'Previdência Privada',
+        icon: 'Landmark',
+        keywords: ['previdencia', 'previdencia privada', 'pgbl', 'vgbl'],
+      },
+      {
+        name: 'Ações & Fundos Imobiliários',
+        icon: 'TrendingUp',
+        keywords: [
+          'xp investimentos',
+          'btg',
+          'inter invest',
+          'tesouro ipca',
+          'acoes',
+          'fiis',
+          'dividendos',
+        ],
+      },
+      {
+        name: 'Aposentadoria',
+        icon: 'PiggyBank',
+        keywords: ['aposentadoria', 'liberdade financeira', 'independencia financeira'],
+      },
+    ],
   },
 ]
 
@@ -359,14 +716,15 @@ export async function seedStandardizedCategoriesAndApplyPlan({
 
     const categoryId = categoryRecord.id
 
-    // 5. Inserir subcategorias com idempotência
+    // 5. Inserir subcategorias com idempotência e cadastrar regras automáticas por keywords
     if (catDef.subcategories && catDef.subcategories.length > 0) {
       for (let sIdx = 0; sIdx < catDef.subcategories.length; sIdx++) {
         const subDef = catDef.subcategories[sIdx]
         const subKey = `${categoryId}::${subDef.name.trim().toLowerCase()}`
+        let subcategoryId: string | null = null
 
         if (!existingSubMap.has(subKey)) {
-          const { error: insertSubError } = await (supabase as any)
+          const { data: newSub, error: insertSubError } = await (supabase as any)
             .from('transaction_subcategories')
             .insert({
               category_id: categoryId,
@@ -376,12 +734,47 @@ export async function seedStandardizedCategoriesAndApplyPlan({
               color: subDef.color || catDef.color,
               sort_order: sIdx + 1,
             })
+            .select('id')
+            .single()
 
-          if (!insertSubError) {
+          if (!insertSubError && newSub) {
             existingSubMap.add(subKey)
+            subcategoryId = newSub.id
             createdSubcategoriesCount += 1
           } else {
             console.warn(`Aviso ao criar subcategoria ${subDef.name}:`, insertSubError)
+          }
+        } else {
+          const foundExisting = (existingSubcategories || []).find(
+            (s: any) =>
+              s.category_id === categoryId &&
+              s.name.trim().toLowerCase() === subDef.name.trim().toLowerCase(),
+          )
+          subcategoryId = foundExisting?.id || null
+        }
+
+        // Se houver keywords para essa subcategoria, injetar em categorization_rules
+        if (subDef.keywords && subDef.keywords.length > 0) {
+          for (const kw of subDef.keywords) {
+            const cleanPattern = kw.trim().toUpperCase()
+            if (!cleanPattern) continue
+
+            // Checa se já existe regra com o padrão para a família
+            const { data: existingRule } = await (supabase as any)
+              .from('categorization_rules')
+              .select('id')
+              .eq('family_id', familyId)
+              .ilike('pattern', cleanPattern)
+              .maybeSingle()
+
+            if (!existingRule) {
+              await (supabase as any).from('categorization_rules').insert({
+                family_id: familyId,
+                pattern: cleanPattern,
+                category_id: categoryId,
+                subcategory_id: subcategoryId,
+              })
+            }
           }
         }
       }

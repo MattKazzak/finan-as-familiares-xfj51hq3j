@@ -103,60 +103,102 @@ export const BUDGET_PRESET_ITEMS: BudgetPreset[] = [
     },
     categories: [
       {
-        name: 'Moradia & Contas',
+        name: 'Moradia',
         matchKey: 'moradia',
         bucket: 'essentials',
-        percent: 25,
-        description: 'Aluguel/financiamento, condomínio, luz, água, internet',
+        percent: 20,
+        description: 'Aluguel, condomínio, luz, água, gás, internet, manutenção',
       },
       {
-        name: 'Alimentação & Mercado',
+        name: 'Alimentação Básica',
         matchKey: 'alimentacao',
         bucket: 'essentials',
-        percent: 15,
-        description: 'Supermercado, feira e alimentação básica em casa',
+        percent: 14,
+        description: 'Supermercado, feira, açougue, padaria do dia a dia',
       },
       {
-        name: 'Transporte',
+        name: 'Transporte Obrigatório',
         matchKey: 'transporte',
         bucket: 'essentials',
-        percent: 10,
-        description: 'Combustível, transporte público, manutenção essencial do veículo',
+        percent: 8,
+        description: 'Combustível, transporte público, Uber/99, pedágio, seguro',
       },
       {
-        name: 'Lazer & Restaurantes',
+        name: 'Saúde & Cuidados Médicos',
+        matchKey: 'saude',
+        bucket: 'essentials',
+        percent: 5,
+        description: 'Plano de saúde, farmácia, exames, dentista',
+      },
+      {
+        name: 'Educação Obrigatória',
+        matchKey: 'educacao',
+        bucket: 'essentials',
+        percent: 3,
+        description: 'Mensalidade escolar/faculdade, materiais, transporte escolar',
+      },
+      {
+        name: 'Gastronomia & Delivery',
+        matchKey: 'gastronomia',
+        bucket: 'lifestyle',
+        percent: 10,
+        description: 'Restaurantes, bares, delivery iFood/Rappi, cafeterias',
+      },
+      {
+        name: 'Lazer & Passeios',
         matchKey: 'lazer',
         bucket: 'lifestyle',
-        percent: 12,
-        description: 'Passeios, refeições fora, cinema e entretenimento',
+        percent: 5,
+        description: 'Cinema, shows, viagens, passeios de fim de semana',
       },
       {
-        name: 'Compras & Pessoais',
-        matchKey: 'compras',
+        name: 'Cuidados Pessoais & Bem-estar',
+        matchKey: 'cuidados',
         bucket: 'lifestyle',
-        percent: 10,
-        description: 'Roupas, cuidados pessoais, tecnologia e conveniências',
+        percent: 5,
+        description: 'Barbearia/salão, estética, cosméticos, academia',
       },
       {
-        name: 'Assinaturas & Serviços',
+        name: 'Assinaturas & Conectividade',
         matchKey: 'servicos',
         bucket: 'lifestyle',
-        percent: 8,
-        description: 'Streaming, academias, clubes e assinaturas diversas',
+        percent: 3,
+        description: 'Streaming, música, softwares e apps',
       },
       {
-        name: 'Reserva de Emergência & Aportes',
+        name: 'Compras & Vestuário',
+        matchKey: 'compras',
+        bucket: 'lifestyle',
+        percent: 4,
+        description: 'Roupas, calçados, eletrônicos, utilidades, presentes',
+      },
+      {
+        name: 'Pets',
+        matchKey: 'pets',
+        bucket: 'lifestyle',
+        percent: 3,
+        description: 'Ração, pet shop, veterinário, banho e tosa',
+      },
+      {
+        name: 'Reserva de Emergência',
         matchKey: 'reserva',
         bucket: 'future',
-        percent: 12,
-        description: 'Construção ou manutenção da reserva de 6 meses',
+        percent: 10,
+        description: 'Aportes e manutenção da reserva de emergência',
       },
       {
-        name: 'Investimentos & Projetos',
+        name: 'Metas & Grandes Sonhos',
+        matchKey: 'metas',
+        bucket: 'future',
+        percent: 4,
+        description: 'Troca de carro, casa própria, viagens internacionais',
+      },
+      {
+        name: 'Investimentos de Longo Prazo',
         matchKey: 'investimentos',
         bucket: 'future',
-        percent: 8,
-        description: 'Previdência, aposentadoria e metas familiares de longo prazo',
+        percent: 6,
+        description: 'Previdência, ações, fundos imobiliários, aposentadoria',
       },
     ],
   },
@@ -179,59 +221,101 @@ export const BUDGET_PRESET_ITEMS: BudgetPreset[] = [
     },
     categories: [
       {
-        name: 'Moradia & Contas',
+        name: 'Moradia',
         matchKey: 'moradia',
         bucket: 'essentials',
-        percent: 30,
-        description: 'Moradia, condomínio e serviços básicos',
+        percent: 24,
+        description: 'Habitação e contas essenciais da casa',
       },
       {
-        name: 'Alimentação & Mercado',
+        name: 'Alimentação Básica',
         matchKey: 'alimentacao',
         bucket: 'essentials',
-        percent: 18,
-        description: 'Compras de supermercado para toda a família',
+        percent: 16,
+        description: 'Supermercado e alimentação básica',
       },
       {
-        name: 'Transporte',
+        name: 'Transporte Obrigatório',
         matchKey: 'transporte',
         bucket: 'essentials',
-        percent: 12,
+        percent: 10,
         description: 'Custos de deslocamento e manutenção',
       },
       {
-        name: 'Lazer & Restaurantes',
-        matchKey: 'lazer',
-        bucket: 'lifestyle',
-        percent: 8,
-        description: 'Momentos de descanso e lazer moderados',
+        name: 'Saúde & Cuidados Médicos',
+        matchKey: 'saude',
+        bucket: 'essentials',
+        percent: 6,
+        description: 'Plano de saúde e medicamentos',
       },
       {
-        name: 'Compras & Pessoais',
-        matchKey: 'compras',
+        name: 'Educação Obrigatória',
+        matchKey: 'educacao',
+        bucket: 'essentials',
+        percent: 4,
+        description: 'Mensalidades escolares e materiais',
+      },
+      {
+        name: 'Gastronomia & Delivery',
+        matchKey: 'gastronomia',
         bucket: 'lifestyle',
         percent: 7,
-        description: 'Gastos pessoais essenciais e vestuário',
+        description: 'Refeições fora e delivery moderado',
       },
       {
-        name: 'Assinaturas & Serviços',
+        name: 'Lazer & Passeios',
+        matchKey: 'lazer',
+        bucket: 'lifestyle',
+        percent: 4,
+        description: 'Momentos de lazer e passeios',
+      },
+      {
+        name: 'Cuidados Pessoais & Bem-estar',
+        matchKey: 'cuidados',
+        bucket: 'lifestyle',
+        percent: 3,
+        description: 'Cuidados pessoais e bem-estar',
+      },
+      {
+        name: 'Assinaturas & Conectividade',
         matchKey: 'servicos',
         bucket: 'lifestyle',
-        percent: 5,
-        description: 'Serviços digitais e assinaturas prioritárias',
+        percent: 2,
+        description: 'Assinaturas essenciais de mídia e software',
       },
       {
-        name: 'Reserva de Emergência & Aportes',
+        name: 'Compras & Vestuário',
+        matchKey: 'compras',
+        bucket: 'lifestyle',
+        percent: 2,
+        description: 'Vestuário e compras prioritárias',
+      },
+      {
+        name: 'Pets',
+        matchKey: 'pets',
+        bucket: 'lifestyle',
+        percent: 2,
+        description: 'Cuidados essenciais com animais de estimação',
+      },
+      {
+        name: 'Reserva de Emergência',
         matchKey: 'reserva',
         bucket: 'future',
-        percent: 12,
-        description: 'Blindagem financeira familiar prioritária',
+        percent: 10,
+        description: 'Blindagem financeira prioritária',
       },
       {
-        name: 'Investimentos & Projetos',
+        name: 'Metas & Grandes Sonhos',
+        matchKey: 'metas',
+        bucket: 'future',
+        percent: 4,
+        description: 'Metas familiares',
+      },
+      {
+        name: 'Investimentos de Longo Prazo',
         matchKey: 'investimentos',
         bucket: 'future',
-        percent: 8,
+        percent: 6,
         description: 'Construção contínua de patrimônio',
       },
     ],
@@ -254,59 +338,101 @@ export const BUDGET_PRESET_ITEMS: BudgetPreset[] = [
     },
     categories: [
       {
-        name: 'Moradia & Contas',
+        name: 'Moradia',
         matchKey: 'moradia',
         bucket: 'essentials',
-        percent: 35,
+        percent: 28,
         description: 'Custos de habitação e contas de consumo',
       },
       {
-        name: 'Alimentação & Mercado',
+        name: 'Alimentação Básica',
         matchKey: 'alimentacao',
         bucket: 'essentials',
-        percent: 22,
+        percent: 20,
         description: 'Alimentação doméstica completa',
       },
       {
-        name: 'Transporte',
+        name: 'Transporte Obrigatório',
         matchKey: 'transporte',
         bucket: 'essentials',
-        percent: 13,
-        description: 'Mobilidade da família',
+        percent: 11,
+        description: 'Mobilidade básica familiar',
       },
       {
-        name: 'Lazer & Restaurantes',
+        name: 'Saúde & Cuidados Médicos',
+        matchKey: 'saude',
+        bucket: 'essentials',
+        percent: 7,
+        description: 'Remédios e cuidados de saúde',
+      },
+      {
+        name: 'Educação Obrigatória',
+        matchKey: 'educacao',
+        bucket: 'essentials',
+        percent: 4,
+        description: 'Educação básica e uniformes',
+      },
+      {
+        name: 'Gastronomia & Delivery',
+        matchKey: 'gastronomia',
+        bucket: 'lifestyle',
+        percent: 7,
+        description: 'Gastos com alimentação fora',
+      },
+      {
+        name: 'Lazer & Passeios',
         matchKey: 'lazer',
         bucket: 'lifestyle',
-        percent: 10,
-        description: 'Conforto e descanso familiar',
+        percent: 4,
+        description: 'Descanso e lazer familiar',
       },
       {
-        name: 'Compras & Pessoais',
-        matchKey: 'compras',
+        name: 'Cuidados Pessoais & Bem-estar',
+        matchKey: 'cuidados',
         bucket: 'lifestyle',
-        percent: 6,
-        description: 'Necessidades pontuais',
+        percent: 3,
+        description: 'Cuidados básicos de higiene e beleza',
       },
       {
-        name: 'Assinaturas & Serviços',
+        name: 'Assinaturas & Conectividade',
         matchKey: 'servicos',
         bucket: 'lifestyle',
-        percent: 4,
-        description: 'Serviços básicos de entretenimento',
+        percent: 2,
+        description: 'Streaming e aplicativos',
       },
       {
-        name: 'Reserva de Emergência & Aportes',
+        name: 'Compras & Vestuário',
+        matchKey: 'compras',
+        bucket: 'lifestyle',
+        percent: 2,
+        description: 'Vestuário essencial',
+      },
+      {
+        name: 'Pets',
+        matchKey: 'pets',
+        bucket: 'lifestyle',
+        percent: 2,
+        description: 'Alimentação e saúde dos pets',
+      },
+      {
+        name: 'Reserva de Emergência',
         matchKey: 'reserva',
         bucket: 'future',
-        percent: 6,
+        percent: 5,
         description: 'Primeiros passos da reserva financeira',
       },
       {
-        name: 'Investimentos & Projetos',
+        name: 'Metas & Grandes Sonhos',
+        matchKey: 'metas',
+        bucket: 'future',
+        percent: 2,
+        description: 'Pequenas metas financeiras',
+      },
+      {
+        name: 'Investimentos de Longo Prazo',
         matchKey: 'investimentos',
         bucket: 'future',
-        percent: 4,
+        percent: 3,
         description: 'Hábito de poupar consistentemente todo mês',
       },
     ],
@@ -362,41 +488,75 @@ export function matchCategoryToPresetKey(categoryName: string): string | null {
     return 'transporte'
   }
   if (
-    norm.includes('lazer') ||
+    norm.includes('saude') ||
+    norm.includes('medico') ||
+    norm.includes('farmacia') ||
+    norm.includes('hospital')
+  ) {
+    return 'saude'
+  }
+  if (
+    norm.includes('educa') ||
+    norm.includes('escola') ||
+    norm.includes('faculdade') ||
+    norm.includes('curso')
+  ) {
+    return 'educacao'
+  }
+  if (
+    norm.includes('gastronomia') ||
+    norm.includes('delivery') ||
     norm.includes('restaurante') ||
-    norm.includes('bar') ||
-    norm.includes('viagem') ||
-    norm.includes('passeio')
+    norm.includes('ifood')
+  ) {
+    return 'gastronomia'
+  }
+  if (
+    norm.includes('lazer') ||
+    norm.includes('cinema') ||
+    norm.includes('passeio') ||
+    norm.includes('viagem')
   ) {
     return 'lazer'
   }
   if (
-    norm.includes('compra') ||
-    norm.includes('vestu') ||
-    norm.includes('roupa') ||
-    norm.includes('eletr') ||
-    norm.includes('pessoal')
+    norm.includes('cuidado') ||
+    norm.includes('estetica') ||
+    norm.includes('salao') ||
+    norm.includes('beleza')
   ) {
-    return 'compras'
+    return 'cuidados'
   }
   if (
     norm.includes('servico') ||
     norm.includes('assinatura') ||
     norm.includes('stream') ||
-    norm.includes('academia') ||
-    norm.includes('internet')
+    norm.includes('conectividade')
   ) {
     return 'servicos'
+  }
+  if (
+    norm.includes('compra') ||
+    norm.includes('vestu') ||
+    norm.includes('roupa') ||
+    norm.includes('eletr')
+  ) {
+    return 'compras'
+  }
+  if (norm.includes('pet') || norm.includes('racao') || norm.includes('veterinario')) {
+    return 'pets'
   }
   if (norm.includes('reserva') || norm.includes('emergenc') || norm.includes('poupanca')) {
     return 'reserva'
   }
+  if (norm.includes('meta') || norm.includes('sonho') || norm.includes('projeto')) {
+    return 'metas'
+  }
   if (
     norm.includes('invest') ||
     norm.includes('aporte') ||
-    norm.includes('meta') ||
-    norm.includes('projeto') ||
-    norm.includes('futuro')
+    norm.includes('aposentadoria') ||
+    norm.includes('longo prazo')
   ) {
     return 'investimentos'
   }

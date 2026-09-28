@@ -10,24 +10,27 @@ describe('Seed de Categorias Padronizadas e Onboarding', () => {
 
     const categoryNames = STANDARDIZED_CATEGORIES_TREE.map((c) => c.name)
 
-    // Necessidades
+    // Necessidades (5)
     expect(categoryNames).toContain('Moradia')
     expect(categoryNames).toContain('Alimentação Básica')
-    expect(categoryNames).toContain('Transporte')
-    expect(categoryNames).toContain('Saúde')
-    expect(categoryNames).toContain('Educação')
+    expect(categoryNames).toContain('Transporte Obrigatório')
+    expect(categoryNames).toContain('Saúde & Cuidados Médicos')
+    expect(categoryNames).toContain('Educação Obrigatória')
 
-    // Estilo de Vida
-    expect(categoryNames).toContain('Lazer & Gastronomia')
-    expect(categoryNames).toContain('Cuidados Pessoais & Estética')
-    expect(categoryNames).toContain('Compras & Desejos')
-    expect(categoryNames).toContain('Assinaturas & Serviços')
+    // Estilo de Vida (6)
+    expect(categoryNames).toContain('Gastronomia & Delivery')
+    expect(categoryNames).toContain('Lazer & Passeios')
+    expect(categoryNames).toContain('Cuidados Pessoais & Bem-estar')
+    expect(categoryNames).toContain('Assinaturas & Conectividade')
+    expect(categoryNames).toContain('Compras & Vestuário')
     expect(categoryNames).toContain('Pets')
 
-    // Futuro & Metas
+    // Futuro & Metas (3)
     expect(categoryNames).toContain('Reserva de Emergência')
-    expect(categoryNames).toContain('Investimentos & Aposentadoria')
-    expect(categoryNames).toContain('Grandes Projetos')
+    expect(categoryNames).toContain('Metas & Grandes Sonhos')
+    expect(categoryNames).toContain('Investimentos de Longo Prazo')
+
+    expect(categoryNames.length).toBe(14)
   })
 
   it('verifica as subcategorias de moradia, transporte e alimentação', () => {
@@ -36,13 +39,12 @@ describe('Seed de Categorias Padronizadas e Onboarding', () => {
     const moradiaSubs = moradia?.subcategories.map((s) => s.name)
     expect(moradiaSubs).toEqual(
       expect.arrayContaining([
-        'Aluguel/Financiamento',
-        'Condomínio',
-        'Energia',
-        'Água',
+        'Aluguel / Condomínio',
+        'Energia Elétrica',
+        'Água & Saneamento',
         'Gás',
-        'Internet/Telefone',
-        'Manutenção',
+        'Internet & Fixo',
+        'Manutenção da Casa',
       ]),
     )
 
@@ -50,11 +52,16 @@ describe('Seed de Categorias Padronizadas e Onboarding', () => {
     expect(alimentacao).toBeDefined()
     const alimSubs = alimentacao?.subcategories.map((s) => s.name)
     expect(alimSubs).toEqual(
-      expect.arrayContaining(['Supermercado', 'Hortifruti & Feira', 'Açougue', 'Padaria']),
+      expect.arrayContaining([
+        'Supermercado',
+        'Açougue & Peixaria',
+        'Hortifruti & Feira',
+        'Padaria do Dia a Dia',
+      ]),
     )
 
     const future = STANDARDIZED_CATEGORIES_TREE.find((c) => c.name === 'Reserva de Emergência')
-    expect(future?.subcategories.map((s) => s.name)).toContain('Aporte da Reserva')
+    expect(future?.subcategories.map((s) => s.name)).toContain('Aportes na Reserva')
   })
 
   it('calcula o fator de ponderação correto por modelo orçamentário', () => {
