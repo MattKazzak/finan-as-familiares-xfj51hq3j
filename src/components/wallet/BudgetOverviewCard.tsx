@@ -453,8 +453,9 @@ export function BudgetOverviewCard({
                     cfg.key === 'essentials' ? 50 : cfg.key === 'lifestyle' ? 30 : 20
                   const metaCents = Math.round(netIncomeCents * (targetPercent / 100))
 
-                  if (data.budgetCents < metaCents) {
-                    const diff = metaCents - data.budgetCents
+                  const diff = metaCents - data.budgetCents
+
+                  if (diff > 0) {
                     return (
                       <div className="mt-1.5 flex items-center">
                         <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 leading-tight break-words">
@@ -464,21 +465,20 @@ export function BudgetOverviewCard({
                     )
                   }
 
-                  if (data.budgetCents === metaCents) {
+                  if (diff === 0) {
                     return (
                       <div className="mt-1.5 flex items-center">
-                        <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/80 leading-tight">
+                        <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200/80 leading-tight">
                           ✓ Cota 100% alocada
                         </span>
                       </div>
                     )
                   }
 
-                  const diff = data.budgetCents - metaCents
                   return (
                     <div className="mt-1.5 flex items-center">
                       <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/80 leading-tight break-words">
-                        ⚠️ {formatBRL(diff)} acima da meta de {targetPercent}%
+                        ⚠️ {formatBRL(Math.abs(diff))} acima da meta sugerida
                       </span>
                     </div>
                   )
