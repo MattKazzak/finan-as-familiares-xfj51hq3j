@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { CategoryIcon, AVAILABLE_ICONS } from '@/components/common/CategoryIcon'
-import { Loader2, Plus, Home, Coffee, TrendingUp } from 'lucide-react'
+import { Loader2, Plus, Home, Coffee, TrendingUp, Sparkles } from 'lucide-react'
 import type { BudgetBucket, TransactionCategory } from '@/types/finance'
 import { useFamily } from '@/hooks/use-family'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -93,7 +93,7 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
   title,
   defaultType = 'expense',
   initialLimitCents,
-  bucketsSummary: _bucketsSummary,
+  bucketsSummary,
   family: familyProp,
 }) => {
   const isMobile = useIsMobile()
@@ -152,6 +152,12 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
     netIncome > 0 && parsedBudgetCents > 0
       ? Math.round((parsedBudgetCents / netIncome) * 1000) / 10
       : null
+
+  const selectedBucketData =
+    type === 'expense' && budgetBucket && bucketsSummary ? bucketsSummary[budgetBucket] : null
+  const bucketBudgetCents = selectedBucketData?.budgetCents ?? 0
+  const bucketSpentCents = selectedBucketData?.spentCents ?? 0
+  const freeInBudgetCents = Math.max(0, bucketBudgetCents - bucketSpentCents)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -359,6 +365,32 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
               ? `Teto individual fixado em ${formatBRL(parsedBudgetCents)}.`
               : 'Consumo livre do saldo do balde (sem teto individual). Esta categoria consumirá o saldo livre do balde orçamentário sem limite individual.'}
           </p>
+
+          {/* Faixa de folga no balde com botão "+ Somar ao teto" */}
+          {freeInBudgetCents > 0 && (
+            <div className="mt-2 p-2.5 bg-emerald-50 border border-emerald-200/90 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-emerald-900">
+              <div className="text-xs min-w-0">
+                <span className="font-bold flex items-center gap-1.5 leading-snug">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>{formatBRL(freeInBudgetCents)} livres no balde</span>
+                </span>
+                <p className="text-[11px] text-emerald-700 mt-0.5 leading-tight">
+                  Você pode somar essa folga ao teto desta categoria.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const currentCents = parseBRLToCents(budgetAmountStr) || 0
+                  const newTotalCents = currentCents + freeInBudgetCents
+                  setBudgetAmountStr(formatNumberBRL(newTotalCents))
+                }}
+                className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl transition-all shadow-xs shrink-0 cursor-pointer active:scale-95 self-stretch sm:self-auto text-center touch-manipulation"
+              >
+                + Somar ao teto
+              </button>
+            </div>
+          )}
         </div>
       )}
 
