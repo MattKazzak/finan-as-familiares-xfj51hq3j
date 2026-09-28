@@ -293,6 +293,23 @@ export default function WalletPage() {
   const [isEditTxOpen, setIsEditTxOpen] = useState(false)
   const [txToDelete, setTxToDelete] = useState<Transaction | null>(null)
 
+  // Diálogo legado controlado de edição de categoria e subcategoria
+  const [isCategoryEditorOpen, setIsCategoryEditorOpen] = useState(false)
+  const [categoryToEdit, setCategoryToEdit] = useState<TransactionCategory | null>(null)
+  const [categoryEditorName, setCategoryEditorName] = useState('')
+  const [categoryEditorType, setCategoryEditorType] = useState<'income' | 'expense'>('expense')
+  const [categoryEditorColor, setCategoryEditorColor] = useState('#3B82F6')
+  const [categoryEditorIcon, setCategoryEditorIcon] = useState('Tag')
+  const [categoryEditorBucket, setCategoryEditorBucket] = useState<BudgetBucket | null>(
+    'essentials',
+  )
+  const [savingCategoryEditor, setSavingCategoryEditor] = useState(false)
+
+  const [isNewSubcatDialogOpen, setIsNewSubcatDialogOpen] = useState(false)
+  const [categoryForNewSubcat, setCategoryForNewSubcat] = useState<TransactionCategory | null>(null)
+  const [newSubcatName, setNewSubcatName] = useState('')
+  const [savingNewSubcat, setSavingNewSubcat] = useState(false)
+
   // Ações de orçamento
   const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false)
   const [editingBudgetCatId, setEditingBudgetCatId] = useState<string>('')
