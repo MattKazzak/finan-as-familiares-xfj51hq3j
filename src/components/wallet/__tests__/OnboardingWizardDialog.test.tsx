@@ -18,6 +18,7 @@ describe('OnboardingWizardDialog', () => {
     expect(screen.getByText('Boas-vindas ao Curiangoo')).toBeDefined()
     expect(screen.getByText('Renda Mensal Familiar')).toBeDefined()
     expect(screen.getByText('Quanto entra líquido na conta da família por mês?')).toBeDefined()
+    expect(screen.getByText('Renda Líquida Total dos Membros')).toBeDefined()
   })
 
   it('permite digitar renda e avançar para etapa 2 (Seu Orçamento em 3 Caixas)', async () => {

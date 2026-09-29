@@ -231,7 +231,7 @@ export function OnboardingWizardDialog({
                 htmlFor="onboarding-income-input"
                 className="block text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer"
               >
-                Renda Líquida Total da Casa
+                Renda Líquida Total dos Membros
               </label>
 
               <div className="relative max-w-xs mx-auto">
