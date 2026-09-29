@@ -13,6 +13,7 @@ import Goals from '@/pages/Goals'
 import Investments from '@/pages/Investments'
 import Profile from '@/pages/Profile'
 import NotFound from '@/pages/NotFound'
+import { InviteAcceptPage } from '@/pages/InviteAcceptPage'
 import { Loader2 } from 'lucide-react'
 
 // Verifica síncronamente na URL se há indício de recuperação de senha (distinguindo estritamente de signup)
@@ -115,6 +116,16 @@ const App = () => (
           {/* Rotas públicas e dedicadas de redefinição de senha */}
           <Route path="/redefinir-senha" element={<ResetPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+
+          {/* Rota pública de convite para família */}
+          <Route
+            path="/convite/:codigo"
+            element={
+              <FamilyProvider>
+                <InviteAcceptPage />
+              </FamilyProvider>
+            }
+          />
 
           {/* Rota pública de login */}
           <Route path="/" element={<LoginRoute />} />

@@ -18,7 +18,34 @@ export interface FamilyMember {
   family_id: string
   name: string
   is_admin: boolean
+  user_id?: string | null
   created_at: string
+}
+
+export type FamilyInviteStatus = 'pending' | 'accepted' | 'revoked' | 'expired'
+
+export interface FamilyInvite {
+  id: string
+  code: string
+  family_id: string
+  created_by: string
+  role: string
+  status: FamilyInviteStatus
+  max_uses: number
+  uses_count: number
+  expires_at: string
+  created_at: string
+  accepted_by?: string | null
+  accepted_at?: string | null
+}
+
+export interface FamilyInvitePreview {
+  valid: boolean
+  code?: string
+  family_id?: string
+  family_name?: string
+  expires_at?: string
+  error?: string
 }
 
 export type BudgetBucket = 'essentials' | 'lifestyle' | 'future'

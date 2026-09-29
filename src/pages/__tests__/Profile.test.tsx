@@ -67,6 +67,36 @@ describe('ProfilePage PWA Install Shortcut - 3 Cenários de Clique', () => {
     mockMembers = [{ id: 'm-1', name: 'Lucas', is_admin: true }]
   })
 
+  it('exibe o botão "Convidar membro" para o admin da família e abre o modal de convite', async () => {
+    render(
+      <MemoryRouter>
+        <ProfilePage />
+      </MemoryRouter>,
+    )
+
+    const inviteBtn = screen.getByRole('button', { name: /Convidar membro/i })
+    expect(inviteBtn).toBeDefined()
+    fireEvent.click(inviteBtn)
+
+    expect(screen.getByText('Convidar Cônjuge ou Familiar')).toBeDefined()
+    expect(screen.getByText(/Envie o código ou o link mágico/i)).toBeDefined()
+  })
+
+  it('exibe o botão "Entrar com código" e abre o diálogo de código de convite', () => {
+    render(
+      <MemoryRouter>
+        <ProfilePage />
+      </MemoryRouter>,
+    )
+
+    const joinBtn = screen.getByRole('button', { name: /Entrar com código/i })
+    expect(joinBtn).toBeDefined()
+    fireEvent.click(joinBtn)
+
+    expect(screen.getByText('Entrar em uma Família')).toBeDefined()
+    expect(screen.getByPlaceholderText('Ex: CURI-XXXX')).toBeDefined()
+  })
+
   it('esconde o quadro "Quem está usando este aparelho?" quando há apenas 1 membro', () => {
     mockMembers = [{ id: 'm-1', name: 'Lucas', is_admin: true }]
 

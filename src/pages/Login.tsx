@@ -21,7 +21,7 @@ import { InstallPwaBanner } from '@/components/common/InstallPwaBanner'
 
 type AuthMode = 'login' | 'signup' | 'forgot_password'
 
-function isEmailNotConfirmedError(error: any): boolean {
+export function isEmailNotConfirmedError(error: any): boolean {
   if (!error) return false
   const msg = (error.message || '').toLowerCase()
   const code = (error.code || error.error_code || error.status || '').toString().toLowerCase()

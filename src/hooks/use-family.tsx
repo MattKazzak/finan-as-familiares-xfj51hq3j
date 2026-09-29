@@ -49,6 +49,8 @@ interface FamilyContextType {
   addMember: (name: string) => Promise<FamilyMember>
   editMember: (id: string, name: string) => Promise<FamilyMember>
   removeMember: (id: string) => Promise<void>
+  leaveFamily: () => Promise<void>
+  joinFamilyWithCode: (code: string) => Promise<void>
   addNewCategory: (
     name: string,
     type: 'income' | 'expense',
@@ -339,7 +341,26 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     await deleteFamilyMember(id)
     setMembers((prev) => prev.filter((m) => m.id !== id))
     if (selectedMemberId === id) setSelectedMemberId(null)
-    toast({ title: 'Sucesso', description: 'Membro removido.' })
+    toast({ title: 'Sucesso', description: 'Membro removido da família.' })
+  }
+
+  const leaveFamily = async () => {
+    if (!family) throw new Error('Família não carregada')
+    const { leaveFamilyWorkspace } = await import('@/services/family')
+    await leaveFamilyWorkspace(family.id)
+    toast({ title: 'Você saiu da família', description: 'Acesso à família encerrado.' })
+    localStorage.removeItem('financas_familiares_active_member_id')
+    await reloadFamily()
+  }
+
+  const joinFamilyWithCode = async (code: string) => {
+    const { acceptFamilyInvite } = await import('@/services/family')
+    const res = await acceptFamilyInvite(code)
+    if (res?.member_id) {
+      setActiveMemberId(res.member_id)
+    }
+    toast({ title: 'Bem-vindo(a)!', description: 'Você agora faz parte da família.' })
+    await reloadFamily()
   }
 
   const addNewCategory = async (
@@ -597,6 +618,8 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         addMember,
         editMember,
         removeMember,
+        leaveFamily,
+        joinFamilyWithCode,
         addNewCategory,
         editCategory,
         removeCategory,

@@ -1,7 +1,13 @@
 // Serviço de dados da Família, Membros e Categorias
 import { supabase } from '@/lib/supabase/client'
 import { normalizeFamilyName } from '@/lib/formatters'
-import type { Family, FamilyMember, TransactionCategory } from '@/types/finance'
+import type {
+  Family,
+  FamilyMember,
+  TransactionCategory,
+  FamilyInvite,
+  FamilyInvitePreview,
+} from '@/types/finance'
 
 export async function createNewFamilyWorkspace(
   familyName?: string,
@@ -67,30 +73,58 @@ export async function fetchFamilyData() {
   if (famErr) throw famErr
   let family: Family | null = families && families.length > 0 ? (families[0] as Family) : null
 
-  // Se o usuário não possui uma família criada ainda, cria automaticamente o workspace padrão
+  // Se o usuário não possui uma família criada ainda, verifica se há convite pendente para aplicar
   if (!family) {
-    const rawName = (user.user_metadata?.name as string) || ''
-    const fallbackMemberName = rawName || user.email?.split('@')[0] || 'Principal'
-    // O nome da pessoa nunca deve alimentar o nome da família
-    const fallbackFamilyName = 'Minha Família'
-
+    let pendingInviteApplied = false
     try {
-      await createNewFamilyWorkspace(fallbackFamilyName, fallbackMemberName)
-      const { data: refetched } = await (supabase as any)
-        .from('families')
-        .select('*')
-        .order('created_at', { ascending: true })
-        .limit(1)
+      const pendingInviteCode =
+        sessionStorage.getItem('curiangoo_pending_invite_code') ||
+        localStorage.getItem('curiangoo_pending_invite_code')
+      if (pendingInviteCode) {
+        const acceptRes = await acceptFamilyInvite(pendingInviteCode)
+        if (acceptRes?.family_id) {
+          sessionStorage.removeItem('curiangoo_pending_invite_code')
+          localStorage.removeItem('curiangoo_pending_invite_code')
+          pendingInviteApplied = true
 
-      if (refetched && refetched.length > 0) {
-        family = refetched[0] as Family
+          const { data: acceptedFam } = await (supabase as any)
+            .from('families')
+            .select('*')
+            .eq('id', acceptRes.family_id)
+            .single()
+
+          if (acceptedFam) {
+            family = acceptedFam as Family
+          }
+        }
       }
-    } catch (createErr) {
-      console.error('Erro ao auto-criar família para o usuário:', createErr)
-      return { family: null, members: [], categories: [] }
+    } catch (inviteErr) {
+      console.warn('Erro ao aplicar convite pendente na inicialização:', inviteErr)
+    }
+
+    if (!family && !pendingInviteApplied) {
+      const rawName = (user.user_metadata?.name as string) || ''
+      const fallbackMemberName = rawName || user.email?.split('@')[0] || 'Principal'
+      // O nome da pessoa nunca deve alimentar o nome da família
+      const fallbackFamilyName = 'Minha Família'
+
+      try {
+        await createNewFamilyWorkspace(fallbackFamilyName, fallbackMemberName)
+        const { data: refetched } = await (supabase as any)
+          .from('families')
+          .select('*')
+          .order('created_at', { ascending: true })
+          .limit(1)
+
+        if (refetched && refetched.length > 0) {
+          family = refetched[0] as Family
+        }
+      } catch (createErr) {
+        console.error('Erro ao auto-criar família para o usuário:', createErr)
+        return { family: null, members: [], categories: [] }
+      }
     }
   }
-
   if (!family) {
     return { family: null, members: [], categories: [] }
   }
@@ -174,9 +208,68 @@ export async function updateFamilyMember(id: string, name: string) {
 }
 
 export async function deleteFamilyMember(id: string) {
-  const { error } = await (supabase as any).from('family_members').delete().eq('id', id)
+  // Chama a RPC remove_family_member para garantir validação de admin e segurança de vínculos
+  const { data, error } = await (supabase as any).rpc('remove_family_member', {
+    p_member_id: id,
+  })
 
   if (error) throw error
+  return data
+}
+
+export async function leaveFamilyWorkspace(familyId: string) {
+  const { data, error } = await (supabase as any).rpc('leave_family', {
+    p_family_id: familyId,
+  })
+
+  if (error) throw error
+  return data
+}
+
+export async function generateFamilyInvite(familyId: string): Promise<FamilyInvite> {
+  const { data, error } = await (supabase as any).rpc('generate_family_invite', {
+    p_family_id: familyId,
+  })
+
+  if (error) throw error
+  return data as FamilyInvite
+}
+
+export async function fetchFamilyInvites(familyId: string): Promise<FamilyInvite[]> {
+  const { data, error } = await (supabase as any)
+    .from('family_invites')
+    .select('*')
+    .eq('family_id', familyId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return (data || []) as FamilyInvite[]
+}
+
+export async function getInvitePreview(code: string): Promise<FamilyInvitePreview> {
+  const cleanCode = code.trim().toUpperCase()
+  const { data, error } = await (supabase as any).rpc('get_invite_preview', {
+    p_code: cleanCode,
+  })
+
+  if (error) throw error
+  return data as FamilyInvitePreview
+}
+
+export async function acceptFamilyInvite(code: string): Promise<{
+  success: boolean
+  family_id: string
+  member_id: string
+  member_name?: string
+  already_member?: boolean
+}> {
+  const cleanCode = code.trim().toUpperCase()
+  const { data, error } = await (supabase as any).rpc('accept_family_invite', {
+    p_code: cleanCode,
+  })
+
+  if (error) throw error
+  return data
 }
 
 export async function updateFamilyDetails(

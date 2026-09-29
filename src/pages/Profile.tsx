@@ -4,7 +4,8 @@ import { useAuth } from '@/hooks/use-auth'
 import { useFamily } from '@/hooks/use-family'
 import { useToast } from '@/hooks/use-toast'
 import { usePwaInstall } from '@/hooks/use-pwa-install'
-import type { FamilyMember } from '@/types/finance'
+import type { FamilyMember, FamilyInvite } from '@/types/finance'
+import { generateFamilyInvite, fetchFamilyInvites } from '@/services/family'
 import {
   Users,
   Plus,
@@ -19,6 +20,13 @@ import {
   Pencil,
   Download,
   Share,
+  UserPlus,
+  Copy,
+  Clock,
+  KeyRound,
+  Shield,
+  ArrowRight,
+  ShieldAlert,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -65,6 +73,8 @@ export default function ProfilePage() {
     addMember,
     editMember,
     removeMember,
+    leaveFamily,
+    joinFamilyWithCode,
     updateFamily,
     uploadFamilyAvatar,
     triggerRefresh,
@@ -96,6 +106,22 @@ export default function ProfilePage() {
   const [memberName, setMemberName] = useState('')
   const [savingMember, setSavingMember] = useState(false)
   const [memberToDelete, setMemberToDelete] = useState<FamilyMember | null>(null)
+
+  // Sistema de Convites
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
+  const [generatingInvite, setGeneratingInvite] = useState(false)
+  const [currentInvite, setCurrentInvite] = useState<FamilyInvite | null>(null)
+  const [copiedCode, setCopiedCode] = useState(false)
+  const [copiedLink, setCopiedLink] = useState(false)
+
+  // Ação: Entrar em uma Família com Código
+  const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false)
+  const [joinCodeInput, setJoinCodeInput] = useState('')
+  const [joiningFamily, setJoiningFamily] = useState(false)
+
+  // Ação: Sair da Família (Convidado)
+  const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false)
+  const [leavingFamilyState, setLeavingFamilyState] = useState(false)
 
   const openEditFamilyDialog = () => {
     // Se o nome atual começar com 'Família ', preenche apenas o sufixo no input
@@ -176,10 +202,126 @@ export default function ProfilePage() {
     }
   }
 
-  const openAddMemberDialog = () => {
-    setEditingMember(null)
-    setMemberName('')
-    setIsMemberDialogOpen(true)
+  // Determina se o usuário conectado é Admin da Família
+  const isFamilyAdmin =
+    family?.created_by === user?.id || members.some((m) => m.user_id === user?.id && m.is_admin)
+
+  // Abre modal de convite e carrega último convite ativo ou gera um novo
+  const handleOpenInviteModal = async () => {
+    if (!family) return
+    setIsInviteModalOpen(true)
+    setCopiedCode(false)
+    setCopiedLink(false)
+
+    try {
+      setGeneratingInvite(true)
+      const list = await fetchFamilyInvites(family.id)
+      const active = list.find(
+        (i) =>
+          i.status === 'pending' &&
+          new Date(i.expires_at) > new Date() &&
+          i.uses_count < i.max_uses,
+      )
+      if (active) {
+        setCurrentInvite(active)
+      } else {
+        const fresh = await generateFamilyInvite(family.id)
+        setCurrentInvite(fresh)
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao gerar convite',
+        description: err?.message || 'Não foi possível gerar convite no momento.',
+        variant: 'destructive',
+      })
+    } finally {
+      setGeneratingInvite(false)
+    }
+  }
+
+  const handleRegenerateInvite = async () => {
+    if (!family) return
+    try {
+      setGeneratingInvite(true)
+      const fresh = await generateFamilyInvite(family.id)
+      setCurrentInvite(fresh)
+      setCopiedCode(false)
+      setCopiedLink(false)
+      toast({
+        title: 'Novo convite gerado!',
+        description: 'Código e link de 7 dias criados com sucesso.',
+      })
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao gerar convite',
+        description: err?.message || 'Limite atingido ou permissão negada.',
+        variant: 'destructive',
+      })
+    } finally {
+      setGeneratingInvite(false)
+    }
+  }
+
+  const handleCopy = async (text: string, type: 'code' | 'link') => {
+    try {
+      await navigator.clipboard.writeText(text)
+      if (type === 'code') {
+        setCopiedCode(true)
+        setTimeout(() => setCopiedCode(false), 2500)
+      } else {
+        setCopiedLink(true)
+        setTimeout(() => setCopiedLink(false), 2500)
+      }
+      toast({
+        title: 'Copiado para a área de transferência!',
+        description: type === 'code' ? 'Código de convite copiado.' : 'Link mágico copiado.',
+      })
+    } catch {
+      toast({
+        title: 'Falha ao copiar',
+        description: 'Selecione e copie manualmente o texto.',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleJoinFamilySubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const clean = joinCodeInput.trim().toUpperCase()
+    if (!clean) return
+
+    try {
+      setJoiningFamily(true)
+      await joinFamilyWithCode(clean)
+      setIsJoinDialogOpen(false)
+      setJoinCodeInput('')
+      triggerRefresh()
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao entrar na família',
+        description: err?.message || 'Código inválido, expirado ou família cheia.',
+        variant: 'destructive',
+      })
+    } finally {
+      setJoiningFamily(false)
+    }
+  }
+
+  const handleConfirmLeaveFamily = async () => {
+    try {
+      setLeavingFamilyState(true)
+      await leaveFamily()
+      setIsLeaveDialogOpen(false)
+      triggerRefresh()
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao sair da família',
+        description: err?.message || 'Não foi possível sair no momento.',
+        variant: 'destructive',
+      })
+    } finally {
+      setLeavingFamilyState(false)
+    }
   }
 
   const openEditMemberDialog = (member: FamilyMember) => {
@@ -514,24 +656,53 @@ export default function ProfilePage() {
 
       {/* 3. Membros da Família */}
       <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-emerald-700" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold shrink-0">
+              <Users className="w-5 h-5" />
+            </div>
             <div>
-              <h3 className="font-bold text-base text-slate-900">Membros da Família</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-base text-slate-900">Membros da Família</h3>
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                  {members.length}/5 membros
+                </span>
+              </div>
               <p className="text-xs text-slate-500">
-                Pessoas atribuíveis para controle de receitas e despesas
+                Pessoas com acesso à conta compartilhada e lançamentos
               </p>
             </div>
           </div>
 
-          <Button
-            onClick={openAddMemberDialog}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-sm gap-1"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Adicionar membro</span>
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            {isFamilyAdmin ? (
+              <Button
+                onClick={handleOpenInviteModal}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-sm gap-1.5 h-9"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>Convidar membro</span>
+              </Button>
+            ) : (
+              <Button
+                onClick={() => setIsLeaveDialogOpen(true)}
+                variant="outline"
+                className="text-xs font-semibold text-red-600 border-red-200 hover:bg-red-50 rounded-xl h-9 gap-1"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sair da família</span>
+              </Button>
+            )}
+
+            <Button
+              onClick={() => setIsJoinDialogOpen(true)}
+              variant="outline"
+              className="text-xs font-semibold text-slate-700 border-slate-200 hover:bg-slate-50 rounded-xl h-9 gap-1.5"
+            >
+              <KeyRound className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Entrar com código</span>
+            </Button>
+          </div>
         </div>
 
         <div className="divide-y divide-slate-100">
@@ -552,26 +723,33 @@ export default function ProfilePage() {
                     <span
                       className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                         member.is_admin
-                          ? 'bg-emerald-100 text-emerald-800'
+                          ? 'bg-emerald-100 text-emerald-800 flex items-center gap-1'
                           : 'bg-slate-100 text-slate-600'
                       }`}
                     >
-                      {member.is_admin ? 'Administrador' : 'Membro'}
+                      {member.is_admin && <Shield className="w-3 h-3 text-emerald-700" />}
+                      {member.is_admin ? 'Admin' : 'Membro'}
                     </span>
                   </div>
-                  <span className="text-[11px] text-slate-400">Atribuível em transações</span>
+                  <span className="text-[11px] text-slate-400">
+                    {member.is_admin
+                      ? 'Gerencia convites e configurações'
+                      : 'Acesso total a lançamentos'}
+                  </span>
                 </div>
               </div>
 
               <div className="flex items-center gap-1">
-                <button
-                  onClick={() => openEditMemberDialog(member)}
-                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"
-                  title="Renomear membro"
-                >
-                  <Edit3 className="w-4 h-4" />
-                </button>
-                {!member.is_admin && (
+                {isFamilyAdmin && (
+                  <button
+                    onClick={() => openEditMemberDialog(member)}
+                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"
+                    title="Renomear membro"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                )}
+                {isFamilyAdmin && !member.is_admin && (
                   <button
                     onClick={() => setMemberToDelete(member)}
                     className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
@@ -878,26 +1056,242 @@ export default function ProfilePage() {
         </span>
       </div>
 
-      {/* CONFIRMAÇÃO DE EXCLUSÃO DE MEMBRO */}
+      {/* MODAL CONVIDAR MEMBRO (ADMIN GERA CÓDIGO E LINK) */}
+      <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
+        <DialogContent className="max-w-md w-[92vw] rounded-3xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-emerald-700" />
+              <span>Convidar Cônjuge ou Familiar</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Envie o código ou o link mágico para seu parceiro(a) entrar nesta mesma família.
+            </DialogDescription>
+          </DialogHeader>
+
+          {generatingInvite ? (
+            <div className="py-8 flex flex-col items-center justify-center gap-2 text-slate-500">
+              <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
+              <p className="text-xs">Gerando código seguro...</p>
+            </div>
+          ) : currentInvite ? (
+            <div className="space-y-4 pt-1">
+              {/* Código de Convite */}
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                <span className="text-[11px] font-semibold text-slate-500 block mb-1">
+                  Código de Convite (6–8 caracteres)
+                </span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xl sm:text-2xl font-black tracking-wider text-emerald-950 font-mono">
+                    {currentInvite.code}
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleCopy(currentInvite.code, 'code')}
+                    className="h-9 px-3 rounded-xl border-emerald-600/30 text-emerald-700 hover:bg-emerald-50 text-xs font-semibold gap-1.5"
+                  >
+                    {copiedCode ? (
+                      <>
+                        <Check className="w-4 h-4 text-emerald-600" />
+                        <span>Copiado!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        <span>Copiar Código</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Link Mágico */}
+              <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100">
+                <span className="text-[11px] font-semibold text-emerald-900 block mb-1">
+                  Link Mágico (Ideal para WhatsApp)
+                </span>
+                <p className="text-[11px] text-slate-600 mb-2 leading-relaxed">
+                  Quem abrir este link já se cadastra ou entra diretamente na sua família, sem
+                  precisar digitar código.
+                </p>
+                <div className="flex items-center gap-2">
+                  <Input
+                    readOnly
+                    value={`${window.location.origin}/convite/${currentInvite.code}`}
+                    className="text-xs bg-white text-slate-700 h-9 rounded-xl font-mono"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() =>
+                      handleCopy(`${window.location.origin}/convite/${currentInvite.code}`, 'link')
+                    }
+                    className="h-9 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shrink-0 gap-1.5"
+                  >
+                    {copiedLink ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        <span>Copiado!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        <span>Copiar Link</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Validade de 7 dias e Regras */}
+              <div className="flex items-center gap-2 text-[11px] text-slate-500 bg-amber-50/60 border border-amber-200/60 p-2.5 rounded-xl">
+                <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>
+                  <strong>Validade de 7 dias:</strong> expira em{' '}
+                  {new Date(currentInvite.expires_at).toLocaleDateString('pt-BR')}. Famílias
+                  suportam até 5 membros.
+                </span>
+              </div>
+
+              <div className="pt-2 flex items-center justify-between border-t border-slate-100">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRegenerateInvite}
+                  disabled={generatingInvite}
+                  className="text-xs text-slate-600 hover:text-slate-900"
+                >
+                  Regerar novo convite
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setIsInviteModalOpen(false)}
+                  className="bg-slate-900 hover:bg-slate-800 text-white text-xs rounded-xl h-9 px-4 font-semibold"
+                >
+                  Fechar
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      {/* DIÁLOGO ENTRAR EM UMA FAMÍLIA (COM CÓDIGO) */}
+      <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
+        <DialogContent className="max-w-sm w-[92vw] rounded-3xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <KeyRound className="w-5 h-5 text-emerald-700" />
+              <span>Entrar em uma Família</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Cole o código de convite (ex: CURI-7K2X) enviado pelo cônjuge ou administrador.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleJoinFamilySubmit} className="space-y-4 pt-2">
+            <div>
+              <Label htmlFor="join-code-input" className="text-xs font-semibold text-slate-700">
+                Código de Convite
+              </Label>
+              <Input
+                id="join-code-input"
+                type="text"
+                placeholder="Ex: CURI-XXXX"
+                value={joinCodeInput}
+                onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
+                className="mt-1 h-11 text-center font-mono font-bold tracking-widest text-base uppercase rounded-xl"
+                autoFocus
+                required
+              />
+              <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+                Ao entrar, você terá acesso imediato aos lançamentos e categorias desta família.
+              </p>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsJoinDialogOpen(false)}
+                disabled={joiningFamily}
+                className="rounded-xl text-xs h-9"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={joiningFamily || !joinCodeInput.trim()}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs h-9 font-semibold"
+              >
+                {joiningFamily && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+                Entrar na Família
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIÁLOGO CONFIRMAÇÃO DE SAIR DA FAMÍLIA (CONVIDADO) */}
+      <AlertDialog
+        open={isLeaveDialogOpen}
+        onOpenChange={(open) => !open && setIsLeaveDialogOpen(false)}
+      >
+        <AlertDialogContent className="rounded-3xl max-w-sm w-[92vw] p-6">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-bold text-red-900 flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5 text-red-600" />
+              <span>Sair da família?</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-slate-600 space-y-2">
+              <p>
+                Você deixará de ter acesso às despesas, receitas, orçamentos e relatórios de{' '}
+                <strong>{family?.name}</strong>.
+              </p>
+              <p>
+                Para voltar futuramente, você precisará receber um novo convite do administrador.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0 pt-2">
+            <AlertDialogCancel className="text-xs rounded-xl h-9">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmLeaveFamily}
+              disabled={leavingFamilyState}
+              className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl h-9"
+            >
+              {leavingFamilyState && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+              Confirmar e Sair
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* CONFIRMAÇÃO DE EXCLUSÃO DE MEMBRO (PELO ADMIN) */}
       <AlertDialog
         open={!!memberToDelete}
         onOpenChange={(open) => !open && setMemberToDelete(null)}
       >
-        <AlertDialogContent className="rounded-2xl max-w-sm">
+        <AlertDialogContent className="rounded-3xl max-w-sm w-[92vw] p-6">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-base font-bold text-slate-900">
               Remover familiar?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs text-slate-500">
-              Deseja remover <strong>{memberToDelete?.name}</strong> da lista da família? Se houver
-              transações vinculadas a este membro, elas deverão ser reatribuídas antes.
+              Deseja remover <strong>{memberToDelete?.name}</strong> da família? O usuário perderá o
+              acesso imediato ao aplicativo compartilhado.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="text-xs">Cancelar</AlertDialogCancel>
+          <AlertDialogFooter className="gap-2 sm:gap-0 pt-2">
+            <AlertDialogCancel className="text-xs rounded-xl h-9">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDeleteMember}
-              className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold"
+              className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl h-9"
             >
               Remover
             </AlertDialogAction>

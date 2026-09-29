@@ -77,6 +77,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
     family,
     members,
     categories,
+    activeMemberId,
     newTransactionDefaultType,
     newTransactionPrefill,
     triggerRefresh,
@@ -136,9 +137,12 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
         initialType ?? newTransactionPrefill?.initialType ?? newTransactionDefaultType ?? 'expense'
       const effectiveDesc = initialDescription ?? newTransactionPrefill?.initialDescription ?? ''
       const effectiveAmountCents = initialAmountCents ?? newTransactionPrefill?.initialAmountCents
+      const userMember = members.find((m) => m.user_id === user?.id)
       const effectiveMember =
         initialMemberId ??
         newTransactionPrefill?.initialMemberId ??
+        activeMemberId ??
+        userMember?.id ??
         (members.length > 0 ? members[0].id : '')
       const effectiveCategory =
         initialCategoryId ?? newTransactionPrefill?.initialCategoryId ?? 'none'
@@ -169,6 +173,8 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
     newTransactionDefaultType,
     newTransactionPrefill,
     members,
+    activeMemberId,
+    user,
   ])
 
   // Subcategorias disponíveis para a categoria selecionada
