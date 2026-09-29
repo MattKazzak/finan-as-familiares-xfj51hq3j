@@ -641,7 +641,7 @@ export default function Home() {
           {/* Link sutil para Carteira */}
           <button
             type="button"
-            onClick={() => navigate('/carteira')}
+            onClick={() => navigate('/orcamentos')}
             className="w-full mt-4 pt-3 border-t border-slate-100 text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50/60 py-2 px-2.5 rounded-xl transition-colors flex items-center justify-between cursor-pointer group"
           >
             <span className="group-hover:underline">Ver detalhes na Carteira →</span>

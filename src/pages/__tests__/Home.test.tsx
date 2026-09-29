@@ -157,7 +157,7 @@ describe('Home Page - Card Orçamento em 3 Baldes (50/30/20)', () => {
     expect(screen.queryByText(/6\.000,00\/mês/)).toBeNull()
   })
 
-  it('navega para /carteira ao clicar em "Ver detalhes na Carteira →"', () => {
+  it('navega para /orcamentos ao clicar em "Ver detalhes na Carteira →"', () => {
     render(
       <MemoryRouter>
         <Home />
@@ -167,7 +167,7 @@ describe('Home Page - Card Orçamento em 3 Baldes (50/30/20)', () => {
     const linkBtn = screen.getByRole('button', { name: /Ver detalhes na Carteira →/i })
     fireEvent.click(linkBtn)
 
-    expect(mockNavigate).toHaveBeenCalledWith('/carteira')
+    expect(mockNavigate).toHaveBeenCalledWith('/orcamentos')
   })
 
   it('degrada com elegância quando a família não tem renda configurada (monthly_net_income_cents = null)', () => {
