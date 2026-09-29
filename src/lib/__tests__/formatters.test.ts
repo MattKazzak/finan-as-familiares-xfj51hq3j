@@ -1,5 +1,53 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeFamilyName, formatFamilyDisplayName } from '../formatters'
+import { normalizeFamilyName, formatFamilyDisplayName, parseBRLToCents } from '../formatters'
+
+describe('parseBRLToCents', () => {
+  it('converts Brazilian Portuguese thousand format without decimals ("1.000" -> 100000 cents)', () => {
+    expect(parseBRLToCents('1.000')).toBe(100000)
+    expect(parseBRLToCents('1.500')).toBe(150000)
+    expect(parseBRLToCents('10.000')).toBe(1000000)
+    expect(parseBRLToCents('1.000.000')).toBe(100000000)
+  })
+
+  it('converts plain integer strings ("1000" -> 100000 cents)', () => {
+    expect(parseBRLToCents('1000')).toBe(100000)
+    expect(parseBRLToCents('50')).toBe(5000)
+    expect(parseBRLToCents('0')).toBe(0)
+  })
+
+  it('converts Brazilian thousand with decimals ("1.000,00" -> 100000 cents, "1.250,50" -> 125050 cents)', () => {
+    expect(parseBRLToCents('1.000,00')).toBe(100000)
+    expect(parseBRLToCents('1.250,50')).toBe(125050)
+  })
+
+  it('converts standard comma decimals without thousand dot ("1000,00" -> 100000 cents, "50,00" -> 5000 cents)', () => {
+    expect(parseBRLToCents('1000,00')).toBe(100000)
+    expect(parseBRLToCents('50,00')).toBe(5000)
+    expect(parseBRLToCents('1000,50')).toBe(100050)
+  })
+
+  it('removes spaces and "R$" prefix ("R$ 1.000" -> 100000 cents)', () => {
+    expect(parseBRLToCents('R$ 1.000')).toBe(100000)
+    expect(parseBRLToCents('R$ 1.250,50')).toBe(125050)
+    expect(parseBRLToCents(' R$   50,00 ')).toBe(5000)
+  })
+
+  it('handles numeric numbers directly', () => {
+    expect(parseBRLToCents(1000)).toBe(100000)
+    expect(parseBRLToCents(50.5)).toBe(5050)
+  })
+
+  it('handles empty or invalid inputs', () => {
+    expect(parseBRLToCents('')).toBe(0)
+    expect(parseBRLToCents('   ')).toBe(0)
+    expect(parseBRLToCents('invalid')).toBe(0)
+  })
+
+  it('handles standard dot decimal when not 3 digits thousand ("10.5", "10.50")', () => {
+    expect(parseBRLToCents('10.5')).toBe(1050)
+    expect(parseBRLToCents('10.50')).toBe(1050)
+  })
+})
 
 describe('normalizeFamilyName', () => {
   it('handles null, undefined or empty strings returning empty string', () => {

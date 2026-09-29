@@ -36,14 +36,37 @@ export function parseBRLToCents(val: string | number): number {
     return Math.round(val * 100)
   }
   if (!val) return 0
-  // Remove R$, espaços
+  // 1. Remove espaços e o prefixo "R$"
   let clean = val.replace(/[R$\s]/g, '').trim()
   if (!clean) return 0
 
-  // Se tiver vírgula como separador decimal: "1.250,50" -> "1250.50"
-  if (clean.includes(',')) {
+  const hasComma = clean.includes(',')
+  const hasDot = clean.includes('.')
+
+  if (hasComma && hasDot) {
+    // Ex: "1.250,50" -> remover todos os pontos e substituir vírgula por ponto
     clean = clean.replace(/\./g, '').replace(',', '.')
+  } else if (hasComma) {
+    // Ex: "1000,50" ou "50,00" -> substituir a vírgula por ponto
+    clean = clean.replace(',', '.')
+  } else if (hasDot) {
+    // Apenas ponto presente
+    // Se tiver formato de milhar com blocos de 3 dígitos após ponto (ex: "1.000" ou "1.500" ou "1.000.000")
+    // Tratar como separador de milhar brasileiro se tiver 3 dígitos após o ponto, convertendo para 1000 ou 1500;
+    // ou limpar os pontos de milhar antes da conversão.
+    const dotParts = clean.split('.')
+    const afterLastDot = dotParts[dotParts.length - 1]
+    const allIntermediateValidThousands = dotParts.slice(1).every((part) => part.length === 3)
+
+    if (allIntermediateValidThousands && afterLastDot.length === 3) {
+      // Ex: "1.000", "15.000", "1.250.000" -> separador de milhar brasileiro
+      clean = clean.replace(/\./g, '')
+    } else {
+      // Se não for milhar (ex: "10.5" ou "10.50"), deixa como float americano padrão
+      // caso o usuário digite com ponto decimal
+    }
   }
+
   const parsed = parseFloat(clean)
   return isNaN(parsed) ? 0 : Math.round(parsed * 100)
 }
