@@ -420,6 +420,11 @@ DATA:OFXSGML
       expect(extractPatternFromDescription('COMPRA CARTAO IFOOD 12345')).toBe('IFOOD')
       expect(extractPatternFromDescription('PAGAMENTO POSTO IPIRANGA 99')).toBe('IPIRANGA')
       expect(extractPatternFromDescription('NETFLIX.COM')).toBe('NETFLIX.COM')
+      expect(extractPatternFromDescription('CLINICA VET ESPACO ANIMAL')).toBe('VET ESPACO ANIMAL')
+      expect(extractPatternFromDescription('HOSPITAL VETERINARIO 24H')).toBe('VETERINARIO 24H')
+      expect(extractPatternFromDescription('CLINICA ODONTOLOGICA SORRISO')).toBe(
+        'ODONTOLOGICA SORRISO',
+      )
     })
 
     it('distingue padrões como MAX, BAR e UBER vs UBER EATS sem falsos positivos', () => {
@@ -514,6 +519,116 @@ DATA:OFXSGML
 
       const m3 = matchCategorization('HABIBS DELIVERY', 'expense', mockCategories, dbRules)
       expect(m3?.category.id).toBe('cat-mercado')
+    })
+
+    it('garante precedência estrita de Pets sobre Saúde e negative check em Saúde', () => {
+      const categoriesWithPetsAndHealth: TransactionCategory[] = [
+        {
+          id: 'cat-saude',
+          family_id: 'fam-1',
+          name: 'Saúde & Cuidados Médicos',
+          type: 'expense',
+          icon: 'HeartPulse',
+          color: '#EF4444',
+          created_at: '',
+        },
+        {
+          id: 'cat-pets',
+          family_id: 'fam-1',
+          name: 'Pets',
+          type: 'expense',
+          icon: 'PawPrint',
+          color: '#F97316',
+          created_at: '',
+        },
+      ]
+
+      // 1. "CLINICA VET..." deve ser classificado como Pets, nunca como Saúde
+      const matchClinicaVet = matchCategorization(
+        'CLINICA VET ESPACO ANIMAL',
+        'expense',
+        categoriesWithPetsAndHealth,
+      )
+      expect(matchClinicaVet?.category.id).toBe('cat-pets')
+      expect(matchClinicaVet?.category.name).toBe('Pets')
+
+      // 2. "HOSPITAL VETERINARIO" deve ser Pets, nunca Saúde
+      const matchHospitalVet = matchCategorization(
+        'HOSPITAL VETERINARIO 24 HORAS',
+        'expense',
+        categoriesWithPetsAndHealth,
+      )
+      expect(matchHospitalVet?.category.id).toBe('cat-pets')
+      expect(matchHospitalVet?.category.name).toBe('Pets')
+
+      // 3. "PET CARE" deve ser Pets
+      const matchPetCare = matchCategorization(
+        'PET CARE CENTRO MEDICO',
+        'expense',
+        categoriesWithPetsAndHealth,
+      )
+      expect(matchPetCare?.category.id).toBe('cat-pets')
+
+      // 4. Termos adicionais veterinários/pets
+      expect(
+        matchCategorization('COBASI MORUMBI', 'expense', categoriesWithPetsAndHealth)?.category.id,
+      ).toBe('cat-pets')
+      expect(
+        matchCategorization('PETZ MARGINAL', 'expense', categoriesWithPetsAndHealth)?.category.id,
+      ).toBe('cat-pets')
+      expect(
+        matchCategorization('ZOOPLANET SHOP', 'expense', categoriesWithPetsAndHealth)?.category.id,
+      ).toBe('cat-pets')
+      expect(
+        matchCategorization('CANIL SAO ROQUE', 'expense', categoriesWithPetsAndHealth)?.category.id,
+      ).toBe('cat-pets')
+      expect(
+        matchCategorization('RACAO GOLDEN 15KG', 'expense', categoriesWithPetsAndHealth)?.category
+          .id,
+      ).toBe('cat-pets')
+
+      // 5. Clínicas e hospitais humanos continuam sendo categorizados como Saúde
+      const matchClinicaHumana = matchCategorization(
+        'CLINICA SAO PAULO MEDICINA',
+        'expense',
+        categoriesWithPetsAndHealth,
+      )
+      expect(matchClinicaHumana?.category.id).toBe('cat-saude')
+
+      const matchHospitalHumano = matchCategorization(
+        'HOSPITAL ALBERT EINSTEIN',
+        'expense',
+        categoriesWithPetsAndHealth,
+      )
+      expect(matchHospitalHumano?.category.id).toBe('cat-saude')
+
+      const matchFarmacia = matchCategorization(
+        'DROGASIL FARMACIA',
+        'expense',
+        categoriesWithPetsAndHealth,
+      )
+      expect(matchFarmacia?.category.id).toBe('cat-saude')
+
+      // 6. Caso uma descrição tenha termo de Saúde ("CLINICA") e radical de pet ("ANIMAL", "VET", "PET"),
+      // mesmo se não houvesse categoria Pets cadastrada na família, a regra de Saúde não pontua devido ao negative check
+      const categoriesOnlyHealth: TransactionCategory[] = [
+        {
+          id: 'cat-saude',
+          family_id: 'fam-1',
+          name: 'Saúde & Cuidados Médicos',
+          type: 'expense',
+          icon: 'HeartPulse',
+          color: '#EF4444',
+          created_at: '',
+        },
+      ]
+
+      const matchVetWithoutPetsCategory = matchCategorization(
+        'CLINICA VET ESPACO ANIMAL',
+        'expense',
+        categoriesOnlyHealth,
+      )
+      expect(matchVetWithoutPetsCategory).toBeNull()
     })
   })
 })

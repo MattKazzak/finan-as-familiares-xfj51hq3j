@@ -174,7 +174,36 @@ export const AUTO_CATEGORIZATION_RULES: KeywordRule[] = [
     ],
   },
 
-  // 6. Saúde & Cuidados Médicos (essentials)
+  // 6. Pets (lifestyle) - Precedência antes de Saúde para evitar falso positivo em clínicas/hospitais veterinários
+  // Keywords: petz, cobasi, pet shop, veterinario, royal canin, premier pet, vet, animal
+  {
+    categoryNames: ['Pets'],
+    type: 'expense',
+    keywords: [
+      'CLINICA VET',
+      'HOSPITAL VET',
+      'PET SHOP',
+      'PETSHOP',
+      'PETZ',
+      'COBASI',
+      'ZOOPLANET',
+      'PETLOVE',
+      'PREMIER PET',
+      'ROYAL CANIN',
+      'VETERINARIO',
+      'VETERINÁRIO',
+      'VETERINAR',
+      'VET',
+      'PET',
+      'ANIMAL',
+      'CANIL',
+      'RACAO',
+      'RAÇÃO',
+      'BANHO E TOSA',
+    ],
+  },
+
+  // 7. Saúde & Cuidados Médicos (essentials)
   // Keywords: drogasil, droga raia, pague menos, unimed, bradesco saude, laboratorio, fleury, dentista, farmacia
   {
     categoryNames: ['Saúde & Cuidados Médicos', 'Saúde'],
@@ -371,28 +400,6 @@ export const AUTO_CATEGORIZATION_RULES: KeywordRule[] = [
     ],
   },
 
-  // 13. Pets (lifestyle)
-  // Keywords: petz, cobasi, pet shop, veterinario, royal canin, premier pet
-  {
-    categoryNames: ['Pets'],
-    type: 'expense',
-    keywords: [
-      'PETZ',
-      'COBASI',
-      'PET SHOP',
-      'PETSHOP',
-      'VETERINARIO',
-      'VETERINÁRIO',
-      'ROYAL CANIN',
-      'PREMIER PET',
-      'PETLOVE',
-      'RACAO',
-      'RAÇÃO',
-      'BANHO E TOSA',
-      'CLINICA VET',
-    ],
-  },
-
   // 14. Reserva de Emergência (future)
   // Keywords: tesouro selic, cdb liquidez diaria, reserva, caixinha nubank
   {
@@ -471,7 +478,7 @@ export function extractPatternFromDescription(desc: string): string {
   if (!norm) return ''
 
   // Remover termos de ruído comuns de extratos antes do padrão
-  const clean = norm
+  let clean = norm
     .replace(
       /\b(COMPRA|PAGAMENTO|PAGTO|PIX|TRANSF|TED|DOC|CARTAO|DEBITO|CREDITO|AUTO|POSTO)\b/g,
       ' ',
@@ -479,6 +486,14 @@ export function extractPatternFromDescription(desc: string): string {
     .replace(/\b\d{2,}\b/g, ' ') // remove blocos de números
     .replace(/\s+/g, ' ')
     .trim()
+
+  // Se restaram múltiplos termos e inicia com prefixo genérico de tipo de estabelecimento
+  // (ex.: "CLINICA VET ESPACO ANIMAL" -> "VET ESPACO ANIMAL"), remove o prefixo genérico
+  // preservando a especificidade do estabelecimento e evitando capturar termos isolados como "CLINICA"
+  const genericPrefixMatch = clean.match(/^(?:CLINICA|CLINICAS|HOSPITAL|CONSULTORIO)\s+(.+)$/i)
+  if (genericPrefixMatch && genericPrefixMatch[1].trim().length >= 2) {
+    clean = genericPrefixMatch[1].trim()
+  }
 
   return clean || norm
 }
@@ -575,6 +590,21 @@ export function matchCategorization(
 
   for (const rule of AUTO_CATEGORIZATION_RULES) {
     if (rule.type && rule.type !== type) continue
+
+    // Cláusula de desempate/exclusão (negative check) para Saúde & Cuidados Médicos:
+    // Nunca pontuar nem categorizar como Saúde se a descrição contiver radicais de pet/veterinária
+    const isHealthRule = rule.categoryNames.some((name) => {
+      const norm = normalizeText(name)
+      return norm.includes('SAUDE')
+    })
+
+    if (isHealthRule) {
+      const hasPetKeyword =
+        normDesc.includes('VET') || normDesc.includes('PET') || normDesc.includes('ANIMAL')
+      if (hasPetKeyword) {
+        continue
+      }
+    }
 
     const matchedKw = rule.keywords.find((kw) => {
       const normKw = normalizeText(kw)
