@@ -17,13 +17,22 @@ interface WhoIsUsingDialogProps {
 export function WhoIsUsingDialog({ open, onOpenChange }: WhoIsUsingDialogProps) {
   const { members, activeMemberId, setActiveMemberId } = useFamily()
 
+  // Regra de segurança: se houver menos de 2 membros, o diálogo não deve ser exibido.
+  // Seleciona automaticamente o membro único caso haja 1 membro.
+  const hasMultipleMembers = members.length > 1
+  const isActuallyOpen = open && hasMultipleMembers
+
   const handleSelectMember = (id: string) => {
     setActiveMemberId(id)
     onOpenChange(false)
   }
 
+  if (!hasMultipleMembers) {
+    return null
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isActuallyOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm w-[92vw] rounded-3xl p-6">
         <DialogHeader className="text-center sm:text-center pb-2">
           <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto mb-2 shadow-inner">

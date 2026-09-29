@@ -213,8 +213,14 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   }, [])
 
   const openWhoIsUsing = useCallback(() => {
-    setIsWhoIsUsingOpen(true)
-  }, [])
+    // Diálogo só deve abrir quando a família tiver 2 ou mais membros
+    if (members.length > 1) {
+      setIsWhoIsUsingOpen(true)
+    } else if (members.length === 1) {
+      setActiveMemberId(members[0].id)
+      setIsWhoIsUsingOpen(false)
+    }
+  }, [members, setActiveMemberId])
 
   const triggerRefresh = useCallback(() => {
     setRefreshTrigger((prev) => prev + 1)
@@ -251,19 +257,31 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     reloadFamily()
   }, [reloadFamily])
 
-  // Se houver membros carregados e nenhum membro ativo estiver configurado no localStorage,
-  // abre o modal "Quem está usando?" na primeira utilização do dispositivo.
+  // Regra de produto: "Quem está usando?" só aparece com 2 ou mais membros.
+  // Com exatamente 1 membro, seleciona-o automaticamente e NUNCA abre o diálogo.
   useEffect(() => {
-    if (!loading && members.length > 0) {
-      const stored = localStorage.getItem('financas_familiares_active_member_id')
-      if (!stored || !members.some((m) => m.id === stored)) {
-        // Se a família tem renda cadastrada, pode sugerir quem está usando; senão o onboarding terá prioridade
-        if (family?.monthly_net_income_cents && family.monthly_net_income_cents > 0) {
-          setIsWhoIsUsingOpen(true)
-        }
+    if (loading || members.length === 0) return
+
+    const stored = localStorage.getItem('financas_familiares_active_member_id')
+    const hasValidStored = stored && members.some((m) => m.id === stored)
+
+    if (members.length === 1) {
+      const singleMemberId = members[0].id
+      if (stored !== singleMemberId) {
+        setActiveMemberId(singleMemberId)
+      }
+      setIsWhoIsUsingOpen(false)
+      return
+    }
+
+    // Com 2 ou mais membros: se não há seleção válida salva e a família já tem renda (onboarding feito),
+    // abre o diálogo para escolha de perfil no dispositivo.
+    if (!hasValidStored) {
+      if (family?.monthly_net_income_cents && family.monthly_net_income_cents > 0) {
+        setIsWhoIsUsingOpen(true)
       }
     }
-  }, [loading, members, family?.monthly_net_income_cents])
+  }, [loading, members, family?.monthly_net_income_cents, setActiveMemberId])
 
   // Iniciar automaticamente o fluxo de Onboarding (OnboardingWizardDialog)
   // Gatilho: Se family.monthly_net_income_cents for nulo/zero OU a família não possuir categorias cadastradas

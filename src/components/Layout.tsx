@@ -22,6 +22,7 @@ export default function Layout() {
   const { signOut } = useAuth()
   const {
     family,
+    members,
     currentMember,
     refreshTrigger,
     triggerRefresh,
@@ -176,24 +177,42 @@ export default function Layout() {
 
         {/* Rodapé do Perfil Desktop */}
         <div className="p-4 border-t border-slate-100 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={openWhoIsUsing}
-            title="Trocar quem está usando"
-            className="flex items-center gap-2.5 text-left hover:bg-slate-50 p-1.5 rounded-xl transition-colors overflow-hidden flex-1 mr-1"
-          >
-            <Avatar className="w-8 h-8 border border-emerald-200 shrink-0">
-              <AvatarFallback className="bg-emerald-100 text-emerald-800 font-bold text-xs">
-                {userInitial}
-              </AvatarFallback>
-            </Avatar>
-            <div className="overflow-hidden">
-              <p className="text-xs font-semibold text-slate-800 truncate">
-                {currentMember?.name || 'Família'}
-              </p>
-              <p className="text-[10px] text-emerald-600 truncate font-medium">Trocar usuário ▾</p>
+          {members.length > 1 ? (
+            <button
+              type="button"
+              onClick={openWhoIsUsing}
+              title="Trocar quem está usando"
+              className="flex items-center gap-2.5 text-left hover:bg-slate-50 p-1.5 rounded-xl transition-colors overflow-hidden flex-1 mr-1 cursor-pointer"
+            >
+              <Avatar className="w-8 h-8 border border-emerald-200 shrink-0">
+                <AvatarFallback className="bg-emerald-100 text-emerald-800 font-bold text-xs">
+                  {userInitial}
+                </AvatarFallback>
+              </Avatar>
+              <div className="overflow-hidden">
+                <p className="text-xs font-semibold text-slate-800 truncate">
+                  {currentMember?.name || 'Família'}
+                </p>
+                <p className="text-[10px] text-emerald-600 truncate font-medium">
+                  Trocar usuário ▾
+                </p>
+              </div>
+            </button>
+          ) : (
+            <div className="flex items-center gap-2.5 text-left p-1.5 rounded-xl overflow-hidden flex-1 mr-1">
+              <Avatar className="w-8 h-8 border border-emerald-200 shrink-0">
+                <AvatarFallback className="bg-emerald-100 text-emerald-800 font-bold text-xs">
+                  {userInitial}
+                </AvatarFallback>
+              </Avatar>
+              <div className="overflow-hidden">
+                <p className="text-xs font-semibold text-slate-800 truncate">
+                  {currentMember?.name || 'Família'}
+                </p>
+                <p className="text-[10px] text-slate-400 truncate font-medium">Administrador</p>
+              </div>
             </div>
-          </button>
+          )}
           <button
             onClick={handleSignOut}
             title="Sair da conta"
@@ -215,21 +234,34 @@ export default function Layout() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div
-              onClick={openWhoIsUsing}
-              title="Toque para trocar quem está usando"
-              className="flex items-center gap-2 cursor-pointer group bg-slate-50 hover:bg-emerald-50 px-2.5 py-1 rounded-full border border-slate-200/80 transition-all"
-            >
-              <Avatar className="w-7 h-7 border border-emerald-200 shadow-sm group-hover:ring-2 group-hover:ring-emerald-400 transition-all">
-                <AvatarFallback className="bg-gradient-to-tr from-emerald-600 to-teal-700 text-white font-bold text-xs">
-                  {userInitial}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-xs font-medium text-slate-700 group-hover:text-emerald-800 transition-colors flex items-center gap-1">
-                <span>{currentMember?.name || 'Família'}</span>
-                <span className="text-[10px] text-slate-400">▾</span>
-              </span>
-            </div>
+            {members.length > 1 ? (
+              <div
+                onClick={openWhoIsUsing}
+                title="Toque para trocar quem está usando"
+                className="flex items-center gap-2 cursor-pointer group bg-slate-50 hover:bg-emerald-50 px-2.5 py-1 rounded-full border border-slate-200/80 transition-all"
+              >
+                <Avatar className="w-7 h-7 border border-emerald-200 shadow-sm group-hover:ring-2 group-hover:ring-emerald-400 transition-all">
+                  <AvatarFallback className="bg-gradient-to-tr from-emerald-600 to-teal-700 text-white font-bold text-xs">
+                    {userInitial}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-xs font-medium text-slate-700 group-hover:text-emerald-800 transition-colors flex items-center gap-1">
+                  <span>{currentMember?.name || 'Família'}</span>
+                  <span className="text-[10px] text-slate-400">▾</span>
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200/80">
+                <Avatar className="w-7 h-7 border border-emerald-200 shadow-sm">
+                  <AvatarFallback className="bg-gradient-to-tr from-emerald-600 to-teal-700 text-white font-bold text-xs">
+                    {userInitial}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-xs font-medium text-slate-700">
+                  <span>{currentMember?.name || 'Família'}</span>
+                </span>
+              </div>
+            )}
           </div>
         </header>
 
@@ -376,6 +408,12 @@ export default function Layout() {
         onSuccess={async () => {
           if (family?.id) {
             sessionStorage.setItem(`onboarding_dismissed_${family.id}`, 'true')
+          }
+          // Se a família possui apenas 1 membro, garante que ele esteja imediatamente
+          // definido como membro ativo no localStorage e fecha qualquer diálogo "Quem está usando?"
+          if (members.length === 1) {
+            localStorage.setItem('financas_familiares_active_member_id', members[0].id)
+            setIsWhoIsUsingOpen(false)
           }
           await reloadFamily()
           triggerRefresh()
