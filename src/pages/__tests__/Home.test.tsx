@@ -117,42 +117,43 @@ describe('Home Page - Card Orçamento em 3 Baldes (50/30/20)', () => {
     expect(screen.queryByText('Orçamento do Mês')).toBeNull()
   })
 
-  it('exibe os 3 baldes com seus rótulos, percentuais e valores calculados a partir da renda', async () => {
+  it('exibe os 3 baldes simplificados com seus rótulos, percentuais e valores restantes calculados', async () => {
     render(
       <MemoryRouter>
         <Home />
       </MemoryRouter>,
     )
 
-    // Necessidades (50% de 6.000 = 3.000)
+    // Necessidades (50% de 6.000 = 3.000, gasto 1.500 -> resta 1.500)
     expect(screen.getByText('Necessidades')).toBeDefined()
     expect(screen.getByText('(50%)')).toBeDefined()
-    expect(screen.getByText(/1\.500,00/)).toBeDefined()
-    expect(screen.getByText(/\/ R\$\s*3\.000,00/)).toBeDefined()
+    expect(screen.getByText(/resta R\$\s*1\.500,00/i)).toBeDefined()
 
-    // Estilo de Vida (30% de 6.000 = 1.800)
+    // Estilo de Vida (30% de 6.000 = 1.800, gasto 600 -> resta 1.200)
     expect(screen.getByText('Estilo de Vida')).toBeDefined()
     expect(screen.getByText('(30%)')).toBeDefined()
-    expect(screen.getByText(/600,00/)).toBeDefined()
-    expect(screen.getByText(/\/ R\$\s*1\.800,00/)).toBeDefined()
+    expect(screen.getByText(/resta R\$\s*1\.200,00/i)).toBeDefined()
 
-    // Futuro & Metas (20% de 6.000 = 1.200)
+    // Futuro & Metas (20% de 6.000 = 1.200, gasto 400 -> resta 800)
     expect(screen.getByText('Futuro & Metas')).toBeDefined()
     expect(screen.getByText('(20%)')).toBeDefined()
-    expect(screen.getByText(/400,00/)).toBeDefined()
-    expect(screen.getByText(/\/ R\$\s*1\.200,00/)).toBeDefined()
+    expect(screen.getByText(/resta R\$\s*800,00/i)).toBeDefined()
   })
 
-  it('exibe o destaque "Disponível em Estilo de Vida" com o saldo restante (1.800 - 600 = 1.200)', async () => {
+  it('exibe o número herói safe-to-spend "Livre para gastar este mês" com contexto do balde Estilo de Vida', async () => {
     render(
       <MemoryRouter>
         <Home />
       </MemoryRouter>,
     )
 
-    expect(screen.getByText(/Disponível em Estilo de Vida/i)).toBeDefined()
-    // Valor restante R$ 1.200,00
+    expect(screen.getByText(/Livre para gastar este mês/i)).toBeDefined()
+    // Valor restante R$ 1.200,00 (1.800 - 600)
     expect(screen.getByText(/1\.200,00/)).toBeDefined()
+    // Sublinha de contexto único: "Usado R$ 600,00 de R$ 1.800,00"
+    expect(screen.getByText(/Usado R\$\s*600,00 de R\$\s*1\.800,00/i)).toBeDefined()
+    // Não exibe o badge de renda no cabeçalho do card
+    expect(screen.queryByText(/6\.000,00\/mês/)).toBeNull()
   })
 
   it('navega para /carteira ao clicar em "Ver detalhes na Carteira →"', () => {
@@ -185,8 +186,10 @@ describe('Home Page - Card Orçamento em 3 Baldes (50/30/20)', () => {
     expect(
       screen.getByText('Defina a renda na Carteira para calcular o saldo livre.'),
     ).toBeDefined()
-    // Mostra tetos como 0,00 sem travar ou quebrar
-    expect(screen.getAllByText(/\/ R\$\s*0,00/).length).toBe(3)
+    // Baldes mostram os gastos sem travar
+    expect(screen.getByText('Necessidades')).toBeDefined()
+    expect(screen.getByText('Estilo de Vida')).toBeDefined()
+    expect(screen.getByText('Futuro & Metas')).toBeDefined()
   })
 
   describe('Rótulo Visual Inteligente de Receitas', () => {
@@ -376,10 +379,12 @@ describe('Home Page - Card Orçamento em 3 Baldes (50/30/20)', () => {
         expect(screen.getByText('Orçamento em 3 Baldes')).toBeDefined()
       })
 
-      // Rótulos completos dos baldes presentes
-      expect(screen.getByText('Moradia, mercado, saúde, contas')).toBeDefined()
-      expect(screen.getByText('Lazer, refeições fora, compras')).toBeDefined()
-      expect(screen.getByText('Reserva, metas, investimentos')).toBeDefined()
+      // Linha de exemplos unificada presente
+      expect(
+        screen.getByText(
+          'Necessidades: moradia e mercado · Estilo: lazer e refeições · Futuro: reserva e metas',
+        ),
+      ).toBeDefined()
 
       // O container principal da Home não deve ter elementos com a classe truncate
       const truncatedElements = container.querySelectorAll('.truncate')

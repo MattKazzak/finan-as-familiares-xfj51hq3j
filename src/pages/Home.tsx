@@ -516,185 +516,207 @@ export default function Home() {
         {/* CARD ORÇAMENTO EM 3 BALDES (Desktop 4 col) */}
         <div className="md:col-span-4 bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div>
-            {/* Header do Card */}
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-base shadow-2xs shrink-0">
-                  ⚖️
-                </div>
-                <div className="min-w-0">
-                  <h3 className="font-bold text-sm text-slate-900 leading-tight break-words">
-                    Orçamento em 3 Baldes
-                  </h3>
-                  <span className="text-[10px] text-slate-400 font-medium block">
-                    Modelo 50 / 30 / 20
-                  </span>
-                </div>
+            {/* Header do Card (enxuto: ícone ⚖️ + título + subtítulo, sem badge de renda concorrente) */}
+            <div className="flex items-center gap-2 mb-3.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-base shadow-2xs shrink-0">
+                ⚖️
               </div>
-              {bucketsData.hasIncomeConfigured && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 tabular-nums shrink-0">
-                  {formatBRL(bucketsData.netIncomeCents)}/mês
+              <div className="min-w-0">
+                <h3 className="font-bold text-sm text-slate-900 leading-tight break-words">
+                  Orçamento em 3 Baldes
+                </h3>
+                <span className="text-[10px] text-slate-400 font-medium block">
+                  Modelo 50 / 30 / 20
                 </span>
-              )}
-            </div>
-
-            {/* Destaque no topo: Saldo livre imediato em Estilo de Vida */}
-            <div
-              className={`p-3 rounded-2xl mb-4 border transition-all ${
-                !bucketsData.hasIncomeConfigured
-                  ? 'bg-slate-50 border-slate-200/80 text-slate-600'
-                  : bucketsData.lifestyle.availableCents >= 0
-                    ? 'bg-amber-50/80 border-amber-200/80 text-amber-950'
-                    : 'bg-rose-50/80 border-rose-200/80 text-rose-950'
-              }`}
-            >
-              <div className="flex items-center justify-between gap-1 mb-0.5">
-                <span className="text-[10px] uppercase font-bold tracking-wider opacity-80 flex items-center gap-1">
-                  <span>🏖️</span>
-                  <span>Disponível em Estilo de Vida</span>
-                </span>
-                {bucketsData.hasIncomeConfigured && bucketsData.lifestyle.isOver && (
-                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-rose-200/80 text-rose-800 shrink-0">
-                    Estourado
-                  </span>
-                )}
-              </div>
-
-              {bucketsData.hasIncomeConfigured ? (
-                <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 mt-1">
-                  <span
-                    className={`text-lg sm:text-xl font-black tracking-tight tabular-nums break-words ${
-                      bucketsData.lifestyle.availableCents >= 0 ? 'text-amber-900' : 'text-rose-600'
-                    }`}
-                  >
-                    {bucketsData.lifestyle.availableCents < 0 ? '− ' : ''}
-                    {formatBRL(Math.abs(bucketsData.lifestyle.availableCents))}
-                  </span>
-                  <span className="text-[10px] opacity-75 font-medium tabular-nums">
-                    {bucketsData.lifestyle.availableCents >= 0
-                      ? 'saldo livre p/ o mês'
-                      : 'acima do sugerido'}
-                  </span>
-                </div>
-              ) : (
-                <p className="text-xs text-slate-500 mt-1 break-words">
-                  Defina a renda na Carteira para calcular o saldo livre.
-                </p>
-              )}
-            </div>
-
-            {/* As 3 Barras de Progresso Proporcionais dos Baldes */}
-            <div className="space-y-3.5">
-              {/* Balde 1: 🛡️ Necessidades (50%) - Cor Azul / Índigo */}
-              <div className="space-y-1.5">
-                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-xs">
-                  <span className="font-semibold text-slate-700 flex items-center gap-1">
-                    <span>🛡️</span>
-                    <span className="font-bold text-slate-800">Necessidades</span>
-                    <span className="text-[10px] text-slate-400 font-medium">(50%)</span>
-                  </span>
-                  <span className="font-bold text-slate-700 tabular-nums text-[11px] break-words">
-                    {formatBRL(bucketsData.essentials.spentCents)}
-                    <span className="text-slate-400 font-normal">
-                      {' '}
-                      / {formatBRL(bucketsData.essentials.limitCents)}
-                    </span>
-                  </span>
-                </div>
-
-                <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-700 bg-indigo-600"
-                    style={{
-                      width: `${Math.min(bucketsData.essentials.percent, 100)}%`,
-                    }}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between gap-2 text-[10px] text-slate-400 font-medium">
-                  <span className="break-words leading-tight">Moradia, mercado, saúde, contas</span>
-                  <span
-                    className={`font-semibold tabular-nums shrink-0 ${
-                      bucketsData.essentials.isOver ? 'text-rose-600 font-bold' : 'text-slate-500'
-                    }`}
-                  >
-                    {bucketsData.essentials.percent}%
-                  </span>
-                </div>
-              </div>
-
-              {/* Balde 2: 🏖️ Estilo de Vida (30%) - Cor Âmbar / Violeta */}
-              <div className="space-y-1.5">
-                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-xs">
-                  <span className="font-semibold text-slate-700 flex items-center gap-1">
-                    <span>🏖️</span>
-                    <span className="font-bold text-slate-800">Estilo de Vida</span>
-                    <span className="text-[10px] text-slate-400 font-medium">(30%)</span>
-                  </span>
-                  <span className="font-bold text-slate-700 tabular-nums text-[11px] break-words">
-                    {formatBRL(bucketsData.lifestyle.spentCents)}
-                    <span className="text-slate-400 font-normal">
-                      {' '}
-                      / {formatBRL(bucketsData.lifestyle.limitCents)}
-                    </span>
-                  </span>
-                </div>
-
-                <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-700 bg-amber-500"
-                    style={{
-                      width: `${Math.min(bucketsData.lifestyle.percent, 100)}%`,
-                    }}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between gap-2 text-[10px] text-slate-400 font-medium">
-                  <span className="break-words leading-tight">Lazer, refeições fora, compras</span>
-                  <span
-                    className={`font-semibold tabular-nums shrink-0 ${
-                      bucketsData.lifestyle.isOver ? 'text-rose-600 font-bold' : 'text-slate-500'
-                    }`}
-                  >
-                    {bucketsData.lifestyle.percent}%
-                  </span>
-                </div>
-              </div>
-
-              {/* Balde 3: 🎯 Futuro & Metas (20%) - Cor Esmeralda */}
-              <div className="space-y-1.5">
-                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-xs">
-                  <span className="font-semibold text-slate-700 flex items-center gap-1">
-                    <span>🎯</span>
-                    <span className="font-bold text-slate-800">Futuro & Metas</span>
-                    <span className="text-[10px] text-slate-400 font-medium">(20%)</span>
-                  </span>
-                  <span className="font-bold text-slate-700 tabular-nums text-[11px] break-words">
-                    {formatBRL(bucketsData.future.spentCents)}
-                    <span className="text-slate-400 font-normal">
-                      {' '}
-                      / {formatBRL(bucketsData.future.limitCents)}
-                    </span>
-                  </span>
-                </div>
-
-                <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-700 bg-emerald-600"
-                    style={{
-                      width: `${Math.min(bucketsData.future.percent, 100)}%`,
-                    }}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between gap-2 text-[10px] text-slate-400 font-medium">
-                  <span className="break-words leading-tight">Reserva, metas, investimentos</span>
-                  <span className="font-semibold text-slate-500 tabular-nums shrink-0">
-                    {bucketsData.future.percent}%
-                  </span>
-                </div>
               </div>
             </div>
+
+            {/* Número herói (safe-to-spend): valor livre para gastar em Estilo de Vida */}
+            {(() => {
+              if (!bucketsData.hasIncomeConfigured) {
+                return (
+                  <div className="p-3.5 rounded-2xl mb-4 border border-dashed border-slate-200 bg-slate-50/80 text-slate-600 transition-all">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
+                      Livre para gastar este mês
+                    </span>
+                    <p className="text-xs text-slate-500 mt-1 break-words leading-relaxed">
+                      Defina a renda na Carteira para calcular o saldo livre.
+                    </p>
+                  </div>
+                )
+              }
+
+              const freeCents = bucketsData.lifestyle.availableCents
+              const isOver = bucketsData.lifestyle.isOver
+              const percentConsumed = bucketsData.lifestyle.percent
+              const isTight = !isOver && percentConsumed >= 80
+
+              // Farol visual refinado (verde quando sobra folga, âmbar quando apertado, vermelho quando estourado)
+              let heroContainerBg = 'bg-emerald-50/70 border-emerald-200/70'
+              let heroLabelColor = 'text-emerald-700/90'
+              let heroValueColor = 'text-emerald-950'
+              let heroSubtextColor = 'text-emerald-700/80'
+
+              if (isOver) {
+                heroContainerBg = 'bg-rose-50/80 border-rose-200/80'
+                heroLabelColor = 'text-rose-700/90'
+                heroValueColor = 'text-rose-950'
+                heroSubtextColor = 'text-rose-700/80'
+              } else if (isTight) {
+                heroContainerBg = 'bg-amber-50/80 border-amber-200/80'
+                heroLabelColor = 'text-amber-800/90'
+                heroValueColor = 'text-amber-950'
+                heroSubtextColor = 'text-amber-800/80'
+              }
+
+              return (
+                <div className={`p-3.5 rounded-2xl mb-4 border transition-all ${heroContainerBg}`}>
+                  <div className="flex items-center justify-between gap-1.5 mb-1 min-w-0">
+                    <span
+                      className={`text-[10px] uppercase font-bold tracking-wider flex items-center gap-1 min-w-0 ${heroLabelColor}`}
+                    >
+                      <span className="shrink-0">✨</span>
+                      <span className="break-words">Livre para gastar este mês</span>
+                    </span>
+                    {isOver ? (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-rose-200/80 text-rose-800 shrink-0 whitespace-nowrap">
+                        Estourado
+                      </span>
+                    ) : isTight ? (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-200/80 text-amber-800 shrink-0 whitespace-nowrap">
+                        Atenção
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-1">
+                    <div
+                      className={`text-xl sm:text-2xl font-black tracking-tight tabular-nums break-words leading-none ${heroValueColor}`}
+                    >
+                      {freeCents < 0 ? '− ' : ''}
+                      {formatBRL(Math.abs(freeCents))}
+                    </div>
+                    {/* Sublinha única de contexto: sem repetir depois */}
+                    <div
+                      className={`text-[11px] font-medium mt-1.5 break-words leading-tight ${heroSubtextColor}`}
+                    >
+                      {isOver ? (
+                        <span>
+                          Acima do teto · usado {formatBRL(bucketsData.lifestyle.spentCents)} de{' '}
+                          {formatBRL(bucketsData.lifestyle.limitCents)}
+                        </span>
+                      ) : (
+                        <span>
+                          Usado {formatBRL(bucketsData.lifestyle.spentCents)} de{' '}
+                          {formatBRL(bucketsData.lifestyle.limitCents)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* As 3 Barras de Balde Simplificadas */}
+            <div className="space-y-3">
+              {[
+                {
+                  key: 'essentials',
+                  name: 'Necessidades',
+                  emoji: '🛡️',
+                  percentModel: '50%',
+                  spent: bucketsData.essentials.spentCents,
+                  limit: bucketsData.essentials.limitCents,
+                  percent: bucketsData.essentials.percent,
+                  isOver: bucketsData.essentials.isOver,
+                  barBg: 'bg-indigo-600',
+                },
+                {
+                  key: 'lifestyle',
+                  name: 'Estilo de Vida',
+                  emoji: '🏖️',
+                  percentModel: '30%',
+                  spent: bucketsData.lifestyle.spentCents,
+                  limit: bucketsData.lifestyle.limitCents,
+                  percent: bucketsData.lifestyle.percent,
+                  isOver: bucketsData.lifestyle.isOver,
+                  barBg: 'bg-amber-500',
+                },
+                {
+                  key: 'future',
+                  name: 'Futuro & Metas',
+                  emoji: '🎯',
+                  percentModel: '20%',
+                  spent: bucketsData.future.spentCents,
+                  limit: bucketsData.future.limitCents,
+                  percent: bucketsData.future.percent,
+                  isOver: bucketsData.future.isOver,
+                  barBg: 'bg-emerald-600',
+                },
+              ].map((bucket) => {
+                const remaining = bucket.limit - bucket.spent
+                const hasSpent = bucket.spent > 0
+                const isOver = bucket.isOver
+
+                return (
+                  <div key={bucket.key} className="space-y-1.5">
+                    {/* Linha topo do balde: Nome completo + % do modelo à esquerda | Valor restante à direita */}
+                    <div className="flex items-baseline justify-between gap-2 min-w-0">
+                      <span className="font-semibold text-slate-800 text-xs flex items-center gap-1.5 min-w-0">
+                        <span className="shrink-0">{bucket.emoji}</span>
+                        <span className="font-bold break-words">{bucket.name}</span>
+                        <span className="text-[10px] text-slate-400 font-medium shrink-0">
+                          ({bucket.percentModel})
+                        </span>
+                      </span>
+
+                      {/* Figura única de saldo restante / estourado / intacto */}
+                      <span className="text-right shrink-0 tabular-nums">
+                        {bucketsData.hasIncomeConfigured ? (
+                          isOver ? (
+                            <span className="text-[11px] font-bold text-rose-600 break-words">
+                              estourou {formatBRL(Math.abs(remaining))}
+                            </span>
+                          ) : !hasSpent ? (
+                            <span className="text-[11px] font-semibold text-slate-700 break-words">
+                              resta {formatBRL(remaining)}{' '}
+                              <span className="text-[10px] text-slate-400 font-normal">
+                                (intacto)
+                              </span>
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-bold text-slate-700 break-words">
+                              resta {formatBRL(remaining)}
+                            </span>
+                          )
+                        ) : (
+                          <span className="text-[11px] text-slate-400 font-medium">
+                            {formatBRL(bucket.spent)}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Barra de progresso simplificada e limpa */}
+                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-700 ${
+                          isOver ? 'bg-rose-500' : bucket.barBg
+                        }`}
+                        style={{
+                          width: `${Math.min(bucket.percent, 100)}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Linha discreta de rodapé unificada com os exemplos das categorias */}
+            <p className="mt-3.5 pt-2 border-t border-slate-100 text-[10px] text-slate-400 font-medium break-words leading-relaxed text-center sm:text-left">
+              Necessidades: moradia e mercado · Estilo: lazer e refeições · Futuro: reserva e metas
+            </p>
           </div>
 
           {/* Link sutil para Carteira */}
