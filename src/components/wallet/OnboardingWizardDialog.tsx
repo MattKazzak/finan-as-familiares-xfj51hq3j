@@ -184,7 +184,7 @@ export function OnboardingWizardDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-[calc(100vw-2rem)] sm:w-full sm:max-w-lg rounded-3xl p-4 sm:p-7 bg-white border border-slate-200/80 shadow-2xl max-h-[92vh] overflow-x-hidden overflow-y-auto"
+        className="w-[calc(100%-2rem)] max-w-[calc(100vw-2rem)] sm:w-full sm:max-w-lg rounded-3xl p-4 sm:p-7 bg-white border border-slate-200/80 shadow-2xl max-h-[92vh] overflow-x-hidden overflow-y-auto box-border"
         onInteractOutside={(e) => {
           // Mantém modal acolhedor focado até o usuário concluir ou clicar em fechar
           e.preventDefault()

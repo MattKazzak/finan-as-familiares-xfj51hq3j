@@ -46,6 +46,14 @@ describe('OnboardingWizardDialog', () => {
 
     // Botão de conclusão
     expect(screen.getByRole('button', { name: /Concluir e Ativar meu Plano/i })).toBeDefined()
+
+    // Valida que o container do DialogContent possui classes de centralização e prevenção de overflow horizontal
+    const dialogContent = screen.getByRole('dialog')
+    expect(dialogContent.className).toContain('left-1/2')
+    expect(dialogContent.className).toContain('top-1/2')
+    expect(dialogContent.className).toContain('-translate-x-1/2')
+    expect(dialogContent.className).toContain('-translate-y-1/2')
+    expect(dialogContent.className).toContain('overflow-x-hidden')
   })
 
   it('abre seletor de modelos ao clicar no link sutil', () => {
