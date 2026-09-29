@@ -462,7 +462,7 @@ export function OnboardingWizardDialog({
                 type="button"
                 onClick={handleActivatePlan}
                 disabled={isActivating}
-                className="w-full flex-1 h-12 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-emerald-700/20 flex items-center justify-center gap-2 transition-all cursor-pointer min-w-0 px-4"
+                className="w-full flex-1 h-12 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-emerald-700/20 flex items-center justify-center gap-2 transition-all cursor-pointer min-w-0 px-4 disabled:opacity-75 disabled:cursor-not-allowed"
               >
                 {isActivating ? (
                   <span className="flex items-center justify-center gap-2 break-words text-center">

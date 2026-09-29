@@ -17,6 +17,37 @@ export async function createNewFamilyWorkspace(
   return data as string
 }
 
+export interface ActivateFamilyOnboardingPlanParams {
+  familyId: string
+  monthlyNetIncomeCents: number
+  modelPresetId?: '50_30_20' | '60_25_15' | '70_20_10'
+}
+
+export interface ActivateFamilyOnboardingPlanResult {
+  success: boolean
+  family_id: string
+  monthly_net_income_cents: number
+  model_preset_id: string
+  categories_count: number
+  subcategories_count: number
+  total_budget_cents: number
+}
+
+export async function activateFamilyOnboardingPlanRpc({
+  familyId,
+  monthlyNetIncomeCents,
+  modelPresetId = '50_30_20',
+}: ActivateFamilyOnboardingPlanParams): Promise<ActivateFamilyOnboardingPlanResult> {
+  const { data, error } = await (supabase as any).rpc('activate_family_onboarding_plan', {
+    p_family_id: familyId,
+    p_monthly_net_income_cents: monthlyNetIncomeCents,
+    p_model_preset_id: modelPresetId,
+  })
+
+  if (error) throw error
+  return data as ActivateFamilyOnboardingPlanResult
+}
+
 export async function fetchFamilyData() {
   const {
     data: { user },

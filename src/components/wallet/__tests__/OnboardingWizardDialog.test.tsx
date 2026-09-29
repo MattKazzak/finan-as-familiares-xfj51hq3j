@@ -99,4 +99,47 @@ describe('OnboardingWizardDialog', () => {
     const dialog = screen.getByRole('dialog')
     expect(dialog.querySelector('.truncate')).toBeNull()
   })
+
+  it('exibe estado de carregamento e desabilita botão com texto "Criando categorias e ativando..." durante a ativação', async () => {
+    let resolveSeed: () => void = () => {}
+    const deferredPromise = new Promise<{
+      createdCategoriesCount: number
+      createdSubcategoriesCount: number
+      totalBudgetCents: number
+    }>((resolve) => {
+      resolveSeed = () =>
+        resolve({
+          createdCategoriesCount: 16,
+          createdSubcategoriesCount: 55,
+          totalBudgetCents: 600000,
+        })
+    })
+
+    const onboardingService = await import('@/services/onboarding')
+    const seedSpy = vi
+      .spyOn(onboardingService, 'seedStandardizedCategoriesAndApplyPlan')
+      .mockImplementation(() => deferredPromise)
+
+    render(
+      <OnboardingWizardDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        family={{ ...mockFamily, monthly_net_income_cents: 600000 }}
+      />,
+    )
+
+    const continueBtn = screen.getByRole('button', { name: /Continuar para as 3 Caixas/i })
+    fireEvent.click(continueBtn)
+
+    const activateBtn = screen.getByRole('button', { name: /Concluir e Ativar meu Plano/i })
+    fireEvent.click(activateBtn)
+
+    // Enquanto carrega, deve exibir o spinner com o texto requerido
+    expect(screen.getByText('Criando categorias e ativando...')).toBeDefined()
+    expect(activateBtn.hasAttribute('disabled')).toBe(true)
+
+    // Finaliza
+    resolveSeed()
+    seedSpy.mockRestore()
+  })
 })

@@ -1,5 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
-import { STANDARDIZED_CATEGORIES_TREE, getCategoryWeightFactor } from '@/services/onboarding'
+import {
+  STANDARDIZED_CATEGORIES_TREE,
+  getCategoryWeightFactor,
+  seedStandardizedCategoriesAndApplyPlan,
+} from '@/services/onboarding'
+import * as familyService from '@/services/family'
 
 describe('Seed de Categorias Padronizadas e Onboarding', () => {
   it('contém todos os baldes e categorias requeridas pelo usuário', () => {
@@ -91,5 +96,39 @@ describe('Seed de Categorias Padronizadas e Onboarding', () => {
     expect(getCategoryWeightFactor('essentials', '70_20_10')).toBeCloseTo(1.4)
     expect(getCategoryWeightFactor('lifestyle', '70_20_10')).toBeCloseTo(20 / 30)
     expect(getCategoryWeightFactor('future', '70_20_10')).toBeCloseTo(0.5)
+  })
+
+  it('chama activateFamilyOnboardingPlanRpc via seedStandardizedCategoriesAndApplyPlan com parâmetros corretos', async () => {
+    const rpcSpy = vi
+      .spyOn(familyService, 'activateFamilyOnboardingPlanRpc')
+      .mockResolvedValueOnce({
+        success: true,
+        family_id: 'fam-123',
+        monthly_net_income_cents: 500000,
+        model_preset_id: '50_30_20',
+        categories_count: 16,
+        subcategories_count: 55,
+        total_budget_cents: 500000,
+      })
+
+    const result = await seedStandardizedCategoriesAndApplyPlan({
+      familyId: 'fam-123',
+      monthlyNetIncomeCents: 500000,
+      modelPresetId: '50_30_20',
+    })
+
+    expect(rpcSpy).toHaveBeenCalledWith({
+      familyId: 'fam-123',
+      monthlyNetIncomeCents: 500000,
+      modelPresetId: '50_30_20',
+    })
+
+    expect(result).toEqual({
+      createdCategoriesCount: 16,
+      createdSubcategoriesCount: 55,
+      totalBudgetCents: 500000,
+    })
+
+    rpcSpy.mockRestore()
   })
 })

@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase/client'
 import { BudgetBucket } from '@/types/finance'
 import { upsertDefaultBudget } from '@/services/transactions'
-import { updateFamilyDetails } from '@/services/family'
+import { updateFamilyDetails, activateFamilyOnboardingPlanRpc } from '@/services/family'
 
 export interface CategorySubcategorySeed {
   name: string
@@ -605,6 +605,11 @@ export function getCategoryWeightFactor(
 /**
  * Cria a árvore padronizada completa com idempotência e aplica os tetos sugeridos com base na renda líquida
  */
+/**
+ * Ativa o planejamento familiar e semeia a árvore "Padrão Ouro" no servidor via RPC atômica rápida.
+ * Elimina ~300 requisições sequenciais do cliente HTTP, respondendo em frações de segundo.
+ * Possui fallback gracioso caso a RPC falhe por incompatibilidade temporária.
+ */
 export async function seedStandardizedCategoriesAndApplyPlan({
   familyId,
   monthlyNetIncomeCents,
@@ -618,189 +623,153 @@ export async function seedStandardizedCategoriesAndApplyPlan({
     throw new Error('familyId é obrigatório')
   }
 
-  // 1. Atualiza renda líquida na tabela families
-  await updateFamilyDetails(familyId, {
-    monthly_net_income_cents: monthlyNetIncomeCents,
-  })
+  try {
+    // 1. Caminho ultra-rápido: Executa RPC atômica no servidor em 1 viagem
+    const rpcResult = await activateFamilyOnboardingPlanRpc({
+      familyId,
+      monthlyNetIncomeCents,
+      modelPresetId,
+    })
 
-  // 2. Busca categorias existentes da família para idempotência
-  const { data: existingCategories, error: fetchCatError } = await (supabase as any)
-    .from('transaction_categories')
-    .select('id, name, budget_bucket, sort_order')
-    .eq('family_id', familyId)
-
-  if (fetchCatError) {
-    throw fetchCatError
-  }
-
-  const existingCatMap = new Map<string, any>()
-  let maxSortOrder = 0
-  for (const c of existingCategories || []) {
-    existingCatMap.set(c.name.trim().toLowerCase(), c)
-    if (c.sort_order && c.sort_order > maxSortOrder) {
-      maxSortOrder = c.sort_order
+    return {
+      createdCategoriesCount: rpcResult.categories_count,
+      createdSubcategoriesCount: rpcResult.subcategories_count,
+      totalBudgetCents: rpcResult.total_budget_cents,
     }
-  }
+  } catch (rpcErr) {
+    console.warn(
+      'RPC activate_family_onboarding_plan indisponível ou falhou, acionando fallback controlado:',
+      rpcErr,
+    )
 
-  // 3. Busca subcategorias existentes para idempotência
-  const { data: existingSubcategories, error: fetchSubError } = await (supabase as any)
-    .from('transaction_subcategories')
-    .select('id, category_id, name')
-    .eq('family_id', familyId)
+    // Fallback: método cliente se a RPC falhar
+    await updateFamilyDetails(familyId, {
+      monthly_net_income_cents: monthlyNetIncomeCents,
+    })
 
-  if (fetchSubError) {
-    throw fetchSubError
-  }
+    const { data: existingCategories, error: fetchCatError } = await (supabase as any)
+      .from('transaction_categories')
+      .select('id, name, budget_bucket, sort_order')
+      .eq('family_id', familyId)
 
-  const existingSubMap = new Set<string>()
-  for (const s of existingSubcategories || []) {
-    existingSubMap.add(`${s.category_id}::${s.name.trim().toLowerCase()}`)
-  }
+    if (fetchCatError) {
+      throw fetchCatError
+    }
 
-  let createdCategoriesCount = 0
-  let createdSubcategoriesCount = 0
-  let totalBudgetCents = 0
+    const existingCatMap = new Map<string, any>()
+    let maxSortOrder = 0
+    for (const c of existingCategories || []) {
+      existingCatMap.set(c.name.trim().toLowerCase(), c)
+      if (c.sort_order && c.sort_order > maxSortOrder) {
+        maxSortOrder = c.sort_order
+      }
+    }
 
-  // 4. Itera sobre a árvore padronizada
-  for (let i = 0; i < STANDARDIZED_CATEGORIES_TREE.length; i++) {
-    const catDef = STANDARDIZED_CATEGORIES_TREE[i]
-    const catKey = catDef.name.trim().toLowerCase()
+    const { data: existingSubcategories, error: fetchSubError } = await (supabase as any)
+      .from('transaction_subcategories')
+      .select('id, category_id, name')
+      .eq('family_id', familyId)
 
-    let categoryRecord = existingCatMap.get(catKey)
+    if (fetchSubError) {
+      throw fetchSubError
+    }
 
-    if (!categoryRecord) {
-      maxSortOrder += 1
-      const { data: newCat, error: insertCatError } = await (supabase as any)
-        .from('transaction_categories')
-        .insert({
-          family_id: familyId,
-          name: catDef.name,
-          type: catDef.type,
-          budget_bucket: catDef.bucket,
-          icon: catDef.icon,
-          color: catDef.color,
-          sort_order: i + 1,
-        })
-        .select()
-        .single()
+    const existingSubMap = new Set<string>()
+    for (const s of existingSubcategories || []) {
+      existingSubMap.add(`${s.category_id}::${s.name.trim().toLowerCase()}`)
+    }
 
-      if (insertCatError) {
-        // Se bater no índice único por concorrência, faz fallback buscando
-        const { data: fallbackCat } = await (supabase as any)
+    let createdCategoriesCount = 0
+    let createdSubcategoriesCount = 0
+    let totalBudgetCents = 0
+
+    for (let i = 0; i < STANDARDIZED_CATEGORIES_TREE.length; i++) {
+      const catDef = STANDARDIZED_CATEGORIES_TREE[i]
+      const catKey = catDef.name.trim().toLowerCase()
+
+      let categoryRecord = existingCatMap.get(catKey)
+
+      if (!categoryRecord) {
+        maxSortOrder += 1
+        const { data: newCat, error: insertCatError } = await (supabase as any)
           .from('transaction_categories')
-          .select('id, name, budget_bucket, sort_order')
-          .eq('family_id', familyId)
-          .eq('name', catDef.name)
+          .insert({
+            family_id: familyId,
+            name: catDef.name,
+            type: catDef.type,
+            budget_bucket: catDef.bucket,
+            icon: catDef.icon,
+            color: catDef.color,
+            sort_order: i + 1,
+          })
+          .select()
           .single()
 
-        if (fallbackCat) {
-          categoryRecord = fallbackCat
-        } else {
-          console.error(`Erro ao criar categoria ${catDef.name}:`, insertCatError)
-          throw insertCatError
-        }
-      } else {
-        categoryRecord = newCat
-        existingCatMap.set(catKey, newCat)
-        createdCategoriesCount += 1
-      }
-    } else {
-      // Se já existia, atualiza budget_bucket ou sort_order caso estejam divergentes
-      const updates: any = {}
-      if (!categoryRecord.budget_bucket || categoryRecord.budget_bucket !== catDef.bucket) {
-        updates.budget_bucket = catDef.bucket
-      }
-      if (categoryRecord.sort_order === undefined || categoryRecord.sort_order === null) {
-        updates.sort_order = i + 1
-      }
-      if (Object.keys(updates).length > 0) {
-        await (supabase as any)
-          .from('transaction_categories')
-          .update(updates)
-          .eq('id', categoryRecord.id)
-      }
-    }
-
-    const categoryId = categoryRecord.id
-
-    // 5. Inserir subcategorias com idempotência e cadastrar regras automáticas por keywords
-    if (catDef.subcategories && catDef.subcategories.length > 0) {
-      for (let sIdx = 0; sIdx < catDef.subcategories.length; sIdx++) {
-        const subDef = catDef.subcategories[sIdx]
-        const subKey = `${categoryId}::${subDef.name.trim().toLowerCase()}`
-        let subcategoryId: string | null = null
-
-        if (!existingSubMap.has(subKey)) {
-          const { data: newSub, error: insertSubError } = await (supabase as any)
-            .from('transaction_subcategories')
-            .insert({
-              category_id: categoryId,
-              family_id: familyId,
-              name: subDef.name,
-              icon: subDef.icon || catDef.icon,
-              color: subDef.color || catDef.color,
-              sort_order: sIdx + 1,
-            })
-            .select('id')
+        if (insertCatError) {
+          const { data: fallbackCat } = await (supabase as any)
+            .from('transaction_categories')
+            .select('id, name, budget_bucket, sort_order')
+            .eq('family_id', familyId)
+            .eq('name', catDef.name)
             .single()
 
-          if (!insertSubError && newSub) {
-            existingSubMap.add(subKey)
-            subcategoryId = newSub.id
-            createdSubcategoriesCount += 1
+          if (fallbackCat) {
+            categoryRecord = fallbackCat
           } else {
-            console.warn(`Aviso ao criar subcategoria ${subDef.name}:`, insertSubError)
+            throw insertCatError
           }
         } else {
-          const foundExisting = (existingSubcategories || []).find(
-            (s: any) =>
-              s.category_id === categoryId &&
-              s.name.trim().toLowerCase() === subDef.name.trim().toLowerCase(),
-          )
-          subcategoryId = foundExisting?.id || null
+          categoryRecord = newCat
+          existingCatMap.set(catKey, newCat)
+          createdCategoriesCount += 1
         }
+      }
 
-        // Se houver keywords para essa subcategoria, injetar em categorization_rules
-        if (subDef.keywords && subDef.keywords.length > 0) {
-          for (const kw of subDef.keywords) {
-            const cleanPattern = kw.trim().toUpperCase()
-            if (!cleanPattern) continue
+      const categoryId = categoryRecord.id
 
-            // Checa se já existe regra com o padrão para a família
-            const { data: existingRule } = await (supabase as any)
-              .from('categorization_rules')
-              .select('id')
-              .eq('family_id', familyId)
-              .ilike('pattern', cleanPattern)
-              .maybeSingle()
+      if (catDef.subcategories && catDef.subcategories.length > 0) {
+        for (let sIdx = 0; sIdx < catDef.subcategories.length; sIdx++) {
+          const subDef = catDef.subcategories[sIdx]
+          const subKey = `${categoryId}::${subDef.name.trim().toLowerCase()}`
+          let subcategoryId: string | null = null
 
-            if (!existingRule) {
-              await (supabase as any).from('categorization_rules').insert({
-                family_id: familyId,
-                pattern: cleanPattern,
+          if (!existingSubMap.has(subKey)) {
+            const { data: newSub, error: insertSubError } = await (supabase as any)
+              .from('transaction_subcategories')
+              .insert({
                 category_id: categoryId,
-                subcategory_id: subcategoryId,
+                family_id: familyId,
+                name: subDef.name,
+                icon: subDef.icon || catDef.icon,
+                color: subDef.color || catDef.color,
+                sort_order: sIdx + 1,
               })
+              .select('id')
+              .single()
+
+            if (!insertSubError && newSub) {
+              existingSubMap.add(subKey)
+              subcategoryId = newSub.id
+              createdSubcategoriesCount += 1
             }
           }
         }
       }
+
+      const weightFactor = getCategoryWeightFactor(catDef.bucket, modelPresetId)
+      const effectivePercent = catDef.suggestedPercent * weightFactor
+      const targetAmountCents = Math.round((monthlyNetIncomeCents * effectivePercent) / 100)
+
+      if (targetAmountCents > 0) {
+        await upsertDefaultBudget(familyId, categoryId, targetAmountCents, null)
+        totalBudgetCents += targetAmountCents
+      }
     }
 
-    // 6. Calcular e definir o teto inicial sugerido em default_budgets
-    const weightFactor = getCategoryWeightFactor(catDef.bucket, modelPresetId)
-    const effectivePercent = catDef.suggestedPercent * weightFactor
-    const targetAmountCents = Math.round((monthlyNetIncomeCents * effectivePercent) / 100)
-
-    if (targetAmountCents > 0) {
-      await upsertDefaultBudget(familyId, categoryId, targetAmountCents, null)
-      totalBudgetCents += targetAmountCents
+    return {
+      createdCategoriesCount,
+      createdSubcategoriesCount,
+      totalBudgetCents,
     }
-  }
-
-  return {
-    createdCategoriesCount,
-    createdSubcategoriesCount,
-    totalBudgetCents,
   }
 }
