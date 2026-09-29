@@ -494,14 +494,14 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 
   const validateAndProcessFile = (file: File) => {
     const ext = file.name.split('.').pop()?.toLowerCase() || ''
-    if (ext !== 'ofx') {
-      if (ext === 'csv' || ext === 'pdf') {
+    if (ext !== 'ofx' && ext !== 'pdf') {
+      if (ext === 'csv') {
         setErrorMessage(
-          `O formato .${ext.toUpperCase()} não é aceito. No momento, o Finanças Familiares trabalha exclusivamente com extratos em formato OFX. Por favor, exporte seu extrato em .OFX no seu banco (ex.: Nubank, Inter, Itaú) e tente novamente.`,
+          'O formato .CSV não é aceito. Suportamos extratos em formato .OFX e faturas de cartão de crédito em .PDF (Nubank, Inter, C6, Itaú, etc.).',
         )
       } else {
         setErrorMessage(
-          'Formato não suportado. Por favor, selecione exclusivamente um arquivo com extensão .ofx gerado pelo seu banco.',
+          'Formato não suportado. Por favor, selecione um arquivo .OFX ou uma fatura em .PDF gerada pelo seu banco.',
         )
       }
       return
@@ -885,7 +885,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                   </div>
                   <p className="text-xs text-slate-500 truncate mt-0.5">
                     {step === 'upload'
-                      ? 'Arquivo OFX com conciliação automática e 100% de precisão bancária.'
+                      ? 'Extratos OFX e faturas de cartão em PDF com conciliação automática e inteligência de categorias.'
                       : `Revisão de lançamentos: ajuste categorias, membros, datas e confirme a importação`}
                   </p>
                 </div>
@@ -1033,7 +1033,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".ofx"
+                  accept=".ofx,.pdf"
                   onChange={handleFileInputChange}
                   className="hidden"
                 />
@@ -1048,20 +1048,20 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 
                 <h3 className="font-bold text-base text-slate-800">
                   {parsing
-                    ? 'Processando e categorizando extrato OFX...'
-                    : 'Arraste seu arquivo .OFX aqui'}
+                    ? 'Processando e categorizando extrato ou fatura...'
+                    : 'Arraste seu extrato .OFX ou fatura .PDF aqui'}
                 </h3>
                 <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 mb-4">
                   {parsing
-                    ? 'Lendo transações, identificando valores e aplicando inteligência de categorias...'
-                    : 'Ou clique para selecionar o arquivo .ofx do seu computador ou celular'}
+                    ? 'Lendo lançamentos, identificando parcelas e aplicando inteligência de categorias...'
+                    : 'Ou clique para selecionar o arquivo (.ofx ou fatura em .pdf) do seu dispositivo'}
                 </p>
 
-                {/* Badge exclusivo OFX */}
+                {/* Badges de formatos suportados */}
                 <div className="flex items-center justify-center gap-2 flex-wrap">
                   <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-emerald-600 text-white shadow-sm px-3.5 py-1.5 rounded-xl">
                     <Star className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
-                    <span>Formato Exclusivo: OFX (.ofx) • 100% Preciso</span>
+                    <span>Extrato OFX (.ofx) &amp; Fatura Cartão em PDF (.pdf)</span>
                   </span>
                 </div>
               </div>

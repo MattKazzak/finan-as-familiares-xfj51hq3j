@@ -270,26 +270,16 @@ DATA:OFXSGML
     })
   })
 
-  describe('parseStatementFile — Restrição exclusiva para .OFX', () => {
-    it('rejeita arquivos .csv com mensagem amigável em português explicando a restrição ao OFX', async () => {
+  describe('parseStatementFile — Suporte a .OFX e .PDF', () => {
+    it('rejeita arquivos .csv com mensagem orientando sobre suporte a OFX e faturas em PDF', async () => {
       const csvFile = new File(['data,valor,descricao\n2026-03-10,-50.00,Mercado'], 'extrato.csv', {
         type: 'text/csv',
       })
       const result = await parseStatementFile(csvFile)
       expect(result.success).toBe(false)
       expect(result.error).toContain('.CSV não é suportado')
-      expect(result.error).toContain('exclusivamente com importação de extrato em arquivo OFX')
-      expect(result.error).toContain('Nubank')
-    })
-
-    it('rejeita arquivos .pdf com mensagem amigável em português explicando a restrição ao OFX', async () => {
-      const pdfFile = new File(['%PDF-1.4 mock content'], 'fatura.pdf', {
-        type: 'application/pdf',
-      })
-      const result = await parseStatementFile(pdfFile)
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('.PDF não é suportado')
-      expect(result.error).toContain('exclusivamente com importação de extrato em arquivo OFX')
+      expect(result.error).toContain('OFX')
+      expect(result.error).toContain('PDF')
     })
 
     it('processa arquivo .ofx com sucesso', async () => {

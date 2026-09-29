@@ -37,7 +37,7 @@ export interface ParseDiagnostics {
 export interface ParseResult {
   success: boolean
   transactions: ParsedRawTransaction[]
-  format: 'ofx' | 'unknown'
+  format: 'ofx' | 'pdf' | 'unknown'
   error?: string
   warnings?: string[]
   ignoredCount?: number
@@ -647,41 +647,61 @@ export function parseOFX(content: string): ParseResult {
 }
 
 /**
- * Função principal para analisar arquivo enviado pelo usuário (aceita exclusivamente .ofx)
+ * Função principal para analisar arquivo enviado pelo usuário (aceita .ofx e .pdf)
  */
 export async function parseStatementFile(file: File): Promise<ParseResult> {
   const ext = file.name.split('.').pop()?.toLowerCase() || ''
 
-  // Validação estrita de extensão: aceita somente .ofx
-  if (ext !== 'ofx') {
-    if (ext === 'csv' || ext === 'pdf') {
+  // Validação de extensão: suporta .ofx e .pdf
+  if (ext === 'pdf') {
+    try {
+      // Import dinâmico ou direto do parser de PDF
+      const { parsePdfStatement } = await import('@/services/import/pdf-parser')
+      const res = await parsePdfStatement(file, file.name)
+      return {
+        ...res,
+        format: 'pdf',
+      }
+    } catch (err: any) {
       return {
         success: false,
         transactions: [],
-        format: 'unknown',
-        error: `O formato .${ext.toUpperCase()} não é suportado. Trabalhamos exclusivamente com importação de extrato em arquivo OFX. Baixe o arquivo OFX no aplicativo ou internet banking da sua conta/cartão (ex.: Nubank).`,
+        format: 'pdf',
+        error: err?.message || 'Falha ao ler a fatura em PDF selecionada.',
       }
     }
+  }
 
+  if (ext === 'ofx') {
+    try {
+      const text = await readFileAsText(file)
+      return parseOFX(text)
+    } catch (err: any) {
+      return {
+        success: false,
+        transactions: [],
+        format: 'ofx',
+        error: err?.message || 'Falha ao ler o arquivo OFX selecionado.',
+      }
+    }
+  }
+
+  if (ext === 'csv') {
     return {
       success: false,
       transactions: [],
       format: 'unknown',
       error:
-        'Formato de arquivo não suportado. Por favor, envie um arquivo com extensão .ofx gerado pelo seu banco.',
+        'O formato .CSV não é suportado. Suportamos importação de extratos em arquivo OFX e faturas de cartão de crédito em PDF (ex.: Nubank, Inter, C6, Itaú).',
     }
   }
 
-  try {
-    const text = await readFileAsText(file)
-    return parseOFX(text)
-  } catch (err: any) {
-    return {
-      success: false,
-      transactions: [],
-      format: 'ofx',
-      error: err?.message || 'Falha ao ler o arquivo OFX selecionado.',
-    }
+  return {
+    success: false,
+    transactions: [],
+    format: 'unknown',
+    error:
+      'Formato de arquivo não suportado. Por favor, envie um arquivo .OFX ou uma fatura em .PDF gerada pelo seu banco.',
   }
 }
 
