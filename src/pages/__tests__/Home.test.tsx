@@ -343,5 +343,47 @@ describe('Home Page - Card Orçamento em 3 Baldes (50/30/20)', () => {
       expect(screen.queryByText('Aguardando entradas do mês')).toBeNull()
       expect(screen.queryByText('[Registrar salário]')).toBeNull()
     })
+
+    it('não possui truncate nos elementos principais da Home (baldes 50/30/20, chips de membros, transações)', async () => {
+      mockFamily = {
+        id: 'fam-1',
+        name: 'Silva',
+        monthly_net_income_cents: 600000,
+      }
+      const currentMonth = new Date().toISOString().slice(0, 7)
+      vi.mocked(transactionsService.fetchTransactions).mockResolvedValue([
+        {
+          id: 'tx-long-name',
+          family_id: 'fam-1',
+          member_id: 'm-1',
+          category_id: 'cat-1',
+          amount_cents: 50000,
+          type: 'expense',
+          status: 'confirmed',
+          description: 'Supermercado e Feira de Orgânicos da Família',
+          transaction_date: `${currentMonth}-08`,
+          created_at: `${currentMonth}-08T10:00:00Z`,
+        },
+      ])
+
+      const { container } = render(
+        <MemoryRouter>
+          <Home />
+        </MemoryRouter>,
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Orçamento em 3 Baldes')).toBeDefined()
+      })
+
+      // Rótulos completos dos baldes presentes
+      expect(screen.getByText('Moradia, mercado, saúde, contas')).toBeDefined()
+      expect(screen.getByText('Lazer, refeições fora, compras')).toBeDefined()
+      expect(screen.getByText('Reserva, metas, investimentos')).toBeDefined()
+
+      // O container principal da Home não deve ter elementos com a classe truncate
+      const truncatedElements = container.querySelectorAll('.truncate')
+      expect(truncatedElements.length).toBe(0)
+    })
   })
 })

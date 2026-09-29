@@ -349,7 +349,7 @@ export default function Home() {
           }`}
         >
           <Users className="w-3.5 h-3.5 shrink-0" />
-          Todos
+          <span>Todos</span>
         </button>
         {members.map((m) => {
           const isSelected = selectedMemberId === m.id
@@ -358,16 +358,17 @@ export default function Home() {
               key={m.id}
               type="button"
               onClick={() => setSelectedMemberId(m.id)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
                 isSelected
                   ? 'bg-emerald-700 text-white shadow-sm ring-2 ring-emerald-600/30'
                   : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
               }`}
+              title={m.name}
             >
               <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[9px] font-bold shrink-0">
                 {m.name.charAt(0).toUpperCase()}
               </span>
-              {m.name}
+              <span>{m.name}</span>
             </button>
           )
         })}
@@ -427,7 +428,7 @@ export default function Home() {
                   <ArrowUpRight className="w-5 h-5 stroke-[2.5]" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <span className="text-[10px] sm:text-[11px] uppercase font-bold tracking-wider text-emerald-100/90 block truncate">
+                  <span className="text-[10px] sm:text-[11px] uppercase font-bold tracking-wider text-emerald-100/90 block break-words">
                     Receitas do Mês
                   </span>
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 mt-0.5">
@@ -499,10 +500,10 @@ export default function Home() {
                 <ArrowDownRight className="w-5 h-5 stroke-[2.5]" />
               </div>
               <div className="min-w-0 flex-1 overflow-hidden">
-                <span className="text-[10px] sm:text-[11px] uppercase font-bold tracking-wider text-emerald-100/90 block truncate">
+                <span className="text-[10px] sm:text-[11px] uppercase font-bold tracking-wider text-emerald-100/90 block break-words">
                   Despesas do Mês
                 </span>
-                <span className="text-base sm:text-lg font-bold text-white tabular-nums truncate block mt-0.5">
+                <span className="text-base sm:text-lg font-bold text-white tabular-nums break-words block mt-0.5">
                   {formatBRL(monthExpenseCents)}
                 </span>
               </div>
@@ -520,7 +521,7 @@ export default function Home() {
                   ⚖️
                 </div>
                 <div className="min-w-0">
-                  <h3 className="font-bold text-sm text-slate-900 leading-tight truncate">
+                  <h3 className="font-bold text-sm text-slate-900 leading-tight break-words">
                     Orçamento em 3 Baldes
                   </h3>
                   <span className="text-[10px] text-slate-400 font-medium block">
@@ -551,7 +552,7 @@ export default function Home() {
                   <span>Disponível em Estilo de Vida</span>
                 </span>
                 {bucketsData.hasIncomeConfigured && bucketsData.lifestyle.isOver && (
-                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-rose-200/80 text-rose-800">
+                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-rose-200/80 text-rose-800 shrink-0">
                     Estourado
                   </span>
                 )}
@@ -574,7 +575,7 @@ export default function Home() {
                   </span>
                 </div>
               ) : (
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-500 mt-1 break-words">
                   Defina a renda na Carteira para calcular o saldo livre.
                 </p>
               )}
@@ -608,8 +609,8 @@ export default function Home() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
-                  <span className="truncate mr-1">Moradia, mercado, saúde, contas</span>
+                <div className="flex items-center justify-between gap-2 text-[10px] text-slate-400 font-medium">
+                  <span className="break-words leading-tight">Moradia, mercado, saúde, contas</span>
                   <span
                     className={`font-semibold tabular-nums shrink-0 ${
                       bucketsData.essentials.isOver ? 'text-rose-600 font-bold' : 'text-slate-500'
@@ -646,8 +647,8 @@ export default function Home() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
-                  <span className="truncate mr-1">Lazer, refeições fora, compras</span>
+                <div className="flex items-center justify-between gap-2 text-[10px] text-slate-400 font-medium">
+                  <span className="break-words leading-tight">Lazer, refeições fora, compras</span>
                   <span
                     className={`font-semibold tabular-nums shrink-0 ${
                       bucketsData.lifestyle.isOver ? 'text-rose-600 font-bold' : 'text-slate-500'
@@ -684,8 +685,8 @@ export default function Home() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
-                  <span className="truncate mr-1">Reserva, metas, investimentos</span>
+                <div className="flex items-center justify-between gap-2 text-[10px] text-slate-400 font-medium">
+                  <span className="break-words leading-tight">Reserva, metas, investimentos</span>
                   <span className="font-semibold text-slate-500 tabular-nums shrink-0">
                     {bucketsData.future.percent}%
                   </span>
@@ -710,8 +711,8 @@ export default function Home() {
       <div className="bg-white rounded-3xl border border-slate-200/80 p-4 sm:p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4 gap-2">
           <div className="min-w-0">
-            <h3 className="font-bold text-base text-slate-900 truncate">Últimas Transações</h3>
-            <p className="text-xs text-slate-500 truncate">
+            <h3 className="font-bold text-base text-slate-900 break-words">Últimas Transações</h3>
+            <p className="text-xs text-slate-500 break-words">
               Histórico recente de receitas e despesas
             </p>
           </div>
@@ -831,9 +832,7 @@ export default function Home() {
                           <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[7px] font-bold shrink-0">
                             {tx.member?.name?.charAt(0).toUpperCase() || 'M'}
                           </span>
-                          <span className="max-w-[120px] sm:max-w-[150px] truncate">
-                            {tx.member?.name || 'Membro'}
-                          </span>
+                          <span className="break-words">{tx.member?.name || 'Membro'}</span>
                         </span>
 
                         <span className="text-slate-300 shrink-0 hidden xs:inline">•</span>

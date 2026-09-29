@@ -289,92 +289,92 @@ export function OnboardingWizardDialog({
             </div>
 
             {/* As 3 Caixas Visuais em Destaque */}
-            <div className="space-y-2.5 w-full min-w-0">
+            <div className="space-y-3 w-full min-w-0">
               {/* Caixa 1: Necessidades (50%) */}
-              <div className="p-3.5 sm:p-4 rounded-2xl bg-sky-50/80 border border-sky-200/90 flex items-center justify-between gap-2.5 sm:gap-3 shadow-2xs min-w-0">
-                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                  <div className="w-10 h-10 rounded-xl bg-sky-500 text-white flex items-center justify-center shrink-0 shadow-sm">
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-sky-50/80 border border-sky-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs min-w-0 transition-all">
+                <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                  <div className="w-10 h-10 rounded-xl bg-sky-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5 sm:mt-0">
                     <Shield className="w-5 h-5" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                      <span className="font-bold text-sm text-sky-950 truncate">
+                      <span className="font-bold text-sm text-sky-950 break-words">
                         🛡️ Necessidades
                       </span>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-200/70 text-sky-800 shrink-0">
                         {currentModel.essentialsPct}%
                       </span>
                     </div>
-                    <p className="text-[11px] text-sky-700/90 truncate mt-0.5">
+                    <p className="text-[11px] text-sky-700/90 break-words leading-relaxed mt-0.5">
                       Moradia, alimentação, transporte, saúde e contas
                     </p>
                   </div>
                 </div>
-                <div className="text-right shrink-0 pl-1">
-                  <span className="text-sm sm:text-base md:text-lg font-black text-sky-950 tabular-nums whitespace-nowrap block">
+                <div className="text-left sm:text-right shrink-0 pl-13 sm:pl-2 pt-1 sm:pt-0 border-t sm:border-t-0 border-sky-200/60 flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-center gap-x-2">
+                  <span className="text-base sm:text-lg md:text-xl font-black text-sky-950 tabular-nums break-words">
                     {formatBRL(bucketAmounts.essentials)}
                   </span>
-                  <span className="text-[10px] text-sky-600 block whitespace-nowrap">
+                  <span className="text-[10px] font-medium text-sky-600 shrink-0">
                     teto planejado
                   </span>
                 </div>
               </div>
 
               {/* Caixa 2: Estilo de Vida (30%) */}
-              <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50/80 border border-amber-200/90 flex items-center justify-between gap-2.5 sm:gap-3 shadow-2xs min-w-0">
-                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm">
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50/80 border border-amber-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs min-w-0 transition-all">
+                <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5 sm:mt-0">
                     <Sun className="w-5 h-5" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                      <span className="font-bold text-sm text-amber-950 truncate">
+                      <span className="font-bold text-sm text-amber-950 break-words">
                         🏖️ Estilo de Vida
                       </span>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200/70 text-amber-800 shrink-0">
                         {currentModel.lifestylePct}%
                       </span>
                     </div>
-                    <p className="text-[11px] text-amber-700/90 truncate mt-0.5">
+                    <p className="text-[11px] text-amber-700/90 break-words leading-relaxed mt-0.5">
                       Lazer, restaurantes, compras, assinaturas e pets
                     </p>
                   </div>
                 </div>
-                <div className="text-right shrink-0 pl-1">
-                  <span className="text-sm sm:text-base md:text-lg font-black text-amber-950 tabular-nums whitespace-nowrap block">
+                <div className="text-left sm:text-right shrink-0 pl-13 sm:pl-2 pt-1 sm:pt-0 border-t sm:border-t-0 border-amber-200/60 flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-center gap-x-2">
+                  <span className="text-base sm:text-lg md:text-xl font-black text-amber-950 tabular-nums break-words">
                     {formatBRL(bucketAmounts.lifestyle)}
                   </span>
-                  <span className="text-[10px] text-amber-600 block whitespace-nowrap">
+                  <span className="text-[10px] font-medium text-amber-600 shrink-0">
                     teto planejado
                   </span>
                 </div>
               </div>
 
               {/* Caixa 3: Futuro & Metas (20%) */}
-              <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200/90 flex items-center justify-between gap-2.5 sm:gap-3 shadow-2xs min-w-0">
-                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs min-w-0 transition-all">
+                <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5 sm:mt-0">
                     <Target className="w-5 h-5" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                      <span className="font-bold text-sm text-emerald-950 truncate">
+                      <span className="font-bold text-sm text-emerald-950 break-words">
                         🎯 Futuro & Metas
                       </span>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-200/70 text-emerald-800 shrink-0">
                         {currentModel.futurePct}%
                       </span>
                     </div>
-                    <p className="text-[11px] text-emerald-700/90 truncate mt-0.5">
+                    <p className="text-[11px] text-emerald-700/90 break-words leading-relaxed mt-0.5">
                       Reserva de emergência, investimentos e sonhos
                     </p>
                   </div>
                 </div>
-                <div className="text-right shrink-0 pl-1">
-                  <span className="text-sm sm:text-base md:text-lg font-black text-emerald-950 tabular-nums whitespace-nowrap block">
+                <div className="text-left sm:text-right shrink-0 pl-13 sm:pl-2 pt-1 sm:pt-0 border-t sm:border-t-0 border-emerald-200/60 flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-center gap-x-2">
+                  <span className="text-base sm:text-lg md:text-xl font-black text-emerald-950 tabular-nums break-words">
                     {formatBRL(bucketAmounts.future)}
                   </span>
-                  <span className="text-[10px] text-emerald-600 block whitespace-nowrap">
+                  <span className="text-[10px] font-medium text-emerald-600 shrink-0">
                     teto planejado
                   </span>
                 </div>
@@ -462,17 +462,17 @@ export function OnboardingWizardDialog({
                 type="button"
                 onClick={handleActivatePlan}
                 disabled={isActivating}
-                className="w-full flex-1 h-12 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-emerald-700/20 flex items-center justify-center gap-2 transition-all cursor-pointer min-w-0"
+                className="w-full flex-1 h-12 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-emerald-700/20 flex items-center justify-center gap-2 transition-all cursor-pointer min-w-0 px-4"
               >
                 {isActivating ? (
-                  <span className="flex items-center gap-2 truncate">
+                  <span className="flex items-center justify-center gap-2 break-words text-center">
                     <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
-                    <span className="truncate">Criando categorias e ativando...</span>
+                    <span className="break-words">Criando categorias e ativando...</span>
                   </span>
                 ) : (
-                  <span className="flex items-center gap-2 truncate">
+                  <span className="flex items-center justify-center gap-2 break-words text-center">
                     <Sparkles className="w-4 h-4 shrink-0" />
-                    <span className="truncate">Concluir e Ativar meu Plano</span>
+                    <span className="break-words">Concluir e Ativar meu Plano</span>
                   </span>
                 )}
               </Button>

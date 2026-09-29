@@ -74,4 +74,29 @@ describe('OnboardingWizardDialog', () => {
     expect(screen.getByText('Modelo 60 / 25 / 15')).toBeDefined()
     expect(screen.getByText('Modelo 70 / 20 / 10')).toBeDefined()
   })
+
+  it('não possui textos truncados nem abreviações forçadas nas caixas 50/30/20', () => {
+    render(
+      <OnboardingWizardDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        family={{ ...mockFamily, monthly_net_income_cents: 800000 }}
+      />,
+    )
+
+    const continueBtn = screen.getByRole('button', { name: /Continuar para as 3 Caixas/i })
+    fireEvent.click(continueBtn)
+
+    // Valida que os nomes completos das caixas e descrições aparecem
+    expect(screen.getByText('🛡️ Necessidades')).toBeDefined()
+    expect(screen.getByText('🏖️ Estilo de Vida')).toBeDefined()
+    expect(screen.getByText('🎯 Futuro & Metas')).toBeDefined()
+    expect(screen.getByText('Moradia, alimentação, transporte, saúde e contas')).toBeDefined()
+    expect(screen.getByText('Lazer, restaurantes, compras, assinaturas e pets')).toBeDefined()
+    expect(screen.getByText('Reserva de emergência, investimentos e sonhos')).toBeDefined()
+
+    // O Dialog não deve ter elementos com a classe truncate
+    const dialog = screen.getByRole('dialog')
+    expect(dialog.querySelector('.truncate')).toBeNull()
+  })
 })
