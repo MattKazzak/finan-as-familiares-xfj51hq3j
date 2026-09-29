@@ -1,6 +1,6 @@
 // Testes unitários para o parser de faturas em PDF de cartão de crédito brasileiras
-// Cobre formatos reais e simulados de Nubank, Banco Inter, C6 Bank e Itaú,
-// incluindo parcelamentos ("01/03", "2/12"), estornos, pagamentos e deduplicação determinística.
+// Cobre formatos reais e simulados de Nubank, Banco Inter, C6 Bank, Itaú e Santander,
+// incluindo parcelamentos ("01/03", "2/12"), estornos, pagamentos de fatura, deduplicação determinística e accountType.
 
 import { describe, it, expect } from 'vitest'
 import {
@@ -10,6 +10,7 @@ import {
   parsePdfTransactionLine,
   parsePdfTextLines,
 } from '@/services/import/pdf-parser'
+import { parseStatementFile } from '@/services/import/statement-parser'
 
 describe('PDF Invoice Parser - Unidades e Heurísticas Bancárias Brasileiras', () => {
   describe('normalizePdfDate', () => {
@@ -111,6 +112,40 @@ describe('PDF Invoice Parser - Unidades e Heurísticas Bancárias Brasileiras', 
       expect(tx.date).toBe('2026-10-14')
       expect(tx.amount_cents).toBe(8990)
       expect(tx.type).toBe('income')
+    })
+
+    it('analisa fatura do banco Santander com compras, parcelas e pagamento de fatura', () => {
+      // 1. Compra simples Santander com DD/MM e descrição
+      const line1 = '18/10 RESTAURANTE VARANDA 145,00'
+      const res1 = parsePdfTransactionLine(line1, 2026)
+      expect(res1.transaction).not.toBeNull()
+      expect(res1.transaction!.date).toBe('2026-10-18')
+      expect(res1.transaction!.description).toBe('RESTAURANTE VARANDA')
+      expect(res1.transaction!.amount_cents).toBe(14500)
+      expect(res1.transaction!.type).toBe('expense')
+
+      // 2. Compra parcelada Santander "03/10"
+      const line2 = '22/10 LOJAS CEM 03/10 89,90'
+      const res2 = parsePdfTransactionLine(line2, 2026)
+      expect(res2.transaction).not.toBeNull()
+      expect(res2.transaction!.installmentInfo?.isInstallment).toBe(true)
+      expect(res2.transaction!.installmentInfo?.current).toBe(3)
+      expect(res2.transaction!.installmentInfo?.total).toBe(10)
+      expect(res2.transaction!.type).toBe('expense')
+
+      // 3. Pagamento de fatura Santander tratado como receita/crédito
+      const line3 = '20/10 PAGAMENTO DE FATURA EFETUADO -1.250,00'
+      const res3 = parsePdfTransactionLine(line3, 2026)
+      expect(res3.transaction).not.toBeNull()
+      expect(res3.transaction!.type).toBe('income')
+      expect(res3.transaction!.amount_cents).toBe(125000)
+
+      // 4. Pagamento de fatura sem sinal negativo na string de valor mas com descrição explicita
+      const line4 = '20/10 PAGAMENTO DA FATURA 1.250,00'
+      const res4 = parsePdfTransactionLine(line4, 2026)
+      expect(res4.transaction).not.toBeNull()
+      expect(res4.transaction!.type).toBe('income')
+      expect(res4.transaction!.amount_cents).toBe(125000)
     })
 
     it('analisa linha típica Banco Inter com DD/MM/AAAA e prefixo "COMPRA CARTAO"', () => {
@@ -234,6 +269,37 @@ describe('PDF Invoice Parser - Unidades e Heurísticas Bancárias Brasileiras', 
       expect(result.success).toBe(true)
       expect(result.transactions.length).toBe(2)
       expect(result.warnings?.[0]).toContain('transações idênticas repetidas foram unificadas')
+      expect(result.accountType).toBe('CREDIT_CARD')
+      expect(result.format).toBe('pdf')
+    })
+
+    it('processa fatura simulada Santander em lote retornando accountType CREDIT_CARD', () => {
+      const santanderSample = [
+        'BANCO SANTANDER (BRASIL) S.A.',
+        'Extrato do Cartão Santander SX Visa',
+        'Vencimento: 15/11/2026',
+        'Lançamentos Nacionais',
+        '10/10 SUPERMERCADO PAO DE ACUCAR 234,50',
+        '12/10 DROGASIL 54,20',
+        '15/10 PAGAMENTO DE FATURA -1.500,00',
+        '18/10 FAST SHOP 02/05 320,00',
+        '25/10 UBER TRIP 19,90',
+        'Central de Atendimento Santander 4004-3535',
+      ]
+
+      const result = parsePdfTextLines(santanderSample, 2026)
+      expect(result.success).toBe(true)
+      expect(result.accountType).toBe('CREDIT_CARD')
+      expect(result.transactions.length).toBe(5)
+
+      const paymentTx = result.transactions.find((t) => t.amount_cents === 150000)
+      expect(paymentTx).toBeDefined()
+      expect(paymentTx?.type).toBe('income')
+
+      const installmentTx = result.transactions.find((t) => t.amount_cents === 32000)
+      expect(installmentTx?.installmentInfo?.isInstallment).toBe(true)
+      expect(installmentTx?.installmentInfo?.current).toBe(2)
+      expect(installmentTx?.installmentInfo?.total).toBe(5)
     })
   })
 })

@@ -1,5 +1,5 @@
 // Parser especializado em faturas de cartão de crédito e extratos em PDF
-// Compatível com as principais instituições financeiras brasileiras (Nubank, Banco Inter, C6 Bank, Itaú, Bradesco, Santander, etc.)
+// Compatível com as principais instituições financeiras brasileiras (Nubank, Banco Inter, C6 Bank, Itaú, Bradesco, Santander, BTG, XP, etc.)
 // Reutiliza a tipagem ParsedRawTransaction e ParseResult compatível com o fluxo OFX e a conciliação existente.
 
 import type { TransactionType } from '@/types/finance'
@@ -182,9 +182,12 @@ export function extractInvoiceReferenceYear(fullText: string): number {
 
 /**
  * Gera hash determinístico curto para FITID a partir de data, descrição e valor
+ * Baseado na tríade: data (YYYY-MM-DD) + estabelecimento/descrição normalizada + valor (centavos)
  */
 export function generatePdfFitid(date: string, description: string, amountCents: number): string {
-  const norm = `${date}_${amountCents}_${description.toLowerCase().replace(/[^a-z0-9]/g, '')}`
+  // Limpa caracteres especiais, remove parcelas da descrição para que o identificador reflita data+estabelecimento+valor
+  const cleanDesc = description.toLowerCase().replace(/[^a-z0-9]/g, '')
+  const norm = `${date}_${cleanDesc}_${amountCents}`
   let hash = 0
   for (let i = 0; i < norm.length; i++) {
     const char = norm.charCodeAt(i)
@@ -206,7 +209,8 @@ export interface ParsePdfLineResult {
  *  - Nubank: "12 OUT Mercado Livre 01/03 150,00" ou "12 OUT - Pagamento em 12 OUT - -1.500,00"
  *  - Inter: "05/10/2026 COMPRA CARTAO - IFOOD 45,90"
  *  - C6: "28/09 UBER *TRIP R$ 23,50"
- *  - Itaú: "15/10 DROGARIA SAO PAULO 89,90"
+ *  - Itaú: "15/10 DROGARIA SAO PAULO 89,90" ou "15/10 MAGAZINE LUIZA 2/12 210,00"
+ *  - Santander: "18/10 RESTAURANTE VARANDA 145,00" ou "20/10 PAGAMENTO DE FATURA EFETUADO -1.250,00" ou "22/10 LOJAS CEM 03/10 89,90"
  *  - Estornos: "20/10 ESTORNO COMPRA XYZ -50,00" ou "20/10 ESTORNO COMPRA XYZ 50,00-"
  */
 export function parsePdfTransactionLine(
@@ -245,9 +249,9 @@ export function parsePdfTransactionLine(
   // Padrão de data no início da linha
   // Casos:
   // 1. "DD/MM/AAAA", "DD-MM-AAAA", "DD/MM"
-  // 2. "DD MMM" (ex: "12 OUT", "05 FEV", "28 DEZ")
+  // 2. "DD MMM" (ex: "12 OUT", "05 FEV", "28 DEZ", "18/OUT")
   const dateRegex =
-    /^(?:(\d{1,2}[/\-.]\d{1,2}(?:[/\-.]\d{2,4})?)|(\d{1,2}\s+(?:JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ|JANEIRO|FEVEREIRO|MARCO|MARÇO|ABRIL|MAIO|JUNHO|JULHO|AGOSTO|SETEMBRO|OUTUBRO|NOVEMBRO|DEZEMBRO)(?:\s+\d{4})?))\b/i
+    /^(?:(\d{1,2}[/\-.]\d{1,2}(?:[/\-.]\d{2,4})?)|(\d{1,2}(?:[/\s]+DE[/\s]+|[/\s]+)(?:JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ|JANEIRO|FEVEREIRO|MARCO|MARÇO|ABRIL|MAIO|JUNHO|JULHO|AGOSTO|SETEMBRO|OUTUBRO|NOVEMBRO|DEZEMBRO)(?:\s+\d{4})?))\b/i
 
   const dateMatch = lineWithoutAmount.match(dateRegex)
   if (!dateMatch) {
@@ -285,8 +289,9 @@ export function parsePdfTransactionLine(
 
   // Em cartão de crédito:
   // Se o valor estiver explícito como negativo (ex: "-150,00", "(150,00)", "150,00-", "150,00 C"):
-  // é um pagamento da fatura, crédito ou estorno (income/reembolso).
-  // Se a descrição contiver "ESTORNO", "REEMBOLSO", "PAGAMENTO DA FATURA", "PAGAMENTO RECEBIDO", também vira income.
+  // é um pagamento de fatura, crédito ou estorno (income/reembolso).
+  // Se a descrição contiver "ESTORNO", "REEMBOLSO", "PAGAMENTO DA FATURA", "PAGAMENTO RECEBIDO",
+  // "PAGAMENTO DE FATURA", "PAGTO FATURA", também vira income (crédito/receita).
   const rawIsNegative =
     rawAmountStr.includes('-') ||
     rawAmountStr.includes('–') ||
@@ -516,7 +521,8 @@ export async function parsePdfStatement(
     return {
       success: true,
       transactions: unique,
-      format: 'unknown', // ou tratado como formato de cartão no retorno
+      format: 'pdf',
+      accountType: 'CREDIT_CARD',
       ignoredLines,
       ignoredCount: ignoredLines.length,
       warnings,
@@ -590,7 +596,8 @@ export function parsePdfTextLines(
   return {
     success: unique.length > 0,
     transactions: unique,
-    format: 'unknown',
+    format: 'pdf',
+    accountType: 'CREDIT_CARD',
     ignoredLines,
     ignoredCount: ignoredLines.length,
     warnings,

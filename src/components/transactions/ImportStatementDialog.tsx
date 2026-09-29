@@ -497,7 +497,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
     if (ext !== 'ofx' && ext !== 'pdf') {
       if (ext === 'csv') {
         setErrorMessage(
-          'O formato .CSV não é aceito. Suportamos extratos em formato .OFX e faturas de cartão de crédito em .PDF (Nubank, Inter, C6, Itaú, etc.).',
+          'O formato .CSV não é aceito. Suportamos extratos em formato .OFX e faturas de cartão de crédito em .PDF (Nubank, Inter, C6, Itaú, Santander, etc.).',
         )
       } else {
         setErrorMessage(
@@ -1033,7 +1033,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".ofx,.pdf"
+                  accept=".ofx,application/pdf,.pdf"
                   onChange={handleFileInputChange}
                   className="hidden"
                 />
@@ -1049,7 +1049,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 <h3 className="font-bold text-base text-slate-800">
                   {parsing
                     ? 'Processando e categorizando extrato ou fatura...'
-                    : 'Arraste seu extrato .OFX ou fatura .PDF aqui'}
+                    : 'Arraste seu arquivo OFX ou PDF de fatura aqui'}
                 </h3>
                 <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 mb-4">
                   {parsing

@@ -38,6 +38,7 @@ export interface ParseResult {
   success: boolean
   transactions: ParsedRawTransaction[]
   format: 'ofx' | 'pdf' | 'unknown'
+  accountType?: 'CREDIT_CARD' | 'CHECKING'
   error?: string
   warnings?: string[]
   ignoredCount?: number
@@ -354,13 +355,21 @@ export function resolveCreditCardTransactionType(
 ): TransactionType {
   const norm = cleanForNoiseCheck(description)
 
-  // Palavras claras de crédito/estorno/reembolso
+  // Palavras claras de crédito/estorno/reembolso/pagamento de fatura
   const isCreditWord =
     norm.includes('ESTORNO') ||
     norm.includes('REEMBOLSO') ||
     norm.includes('CASHBACK') ||
     norm.includes('CREDITO CONCEDIDO') ||
+    norm.includes('CREDITO') ||
     norm.includes('PAGAMENTO RECEBIDO') ||
+    norm.includes('PAGAMENTO DE FATURA') ||
+    norm.includes('PAGAMENTO DA FATURA') ||
+    norm.includes('PAGTO FATURA') ||
+    norm.includes('PGTO FATURA') ||
+    norm.includes('PAGAMENTO EFETUADO') ||
+    norm.includes('PAGAMENTO TITULO') ||
+    norm.includes('PAGAMENTO BOLETO') ||
     norm.includes('SALARIO') ||
     norm.includes('SALÁRIO')
 
@@ -650,29 +659,33 @@ export function parseOFX(content: string): ParseResult {
  * Função principal para analisar arquivo enviado pelo usuário (aceita .ofx e .pdf)
  */
 export async function parseStatementFile(file: File): Promise<ParseResult> {
-  const ext = file.name.split('.').pop()?.toLowerCase() || ''
+  const fileNameLower = file.name.toLowerCase()
 
-  // Validação de extensão: suporta .ofx e .pdf
-  if (ext === 'pdf') {
+  // Se file.name.toLowerCase().endsWith('.pdf')
+  if (fileNameLower.endsWith('.pdf')) {
     try {
-      // Import dinâmico ou direto do parser de PDF
+      // Converte o arquivo para ArrayBuffer e invoca parsePdfStatement(arrayBuffer)
+      const arrayBuffer = await file.arrayBuffer()
       const { parsePdfStatement } = await import('@/services/import/pdf-parser')
-      const res = await parsePdfStatement(file, file.name)
+      const res = await parsePdfStatement(arrayBuffer, file.name)
+      // Retorna a lista normalizada de transações com accountType: 'CREDIT_CARD'
       return {
         ...res,
         format: 'pdf',
+        accountType: 'CREDIT_CARD',
       }
     } catch (err: any) {
       return {
         success: false,
         transactions: [],
         format: 'pdf',
+        accountType: 'CREDIT_CARD',
         error: err?.message || 'Falha ao ler a fatura em PDF selecionada.',
       }
     }
   }
 
-  if (ext === 'ofx') {
+  if (fileNameLower.endsWith('.ofx')) {
     try {
       const text = await readFileAsText(file)
       return parseOFX(text)
@@ -686,13 +699,13 @@ export async function parseStatementFile(file: File): Promise<ParseResult> {
     }
   }
 
-  if (ext === 'csv') {
+  if (fileNameLower.endsWith('.csv')) {
     return {
       success: false,
       transactions: [],
       format: 'unknown',
       error:
-        'O formato .CSV não é suportado. Suportamos importação de extratos em arquivo OFX e faturas de cartão de crédito em PDF (ex.: Nubank, Inter, C6, Itaú).',
+        'O formato .CSV não é suportado. Suportamos importação de extratos em arquivo OFX e faturas de cartão de crédito em PDF (ex.: Nubank, Inter, C6, Itaú, Santander).',
     }
   }
 
