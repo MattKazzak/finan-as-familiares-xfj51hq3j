@@ -161,8 +161,8 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
   const bucketPercentInt =
     budgetBucket === 'essentials' ? 50 : budgetBucket === 'lifestyle' ? 30 : 20
 
-  // otherCategoriesSumCents = soma dos tetos de TODAS AS OUTRAS categorias deste mesmo balde (excluindo a categoria em edição)
-  const otherCategoriesSumCents = (() => {
+  // otherCategoriesInBucketSum: soma dos tetos de todas as OUTRAS categorias do MESMO balde (excluindo a categoria em edição)
+  const otherCategoriesInBucketSum = (() => {
     if (typeof otherCategoriesSumProp === 'number') {
       return otherCategoriesSumProp
     }
@@ -177,7 +177,7 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
       const currentCatSavedLimit = isOriginalBucket ? initialLimitCents || 0 : 0
       return Math.max(0, bucketSummaryItem.budgetCents - currentCatSavedLimit)
     }
-    // Fallback: calcular a partir do percent_default das outras categorias
+    // Fallback: calcular a partir do percent_default das outras categorias do mesmo balde
     return (allCategories || []).reduce((sum, cat) => {
       if (category && cat.id === category.id) return sum
       if (cat.type !== 'expense') return sum
@@ -192,8 +192,46 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
     }, 0)
   })()
 
-  // remainingBudgetCents = metaDoBalde - (otherCategoriesSumCents + currentInputCents)
-  const remainingBudgetCents = bucketMetaCents - (otherCategoriesSumCents + currentInputCents)
+  // allOtherCategoriesSum: soma dos tetos de TODAS as outras categorias da família, de TODOS os baldes (excluindo a categoria em edição)
+  const allOtherCategoriesSum = (() => {
+    if (bucketsSummary) {
+      const sumAllBuckets =
+        (bucketsSummary.essentials?.budgetCents || 0) +
+        (bucketsSummary.lifestyle?.budgetCents || 0) +
+        (bucketsSummary.future?.budgetCents || 0)
+      const currentCatSavedLimit = initialLimitCents || 0
+      return Math.max(0, sumAllBuckets - currentCatSavedLimit)
+    }
+    // Fallback: calcular a partir de allCategories
+    return (allCategories || []).reduce((sum, cat) => {
+      if (category && cat.id === category.id) return sum
+      if (cat.type !== 'expense') return sum
+
+      const catPercent = cat.percent_default ?? null
+      let catLimit = 0
+      if (catPercent !== null && catPercent > 0 && netIncomeCents > 0) {
+        catLimit = Math.round((catPercent / 100) * netIncomeCents)
+      }
+      return sum + catLimit
+    }, 0)
+  })()
+
+  // remainingBucketCents = bucketMetaCents - (otherCategoriesInBucketSum + currentInputCents)
+  const remainingBucketCents = bucketMetaCents - (otherCategoriesInBucketSum + currentInputCents)
+
+  // remainingGlobalCents = netIncomeCents - (allOtherCategoriesSum + currentInputCents)
+  const remainingGlobalCents = netIncomeCents - (allOtherCategoriesSum + currentInputCents)
+
+  // freeInOtherBucketsCents = Math.max(0, remainingGlobalCents - Math.max(0, remainingBucketCents))
+  const freeInOtherBucketsCents = Math.max(
+    0,
+    remainingGlobalCents - Math.max(0, remainingBucketCents),
+  )
+
+  // percentIncome = percentual da renda que o balde passa a representar com o valor digitado
+  const bucketTotalCents = otherCategoriesInBucketSum + currentInputCents
+  const percentIncome =
+    netIncomeCents > 0 ? Math.round((bucketTotalCents / netIncomeCents) * 100) : 0
 
   const selectedBucketOption = BUCKET_OPTIONS.find((opt) => opt.id === budgetBucket)
   const bucketDisplayName = selectedBucketOption?.label || 'Essenciais'
@@ -400,33 +438,53 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
             </div>
           </div>
 
-          {/* Feedback consultivo elegante — UM único card sutil em tempo real */}
+          {/* Feedback consultivo elegante — Inteligência financeira em tempo real */}
           {netIncomeCents > 0 && budgetBucket && (
-            <div className="mt-2">
-              {remainingBudgetCents > 0 && (
-                <div className="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200/80 text-emerald-950 text-xs leading-snug shadow-2xs">
-                  <span>
+            <div className="mt-2 space-y-2">
+              {/* Cenário 1 — Dentro da meta do balde (remainingBucketCents >= 0) */}
+              {remainingBucketCents >= 0 && (
+                <div className="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200/80 text-emerald-950 text-xs leading-snug shadow-2xs space-y-1">
+                  <div>
                     🛡️ Cota de {bucketDisplayName}: Você ainda tem{' '}
                     <strong className="font-bold tabular-nums">
-                      {formatBRL(remainingBudgetCents)}
+                      {formatBRL(remainingBucketCents)}
                     </strong>{' '}
-                    livres para distribuir neste balde.
+                    livres neste balde.
+                  </div>
+                  {freeInOtherBucketsCents > 0 && (
+                    <div className="text-[11px] text-emerald-800/90 leading-tight pt-0.5 border-t border-emerald-200/50">
+                      💡 Você também possui{' '}
+                      <strong className="font-semibold tabular-nums">
+                        {formatBRL(freeInOtherBucketsCents)}
+                      </strong>{' '}
+                      livres de outros baldes que pode alocar aqui se precisar.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Cenário 2 — Acima da meta do balde, mas equilibrado no geral (remainingBucketCents < 0 && remainingGlobalCents >= 0) */}
+              {remainingBucketCents < 0 && remainingGlobalCents >= 0 && (
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs leading-snug shadow-2xs">
+                  <span>
+                    ⚖️ Equilíbrio Global Mantido: Este balde passa a representar{' '}
+                    <strong className="font-bold tabular-nums">{percentIncome}%</strong> da renda
+                    (acima da meta de {bucketPercentInt}%), mas o orçamento geral da família segue
+                    equilibrado utilizando a folga dos outros baldes.
                   </span>
                 </div>
               )}
-              {remainingBudgetCents === 0 && (
-                <div className="p-2.5 rounded-xl bg-emerald-50/50 border border-emerald-200/60 text-emerald-900 text-xs leading-snug shadow-2xs">
-                  <span>✓ Cota de {bucketDisplayName} 100% preenchida.</span>
-                </div>
-              )}
-              {remainingBudgetCents < 0 && (
+
+              {/* Cenário 3 — Estouro da renda familiar total (remainingGlobalCents < 0) */}
+              {remainingGlobalCents < 0 && (
                 <div className="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200/90 text-amber-950 text-xs leading-snug shadow-2xs">
                   <span>
-                    ⚠️ Atenção: Os tetos deste balde estão{' '}
+                    ⚠️ Orçamento Geral Excedido: Os tetos cadastrados de toda a casa ultrapassam a
+                    renda líquida mensal em{' '}
                     <strong className="font-bold tabular-nums">
-                      {formatBRL(Math.abs(remainingBudgetCents))}
-                    </strong>{' '}
-                    acima da meta de {bucketPercentInt}%.
+                      {formatBRL(Math.abs(remainingGlobalCents))}
+                    </strong>
+                    .
                   </span>
                 </div>
               )}
