@@ -400,7 +400,7 @@ export default function ProfilePage() {
   }
 
   const familyInitial = family?.name?.charAt(0).toUpperCase() || 'F'
-  const appVersion = packageJson.version || '0.0.169'
+  const appVersion = packageJson.version || '0.0.177'
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto w-full min-w-0">
