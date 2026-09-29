@@ -1815,6 +1815,19 @@ export default function WalletPage() {
               )
             })()}
 
+            {/* FAROL & ALERTAS PREVENTIVOS — Posicionado logo abaixo do card de orçamento e acima da lista de categorias */}
+            <BudgetAlertsFarol
+              family={family}
+              bucketsSummary={categoryBudgetData.bucketsSummary}
+              totalBudget={categoryBudgetData.totalBudget}
+              totalBudgetPercentOfIncome={categoryBudgetData.totalBudgetPercentOfIncome}
+              categoryList={categoryBudgetData.list}
+              currentDate={currentDate}
+              monthKey={monthKey}
+              onOpenCategoryEditor={(cat) => setActiveAlertEditCategory(cat)}
+              onOpenModelDialog={() => setIsApplyModelOpen(true)}
+            />
+
             {/* Lista de Orçamentos com Hierarquia Categoria Pai -> Subcategorias e Gestão Inline com Ícones */}
             <div className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -3028,19 +3041,6 @@ export default function WalletPage() {
                     }}
                   />
                 </div>
-
-                {/* FAROL & ALERTAS PREVENTIVOS — Design inteligente e recolhido por padrão no fim da lista */}
-                <BudgetAlertsFarol
-                  family={family}
-                  bucketsSummary={categoryBudgetData.bucketsSummary}
-                  totalBudget={categoryBudgetData.totalBudget}
-                  totalBudgetPercentOfIncome={categoryBudgetData.totalBudgetPercentOfIncome}
-                  categoryList={categoryBudgetData.list}
-                  currentDate={currentDate}
-                  monthKey={monthKey}
-                  onOpenCategoryEditor={(cat) => setActiveAlertEditCategory(cat)}
-                  onOpenModelDialog={() => setIsApplyModelOpen(true)}
-                />
               </div>
             </div>
 

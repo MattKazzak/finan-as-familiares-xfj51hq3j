@@ -249,7 +249,7 @@ export function BudgetAlertsFarol({
   const hasRegularAlerts = totalRegularCount > 0
 
   return (
-    <div className="pt-2 space-y-2">
+    <div className="space-y-2">
       {/* ============================================================== */}
       {/* REGRA DE EXCEÇÃO INTELIGENTE: Alertas CRÍTICOS sempre visíveis */}
       {/* (Ex.: estouro da renda líquida) fora do accordion               */}
