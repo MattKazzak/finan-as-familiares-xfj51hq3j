@@ -189,6 +189,59 @@ export type Database = {
         }
         Relationships: []
       }
+      family_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          code: string
+          created_at: string
+          created_by: string
+          expires_at: string
+          family_id: string
+          id: string
+          max_uses: number
+          role: string
+          status: string
+          uses_count: number
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          code: string
+          created_at?: string
+          created_by: string
+          expires_at?: string
+          family_id: string
+          id?: string
+          max_uses?: number
+          role?: string
+          status?: string
+          uses_count?: number
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          code?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          family_id?: string
+          id?: string
+          max_uses?: number
+          role?: string
+          status?: string
+          uses_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'family_invites_family_id_fkey'
+            columns: ['family_id']
+            isOneToOne: false
+            referencedRelation: 'families'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       family_members: {
         Row: {
           created_at: string
@@ -196,6 +249,7 @@ export type Database = {
           id: string
           is_admin: boolean
           name: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -203,6 +257,7 @@ export type Database = {
           id?: string
           is_admin?: boolean
           name: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -210,6 +265,7 @@ export type Database = {
           id?: string
           is_admin?: boolean
           name?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -628,6 +684,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_family_invite: { Args: { p_code: string }; Returns: Json }
       activate_family_onboarding_plan: {
         Args: {
           p_family_id: string
@@ -640,6 +697,10 @@ export type Database = {
         Args: { p_family_name: string; p_member_name: string }
         Returns: string
       }
+      generate_family_invite: { Args: { p_family_id: string }; Returns: Json }
+      get_invite_preview: { Args: { p_code: string }; Returns: Json }
+      leave_family: { Args: { p_family_id: string }; Returns: Json }
+      remove_family_member: { Args: { p_member_id: string }; Returns: Json }
       user_belongs_to_family: { Args: { f_id: string }; Returns: boolean }
     }
     Enums: {

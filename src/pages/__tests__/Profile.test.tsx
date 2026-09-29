@@ -216,6 +216,33 @@ describe('ProfilePage PWA Install Shortcut - 3 Cenários de Clique', () => {
     expect(screen.getByText(/Instalar aplicativo/i)).toBeDefined()
   })
 
+  it('exibe a versão atualizada do app no rodapé', () => {
+    render(
+      <MemoryRouter>
+        <ProfilePage />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText(/Versão 0\.0\.169 • Finanças Familiares/i)).toBeDefined()
+  })
+
+  it('não possui botões ou lápis duplicados no card da família', () => {
+    render(
+      <MemoryRouter>
+        <ProfilePage />
+      </MemoryRouter>,
+    )
+
+    // Deve existir apenas UM botão "Editar Família" no card
+    const editFamilyButtons = screen.getAllByRole('button', { name: /Editar Família/i })
+    expect(editFamilyButtons.length).toBe(1)
+
+    // Não deve existir lápis inline duplicado com title "Editar nome da família"
+    expect(screen.queryByTitle('Editar nome da família')).toBeNull()
+    // Nem botão duplicado de câmera sobreposto
+    expect(screen.queryByTitle('Editar foto ou nome da família')).toBeNull()
+  })
+
   it('renderiza o título da família sem classe truncate e com quebra responsiva', () => {
     render(
       <MemoryRouter>

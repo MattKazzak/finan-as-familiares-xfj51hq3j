@@ -42,6 +42,7 @@ import {
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
 import { InstallInstructionsModal } from '@/components/common/InstallInstructionsModal'
 import { Sparkles, Landmark } from 'lucide-react'
+import packageJson from '../../package.json'
 import {
   Dialog,
   DialogContent,
@@ -399,15 +400,16 @@ export default function ProfilePage() {
   }
 
   const familyInitial = family?.name?.charAt(0).toUpperCase() || 'F'
+  const appVersion = packageJson.version || '0.0.169'
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      {/* 1. Card da Família (Hero Editável) */}
-      <div className="bg-gradient-to-br from-[#059669] to-[#0F766E] rounded-3xl p-6 sm:p-7 text-white shadow-xl shadow-emerald-950/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden group">
-        <div className="flex items-center gap-4 min-w-0 flex-1">
-          {/* Avatar Interativo com Troca de Imagem / Inicial */}
-          <div className="relative group/avatar shrink-0">
-            <Avatar className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/20 backdrop-blur-sm border-2 border-white/30 text-white font-black text-2xl sm:text-3xl shadow-lg shrink-0 overflow-hidden">
+    <div className="space-y-6 max-w-4xl mx-auto w-full min-w-0">
+      {/* 1. Card da Família (Hero Editável) - Design Limpo, sem lápis duplicados */}
+      <div className="bg-gradient-to-br from-[#059669] to-[#0F766E] rounded-3xl p-5 sm:p-6 text-white shadow-xl shadow-emerald-950/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
+        <div className="flex items-center gap-3.5 sm:gap-4 min-w-0 flex-1">
+          {/* Avatar da Família com Inicial ou Imagem */}
+          <div className="shrink-0">
+            <Avatar className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/20 backdrop-blur-sm border-2 border-white/30 text-white font-black text-2xl sm:text-3xl shadow-lg overflow-hidden">
               {family?.avatar_url && (
                 <AvatarImage
                   src={family.avatar_url}
@@ -419,93 +421,73 @@ export default function ProfilePage() {
                 {familyInitial}
               </AvatarFallback>
             </Avatar>
-
-            {/* Botão de Câmera sobreposto no avatar */}
-            <button
-              type="button"
-              onClick={openEditFamilyDialog}
-              className="absolute -bottom-1 -right-1 p-1.5 bg-white text-emerald-800 rounded-xl shadow-md hover:scale-105 active:scale-95 transition-transform"
-              title="Editar foto ou nome da família"
-              aria-label="Editar foto ou nome da família"
-            >
-              <Camera className="w-3.5 h-3.5 stroke-[2.5]" />
-            </button>
           </div>
 
           <div className="min-w-0 flex-1">
-            <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-100/90 block">
+            <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-100/90 block mb-0.5">
               Família Registrada
             </span>
-            <div className="flex items-baseline gap-2 flex-wrap sm:flex-nowrap">
-              <h2 className="text-lg sm:text-2xl font-black tracking-tight text-white leading-tight break-words [text-wrap:balance]">
-                {formatFamilyDisplayName(family?.name, 'Silva')}
-              </h2>
-              <button
-                type="button"
-                onClick={openEditFamilyDialog}
-                className="p-1 hover:bg-white/20 rounded-lg text-emerald-100 hover:text-white transition-colors shrink-0 self-center"
-                title="Editar nome da família"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            <h2 className="text-lg sm:text-2xl font-black tracking-tight text-white leading-tight break-words [text-wrap:balance]">
+              {formatFamilyDisplayName(family?.name, 'Silva')}
+            </h2>
             <p className="text-xs text-emerald-100/80 mt-1 truncate">
               Conta: {user?.email || 'Usuário'}
             </p>
           </div>
         </div>
 
+        {/* ÚNICA ação de edição clara e bem posicionada */}
         <Button
           onClick={openEditFamilyDialog}
           variant="secondary"
           size="sm"
-          className="bg-white/15 hover:bg-white/25 text-white border border-white/20 text-xs font-semibold rounded-xl self-start sm:self-center shadow-sm shrink-0"
+          className="bg-white/15 hover:bg-white/25 text-white border border-white/20 text-xs font-semibold rounded-xl h-9 px-3.5 shadow-sm shrink-0 w-full sm:w-auto justify-center gap-1.5"
         >
-          <Pencil className="w-3.5 h-3.5 mr-1.5" />
-          Editar Família
+          <Pencil className="w-3.5 h-3.5" />
+          <span>Editar Família</span>
         </Button>
       </div>
 
-      {/* 1.5. Card de Renda Líquida Mensal da Família (Base do Orçamento) */}
+      {/* 2. Card de Renda Líquida Mensal da Família (Base do Orçamento) */}
       <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-start sm:items-center gap-3">
+        {/* Cabeçalho padronizado: Ícone + Título + Badge + Descrição + Ação alinhada */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
             <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold shrink-0">
               <Landmark className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-base text-slate-900">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-bold text-base text-slate-900 leading-tight">
                   Renda Líquida Mensal Familiar
                 </h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
                   Base dos cálculos
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 mt-1 leading-normal break-words">
                 Valor líquido que efetivamente entra na conta familiar para cálculo dos tetos
                 ideais.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <Button
-              onClick={() => setIsApplyModelOpen(true)}
-              variant="outline"
-              size="sm"
-              className="text-xs font-semibold rounded-xl border-emerald-600/30 text-emerald-700 hover:bg-emerald-50 gap-1.5"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Aplicar modelo sugerido</span>
-            </Button>
-          </div>
+          <Button
+            onClick={() => setIsApplyModelOpen(true)}
+            variant="outline"
+            size="sm"
+            className="text-xs font-semibold rounded-xl border-emerald-600/30 text-emerald-700 hover:bg-emerald-50 gap-1.5 h-9 shrink-0 w-full sm:w-auto justify-center"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Aplicar modelo sugerido</span>
+          </Button>
         </div>
 
+        {/* Linha de Valor com hierarquia clara e alinhamento responsivo */}
         <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           {isEditingIncome ? (
-            <div className="flex items-center gap-2 flex-1 max-w-sm">
-              <div className="relative flex-1">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1 max-w-md w-full">
+              <div className="relative flex-1 min-w-0">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
                   R$
                 </span>
@@ -514,48 +496,50 @@ export default function ProfilePage() {
                   placeholder="0,00"
                   value={incomeInputStr}
                   onChange={(e) => setIncomeInputStr(e.target.value)}
-                  className="pl-9 text-sm font-bold rounded-xl h-9"
+                  className="pl-9 text-sm font-bold rounded-xl h-9 w-full"
                   autoFocus
                 />
               </div>
-              <Button
-                size="sm"
-                onClick={async () => {
-                  try {
-                    setSavingIncome(true)
-                    const cents = parseBRLToCents(incomeInputStr)
-                    await updateFamily({ monthly_net_income_cents: cents })
-                    setIsEditingIncome(false)
-                    triggerRefresh()
-                  } catch {
-                    toast({
-                      title: 'Erro ao salvar renda',
-                      description: 'Tente novamente.',
-                      variant: 'destructive',
-                    })
-                  } finally {
-                    setSavingIncome(false)
-                  }
-                }}
-                disabled={savingIncome}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded-xl h-9 font-semibold"
-              >
-                Salvar
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsEditingIncome(false)}
-                disabled={savingIncome}
-                className="text-xs rounded-xl h-9 text-slate-500"
-              >
-                Cancelar
-              </Button>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      setSavingIncome(true)
+                      const cents = parseBRLToCents(incomeInputStr)
+                      await updateFamily({ monthly_net_income_cents: cents })
+                      setIsEditingIncome(false)
+                      triggerRefresh()
+                    } catch {
+                      toast({
+                        title: 'Erro ao salvar renda',
+                        description: 'Tente novamente.',
+                        variant: 'destructive',
+                      })
+                    } finally {
+                      setSavingIncome(false)
+                    }
+                  }}
+                  disabled={savingIncome}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded-xl h-9 font-semibold flex-1 sm:flex-initial px-4"
+                >
+                  Salvar
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditingIncome(false)}
+                  disabled={savingIncome}
+                  className="text-xs rounded-xl h-9 text-slate-500 flex-1 sm:flex-initial px-3"
+                >
+                  Cancelar
+                </Button>
+              </div>
             </div>
           ) : (
-            <div className="flex items-center gap-3">
+            <div className="flex items-baseline gap-3 flex-wrap">
               <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
                   Renda Líquida Cadastrada
                 </span>
                 <span className="text-xl sm:text-2xl font-black text-slate-900 tabular-nums">
@@ -572,7 +556,7 @@ export default function ProfilePage() {
                   setIncomeInputStr(curr > 0 ? formatNumberBRL(curr) : '')
                   setIsEditingIncome(true)
                 }}
-                className="text-xs text-emerald-700 hover:bg-emerald-50 rounded-xl h-8 px-2.5 font-semibold"
+                className="text-xs text-emerald-700 hover:bg-emerald-50 rounded-xl h-8 px-2.5 font-semibold self-center"
               >
                 <Edit3 className="w-3.5 h-3.5 mr-1" />
                 {family?.monthly_net_income_cents && family.monthly_net_income_cents > 0
@@ -582,29 +566,27 @@ export default function ProfilePage() {
             </div>
           )}
 
-          <div className="text-right sm:text-left text-[11px] text-slate-400">
-            <span>Usado para ajustar tetos por % e farol preventivo</span>
-          </div>
+          <p className="text-left sm:text-right text-[11px] text-slate-400 shrink-0">
+            Usado para ajustar tetos por % e farol preventivo
+          </p>
         </div>
       </div>
 
-      {/* 2. Seletor 'Quem está usando?' por Aparelho (apenas quando houver 2 ou mais membros) */}
+      {/* 3. Seletor 'Quem está usando?' por Aparelho (apenas quando houver 2 ou mais membros) */}
       {members.length > 1 && (
         <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
-                <Smartphone className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="font-bold text-base text-slate-900">
-                  Quem está usando este aparelho?
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Alterne para personalizar a saudação "Olá, {currentMember?.name || 'Nome'}!" neste
-                  dispositivo.
-                </p>
-              </div>
+          <div className="flex items-start sm:items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold shrink-0">
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3 className="font-bold text-base text-slate-900 leading-tight">
+                Quem está usando este aparelho?
+              </h3>
+              <p className="text-xs text-slate-500 mt-1 leading-normal break-words">
+                Alterne para personalizar a saudação "Olá, {currentMember?.name || 'Nome'}!" neste
+                dispositivo.
+              </p>
             </div>
           </div>
 
@@ -622,19 +604,19 @@ export default function ProfilePage() {
                       description: 'Perfil ativo atualizado neste dispositivo.',
                     })
                   }}
-                  className={`p-3 rounded-2xl border text-left flex items-center justify-between transition-all ${
+                  className={`p-3 rounded-2xl border text-left flex items-center justify-between transition-all min-w-0 ${
                     isSelected
                       ? 'border-emerald-600 bg-emerald-50/70 shadow-sm ring-2 ring-emerald-600/20'
                       : 'border-slate-200/80 hover:bg-slate-50 hover:border-slate-300'
                   }`}
                 >
-                  <div className="flex items-center gap-2.5 overflow-hidden">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 overflow-hidden mr-2">
                     <Avatar className="w-8 h-8 border border-emerald-200 shrink-0">
                       <AvatarFallback className="bg-gradient-to-tr from-emerald-600 to-teal-700 text-white font-bold text-xs">
                         {member.name.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="overflow-hidden">
+                    <div className="min-w-0 flex-1">
                       <p className="font-bold text-xs text-slate-900 truncate">{member.name}</p>
                       <p className="text-[10px] text-slate-500 truncate">
                         {member.is_admin ? 'Administrador' : 'Membro'}
@@ -654,31 +636,34 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* 3. Membros da Família */}
+      {/* 4. Membros da Família */}
       <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4">
+          <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold shrink-0">
               <Users className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-base text-slate-900">Membros da Família</h3>
-                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-bold text-base text-slate-900 leading-tight">
+                  Membros da Família
+                </h3>
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 shrink-0">
                   {members.length}/5 membros
                 </span>
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 mt-1 leading-normal break-words">
                 Pessoas com acesso à conta compartilhada e lançamentos
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          {/* Botões perfeitamente alinhados: grid no mobile, flex no sm+ */}
+          <div className="grid grid-cols-1 sm:flex items-center gap-2 w-full sm:w-auto shrink-0">
             {isFamilyAdmin ? (
               <Button
                 onClick={handleOpenInviteModal}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-sm gap-1.5 h-9"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-sm gap-1.5 h-9 w-full sm:w-auto justify-center"
               >
                 <UserPlus className="w-4 h-4" />
                 <span>Convidar membro</span>
@@ -687,7 +672,7 @@ export default function ProfilePage() {
               <Button
                 onClick={() => setIsLeaveDialogOpen(true)}
                 variant="outline"
-                className="text-xs font-semibold text-red-600 border-red-200 hover:bg-red-50 rounded-xl h-9 gap-1"
+                className="text-xs font-semibold text-red-600 border-red-200 hover:bg-red-50 rounded-xl h-9 gap-1 w-full sm:w-auto justify-center"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>Sair da família</span>
@@ -697,7 +682,7 @@ export default function ProfilePage() {
             <Button
               onClick={() => setIsJoinDialogOpen(true)}
               variant="outline"
-              className="text-xs font-semibold text-slate-700 border-slate-200 hover:bg-slate-50 rounded-xl h-9 gap-1.5"
+              className="text-xs font-semibold text-slate-700 border-slate-200 hover:bg-slate-50 rounded-xl h-9 gap-1.5 w-full sm:w-auto justify-center"
             >
               <KeyRound className="w-3.5 h-3.5 text-emerald-600" />
               <span>Entrar com código</span>
@@ -705,23 +690,24 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Lista de Membros com alinhamento refinado */}
         <div className="divide-y divide-slate-100">
           {members.map((member) => (
             <div
               key={member.id}
-              className="py-3.5 flex items-center justify-between hover:bg-slate-50/70 rounded-2xl px-2 transition-colors group"
+              className="py-3 sm:py-3.5 flex items-center justify-between hover:bg-slate-50/70 rounded-2xl px-2 transition-colors gap-3"
             >
-              <div className="flex items-center gap-3">
-                <Avatar className="w-10 h-10 border border-emerald-100">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <Avatar className="w-10 h-10 border border-emerald-100 shrink-0">
                   <AvatarFallback className="bg-emerald-100 text-emerald-800 font-bold text-sm">
                     {member.name.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm text-slate-900">{member.name}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-sm text-slate-900 truncate">{member.name}</span>
                     <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${
                         member.is_admin
                           ? 'bg-emerald-100 text-emerald-800 flex items-center gap-1'
                           : 'bg-slate-100 text-slate-600'
@@ -731,29 +717,33 @@ export default function ProfilePage() {
                       {member.is_admin ? 'Admin' : 'Membro'}
                     </span>
                   </div>
-                  <span className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-slate-400 truncate mt-0.5">
                     {member.is_admin
                       ? 'Gerencia convites e configurações'
                       : 'Acesso total a lançamentos'}
-                  </span>
+                  </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 shrink-0">
                 {isFamilyAdmin && (
                   <button
+                    type="button"
                     onClick={() => openEditMemberDialog(member)}
-                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"
+                    className="p-2 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition-colors"
                     title="Renomear membro"
+                    aria-label={`Renomear ${member.name}`}
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
                 )}
                 {isFamilyAdmin && !member.is_admin && (
                   <button
+                    type="button"
                     onClick={() => setMemberToDelete(member)}
                     className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
                     title="Remover membro"
+                    aria-label={`Remover ${member.name}`}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -768,7 +758,7 @@ export default function ProfilePage() {
       {!isStandalone && (
         <div className="bg-gradient-to-br from-emerald-900 via-[#064E3B] to-teal-950 rounded-3xl p-5 sm:p-6 text-white shadow-lg shadow-emerald-950/15 border border-emerald-600/30">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-start sm:items-center gap-3.5">
+            <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
               <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 p-1 flex items-center justify-center shrink-0 shadow-inner">
                 <img
                   src="/icon-192.png"
@@ -780,11 +770,11 @@ export default function ProfilePage() {
                   }}
                 />
               </div>
-              <div>
-                <h3 className="font-bold text-base text-white flex items-center gap-1.5">
+              <div className="min-w-0 flex-1">
+                <h3 className="font-bold text-base text-white flex items-center gap-1.5 leading-tight">
                   <span>📲 Instalar aplicativo no celular</span>
                 </h3>
-                <p className="text-xs text-emerald-100/90 mt-0.5">
+                <p className="text-xs text-emerald-100/90 mt-1 leading-normal break-words">
                   Tenha acesso rápido direto da sua tela inicial
                 </p>
               </div>
@@ -794,7 +784,7 @@ export default function ProfilePage() {
               type="button"
               onClick={handleInstallShortcutClick}
               disabled={isInstalling}
-              className="bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold text-xs rounded-xl h-10 px-4 shadow-md active:scale-95 transition-all self-start sm:self-center shrink-0 flex items-center gap-1.5"
+              className="bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold text-xs rounded-xl h-9 px-4 shadow-md active:scale-95 transition-all w-full sm:w-auto shrink-0 flex items-center justify-center gap-1.5"
             >
               {isInstalling ? (
                 <>
@@ -822,30 +812,36 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* 6. Configurações do Sistema */}
+      {/* 6. Configurações do Sistema e Preferências */}
       <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm space-y-4">
-        <h4 className="font-bold text-sm text-slate-900 mb-2">Preferências</h4>
-
-        <div className="flex items-center justify-between py-2 border-b border-slate-100">
-          <div className="flex items-center gap-3">
-            <DollarSign className="w-5 h-5 text-slate-400" />
-            <div>
-              <p className="text-xs font-semibold text-slate-800">Formato de Moeda</p>
-              <p className="text-[11px] text-slate-500">Padrão nacional do sistema</p>
-            </div>
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold shrink-0">
+            <DollarSign className="w-5 h-5" />
           </div>
-          <span className="text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-full">
+          <div>
+            <h4 className="font-bold text-base text-slate-900 leading-tight">Preferências</h4>
+            <p className="text-xs text-slate-500 mt-1">Configurações regionais e da sua conta</p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between py-3 border-t border-b border-slate-100 gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-slate-800">Formato de Moeda</p>
+            <p className="text-[11px] text-slate-500">Padrão nacional do sistema</p>
+          </div>
+          <span className="text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-full shrink-0">
             BRL (R$)
           </span>
         </div>
 
-        {/* Botão Sair */}
-        <div className="pt-2">
+        {/* Botão Sair com visual limpo */}
+        <div className="pt-1">
           <button
+            type="button"
             onClick={handleSignOut}
-            className="flex items-center gap-2 text-xs font-semibold text-red-600 hover:text-red-700 p-2 rounded-xl hover:bg-red-50 transition-colors"
+            className="flex items-center gap-2 text-xs font-semibold text-red-600 hover:text-red-700 p-2.5 rounded-xl hover:bg-red-50 transition-colors w-full sm:w-auto"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-4 h-4 shrink-0" />
             <span>Sair da conta compartilhada</span>
           </button>
         </div>
@@ -1049,10 +1045,10 @@ export default function ProfilePage() {
         isIos={isIos}
       />
 
-      {/* Rodapé de Versão */}
+      {/* Rodapé de Versão com versão dinâmica sincronizada */}
       <div className="text-center pt-2 pb-4">
         <span className="text-[11px] text-slate-400 font-medium">
-          Versão 0.0.124 • Finanças Familiares
+          Versão {appVersion} • Finanças Familiares
         </span>
       </div>
 
