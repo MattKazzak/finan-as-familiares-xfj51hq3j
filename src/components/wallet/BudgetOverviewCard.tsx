@@ -1,17 +1,5 @@
 import { useState } from 'react'
-import {
-  Sparkles,
-  AlertTriangle,
-  CheckCircle2,
-  AlertCircle,
-  TrendingUp,
-  Home,
-  Coffee,
-  HelpCircle,
-  ChevronRight,
-  ShieldAlert,
-  Info,
-} from 'lucide-react'
+import { Sparkles, CheckCircle2, TrendingUp, Home, Coffee } from 'lucide-react'
 import { formatBRL } from '@/lib/formatters'
 import type { Family } from '@/types/finance'
 
@@ -131,13 +119,12 @@ export function BudgetOverviewCard({
   totalSpent,
   currentDate,
   monthKey,
-  categoryList,
+  categoryList: _categoryList,
   onOpenModelDialog,
 }: BudgetOverviewCardProps) {
   const [selectedBucket, setSelectedBucket] = useState<
     'all' | 'essentials' | 'lifestyle' | 'future'
   >('all')
-  const [showAllAlerts, setShowAllAlerts] = useState(false)
 
   const netIncomeCents = family?.monthly_net_income_cents || 0
 
@@ -159,104 +146,7 @@ export function BudgetOverviewCard({
     : 30
   const futureWidth = hasBudgetData ? (bucketsSummary.future.budgetCents / sumBudgets) * 100 : 20
 
-  // Coleta inteligente e ordenada dos alertas dos tetos e baldes
-  const now = new Date()
-  const isCurrentViewingMonth = now.toISOString().slice(0, 7) === monthKey
-  const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate()
-  const currentDay = isCurrentViewingMonth ? now.getDate() : 1
-  const daysRemaining = Math.max(0, daysInMonth - currentDay)
-
-  const alerts: SummaryAlert[] = []
-
-  // 1. Alerta de comprometimento total da renda líquida
-  if (totalBudgetPercentOfIncome > 100) {
-    alerts.push({
-      id: 'total-income-overflow',
-      severity: 'red',
-      categoryName: 'Orçamento Global',
-      title: 'Tetos somados ultrapassam 100% da renda líquida',
-      detail: `O valor orçado (${formatBRL(totalBudget)}) equivale a ${totalBudgetPercentOfIncome}% da sua renda mensal. Ajuste os tetos para manter equilíbrio financeiro.`,
-      metric: `${totalBudgetPercentOfIncome}% da renda`,
-      priority: 1,
-    })
-  }
-
-  // 2. Alertas por categoria (farol preventivo)
-  categoryList.forEach((item) => {
-    if (item.limitCents <= 0) return
-
-    const isInvestment =
-      item.category.name.toLowerCase().includes('reserva') ||
-      item.category.name.toLowerCase().includes('invest') ||
-      item.category.budget_bucket === 'future'
-
-    // Reserva & Investimentos: alerta quando aporte ficar abaixo do ideal
-    if (isInvestment) {
-      if (item.percent < 70) {
-        alerts.push({
-          id: `inv-${item.category.id}`,
-          severity: 'amber',
-          categoryName: item.category.name,
-          bucketKey: item.category.budget_bucket || 'future',
-          title: `Aporte abaixo do mínimo recomendado (${item.percent}%)`,
-          detail: `Priorize a reserva de segurança familiar. Aportado ${formatBRL(item.spentCents)} de ${formatBRL(item.limitCents)} previstos.`,
-          metric: `${item.percent}% atingido`,
-          priority: 25,
-        })
-      }
-      return
-    }
-
-    // Regra preventiva padrão para despesas
-    if (item.percent > 100 || item.isOver) {
-      alerts.push({
-        id: `over-${item.category.id}`,
-        severity: 'red',
-        categoryName: item.category.name,
-        bucketKey: item.category.budget_bucket || undefined,
-        title: `Estourou o teto em ${formatBRL(Math.max(0, item.spentCents - item.limitCents))}`,
-        detail: `Consumiu ${item.percent}% do limite mensal (${formatBRL(item.spentCents)} de ${formatBRL(item.limitCents)}).`,
-        metric: `${item.percent}%`,
-        priority: 10,
-      })
-    } else if (item.percent > 90) {
-      alerts.push({
-        id: `danger-${item.category.id}`,
-        severity: 'red',
-        categoryName: item.category.name,
-        bucketKey: item.category.budget_bucket || undefined,
-        title: `Consumo crítico do teto (${item.percent}%)`,
-        detail: `Restam apenas ${formatBRL(item.limitCents - item.spentCents)} para ${daysRemaining > 0 && isCurrentViewingMonth ? `${daysRemaining} dias restantes no mês.` : 'o mês.'}`,
-        metric: `${item.percent}%`,
-        priority: 15,
-      })
-    } else if (item.percent >= 71) {
-      alerts.push({
-        id: `warning-${item.category.id}`,
-        severity: 'amber',
-        categoryName: item.category.name,
-        bucketKey: item.category.budget_bucket || undefined,
-        title: `Teto em atenção preventiva (${item.percent}%)`,
-        detail: `Já consumiu ${item.percent}% do teto planejado${daysRemaining > 0 && isCurrentViewingMonth ? ` e ainda faltam ${daysRemaining} dias para fechar o mês.` : '.'}`,
-        metric: `${item.percent}%`,
-        priority: 30,
-      })
-    }
-  })
-
-  // Ordenação prioritária dos alertas:
-  // Vermelhos mais críticos primeiro, depois âmbar, depois pelo maior consumo
-  alerts.sort((a, b) => a.priority - b.priority)
-
-  // Filtra por balde se o usuário selecionou um balde específico
-  const filteredAlerts =
-    selectedBucket === 'all' ? alerts : alerts.filter((al) => al.bucketKey === selectedBucket)
-
-  const displayedAlerts = showAllAlerts ? filteredAlerts : filteredAlerts.slice(0, 3)
-  const remainingAlertsCount = filteredAlerts.length - displayedAlerts.length
-
-  const redAlertsCount = alerts.filter((a) => a.severity === 'red').length
-  const amberAlertsCount = alerts.filter((a) => a.severity === 'amber').length
+  const isOverIncome = totalBudgetPercentOfIncome > 100
 
   return (
     <section className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-xs relative overflow-hidden transition-all">
@@ -272,15 +162,10 @@ export function BudgetOverviewCard({
             </span>
             <span className="text-slate-300">·</span>
             <span className="text-[11px] font-semibold text-slate-500">3 Baldes Financeiros</span>
-            {redAlertsCount > 0 ? (
+            {isOverIncome ? (
               <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                {redAlertsCount} {redAlertsCount === 1 ? 'alerta crítico' : 'alertas críticos'}
-              </span>
-            ) : amberAlertsCount > 0 ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                {amberAlertsCount} em atenção
+                Tetos acima da renda
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
@@ -519,145 +404,6 @@ export function BudgetOverviewCard({
             )}
           </div>
         </div>
-      </div>
-
-      {/* SEÇÃO DE ALERTAS PREVENTIVOS & FAROL (INTEGRADOS EM LISTA LEVE E FLUIDA, NÃO COMO CARDS EMPILHADOS) */}
-      <div className="mt-5 pt-4 border-t border-slate-100 space-y-2.5">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-              <span>Farol & Alertas Preventivos</span>
-              {filteredAlerts.length > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
-                  {filteredAlerts.length}
-                </span>
-              )}
-            </span>
-            {selectedBucket !== 'all' && (
-              <span className="text-[11px] text-slate-400">
-                (filtrado por {BUCKETS_CONFIG.find((b) => b.key === selectedBucket)?.label})
-              </span>
-            )}
-          </div>
-
-          {filteredAlerts.length > 3 && (
-            <button
-              type="button"
-              onClick={() => setShowAllAlerts((prev) => !prev)}
-              className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 transition-colors"
-            >
-              {showAllAlerts ? 'Ver menos' : `Ver todos (${filteredAlerts.length})`}
-            </button>
-          )}
-        </div>
-
-        {/* Lista fluida de alertas */}
-        {filteredAlerts.length === 0 ? (
-          <div className="p-3 rounded-2xl bg-emerald-50/50 border border-emerald-100 flex items-center gap-3">
-            <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-4 h-4" />
-            </div>
-            <div className="text-xs">
-              <p className="font-bold text-emerald-900 leading-snug">
-                Nenhum alerta para o período
-              </p>
-              <p className="text-[11px] text-emerald-700 mt-0.5">
-                Todos os tetos acompanhados estão dentro do ritmo planejado e com aportes adequados.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-1.5">
-            {displayedAlerts.map((alert) => {
-              const isRed = alert.severity === 'red'
-              const isAmber = alert.severity === 'amber'
-
-              return (
-                <div
-                  key={alert.id}
-                  className={`p-3 rounded-2xl border transition-all flex items-start justify-between gap-3 ${
-                    isRed
-                      ? 'bg-red-50/60 border-red-200/80 text-red-950'
-                      : isAmber
-                        ? 'bg-amber-50/60 border-amber-200/80 text-amber-950'
-                        : 'bg-emerald-50/60 border-emerald-200/80 text-emerald-950'
-                  }`}
-                >
-                  <div className="flex items-start gap-2.5 min-w-0">
-                    <div
-                      className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
-                        isRed
-                          ? 'bg-red-100 text-red-700'
-                          : isAmber
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-emerald-100 text-emerald-700'
-                      }`}
-                    >
-                      {isRed ? (
-                        <AlertCircle className="w-3.5 h-3.5" />
-                      ) : isAmber ? (
-                        <AlertTriangle className="w-3.5 h-3.5" />
-                      ) : (
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                      )}
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-bold leading-tight">{alert.title}</span>
-                        <span
-                          className={`text-[10px] font-semibold px-1.5 py-0.2 rounded-md ${
-                            isRed
-                              ? 'bg-red-200/70 text-red-800'
-                              : isAmber
-                                ? 'bg-amber-200/70 text-amber-900'
-                                : 'bg-emerald-200/70 text-emerald-800'
-                          }`}
-                        >
-                          {alert.categoryName}
-                        </span>
-                      </div>
-                      <p
-                        className={`text-[11px] mt-0.5 leading-relaxed ${
-                          isRed
-                            ? 'text-red-900/80'
-                            : isAmber
-                              ? 'text-amber-900/80'
-                              : 'text-emerald-900/80'
-                        }`}
-                      >
-                        {alert.detail}
-                      </p>
-                    </div>
-                  </div>
-
-                  {alert.metric && (
-                    <span
-                      className={`text-xs font-extrabold tabular-nums shrink-0 px-2 py-0.5 rounded-lg ${
-                        isRed
-                          ? 'bg-white/80 text-red-700 border border-red-200/60'
-                          : 'bg-white/80 text-amber-800 border border-amber-200/60'
-                      }`}
-                    >
-                      {alert.metric}
-                    </span>
-                  )}
-                </div>
-              )
-            })}
-
-            {!showAllAlerts && remainingAlertsCount > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowAllAlerts(true)}
-                className="w-full text-center py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors border border-slate-200/60"
-              >
-                Mostrar mais {remainingAlertsCount}{' '}
-                {remainingAlertsCount === 1 ? 'alerta' : 'alertas'}
-              </button>
-            )}
-          </div>
-        )}
       </div>
     </section>
   )

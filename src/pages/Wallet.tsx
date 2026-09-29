@@ -37,6 +37,7 @@ import {
   CategoryEditorPopover,
   CATEGORY_COLORS,
 } from '@/components/categories/CategoryEditorPopover'
+import { BudgetAlertsFarol } from '@/components/wallet/BudgetAlertsFarol'
 import { SubcategoryEditorPopover } from '@/components/categories/SubcategoryEditorPopover'
 import {
   DeleteCategoryConfirmDialog,
@@ -302,6 +303,10 @@ export default function WalletPage() {
     'essentials',
   )
   const [savingCategoryEditor, setSavingCategoryEditor] = useState(false)
+
+  // Estado para abrir editor de categoria diretamente de um alerta do Farol
+  const [activeAlertEditCategory, setActiveAlertEditCategory] =
+    useState<TransactionCategory | null>(null)
 
   const [isNewSubcatDialogOpen, setIsNewSubcatDialogOpen] = useState(false)
   const [categoryForNewSubcat, setCategoryForNewSubcat] = useState<TransactionCategory | null>(null)
@@ -3023,8 +3028,121 @@ export default function WalletPage() {
                     }}
                   />
                 </div>
+
+                {/* FAROL & ALERTAS PREVENTIVOS — Design inteligente e recolhido por padrão no fim da lista */}
+                <BudgetAlertsFarol
+                  family={family}
+                  bucketsSummary={categoryBudgetData.bucketsSummary}
+                  totalBudget={categoryBudgetData.totalBudget}
+                  totalBudgetPercentOfIncome={categoryBudgetData.totalBudgetPercentOfIncome}
+                  categoryList={categoryBudgetData.list}
+                  currentDate={currentDate}
+                  monthKey={monthKey}
+                  onOpenCategoryEditor={(cat) => setActiveAlertEditCategory(cat)}
+                  onOpenModelDialog={() => setIsApplyModelOpen(true)}
+                />
               </div>
             </div>
+
+            {/* Editor de categoria controlado aberto via clique em item de alerta do Farol */}
+            {activeAlertEditCategory &&
+              (() => {
+                const item = categoryBudgetData.list.find(
+                  (it) => it.category.id === activeAlertEditCategory.id,
+                )
+                const initialLimit = item?.defaultLimitCents || item?.limitCents || 0
+
+                return (
+                  <CategoryEditorPopover
+                    key={`alert-edit-${activeAlertEditCategory.id}`}
+                    category={activeAlertEditCategory}
+                    open={true}
+                    onOpenChange={(isOpen) => {
+                      if (!isOpen) setActiveAlertEditCategory(null)
+                    }}
+                    initialLimitCents={initialLimit}
+                    bucketsSummary={categoryBudgetData.bucketsSummary}
+                    family={family}
+                    onSave={async (data) => {
+                      try {
+                        await editCategory(activeAlertEditCategory.id, {
+                          name: data.name,
+                          type: data.type,
+                          color: data.color,
+                          icon: data.icon,
+                          budget_bucket: data.budget_bucket,
+                        })
+                        if (
+                          data.type === 'expense' &&
+                          typeof data.budget_amount_cents === 'number'
+                        ) {
+                          const newLimit = Math.max(0, data.budget_amount_cents)
+                          setDefaultBudgets((prev) => {
+                            const exists = prev.some(
+                              (b) =>
+                                b.category_id === activeAlertEditCategory.id && !b.subcategory_id,
+                            )
+                            if (exists) {
+                              return prev.map((b) =>
+                                b.category_id === activeAlertEditCategory.id && !b.subcategory_id
+                                  ? { ...b, amount_cents: newLimit }
+                                  : b,
+                              )
+                            }
+                            return [
+                              ...prev,
+                              {
+                                id: `temp-${Date.now()}`,
+                                family_id: family!.id,
+                                category_id: activeAlertEditCategory.id,
+                                subcategory_id: null,
+                                amount_cents: newLimit,
+                                created_at: new Date().toISOString(),
+                                updated_at: new Date().toISOString(),
+                              } as any,
+                            ]
+                          })
+                          if (item?.hasOverride) {
+                            setMonthOverrides((prev) =>
+                              prev.filter(
+                                (b) =>
+                                  !(
+                                    b.category_id === activeAlertEditCategory.id &&
+                                    !b.subcategory_id
+                                  ),
+                              ),
+                            )
+                          }
+                          await upsertDefaultBudget(
+                            family!.id,
+                            activeAlertEditCategory.id,
+                            newLimit,
+                            null,
+                          )
+                          if (item?.hasOverride) {
+                            await resetMonthBudgetToDefault(
+                              family!.id,
+                              activeAlertEditCategory.id,
+                              monthKey,
+                              null,
+                            )
+                          }
+                        }
+                        setActiveAlertEditCategory(null)
+                        triggerRefresh()
+                        await loadMonthData()
+                      } catch (err: any) {
+                        console.error('Erro ao editar categoria via alerta:', err)
+                        toast({
+                          title: 'Erro ao editar categoria',
+                          description: err?.message || 'Tente novamente.',
+                          variant: 'destructive',
+                        })
+                      }
+                    }}
+                  />
+                )
+              })()}
           </div>
         ) : null}
       </div>
