@@ -301,7 +301,7 @@ export default function Home() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-5xl mx-auto w-full min-w-0 overflow-x-hidden">
       {/* 1. Header Saudação + Pull-to-refresh */}
       <div className="flex items-start sm:items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
@@ -338,7 +338,7 @@ export default function Home() {
       </div>
 
       {/* 2. Filtro Horizontal de Membros (Chips) */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none max-w-full">
         <button
           type="button"
           onClick={() => setSelectedMemberId(null)}

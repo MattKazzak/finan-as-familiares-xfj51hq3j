@@ -108,6 +108,40 @@
     --chart-5: 10 100% 50%;
   }
 
+  /* Garantia estrutural GLOBAL: impede rolagem horizontal em qualquer tela do app */
+  html,
+  body {
+    overflow-x: clip !important;
+    max-width: 100vw !important;
+    box-sizing: border-box;
+  }
+
+  /* Support fallback for browsers that don't support clip */
+  @supports not (overflow-x: clip) {
+    html,
+    body {
+      overflow-x: hidden !important;
+    }
+  }
+
+  #root {
+    overflow-x: clip;
+    max-width: 100%;
+    min-height: 100vh;
+  }
+
+  @supports not (overflow-x: clip) {
+    #root {
+      overflow-x: hidden;
+    }
+  }
+
+  /* Impede que o Radix ScrollLock ao injetar padding ou overflow force scrollbar horizontal */
+  body[data-scroll-locked] {
+    overflow-x: clip !important;
+    margin-right: 0 !important;
+  }
+
   /* NEVER REMOVE THIS */
   section[aria-label='Notifications alt+T'] {
     padding: 0 !important;

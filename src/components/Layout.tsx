@@ -117,7 +117,7 @@ export default function Layout() {
   const userInitial = currentMember?.name?.charAt(0).toUpperCase() || 'F'
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row text-slate-900 font-sans antialiased">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50 flex flex-col md:flex-row text-slate-900 font-sans antialiased">
       {/* SIDEBAR DESKTOP (>= 768px) */}
       <aside className="hidden md:flex md:w-60 flex-col bg-white border-r border-slate-200/80 fixed inset-y-0 left-0 z-40">
         {/* Logo & Marca */}
@@ -234,7 +234,7 @@ export default function Layout() {
         </header>
 
         {/* CONTEÚDO PRINCIPAL (max-width 1200px centralizado) */}
-        <main className="flex-1 w-full max-w-[1200px] mx-auto p-4 sm:p-6 pb-28 md:pb-8">
+        <main className="flex-1 w-full max-w-[1200px] mx-auto p-4 sm:p-6 pb-28 md:pb-8 overflow-x-hidden min-w-0">
           <Outlet />
         </main>
 

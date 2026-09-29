@@ -184,25 +184,25 @@ export function OnboardingWizardDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-[calc(100%-2rem)] max-w-[calc(100vw-2rem)] sm:w-full sm:max-w-lg rounded-3xl p-4 sm:p-7 bg-white border border-slate-200/80 shadow-2xl max-h-[92vh] overflow-x-hidden overflow-y-auto box-border"
+        className="w-[calc(100%-2rem)] max-w-[calc(100vw-2rem)] sm:w-full sm:max-w-lg rounded-3xl p-4 sm:p-7 bg-white border border-slate-200/80 shadow-2xl max-h-[92vh] overflow-x-hidden overflow-y-auto box-border min-w-0"
         onInteractOutside={(e) => {
           // Mantém modal acolhedor focado até o usuário concluir ou clicar em fechar
           e.preventDefault()
         }}
       >
-        <DialogHeader className="space-y-2 text-left">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+        <DialogHeader className="space-y-2 text-left min-w-0">
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
             <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 rounded-full">
               Boas-vindas ao Curiangoo
             </span>
           </div>
 
-          <DialogTitle className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          <DialogTitle className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight break-words min-w-0">
             {step === 1 ? 'Renda Mensal Familiar' : 'Seu Orçamento em 3 Caixas'}
           </DialogTitle>
 
-          <DialogDescription className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+          <DialogDescription className="text-xs sm:text-sm text-slate-500 leading-relaxed break-words min-w-0">
             {step === 1
               ? 'Quanto entra líquido na conta da família por mês?'
               : 'Separamos seu dinheiro em 3 caixas inteligentes para equilibrar o mês sem esforço.'}
@@ -210,14 +210,14 @@ export function OnboardingWizardDialog({
         </DialogHeader>
 
         {/* Indicador de progresso limpo */}
-        <div className="flex items-center gap-2 my-2">
+        <div className="flex items-center gap-2 my-2 w-full min-w-0">
           <div
-            className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+            className={`h-1.5 flex-1 min-w-0 rounded-full transition-all duration-300 ${
               step >= 1 ? 'bg-emerald-600' : 'bg-slate-200'
             }`}
           />
           <div
-            className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+            className={`h-1.5 flex-1 min-w-0 rounded-full transition-all duration-300 ${
               step >= 2 ? 'bg-emerald-600' : 'bg-slate-200'
             }`}
           />
@@ -225,16 +225,16 @@ export function OnboardingWizardDialog({
 
         {/* ETAPA 1: RENDA MENSAL FAMILIAR */}
         {step === 1 && (
-          <div className="space-y-5 py-2">
-            <div className="p-5 sm:p-6 bg-gradient-to-b from-slate-50/90 to-slate-100/50 rounded-3xl border border-slate-200/80 text-center space-y-4">
+          <div className="space-y-5 py-2 w-full min-w-0">
+            <div className="p-5 sm:p-6 bg-gradient-to-b from-slate-50/90 to-slate-100/50 rounded-3xl border border-slate-200/80 text-center space-y-4 min-w-0">
               <label
                 htmlFor="onboarding-income-input"
-                className="block text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer"
+                className="block text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer break-words"
               >
                 Renda Líquida Total dos Membros
               </label>
 
-              <div className="relative max-w-xs mx-auto">
+              <div className="relative max-w-xs mx-auto w-full min-w-0">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-extrabold text-xl sm:text-2xl select-none">
                   R$
                 </span>
@@ -255,12 +255,12 @@ export function OnboardingWizardDialog({
                 />
               </div>
 
-              <p className="text-[11px] sm:text-xs text-slate-500 leading-snug">
+              <p className="text-[11px] sm:text-xs text-slate-500 leading-snug break-words">
                 Soma dos salários líquidos, pró-labores e rendas fixas de quem mora junto.
               </p>
             </div>
 
-            <div className="flex flex-col gap-2 pt-2">
+            <div className="flex flex-col gap-2 pt-2 w-full min-w-0">
               <Button
                 type="button"
                 onClick={handleNextStep}
@@ -268,7 +268,7 @@ export function OnboardingWizardDialog({
                 className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-emerald-700/20 flex items-center justify-center gap-2 transition-all"
               >
                 <span>Continuar para as 3 Caixas</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 shrink-0" />
               </Button>
             </div>
           </div>
@@ -276,11 +276,11 @@ export function OnboardingWizardDialog({
 
         {/* ETAPA 2: SEU ORÇAMENTO EM 3 CAIXAS */}
         {step === 2 && (
-          <div className="space-y-4 py-1">
-            <div className="text-center px-1">
-              <p className="text-xs text-slate-500">
+          <div className="space-y-4 py-1 w-full min-w-0">
+            <div className="text-center px-1 min-w-0">
+              <p className="text-xs text-slate-500 break-words">
                 Baseado na sua renda de{' '}
-                <strong className="text-slate-800 font-bold">
+                <strong className="text-slate-800 font-bold whitespace-nowrap">
                   {formatBRL(parsedNetIncomeCents)}
                 </strong>
                 , seu plano de referência é o{' '}
@@ -289,17 +289,19 @@ export function OnboardingWizardDialog({
             </div>
 
             {/* As 3 Caixas Visuais em Destaque */}
-            <div className="space-y-2.5">
+            <div className="space-y-2.5 w-full min-w-0">
               {/* Caixa 1: Necessidades (50%) */}
-              <div className="p-3.5 sm:p-4 rounded-2xl bg-sky-50/80 border border-sky-200/90 flex items-center justify-between gap-3 shadow-2xs">
-                <div className="flex items-center gap-3 min-w-0">
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-sky-50/80 border border-sky-200/90 flex items-center justify-between gap-2.5 sm:gap-3 shadow-2xs min-w-0">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                   <div className="w-10 h-10 rounded-xl bg-sky-500 text-white flex items-center justify-center shrink-0 shadow-sm">
                     <Shield className="w-5 h-5" />
                   </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-bold text-sm text-sky-950">🛡️ Necessidades</span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-200/70 text-sky-800">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                      <span className="font-bold text-sm text-sky-950 truncate">
+                        🛡️ Necessidades
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-200/70 text-sky-800 shrink-0">
                         {currentModel.essentialsPct}%
                       </span>
                     </div>
@@ -308,24 +310,28 @@ export function OnboardingWizardDialog({
                     </p>
                   </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <span className="text-base sm:text-lg font-black text-sky-950 tabular-nums block">
+                <div className="text-right shrink-0 pl-1">
+                  <span className="text-sm sm:text-base md:text-lg font-black text-sky-950 tabular-nums whitespace-nowrap block">
                     {formatBRL(bucketAmounts.essentials)}
                   </span>
-                  <span className="text-[10px] text-sky-600 block">teto planejado</span>
+                  <span className="text-[10px] text-sky-600 block whitespace-nowrap">
+                    teto planejado
+                  </span>
                 </div>
               </div>
 
               {/* Caixa 2: Estilo de Vida (30%) */}
-              <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50/80 border border-amber-200/90 flex items-center justify-between gap-3 shadow-2xs">
-                <div className="flex items-center gap-3 min-w-0">
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50/80 border border-amber-200/90 flex items-center justify-between gap-2.5 sm:gap-3 shadow-2xs min-w-0">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                   <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm">
                     <Sun className="w-5 h-5" />
                   </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-bold text-sm text-amber-950">🏖️ Estilo de Vida</span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200/70 text-amber-800">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                      <span className="font-bold text-sm text-amber-950 truncate">
+                        🏖️ Estilo de Vida
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200/70 text-amber-800 shrink-0">
                         {currentModel.lifestylePct}%
                       </span>
                     </div>
@@ -334,24 +340,28 @@ export function OnboardingWizardDialog({
                     </p>
                   </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <span className="text-base sm:text-lg font-black text-amber-950 tabular-nums block">
+                <div className="text-right shrink-0 pl-1">
+                  <span className="text-sm sm:text-base md:text-lg font-black text-amber-950 tabular-nums whitespace-nowrap block">
                     {formatBRL(bucketAmounts.lifestyle)}
                   </span>
-                  <span className="text-[10px] text-amber-600 block">teto planejado</span>
+                  <span className="text-[10px] text-amber-600 block whitespace-nowrap">
+                    teto planejado
+                  </span>
                 </div>
               </div>
 
               {/* Caixa 3: Futuro & Metas (20%) */}
-              <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200/90 flex items-center justify-between gap-3 shadow-2xs">
-                <div className="flex items-center gap-3 min-w-0">
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200/90 flex items-center justify-between gap-2.5 sm:gap-3 shadow-2xs min-w-0">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                   <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
                     <Target className="w-5 h-5" />
                   </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-bold text-sm text-emerald-950">🎯 Futuro & Metas</span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-200/70 text-emerald-800">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                      <span className="font-bold text-sm text-emerald-950 truncate">
+                        🎯 Futuro & Metas
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-200/70 text-emerald-800 shrink-0">
                         {currentModel.futurePct}%
                       </span>
                     </div>
@@ -360,28 +370,30 @@ export function OnboardingWizardDialog({
                     </p>
                   </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <span className="text-base sm:text-lg font-black text-emerald-950 tabular-nums block">
+                <div className="text-right shrink-0 pl-1">
+                  <span className="text-sm sm:text-base md:text-lg font-black text-emerald-950 tabular-nums whitespace-nowrap block">
                     {formatBRL(bucketAmounts.future)}
                   </span>
-                  <span className="text-[10px] text-emerald-600 block">teto planejado</span>
+                  <span className="text-[10px] text-emerald-600 block whitespace-nowrap">
+                    teto planejado
+                  </span>
                 </div>
               </div>
             </div>
 
             {/* Link sutil para alternar modelo */}
-            <div className="pt-1 text-center">
+            <div className="pt-1 text-center min-w-0">
               {!showModelPicker ? (
                 <button
                   type="button"
                   onClick={() => setShowModelPicker(true)}
                   className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-emerald-700 transition-colors font-medium underline underline-offset-4 cursor-pointer"
                 >
-                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
                   <span>Prefere outro modelo?</span>
                 </button>
               ) : (
-                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2 text-left animate-in fade-in-50 duration-200">
+                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2 text-left animate-in fade-in-50 duration-200 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-700">
                       Selecione o modelo orçamentário:
@@ -394,7 +406,7 @@ export function OnboardingWizardDialog({
                       Fechar
                     </button>
                   </div>
-                  <div className="grid grid-cols-1 gap-1.5">
+                  <div className="grid grid-cols-1 gap-1.5 min-w-0">
                     {BUDGET_MODEL_OPTIONS.map((opt) => {
                       const isSelected = selectedModelId === opt.id
                       return (
@@ -404,20 +416,20 @@ export function OnboardingWizardDialog({
                             setSelectedModelId(opt.id)
                             setShowModelPicker(false)
                           }}
-                          className={`p-2.5 rounded-xl border text-xs cursor-pointer flex items-center justify-between transition-all ${
+                          className={`p-2.5 rounded-xl border text-xs cursor-pointer flex items-center justify-between gap-2 transition-all min-w-0 ${
                             isSelected
                               ? 'bg-emerald-50/80 border-emerald-500 font-semibold text-emerald-950'
                               : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
                           }`}
                         >
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span>{opt.name}</span>
-                              <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-600">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                              <span className="font-semibold">{opt.name}</span>
+                              <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-600 shrink-0">
                                 {opt.label}
                               </span>
                             </div>
-                            <span className="text-[10px] text-slate-400 block mt-0.5">
+                            <span className="text-[10px] text-slate-400 block mt-0.5 break-words">
                               {opt.description}
                             </span>
                           </div>
@@ -433,15 +445,15 @@ export function OnboardingWizardDialog({
             </div>
 
             {/* Ações da Etapa 2 */}
-            <div className="pt-2 flex flex-col sm:flex-row items-center gap-2">
+            <div className="pt-2 flex flex-col sm:flex-row items-center gap-2 w-full min-w-0">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setStep(1)}
                 disabled={isActivating}
-                className="w-full sm:w-auto rounded-2xl text-xs gap-1.5 h-11 text-slate-600 border-slate-200 hover:bg-slate-50"
+                className="w-full sm:w-auto rounded-2xl text-xs gap-1.5 h-11 text-slate-600 border-slate-200 hover:bg-slate-50 shrink-0"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-4 h-4 shrink-0" />
                 <span>Alterar Renda</span>
               </Button>
 
@@ -450,17 +462,17 @@ export function OnboardingWizardDialog({
                 type="button"
                 onClick={handleActivatePlan}
                 disabled={isActivating}
-                className="w-full flex-1 h-12 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-emerald-700/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                className="w-full flex-1 h-12 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-emerald-700/20 flex items-center justify-center gap-2 transition-all cursor-pointer min-w-0"
               >
                 {isActivating ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Criando categorias e ativando...</span>
+                  <span className="flex items-center gap-2 truncate">
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
+                    <span className="truncate">Criando categorias e ativando...</span>
                   </span>
                 ) : (
-                  <span className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4" />
-                    <span>Concluir e Ativar meu Plano</span>
+                  <span className="flex items-center gap-2 truncate">
+                    <Sparkles className="w-4 h-4 shrink-0" />
+                    <span className="truncate">Concluir e Ativar meu Plano</span>
                   </span>
                 )}
               </Button>
