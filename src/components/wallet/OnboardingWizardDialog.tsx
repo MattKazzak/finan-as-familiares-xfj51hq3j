@@ -184,7 +184,7 @@ export function OnboardingWizardDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-lg w-[95vw] rounded-3xl p-5 sm:p-7 bg-white border border-slate-200/80 shadow-2xl max-h-[92vh] overflow-y-auto"
+        className="w-[calc(100vw-2rem)] sm:w-full sm:max-w-lg rounded-3xl p-4 sm:p-7 bg-white border border-slate-200/80 shadow-2xl max-h-[92vh] overflow-x-hidden overflow-y-auto"
         onInteractOutside={(e) => {
           // Mantém modal acolhedor focado até o usuário concluir ou clicar em fechar
           e.preventDefault()
@@ -378,7 +378,7 @@ export function OnboardingWizardDialog({
                   className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-emerald-700 transition-colors font-medium underline underline-offset-4 cursor-pointer"
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5" />
-                  <span>Prefere outro modelo? [Alternar para 60/25/15 ou 70/20/10]</span>
+                  <span>Prefere outro modelo?</span>
                 </button>
               ) : (
                 <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2 text-left animate-in fade-in-50 duration-200">

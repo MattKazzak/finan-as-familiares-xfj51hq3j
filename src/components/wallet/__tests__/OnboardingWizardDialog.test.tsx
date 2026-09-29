@@ -42,9 +42,7 @@ describe('OnboardingWizardDialog', () => {
     expect(screen.getByText('R$ 1.000,00')).toBeDefined()
 
     // Link sutil para alternar modelo
-    expect(
-      screen.getByText(/Prefere outro modelo\? \[Alternar para 60\/25\/15 ou 70\/20\/10\]/i),
-    ).toBeDefined()
+    expect(screen.getByText('Prefere outro modelo?')).toBeDefined()
 
     // Botão de conclusão
     expect(screen.getByRole('button', { name: /Concluir e Ativar meu Plano/i })).toBeDefined()
