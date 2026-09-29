@@ -198,4 +198,62 @@ describe('ProfilePage PWA Install Shortcut - 3 Cenários de Clique', () => {
     expect(titleEl.className).not.toContain('truncate')
     expect(titleEl.className).toContain('break-words')
   })
+
+  it('permite abrir o diálogo de edição da família com label "Nome da família", renomear e salvar', async () => {
+    const mockUpdateFamily = vi.fn().mockResolvedValue({})
+    const mockTriggerRefresh = vi.fn()
+
+    // Atualiza mock do useFamily temporariamente para este teste
+    const useFamilyModule = await import('@/hooks/use-family')
+    const spy = vi.spyOn(useFamilyModule, 'useFamily').mockReturnValue({
+      family: {
+        id: 'f-1',
+        name: 'Família Silva',
+        monthly_net_income_cents: 800000,
+        avatar_url: null,
+      },
+      members: [{ id: 'm-1', name: 'Lucas', is_admin: true }],
+      categories: [],
+      currentMember: { id: 'm-1', name: 'Lucas', is_admin: true },
+      activeMemberId: 'm-1',
+      setActiveMemberId: vi.fn(),
+      openWhoIsUsing: vi.fn(),
+      addMember: vi.fn(),
+      editMember: vi.fn(),
+      removeMember: vi.fn(),
+      updateFamily: mockUpdateFamily,
+      uploadFamilyAvatar: vi.fn(),
+      triggerRefresh: mockTriggerRefresh,
+    } as any)
+
+    render(
+      <MemoryRouter>
+        <ProfilePage />
+      </MemoryRouter>,
+    )
+
+    // Clica no botão "Editar Família"
+    const editBtn = screen.getByRole('button', { name: /Editar Família/i })
+    fireEvent.click(editBtn)
+
+    // Deve exibir o label correto "Nome da família"
+    expect(screen.getByText('Nome da família')).toBeDefined()
+    expect(screen.getByText('Editar Dados da Família')).toBeDefined()
+
+    // Campo de input com valor prévio
+    const input =
+      screen.getByRole('textbox', { name: /Nome da família/i }) ||
+      screen.getByLabelText(/Nome da família/i)
+    fireEvent.change(input, { target: { value: 'Oliveira' } })
+
+    const saveBtn = screen.getByRole('button', { name: /Salvar Alterações/i })
+    fireEvent.click(saveBtn)
+
+    await waitFor(() => {
+      expect(mockUpdateFamily).toHaveBeenCalledWith({ name: 'Família Oliveira' })
+      expect(mockTriggerRefresh).toHaveBeenCalled()
+    })
+
+    spy.mockRestore()
+  })
 })

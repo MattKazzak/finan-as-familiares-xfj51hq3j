@@ -75,6 +75,24 @@ describe('Login / Cadastro Page Brand Header', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Curiangoo' })).toBeDefined()
     expect(screen.getByText('Finanças Familiares no Prumo')).toBeDefined()
   })
+
+  it('no modo cadastro, exibe apenas o campo "Seu Nome" (pessoa) e não pede nome da família', () => {
+    render(
+      <MemoryRouter>
+        <Login />
+      </MemoryRouter>,
+    )
+
+    const signupTab = screen.getByText('Criar Nova Conta')
+    fireEvent.click(signupTab)
+
+    expect(screen.getByLabelText('Seu Nome')).toBeDefined()
+    expect(screen.getByPlaceholderText('Ex: Matheus')).toBeDefined()
+
+    // Garante que NÃO existe campo de família no signup (conforme decidido no produto)
+    expect(screen.queryByLabelText(/Nome da Família/i)).toBeNull()
+    expect(screen.queryByPlaceholderText(/Ex.: Silva/i)).toBeNull()
+  })
 })
 
 describe('Fluxo de Reenvio de E-mail de Confirmação', () => {

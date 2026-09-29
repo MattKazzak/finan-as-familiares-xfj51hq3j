@@ -12,17 +12,31 @@ const mockFamily: Family = {
 }
 
 describe('OnboardingWizardDialog', () => {
-  it('renderiza etapa 1 com marca oficial Curiangoo e pergunta sobre renda líquida', () => {
+  it('renderiza etapa 1 "Vamos criar o espaço da sua família" com sugestão "Família {nome}" editável', () => {
     render(<OnboardingWizardDialog open={true} onOpenChange={vi.fn()} family={mockFamily} />)
 
     expect(screen.getByText('Boas-vindas ao Curiangoo')).toBeDefined()
-    expect(screen.getByText('Renda Mensal Familiar')).toBeDefined()
-    expect(screen.getByText('Quanto entra líquido na conta da família por mês?')).toBeDefined()
-    expect(screen.getByText('Renda Líquida Total dos Membros')).toBeDefined()
+    expect(screen.getByText('Vamos criar o espaço da sua família')).toBeDefined()
+    expect(screen.getByText('Nome da família')).toBeDefined()
+
+    const familyNameInput = screen.getByDisplayValue('Família Silva')
+    expect(familyNameInput).toBeDefined()
+
+    // Permite editar o nome
+    fireEvent.change(familyNameInput, { target: { value: 'Família Ferreira' } })
+    expect(screen.getByDisplayValue('Família Ferreira')).toBeDefined()
   })
 
-  it('permite digitar renda e avançar para etapa 2 (Seu Orçamento em 3 Caixas)', async () => {
+  it('permite definir nome da família e avançar pela renda até etapa 3 (Seu Orçamento em 3 Caixas)', async () => {
     render(<OnboardingWizardDialog open={true} onOpenChange={vi.fn()} family={mockFamily} />)
+
+    // Etapa 1: Nome da família
+    const step1Btn = screen.getByRole('button', { name: /Continuar para a Renda/i })
+    fireEvent.click(step1Btn)
+
+    // Etapa 2: Renda Mensal Familiar
+    expect(screen.getByText('Renda Mensal Familiar')).toBeDefined()
+    expect(screen.getByText('Renda Líquida Total dos Membros')).toBeDefined()
 
     const input = screen.getByPlaceholderText('0,00')
     fireEvent.change(input, { target: { value: '5000,00' } })
@@ -30,7 +44,7 @@ describe('OnboardingWizardDialog', () => {
     const continueBtn = screen.getByRole('button', { name: /Continuar para as 3 Caixas/i })
     fireEvent.click(continueBtn)
 
-    // Deve estar no Passo 2
+    // Deve estar no Passo 3
     expect(screen.getByText('Seu Orçamento em 3 Caixas')).toBeDefined()
     expect(screen.getByText(/Necessidades/)).toBeDefined()
     expect(screen.getByText(/Estilo de Vida/)).toBeDefined()
@@ -65,6 +79,9 @@ describe('OnboardingWizardDialog', () => {
       />,
     )
 
+    const step1Btn = screen.getByRole('button', { name: /Continuar para a Renda/i })
+    fireEvent.click(step1Btn)
+
     const continueBtn = screen.getByRole('button', { name: /Continuar para as 3 Caixas/i })
     fireEvent.click(continueBtn)
 
@@ -83,6 +100,9 @@ describe('OnboardingWizardDialog', () => {
         family={{ ...mockFamily, monthly_net_income_cents: 800000 }}
       />,
     )
+
+    const step1Btn = screen.getByRole('button', { name: /Continuar para a Renda/i })
+    fireEvent.click(step1Btn)
 
     const continueBtn = screen.getByRole('button', { name: /Continuar para as 3 Caixas/i })
     fireEvent.click(continueBtn)
@@ -127,6 +147,9 @@ describe('OnboardingWizardDialog', () => {
         family={{ ...mockFamily, monthly_net_income_cents: 600000 }}
       />,
     )
+
+    const step1Btn = screen.getByRole('button', { name: /Continuar para a Renda/i })
+    fireEvent.click(step1Btn)
 
     const continueBtn = screen.getByRole('button', { name: /Continuar para as 3 Caixas/i })
     fireEvent.click(continueBtn)

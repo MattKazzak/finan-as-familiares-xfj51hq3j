@@ -10,8 +10,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
 import { Family } from '@/types/finance'
-import { formatBRL, parseBRLToCents } from '@/lib/formatters'
+import { formatBRL, parseBRLToCents, normalizeFamilyName } from '@/lib/formatters'
 import { seedStandardizedCategoriesAndApplyPlan } from '@/services/onboarding'
+import { updateFamilyDetails } from '@/services/family'
+import { useAuth } from '@/hooks/use-auth'
+import { useFamily } from '@/hooks/use-family'
 import {
   Sparkles,
   ChevronRight,
@@ -22,6 +25,7 @@ import {
   Sun,
   Target,
   ArrowRight,
+  Home,
 } from 'lucide-react'
 
 export type BudgetModelId = '50_30_20' | '60_25_15' | '70_20_10'
@@ -83,32 +87,74 @@ export function OnboardingWizardDialog({
   const { toast } = useToast()
 
   // 2 Etapas Limpas:
-  // 1: Renda Mensal Familiar
-  // 2: Seu Orçamento em 3 Caixas (Resumo 50/30/20 com valores na hora + seletor alternativo + botão Concluir e Ativar meu Plano)
-  const [step, setStep] = useState<1 | 2>(1)
+  const { user } = useAuth()
+  const { members, triggerRefresh, updateFamily } = useFamily()
+
+  // 3 Etapas Limpas:
+  // 1: Vamos criar o espaço da sua família (Nome da família pré-preenchido com "Família {primeiro nome}", editável)
+  // 2: Renda Mensal Familiar (Renda Líquida Total dos Membros)
+  // 3: Seu Orçamento em 3 Caixas (Resumo 50/30/20 + alternativo + Concluir e Ativar meu Plano)
+  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [familyNameInput, setFamilyNameInput] = useState<string>('')
   const [incomeInput, setIncomeInput] = useState<string>('')
   const [selectedModelId, setSelectedModelId] = useState<BudgetModelId>('50_30_20')
   const [showModelPicker, setShowModelPicker] = useState<boolean>(false)
   const [isActivating, setIsActivating] = useState(false)
 
-  // Pré-preenche renda se já existir na família
-  useEffect(() => {
-    if (family?.monthly_net_income_cents && family.monthly_net_income_cents > 0) {
-      const formatted = (family.monthly_net_income_cents / 100).toFixed(2).replace('.', ',')
-      setIncomeInput(formatted)
+  // Calcula a sugestão automática "Família {primeiro nome}"
+  // Extrai o primeiro nome de user.user_metadata?.name ou do membro admin
+  const computeSuggestedFamilyName = (): string => {
+    // 1. Tenta pegar primeiro nome de user.user_metadata?.name
+    const rawUserName = (user?.user_metadata?.name as string)?.trim()
+    if (rawUserName) {
+      const firstName = rawUserName.split(/\s+/)[0]
+      if (firstName) {
+        return `Família ${firstName}`
+      }
     }
-  }, [family])
 
-  // Reseta estado quando o diálogo abre
+    // 2. Tenta pegar primeiro nome do membro admin
+    const adminMember = members.find((m) => m.is_admin) || members[0]
+    if (adminMember?.name) {
+      const firstName = adminMember.name.trim().split(/\s+/)[0]
+      if (firstName) {
+        return `Família ${firstName}`
+      }
+    }
+
+    // 3. Fallback do e-mail do usuário se existir
+    if (user?.email) {
+      const emailPrefix = user.email.split('@')[0]
+      const capitalized = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1)
+      if (capitalized) {
+        return `Família ${capitalized}`
+      }
+    }
+
+    return 'Família Silva'
+  }
+
+  // Pré-preenche o nome da família e renda ao abrir o diálogo
   useEffect(() => {
     if (open) {
       setStep(1)
       setShowModelPicker(false)
+
+      // Se a família tiver nome gravado e não for o padrão temporário 'Minha Família', usa ele;
+      // Caso contrário, calcula a sugestão automática "Família {primeiro nome}"
+      const currentName = family?.name?.trim()
+      if (currentName && currentName !== 'Minha Família' && currentName !== '') {
+        // Se já não começar com "Família", ou se for exatamente "Família Silva", mantém ou formata
+        setFamilyNameInput(currentName)
+      } else {
+        setFamilyNameInput(computeSuggestedFamilyName())
+      }
+
       if (family?.monthly_net_income_cents && family.monthly_net_income_cents > 0) {
         setIncomeInput((family.monthly_net_income_cents / 100).toFixed(2).replace('.', ','))
       }
     }
-  }, [open, family])
+  }, [open, family?.id, user?.id, members])
 
   const parsedNetIncomeCents = useMemo(() => {
     return parseBRLToCents(incomeInput)
@@ -130,7 +176,20 @@ export function OnboardingWizardDialog({
     }
   }, [parsedNetIncomeCents, currentModel])
 
-  const handleNextStep = () => {
+  const handleNextFromStep1 = () => {
+    const trimmed = familyNameInput.trim()
+    if (!trimmed) {
+      toast({
+        title: 'Nome da família obrigatório',
+        description: 'Digite um nome para o espaço da sua família.',
+        variant: 'destructive',
+      })
+      return
+    }
+    setStep(2)
+  }
+
+  const handleNextFromStep2 = () => {
     if (parsedNetIncomeCents <= 0) {
       toast({
         title: 'Informe a renda líquida',
@@ -139,32 +198,63 @@ export function OnboardingWizardDialog({
       })
       return
     }
-    setStep(2)
+    setStep(3)
   }
 
   const handleActivatePlan = async () => {
     if (!family) return
-    if (parsedNetIncomeCents <= 0) {
+    const trimmedName = familyNameInput.trim()
+    if (!trimmedName) {
       toast({
-        title: 'Renda inválida',
-        description: 'Informe uma renda líquida mensal maior que zero.',
+        title: 'Nome da família obrigatório',
+        description: 'Defina o nome da família antes de concluir.',
         variant: 'destructive',
       })
       setStep(1)
       return
     }
 
+    if (parsedNetIncomeCents <= 0) {
+      toast({
+        title: 'Renda inválida',
+        description: 'Informe uma renda líquida mensal maior que zero.',
+        variant: 'destructive',
+      })
+      setStep(2)
+      return
+    }
+
     try {
       setIsActivating(true)
+
+      // Atualiza o nome da família em public.families.name via updateFamilyDetails / updateFamily
+      const normalizedName = normalizeFamilyName(trimmedName)
+      try {
+        if (updateFamily) {
+          await updateFamily({ name: normalizedName })
+        } else {
+          await updateFamilyDetails(family.id, { name: normalizedName })
+        }
+      } catch (famErr) {
+        console.warn(
+          'Erro ao atualizar nome da família no onboarding, tentando updateFamilyDetails direto:',
+          famErr,
+        )
+        await updateFamilyDetails(family.id, { name: normalizedName })
+      }
+
+      // Executa a ativação com RPC atômica (ou fallback controlado)
       await seedStandardizedCategoriesAndApplyPlan({
         familyId: family.id,
         monthlyNetIncomeCents: parsedNetIncomeCents,
         modelPresetId: selectedModelId,
       })
 
+      triggerRefresh?.()
+
       toast({
         title: 'Tudo pronto! 🎉',
-        description: 'Seu planejamento familiar está ativo.',
+        description: `Espaço da ${normalizedName} configurado com sucesso.`,
       })
 
       onOpenChange(false)
@@ -199,17 +289,20 @@ export function OnboardingWizardDialog({
           </div>
 
           <DialogTitle className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight break-words min-w-0">
-            {step === 1 ? 'Renda Mensal Familiar' : 'Seu Orçamento em 3 Caixas'}
+            {step === 1 && 'Vamos criar o espaço da sua família'}
+            {step === 2 && 'Renda Mensal Familiar'}
+            {step === 3 && 'Seu Orçamento em 3 Caixas'}
           </DialogTitle>
 
           <DialogDescription className="text-xs sm:text-sm text-slate-500 leading-relaxed break-words min-w-0">
-            {step === 1
-              ? 'Quanto entra líquido na conta da família por mês?'
-              : 'Separamos seu dinheiro em 3 caixas inteligentes para equilibrar o mês sem esforço.'}
+            {step === 1 && 'Dê um nome afetuoso ou sobrenome para o workspace de vocês.'}
+            {step === 2 && 'Quanto entra líquido na conta da família por mês?'}
+            {step === 3 &&
+              'Separamos seu dinheiro em 3 caixas inteligentes para equilibrar o mês sem esforço.'}
           </DialogDescription>
         </DialogHeader>
 
-        {/* Indicador de progresso limpo */}
+        {/* Indicador de progresso em 3 etapas limpas */}
         <div className="flex items-center gap-2 my-2 w-full min-w-0">
           <div
             className={`h-1.5 flex-1 min-w-0 rounded-full transition-all duration-300 ${
@@ -221,10 +314,72 @@ export function OnboardingWizardDialog({
               step >= 2 ? 'bg-emerald-600' : 'bg-slate-200'
             }`}
           />
+          <div
+            className={`h-1.5 flex-1 min-w-0 rounded-full transition-all duration-300 ${
+              step >= 3 ? 'bg-emerald-600' : 'bg-slate-200'
+            }`}
+          />
         </div>
 
-        {/* ETAPA 1: RENDA MENSAL FAMILIAR */}
+        {/* ETAPA 1: VAMOS CRIAR O ESPAÇO DA SUA FAMÍLIA (NOME DA FAMÍLIA) */}
         {step === 1 && (
+          <div className="space-y-5 py-2 w-full min-w-0">
+            <div className="p-5 sm:p-6 bg-gradient-to-b from-slate-50/90 to-slate-100/50 rounded-3xl border border-slate-200/80 text-center space-y-4 min-w-0">
+              <div className="w-12 h-12 mx-auto rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                <Home className="w-6 h-6" />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="onboarding-family-name-input"
+                  className="block text-xs font-semibold text-slate-700 uppercase tracking-wide cursor-pointer break-words"
+                >
+                  Nome da família
+                </label>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Sugerimos um nome automático com base no seu cadastro, mas você pode editar
+                  livremente:
+                </p>
+              </div>
+
+              <div className="relative max-w-sm mx-auto w-full min-w-0">
+                <Input
+                  id="onboarding-family-name-input"
+                  type="text"
+                  placeholder="Ex.: Família Silva ou Família Matheus"
+                  value={familyNameInput}
+                  onChange={(e) => setFamilyNameInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && familyNameInput.trim()) {
+                      handleNextFromStep1()
+                    }
+                  }}
+                  autoFocus
+                  className="h-14 px-4 text-center text-lg sm:text-xl font-bold bg-white border-slate-300 focus:border-emerald-600 focus:ring-emerald-500/20 text-slate-900 rounded-2xl shadow-xs"
+                />
+              </div>
+
+              <p className="text-[11px] sm:text-xs text-slate-400 leading-snug break-words">
+                Você também poderá trocar esse nome a qualquer momento na página de Perfil.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-2 w-full min-w-0">
+              <Button
+                type="button"
+                onClick={handleNextFromStep1}
+                disabled={!familyNameInput.trim()}
+                className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-emerald-700/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <span>Continuar para a Renda</span>
+                <ArrowRight className="w-4 h-4 shrink-0" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* ETAPA 2: RENDA MENSAL FAMILIAR */}
+        {step === 2 && (
           <div className="space-y-5 py-2 w-full min-w-0">
             <div className="p-5 sm:p-6 bg-gradient-to-b from-slate-50/90 to-slate-100/50 rounded-3xl border border-slate-200/80 text-center space-y-4 min-w-0">
               <label
@@ -247,7 +402,7 @@ export function OnboardingWizardDialog({
                   onChange={(e) => setIncomeInput(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && parsedNetIncomeCents > 0) {
-                      handleNextStep()
+                      handleNextFromStep2()
                     }
                   }}
                   autoFocus
@@ -260,12 +415,22 @@ export function OnboardingWizardDialog({
               </p>
             </div>
 
-            <div className="flex flex-col gap-2 pt-2 w-full min-w-0">
+            <div className="flex flex-col sm:flex-row items-center gap-2 pt-2 w-full min-w-0">
               <Button
                 type="button"
-                onClick={handleNextStep}
+                variant="outline"
+                onClick={() => setStep(1)}
+                className="w-full sm:w-auto rounded-2xl text-xs gap-1.5 h-11 text-slate-600 border-slate-200 hover:bg-slate-50 shrink-0"
+              >
+                <ChevronLeft className="w-4 h-4 shrink-0" />
+                <span>Voltar</span>
+              </Button>
+
+              <Button
+                type="button"
+                onClick={handleNextFromStep2}
                 disabled={parsedNetIncomeCents <= 0}
-                className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-emerald-700/20 flex items-center justify-center gap-2 transition-all"
+                className="w-full flex-1 h-12 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-emerald-700/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 <span>Continuar para as 3 Caixas</span>
                 <ArrowRight className="w-4 h-4 shrink-0" />
@@ -274,8 +439,8 @@ export function OnboardingWizardDialog({
           </div>
         )}
 
-        {/* ETAPA 2: SEU ORÇAMENTO EM 3 CAIXAS */}
-        {step === 2 && (
+        {/* ETAPA 3: SEU ORÇAMENTO EM 3 CAIXAS */}
+        {step === 3 && (
           <div className="space-y-4 py-1 w-full min-w-0">
             <div className="text-center px-1 min-w-0">
               <p className="text-xs text-slate-500 break-words">
@@ -444,12 +609,12 @@ export function OnboardingWizardDialog({
               )}
             </div>
 
-            {/* Ações da Etapa 2 */}
+            {/* Ações da Etapa 3 */}
             <div className="pt-2 flex flex-col sm:flex-row items-center gap-2 w-full min-w-0">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setStep(1)}
+                onClick={() => setStep(2)}
                 disabled={isActivating}
                 className="w-full sm:w-auto rounded-2xl text-xs gap-1.5 h-11 text-slate-600 border-slate-200 hover:bg-slate-50 shrink-0"
               >

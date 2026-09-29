@@ -29,6 +29,7 @@ import {
   formatFamilyDisplayName,
   formatNumberBRL,
   parseBRLToCents,
+  normalizeFamilyName,
 } from '@/lib/formatters'
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
 import { InstallInstructionsModal } from '@/components/common/InstallInstructionsModal'
@@ -97,19 +98,36 @@ export default function ProfilePage() {
   const [memberToDelete, setMemberToDelete] = useState<FamilyMember | null>(null)
 
   const openEditFamilyDialog = () => {
-    setFamilyNameInput(family?.name || '')
+    // Se o nome atual começar com 'Família ', preenche apenas o sufixo no input
+    // para casar com o prefixo visual fixo 'Família'
+    const currentName = family?.name?.trim() || ''
+    const strippedName = currentName.replace(/^Família\s+/i, '').trim()
+    setFamilyNameInput(strippedName || currentName)
     setIsEditFamilyOpen(true)
   }
 
   const handleSaveFamily = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!familyNameInput.trim()) return
+    const trimmed = familyNameInput.trim()
+    if (!trimmed) {
+      toast({
+        title: 'Nome obrigatório',
+        description: 'Digite o nome da sua família.',
+        variant: 'destructive',
+      })
+      return
+    }
 
     try {
       setSavingFamily(true)
-      await updateFamily({ name: familyNameInput.trim() })
+      const normalized = normalizeFamilyName(trimmed)
+      await updateFamily({ name: normalized })
       setIsEditFamilyOpen(false)
       triggerRefresh()
+      toast({
+        title: 'Nome da família atualizado!',
+        description: `O espaço agora se chama ${normalized}.`,
+      })
     } catch {
       toast({
         title: 'Erro ao salvar dados da família',
@@ -734,10 +752,10 @@ export default function ProfilePage() {
           <form onSubmit={handleSaveFamily} className="space-y-4 pt-2">
             <div>
               <Label htmlFor="family-name-input" className="text-xs font-semibold text-slate-700">
-                Sobrenome da Família
+                Nome da família
               </Label>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-2 rounded-xl border border-slate-200">
+                <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-2 rounded-xl border border-slate-200 shrink-0">
                   Família
                 </span>
                 <Input
@@ -746,10 +764,13 @@ export default function ProfilePage() {
                   placeholder="Ex.: Silva, Oliveira, Ferreira"
                   value={familyNameInput}
                   onChange={(e) => setFamilyNameInput(e.target.value)}
-                  className="text-xs"
+                  className="text-xs flex-1"
                   required
                 />
               </div>
+              <p className="text-[11px] text-slate-400 mt-1">
+                O nome atualizado aparecerá imediatamente no cabeçalho e na tela inicial.
+              </p>
             </div>
 
             <DialogFooter className="gap-2 sm:gap-0 pt-2">
