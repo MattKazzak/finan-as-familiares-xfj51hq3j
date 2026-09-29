@@ -140,18 +140,19 @@ describe('Home Page - Card Orçamento em 3 Baldes (50/30/20)', () => {
     expect(screen.getByText(/resta R\$\s*800,00/i)).toBeDefined()
   })
 
-  it('exibe o número herói safe-to-spend "Livre para gastar este mês" com contexto do balde Estilo de Vida', async () => {
+  it('exibe o mês de referência no cabeçalho e não exibe o número herói safe-to-spend', async () => {
     render(
       <MemoryRouter>
         <Home />
       </MemoryRouter>,
     )
 
-    expect(screen.getByText(/Livre para gastar este mês/i)).toBeDefined()
-    // Valor restante R$ 1.200,00 (1.800 - 600)
-    expect(screen.getByText(/1\.200,00/)).toBeDefined()
-    // Sublinha de contexto único: "Usado R$ 600,00 de R$ 1.800,00"
-    expect(screen.getByText(/Usado R\$\s*600,00 de R\$\s*1\.800,00/i)).toBeDefined()
+    // O cabeçalho deve exibir o modelo e o mês de referência formatado
+    expect(screen.getByText('Modelo 50 / 30 / 20')).toBeDefined()
+    // O herói "Livre para gastar este mês" foi completamente removido
+    expect(screen.queryByText(/Livre para gastar este mês/i)).toBeNull()
+    expect(screen.queryByText(/Atenção/i)).toBeNull()
+    expect(screen.queryByText(/Estourado/i)).toBeNull()
     // Não exibe o badge de renda no cabeçalho do card
     expect(screen.queryByText(/6\.000,00\/mês/)).toBeNull()
   })
@@ -183,9 +184,8 @@ describe('Home Page - Card Orçamento em 3 Baldes (50/30/20)', () => {
     )
 
     expect(screen.getByText('Orçamento em 3 Baldes')).toBeDefined()
-    expect(
-      screen.getByText('Defina a renda na Carteira para calcular o saldo livre.'),
-    ).toBeDefined()
+    // Herói removido: não há mensagem "Defina a renda na Carteira para calcular o saldo livre."
+    expect(screen.queryByText('Defina a renda na Carteira para calcular o saldo livre.')).toBeNull()
     // Baldes mostram os gastos sem travar
     expect(screen.getByText('Necessidades')).toBeDefined()
     expect(screen.getByText('Estilo de Vida')).toBeDefined()

@@ -7,6 +7,7 @@ import {
   formatBRL,
   formatFamilyDisplayName,
   formatFullDate,
+  formatMonthYear,
   formatRelativeDate,
 } from '@/lib/formatters'
 import { CountUp } from '@/components/common/CountUp'
@@ -230,9 +231,6 @@ export default function Home() {
     const futurePercent =
       suggestedLimits.future > 0 ? Math.round((spentFuture / suggestedLimits.future) * 100) : 0
 
-    // Saldo livre imediato em Estilo de Vida: teto sugerido menos o que já foi gasto
-    const lifestyleAvailableCents = suggestedLimits.lifestyle - spentLifestyle
-
     return {
       netIncomeCents,
       hasIncomeConfigured: netIncomeCents > 0,
@@ -247,7 +245,6 @@ export default function Home() {
         limitCents: suggestedLimits.lifestyle,
         percent: lifestylePercent,
         isOver: spentLifestyle > suggestedLimits.lifestyle && suggestedLimits.lifestyle > 0,
-        availableCents: lifestyleAvailableCents,
       },
       future: {
         spentCents: spentFuture,
@@ -516,106 +513,28 @@ export default function Home() {
         {/* CARD ORÇAMENTO EM 3 BALDES (Desktop 4 col) */}
         <div className="md:col-span-4 bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div>
-            {/* Header do Card (enxuto: ícone ⚖️ + título + subtítulo, sem badge de renda concorrente) */}
-            <div className="flex items-center gap-2 mb-3.5 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-base shadow-2xs shrink-0">
-                ⚖️
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-bold text-sm text-slate-900 leading-tight break-words">
-                  Orçamento em 3 Baldes
-                </h3>
-                <span className="text-[10px] text-slate-400 font-medium block">
-                  Modelo 50 / 30 / 20
-                </span>
-              </div>
-            </div>
-
-            {/* Número herói (safe-to-spend): valor livre para gastar em Estilo de Vida */}
-            {(() => {
-              if (!bucketsData.hasIncomeConfigured) {
-                return (
-                  <div className="p-3.5 rounded-2xl mb-4 border border-dashed border-slate-200 bg-slate-50/80 text-slate-600 transition-all">
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
-                      Livre para gastar este mês
+            {/* Header do Card (ícone ⚖️ + título + subtítulo com mês de referência discreto) */}
+            <div className="flex items-center justify-between gap-2 mb-4 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-base shadow-2xs shrink-0">
+                  ⚖️
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-bold text-sm text-slate-900 leading-tight break-words">
+                    Orçamento em 3 Baldes
+                  </h3>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] text-slate-400 font-medium block">
+                      Modelo 50 / 30 / 20
                     </span>
-                    <p className="text-xs text-slate-500 mt-1 break-words leading-relaxed">
-                      Defina a renda na Carteira para calcular o saldo livre.
-                    </p>
-                  </div>
-                )
-              }
-
-              const freeCents = bucketsData.lifestyle.availableCents
-              const isOver = bucketsData.lifestyle.isOver
-              const percentConsumed = bucketsData.lifestyle.percent
-              const isTight = !isOver && percentConsumed >= 80
-
-              // Farol visual refinado (verde quando sobra folga, âmbar quando apertado, vermelho quando estourado)
-              let heroContainerBg = 'bg-emerald-50/70 border-emerald-200/70'
-              let heroLabelColor = 'text-emerald-700/90'
-              let heroValueColor = 'text-emerald-950'
-              let heroSubtextColor = 'text-emerald-700/80'
-
-              if (isOver) {
-                heroContainerBg = 'bg-rose-50/80 border-rose-200/80'
-                heroLabelColor = 'text-rose-700/90'
-                heroValueColor = 'text-rose-950'
-                heroSubtextColor = 'text-rose-700/80'
-              } else if (isTight) {
-                heroContainerBg = 'bg-amber-50/80 border-amber-200/80'
-                heroLabelColor = 'text-amber-800/90'
-                heroValueColor = 'text-amber-950'
-                heroSubtextColor = 'text-amber-800/80'
-              }
-
-              return (
-                <div className={`p-3.5 rounded-2xl mb-4 border transition-all ${heroContainerBg}`}>
-                  <div className="flex items-center justify-between gap-1.5 mb-1 min-w-0">
-                    <span
-                      className={`text-[10px] uppercase font-bold tracking-wider flex items-center gap-1 min-w-0 ${heroLabelColor}`}
-                    >
-                      <span className="shrink-0">✨</span>
-                      <span className="break-words">Livre para gastar este mês</span>
+                    <span className="text-[10px] text-slate-300 font-normal select-none">·</span>
+                    <span className="text-[10px] text-emerald-700 font-semibold break-words">
+                      {formatMonthYear(new Date())}
                     </span>
-                    {isOver ? (
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-rose-200/80 text-rose-800 shrink-0 whitespace-nowrap">
-                        Estourado
-                      </span>
-                    ) : isTight ? (
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-200/80 text-amber-800 shrink-0 whitespace-nowrap">
-                        Atenção
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-1">
-                    <div
-                      className={`text-xl sm:text-2xl font-black tracking-tight tabular-nums break-words leading-none ${heroValueColor}`}
-                    >
-                      {freeCents < 0 ? '− ' : ''}
-                      {formatBRL(Math.abs(freeCents))}
-                    </div>
-                    {/* Sublinha única de contexto: sem repetir depois */}
-                    <div
-                      className={`text-[11px] font-medium mt-1.5 break-words leading-tight ${heroSubtextColor}`}
-                    >
-                      {isOver ? (
-                        <span>
-                          Acima do teto · usado {formatBRL(bucketsData.lifestyle.spentCents)} de{' '}
-                          {formatBRL(bucketsData.lifestyle.limitCents)}
-                        </span>
-                      ) : (
-                        <span>
-                          Usado {formatBRL(bucketsData.lifestyle.spentCents)} de{' '}
-                          {formatBRL(bucketsData.lifestyle.limitCents)}
-                        </span>
-                      )}
-                    </div>
                   </div>
                 </div>
-              )
-            })()}
+              </div>
+            </div>
 
             {/* As 3 Barras de Balde Simplificadas */}
             <div className="space-y-3">
