@@ -15,11 +15,86 @@ export interface AiCategorizationSuggestion {
   reasoning: string
 }
 
+export interface AiPdfTransactionItem {
+  date: string // YYYY-MM-DD
+  description: string
+  cleanMerchant: string
+  amountCents: number
+  type?: 'expense' | 'income'
+  installment?: string
+  categoryId: string
+  subcategoryId?: string | null
+  confidence: number
+}
+
 interface BatchCategorizeResponse {
   suggestions?: AiCategorizationSuggestion[]
+  transactions?: AiPdfTransactionItem[]
   totalProcessed?: number
+  totalExtracted?: number
+  mode?: 'batch' | 'pdf'
   error?: string
   message?: string
+}
+
+/**
+ * Invoca a Edge Function 'batch-categorize' no modo PDF com texto bruto.
+ * A IA especializada extrai todas as compras/estornos reais, descarta ruídos
+ * e já classifica cada transação no catálogo da família.
+ */
+export async function parsePdfWithAI(
+  rawText: string,
+  familyId?: string,
+): Promise<{ success: boolean; transactions: AiPdfTransactionItem[]; error?: string }> {
+  if (!rawText || !rawText.trim()) {
+    return {
+      success: false,
+      transactions: [],
+      error: 'O texto do PDF está vazio ou não pôde ser extraído.',
+    }
+  }
+
+  try {
+    const { data, error } = await supabase.functions.invoke<BatchCategorizeResponse>(
+      'batch-categorize',
+      {
+        body: {
+          rawText,
+          familyId,
+        },
+      },
+    )
+
+    if (error) {
+      console.warn('Falha na chamada da Edge Function batch-categorize (modo PDF):', error)
+      return {
+        success: false,
+        transactions: [],
+        error: error.message || 'Falha ao processar o extrato com IA.',
+      }
+    }
+
+    if (!data || !Array.isArray(data.transactions)) {
+      console.warn('Resposta inesperada da Edge Function batch-categorize (modo PDF):', data)
+      return {
+        success: false,
+        transactions: [],
+        error: data?.message || 'A IA não retornou transações formatadas.',
+      }
+    }
+
+    return {
+      success: true,
+      transactions: data.transactions,
+    }
+  } catch (err: any) {
+    console.warn('Exceção ao processar PDF com IA:', err)
+    return {
+      success: false,
+      transactions: [],
+      error: err?.message || 'Erro inesperado na análise com IA.',
+    }
+  }
 }
 
 /**

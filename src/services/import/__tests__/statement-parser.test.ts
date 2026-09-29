@@ -305,13 +305,13 @@ DATA:OFXSGML
       expect(result.transactions[0].amount_cents).toBe(8500)
     })
 
-    it('identifica arquivo .pdf em parseStatementFile e retorna com accountType CREDIT_CARD', async () => {
-      const emptyPdfFile = new File(['%PDF-1.4 empty'], 'fatura_santander.pdf', {
-        type: 'application/pdf',
+    it('identifica arquivo de formato desconhecido e retorna erro amigável', async () => {
+      const txtFile = new File(['conteúdo'], 'extrato.txt', {
+        type: 'text/plain',
       })
-      const result = await parseStatementFile(emptyPdfFile)
-      expect(result.format).toBe('pdf')
-      expect(result.accountType).toBe('CREDIT_CARD')
+      const result = await parseStatementFile(txtFile)
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Formato de arquivo não suportado')
     })
   })
 

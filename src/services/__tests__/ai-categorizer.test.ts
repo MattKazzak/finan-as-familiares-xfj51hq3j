@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { categorizeBatchWithAI } from '../ai-categorizer'
+import { categorizeBatchWithAI, parsePdfWithAI } from '../ai-categorizer'
 import { supabase } from '@/lib/supabase/client'
 
 vi.mock('@/lib/supabase/client', () => ({
@@ -82,5 +82,76 @@ describe('ai-categorizer service (categorizeBatchWithAI)', () => {
 
     const result = await categorizeBatchWithAI(transactions, 'fam-123')
     expect(result).toEqual([])
+  })
+})
+
+describe('ai-categorizer service (parsePdfWithAI)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('retorna erro se rawText for vazio', async () => {
+    const res = await parsePdfWithAI('   ')
+    expect(res.success).toBe(false)
+    expect(res.transactions).toEqual([])
+    expect(supabase.functions.invoke).not.toHaveBeenCalled()
+  })
+
+  it('envia rawText para a Edge Function no modo PDF e retorna transações extraídas', async () => {
+    const mockExtracted = [
+      {
+        date: '2025-05-12',
+        description: 'UBER *TRIP 123',
+        cleanMerchant: 'Uber',
+        amountCents: 3250,
+        type: 'expense' as const,
+        categoryId: 'cat-transporte',
+        subcategoryId: null,
+        confidence: 0.95,
+      },
+      {
+        date: '2025-05-13',
+        description: 'DROGASIL 02/03',
+        cleanMerchant: 'Drogasil',
+        amountCents: 15400,
+        type: 'expense' as const,
+        installment: '02/03',
+        categoryId: 'cat-saude',
+        subcategoryId: 'sub-farmacia',
+        confidence: 0.98,
+      },
+    ]
+
+    vi.mocked(supabase.functions.invoke).mockResolvedValueOnce({
+      data: {
+        transactions: mockExtracted,
+        totalExtracted: 2,
+        mode: 'pdf',
+      },
+      error: null,
+    })
+
+    const result = await parsePdfWithAI('Texto bruto da fatura do Nubank...', 'fam-456')
+
+    expect(supabase.functions.invoke).toHaveBeenCalledWith('batch-categorize', {
+      body: {
+        rawText: 'Texto bruto da fatura do Nubank...',
+        familyId: 'fam-456',
+      },
+    })
+    expect(result.success).toBe(true)
+    expect(result.transactions).toEqual(mockExtracted)
+  })
+
+  it('trata erro retornado pela Edge Function sem quebrar', async () => {
+    vi.mocked(supabase.functions.invoke).mockResolvedValueOnce({
+      data: null,
+      error: { message: 'Erro na chamada da IA' } as any,
+    })
+
+    const result = await parsePdfWithAI('Algum texto', 'fam-456')
+    expect(result.success).toBe(false)
+    expect(result.transactions).toEqual([])
+    expect(result.error).toContain('Erro na chamada da IA')
   })
 })

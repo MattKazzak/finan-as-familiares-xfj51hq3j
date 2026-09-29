@@ -10,6 +10,9 @@ interface BatchTransactionItem {
 }
 
 interface RequestPayload {
+  // Modo A: PDF com texto bruto
+  rawText?: string
+  // Modo B: Lote de transações já extraídas (OFX ou Carteira)
   transactions?: BatchTransactionItem[]
   familyId?: string
 }
@@ -20,6 +23,18 @@ interface AiCategorizationResultItem {
   subcategoryId?: string | null
   confidence: number
   reasoning: string
+}
+
+interface PdfExtractedTransactionItem {
+  date: string // AAAA-MM-DD
+  description: string
+  cleanMerchant: string
+  amountCents: number
+  type?: 'expense' | 'income'
+  installment?: string // ex: "02/10"
+  categoryId: string
+  subcategoryId?: string | null
+  confidence: number
 }
 
 Deno.serve(async (req: Request) => {
@@ -35,6 +50,7 @@ Deno.serve(async (req: Request) => {
           error: 'UNAUTHORIZED',
           message: 'Sessão não autenticada. Faça login novamente.',
           suggestions: [],
+          transactions: [],
         }),
         {
           status: 401,
@@ -53,6 +69,7 @@ Deno.serve(async (req: Request) => {
           error: 'OPENAI_API_KEY_NOT_CONFIGURED',
           message: 'Chave OPENAI_API_KEY não configurada no backend Supabase.',
           suggestions: [],
+          transactions: [],
         }),
         {
           status: 500,
@@ -61,7 +78,7 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // Cliente Supabase no contexto da autenticação do usuário
+    // Cliente Supabase no contexto da autenticação do usuário para isolamento e RLS
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: {
         headers: { Authorization: authHeader },
@@ -80,6 +97,7 @@ Deno.serve(async (req: Request) => {
           error: 'INVALID_SESSION',
           message: 'Sessão expirada. Faça login novamente.',
           suggestions: [],
+          transactions: [],
         }),
         {
           status: 401,
@@ -97,6 +115,7 @@ Deno.serve(async (req: Request) => {
           error: 'BAD_REQUEST',
           message: 'Corpo da requisição inválido ou JSON malformado.',
           suggestions: [],
+          transactions: [],
         }),
         {
           status: 400,
@@ -105,12 +124,15 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    const transactions = Array.isArray(body.transactions) ? body.transactions : []
-    if (transactions.length === 0) {
+    const isPdfMode = typeof body.rawText === 'string' && body.rawText.trim().length > 0
+    const rawTransactions = Array.isArray(body.transactions) ? body.transactions : []
+
+    if (!isPdfMode && rawTransactions.length === 0) {
       return new Response(
         JSON.stringify({
           suggestions: [],
-          message: 'Nenhuma transação enviada para categorização.',
+          transactions: [],
+          message: 'Nenhum dado enviado (informe rawText para PDF ou transactions para lote).',
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -160,6 +182,7 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           suggestions: [],
+          transactions: [],
           message: 'Nenhuma categoria ativa cadastrada para a família.',
         }),
         {
@@ -168,8 +191,22 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // Formatar o catálogo de categorias para o System Prompt
-    // Mapeando com seus respectivos baldes ('essentials', 'lifestyle', 'future')
+    // Conjuntos para validação rigorosa de integridade
+    const validCategoryIds = new Set(categoriesList.map((c: any) => c.id))
+    const validSubcategoryIds = new Set<string>()
+    const catToSubsMap = new Map<string, Set<string>>()
+    categoriesList.forEach((c: any) => {
+      const subSet = new Set<string>()
+      ;(c.transaction_subcategories || []).forEach((s: any) => {
+        if (s.id) {
+          validSubcategoryIds.add(s.id)
+          subSet.add(s.id)
+        }
+      })
+      catToSubsMap.set(c.id, subSet)
+    })
+
+    // Formatar catálogo de categorias para o System Prompt
     const catalogPrompt = categoriesList
       .map((cat: any) => {
         const subs = (cat.transaction_subcategories || [])
@@ -180,6 +217,198 @@ Deno.serve(async (req: Request) => {
       })
       .join('\n')
 
+    // =========================================================================
+    // CASO A: MODO PDF (rawText da fatura de cartão de crédito)
+    // =========================================================================
+    if (isPdfMode) {
+      const rawText = body.rawText!.trim()
+      const currentYear = new Date().getFullYear()
+
+      const pdfSystemPrompt = `Você é o especialista sênior em inteligência financeira do Curiangoo (Curiangoo Copilot), especializado na leitura e extração de faturas de cartão de crédito brasileiras (Rico, XP, Nubank, Inter, Itaú, Santander, C6 Bank, Bradesco, BTG Pactual, etc.) e na regra orçamentária 50/30/20.
+
+Seu objetivo é analisar o texto bruto extraído de um PDF de fatura de cartão de crédito e extrair com máxima precisão TODAS as compras e estornos reais, atribuindo a cada uma a categoria e subcategoria mais adequada do catálogo da família.
+
+CATÁLOGO REAL DE CATEGORIAS DA FAMÍLIA:
+${catalogPrompt}
+
+REGRAS CRÍTICAS DE EXTRAÇÃO DE FATURA:
+1. O QUE EXTRAIR:
+   - Todas as compras de bens e serviços nacionais e internacionais (ex: "UBER", "IFOOD", "MERCADO LIVRE", "DROGASIL", "NETFLIX", "POSTO", "CARREFOUR", "PAG*...").
+   - Compras parceladas (identificar o sufixo ou padrão de parcela, ex: "02/10", "3/12").
+   - Estornos e reembolsos reais (marcar amountCents com o valor positivo e type="income").
+
+2. O QUE DESCARTAR ABSOLUTAMENTE (NÃO SÃO COMPRAS):
+   - Cabeçalhos e rodapés institucionais, dados do titular, agência, conta, CNPJ/CPF, endereços e CEP.
+   - Telefones, SAC, WhatsApp, Ouvidoria (ex: "0800", "3003", "4004").
+   - Resumos e totais da fatura (ex: "Resumo da Fatura", "Total da fatura R$...", "Total desta fatura", "Fatura Anterior", "Subtotal").
+   - Limites de crédito (ex: "Limite Total", "Limite Disponível", "Limite Utilizado", "Limite de Saque").
+   - Pagamentos da fatura (ex: "Pagamento de fatura", "Pagamento recebido", "Pagamento efetuado", "Pagamento de título", "Pagamento mínimo", "Pagto fatura").
+   - Encargos, CET, multas ou juros de mora a menos que discriminados como lançamento do período.
+   - Tabelas de cotação de dólar ou pontos de fidelidade.
+
+3. PADRONIZAÇÃO DOS DADOS DE CADA TRANSAÇÃO:
+   - "date": string no formato ISO "AAAA-MM-DD" (se o ano não constar explicitamente no lançamento, use o ano da fatura indicado no texto ou ${currentYear}).
+   - "description": descrição original completa encontrada no extrato (incluindo parcelas se houver).
+   - "cleanMerchant": nome limpo e legível do estabelecimento comercial sem intermediários ruidosos ou parcelas (ex: "MP *DROGASIL 02/03" vira "Drogasil", "PAG*RESTAURANTE" vira "Restaurante", "UBER *TRIP HELP" vira "Uber").
+   - "amountCents": número inteiro positivo em centavos (ex: R$ 45,90 vira 4590; R$ 1.250,00 vira 125000). NUNCA usar decimais.
+   - "type": "expense" para compras (padrão de cartão) ou "income" para estornos/créditos.
+   - "installment": string com a parcela quando houver (ex: "02/10", "1/3") ou undefined/null se for compra à vista.
+   - "categoryId": ID UUID exato da categoria selecionada no catálogo da família acima. OBRIGATÓRIO usar um ID real existente!
+   - "subcategoryId": ID UUID da subcategoria do catálogo, ou null se nenhuma for aplicável.
+   - "confidence": número entre 0.0 e 1.0 indicando a certeza da classificação.
+
+RETORNO ESTRITAMENTE OBRIGATÓRIO:
+Você DEVE responder exclusivamente com um objeto JSON válido (response_format: json_object) com a chave "transactions", contendo o array com os itens extraídos:
+{
+  "transactions": [
+    {
+      "date": "AAAA-MM-DD",
+      "description": "string original",
+      "cleanMerchant": "string limpa",
+      "amountCents": 1234,
+      "type": "expense",
+      "installment": "02/10",
+      "categoryId": "UUID",
+      "subcategoryId": "UUID ou null",
+      "confidence": 0.95
+    }
+  ]
+}`
+
+      const pdfUserPrompt = `Texto bruto extraído da fatura em PDF:
+--- INÍCIO DO TEXTO ---
+${rawText.slice(0, 100000)}
+--- FIM DO TEXTO ---
+
+Extraia todas as compras e estornos reais, descarte ruídos/limites/pagamentos de fatura, e classifique cada transação com IDs válidos do catálogo da família.`
+
+      const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${openaiApiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: pdfSystemPrompt },
+            { role: 'user', content: pdfUserPrompt },
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.1,
+        }),
+      })
+
+      if (!openaiRes.ok) {
+        const errText = await openaiRes.text()
+        console.error('OpenAI API Error in batch-categorize (PDF mode):', openaiRes.status, errText)
+        return new Response(
+          JSON.stringify({
+            error: 'OPENAI_ERROR',
+            message: `Erro na comunicação com a IA (HTTP ${openaiRes.status})`,
+            transactions: [],
+          }),
+          {
+            status: 502,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        )
+      }
+
+      const openAiData = await openaiRes.json()
+      const content = openAiData.choices?.[0]?.message?.content
+
+      let parsed: any = null
+      try {
+        parsed = JSON.parse(content || '{}')
+      } catch (parseErr) {
+        console.error(
+          'Falha ao parsear JSON da OpenAI em batch-categorize (PDF mode):',
+          parseErr,
+          content,
+        )
+        return new Response(
+          JSON.stringify({
+            error: 'PARSE_ERROR',
+            message: 'Falha ao processar a resposta da IA no extrato PDF.',
+            transactions: [],
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        )
+      }
+
+      const rawItems: any[] = Array.isArray(parsed?.transactions) ? parsed.transactions : []
+
+      // Higienizar e validar transações contra o catálogo real
+      const sanitizedTransactions: PdfExtractedTransactionItem[] = []
+      for (const item of rawItems) {
+        if (!item || typeof item !== 'object') continue
+
+        // Validar campos mínimos
+        const amount =
+          typeof item.amountCents === 'number' ? Math.round(Math.abs(item.amountCents)) : 0
+        if (amount <= 0) continue
+
+        const desc = String(item.description || item.cleanMerchant || '').trim()
+        if (!desc) continue
+
+        // Validar data no formato AAAA-MM-DD
+        let date = String(item.date || '').trim()
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+          // Fallback para data atual se a IA errou formato
+          date = new Date().toISOString().slice(0, 10)
+        }
+
+        // Categoria: verificar se existe no catálogo da família
+        let catId = String(item.categoryId || '')
+        let subId: string | null = item.subcategoryId ? String(item.subcategoryId) : null
+
+        if (!validCategoryIds.has(catId)) {
+          // Se a IA gerou um UUID inválido, usa a primeira categoria compatível de despesa da família
+          const fallbackCat =
+            categoriesList.find((c: any) => c.type === 'expense') || categoriesList[0]
+          catId = fallbackCat?.id || ''
+          subId = null
+        } else {
+          // Se a subcategoria não pertencer a essa categoria, anula
+          const allowedSubs = catToSubsMap.get(catId)
+          if (!subId || !allowedSubs || !allowedSubs.has(subId)) {
+            subId = null
+          }
+        }
+
+        sanitizedTransactions.push({
+          date,
+          description: desc,
+          cleanMerchant: String(item.cleanMerchant || desc).trim(),
+          amountCents: amount,
+          type: item.type === 'income' ? 'income' : 'expense',
+          installment: item.installment ? String(item.installment).trim() : undefined,
+          categoryId: catId,
+          subcategoryId: subId,
+          confidence:
+            typeof item.confidence === 'number' ? Math.min(1, Math.max(0, item.confidence)) : 0.85,
+        })
+      }
+
+      return new Response(
+        JSON.stringify({
+          transactions: sanitizedTransactions,
+          totalExtracted: sanitizedTransactions.length,
+          mode: 'pdf',
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
+    }
+
+    // =========================================================================
+    // CASO B: MODO LOTE / OFX (array de transações já extraídas)
+    // =========================================================================
+    const transactions = rawTransactions
     const systemPrompt = `Você é o assistente de categorização financeira do app Curiangoo (Curiangoo Copilot), especializado em finanças familiares brasileiras e na regra 50/30/20.
 
 Seu objetivo é analisar um lote de transações bancárias não categorizadas e sugerir a melhor categoria (e subcategoria opcional) para cada uma.
@@ -244,7 +473,7 @@ ${JSON.stringify(
 
     if (!openaiRes.ok) {
       const errText = await openaiRes.text()
-      console.error('OpenAI API Error in batch-categorize:', openaiRes.status, errText)
+      console.error('OpenAI API Error in batch-categorize (batch mode):', openaiRes.status, errText)
       return new Response(
         JSON.stringify({
           error: 'OPENAI_ERROR',
@@ -265,7 +494,11 @@ ${JSON.stringify(
     try {
       parsed = JSON.parse(content || '{}')
     } catch (parseErr) {
-      console.error('Falha ao parsear JSON da OpenAI em batch-categorize:', parseErr, content)
+      console.error(
+        'Falha ao parsear JSON da OpenAI em batch-categorize (batch mode):',
+        parseErr,
+        content,
+      )
       return new Response(
         JSON.stringify({
           error: 'PARSE_ERROR',
@@ -280,15 +513,6 @@ ${JSON.stringify(
 
     const rawSuggestions = Array.isArray(parsed?.suggestions) ? parsed.suggestions : []
 
-    // Validar e higienizar sugestões contra o catálogo existente
-    const validCategoryIds = new Set(categoriesList.map((c: any) => c.id))
-    const validSubcategoryIds = new Set<string>()
-    categoriesList.forEach((c: any) => {
-      ;(c.transaction_subcategories || []).forEach((s: any) => {
-        if (s.id) validSubcategoryIds.add(s.id)
-      })
-    })
-
     const sanitizedSuggestions: AiCategorizationResultItem[] = []
     for (const item of rawSuggestions) {
       if (!item || !item.tempId || !item.categoryId) continue
@@ -298,8 +522,9 @@ ${JSON.stringify(
         continue
       }
 
+      const allowedSubs = catToSubsMap.get(item.categoryId)
       const subId =
-        item.subcategoryId && validSubcategoryIds.has(item.subcategoryId)
+        item.subcategoryId && allowedSubs && allowedSubs.has(item.subcategoryId)
           ? item.subcategoryId
           : null
 
@@ -316,6 +541,7 @@ ${JSON.stringify(
       JSON.stringify({
         suggestions: sanitizedSuggestions,
         totalProcessed: sanitizedSuggestions.length,
+        mode: 'batch',
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -328,6 +554,7 @@ ${JSON.stringify(
         error: 'INTERNAL_ERROR',
         message: err?.message || 'Erro interno na Edge Function batch-categorize',
         suggestions: [],
+        transactions: [],
       }),
       {
         status: 500,

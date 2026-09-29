@@ -661,30 +661,7 @@ export function parseOFX(content: string): ParseResult {
 export async function parseStatementFile(file: File): Promise<ParseResult> {
   const fileNameLower = file.name.toLowerCase()
 
-  // Se file.name.toLowerCase().endsWith('.pdf')
-  if (fileNameLower.endsWith('.pdf')) {
-    try {
-      // Converte o arquivo para ArrayBuffer e invoca parsePdfStatement(arrayBuffer)
-      const arrayBuffer = await file.arrayBuffer()
-      const { parsePdfStatement } = await import('@/services/import/pdf-parser')
-      const res = await parsePdfStatement(arrayBuffer, file.name)
-      // Retorna a lista normalizada de transações com accountType: 'CREDIT_CARD'
-      return {
-        ...res,
-        format: 'pdf',
-        accountType: 'CREDIT_CARD',
-      }
-    } catch (err: any) {
-      return {
-        success: false,
-        transactions: [],
-        format: 'pdf',
-        accountType: 'CREDIT_CARD',
-        error: err?.message || 'Falha ao ler a fatura em PDF selecionada.',
-      }
-    }
-  }
-
+  // Arquivos .ofx são tratados diretamente pelo parser local
   if (fileNameLower.endsWith('.ofx')) {
     try {
       const text = await readFileAsText(file)

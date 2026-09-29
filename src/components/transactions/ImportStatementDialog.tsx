@@ -79,7 +79,12 @@ import {
   type ParsedInstallmentInfo,
 } from '@/services/installments'
 import { findReconciliationMatch, type MatchStatus } from '@/services/import/reconciliation'
-import { categorizeBatchWithAI } from '@/services/ai-categorizer'
+import {
+  categorizeBatchWithAI,
+  parsePdfWithAI,
+  type AiPdfTransactionItem,
+} from '@/services/ai-categorizer'
+import { extractRawTextFromPdf, generatePdfFitid } from '@/services/import/pdf-parser'
 
 export interface ReviewItem {
   id: string
@@ -264,8 +269,255 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
     setErrorMessage(null)
     setDiagnostics(null)
 
+    const isPdf = file.name.toLowerCase().endsWith('.pdf')
+    const isOfx = file.name.toLowerCase().endsWith('.ofx')
+
     try {
-      // 1. Parser do arquivo
+      // Carregar dados de conciliação do banco (transações e regras existentes da família)
+      let existingTxs: Transaction[] = []
+      let loadedRules: CategorizationRule[] = []
+      try {
+        const [txs, rules] = await Promise.all([
+          fetchTransactions({ familyId: family.id }),
+          fetchCategorizationRules(family.id).catch(() => []),
+        ])
+        existingTxs = txs
+        loadedRules = rules
+        setCategorizationRules(rules)
+      } catch (fetchErr) {
+        console.warn('Não foi possível carregar transações ou regras anteriores:', fetchErr)
+      }
+
+      const isSimilar = (a: string, b: string) => {
+        const normA = (a || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+        const normB = (b || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+        if (normA === normB) return true
+        if (normA.includes(normB) || normB.includes(normA)) return true
+        return false
+      }
+
+      const activeMemberId = defaultMemberId || members[0]?.id || ''
+      const claimedManualIds = new Set<string>()
+
+      // =========================================================================
+      // FLUXO A: FATURA DE CARTÃO EM PDF VIA IA ESPECIALIZADA (batch-categorize)
+      // =========================================================================
+      if (isPdf) {
+        setIsAiCategorizing(true)
+
+        // 1. Extração pura de texto bruto com pdfjs-dist
+        let rawText = ''
+        try {
+          const { rawText: extracted } = await extractRawTextFromPdf(file)
+          rawText = extracted
+        } catch (pdfErr: any) {
+          throw new Error(
+            pdfErr?.message || 'Não foi possível extrair o texto da fatura em PDF selecionada.',
+          )
+        }
+
+        if (!rawText.trim()) {
+          throw new Error(
+            'O PDF parece ser uma imagem digitalizada sem camada de texto selecionável.',
+          )
+        }
+
+        // 2. Envio do rawText diretamente para a Edge Function batch-categorize
+        const aiResponse = await parsePdfWithAI(rawText, family.id)
+        if (!aiResponse.success || aiResponse.transactions.length === 0) {
+          throw new Error(
+            aiResponse.error ||
+              'A IA não conseguiu identificar lançamentos de compras nesta fatura em PDF.',
+          )
+        }
+
+        setFileInfo({
+          name: file.name,
+          size: file.size,
+          format: 'PDF (FATURA)',
+        })
+        setIgnoredLines([])
+        setFileWarnings([])
+
+        // 3. Montar itens para a tela de revisão
+        const reviewList: ReviewItem[] = aiResponse.transactions.map(
+          (tx: AiPdfTransactionItem, idx: number) => {
+            const description = tx.cleanMerchant || tx.description
+            const amountCents = tx.amountCents
+            const date = tx.date
+            const txType: TransactionType = tx.type === 'income' ? 'income' : 'expense'
+            const fitid = generatePdfFitid(date, description, amountCents)
+            const txId = `pdf-${idx}-${Date.now()}`
+
+            // 1ª camada: verificar se existe regra prévia no banco
+            const ruleMatch = matchCategorization(description, txType, categories, loadedRules)
+
+            // Categoria final: regra do banco tem prioridade (1ª camada), senão sugestão da IA
+            let finalCatId: string | null = null
+            let finalSubId: string | null = null
+            let source: ReviewItem['source'] = 'ai_suggestion'
+
+            if (ruleMatch) {
+              finalCatId = ruleMatch.category.id
+              finalSubId = ruleMatch.subcategory?.id || null
+              source = ruleMatch.source || 'database_rule'
+            } else if (tx.categoryId && categories.some((c) => c.id === tx.categoryId)) {
+              finalCatId = tx.categoryId
+              finalSubId = tx.subcategoryId || null
+              source = 'ai_suggestion'
+            }
+
+            // Parcelas
+            const instInfo = parseInstallmentFromDescription(
+              tx.installment ? `${description} ${tx.installment}` : description,
+            )
+            const isInstallment = instInfo.isInstallment && txType === 'expense'
+            const currentInst = isInstallment ? instInfo.current : 1
+            const totalInst = isInstallment ? instInfo.total : 1
+
+            // Anti-duplicidade e projeções
+            let matchedProjectId: string | null = null
+            let matchedGroupId: string | null = null
+            let dupMatch: Transaction | undefined = undefined
+            const txMonth = date.slice(0, 7)
+
+            if (isInstallment) {
+              const matchingProjection = existingTxs.find((ex) => {
+                const exMonth = ex.transaction_date?.slice(0, 7)
+                const sameMonth = exMonth === txMonth
+                const sameAmount = ex.amount_cents === amountCents
+                const sameInstNum =
+                  ex.installment_number === currentInst ||
+                  (ex.description && ex.description.includes(`${currentInst}/${totalInst}`))
+                const descMatch =
+                  isSimilar(ex.description || '', instInfo.cleanDescription) ||
+                  isSimilar(ex.description || '', description)
+                return (
+                  ex.status === 'projected' && sameMonth && sameAmount && (sameInstNum || descMatch)
+                )
+              })
+
+              if (matchingProjection) {
+                matchedProjectId = matchingProjection.id
+                matchedGroupId = matchingProjection.installment_group_id || null
+              }
+
+              dupMatch = existingTxs.find((ex) => {
+                const exMonth = ex.transaction_date?.slice(0, 7)
+                const sameMonth = exMonth === txMonth
+                const sameAmount = ex.amount_cents === amountCents
+                const sameGroup =
+                  matchedGroupId && ex.installment_group_id
+                    ? ex.installment_group_id === matchedGroupId
+                    : false
+                const descMatch = isSimilar(ex.description || '', description)
+                return (
+                  ex.status !== 'projected' && sameMonth && sameAmount && (sameGroup || descMatch)
+                )
+              })
+            } else {
+              dupMatch = existingTxs.find((ex) => {
+                if (fitid && ex.bank_transaction_id && ex.bank_transaction_id === fitid) {
+                  return true
+                }
+                return (
+                  ex.transaction_date === date &&
+                  ex.amount_cents === amountCents &&
+                  ex.bank_transaction_id &&
+                  isSimilar(ex.description || '', description)
+                )
+              })
+            }
+
+            // Conciliação inteligente com lançamento manual
+            let isReconciledManual = false
+            let matchedManualTransaction: Transaction | null = null
+            let reconciliationCandidates: Transaction[] = []
+            let reconciliationReason: string | undefined = undefined
+            let reconciliationStatus: MatchStatus = 'unmatched'
+
+            if (!dupMatch && !matchedProjectId) {
+              const reconMatch = findReconciliationMatch(
+                {
+                  id: txId,
+                  date,
+                  amount_cents: amountCents,
+                  type: txType,
+                  description,
+                  fitid,
+                },
+                existingTxs,
+                claimedManualIds,
+                3,
+              )
+
+              reconciliationStatus = reconMatch.status
+              reconciliationCandidates = reconMatch.candidateTransactions
+              reconciliationReason = reconMatch.matchReason
+
+              if (reconMatch.suggestAutoMerge && reconMatch.matchedTransaction) {
+                isReconciledManual = true
+                matchedManualTransaction = reconMatch.matchedTransaction
+                claimedManualIds.add(reconMatch.matchedTransaction.id)
+              }
+            }
+
+            const isFirstInstallment = isInstallment && currentInst === 1 && totalInst > 1
+            const initialCat =
+              isReconciledManual && matchedManualTransaction?.category_id
+                ? matchedManualTransaction.category_id
+                : finalCatId
+            const initialSub =
+              isReconciledManual && matchedManualTransaction
+                ? matchedManualTransaction.subcategory_id || null
+                : finalSubId
+            const initialMem =
+              isReconciledManual && matchedManualTransaction?.member_id
+                ? matchedManualTransaction.member_id
+                : activeMemberId
+
+            return {
+              id: txId,
+              date,
+              description,
+              amount_cents: amountCents,
+              type: txType,
+              fitid,
+              member_id: initialMem,
+              category_id: initialCat,
+              subcategory_id: initialSub,
+              rememberRule: !!initialCat,
+              source: isReconciledManual ? 'manual' : source,
+              aiReasoning: 'Extraído e classificado pela IA financeira do Curiangoo',
+              aiConfidence: tx.confidence,
+              isDuplicate: !!dupMatch,
+              duplicateReason: dupMatch
+                ? `Transação idêntica já cadastrada em ${dupMatch.transaction_date}`
+                : undefined,
+              isInstallment,
+              installmentCurrent: currentInst,
+              installmentTotal: totalInst,
+              matchedProjectId,
+              matchedGroupId,
+              generateFutureInstallments: isFirstInstallment,
+              selected: !dupMatch,
+              isReconciledManual,
+              matchedManualTransaction,
+              reconciliationStatus,
+              reconciliationCandidates,
+              reconciliationReason,
+            }
+          },
+        )
+
+        setItems(reviewList)
+        setStep('review')
+        return
+      }
+
+      // =========================================================================
+      // FLUXO B: EXTRATO BANCÁRIO OFX (Parser XML local rápido + IA para resto)
+      // =========================================================================
       const result = await parseStatementFile(file)
       if (!result.success || result.transactions.length === 0) {
         setErrorMessage(
@@ -287,61 +539,19 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
       setIgnoredLines(result.ignoredLines || [])
       setFileWarnings(result.warnings || [])
 
-      // 2. Buscar transações existentes para verificação inteligente de duplicadas
-      const dates = result.transactions.map((t) => t.date)
-      const minDate = dates.reduce((a, b) => (a < b ? a : b))
-      const maxDate = dates.reduce((a, b) => (a > b ? a : b))
-
-      let existingTxs: Transaction[] = []
-      let loadedRules: CategorizationRule[] = []
-      try {
-        const [txs, rules] = await Promise.all([
-          fetchTransactions({ familyId: family.id }),
-          fetchCategorizationRules(family.id).catch(() => []),
-        ])
-        existingTxs = txs
-        loadedRules = rules
-        setCategorizationRules(rules)
-      } catch (fetchErr) {
-        console.warn('Não foi possível carregar transações ou regras anteriores:', fetchErr)
-      }
-
-      // Função de similaridade simples para descrição
-      const isSimilar = (a: string, b: string) => {
-        const normA = (a || '').toLowerCase().replace(/[^a-z0-9]/g, '')
-        const normB = (b || '').toLowerCase().replace(/[^a-z0-9]/g, '')
-        if (normA === normB) return true
-        if (normA.includes(normB) || normB.includes(normA)) return true
-        return false
-      }
-
-      // 3. Montar itens para a tela de revisão aplicando:
-      //    a) Conciliação inteligente (Smart Matching com transações manuais ±3 dias)
-      //    b) Detecção de parcelas e correspondência de projeções
-      //    c) Anti-duplicidade tradicional
-      //    d) Auto-categorização por regras
-      const activeMemberId = defaultMemberId || members[0]?.id || ''
-      const claimedManualIds = new Set<string>()
-
       const reviewList: ReviewItem[] = result.transactions.map((tx: ParsedRawTransaction) => {
-        // Encontrar categoria e subcategoria usando as regras da tabela categorization_rules
         const matchResult = matchCategorization(tx.description, tx.type, categories, loadedRules)
-
-        // Detecção de parcelamento na descrição
         const instInfo = tx.installmentInfo || parseInstallmentFromDescription(tx.description)
         const isInstallment = instInfo.isInstallment && tx.type === 'expense'
         const currentInst = isInstallment ? instInfo.current : 1
         const totalInst = isInstallment ? instInfo.total : 1
 
-        // Checar duplicata e verificar correspondência com projeção futura existente
         let matchedProjectId: string | null = null
         let matchedGroupId: string | null = null
         let dupMatch: Transaction | undefined = undefined
-
-        const txMonth = tx.date.slice(0, 7) // YYYY-MM
+        const txMonth = tx.date.slice(0, 7)
 
         if (isInstallment) {
-          // Procurar se já existe uma 'projected' correspondente
           const matchingProjection = existingTxs.find((ex) => {
             const exMonth = ex.transaction_date?.slice(0, 7)
             const sameMonth = exMonth === txMonth
@@ -363,7 +573,6 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
             matchedGroupId = matchingProjection.installment_group_id || null
           }
 
-          // Checar se já existe uma 'confirmed' (duplicata de parcela confirmada)
           dupMatch = existingTxs.find((ex) => {
             const exMonth = ex.transaction_date?.slice(0, 7)
             const sameMonth = exMonth === txMonth
@@ -377,13 +586,10 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
             return ex.status !== 'projected' && sameMonth && sameAmount && (sameGroup || descMatch)
           })
         } else {
-          // Transação comum: verificar se é duplicata idêntica tradicional (mesma data, mesmo FITID se houver, ou mesma descrição)
           dupMatch = existingTxs.find((ex) => {
-            // Se ambos têm FITID/bank_transaction_id idêntico: duplicata absoluta
             if (tx.fitid && ex.bank_transaction_id && ex.bank_transaction_id === tx.fitid) {
               return true
             }
-            // Transação confirmada já vinculada a extrato anterior
             return (
               ex.transaction_date === tx.date &&
               ex.amount_cents === tx.amount_cents &&
@@ -393,9 +599,6 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           })
         }
 
-        // ================= CONCILIAÇÃO INTELIGENTE (SMART MATCHING) =================
-        // Se NÃO for uma duplicata idêntica já vinculada nem uma projeção parcelada,
-        // checar se é um lançamento manual que coincide com o extrato (±3 dias, mesmo valor e tipo)
         let isReconciledManual = false
         let matchedManualTransaction: Transaction | null = null
         let reconciliationCandidates: Transaction[] = []
@@ -428,16 +631,12 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           }
         }
 
-        // Se for parcela 1/YY (ou a primeira parcela importada de uma compra), gerar projeções futuras por padrão
         const isFirstInstallment = isInstallment && currentInst === 1 && totalInst > 1
-
         let duplicateReason: string | undefined = undefined
         if (dupMatch) {
           duplicateReason = `Transação idêntica já cadastrada em ${dupMatch.transaction_date}`
         }
 
-        // Se houver transação manual mesclada:
-        // Preserva a Categoria, Subcategoria, Membro da família e anotações que o usuário já havia preenchido manualmente
         const initialCategoryId =
           isReconciledManual && matchedManualTransaction?.category_id
             ? matchedManualTransaction.category_id
@@ -479,9 +678,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           matchedProjectId,
           matchedGroupId,
           generateFutureInstallments: isFirstInstallment,
-          // Se for duplicada, desmarcar por padrão para segurança do usuário
           selected: !dupMatch,
-          // Conciliação inteligente
           isReconciledManual,
           matchedManualTransaction,
           reconciliationStatus,
@@ -490,7 +687,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
         }
       })
 
-      // 4. Se houver transações que continuam sem categoria, acionar IA (GPT-4o mini)
+      // Se houver transações sem regra cadastrada no banco, aciona a IA
       const uncategorizedItems = reviewList.filter((item) => !item.category_id && !item.isDuplicate)
       if (uncategorizedItems.length > 0) {
         setIsAiCategorizing(true)
@@ -510,7 +707,6 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
             reviewList.forEach((item) => {
               const sug = suggestionMap.get(item.id)
               if (sug && sug.categoryId) {
-                // Verificar se a categoria sugerida é compatível com o catálogo existente
                 const catExists = categories.some((c) => c.id === sug.categoryId)
                 if (catExists) {
                   item.category_id = sug.categoryId
@@ -534,9 +730,10 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
       setStep('review')
     } catch (err: any) {
       console.error('Erro na importação:', err)
-      setErrorMessage(err?.message || 'Erro inesperado ao processar o extrato OFX.')
+      setErrorMessage(err?.message || 'Erro inesperado ao processar o extrato.')
     } finally {
       setParsing(false)
+      setIsAiCategorizing(false)
     }
   }
 
@@ -1506,7 +1703,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                                         }
                                         className="inline-flex items-center gap-0.5 text-[10px] font-bold text-violet-700 bg-violet-50 border border-violet-200/80 px-1.5 py-0.2 rounded-full shrink-0"
                                       >
-                                        <span>✨ Sugestão IA</span>
+                                        <span>✨ IA</span>
                                       </span>
                                     )}
                                   </span>
@@ -2012,7 +2209,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                                 </label>
                                 {item.source === 'ai_suggestion' && item.aiReasoning && (
                                   <p className="text-[10px] text-violet-700 mt-0.5 italic flex items-center gap-1">
-                                    <span>✨ Sugestão da IA:</span>
+                                    <span>✨ IA:</span>
                                     <span>{item.aiReasoning}</span>
                                   </p>
                                 )}
