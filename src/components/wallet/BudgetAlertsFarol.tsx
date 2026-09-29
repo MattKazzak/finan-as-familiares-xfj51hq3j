@@ -120,27 +120,13 @@ export function BudgetAlertsFarol({
       categoryList.forEach((item) => {
         if (item.limitCents <= 0) return
 
-        const isInvestment =
+        // Categorias do balde Futuro & Metas (investimentos/reserva) não geram alertas de despesa ou aporte
+        const isFutureBucket =
+          item.category.budget_bucket === 'future' ||
           item.category.name.toLowerCase().includes('reserva') ||
-          item.category.name.toLowerCase().includes('invest') ||
-          item.category.budget_bucket === 'future'
+          item.category.name.toLowerCase().includes('invest')
 
-        // Reserva / Investimento: alerta quando aporte fica abaixo de 70%
-        if (isInvestment) {
-          if (item.percent < 70) {
-            regular.push({
-              id: `cat-inv-${item.category.id}`,
-              severity: 'warning',
-              type: 'category',
-              category: item.category,
-              categoryId: item.category.id,
-              categoryName: item.category.name,
-              title: item.category.name,
-              detail: `Aporte em ${item.percent}% do planejado (${formatBRL(item.spentCents)} de ${formatBRL(item.limitCents)}). Priorize sua reserva.`,
-              metric: `${item.percent}%`,
-              priority: 25,
-            })
-          }
+        if (isFutureBucket) {
           return
         }
 

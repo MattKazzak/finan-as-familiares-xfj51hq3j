@@ -2528,21 +2528,44 @@ export default function WalletPage() {
                             {/* Linha de Valores: Gasto vs Teto */}
                             <div className="flex items-baseline justify-between gap-2">
                               <div className="text-xs sm:text-sm text-slate-500 tabular-nums flex items-baseline gap-1.5 flex-wrap">
-                                <span className="font-bold text-slate-800 text-sm sm:text-base">
-                                  {formatBRL(item.spentCents)}
-                                </span>
-                                <span className="text-slate-400 text-xs">de</span>
-                                {item.limitCents > 0 ? (
-                                  <span className="text-slate-600 font-medium">
-                                    {formatBRL(item.limitCents)}
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-baseline gap-1 flex-wrap">
-                                    <span className="text-slate-600 font-medium">R$ 0,00</span>
-                                    <span className="text-[11px] text-slate-400 font-normal">
-                                      (Sem teto alocado)
+                                {item.category.budget_bucket === 'future' ||
+                                item.category.name.toLowerCase().includes('reserva') ||
+                                item.category.name.toLowerCase().includes('invest') ? (
+                                  <>
+                                    <span className="text-slate-600 font-medium">Aportado:</span>
+                                    <span className="font-bold text-slate-800 text-sm sm:text-base">
+                                      {formatBRL(item.spentCents)}
                                     </span>
-                                  </span>
+                                    <span className="text-slate-400 text-xs">de</span>
+                                    {item.limitCents > 0 ? (
+                                      <span className="text-slate-600 font-medium">
+                                        {formatBRL(item.limitCents)}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-400 text-xs">
+                                        (Sem meta definida)
+                                      </span>
+                                    )}
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="font-bold text-slate-800 text-sm sm:text-base">
+                                      {formatBRL(item.spentCents)}
+                                    </span>
+                                    <span className="text-slate-400 text-xs">de</span>
+                                    {item.limitCents > 0 ? (
+                                      <span className="text-slate-600 font-medium">
+                                        {formatBRL(item.limitCents)}
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-baseline gap-1 flex-wrap">
+                                        <span className="text-slate-600 font-medium">R$ 0,00</span>
+                                        <span className="text-[11px] text-slate-400 font-normal">
+                                          (Sem teto alocado)
+                                        </span>
+                                      </span>
+                                    )}
+                                  </>
                                 )}
                               </div>
 
@@ -2551,11 +2574,15 @@ export default function WalletPage() {
                                 {item.limitCents > 0 ? (
                                   <span
                                     className={`text-xs sm:text-sm font-bold tabular-nums ${
-                                      item.isOver || item.percent > 90
-                                        ? 'text-red-600'
-                                        : item.percent >= 71
-                                          ? 'text-amber-600'
-                                          : 'text-emerald-700'
+                                      item.category.budget_bucket === 'future' ||
+                                      item.category.name.toLowerCase().includes('reserva') ||
+                                      item.category.name.toLowerCase().includes('invest')
+                                        ? 'text-emerald-700'
+                                        : item.isOver || item.percent > 90
+                                          ? 'text-red-600'
+                                          : item.percent >= 71
+                                            ? 'text-amber-600'
+                                            : 'text-emerald-700'
                                     }`}
                                   >
                                     {item.percent}%
@@ -2573,101 +2600,20 @@ export default function WalletPage() {
                               <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mt-1.5">
                                 <div
                                   className={`h-full rounded-full transition-all duration-300 ${
-                                    item.isOver || item.percent > 90
-                                      ? 'bg-red-500'
-                                      : item.percent >= 71
-                                        ? 'bg-amber-500'
-                                        : 'bg-emerald-600'
+                                    item.category.budget_bucket === 'future' ||
+                                    item.category.name.toLowerCase().includes('reserva') ||
+                                    item.category.name.toLowerCase().includes('invest')
+                                      ? 'bg-emerald-600'
+                                      : item.isOver || item.percent > 90
+                                        ? 'bg-red-500'
+                                        : item.percent >= 71
+                                          ? 'bg-amber-500'
+                                          : 'bg-emerald-600'
                                   }`}
                                   style={{ width: `${Math.min(item.percent, 100)}%` }}
                                 />
                               </div>
                             ) : null}
-
-                            {/* Farol / Ritmo do orçamento */}
-                            {(() => {
-                              if (item.limitCents <= 0) return null
-
-                              const isInvestmentCategory =
-                                item.category.name.toLowerCase().includes('reserva') ||
-                                item.category.name.toLowerCase().includes('invest') ||
-                                item.category.budget_bucket === 'future'
-
-                              const now = new Date()
-                              const isCurrentViewingMonth =
-                                now.toISOString().slice(0, 7) === monthKey
-
-                              const daysInMonth = new Date(
-                                currentDate.getFullYear(),
-                                currentDate.getMonth() + 1,
-                                0,
-                              ).getDate()
-                              const currentDay = isCurrentViewingMonth ? now.getDate() : 1
-                              const daysRemaining = Math.max(0, daysInMonth - currentDay)
-
-                              // Lógica para Reserva & Investimentos: alerta quando aporte ficar ABAIXO do mínimo
-                              if (isInvestmentCategory) {
-                                if (item.percent < 70) {
-                                  return (
-                                    <p className="text-[10px] sm:text-[11px] text-amber-600 font-semibold mt-1.5 flex items-center gap-1 truncate">
-                                      <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
-                                      <span className="truncate">
-                                        Aporte em {item.percent}% do teto ideal. Priorize sua
-                                        reserva.
-                                      </span>
-                                    </p>
-                                  )
-                                }
-                                return (
-                                  <p className="text-[10px] sm:text-[11px] text-emerald-600 font-medium mt-1.5 flex items-center gap-1 truncate">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                                    <span className="truncate">
-                                      Meta de aportes saudável ({item.percent}% alcançado).
-                                    </span>
-                                  </p>
-                                )
-                              }
-
-                              // Regra preventiva padrão:
-                              // 🔴 Acima de 90% ou 100%+
-                              if (item.percent > 90) {
-                                return (
-                                  <p className="text-[10px] sm:text-[11px] text-red-600 font-semibold mt-1.5 flex items-center gap-1 truncate">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />
-                                    <span className="truncate">
-                                      {item.isOver
-                                        ? `Estourou o teto em ${formatBRL(item.spentCents - item.limitCents)}!`
-                                        : `Atenção: ${item.percent}% consumido do teto.`}
-                                    </span>
-                                  </p>
-                                )
-                              }
-
-                              // 🟡 71% a 90%: Alerta preventivo com dias restantes
-                              if (item.percent >= 71) {
-                                return (
-                                  <p className="text-[10px] sm:text-[11px] text-amber-700 font-medium mt-1.5 flex items-center gap-1 truncate">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                                    <span className="truncate">
-                                      Já consumiu {item.percent}% do orçamento
-                                      {daysRemaining > 0 && isCurrentViewingMonth
-                                        ? ` (${daysRemaining} dias restantes).`
-                                        : '.'}
-                                    </span>
-                                  </p>
-                                )
-                              }
-
-                              // 🟢 Até 70%: Verde ritmo saudável
-                              return (
-                                <p className="text-[10px] sm:text-[11px] text-emerald-600 font-medium mt-1.5 flex items-center gap-1 truncate">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                                  <span className="truncate">
-                                    Ritmo saudável ({item.percent}% consumido).
-                                  </span>
-                                </p>
-                              )
-                            })()}
                           </div>
                         </div>
 
