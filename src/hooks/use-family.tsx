@@ -571,7 +571,8 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const openActionSheet = () => {
-    setIsActionSheetOpen(true)
+    // Redireciona diretamente para o novo modal unificado de Nova Transação
+    openNewTransaction('expense')
   }
 
   const openRecurringIncomes = () => {

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import React from 'react'
 import { NewTransactionDialog } from '../NewTransactionDialog'
@@ -10,22 +10,36 @@ const mockFamily = {
 }
 
 const mockMembers = [
-  { id: 'm-1', name: 'Lucas', is_admin: true },
-  { id: 'm-2', name: 'Ana', is_admin: false },
+  { id: 'm-1', name: 'Lucas', is_admin: true, user_id: 'user-1' },
+  { id: 'm-2', name: 'Ana', is_admin: false, user_id: 'user-2' },
 ]
 
 const mockCategories = [
-  { id: 'cat-salario', name: 'Salário', type: 'income', budget_bucket: 'essentials' },
-  { id: 'cat-alimentacao', name: 'Alimentação', type: 'expense', budget_bucket: 'essentials' },
+  {
+    id: 'cat-salario',
+    name: 'Salário',
+    type: 'income',
+    budget_bucket: 'essentials',
+    subcategories: [],
+  },
+  {
+    id: 'cat-alimentacao',
+    name: 'Alimentação',
+    type: 'expense',
+    budget_bucket: 'essentials',
+    subcategories: [],
+  },
 ]
 
 let mockContextPrefill: any = null
+let mockActiveMemberId: string | null = 'm-1'
 
 vi.mock('@/hooks/use-family', () => ({
   useFamily: () => ({
     family: mockFamily,
     members: mockMembers,
     categories: mockCategories,
+    activeMemberId: mockActiveMemberId,
     newTransactionDefaultType: 'expense',
     newTransactionPrefill: mockContextPrefill,
     triggerRefresh: vi.fn(),
@@ -47,20 +61,64 @@ vi.mock('@/hooks/use-toast', () => ({
   }),
 }))
 
-describe('NewTransactionDialog - suporte a prefill', () => {
+vi.mock('@/services/categorization-rules', () => ({
+  fetchCategorizationRules: vi.fn().mockResolvedValue([
+    {
+      id: 'rule-1',
+      family_id: 'fam-1',
+      pattern: 'SUPERMERCADO',
+      category_id: 'cat-alimentacao',
+    },
+  ]),
+  upsertCategorizationRule: vi.fn().mockResolvedValue({}),
+}))
+
+vi.mock('@/services/transactions', () => ({
+  createTransaction: vi.fn().mockResolvedValue({ id: 'tx-1' }),
+  createTransactionsBatch: vi.fn().mockResolvedValue([]),
+  updateTransaction: vi.fn().mockResolvedValue({ id: 'tx-1' }),
+}))
+
+vi.mock('@/services/recurring-incomes', () => ({
+  createRecurringIncome: vi.fn().mockResolvedValue({ id: 'rec-1' }),
+  updateRecurringIncome: vi.fn().mockResolvedValue({ id: 'rec-1' }),
+}))
+
+describe('NewTransactionDialog - Modal Unificado de Nova Transação', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockContextPrefill = null
+    mockActiveMemberId = 'm-1'
   })
 
-  it('abre vazio por padrão sem props de prefill', () => {
+  it('abre como modal unificado com toggle Despesa selecionado por padrão e campos vazios', () => {
     render(<NewTransactionDialog open={true} onOpenChange={vi.fn()} />)
 
     expect(screen.getByText('Nova Transação')).toBeDefined()
     const amountInput = screen.getByPlaceholderText('0,00') as HTMLInputElement
     expect(amountInput.value).toBe('')
-    const descInput = screen.getByPlaceholderText(/Supermercado/i) as HTMLInputElement
-    expect(descInput.value).toBe('')
+
+    // Toggle Despesa ativo por padrão
+    const expenseBtn = screen.getByRole('button', { name: /Despesa/i })
+    expect(expenseBtn.className).toContain('bg-red-500')
+
+    // Toggle Receita disponível
+    const incomeBtn = screen.getByRole('button', { name: /Receita/i })
+    expect(incomeBtn.className).not.toContain('bg-emerald-600')
+
+    // Toggle "Repetir todo mês" existe na tela
+    expect(screen.getByText('Repetir todo mês')).toBeDefined()
+  })
+
+  it('permite alternar entre Despesa e Receita pelo toggle segmentado', () => {
+    render(<NewTransactionDialog open={true} onOpenChange={vi.fn()} />)
+
+    const incomeBtn = screen.getByRole('button', { name: /Receita/i })
+    fireEvent.click(incomeBtn)
+    expect(incomeBtn.className).toContain('bg-emerald-600')
+
+    const expenseBtn = screen.getByRole('button', { name: /Despesa/i })
+    expect(expenseBtn.className).not.toContain('bg-red-500')
   })
 
   it('popula formulário diretamente via props initialType, initialAmountCents, initialDescription e initialCategoryId', () => {
@@ -79,15 +137,14 @@ describe('NewTransactionDialog - suporte a prefill', () => {
     const amountInput = screen.getByPlaceholderText('0,00') as HTMLInputElement
     expect(amountInput.value).toBe('8.000,00')
 
-    const descInput = screen.getByPlaceholderText(/Supermercado/i) as HTMLInputElement
+    const descInput = screen.getByPlaceholderText(/Ex\.:/i) as HTMLInputElement
     expect(descInput.value).toBe('Salário mensal')
 
-    // Botão Receita selecionado (estilizado com bg-emerald-600)
     const incomeBtn = screen.getByRole('button', { name: /Receita/i })
     expect(incomeBtn.className).toContain('bg-emerald-600')
   })
 
-  it('popula formulário a partir de newTransactionPrefill do contexto (quando aberto globalmente)', () => {
+  it('popula formulário a partir de newTransactionPrefill do contexto', () => {
     mockContextPrefill = {
       initialType: 'income',
       initialAmountCents: 500000,
@@ -101,7 +158,34 @@ describe('NewTransactionDialog - suporte a prefill', () => {
     const amountInput = screen.getByPlaceholderText('0,00') as HTMLInputElement
     expect(amountInput.value).toBe('5.000,00')
 
-    const descInput = screen.getByPlaceholderText(/Supermercado/i) as HTMLInputElement
+    const descInput = screen.getByPlaceholderText(/Ex\.:/i) as HTMLInputElement
     expect(descInput.value).toBe('Freelance')
+  })
+
+  it('ativa seletor de dia do mês quando toggle "Repetir todo mês" é ligado', async () => {
+    render(<NewTransactionDialog open={true} onOpenChange={vi.fn()} />)
+
+    // Inicialmente não mostra "Dia do mês"
+    expect(screen.queryByText('Dia do mês')).toBeNull()
+
+    // Clica no switch de repetir todo mês
+    const repeatSwitch = screen.getByRole('switch')
+    fireEvent.click(repeatSwitch)
+
+    // Agora revela o seletor de dia do mês e a mensagem explicativa
+    await waitFor(() => {
+      expect(screen.getByText('Dia do mês')).toBeDefined()
+      expect(screen.getByText(/Contas & Rendas Recorrentes/i)).toBeDefined()
+    })
+  })
+
+  it('oferece botão de atalho para Falar com IA quando onOpenVoice é fornecido', () => {
+    const mockVoice = vi.fn()
+    render(<NewTransactionDialog open={true} onOpenChange={vi.fn()} onOpenVoice={mockVoice} />)
+
+    const voiceBtn = screen.getByTitle('Falar Lançamento com IA')
+    expect(voiceBtn).toBeDefined()
+    fireEvent.click(voiceBtn)
+    expect(mockVoice).toHaveBeenCalledTimes(1)
   })
 })
