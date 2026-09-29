@@ -292,10 +292,11 @@ export default function WalletPage() {
   const [filterType, setFilterType] = useState<'income' | 'expense' | null>(null)
   const [filterOnlyPending, setFilterOnlyPending] = useState<boolean>(false)
 
-  // Ações de transação
+  // Ações de transação e regras recorrentes
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [editingTx, setEditingTx] = useState<Transaction | null>(null)
+  const [editingRecurringRule, setEditingRecurringRule] = useState<RecurringIncome | null>(null)
   const [isEditTxOpen, setIsEditTxOpen] = useState(false)
   const [txToDelete, setTxToDelete] = useState<Transaction | null>(null)
 
@@ -1477,14 +1478,14 @@ export default function WalletPage() {
               </div>
             </div>
 
-            {/* Barra de Filtro, Atalho de Receitas Fixas e Contagem */}
+            {/* Barra de Filtro, Chip Discreto de Recorrentes e Contagem */}
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setIsFilterSheetOpen(true)}
-                  className={`rounded-xl text-xs font-semibold gap-1.5 ${
+                  className={`rounded-xl text-xs font-semibold gap-1.5 h-8 ${
                     activeFiltersCount > 0
                       ? 'border-emerald-600 bg-emerald-50 text-emerald-700'
                       : 'text-slate-600'
@@ -1498,6 +1499,21 @@ export default function WalletPage() {
                     </span>
                   )}
                 </Button>
+
+                {/* Chip Discreto de Gestão de Recorrentes */}
+                <button
+                  type="button"
+                  onClick={() => setIsRecurringIncomesOpen(true)}
+                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 h-8 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 transition-colors shadow-2xs active:scale-95 shrink-0"
+                  title="Gerenciar regras recorrentes mensais"
+                >
+                  <span>Recorrentes 🔁</span>
+                  {recurringIncomes.length > 0 && (
+                    <span className="text-[10px] text-slate-500 font-normal ml-0.5">
+                      ({recurringIncomes.length})
+                    </span>
+                  )}
+                </button>
 
                 {activeFiltersCount > 0 && (
                   <button
@@ -1759,15 +1775,13 @@ export default function WalletPage() {
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
-                <Button
-                  variant="outline"
-                  size="sm"
+                <button
+                  type="button"
                   onClick={() => setIsRecurringIncomesOpen(true)}
-                  className="rounded-xl text-xs font-semibold gap-1.5 border-slate-200 text-slate-700 bg-white hover:bg-slate-50 h-8 shadow-xs"
+                  className="text-xs font-medium text-slate-500 hover:text-emerald-700 underline underline-offset-2 px-1 py-1 rounded-md transition-colors"
                 >
-                  <Repeat className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Contas & rendas fixas</span>
-                </Button>
+                  Ver recorrentes 🔁
+                </button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -4216,7 +4230,7 @@ export default function WalletPage() {
         }}
       />
 
-      {/* DIÁLOGO DE RECEITAS FIXAS RECORRENTES */}
+      {/* DIÁLOGO DE REGRAS RECORRENTES */}
       <RecurringIncomesDialog
         open={isRecurringIncomesOpen}
         onOpenChange={setIsRecurringIncomesOpen}
@@ -4224,6 +4238,11 @@ export default function WalletPage() {
         recurringIncomes={recurringIncomes}
         recurringOverrides={recurringOverrides}
         onSuccess={() => loadMonthData()}
+        onEditRecurringRule={(rule) => {
+          setEditingRecurringRule(rule)
+          setEditingTx(null)
+          setIsEditTxOpen(true)
+        }}
       />
 
       {/* DIÁLOGO DE DETALHE DA TRANSAÇÃO */}
@@ -4232,20 +4251,25 @@ export default function WalletPage() {
         open={isDetailOpen}
         onOpenChange={setIsDetailOpen}
         onEdit={(tx) => {
+          setEditingRecurringRule(null)
           setEditingTx(tx)
           setIsEditTxOpen(true)
         }}
         onDelete={(tx) => setTxToDelete(tx)}
       />
 
-      {/* DIÁLOGO DE EDIÇÃO DE TRANSAÇÃO */}
+      {/* DIÁLOGO UNIFICADO DE TRANSAÇÃO OU EDIÇÃO DE REGRA RECORRENTE */}
       <NewTransactionDialog
         open={isEditTxOpen}
         onOpenChange={(open) => {
           setIsEditTxOpen(open)
-          if (!open) setEditingTx(null)
+          if (!open) {
+            setEditingTx(null)
+            setEditingRecurringRule(null)
+          }
         }}
         editingTransaction={editingTx}
+        editingRecurringRule={editingRecurringRule}
         onSuccess={() => loadMonthData()}
       />
 

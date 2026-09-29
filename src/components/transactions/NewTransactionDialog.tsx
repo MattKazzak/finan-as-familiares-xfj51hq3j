@@ -42,7 +42,7 @@ import {
 } from '@/services/import/categorization'
 import { parseBRLToCents, formatNumberBRL, formatBRL } from '@/lib/formatters'
 import { useToast } from '@/hooks/use-toast'
-import type { CategorizationRule, Transaction } from '@/types/finance'
+import type { CategorizationRule, Transaction, RecurringIncome } from '@/types/finance'
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -69,6 +69,7 @@ export interface NewTransactionDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   editingTransaction?: Transaction | null
+  editingRecurringRule?: RecurringIncome | null
   onSuccess?: () => void
   initialType?: 'income' | 'expense'
   initialCategoryId?: string
@@ -83,6 +84,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
   open,
   onOpenChange,
   editingTransaction,
+  editingRecurringRule,
   onSuccess,
   initialType,
   initialCategoryId,
@@ -172,7 +174,20 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
     userManuallyChangedCategoryRef.current = false
     setSuggestedCategoryInfo(null)
 
-    if (editingTransaction) {
+    if (editingRecurringRule) {
+      setType((editingRecurringRule.type || 'income') as 'income' | 'expense')
+      setDescription(editingRecurringRule.name || '')
+      setAmountStr(formatNumberBRL(editingRecurringRule.amount_cents))
+      setMemberId(editingRecurringRule.member_id)
+      setCategoryId(editingRecurringRule.category_id || 'none')
+      setSubcategoryId(editingRecurringRule.subcategory_id || 'none')
+      const todayStr = new Date().toISOString().slice(0, 10)
+      setTransactionDate(todayStr)
+      setInstallmentsCount(1)
+      setAmountMode('per_installment')
+      setIsRecurring(true)
+      setDayOfMonth(editingRecurringRule.day_of_month || 1)
+    } else if (editingTransaction) {
       setType(editingTransaction.type)
       setDescription(editingTransaction.description || '')
       setAmountStr(formatNumberBRL(editingTransaction.amount_cents))
@@ -231,6 +246,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
     setErrorMsg(null)
   }, [
     open,
+    editingRecurringRule,
     editingTransaction,
     initialType,
     initialCategoryId,
@@ -276,7 +292,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
 
   // Sugestão automática de categoria baseada nas regras do banco e regras padrão
   useEffect(() => {
-    if (editingTransaction) return
+    if (editingTransaction || editingRecurringRule) return
     if (userManuallyChangedCategoryRef.current) return
     if (!description || description.trim().length < 3) return
 
@@ -291,7 +307,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
         setSuggestedCategoryInfo(`Sugerido: ${match.category.name}`)
       }
     }
-  }, [description, type, categories, dbRules, editingTransaction])
+  }, [description, type, categories, dbRules, editingTransaction, editingRecurringRule])
 
   // Mantém sincronizado o dia do mês com a data escolhida quando o usuário altera a data
   const handleDateChange = (newDate: string) => {
@@ -336,7 +352,42 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
       setLoading(true)
       setErrorMsg(null)
 
-      if (editingTransaction) {
+      if (editingRecurringRule) {
+        // ==========================================
+        // FLUXO DE EDIÇÃO DE REGRA RECORRENTE EXISTENTE
+        // ==========================================
+        await updateRecurringIncome(editingRecurringRule.id, {
+          member_id: memberId,
+          category_id: categoryId === 'none' ? null : categoryId,
+          subcategory_id: subcategoryId === 'none' || categoryId === 'none' ? null : subcategoryId,
+          name: description.trim(),
+          type,
+          amount_cents: cents,
+          day_of_month: dayOfMonth,
+        })
+
+        if (rememberRule && categoryId !== 'none') {
+          try {
+            const rawPattern = extractPatternFromDescription(description.trim())
+            if (rawPattern && rawPattern.length >= 2) {
+              await upsertCategorizationRule({
+                family_id: family.id,
+                user_id: user?.id || null,
+                pattern: rawPattern,
+                category_id: categoryId,
+                subcategory_id: subcategoryId === 'none' ? null : subcategoryId,
+              })
+            }
+          } catch (ruleErr) {
+            console.warn('Não foi possível salvar regra de categorização:', ruleErr)
+          }
+        }
+
+        toast({
+          title: 'Regra recorrente atualizada! 🔁',
+          description: `A regra "${description.trim()}" foi salva com sucesso.`,
+        })
+      } else if (editingTransaction) {
         // Se a transação estiver vinculada a uma regra fixa recorrente, atualiza a regra fixa também se desejado
         if (editingTransaction.recurring_income_id && isRecurring) {
           try {
@@ -718,7 +769,40 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
       {/* ========================================================
           6. NOVO TOGGLE: "Repetir todo mês" COM SELETOR DE DIA
           ======================================================== */}
-      {!editingTransaction && (
+      {editingRecurringRule ? (
+        <div className="bg-gradient-to-br from-emerald-50/60 to-teal-50/40 p-3.5 rounded-2xl border border-emerald-200/80 space-y-3">
+          <div className="flex items-center justify-between gap-3 bg-white p-2.5 rounded-xl border border-emerald-200/70">
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-emerald-700" />
+              <span className="text-xs font-semibold text-slate-800">Dia do mês</span>
+            </div>
+
+            <div className="w-36">
+              <Select
+                value={String(dayOfMonth)}
+                onValueChange={(val) => setDayOfMonth(parseInt(val, 10))}
+              >
+                <SelectTrigger className="h-8 text-xs font-bold rounded-lg bg-slate-50 border-slate-200">
+                  <SelectValue placeholder="Dia" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60 max-w-[calc(100vw-2rem)]">
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                    <SelectItem key={d} value={String(d)}>
+                      <span>Dia {d} de cada mês</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <p className="text-[11px] text-emerald-900/80 leading-relaxed bg-emerald-100/40 p-2 rounded-xl border border-emerald-200/50">
+            🔁 <strong>Regra Recorrente:</strong> Esta{' '}
+            {type === 'income' ? 'receita fixa' : 'despesa fixa'} é gerada automaticamente no dia{' '}
+            {dayOfMonth} de cada mês e alimenta a projeção orçamentária.
+          </p>
+        </div>
+      ) : !editingTransaction ? (
         <div className="bg-gradient-to-br from-emerald-50/60 to-teal-50/40 p-3.5 rounded-2xl border border-emerald-200/80 space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-start gap-2.5">
@@ -789,12 +873,12 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
             </div>
           )}
         </div>
-      )}
+      ) : null}
 
       {/* ========================================================
           7. SEÇÃO DE PARCELAMENTO (APENAS PARA DESPESAS AVULSAS NÃO RECORRENTES)
           ======================================================== */}
-      {!editingTransaction && type === 'expense' && !isRecurring && (
+      {!editingRecurringRule && !editingTransaction && type === 'expense' && !isRecurring && (
         <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/90 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
@@ -939,7 +1023,13 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
         >
           <span className="flex items-center justify-center gap-2">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-            <span>{editingTransaction ? 'Salvar Alterações' : 'Confirmar Lançamento'}</span>
+            <span>
+              {editingRecurringRule
+                ? 'Salvar Regra'
+                : editingTransaction
+                  ? 'Salvar Alterações'
+                  : 'Confirmar Lançamento'}
+            </span>
           </span>
         </Button>
       </div>
@@ -960,11 +1050,15 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           <SheetHeader className="text-left space-y-1 mb-3">
             <div className="flex items-center justify-between gap-2">
               <SheetTitle className="text-lg font-bold text-slate-900 tracking-tight">
-                {editingTransaction ? 'Editar Transação' : 'Nova Transação'}
+                {editingRecurringRule
+                  ? 'Editar Regra Recorrente'
+                  : editingTransaction
+                    ? 'Editar Transação'
+                    : 'Nova Transação'}
               </SheetTitle>
 
               {/* Botão de Atalho para Falar com IA */}
-              {!editingTransaction && onOpenVoice ? (
+              {!editingRecurringRule && !editingTransaction && onOpenVoice ? (
                 <button
                   type="button"
                   onClick={handleTriggerVoice}
@@ -977,9 +1071,11 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
               ) : null}
             </div>
             <SheetDescription className="text-xs text-slate-500">
-              {editingTransaction
-                ? 'Atualize os dados ou valores da transação registrada.'
-                : 'Registre uma despesa ou receita rápida no orçamento familiar.'}
+              {editingRecurringRule
+                ? 'Atualize os dados da regra recorrente mensal.'
+                : editingTransaction
+                  ? 'Atualize os dados ou valores da transação registrada.'
+                  : 'Registre uma despesa ou receita rápida no orçamento familiar.'}
             </SheetDescription>
           </SheetHeader>
 
@@ -997,17 +1093,23 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           <div className="flex items-center justify-between pr-6">
             <div>
               <DialogTitle className="text-xl font-bold text-slate-900">
-                {editingTransaction ? 'Editar Transação' : 'Nova Transação'}
+                {editingRecurringRule
+                  ? 'Editar Regra Recorrente'
+                  : editingTransaction
+                    ? 'Editar Transação'
+                    : 'Nova Transação'}
               </DialogTitle>
               <DialogDescription className="text-xs text-slate-500 mt-0.5">
-                {editingTransaction
-                  ? 'Atualize os dados ou valores da transação registrada.'
-                  : 'Registre uma despesa ou receita rápida no orçamento familiar.'}
+                {editingRecurringRule
+                  ? 'Atualize os dados da regra recorrente mensal.'
+                  : editingTransaction
+                    ? 'Atualize os dados ou valores da transação registrada.'
+                    : 'Registre uma despesa ou receita rápida no orçamento familiar.'}
               </DialogDescription>
             </div>
 
             {/* Atalho de Falar com IA no desktop */}
-            {!editingTransaction && onOpenVoice ? (
+            {!editingRecurringRule && !editingTransaction && onOpenVoice ? (
               <button
                 type="button"
                 onClick={handleTriggerVoice}

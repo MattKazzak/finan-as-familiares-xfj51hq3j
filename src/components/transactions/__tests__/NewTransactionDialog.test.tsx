@@ -110,6 +110,36 @@ describe('NewTransactionDialog - Modal Unificado de Nova Transação', () => {
     expect(screen.getByText('Repetir todo mês')).toBeDefined()
   })
 
+  it('permite carregar uma regra recorrente para edição através de editingRecurringRule', () => {
+    const mockRule = {
+      id: 'rec-1',
+      family_id: 'fam-1',
+      member_id: 'm-2',
+      category_id: 'cat-alimentacao',
+      subcategory_id: null,
+      name: 'Supermercado Mensal',
+      type: 'expense' as const,
+      amount_cents: 125000,
+      day_of_month: 10,
+      active: true,
+      created_at: '2025-01-01',
+    }
+
+    render(
+      <NewTransactionDialog open={true} onOpenChange={vi.fn()} editingRecurringRule={mockRule} />,
+    )
+
+    expect(screen.getByText('Editar Regra Recorrente')).toBeDefined()
+    const descInput = screen.getByPlaceholderText(/Ex\.:/i) as HTMLInputElement
+    expect(descInput.value).toBe('Supermercado Mensal')
+
+    const amountInput = screen.getByPlaceholderText('0,00') as HTMLInputElement
+    expect(amountInput.value).toBe('1.250,00')
+
+    expect(screen.getByText(/Regra Recorrente:/i)).toBeDefined()
+    expect(screen.getByRole('button', { name: /Salvar Regra/i })).toBeDefined()
+  })
+
   it('permite alternar entre Despesa e Receita pelo toggle segmentado', () => {
     render(<NewTransactionDialog open={true} onOpenChange={vi.fn()} />)
 

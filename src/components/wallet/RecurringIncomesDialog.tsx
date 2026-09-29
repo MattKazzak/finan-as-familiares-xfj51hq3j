@@ -8,6 +8,13 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet'
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -17,31 +24,30 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { useFamily } from '@/hooks/use-family'
 import { useToast } from '@/hooks/use-toast'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { formatBRL, parseBRLToCents, formatNumberBRL, formatMonthYear } from '@/lib/formatters'
 import {
-  createRecurringIncome,
   updateRecurringIncome,
   deleteRecurringIncome,
   upsertRecurringIncomeOverride,
   resetRecurringIncomeToDefault,
 } from '@/services/recurring-incomes'
+import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
 import type { RecurringIncome, RecurringIncomeOverride, TransactionType } from '@/types/finance'
 import {
   Sparkles,
-  Plus,
   Trash2,
   Edit3,
   Calendar,
@@ -53,16 +59,24 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Receipt,
-  Layers,
+  Play,
+  Pause,
+  MoreVertical,
 } from 'lucide-react'
 
-interface RecurringIncomesDialogProps {
+export interface RecurringIncomesDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   currentMonthDate: Date
   recurringIncomes: RecurringIncome[]
   recurringOverrides: RecurringIncomeOverride[]
   onSuccess: () => void
+  /**
+   * Callback opcional caso o chamador queira abrir o NewTransactionDialog diretamente.
+   * Se não for fornecido, o RecurringIncomesDialog abre internamente o NewTransactionDialog
+   * em modo de edição da regra.
+   */
+  onEditRecurringRule?: (rule: RecurringIncome) => void
 }
 
 export const RecurringIncomesDialog: React.FC<RecurringIncomesDialogProps> = ({
@@ -72,8 +86,10 @@ export const RecurringIncomesDialog: React.FC<RecurringIncomesDialogProps> = ({
   recurringIncomes,
   recurringOverrides,
   onSuccess,
+  onEditRecurringRule,
 }) => {
-  const { family, members, categories } = useFamily()
+  const isMobile = useIsMobile()
+  const { family } = useFamily()
   const { toast } = useToast()
 
   const currentMonthStr = currentMonthDate.toISOString().slice(0, 7)
@@ -82,20 +98,12 @@ export const RecurringIncomesDialog: React.FC<RecurringIncomesDialogProps> = ({
   const overrideMap = new Map<string, RecurringIncomeOverride>()
   recurringOverrides.forEach((o) => overrideMap.set(o.recurring_income_id, o))
 
-  // Aba ativa: 'income' (Receitas Fixas) ou 'expense' (Despesas Fixas)
-  const [activeTab, setActiveTab] = useState<'income' | 'expense'>('income')
+  // Aba ativa: 'all' (Todas), 'income' (Receitas), 'expense' (Despesas)
+  const [activeTab, setActiveTab] = useState<'all' | 'expense' | 'income'>('all')
 
-  // Estado para Criar/Editar Recorrência Fixa
-  const [isFormOpen, setIsFormOpen] = useState(false)
-  const [editingItem, setEditingItem] = useState<RecurringIncome | null>(null)
-  const [formType, setFormType] = useState<TransactionType>('income')
-  const [name, setName] = useState('')
-  const [amountStr, setAmountStr] = useState('')
-  const [memberId, setMemberId] = useState('')
-  const [categoryId, setCategoryId] = useState<string>('none')
-  const [subcategoryId, setSubcategoryId] = useState<string>('none')
-  const [dayOfMonth, setDayOfMonth] = useState<number>(5)
-  const [saving, setSaving] = useState(false)
+  // Estado para regra sendo editada no modal unificado interno (se não fornecido callback externo)
+  const [editingRule, setEditingRule] = useState<RecurringIncome | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
   // Estado para Exceção Pontual do Mês Selecionado
   const [isOverrideDialogOpen, setIsOverrideDialogOpen] = useState(false)
@@ -108,126 +116,43 @@ export const RecurringIncomesDialog: React.FC<RecurringIncomesDialogProps> = ({
   const [deleteCascadeTransactions, setDeleteCascadeTransactions] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
-  // Categorias disponíveis de acordo com o formType
-  const relevantCategories = categories.filter((c) => c.type === formType)
-  const selectedCatObj = categories.find((c) => c.id === categoryId)
-  const availableSubcategories = selectedCatObj?.subcategories || []
+  // Estado de loading para toggle ativo/pausado
+  const [togglingId, setTogglingId] = useState<string | null>(null)
 
-  // Itens separados por type ('income' ou 'expense'; legado sem type assume 'income')
+  // Itens separados por type
   const incomeItems = recurringIncomes.filter((item) => (item.type || 'income') === 'income')
   const expenseItems = recurringIncomes.filter((item) => item.type === 'expense')
 
-  const openCreateForm = (targetType: TransactionType = activeTab) => {
-    setEditingItem(null)
-    setFormType(targetType)
-    setName('')
-    setAmountStr('')
-    setMemberId(members[0]?.id || '')
-
-    const typeCats = categories.filter((c) => c.type === targetType)
-    if (targetType === 'income') {
-      const defaultIncomeCat = typeCats.find((c) => c.name.toLowerCase().includes('salário'))
-      setCategoryId(defaultIncomeCat ? defaultIncomeCat.id : typeCats[0]?.id || 'none')
+  const handleOpenEdit = (rule: RecurringIncome) => {
+    if (onEditRecurringRule) {
+      onEditRecurringRule(rule)
     } else {
-      const defaultExpenseCat = typeCats.find(
-        (c) =>
-          c.name.toLowerCase().includes('moradia') ||
-          c.name.toLowerCase().includes('casa') ||
-          c.name.toLowerCase().includes('contas'),
-      )
-      setCategoryId(defaultExpenseCat ? defaultExpenseCat.id : typeCats[0]?.id || 'none')
+      setEditingRule(rule)
+      setIsEditDialogOpen(true)
     }
-
-    setSubcategoryId('none')
-    setDayOfMonth(5)
-    setIsFormOpen(true)
   }
 
-  const openEditForm = (item: RecurringIncome) => {
-    setEditingItem(item)
-    const itemType = (item.type || 'income') as TransactionType
-    setFormType(itemType)
-    setName(item.name)
-    setAmountStr(formatNumberBRL(item.amount_cents))
-    setMemberId(item.member_id)
-    setCategoryId(item.category_id || 'none')
-    setSubcategoryId(item.subcategory_id || 'none')
-    setDayOfMonth(item.day_of_month)
-    setIsFormOpen(true)
-  }
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!family) return
-    const cents = parseBRLToCents(amountStr)
-    if (cents <= 0) {
-      toast({
-        title: 'Valor inválido',
-        description: 'Informe um valor maior que zero.',
-        variant: 'destructive',
-      })
-      return
-    }
-    if (!name.trim()) {
-      toast({
-        title: 'Nome obrigatório',
-        description: `Informe uma descrição para a ${formType === 'income' ? 'receita' : 'despesa'}.`,
-        variant: 'destructive',
-      })
-      return
-    }
-    if (!memberId) {
-      toast({
-        title: 'Selecione o membro',
-        description: 'Informe a qual familiar este lançamento pertence.',
-        variant: 'destructive',
-      })
-      return
-    }
-
+  const handleToggleActive = async (rule: RecurringIncome) => {
+    const newStatus = !rule.active
     try {
-      setSaving(true)
-      if (editingItem) {
-        await updateRecurringIncome(editingItem.id, {
-          name: name.trim(),
-          type: formType,
-          amount_cents: cents,
-          member_id: memberId,
-          category_id: categoryId === 'none' ? null : categoryId,
-          subcategory_id: subcategoryId === 'none' ? null : subcategoryId,
-          day_of_month: dayOfMonth,
-        })
-        toast({
-          title: formType === 'income' ? 'Receita fixa atualizada' : 'Despesa fixa atualizada',
-          description: 'As alterações foram salvas com sucesso.',
-        })
-      } else {
-        await createRecurringIncome({
-          family_id: family.id,
-          name: name.trim(),
-          type: formType,
-          amount_cents: cents,
-          member_id: memberId,
-          category_id: categoryId === 'none' ? null : categoryId,
-          subcategory_id: subcategoryId === 'none' ? null : subcategoryId,
-          day_of_month: dayOfMonth,
-        })
-        toast({
-          title: formType === 'income' ? 'Receita fixa criada' : 'Despesa fixa criada',
-          description: 'Será gerada automaticamente todo mês no dia configurado.',
-        })
-      }
-      setIsFormOpen(false)
+      setTogglingId(rule.id)
+      await updateRecurringIncome(rule.id, { active: newStatus })
+      toast({
+        title: newStatus ? 'Regra reativada 🔁' : 'Regra pausada ⏸️',
+        description: newStatus
+          ? `"${rule.name}" voltará a gerar lançamentos automáticos todo mês.`
+          : `"${rule.name}" foi pausada e não gerará lançamentos automáticos até ser reativada.`,
+      })
       onSuccess()
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
       toast({
-        title: 'Erro ao salvar',
-        description: 'Tente novamente.',
+        title: 'Erro ao alterar status',
+        description: err?.message || 'Tente novamente.',
         variant: 'destructive',
       })
     } finally {
-      setSaving(false)
+      setTogglingId(null)
     }
   }
 
@@ -316,36 +241,16 @@ export const RecurringIncomesDialog: React.FC<RecurringIncomesDialogProps> = ({
   }
 
   // Renderizador da lista de itens
-  const renderItemList = (items: RecurringIncome[], type: TransactionType) => {
-    const isIncome = type === 'income'
-
+  const renderItemList = (items: RecurringIncome[]) => {
     if (items.length === 0) {
       return (
-        <div className="text-center py-10 px-4 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-          {isIncome ? (
-            <Briefcase className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-          ) : (
-            <Receipt className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-          )}
-          <p className="font-bold text-slate-800 text-sm">
-            {isIncome ? 'Nenhuma receita fixa cadastrada' : 'Nenhuma despesa fixa cadastrada'}
+        <div className="text-center py-10 px-4 bg-slate-50/60 rounded-2xl border border-dashed border-slate-200">
+          <Sparkles className="w-9 h-9 text-slate-300 mx-auto mb-2" />
+          <p className="font-bold text-slate-800 text-sm">Nenhuma regra recorrente ainda</p>
+          <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+            Use o botão + e ative &quot;Repetir todo mês&quot; para cadastrar salários, assinaturas
+            ou contas fixas da família.
           </p>
-          <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto mb-3">
-            {isIncome
-              ? 'Cadastre salários, pró-labore ou rendas mensais da família. Serão lançadas automaticamente e comporão a previsão orçamentária.'
-              : 'Cadastre aluguel, condomínio, internet ou assinaturas mensais. Serão lançadas automaticamente no dia definido com selo "Previsto".'}
-          </p>
-          <Button
-            type="button"
-            onClick={() => openCreateForm(type)}
-            size="sm"
-            className={`${
-              isIncome ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'
-            } text-white text-xs rounded-xl shadow-xs`}
-          >
-            <Plus className="w-3.5 h-3.5 mr-1" />
-            <span>{isIncome ? 'Nova Receita Fixa' : 'Nova Despesa Fixa'}</span>
-          </Button>
         </div>
       )
     }
@@ -353,6 +258,9 @@ export const RecurringIncomesDialog: React.FC<RecurringIncomesDialogProps> = ({
     return (
       <div className="space-y-2.5">
         {items.map((item) => {
+          const isIncome = (item.type || 'income') === 'income'
+          const isPaused = item.active === false
+          const isTogglingThis = togglingId === item.id
           const override = overrideMap.get(item.id)
           const hasOverride = Boolean(override)
           const effectiveAmount = hasOverride ? override!.amount_cents : item.amount_cents
@@ -360,47 +268,80 @@ export const RecurringIncomesDialog: React.FC<RecurringIncomesDialogProps> = ({
           return (
             <div
               key={item.id}
-              className="rounded-2xl border border-slate-200/80 bg-white p-3.5 space-y-2 shadow-2xs hover:border-slate-300 transition-colors"
+              className={`rounded-2xl border bg-white p-3 sm:p-3.5 space-y-2 shadow-2xs transition-colors ${
+                isPaused
+                  ? 'border-slate-200/60 bg-slate-50/50 opacity-75'
+                  : 'border-slate-200/80 hover:border-slate-300'
+              }`}
             >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-3 overflow-hidden">
+              {/* Linha principal: Ícone, dados da regra, valor e menu de ações */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start gap-2.5 sm:gap-3 min-w-0 flex-1">
                   <div
-                    className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border shadow-2xs ${
-                      isIncome
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                        : 'bg-rose-50 text-rose-700 border-rose-100'
+                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center shrink-0 border shadow-2xs mt-0.5 ${
+                      isPaused
+                        ? 'bg-slate-100 text-slate-400 border-slate-200'
+                        : isIncome
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                          : 'bg-rose-50 text-rose-700 border-rose-100'
                     }`}
                   >
                     {isIncome ? (
-                      <ArrowUpRight className="w-5 h-5 stroke-[2.5]" />
+                      <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
                     ) : (
-                      <ArrowDownRight className="w-5 h-5 stroke-[2.5]" />
+                      <ArrowDownRight className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
                     )}
                   </div>
 
-                  <div className="overflow-hidden">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm text-slate-900 truncate">{item.name}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span
-                        className={`inline-flex items-center gap-1 text-[10px] font-semibold border px-2 py-0.2 rounded-full ${
-                          isIncome
-                            ? 'bg-emerald-100/80 text-emerald-800 border-emerald-200/80'
-                            : 'bg-rose-100/80 text-rose-800 border-rose-200/80'
+                        className={`font-bold text-sm truncate ${
+                          isPaused ? 'text-slate-600 line-through' : 'text-slate-900'
+                        }`}
+                        title={item.name}
+                      >
+                        {item.name}
+                      </span>
+
+                      {/* Tag Ativa / Pausada */}
+                      <span
+                        className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${
+                          isPaused
+                            ? 'bg-slate-100 text-slate-600 border-slate-300/80'
+                            : 'bg-emerald-100/80 text-emerald-800 border-emerald-200/80'
                         }`}
                       >
-                        <Clock className="w-3 h-3" />
+                        {isPaused ? 'Pausada' : 'Ativa'}
+                      </span>
+
+                      {/* Tag Dia do Mês */}
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-600 bg-slate-100/90 border border-slate-200 px-2 py-0.5 rounded-full shrink-0">
+                        <Clock className="w-3 h-3 text-slate-500" />
                         <span>Dia {item.day_of_month}</span>
                       </span>
+
+                      {/* Tag Tipo */}
+                      <span
+                        className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-md shrink-0 ${
+                          isIncome
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                            : 'bg-rose-50 text-rose-700 border border-rose-200/60'
+                        }`}
+                      >
+                        {isIncome ? 'Receita fixa' : 'Despesa fixa'}
+                      </span>
+
                       {hasOverride ? (
-                        <span className="text-[10px] font-semibold bg-amber-100 text-amber-900 border border-amber-200 px-2 py-0.2 rounded-full">
-                          <span>ajustado em {formatMonthYear(currentMonthDate)}</span>
+                        <span className="text-[10px] font-semibold bg-amber-100 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-full shrink-0">
+                          ajustado em {formatMonthYear(currentMonthDate)}
                         </span>
                       ) : null}
                     </div>
 
-                    <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500">
+                    <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 flex-wrap">
                       <span className="inline-flex items-center gap-1 bg-slate-100 px-1.5 py-0.5 rounded text-[11px] font-medium text-slate-600">
-                        <User className="w-3 h-3" />
+                        <User className="w-3 h-3 text-slate-500" />
                         <span>{item.member?.name || 'Membro'}</span>
                       </span>
                       {item.category ? (
@@ -421,10 +362,10 @@ export const RecurringIncomesDialog: React.FC<RecurringIncomesDialogProps> = ({
                   </div>
                 </div>
 
-                <div className="text-right shrink-0">
+                <div className="text-right shrink-0 pl-1">
                   <span
-                    className={`font-bold text-base tabular-nums block ${
-                      isIncome ? 'text-emerald-700' : 'text-rose-700'
+                    className={`font-bold text-sm sm:text-base tabular-nums block ${
+                      isPaused ? 'text-slate-400' : isIncome ? 'text-emerald-700' : 'text-rose-700'
                     }`}
                   >
                     <span>
@@ -432,21 +373,22 @@ export const RecurringIncomesDialog: React.FC<RecurringIncomesDialogProps> = ({
                     </span>
                   </span>
                   {hasOverride ? (
-                    <span className="text-[10px] text-slate-400 line-through tabular-nums">
-                      <span>padrão {formatBRL(item.amount_cents)}</span>
+                    <span className="text-[10px] text-slate-400 line-through tabular-nums block">
+                      padrão {formatBRL(item.amount_cents)}
                     </span>
                   ) : (
-                    <span className="text-[10px] text-slate-400">recorrente mensal</span>
+                    <span className="text-[10px] text-slate-400 block">recorrente mensal</span>
                   )}
                 </div>
               </div>
 
-              {/* Botões de Ação na Linha: Ajuste Pontual, Editar Padrão, Excluir */}
-              <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
+              {/* Barra inferior de Ações: Ajuste Pontual à esquerda e Ações à direita */}
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                {/* Botão de Ajuste pontual deste mês */}
                 <button
                   type="button"
                   onClick={() => openOverrideDialog(item)}
-                  className={`font-semibold px-2 py-1 rounded-lg transition-colors flex items-center gap-1 ${
+                  className={`font-semibold px-2 py-1 rounded-lg transition-colors flex items-center gap-1 text-[11px] sm:text-xs ${
                     isIncome
                       ? 'text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50'
                       : 'text-rose-700 hover:text-rose-800 hover:bg-rose-50'
@@ -456,15 +398,49 @@ export const RecurringIncomesDialog: React.FC<RecurringIncomesDialogProps> = ({
                   <span>{hasOverride ? 'Editar ajuste deste mês' : 'Ajustar só neste mês'}</span>
                 </button>
 
+                {/* Ações: Desktop (ícones diretos) + Mobile (botões diretos E menu de 3 pontinhos com paridade total) */}
                 <div className="flex items-center gap-1">
+                  {/* Botão Pausar/Reativar */}
                   <button
                     type="button"
-                    onClick={() => openEditForm(item)}
-                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    title={`Editar ${isIncome ? 'receita fixa' : 'despesa fixa'}`}
+                    onClick={() => handleToggleActive(item)}
+                    disabled={isTogglingThis}
+                    className={`p-1.5 rounded-lg transition-colors text-xs font-semibold flex items-center gap-1 ${
+                      isPaused
+                        ? 'text-emerald-700 hover:bg-emerald-50'
+                        : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+                    }`}
+                    title={isPaused ? 'Reativar regra recorrente' : 'Pausar regra recorrente'}
+                    aria-label={isPaused ? 'Reativar regra' : 'Pausar regra'}
                   >
-                    <Edit3 className="w-4 h-4" />
+                    {isTogglingThis ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : isPaused ? (
+                      <>
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        <span className="hidden sm:inline">Reativar</span>
+                      </>
+                    ) : (
+                      <>
+                        <Pause className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Pausar</span>
+                      </>
+                    )}
                   </button>
+
+                  {/* Botão Editar (Abre o modal unificado) */}
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEdit(item)}
+                    className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-1"
+                    title={`Editar ${isIncome ? 'receita fixa' : 'despesa fixa'}`}
+                    aria-label="Editar regra"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline text-xs font-semibold">Editar</span>
+                  </button>
+
+                  {/* Botão Excluir */}
                   <button
                     type="button"
                     onClick={() => {
@@ -473,9 +449,66 @@ export const RecurringIncomesDialog: React.FC<RecurringIncomesDialogProps> = ({
                     }}
                     className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     title={`Excluir ${isIncome ? 'receita fixa' : 'despesa fixa'}`}
+                    aria-label="Excluir regra"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
+
+                  {/* Menu Três Pontinhos (Paridade Mobile/Desktop — acesso rápido a todas as ações) */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors shrink-0"
+                        title="Mais opções da regra"
+                        aria-label="Mais opções"
+                      >
+                        <MoreVertical className="w-3.5 h-3.5" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-lg">
+                      <DropdownMenuItem
+                        onClick={() => handleOpenEdit(item)}
+                        className="text-xs font-semibold gap-2 cursor-pointer"
+                      >
+                        <Edit3 className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Editar regra</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleToggleActive(item)}
+                        className="text-xs font-semibold gap-2 cursor-pointer"
+                      >
+                        {isPaused ? (
+                          <>
+                            <Play className="w-3.5 h-3.5 text-emerald-600 fill-current" />
+                            <span>Reativar regra</span>
+                          </>
+                        ) : (
+                          <>
+                            <Pause className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Pausar regra</span>
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => openOverrideDialog(item)}
+                        className="text-xs font-semibold gap-2 cursor-pointer"
+                      >
+                        <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Ajustar só neste mês</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setItemToDelete(item)
+                          setDeleteCascadeTransactions(false)
+                        }}
+                        className="text-xs font-semibold gap-2 text-red-600 focus:text-red-700 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                        <span>Excluir regra</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </div>
@@ -485,300 +518,137 @@ export const RecurringIncomesDialog: React.FC<RecurringIncomesDialogProps> = ({
     )
   }
 
+  const renderContentBody = () => (
+    <div className="space-y-3.5">
+      {/* Abas: Todas, Despesas, Receitas */}
+      <Tabs
+        value={activeTab}
+        onValueChange={(val) => setActiveTab(val as 'all' | 'expense' | 'income')}
+        className="w-full flex flex-col"
+      >
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+          <TabsList className="grid grid-cols-3 p-1 bg-slate-100/90 rounded-2xl h-9 w-full sm:w-80">
+            <TabsTrigger
+              value="all"
+              className="rounded-xl text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-xs"
+            >
+              <span>Todas ({recurringIncomes.length})</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="expense"
+              className="rounded-xl text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-rose-700 data-[state=active]:shadow-xs flex items-center justify-center gap-1"
+            >
+              <ArrowDownRight className="w-3 h-3 stroke-[2.5]" />
+              <span>Despesas ({expenseItems.length})</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="income"
+              className="rounded-xl text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-xs flex items-center justify-center gap-1"
+            >
+              <ArrowUpRight className="w-3 h-3 stroke-[2.5]" />
+              <span>Receitas ({incomeItems.length})</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium bg-slate-50 border border-slate-200/60 px-2.5 py-1 rounded-xl self-end sm:self-auto">
+            <Calendar className="w-3.5 h-3.5 text-slate-500" />
+            <span className="text-[11px]">
+              Mês: <strong>{formatMonthYear(currentMonthDate)}</strong>
+            </span>
+          </div>
+        </div>
+
+        {/* Mensagem educativa discreta */}
+        <p className="text-[11px] text-slate-500 bg-slate-50/70 p-2.5 rounded-xl border border-slate-200/60 mt-2">
+          🔁 <strong>Gestão de Recorrentes:</strong> Salários, aluguel, condomínio e assinaturas são
+          gerados automaticamente no dia configurado. Para criar uma nova, toque no botão{' '}
+          <strong>+</strong> e ative <em>&quot;Repetir todo mês&quot;</em>.
+        </p>
+
+        <div className="mt-3">
+          <TabsContent value="all" className="mt-0">
+            {renderItemList(recurringIncomes)}
+          </TabsContent>
+
+          <TabsContent value="expense" className="mt-0">
+            {renderItemList(expenseItems)}
+          </TabsContent>
+
+          <TabsContent value="income" className="mt-0">
+            {renderItemList(incomeItems)}
+          </TabsContent>
+        </div>
+      </Tabs>
+    </div>
+  )
+
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl w-[95vw] rounded-3xl p-5 sm:p-7 max-h-[90vh] flex flex-col">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-emerald-600" />
-                  <span>Contas & Rendas Recorrentes</span>
-                </DialogTitle>
-                <DialogDescription className="text-xs text-slate-500 mt-0.5">
-                  Salários, aluguel e contas fixas mensais são lançados automaticamente todo mês no
-                  dia definido, gerando projeções no calendário orçamentário.
-                </DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
-
-          {/* Abas: Receitas Fixas e Despesas Fixas */}
-          <Tabs
-            value={activeTab}
-            onValueChange={(val) => {
-              setActiveTab(val as 'income' | 'expense')
-              if (isFormOpen) {
-                setFormType(val as TransactionType)
-                // Atualizar categoria padrão se for relevante
-                const typeCats = categories.filter((c) => c.type === val)
-                setCategoryId(typeCats[0]?.id || 'none')
-                setSubcategoryId('none')
-              }
-            }}
-            className="flex-1 flex flex-col min-h-0"
+      {/* MOBILE: BOTTOM SHEET | DESKTOP: DIALOG CENTRALIZADO */}
+      {isMobile ? (
+        <Sheet open={open} onOpenChange={onOpenChange}>
+          <SheetContent
+            side="bottom"
+            className="rounded-t-3xl border-t border-slate-200/90 bg-white p-5 pb-8 max-h-[92vh] overflow-y-auto overflow-x-hidden min-w-0"
           >
-            {/* Barra de Ações: Abas + Mês de referência + Ação de Adicionar */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2 border-b border-slate-100 pb-3">
-              <TabsList className="grid grid-cols-2 p-1 bg-slate-100/90 rounded-2xl h-10 w-full sm:w-72">
-                <TabsTrigger
-                  value="income"
-                  className="rounded-xl text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-xs flex items-center gap-1.5"
-                >
-                  <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
-                  <span>Receitas Fixas ({incomeItems.length})</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="expense"
-                  className="rounded-xl text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-rose-700 data-[state=active]:shadow-xs flex items-center gap-1.5"
-                >
-                  <ArrowDownRight className="w-3.5 h-3.5 stroke-[2.5]" />
-                  <span>Despesas Fixas ({expenseItems.length})</span>
-                </TabsTrigger>
-              </TabsList>
+            <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-3 -mt-1" />
+            <SheetHeader className="text-left space-y-1 mb-3">
+              <SheetTitle className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-emerald-600" />
+                <span>Regras Recorrentes</span>
+              </SheetTitle>
+              <SheetDescription className="text-xs text-slate-500">
+                Gerencie salários, aluguel e despesas fixas que se repetem todo mês na família.
+              </SheetDescription>
+            </SheetHeader>
 
-              <div className="flex items-center justify-between sm:justify-end gap-2">
-                <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium bg-slate-50 border border-slate-200/60 px-2.5 py-1.5 rounded-xl">
-                  <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                  <span className="text-[11px]">
-                    <strong>{formatMonthYear(currentMonthDate)}</strong>
-                  </span>
-                </div>
+            {renderContentBody()}
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          <DialogContent className="max-w-2xl w-[95vw] rounded-3xl p-6 sm:p-7 max-h-[90vh] overflow-y-auto overflow-x-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-emerald-600" />
+                <span>Regras Recorrentes</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate-500 mt-0.5">
+                Salários, aluguel e contas fixas mensais são lançados automaticamente todo mês no
+                dia definido, gerando projeções no calendário orçamentário.
+              </DialogDescription>
+            </DialogHeader>
 
-                {!isFormOpen ? (
-                  <Button
-                    type="button"
-                    onClick={() => openCreateForm(activeTab)}
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 px-2.5 text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-xl gap-1 border border-slate-200/60"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Adicionar</span>
-                  </Button>
-                ) : null}
-              </div>
-            </div>
+            <div className="flex-1 overflow-y-auto pr-1 py-1">{renderContentBody()}</div>
 
-            {/* Formulário Retrátil: Adicionar / Editar */}
-            {isFormOpen ? (
-              <form
-                onSubmit={handleSave}
-                className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3 animate-in fade-in-50 my-2"
+            <DialogFooter className="pt-3 border-t border-slate-100 flex items-center justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="text-xs rounded-xl w-full sm:w-auto"
               >
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
-                    {formType === 'income' ? (
-                      <ArrowUpRight className="w-4 h-4 text-emerald-600 stroke-[2.5]" />
-                    ) : (
-                      <ArrowDownRight className="w-4 h-4 text-rose-600 stroke-[2.5]" />
-                    )}
-                    <span>
-                      {editingItem
-                        ? `Editar ${formType === 'income' ? 'Receita Fixa' : 'Despesa Fixa'}`
-                        : `Cadastrar ${formType === 'income' ? 'Receita Fixa' : 'Despesa Fixa'}`}
-                    </span>
-                  </span>
-                  <span
-                    className={`text-[10px] font-semibold uppercase ${
-                      formType === 'income' ? 'text-emerald-700' : 'text-rose-700'
-                    }`}
-                  >
-                    Lançamento Automático
-                  </span>
-                </div>
+                <span>Fechar</span>
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div>
-                    <Label htmlFor="rf-name" className="text-xs font-semibold text-slate-700">
-                      Descrição / Nome
-                    </Label>
-                    <Input
-                      id="rf-name"
-                      type="text"
-                      placeholder={
-                        formType === 'income'
-                          ? 'Ex.: Salário Empresa, Pró-labore, Aluguel Recebido'
-                          : 'Ex.: Aluguel, Condomínio, Internet, Academia'
-                      }
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="bg-white text-xs h-9 mt-1"
-                      autoFocus
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="rf-amount" className="text-xs font-semibold text-slate-700">
-                      Valor Mensal (R$)
-                    </Label>
-                    <div className="relative mt-1">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">
-                        R$
-                      </span>
-                      <Input
-                        id="rf-amount"
-                        type="text"
-                        inputMode="decimal"
-                        placeholder="0,00"
-                        value={amountStr}
-                        onChange={(e) => setAmountStr(e.target.value)}
-                        className="pl-9 bg-white text-sm font-bold tabular-nums h-9"
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  <div>
-                    <Label className="text-xs font-semibold text-slate-700">
-                      Membro da Família
-                    </Label>
-                    <Select value={memberId} onValueChange={setMemberId}>
-                      <SelectTrigger className="bg-white text-xs h-9 mt-1">
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {members.map((m) => (
-                          <SelectItem key={m.id} value={m.id}>
-                            <span>{m.name}</span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label className="text-xs font-semibold text-slate-700">
-                      Categoria ({formType === 'income' ? 'Receita' : 'Despesa'})
-                    </Label>
-                    <Select
-                      value={categoryId}
-                      onValueChange={(v) => {
-                        setCategoryId(v)
-                        setSubcategoryId('none')
-                      }}
-                    >
-                      <SelectTrigger className="bg-white text-xs h-9 mt-1">
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">
-                          <span>Sem categoria</span>
-                        </SelectItem>
-                        {relevantCategories.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            <span>{c.name}</span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="rf-day" className="text-xs font-semibold text-slate-700">
-                      Dia do Lançamento
-                    </Label>
-                    <Input
-                      id="rf-day"
-                      type="number"
-                      min={1}
-                      max={31}
-                      value={dayOfMonth}
-                      onChange={(e) => setDayOfMonth(parseInt(e.target.value, 10) || 1)}
-                      className="bg-white text-xs h-9 mt-1"
-                      required
-                    />
-                    <span className="text-[10px] text-slate-400 mt-0.5 block">
-                      Dia 1 a 31 (ou último dia do mês)
-                    </span>
-                  </div>
-                </div>
-
-                {/* Subcategoria se houver */}
-                {categoryId !== 'none' && availableSubcategories.length > 0 ? (
-                  <div>
-                    <Label className="text-xs font-semibold text-slate-700">
-                      Subcategoria (Opcional)
-                    </Label>
-                    <Select value={subcategoryId} onValueChange={setSubcategoryId}>
-                      <SelectTrigger className="bg-white text-xs h-9 mt-1">
-                        <SelectValue placeholder="Nenhuma" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">
-                          <span>Nenhuma</span>
-                        </SelectItem>
-                        {availableSubcategories.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>
-                            <span>{s.name}</span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ) : null}
-
-                <div className="flex justify-end gap-2 pt-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsFormOpen(false)}
-                    className="text-xs h-8 rounded-xl"
-                  >
-                    <span>Cancelar</span>
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={saving || !name.trim()}
-                    size="sm"
-                    className={`${
-                      formType === 'income'
-                        ? 'bg-emerald-600 hover:bg-emerald-700'
-                        : 'bg-rose-600 hover:bg-rose-700'
-                    } text-white text-xs h-8 rounded-xl font-semibold`}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                      <span>
-                        {editingItem
-                          ? 'Salvar Alterações'
-                          : formType === 'income'
-                            ? 'Criar Receita Fixa'
-                            : 'Criar Despesa Fixa'}
-                      </span>
-                    </span>
-                  </Button>
-                </div>
-              </form>
-            ) : null}
-
-            {/* Conteúdo das Abas com rolagem */}
-            <TabsContent value="income" className="flex-1 overflow-y-auto pr-1 py-2 mt-0">
-              {renderItemList(incomeItems, 'income')}
-            </TabsContent>
-
-            <TabsContent value="expense" className="flex-1 overflow-y-auto pr-1 py-2 mt-0">
-              {renderItemList(expenseItems, 'expense')}
-            </TabsContent>
-          </Tabs>
-
-          <DialogFooter className="pt-2 border-t border-slate-100 flex items-center justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="text-xs rounded-xl w-full sm:w-auto"
-            >
-              <span>Fechar</span>
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* DIÁLOGO MODAL UNIFICADO PARA EDIÇÃO DA REGRA (QUANDO ACIONADO INTERNAMENTE) */}
+      <NewTransactionDialog
+        open={isEditDialogOpen}
+        onOpenChange={(openState) => {
+          setIsEditDialogOpen(openState)
+          if (!openState) setEditingRule(null)
+        }}
+        editingRecurringRule={editingRule}
+        onSuccess={() => {
+          onSuccess()
+          setIsEditDialogOpen(false)
+          setEditingRule(null)
+        }}
+      />
 
       {/* DIÁLOGO AJUSTE PONTUAL DESTE MÊS (EXCEÇÃO) */}
       <Dialog open={isOverrideDialogOpen} onOpenChange={setIsOverrideDialogOpen}>
