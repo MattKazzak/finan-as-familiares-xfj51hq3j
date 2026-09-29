@@ -70,8 +70,9 @@ export async function fetchFamilyData() {
   // Se o usuário não possui uma família criada ainda, cria automaticamente o workspace padrão
   if (!family) {
     const rawName = (user.user_metadata?.name as string) || ''
-    const fallbackFamilyName = rawName ? normalizeFamilyName(rawName) : 'Minha Família'
     const fallbackMemberName = rawName || user.email?.split('@')[0] || 'Principal'
+    // O nome da pessoa nunca deve alimentar o nome da família
+    const fallbackFamilyName = 'Minha Família'
 
     try {
       await createNewFamilyWorkspace(fallbackFamilyName, fallbackMemberName)

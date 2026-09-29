@@ -628,6 +628,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activate_family_onboarding_plan: {
+        Args: {
+          p_family_id: string
+          p_model_preset_id?: string
+          p_monthly_net_income_cents: number
+        }
+        Returns: Json
+      }
       create_new_family_workspace: {
         Args: { p_family_name: string; p_member_name: string }
         Returns: string

@@ -151,7 +151,7 @@ export default function Login() {
 
     if (mode === 'signup') {
       if (!name.trim()) {
-        setErrorMessage('Informe seu nome ou da sua família.')
+        setErrorMessage('Informe seu nome.')
         return
       }
       if (password.length < 6) {
@@ -343,7 +343,7 @@ export default function Login() {
           {mode === 'signup' && (
             <div className="animate-fade-in">
               <Label htmlFor="signup-name" className="text-xs font-semibold text-slate-700">
-                Seu Nome (ou Nome da Família)
+                Seu Nome
               </Label>
               <div className="relative mt-1">
                 <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -352,7 +352,7 @@ export default function Login() {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Ex: Matheus ou Família Silva"
+                  placeholder="Ex: Matheus"
                   className="pl-10 h-11 rounded-xl"
                   required={mode === 'signup'}
                   autoFocus={mode === 'signup'}
@@ -443,7 +443,7 @@ export default function Login() {
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin mr-2" />
             ) : mode === 'signup' ? (
-              'Criar Minha Família'
+              'Criar Minha Conta'
             ) : mode === 'forgot_password' ? (
               <span className="flex items-center gap-2">
                 <KeyRound className="w-4 h-4" />
