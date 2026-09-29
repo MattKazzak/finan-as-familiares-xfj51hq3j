@@ -79,6 +79,7 @@ import {
   type ParsedInstallmentInfo,
 } from '@/services/installments'
 import { findReconciliationMatch, type MatchStatus } from '@/services/import/reconciliation'
+import { categorizeBatchWithAI } from '@/services/ai-categorizer'
 
 export interface ReviewItem {
   id: string
@@ -94,6 +95,9 @@ export interface ReviewItem {
   isDuplicate: boolean
   duplicateReason?: string
   selected: boolean
+  source?: 'database_rule' | 'fallback_rule' | 'name_match' | 'ai_suggestion' | 'manual'
+  aiReasoning?: string
+  aiConfidence?: number
   // Dados de parcelamento
   isInstallment?: boolean
   installmentCurrent?: number
@@ -142,6 +146,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
   // Estados do fluxo
   const [step, setStep] = useState<'upload' | 'review'>('upload')
   const [parsing, setParsing] = useState(false)
+  const [isAiCategorizing, setIsAiCategorizing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [diagnostics, setDiagnostics] = useState<ParseDiagnostics | null>(null)
@@ -452,6 +457,8 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
             ? matchedManualTransaction.member_id
             : activeMemberId
 
+        const initialSource = isReconciledManual ? 'manual' : matchResult?.source || undefined
+
         return {
           id: tx.id,
           date: tx.date,
@@ -463,6 +470,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           category_id: initialCategoryId,
           subcategory_id: initialSubcategoryId,
           rememberRule: !!initialCategoryId,
+          source: initialSource,
           isDuplicate: !!dupMatch,
           duplicateReason,
           isInstallment,
@@ -481,6 +489,46 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           reconciliationReason,
         }
       })
+
+      // 4. Se houver transações que continuam sem categoria, acionar IA (GPT-4o mini)
+      const uncategorizedItems = reviewList.filter((item) => !item.category_id && !item.isDuplicate)
+      if (uncategorizedItems.length > 0) {
+        setIsAiCategorizing(true)
+        try {
+          const aiPayload = uncategorizedItems.map((item) => ({
+            tempId: item.id,
+            description: item.description,
+            amountCents: item.amount_cents,
+            date: item.date,
+          }))
+
+          const aiSuggestions = await categorizeBatchWithAI(aiPayload, family.id)
+          if (aiSuggestions && aiSuggestions.length > 0) {
+            const suggestionMap = new Map<string, (typeof aiSuggestions)[0]>()
+            aiSuggestions.forEach((s) => suggestionMap.set(s.tempId, s))
+
+            reviewList.forEach((item) => {
+              const sug = suggestionMap.get(item.id)
+              if (sug && sug.categoryId) {
+                // Verificar se a categoria sugerida é compatível com o catálogo existente
+                const catExists = categories.some((c) => c.id === sug.categoryId)
+                if (catExists) {
+                  item.category_id = sug.categoryId
+                  item.subcategory_id = sug.subcategoryId || null
+                  item.source = 'ai_suggestion'
+                  item.aiConfidence = sug.confidence
+                  item.aiReasoning = sug.reasoning
+                  item.rememberRule = true
+                }
+              }
+            })
+          }
+        } catch (aiErr) {
+          console.warn('Falha graciosa na categorização por IA do extrato:', aiErr)
+        } finally {
+          setIsAiCategorizing(false)
+        }
+      }
 
       setItems(reviewList)
       setStep('review')
@@ -553,6 +601,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           if (!value) {
             updated.subcategory_id = null
             updated.rememberRule = false
+            updated.source = undefined
           } else {
             const cat = categories.find((c) => c.id === value)
             const validSub = cat?.subcategories?.some((s) => s.id === item.subcategory_id)
@@ -561,6 +610,10 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
             }
             if (item.rememberRule === undefined) {
               updated.rememberRule = true
+            }
+            // Se o usuário confirmou/editou manualmente, marcar a fonte
+            if (item.source !== 'ai_suggestion') {
+              updated.source = 'manual'
             }
           }
         }
@@ -1048,12 +1101,16 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 
                 <h3 className="font-bold text-base text-slate-800">
                   {parsing
-                    ? 'Processando e categorizando extrato ou fatura...'
+                    ? isAiCategorizing
+                      ? 'Aplicando categorização por IA (GPT-4o mini)...'
+                      : 'Processando e analisando extrato ou fatura...'
                     : 'Arraste seu arquivo OFX ou PDF de fatura aqui'}
                 </h3>
                 <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 mb-4">
                   {parsing
-                    ? 'Lendo lançamentos, identificando parcelas e aplicando inteligência de categorias...'
+                    ? isAiCategorizing
+                      ? 'Consultando o Copilot IA para sugerir categorias estritas do seu catálogo familiar...'
+                      : 'Lendo lançamentos, identificando parcelas e aplicando regras cadastradas...'
                     : 'Ou clique para selecionar o arquivo (.ofx ou fatura em .pdf) do seu dispositivo'}
                 </p>
 
@@ -1438,8 +1495,20 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                                     Pendente
                                   </span>
                                 ) : (
-                                  <span className="truncate text-slate-600 font-medium">
-                                    • {currentCategory?.name}
+                                  <span className="flex items-center gap-1.5 min-w-0 flex-wrap text-slate-600 font-medium">
+                                    <span className="truncate">• {currentCategory?.name}</span>
+                                    {item.source === 'ai_suggestion' && (
+                                      <span
+                                        title={
+                                          item.aiReasoning
+                                            ? `IA: ${item.aiReasoning}`
+                                            : 'Classificação sugerida pela IA'
+                                        }
+                                        className="inline-flex items-center gap-0.5 text-[10px] font-bold text-violet-700 bg-violet-50 border border-violet-200/80 px-1.5 py-0.2 rounded-full shrink-0"
+                                      >
+                                        <span>✨ Sugestão IA</span>
+                                      </span>
+                                    )}
                                   </span>
                                 )}{' '}
                               </div>
@@ -1941,6 +2010,12 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                                     <span>Lembrar para compras futuras com este nome</span>
                                   </span>
                                 </label>
+                                {item.source === 'ai_suggestion' && item.aiReasoning && (
+                                  <p className="text-[10px] text-violet-700 mt-0.5 italic flex items-center gap-1">
+                                    <span>✨ Sugestão da IA:</span>
+                                    <span>{item.aiReasoning}</span>
+                                  </p>
+                                )}
                               </div>
                             )}
 

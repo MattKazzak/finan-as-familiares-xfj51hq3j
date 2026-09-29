@@ -1,5 +1,6 @@
 {
   "_versions": {
-    "voice-parse": 92
+    "voice-parse": 94,
+    "batch-categorize": 1
   }
 }

@@ -65,6 +65,12 @@ interface TransactionInlineRowProps {
   matchingCount?: number
   matchingTransactionIds?: string[]
   disabled?: boolean
+  aiSuggestion?: {
+    categoryId: string
+    subcategoryId?: string | null
+    confidence?: number
+    reasoning?: string
+  } | null
 }
 
 // Baldes com ordem visual padrão e títulos claros
@@ -88,6 +94,7 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
   matchingCount = 0,
   matchingTransactionIds = [],
   disabled = false,
+  aiSuggestion = null,
 }) => {
   // Estado local para os campos editáveis quando expandido
   const [description, setDescription] = useState<string>(transaction.description || '')
@@ -109,8 +116,10 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
     setTxType(transaction.type || 'expense')
     setTxDate(transaction.transaction_date || '')
     setMemberId(transaction.member_id || '')
-    setSelectedCatId(transaction.category_id || '')
-    setSelectedSubcatId(transaction.subcategory_id || 'none')
+    const catId = transaction.category_id || aiSuggestion?.categoryId || ''
+    const subId = transaction.subcategory_id || aiSuggestion?.subcategoryId || 'none'
+    setSelectedCatId(catId)
+    setSelectedSubcatId(subId)
   }, [
     transaction.id,
     transaction.description,
@@ -119,6 +128,8 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
     transaction.member_id,
     transaction.category_id,
     transaction.subcategory_id,
+    aiSuggestion?.categoryId,
+    aiSuggestion?.subcategoryId,
   ])
 
   // Filtrar categorias aplicáveis pelo tipo da transação
@@ -313,6 +324,18 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
               <span className="font-semibold text-[10px] bg-amber-100 text-amber-900 border border-amber-300/80 px-1.5 py-0.2 rounded font-mono shrink-0">
                 Pendente
               </span>
+              {aiSuggestion && activeCategory && (
+                <span
+                  title={
+                    aiSuggestion.reasoning
+                      ? `IA: ${aiSuggestion.reasoning}`
+                      : 'Classificação sugerida pela IA'
+                  }
+                  className="inline-flex items-center gap-1 text-[10px] font-bold text-violet-700 bg-violet-50 border border-violet-200/90 px-1.5 py-0.2 rounded-full shrink-0"
+                >
+                  <span>✨ Sugestão IA ({activeCategory.name})</span>
+                </span>
+              )}
               {transaction.is_installment && (
                 <span className="font-bold text-[10px] bg-purple-100 text-purple-900 border border-purple-300/80 px-1.5 py-0.2 rounded shrink-0">
                   {transaction.installment_number || 1}/{transaction.installment_total || 1}
@@ -562,7 +585,7 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
             </div>
 
             {/* Checkbox "Lembrar para compras futuras com este nome" (Marcado por padrão) */}
-            <div className="pt-1">
+            <div className="pt-1 space-y-1">
               <label className="flex items-center gap-2 text-xs text-slate-700 font-medium cursor-pointer select-none">
                 <Checkbox
                   checked={rememberRule}
@@ -575,6 +598,12 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
                   <span>Lembrar para compras futuras com este nome</span>
                 </span>
               </label>
+              {aiSuggestion?.reasoning && (
+                <p className="text-[10px] text-violet-700 italic pl-5 flex items-center gap-1">
+                  <span>✨ Motivo IA:</span>
+                  <span>{aiSuggestion.reasoning}</span>
+                </p>
+              )}
             </div>
 
             {/* Fileira de Ações: Botão em Lote "Aplicar aos N pendentes com o mesmo nome" + Salvar Primário */}

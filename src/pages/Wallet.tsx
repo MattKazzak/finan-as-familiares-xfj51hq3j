@@ -86,6 +86,7 @@ import {
 import { SortableList } from '@/components/common/SortableList'
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
 import { BudgetOverviewCard } from '@/components/wallet/BudgetOverviewCard'
+import { categorizeBatchWithAI, type AiCategorizationSuggestion } from '@/services/ai-categorizer'
 import { CategoryTransactionsDrawer } from '@/components/wallet/CategoryTransactionsDrawer'
 import { BUCKET_METADATA } from '@/types/budget-presets'
 
@@ -276,6 +277,12 @@ export default function WalletPage() {
 
   // ID da transação pendente atualmente aberta no accordion (apenas 1 por vez)
   const [expandedPendingTxId, setExpandedPendingTxId] = useState<string | null>(null)
+
+  // Sugestões de IA para lançamentos pendentes
+  const [aiPendingSuggestions, setAiPendingSuggestions] = useState<
+    Record<string, AiCategorizationSuggestion>
+  >({})
+  const [isCategorizingPendingWithAi, setIsCategorizingPendingWithAi] = useState(false)
 
   // Filtros de transação
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false)
@@ -474,6 +481,56 @@ export default function WalletPage() {
   const pendingTransactionsList = useMemo(() => {
     return transactions.filter((t) => !t.category_id)
   }, [transactions])
+
+  // Handler para categorizar pendentes com IA (GPT-4o mini)
+  const handleCategorizePendingWithAi = async () => {
+    if (!family || pendingTransactionsList.length === 0 || isCategorizingPendingWithAi) return
+    setIsCategorizingPendingWithAi(true)
+    try {
+      const payload = pendingTransactionsList.map((t) => ({
+        tempId: t.id,
+        description: t.description || 'Transação',
+        amountCents: t.amount_cents,
+        date: t.transaction_date,
+      }))
+
+      const suggestions = await categorizeBatchWithAI(payload, family.id)
+      if (suggestions && suggestions.length > 0) {
+        const map: Record<string, AiCategorizationSuggestion> = {}
+        suggestions.forEach((s) => {
+          map[s.tempId] = s
+        })
+        setAiPendingSuggestions((prev) => ({ ...prev, ...map }))
+
+        // Se nenhuma estava expandida, expande a primeira com sugestão
+        if (!expandedPendingTxId && suggestions[0]?.tempId) {
+          setExpandedPendingTxId(suggestions[0].tempId)
+        }
+
+        toast({
+          title: '✨ Sugestões da IA geradas!',
+          description: `${suggestions.length} ${
+            suggestions.length === 1 ? 'lançamento analisado' : 'lançamentos analisados'
+          } com sucesso. Confira as sugestões nos accordions abaixo.`,
+        })
+      } else {
+        toast({
+          title: 'Nenhuma sugestão encontrada',
+          description:
+            'A IA não identificou categorias compatíveis ou o serviço está temporariamente indisponível.',
+        })
+      }
+    } catch (err: any) {
+      console.warn('Erro ao categorizar pendentes com IA:', err)
+      toast({
+        title: 'Falha na categorização com IA',
+        description: 'Não foi possível obter sugestões no momento. Tente novamente mais tarde.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsCategorizingPendingWithAi(false)
+    }
+  }
 
   // Handler para salvar categorização inline de transação pendente com atualização otimista dos 3 Baldes
   // e avanço automático suave para a próxima pendente (série de revisão)
@@ -1301,39 +1358,61 @@ export default function WalletPage() {
             ) : pendingTransactionsCount > 0 ? (
               /* Banner complementar quando há pendentes sem o lastImportSummary ativo */
               <div className="rounded-3xl border border-amber-200 bg-amber-50/70 p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold shrink-0">
                     <Sparkles className="w-4 h-4 text-amber-700" />
                   </div>
-                  <div>
-                    <span className="font-bold text-xs sm:text-sm text-slate-900 block">
+                  <div className="min-w-0 space-y-0.5">
+                    <h4 className="font-bold text-xs sm:text-sm text-slate-900">
+                      Lançamentos Pendentes ({pendingTransactionsCount})
+                    </h4>
+                    <span className="text-[11px] text-slate-600 block">
                       Você tem {pendingTransactionsCount}{' '}
                       {pendingTransactionsCount === 1
                         ? 'transação pendente'
                         : 'transações pendentes'}{' '}
-                      de categorização neste mês
-                    </span>
-                    <span className="text-[11px] text-slate-600">
-                      Toque na linha desejada para expandir confortavelmente e categorizar.
+                      de categorização neste mês. Toque na linha para categorizar ou utilize a IA.
                     </span>
                   </div>
                 </div>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setFilterOnlyPending((prev) => !prev)}
-                  className={`text-xs font-bold rounded-xl shrink-0 ${
-                    filterOnlyPending
-                      ? 'bg-amber-600 text-white border-amber-600 hover:bg-amber-700'
-                      : 'border-amber-300 text-amber-900 hover:bg-amber-100/70 bg-white'
-                  }`}
-                >
-                  {filterOnlyPending
-                    ? 'Ver todas as transações'
-                    : `Ver apenas pendentes (${pendingTransactionsCount})`}
-                </Button>
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleCategorizePendingWithAi}
+                    disabled={isCategorizingPendingWithAi}
+                    className="text-xs font-bold rounded-xl shrink-0 bg-violet-600 hover:bg-violet-700 text-white shadow-2xs gap-1.5 h-8 px-3"
+                  >
+                    {isCategorizingPendingWithAi ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Categorizando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5 text-violet-200" />
+                        <span>✨ Categorizar pendentes com IA</span>
+                      </>
+                    )}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFilterOnlyPending((prev) => !prev)}
+                    className={`text-xs font-bold rounded-xl shrink-0 h-8 ${
+                      filterOnlyPending
+                        ? 'bg-amber-600 text-white border-amber-600 hover:bg-amber-700'
+                        : 'border-amber-300 text-amber-900 hover:bg-amber-100/70 bg-white'
+                    }`}
+                  >
+                    {filterOnlyPending
+                      ? 'Ver todas as transações'
+                      : `Ver apenas pendentes (${pendingTransactionsCount})`}
+                  </Button>
+                </div>
               </div>
             ) : filterOnlyPending && pendingTransactionsCount === 0 ? (
               /* Estado de Sucesso quando o usuário estava filtrando pendentes e terminou todas */
@@ -1522,6 +1601,7 @@ export default function WalletPage() {
                                 onSaveBatchSameName={handleSaveBatchSameName}
                                 matchingCount={matchingIds.length}
                                 matchingTransactionIds={matchingIds}
+                                aiSuggestion={aiPendingSuggestions[tx.id] || null}
                               />
                             </div>
                           )
