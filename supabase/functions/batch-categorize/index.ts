@@ -345,10 +345,20 @@ REGRAS CRÍTICAS DE EXTRAÇÃO UNIVERSAL:
    }
    (A linha "PAGAMENTO DE FATURA -5.443,36" foi descartada mas as compras da página continuaram; a linha em US$ 4.00 foi ignorada e apenas a linha em BRL de R$ 23,20 virou lançamento; os subtotais parciais NÃO interromperam a leitura do cartão adicional; o total geral de 4.549,91 foi capturado sem confusão com os subtotais parciais).
 
-6. PADRONIZAÇÃO DOS DADOS DE CADA TRANSAÇÃO:
+6. INTELIGÊNCIA SEMÂNTICA, BALDES ORÇAMENTÁRIOS (50/30/20) E INFOPRODUTOS (CRÍTICO):
+   - Mapeamento dos 3 baldes orçamentários:
+     * Balde "essentials" (Essenciais): reservado EXCLUSIVAMENTE para necessidades vitais fundamentais da família (moradia/aluguel/condomínio, energia elétrica, água, gás, supermercado básico de subsistência, transporte essencial pendular e saúde/remédios vitais).
+     * Balde "lifestyle" (Estilo de Vida): gastos com desejos, lazer, compras livres, vestuário, restaurantes/delivery, streamings, viagens e bem-estar.
+     * Balde "future" (Futuro): previdência privada, aportes, investimentos e reservas financeiras.
+   - REGRA DE OURO PARA INFOPRODUTOS, CURSOS E PLATAFORMAS DIGITAIS:
+     * Cursos livres, treinamentos, mentorias, infoprodutos, e-books, livros e plataformas de conteúdo (ex.: CPT, Cursos CPT, Hotmart, Kiwify, Eduzz, Instagram Milionário, Udemy, Coursera, Alura, Rocketseat, Empiricus, cursos de marketing, etc.) JAMAIS podem ser classificados como "Moradia", "Alimentação", "Supermercado" ou gastos essenciais vitais.
+     * Se o catálogo da família tiver uma categoria do tipo "Educação" ou "Desenvolvimento" (seja ela essentials ou lifestyle), atribua a ela.
+     * Caso a família NÃO possua categoria específica de Educação/Desenvolvimento, classifique OBRIGATORIAMENTE em uma categoria pertencente ao balde "lifestyle" (como "Outros", "Serviços", "Lazer", "Assinaturas" ou similar) — NUNCA em necessidades básicas de sobrevivência ("Moradia", "Alimentação").
+
+7. PADRONIZAÇÃO DOS DADOS DE CADA TRANSAÇÃO:
    - "date": string no formato ISO "AAAA-MM-DD" (se o ano não constar explicitamente no lançamento, use o ano da fatura indicado no texto ou ${currentYear}).
    - "description": descrição original completa encontrada no extrato (incluindo sufixos de parcela se houver).
-   - "cleanMerchant": nome legível do estabelecimento sem parcelas ou intermediários ruidosos.
+   - "cleanMerchant": nome legível do estabelecimento comercial sem abreviações abusivas (ex: "CURSOS CPT", "INSTAGRAM MILIONÁRIO", "AMAZON", "UBER") para fácil reconhecimento do usuário.
    - "amountCents": número inteiro positivo em centavos (ex: R$ 45,90 vira 4590; R$ 1.250,00 vira 125000). NUNCA usar decimais.
    - "type": "expense" para compras normais ou "income" para estornos e reembolsos.
    - "installment": string com a parcela identificada (ex: "01/03", "2/12", "03/10") ou null se à vista.
@@ -640,7 +650,16 @@ REGRAS CRÍTICAS DE CLASSIFICAÇÃO:
    - Termos como "PG *", "PAG*", "MERCADOPAGO", "IFOOD", "UBER", "POSTO", "DROGASIL", "FARMACIA", "PADARIA", "ASSAI", "CARREFOUR", "NETFLIX", "SPOTIFY" são típicos de extratos brasileiros.
    - Entenda a essência do estabelecimento mesmo quando precedido por nomes de adquirentes ou intermediários (ex: "MP *DROGARIA", "PAG*RESTAURANTE").
    - Despesas com beleza, estética, barbearia, cinema ou compras de vestuário pertencem ao balde "lifestyle" (Estilo de Vida), nunca a categorias fixas de moradia ou saúde básica.
-4. NÍVEL DE CONFIANÇA E REASONING:
+4. INTELIGÊNCIA SEMÂNTICA, BALDES ORÇAMENTÁRIOS E INFOPRODUTOS (CRÍTICO):
+   - Mapeamento dos 3 baldes:
+     * "essentials": reservado EXCLUSIVAMENTE para necessidades genuinamente vitais da família (moradia/aluguel/condomínio, energia, água, supermercado básico, transporte essencial e saúde vital).
+     * "lifestyle": gastos com desejos, lazer, cursos livres, infoprodutos, streamings, delivery, restaurantes, vestuário e bem-estar.
+     * "future": investimentos, aportes, previdência e poupança.
+   - REGRA DE OURO PARA INFOPRODUTOS, CURSOS E PLATAFORMAS DIGITAIS:
+     * Infoprodutos, cursos, treinamentos, mentorias, livros e plataformas de conteúdo (ex.: CPT, Cursos CPT, Hotmart, Kiwify, Eduzz, Instagram Milionário, Udemy, Coursera, Alura, Rocketseat, Empiricus, etc.) JAMAIS devem ser classificados como "Moradia" ou "Alimentação".
+     * Se a família tiver uma categoria "Educação" ou "Desenvolvimento", use nela.
+     * Caso NÃO possua categoria de Educação/Desenvolvimento, classifique OBRIGATORIAMENTE no balde Estilo de Vida ("lifestyle", ex.: "Outros", "Serviços", "Lazer", "Assinaturas") — NUNCA em necessidades básicas de sobrevivência.
+5. NÍVEL DE CONFIANÇA E REASONING:
    - "confidence": número entre 0.0 e 1.0 indicando sua certeza (ex.: 0.95 para match óbvio como Uber -> Transporte, 0.60 para descrição genérica).
    - "reasoning": justificativa ultra sucinta (1 frase em português) explicando o motivo da classificação.
 

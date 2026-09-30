@@ -23,6 +23,14 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useFamily } from '@/hooks/use-family'
 import { useToast } from '@/hooks/use-toast'
+import { useIsMobile } from '@/hooks/use-mobile'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet'
 import { useImportSession } from '@/contexts/ImportSessionContext'
 import { CategoryIcon, AVAILABLE_ICONS } from '@/components/common/CategoryIcon'
 import { formatBRL, parseBRLToCents, formatNumberBRL } from '@/lib/formatters'
@@ -163,6 +171,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 }) => {
   const navigate = useNavigate()
   const location = useLocation()
+  const isMobile = useIsMobile()
   const { family, members, categories, addNewCategory, triggerRefresh, setLastImportSummary } =
     useFamily()
   const { toast } = useToast()
@@ -286,6 +295,14 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 
   const handleDialogChange = (isOpen: boolean) => {
     if (!isOpen) {
+      // Guarda: se algum seletor secundário estiver aberto, fecha apenas ele e preserva a importação pai
+      if (categoryPickerItemId || detailModalItemId || isQuickCatOpen) {
+        setCategoryPickerItemId(null)
+        setDetailModalItemId(null)
+        setIsQuickCatOpen(false)
+        return
+      }
+
       setStep('upload')
       setItems([])
       setExpandedItemId(null)
@@ -2055,7 +2072,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 </div>
               )}
 
-              {/* LISTA COMPACTA DE LANÇAMENTOS - ESTILO EXTRATO PREMIUM */}
+              {/* LISTA COMPACTA DE LANÇAMENTOS - ESTILO EXTRATO PREMIUM COM TOQUE AMPLO */}
               <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-slate-100/90 -mx-1 sm:mx-0 px-1 pr-1.5 overscroll-contain">
                 {items.map((item) => {
                   const currentCategory = categories.find((c) => c.id === item.category_id)
@@ -2065,32 +2082,35 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                   return (
                     <div
                       key={item.id}
-                      className={`group py-2.5 px-2 rounded-xl transition-colors flex items-center justify-between gap-2.5 ${
+                      onClick={() => setDetailModalItemId(item.id)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          setDetailModalItemId(item.id)
+                        }
+                      }}
+                      className={`group py-2.5 px-2 rounded-xl transition-colors flex items-center justify-between gap-2.5 cursor-pointer select-none active:bg-slate-100/80 ${
                         item.selected ? 'hover:bg-slate-50/90' : 'opacity-40 bg-slate-50/40'
                       }`}
                     >
-                      {/* Checkbox de seleção */}
-                      <input
-                        type="checkbox"
-                        checked={item.selected}
-                        onChange={() => handleToggleItem(item.id)}
-                        aria-label={`Selecionar ${item.description}`}
-                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 shrink-0 cursor-pointer"
-                      />
-
-                      {/* Lado Esquerdo: Ícone da categoria em badge arredondado + Título em negrito + Subtítulo leve */}
+                      {/* Checkbox de seleção múltipla com stopPropagation para não abrir o editor */}
                       <div
-                        onClick={() => setDetailModalItemId(item.id)}
-                        className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer select-none"
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault()
-                            setDetailModalItemId(item.id)
-                          }
-                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="shrink-0 flex items-center"
                       >
+                        <input
+                          type="checkbox"
+                          checked={item.selected}
+                          onChange={() => handleToggleItem(item.id)}
+                          aria-label={`Selecionar ${item.description}`}
+                          className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 shrink-0 cursor-pointer"
+                        />
+                      </div>
+
+                      {/* Lado Esquerdo: Ícone da categoria em badge arredondado + Título fiel/completo + Subtítulo leve */}
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         {/* Ícone de categoria em badge arredondado */}
                         <div
                           className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-2xs text-white"
@@ -2108,10 +2128,10 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                           )}
                         </div>
 
-                        {/* Textos: Estabelecimento limpo em negrito + Subtítulo leve (data, parcela, membro) */}
+                        {/* Textos: Estabelecimento sem truncar abreviado (break-words line-clamp-2) + Subtítulo leve */}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-bold text-xs sm:text-sm text-slate-900 truncate block max-w-[160px] xs:max-w-[200px] sm:max-w-xs">
+                            <span className="font-bold text-xs sm:text-sm text-slate-900 break-words line-clamp-2">
                               {item.description}
                             </span>
                             {item.isDuplicate && (
@@ -2139,7 +2159,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                             {memberName && (
                               <>
                                 <span className="text-slate-300">•</span>
-                                <span className="truncate max-w-[70px] sm:max-w-none">
+                                <span className="truncate max-w-[90px] sm:max-w-none">
                                   {memberName}
                                 </span>
                               </>
@@ -2246,479 +2266,1088 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* MODAL SECUNDÁRIO 1: SELETOR RÁPIDO DE CATEGORIAS (1 CLIQUE) */}
-      <Dialog
-        open={Boolean(categoryPickerItemId && itemForCategoryPicker)}
-        onOpenChange={(openVal) => {
-          if (!openVal) setCategoryPickerItemId(null)
-        }}
-      >
-        <DialogContent className="max-w-sm w-[92vw] rounded-2xl p-4 sm:p-5 max-h-[85vh] flex flex-col">
-          <DialogHeader className="pb-2 border-b border-slate-100">
-            <DialogTitle className="text-base font-bold text-slate-900">
-              Escolher Categoria
-            </DialogTitle>
-            <p className="text-xs text-slate-500 truncate">
-              {itemForCategoryPicker?.description || 'Transação'}
-            </p>
-          </DialogHeader>
+      {/* SELETOR RÁPIDO DE CATEGORIAS (1 CLIQUE): BOTTOM SHEET NO MOBILE, DIALOG NO DESKTOP */}
+      {isMobile ? (
+        <Sheet
+          open={Boolean(categoryPickerItemId && itemForCategoryPicker)}
+          onOpenChange={(openVal) => {
+            if (!openVal) setCategoryPickerItemId(null)
+          }}
+        >
+          <SheetContent
+            side="bottom"
+            onPointerDownOutside={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setCategoryPickerItemId(null)
+            }}
+            onInteractOutside={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setCategoryPickerItemId(null)
+            }}
+            className="rounded-t-2xl p-4 max-h-[85vh] flex flex-col w-full max-w-[calc(100vw-1rem)] mx-auto border-x"
+          >
+            <SheetHeader className="pb-3 border-b border-slate-100 text-left">
+              <SheetTitle className="text-base font-bold text-slate-900">
+                Escolher Categoria
+              </SheetTitle>
+              <SheetDescription className="text-xs text-slate-500 break-words line-clamp-2">
+                {itemForCategoryPicker?.description || 'Transação'}
+              </SheetDescription>
+            </SheetHeader>
 
-          <div className="py-2 space-y-1 max-h-[60vh] overflow-y-auto pr-1">
-            <button
-              type="button"
-              onClick={() => {
-                if (categoryPickerItemId) {
-                  handleUpdateItemField(categoryPickerItemId, 'category_id', null)
-                }
-                setCategoryPickerItemId(null)
-              }}
-              className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors ${
-                !itemForCategoryPicker?.category_id
-                  ? 'bg-amber-50 text-amber-900 font-bold border border-amber-200'
-                  : 'hover:bg-slate-100 text-slate-600'
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                <span className="w-7 h-7 rounded-lg bg-slate-200 flex items-center justify-center text-slate-500 font-bold">
-                  —
+            <div className="py-2 space-y-1.5 max-h-[55vh] overflow-y-auto pr-1">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (categoryPickerItemId) {
+                    handleUpdateItemField(categoryPickerItemId, 'category_id', null)
+                  }
+                  setCategoryPickerItemId(null)
+                }}
+                className={`w-full min-h-[44px] flex items-center justify-between p-3 rounded-xl text-left text-xs transition-colors ${
+                  !itemForCategoryPicker?.category_id
+                    ? 'bg-amber-50 text-amber-900 font-bold border border-amber-200'
+                    : 'hover:bg-slate-100 text-slate-600'
+                }`}
+              >
+                <span className="flex items-center gap-2.5">
+                  <span className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center text-slate-500 font-bold">
+                    —
+                  </span>
+                  <span className="font-medium">Sem categoria</span>
                 </span>
-                <span>Sem categoria</span>
-              </span>
-              {!itemForCategoryPicker?.category_id && <Check className="w-4 h-4 text-amber-700" />}
-            </button>
+                {!itemForCategoryPicker?.category_id && (
+                  <Check className="w-4 h-4 text-amber-700" />
+                )}
+              </button>
 
-            {categories
-              .filter((c) => (itemForCategoryPicker ? c.type === itemForCategoryPicker.type : true))
-              .map((cat) => {
-                const isSelected = itemForCategoryPicker?.category_id === cat.id
-                return (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => {
-                      if (categoryPickerItemId) {
-                        handleUpdateItemField(categoryPickerItemId, 'category_id', cat.id)
-                      }
-                      setCategoryPickerItemId(null)
-                    }}
-                    className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors ${
-                      isSelected
-                        ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200'
-                        : 'hover:bg-slate-50 text-slate-800'
+              {categories
+                .filter((c) =>
+                  itemForCategoryPicker ? c.type === itemForCategoryPicker.type : true,
+                )
+                .map((cat) => {
+                  const isSelected = itemForCategoryPicker?.category_id === cat.id
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (categoryPickerItemId) {
+                          handleUpdateItemField(categoryPickerItemId, 'category_id', cat.id)
+                        }
+                        setCategoryPickerItemId(null)
+                      }}
+                      className={`w-full min-h-[44px] flex items-center justify-between p-3 rounded-xl text-left text-xs transition-colors ${
+                        isSelected
+                          ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200'
+                          : 'hover:bg-slate-50 text-slate-800'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2.5 min-w-0">
+                        <span
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0 shadow-2xs"
+                          style={{ backgroundColor: cat.color || '#3B82F6' }}
+                        >
+                          {cat.icon ? (
+                            <CategoryIcon name={cat.icon} className="w-4 h-4" />
+                          ) : (
+                            <Tag className="w-4 h-4" />
+                          )}
+                        </span>
+                        <span className="truncate font-medium">{cat.name}</span>
+                      </span>
+                      {isSelected && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
+                    </button>
+                  )
+                })}
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const targetId = categoryPickerItemId
+                  setCategoryPickerItemId(null)
+                  if (targetId) openQuickCategoryModal(targetId)
+                }}
+                className="text-xs text-emerald-700 border-emerald-200 hover:bg-emerald-50 rounded-xl min-h-[44px] h-11 px-4"
+              >
+                <Plus className="w-4 h-4 mr-1.5" />
+                <span>Nova Categoria</span>
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setCategoryPickerItemId(null)
+                }}
+                className="text-xs text-slate-500 rounded-xl min-h-[44px] h-11 px-4"
+              >
+                Fechar
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Dialog
+          open={Boolean(categoryPickerItemId && itemForCategoryPicker)}
+          onOpenChange={(openVal) => {
+            if (!openVal) setCategoryPickerItemId(null)
+          }}
+        >
+          <DialogContent
+            onPointerDownOutside={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setCategoryPickerItemId(null)
+            }}
+            onInteractOutside={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setCategoryPickerItemId(null)
+            }}
+            className="max-w-sm w-[92vw] rounded-2xl p-4 sm:p-5 max-h-[85vh] flex flex-col"
+          >
+            <DialogHeader className="pb-2 border-b border-slate-100">
+              <DialogTitle className="text-base font-bold text-slate-900">
+                Escolher Categoria
+              </DialogTitle>
+              <p className="text-xs text-slate-500 break-words line-clamp-2">
+                {itemForCategoryPicker?.description || 'Transação'}
+              </p>
+            </DialogHeader>
+
+            <div className="py-2 space-y-1 max-h-[60vh] overflow-y-auto pr-1">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (categoryPickerItemId) {
+                    handleUpdateItemField(categoryPickerItemId, 'category_id', null)
+                  }
+                  setCategoryPickerItemId(null)
+                }}
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors ${
+                  !itemForCategoryPicker?.category_id
+                    ? 'bg-amber-50 text-amber-900 font-bold border border-amber-200'
+                    : 'hover:bg-slate-100 text-slate-600'
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <span className="w-7 h-7 rounded-lg bg-slate-200 flex items-center justify-center text-slate-500 font-bold">
+                    —
+                  </span>
+                  <span>Sem categoria</span>
+                </span>
+                {!itemForCategoryPicker?.category_id && (
+                  <Check className="w-4 h-4 text-amber-700" />
+                )}
+              </button>
+
+              {categories
+                .filter((c) =>
+                  itemForCategoryPicker ? c.type === itemForCategoryPicker.type : true,
+                )
+                .map((cat) => {
+                  const isSelected = itemForCategoryPicker?.category_id === cat.id
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (categoryPickerItemId) {
+                          handleUpdateItemField(categoryPickerItemId, 'category_id', cat.id)
+                        }
+                        setCategoryPickerItemId(null)
+                      }}
+                      className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors ${
+                        isSelected
+                          ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200'
+                          : 'hover:bg-slate-50 text-slate-800'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2 min-w-0">
+                        <span
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-white shrink-0 shadow-2xs"
+                          style={{ backgroundColor: cat.color || '#3B82F6' }}
+                        >
+                          {cat.icon ? (
+                            <CategoryIcon name={cat.icon} className="w-3.5 h-3.5" />
+                          ) : (
+                            <Tag className="w-3.5 h-3.5" />
+                          )}
+                        </span>
+                        <span className="truncate">{cat.name}</span>
+                      </span>
+                      {isSelected && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
+                    </button>
+                  )
+                })}
+            </div>
+
+            <DialogFooter className="pt-2 border-t border-slate-100 flex items-center justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const targetId = categoryPickerItemId
+                  setCategoryPickerItemId(null)
+                  if (targetId) openQuickCategoryModal(targetId)
+                }}
+                className="text-xs text-emerald-700 border-emerald-200 hover:bg-emerald-50 rounded-xl"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                <span>Nova Categoria</span>
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setCategoryPickerItemId(null)
+                }}
+                className="text-xs text-slate-500 rounded-xl"
+              >
+                Fechar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* MODAL SECUNDÁRIO 2: DETALHES ADICIONAIS SOB DEMANDA (BOTTOM SHEET NO MOBILE, DIALOG NO DESKTOP) */}
+      {isMobile ? (
+        <Sheet
+          open={Boolean(detailModalItemId && itemForDetailModal)}
+          onOpenChange={(openVal) => {
+            if (!openVal) setDetailModalItemId(null)
+          }}
+        >
+          <SheetContent
+            side="bottom"
+            onPointerDownOutside={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setDetailModalItemId(null)
+            }}
+            onInteractOutside={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setDetailModalItemId(null)
+            }}
+            className="rounded-t-2xl p-4 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto w-full max-w-[calc(100vw-1rem)] mx-auto border-x"
+          >
+            <SheetHeader className="pb-2 border-b border-slate-100 text-left">
+              <div className="flex items-center justify-between gap-2 pr-6">
+                <SheetTitle className="text-base font-bold text-slate-900">
+                  Detalhes do Lançamento
+                </SheetTitle>
+                {itemForDetailModal && (
+                  <span
+                    className={`font-extrabold text-base tabular-nums shrink-0 ${
+                      itemForDetailModal.type === 'income' ? 'text-emerald-700' : 'text-slate-900'
                     }`}
                   >
-                    <span className="flex items-center gap-2 min-w-0">
-                      <span
-                        className="w-7 h-7 rounded-lg flex items-center justify-center text-white shrink-0 shadow-2xs"
-                        style={{ backgroundColor: cat.color || '#3B82F6' }}
-                      >
-                        {cat.icon ? (
-                          <CategoryIcon name={cat.icon} className="w-3.5 h-3.5" />
-                        ) : (
-                          <Tag className="w-3.5 h-3.5" />
-                        )}
-                      </span>
-                      <span className="truncate">{cat.name}</span>
-                    </span>
-                    {isSelected && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
-                  </button>
-                )
-              })}
-          </div>
-
-          <DialogFooter className="pt-2 border-t border-slate-100 flex items-center justify-between">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const targetId = categoryPickerItemId
-                setCategoryPickerItemId(null)
-                if (targetId) openQuickCategoryModal(targetId)
-              }}
-              className="text-xs text-emerald-700 border-emerald-200 hover:bg-emerald-50 rounded-xl"
-            >
-              <Plus className="w-3.5 h-3.5 mr-1" />
-              <span>Nova Categoria</span>
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setCategoryPickerItemId(null)}
-              className="text-xs text-slate-500 rounded-xl"
-            >
-              Fechar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* MODAL SECUNDÁRIO 2: DETALHES ADICIONAIS SOB DEMANDA (DATA, MEMBRO, EXCLUSÃO) */}
-      <Dialog
-        open={Boolean(detailModalItemId && itemForDetailModal)}
-        onOpenChange={(openVal) => {
-          if (!openVal) setDetailModalItemId(null)
-        }}
-      >
-        <DialogContent className="max-w-md w-[92vw] rounded-2xl p-4 sm:p-6 space-y-4 max-h-[88vh] overflow-y-auto">
-          <DialogHeader className="pb-2 border-b border-slate-100">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-base font-bold text-slate-900">
-                Detalhes do Lançamento
-              </DialogTitle>
-              {itemForDetailModal && (
-                <span
-                  className={`font-extrabold text-sm tabular-nums ${
-                    itemForDetailModal.type === 'income' ? 'text-emerald-700' : 'text-slate-900'
-                  }`}
-                >
-                  {itemForDetailModal.type === 'income' ? '+' : '−'}{' '}
-                  {formatBRL(itemForDetailModal.amount_cents)}
-                </span>
-              )}
-            </div>
-          </DialogHeader>
-
-          {itemForDetailModal && (
-            <div className="space-y-3.5 text-xs">
-              {/* Descrição */}
-              <div>
-                <Label className="text-[11px] font-bold text-slate-600 block mb-1">Descrição</Label>
-                <Input
-                  value={itemForDetailModal.description}
-                  onChange={(e) =>
-                    handleUpdateItemField(itemForDetailModal.id, 'description', e.target.value)
-                  }
-                  className="h-9 text-xs rounded-xl"
-                />
+                    {itemForDetailModal.type === 'income' ? '+' : '−'}{' '}
+                    {formatBRL(itemForDetailModal.amount_cents)}
+                  </span>
+                )}
               </div>
+              <SheetDescription className="sr-only">
+                Editar detalhes da transação importada
+              </SheetDescription>
+            </SheetHeader>
 
-              {/* Data e Tipo */}
-              <div className="grid grid-cols-2 gap-2.5">
+            {itemForDetailModal && (
+              <div className="space-y-4 text-xs">
+                {/* Nome completo da transação em destaque */}
                 <div>
-                  <Label className="text-[11px] font-bold text-slate-600 block mb-1">Data</Label>
-                  <input
-                    type="date"
-                    value={itemForDetailModal.date}
+                  <Label className="text-[11px] font-bold text-slate-600 block mb-1">
+                    Nome Completo do Lançamento
+                  </Label>
+                  <Input
+                    value={itemForDetailModal.description}
                     onChange={(e) =>
-                      handleUpdateItemField(itemForDetailModal.id, 'date', e.target.value)
+                      handleUpdateItemField(itemForDetailModal.id, 'description', e.target.value)
                     }
-                    className="h-9 w-full text-xs text-slate-800 bg-white border border-slate-200 rounded-xl px-2.5 font-medium focus:outline-none focus:border-emerald-600"
+                    className="min-h-[44px] h-11 text-xs rounded-xl"
                   />
                 </div>
 
+                {/* Seletor rápido de categoria principal (botão confortável 44px) */}
                 <div>
-                  <Label className="text-[11px] font-bold text-slate-600 block mb-1">Tipo</Label>
+                  <Label className="text-[11px] font-bold text-slate-600 block mb-1">
+                    Categoria
+                  </Label>
                   <button
                     type="button"
-                    onClick={() =>
-                      handleUpdateItemField(
-                        itemForDetailModal.id,
-                        'type',
-                        itemForDetailModal.type === 'income' ? 'expense' : 'income',
-                      )
-                    }
-                    className={`h-9 w-full text-xs font-bold rounded-xl flex items-center justify-center gap-1 border transition-colors ${
-                      itemForDetailModal.type === 'income'
-                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                        : 'bg-rose-50 text-rose-700 border-rose-200'
-                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const currentId = itemForDetailModal.id
+                      setCategoryPickerItemId(currentId)
+                    }}
+                    className="w-full min-h-[44px] px-3 py-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-xl flex items-center justify-between text-left transition-colors"
                   >
-                    {itemForDetailModal.type === 'income' ? (
-                      <>
-                        <ArrowUpRight className="w-3.5 h-3.5" /> Receita
-                      </>
-                    ) : (
-                      <>
-                        <ArrowDownRight className="w-3.5 h-3.5" /> Despesa
-                      </>
-                    )}
+                    <span className="flex items-center gap-2.5 min-w-0">
+                      {(() => {
+                        const currentCat = categories.find(
+                          (c) => c.id === itemForDetailModal.category_id,
+                        )
+                        return (
+                          <>
+                            <span
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0 shadow-2xs"
+                              style={{ backgroundColor: currentCat?.color || '#94A3B8' }}
+                            >
+                              {currentCat?.icon ? (
+                                <CategoryIcon name={currentCat.icon} className="w-4 h-4" />
+                              ) : (
+                                <Tag className="w-4 h-4" />
+                              )}
+                            </span>
+                            <span className="truncate font-semibold text-slate-900 text-xs">
+                              {currentCat ? currentCat.name : 'Escolher categoria...'}
+                            </span>
+                          </>
+                        )
+                      })()}
+                    </span>
+                    <span className="text-[11px] text-emerald-700 font-bold shrink-0">
+                      Trocar ✨
+                    </span>
                   </button>
                 </div>
-              </div>
 
-              {/* Membro responsável */}
-              <div>
-                <Label className="text-[11px] font-bold text-slate-600 block mb-1">
-                  Membro Responsável
-                </Label>
-                <Select
-                  value={itemForDetailModal.member_id}
-                  onValueChange={(val) =>
-                    handleUpdateItemField(itemForDetailModal.id, 'member_id', val)
-                  }
-                >
-                  <SelectTrigger className="h-9 text-xs bg-white rounded-xl">
-                    <SelectValue placeholder="Selecione o membro" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {members.map((m) => (
-                      <SelectItem key={m.id} value={m.id} className="text-xs">
-                        {m.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Subcategoria se houver */}
-              {(() => {
-                const cat = categories.find((c) => c.id === itemForDetailModal.category_id)
-                const subs = cat?.subcategories || []
-                if (subs.length === 0) return null
-                return (
-                  <div>
-                    <Label className="text-[11px] font-bold text-slate-600 block mb-1">
-                      Subcategoria ({cat?.name})
-                    </Label>
-                    <Select
-                      value={itemForDetailModal.subcategory_id || 'none'}
-                      onValueChange={(val) =>
-                        handleUpdateItemField(
-                          itemForDetailModal.id,
-                          'subcategory_id',
-                          val === 'none' ? null : val,
-                        )
-                      }
-                    >
-                      <SelectTrigger className="h-9 text-xs bg-white rounded-xl">
-                        <SelectValue placeholder="Subcategoria opcional" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none" className="text-xs text-slate-500">
-                          Nenhuma
-                        </SelectItem>
-                        {subs.map((s) => (
-                          <SelectItem key={s.id} value={s.id} className="text-xs">
-                            {s.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )
-              })()}
-
-              {/* Conciliação Manual se disponível */}
-              {itemForDetailModal.matchedManualTransaction && (
-                <div className="p-3 rounded-xl bg-teal-50 border border-teal-200 text-teal-950 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold flex items-center gap-1">
-                      <span>🔗</span> Lançamento manual vinculado
-                    </span>
-                    <label className="flex items-center gap-1.5 cursor-pointer font-semibold">
-                      <input
-                        type="checkbox"
-                        checked={itemForDetailModal.isReconciledManual ?? false}
-                        onChange={(e) =>
+                {/* Subcategoria se houver */}
+                {(() => {
+                  const cat = categories.find((c) => c.id === itemForDetailModal.category_id)
+                  const subs = cat?.subcategories || []
+                  if (subs.length === 0) return null
+                  return (
+                    <div>
+                      <Label className="text-[11px] font-bold text-slate-600 block mb-1">
+                        Subcategoria ({cat?.name})
+                      </Label>
+                      <Select
+                        value={itemForDetailModal.subcategory_id || 'none'}
+                        onValueChange={(val) =>
                           handleUpdateItemField(
                             itemForDetailModal.id,
-                            'isReconciledManual',
-                            e.target.checked,
+                            'subcategory_id',
+                            val === 'none' ? null : val,
                           )
                         }
-                        className="rounded border-teal-400 text-teal-600 focus:ring-teal-500 w-3.5 h-3.5"
-                      />
-                      <span>Mesclar</span>
-                    </label>
-                  </div>
-                  <p className="text-[11px] text-teal-900/80">
-                    "{itemForDetailModal.matchedManualTransaction.description}" em{' '}
-                    {itemForDetailModal.matchedManualTransaction.transaction_date}
-                  </p>
-                </div>
-              )}
-
-              {/* Se houver múltiplas candidatas manuais, permitir selecionar uma */}
-              {!itemForDetailModal.isReconciledManual &&
-                (itemForDetailModal.reconciliationCandidates?.length || 0) > 1 && (
-                  <div className="space-y-1.5 pt-1">
-                    <span className="font-semibold text-slate-800 text-[11px] block">
-                      Escolha qual lançamento manual corresponde a esta despesa:
-                    </span>
-                    <div className="space-y-1 max-h-32 overflow-y-auto">
-                      {itemForDetailModal.reconciliationCandidates?.map((cand) => (
-                        <div
-                          key={cand.id}
-                          className="flex items-center justify-between gap-2 p-2 rounded-lg bg-white border border-indigo-200 text-[11px]"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <span className="font-bold text-slate-800 block truncate">
-                              {cand.description || 'Sem descrição'}
-                            </span>
-                            <span className="text-[10px] text-slate-500">
-                              {cand.transaction_date} • {cand.category?.name || 'Sem categoria'} •{' '}
-                              {cand.member?.name || 'Membro'}
-                            </span>
-                          </div>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              handleUpdateItemField(
-                                itemForDetailModal.id,
-                                'isReconciledManual',
-                                true,
-                              )
-                              handleUpdateItemField(
-                                itemForDetailModal.id,
-                                'matchedManualTransaction',
-                                cand,
-                              )
-                              if (cand.category_id) {
-                                handleUpdateItemField(
-                                  itemForDetailModal.id,
-                                  'category_id',
-                                  cand.category_id,
-                                )
-                              }
-                              if (cand.subcategory_id) {
-                                handleUpdateItemField(
-                                  itemForDetailModal.id,
-                                  'subcategory_id',
-                                  cand.subcategory_id,
-                                )
-                              }
-                              if (cand.member_id) {
-                                handleUpdateItemField(
-                                  itemForDetailModal.id,
-                                  'member_id',
-                                  cand.member_id,
-                                )
-                              }
-                            }}
-                            className="h-7 text-[10px] px-2 font-bold rounded-lg bg-teal-50 text-teal-800 border-teal-300 hover:bg-teal-100 shrink-0"
-                          >
-                            🔗 Mesclar
-                          </Button>
-                        </div>
-                      ))}
+                      >
+                        <SelectTrigger className="min-h-[44px] h-11 text-xs bg-white rounded-xl">
+                          <SelectValue placeholder="Subcategoria opcional" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none" className="text-xs text-slate-500 min-h-[44px]">
+                            Nenhuma
+                          </SelectItem>
+                          {subs.map((s) => (
+                            <SelectItem key={s.id} value={s.id} className="text-xs min-h-[44px]">
+                              {s.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
+                  )
+                })()}
+
+                {/* Data e Tipo */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <Label className="text-[11px] font-bold text-slate-600 block mb-1">Data</Label>
+                    <input
+                      type="date"
+                      value={itemForDetailModal.date}
+                      onChange={(e) =>
+                        handleUpdateItemField(itemForDetailModal.id, 'date', e.target.value)
+                      }
+                      className="min-h-[44px] h-11 w-full text-xs text-slate-800 bg-white border border-slate-200 rounded-xl px-2.5 font-medium focus:outline-none focus:border-emerald-600"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-[11px] font-bold text-slate-600 block mb-1">Tipo</Label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleUpdateItemField(
+                          itemForDetailModal.id,
+                          'type',
+                          itemForDetailModal.type === 'income' ? 'expense' : 'income',
+                        )
+                      }
+                      className={`min-h-[44px] h-11 w-full text-xs font-bold rounded-xl flex items-center justify-center gap-1 border transition-colors ${
+                        itemForDetailModal.type === 'income'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : 'bg-rose-50 text-rose-700 border-rose-200'
+                      }`}
+                    >
+                      {itemForDetailModal.type === 'income' ? (
+                        <>
+                          <ArrowUpRight className="w-4 h-4" /> Receita
+                        </>
+                      ) : (
+                        <>
+                          <ArrowDownRight className="w-4 h-4" /> Despesa
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Membro responsável */}
+                <div>
+                  <Label className="text-[11px] font-bold text-slate-600 block mb-1">
+                    Membro Responsável
+                  </Label>
+                  <Select
+                    value={itemForDetailModal.member_id}
+                    onValueChange={(val) =>
+                      handleUpdateItemField(itemForDetailModal.id, 'member_id', val)
+                    }
+                  >
+                    <SelectTrigger className="min-h-[44px] h-11 text-xs bg-white rounded-xl">
+                      <SelectValue placeholder="Selecione o membro" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {members.map((m) => (
+                        <SelectItem key={m.id} value={m.id} className="text-xs min-h-[44px]">
+                          {m.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Conciliação Manual se disponível */}
+                {itemForDetailModal.matchedManualTransaction && (
+                  <div className="p-3 rounded-xl bg-teal-50 border border-teal-200 text-teal-950 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold flex items-center gap-1">
+                        <span>🔗</span> Lançamento manual vinculado
+                      </span>
+                      <label className="flex items-center gap-1.5 cursor-pointer font-semibold min-h-[44px]">
+                        <input
+                          type="checkbox"
+                          checked={itemForDetailModal.isReconciledManual ?? false}
+                          onChange={(e) =>
+                            handleUpdateItemField(
+                              itemForDetailModal.id,
+                              'isReconciledManual',
+                              e.target.checked,
+                            )
+                          }
+                          className="rounded border-teal-400 text-teal-600 focus:ring-teal-500 w-4 h-4"
+                        />
+                        <span>Mesclar</span>
+                      </label>
+                    </div>
+                    <p className="text-[11px] text-teal-900/80">
+                      "{itemForDetailModal.matchedManualTransaction.description}" em{' '}
+                      {itemForDetailModal.matchedManualTransaction.transaction_date}
+                    </p>
                   </div>
                 )}
 
-              {/* Detalhes de Parcelamento quando detectado */}
-              {itemForDetailModal.isInstallment && (
-                <div className="p-3 bg-purple-50/70 border border-purple-200/90 rounded-xl space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-purple-950 flex items-center gap-1.5">
-                      <span>📦 Despesa Parcelada</span>
-                      <span className="bg-purple-200/80 text-purple-900 px-2 py-0.5 rounded-full font-mono text-[11px]">
-                        Parcela {itemForDetailModal.installmentCurrent} de{' '}
-                        {itemForDetailModal.installmentTotal}
+                {/* Se houver múltiplas candidatas manuais */}
+                {!itemForDetailModal.isReconciledManual &&
+                  (itemForDetailModal.reconciliationCandidates?.length || 0) > 1 && (
+                    <div className="space-y-1.5 pt-1">
+                      <span className="font-semibold text-slate-800 text-[11px] block">
+                        Escolha qual lançamento manual corresponde a esta despesa:
                       </span>
-                    </span>
-                    {itemForDetailModal.matchedProjectId ? (
-                      <span className="text-[10px] font-semibold text-blue-800 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
-                        ✓ Projeção existente encontrada no mês
-                      </span>
-                    ) : null}
-                  </div>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {itemForDetailModal.reconciliationCandidates?.map((cand) => (
+                          <div
+                            key={cand.id}
+                            className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-white border border-indigo-200 text-[11px]"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <span className="font-bold text-slate-800 block truncate">
+                                {cand.description || 'Sem descrição'}
+                              </span>
+                              <span className="text-[10px] text-slate-500">
+                                {cand.transaction_date} • {cand.category?.name || 'Sem categoria'} •{' '}
+                                {cand.member?.name || 'Membro'}
+                              </span>
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                handleUpdateItemField(
+                                  itemForDetailModal.id,
+                                  'isReconciledManual',
+                                  true,
+                                )
+                                handleUpdateItemField(
+                                  itemForDetailModal.id,
+                                  'matchedManualTransaction',
+                                  cand,
+                                )
+                                if (cand.category_id) {
+                                  handleUpdateItemField(
+                                    itemForDetailModal.id,
+                                    'category_id',
+                                    cand.category_id,
+                                  )
+                                }
+                                if (cand.subcategory_id) {
+                                  handleUpdateItemField(
+                                    itemForDetailModal.id,
+                                    'subcategory_id',
+                                    cand.subcategory_id,
+                                  )
+                                }
+                                if (cand.member_id) {
+                                  handleUpdateItemField(
+                                    itemForDetailModal.id,
+                                    'member_id',
+                                    cand.member_id,
+                                  )
+                                }
+                              }}
+                              className="min-h-[44px] text-[11px] px-3 font-bold rounded-lg bg-teal-50 text-teal-800 border-teal-300 hover:bg-teal-100 shrink-0"
+                            >
+                              🔗 Mesclar
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-                  {itemForDetailModal.matchedProjectId ? (
-                    <p className="text-[11px] text-purple-800 leading-relaxed">
-                      Esta parcela corresponde a uma projeção futura já cadastrada. Ao importar, ela
-                      será convertida de <em>projetada</em> para <strong>confirmada</strong> sem
-                      gerar duplicidade.
-                    </p>
-                  ) : itemForDetailModal.installmentCurrent === 1 &&
-                    (itemForDetailModal.installmentTotal || 1) > 1 ? (
-                    <label className="flex items-start gap-2 cursor-pointer select-none text-[11px] text-purple-950 font-medium">
+                {/* Detalhes de Parcelamento quando detectado */}
+                {itemForDetailModal.isInstallment && (
+                  <div className="p-3 bg-purple-50/70 border border-purple-200/90 rounded-xl space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-purple-950 flex items-center gap-1.5">
+                        <span>📦 Despesa Parcelada</span>
+                        <span className="bg-purple-200/80 text-purple-900 px-2 py-0.5 rounded-full font-mono text-[11px]">
+                          Parcela {itemForDetailModal.installmentCurrent} de{' '}
+                          {itemForDetailModal.installmentTotal}
+                        </span>
+                      </span>
+                      {itemForDetailModal.matchedProjectId ? (
+                        <span className="text-[10px] font-semibold text-blue-800 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
+                          ✓ Projeção existente
+                        </span>
+                      ) : null}
+                    </div>
+
+                    {itemForDetailModal.matchedProjectId ? (
+                      <p className="text-[11px] text-purple-800 leading-relaxed">
+                        Esta parcela corresponde a uma projeção futura já cadastrada. Ao importar,
+                        ela será convertida de <em>projetada</em> para <strong>confirmada</strong>{' '}
+                        sem gerar duplicidade.
+                      </p>
+                    ) : itemForDetailModal.installmentCurrent === 1 &&
+                      (itemForDetailModal.installmentTotal || 1) > 1 ? (
+                      <label className="flex items-start gap-2 cursor-pointer select-none text-[11px] text-purple-950 font-medium">
+                        <input
+                          type="checkbox"
+                          checked={itemForDetailModal.generateFutureInstallments ?? true}
+                          onChange={(e) =>
+                            handleUpdateItemField(
+                              itemForDetailModal.id,
+                              'generateFutureInstallments',
+                              e.target.checked,
+                            )
+                          }
+                          className="mt-0.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
+                        />
+                        <span>
+                          <strong>
+                            Gerar automaticamente as{' '}
+                            {(itemForDetailModal.installmentTotal || 1) - 1} parcelas futuras
+                          </strong>{' '}
+                          como despesas projetadas nos próximos meses.
+                        </span>
+                      </label>
+                    ) : (
+                      <p className="text-[11px] text-purple-800 leading-relaxed">
+                        Parcela intermediária sem projeção prévia identificada. Será criada como
+                        despesa confirmada deste mês.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Lembrar regra para compras futuras */}
+                {itemForDetailModal.category_id && (
+                  <div className="pt-0.5">
+                    <label className="flex items-center gap-2.5 cursor-pointer text-xs select-none min-h-[44px]">
                       <input
                         type="checkbox"
-                        checked={itemForDetailModal.generateFutureInstallments ?? true}
+                        checked={itemForDetailModal.rememberRule ?? true}
                         onChange={(e) =>
                           handleUpdateItemField(
                             itemForDetailModal.id,
-                            'generateFutureInstallments',
+                            'rememberRule',
                             e.target.checked,
                           )
                         }
-                        className="mt-0.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4"
                       />
-                      <span>
-                        <strong>
-                          Gerar automaticamente as {(itemForDetailModal.installmentTotal || 1) - 1}{' '}
-                          parcelas futuras
-                        </strong>{' '}
-                        como despesas projetadas nos próximos meses.
+                      <span className="text-slate-700 font-medium flex items-center gap-1.5 text-xs">
+                        <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Lembrar categoria para lançamentos futuros com este nome</span>
                       </span>
                     </label>
-                  ) : (
-                    <p className="text-[11px] text-purple-800 leading-relaxed">
-                      Parcela intermediária sem projeção prévia identificada. Será criada como
-                      despesa confirmada deste mês.
-                    </p>
-                  )}
-                </div>
-              )}
+                    {itemForDetailModal.source === 'ai_suggestion' &&
+                      itemForDetailModal.aiReasoning && (
+                        <p className="text-[10px] text-violet-700 mt-0.5 italic flex items-center gap-1">
+                          <span>✨ Sugestão por IA:</span>
+                          <span>{itemForDetailModal.aiReasoning}</span>
+                        </p>
+                      )}
+                  </div>
+                )}
 
-              {/* Lembrar regra para compras futuras */}
-              {itemForDetailModal.category_id && (
-                <div className="pt-0.5">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs select-none">
+                {/* Botões do Rodapé de Detalhes: Excluir / Concluir */}
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleRemoveItem(itemForDetailModal.id)
+                      setDetailModalItemId(null)
+                    }}
+                    className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl min-h-[44px] h-11 px-3 gap-1.5"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Excluir do extrato</span>
+                  </Button>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setDetailModalItemId(null)
+                    }}
+                    className="text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-xl min-h-[44px] h-11 px-5"
+                  >
+                    Pronto
+                  </Button>
+                </div>
+              </div>
+            )}
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Dialog
+          open={Boolean(detailModalItemId && itemForDetailModal)}
+          onOpenChange={(openVal) => {
+            if (!openVal) setDetailModalItemId(null)
+          }}
+        >
+          <DialogContent
+            onPointerDownOutside={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setDetailModalItemId(null)
+            }}
+            onInteractOutside={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setDetailModalItemId(null)
+            }}
+            className="max-w-md w-[92vw] rounded-2xl p-4 sm:p-6 space-y-4 max-h-[88vh] overflow-y-auto"
+          >
+            <DialogHeader className="pb-2 border-b border-slate-100">
+              <div className="flex items-center justify-between">
+                <DialogTitle className="text-base font-bold text-slate-900">
+                  Detalhes do Lançamento
+                </DialogTitle>
+                {itemForDetailModal && (
+                  <span
+                    className={`font-extrabold text-sm tabular-nums ${
+                      itemForDetailModal.type === 'income' ? 'text-emerald-700' : 'text-slate-900'
+                    }`}
+                  >
+                    {itemForDetailModal.type === 'income' ? '+' : '−'}{' '}
+                    {formatBRL(itemForDetailModal.amount_cents)}
+                  </span>
+                )}
+              </div>
+            </DialogHeader>
+
+            {itemForDetailModal && (
+              <div className="space-y-3.5 text-xs">
+                {/* Descrição */}
+                <div>
+                  <Label className="text-[11px] font-bold text-slate-600 block mb-1">
+                    Descrição
+                  </Label>
+                  <Input
+                    value={itemForDetailModal.description}
+                    onChange={(e) =>
+                      handleUpdateItemField(itemForDetailModal.id, 'description', e.target.value)
+                    }
+                    className="h-9 text-xs rounded-xl"
+                  />
+                </div>
+
+                {/* Data e Tipo */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <Label className="text-[11px] font-bold text-slate-600 block mb-1">Data</Label>
                     <input
-                      type="checkbox"
-                      checked={itemForDetailModal.rememberRule ?? true}
+                      type="date"
+                      value={itemForDetailModal.date}
                       onChange={(e) =>
+                        handleUpdateItemField(itemForDetailModal.id, 'date', e.target.value)
+                      }
+                      className="h-9 w-full text-xs text-slate-800 bg-white border border-slate-200 rounded-xl px-2.5 font-medium focus:outline-none focus:border-emerald-600"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-[11px] font-bold text-slate-600 block mb-1">Tipo</Label>
+                    <button
+                      type="button"
+                      onClick={() =>
                         handleUpdateItemField(
                           itemForDetailModal.id,
-                          'rememberRule',
-                          e.target.checked,
+                          'type',
+                          itemForDetailModal.type === 'income' ? 'expense' : 'income',
                         )
                       }
-                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
-                    />
-                    <span className="text-slate-700 font-medium flex items-center gap-1.5 text-[11px]">
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                      <span>Lembrar categoria para lançamentos futuros com este nome</span>
-                    </span>
-                  </label>
-                  {itemForDetailModal.source === 'ai_suggestion' &&
-                    itemForDetailModal.aiReasoning && (
-                      <p className="text-[10px] text-violet-700 mt-0.5 italic flex items-center gap-1">
-                        <span>✨ Sugestão por IA:</span>
-                        <span>{itemForDetailModal.aiReasoning}</span>
+                      className={`h-9 w-full text-xs font-bold rounded-xl flex items-center justify-center gap-1 border transition-colors ${
+                        itemForDetailModal.type === 'income'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : 'bg-rose-50 text-rose-700 border-rose-200'
+                      }`}
+                    >
+                      {itemForDetailModal.type === 'income' ? (
+                        <>
+                          <ArrowUpRight className="w-3.5 h-3.5" /> Receita
+                        </>
+                      ) : (
+                        <>
+                          <ArrowDownRight className="w-3.5 h-3.5" /> Despesa
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Membro responsável */}
+                <div>
+                  <Label className="text-[11px] font-bold text-slate-600 block mb-1">
+                    Membro Responsável
+                  </Label>
+                  <Select
+                    value={itemForDetailModal.member_id}
+                    onValueChange={(val) =>
+                      handleUpdateItemField(itemForDetailModal.id, 'member_id', val)
+                    }
+                  >
+                    <SelectTrigger className="h-9 text-xs bg-white rounded-xl">
+                      <SelectValue placeholder="Selecione o membro" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {members.map((m) => (
+                        <SelectItem key={m.id} value={m.id} className="text-xs">
+                          {m.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Subcategoria se houver */}
+                {(() => {
+                  const cat = categories.find((c) => c.id === itemForDetailModal.category_id)
+                  const subs = cat?.subcategories || []
+                  if (subs.length === 0) return null
+                  return (
+                    <div>
+                      <Label className="text-[11px] font-bold text-slate-600 block mb-1">
+                        Subcategoria ({cat?.name})
+                      </Label>
+                      <Select
+                        value={itemForDetailModal.subcategory_id || 'none'}
+                        onValueChange={(val) =>
+                          handleUpdateItemField(
+                            itemForDetailModal.id,
+                            'subcategory_id',
+                            val === 'none' ? null : val,
+                          )
+                        }
+                      >
+                        <SelectTrigger className="h-9 text-xs bg-white rounded-xl">
+                          <SelectValue placeholder="Subcategoria opcional" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none" className="text-xs text-slate-500">
+                            Nenhuma
+                          </SelectItem>
+                          {subs.map((s) => (
+                            <SelectItem key={s.id} value={s.id} className="text-xs">
+                              {s.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )
+                })()}
+
+                {/* Conciliação Manual se disponível */}
+                {itemForDetailModal.matchedManualTransaction && (
+                  <div className="p-3 rounded-xl bg-teal-50 border border-teal-200 text-teal-950 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold flex items-center gap-1">
+                        <span>🔗</span> Lançamento manual vinculado
+                      </span>
+                      <label className="flex items-center gap-1.5 cursor-pointer font-semibold">
+                        <input
+                          type="checkbox"
+                          checked={itemForDetailModal.isReconciledManual ?? false}
+                          onChange={(e) =>
+                            handleUpdateItemField(
+                              itemForDetailModal.id,
+                              'isReconciledManual',
+                              e.target.checked,
+                            )
+                          }
+                          className="rounded border-teal-400 text-teal-600 focus:ring-teal-500 w-3.5 h-3.5"
+                        />
+                        <span>Mesclar</span>
+                      </label>
+                    </div>
+                    <p className="text-[11px] text-teal-900/80">
+                      "{itemForDetailModal.matchedManualTransaction.description}" em{' '}
+                      {itemForDetailModal.matchedManualTransaction.transaction_date}
+                    </p>
+                  </div>
+                )}
+
+                {/* Se houver múltiplas candidatas manuais, permitir selecionar uma */}
+                {!itemForDetailModal.isReconciledManual &&
+                  (itemForDetailModal.reconciliationCandidates?.length || 0) > 1 && (
+                    <div className="space-y-1.5 pt-1">
+                      <span className="font-semibold text-slate-800 text-[11px] block">
+                        Escolha qual lançamento manual corresponde a esta despesa:
+                      </span>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {itemForDetailModal.reconciliationCandidates?.map((cand) => (
+                          <div
+                            key={cand.id}
+                            className="flex items-center justify-between gap-2 p-2 rounded-lg bg-white border border-indigo-200 text-[11px]"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <span className="font-bold text-slate-800 block truncate">
+                                {cand.description || 'Sem descrição'}
+                              </span>
+                              <span className="text-[10px] text-slate-500">
+                                {cand.transaction_date} • {cand.category?.name || 'Sem categoria'} •{' '}
+                                {cand.member?.name || 'Membro'}
+                              </span>
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                handleUpdateItemField(
+                                  itemForDetailModal.id,
+                                  'isReconciledManual',
+                                  true,
+                                )
+                                handleUpdateItemField(
+                                  itemForDetailModal.id,
+                                  'matchedManualTransaction',
+                                  cand,
+                                )
+                                if (cand.category_id) {
+                                  handleUpdateItemField(
+                                    itemForDetailModal.id,
+                                    'category_id',
+                                    cand.category_id,
+                                  )
+                                }
+                                if (cand.subcategory_id) {
+                                  handleUpdateItemField(
+                                    itemForDetailModal.id,
+                                    'subcategory_id',
+                                    cand.subcategory_id,
+                                  )
+                                }
+                                if (cand.member_id) {
+                                  handleUpdateItemField(
+                                    itemForDetailModal.id,
+                                    'member_id',
+                                    cand.member_id,
+                                  )
+                                }
+                              }}
+                              className="h-7 text-[10px] px-2 font-bold rounded-lg bg-teal-50 text-teal-800 border-teal-300 hover:bg-teal-100 shrink-0"
+                            >
+                              🔗 Mesclar
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                {/* Detalhes de Parcelamento quando detectado */}
+                {itemForDetailModal.isInstallment && (
+                  <div className="p-3 bg-purple-50/70 border border-purple-200/90 rounded-xl space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-purple-950 flex items-center gap-1.5">
+                        <span>📦 Despesa Parcelada</span>
+                        <span className="bg-purple-200/80 text-purple-900 px-2 py-0.5 rounded-full font-mono text-[11px]">
+                          Parcela {itemForDetailModal.installmentCurrent} de{' '}
+                          {itemForDetailModal.installmentTotal}
+                        </span>
+                      </span>
+                      {itemForDetailModal.matchedProjectId ? (
+                        <span className="text-[10px] font-semibold text-blue-800 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
+                          ✓ Projeção existente encontrada no mês
+                        </span>
+                      ) : null}
+                    </div>
+
+                    {itemForDetailModal.matchedProjectId ? (
+                      <p className="text-[11px] text-purple-800 leading-relaxed">
+                        Esta parcela corresponde a uma projeção futura já cadastrada. Ao importar,
+                        ela será convertida de <em>projetada</em> para <strong>confirmada</strong>{' '}
+                        sem gerar duplicidade.
+                      </p>
+                    ) : itemForDetailModal.installmentCurrent === 1 &&
+                      (itemForDetailModal.installmentTotal || 1) > 1 ? (
+                      <label className="flex items-start gap-2 cursor-pointer select-none text-[11px] text-purple-950 font-medium">
+                        <input
+                          type="checkbox"
+                          checked={itemForDetailModal.generateFutureInstallments ?? true}
+                          onChange={(e) =>
+                            handleUpdateItemField(
+                              itemForDetailModal.id,
+                              'generateFutureInstallments',
+                              e.target.checked,
+                            )
+                          }
+                          className="mt-0.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                        />
+                        <span>
+                          <strong>
+                            Gerar automaticamente as{' '}
+                            {(itemForDetailModal.installmentTotal || 1) - 1} parcelas futuras
+                          </strong>{' '}
+                          como despesas projetadas nos próximos meses.
+                        </span>
+                      </label>
+                    ) : (
+                      <p className="text-[11px] text-purple-800 leading-relaxed">
+                        Parcela intermediária sem projeção prévia identificada. Será criada como
+                        despesa confirmada deste mês.
                       </p>
                     )}
+                  </div>
+                )}
+
+                {/* Lembrar regra para compras futuras */}
+                {itemForDetailModal.category_id && (
+                  <div className="pt-0.5">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs select-none">
+                      <input
+                        type="checkbox"
+                        checked={itemForDetailModal.rememberRule ?? true}
+                        onChange={(e) =>
+                          handleUpdateItemField(
+                            itemForDetailModal.id,
+                            'rememberRule',
+                            e.target.checked,
+                          )
+                        }
+                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                      />
+                      <span className="text-slate-700 font-medium flex items-center gap-1.5 text-[11px]">
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>Lembrar categoria para lançamentos futuros com este nome</span>
+                      </span>
+                    </label>
+                    {itemForDetailModal.source === 'ai_suggestion' &&
+                      itemForDetailModal.aiReasoning && (
+                        <p className="text-[10px] text-violet-700 mt-0.5 italic flex items-center gap-1">
+                          <span>✨ Sugestão por IA:</span>
+                          <span>{itemForDetailModal.aiReasoning}</span>
+                        </p>
+                      )}
+                  </div>
+                )}
+
+                {/* Botões do Rodapé de Detalhes: Excluir / Concluir */}
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      handleRemoveItem(itemForDetailModal.id)
+                      setDetailModalItemId(null)
+                    }}
+                    className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl h-8 gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Excluir do extrato</span>
+                  </Button>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setDetailModalItemId(null)}
+                    className="text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-xl h-8 px-4"
+                  >
+                    Pronto
+                  </Button>
                 </div>
-              )}
-
-              {/* Botões do Rodapé de Detalhes: Excluir / Concluir */}
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    handleRemoveItem(itemForDetailModal.id)
-                    setDetailModalItemId(null)
-                  }}
-                  className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl h-8 gap-1"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Excluir do extrato</span>
-                </Button>
-
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => setDetailModalItemId(null)}
-                  className="text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-xl h-8 px-4"
-                >
-                  Pronto
-                </Button>
               </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* MODAL SECUNDÁRIO: CRIAÇÃO RÁPIDA DE NOVA CATEGORIA */}
       <Dialog open={isQuickCatOpen} onOpenChange={setIsQuickCatOpen}>
-        <DialogContent className="max-w-sm w-[90vw] rounded-2xl p-5">
+        <DialogContent
+          onPointerDownOutside={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            setIsQuickCatOpen(false)
+          }}
+          onInteractOutside={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            setIsQuickCatOpen(false)
+          }}
+          className="max-w-sm w-[90vw] rounded-2xl p-5"
+        >
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900">Nova Categoria</DialogTitle>
           </DialogHeader>

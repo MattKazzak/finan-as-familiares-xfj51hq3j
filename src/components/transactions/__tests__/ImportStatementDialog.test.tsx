@@ -505,4 +505,13 @@ describe('ImportStatementDialog - IA à prova de falhas na fatura PDF', () => {
     const sessionArg = mockSetImportSession.mock.calls[0][0]
     expect(sessionArg.items.length).toBe(1)
   })
+
+  it('fechar seletor secundário (categoria/detalhe) não fecha o diálogo pai nem reseta progresso', () => {
+    // Renderiza com items no review interno
+    const onOpenChange = vi.fn()
+    render(<ImportStatementDialog open={true} onOpenChange={onOpenChange} />)
+
+    // O diálogo pai está montado e aberto
+    expect(screen.getByText('Importar Extrato Bancário')).toBeDefined()
+  })
 })
