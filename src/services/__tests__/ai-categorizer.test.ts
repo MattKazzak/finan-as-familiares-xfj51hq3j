@@ -222,4 +222,36 @@ describe('ai-categorizer service (parsePdfWithAI)', () => {
     expect(result.transactions.length).toBe(1)
     expect(supabase.functions.invoke).toHaveBeenCalledTimes(2)
   })
+
+  it('recebe transações sanitizadas com sucesso sem lançar ReferenceError', async () => {
+    // Valida o contrato e formato de resposta gerado pela Edge Function batch-categorize no modo PDF
+    const mockExtractedItem = {
+      date: '2025-05-15',
+      description: 'DROGASIL SAO PAULO 01/03',
+      cleanMerchant: 'Drogasil',
+      amountCents: 8990,
+      type: 'expense' as const,
+      installment: '01/03',
+      categoryId: 'cat-saude',
+      subcategoryId: null,
+      confidence: 0.95,
+    }
+
+    vi.mocked(supabase.functions.invoke).mockResolvedValueOnce({
+      data: {
+        transactions: [mockExtractedItem],
+        declaredTotalCents: 8990,
+        totalExtracted: 1,
+        mode: 'pdf',
+      },
+      error: null,
+    })
+
+    const result = await parsePdfWithAI('05/02 DROGASIL SAO PAULO 01/03 R$ 89,90', 'fam-123')
+    expect(result.success).toBe(true)
+    expect(result.transactions).toHaveLength(1)
+    expect(result.transactions[0]).toEqual(mockExtractedItem)
+    expect(result.declaredTotalCents).toBe(8990)
+    expect(result.error).toBeUndefined()
+  })
 })

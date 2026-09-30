@@ -384,7 +384,8 @@ Instruções cruciais:
           ? Math.round(rawDeclaredTotal)
           : null
 
-      // Higienizar e validar transações contra o catálogo real      const sanitizedTransactions: PdfExtractedTransactionItem[] = []
+      // Higienizar e validar transações contra o catálogo real
+      const sanitizedTransactions: PdfExtractedTransactionItem[] = []
       for (const item of rawItems) {
         if (!item || typeof item !== 'object') continue
 
