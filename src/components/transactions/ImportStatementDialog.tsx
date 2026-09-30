@@ -399,23 +399,53 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 
         setExtractionProgress(
           totalPages === 1
-            ? 'Analisando fatura com IA (GPT-4o mini)...'
-            : `Extraindo lançamentos de ${totalPages} páginas em paralelo...`,
+            ? 'Identificando lançamentos com IA (GPT-4o mini)...'
+            : `Lendo ${totalPages} páginas em paralelo...`,
         )
 
         // 2. Extração em blocos em chamadas PARALELAS (requisito de performance acordado)
+        // Rastrear progresso por página concluída para feedback dinâmico
+        let completedChunks = 0
+        const updateChunkProgress = () => {
+          completedChunks++
+          if (totalPages > 1) {
+            if (completedChunks < totalPages) {
+              setExtractionProgress(
+                `Lendo página ${completedChunks + 1} de ${totalPages} e identificando lançamentos...`,
+              )
+            } else {
+              setExtractionProgress('Categorizando lançamentos e conferindo fechamento...')
+            }
+          } else {
+            setExtractionProgress('Categorizando lançamentos e conferindo fechamento...')
+          }
+        }
+
         let parallelPromises: Promise<any>[] = []
         if (validPages.length > 0) {
           parallelPromises = validPages.map((page) =>
-            parsePdfWithAI(page.text, family.id).catch((err) => ({
-              success: false,
-              transactions: [],
-              declaredTotalCents: null,
-              error: err?.message,
-            })),
+            parsePdfWithAI(page.text, family.id)
+              .then((res) => {
+                updateChunkProgress()
+                return res
+              })
+              .catch((err) => {
+                updateChunkProgress()
+                return {
+                  success: false,
+                  transactions: [],
+                  declaredTotalCents: null,
+                  error: err?.message,
+                }
+              }),
           )
         } else {
-          parallelPromises = [parsePdfWithAI(extractedPdf.rawText, family.id)]
+          parallelPromises = [
+            parsePdfWithAI(extractedPdf.rawText, family.id).then((res) => {
+              updateChunkProgress()
+              return res
+            }),
+          ]
         }
 
         const pageResults = await Promise.all(parallelPromises)
@@ -1720,7 +1750,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           {/* ================= ETAPA 2: REVISÃO ANTES DE SALVAR ================= */}
           {step === 'review' ? (
             <div className="flex-1 flex flex-col min-h-0 pt-2 space-y-3">
-              {/* Aviso Persistente de Fechamento da Fatura (Item 2 do plano IA à prova de falhas) */}
+              {/* Aviso no Topo de Fechamento da Fatura (Item 2 do plano IA à prova de falhas) */}
               {closingValidation && !closingValidation.matches && (
                 <div
                   role="alert"
@@ -1730,14 +1760,15 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                     <span className="text-base sm:text-lg shrink-0 mt-0.5 leading-none">⚠</span>
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-amber-950 text-xs sm:text-sm leading-snug">
-                        A soma dos {closingValidation.itemCount} lançamentos (
-                        {formatBRL(closingValidation.expensesSumCents)}) não bate com o total da
-                        fatura ({formatBRL(closingValidation.declaredTotalCents)}) — algo ficou de
+                        A soma dos lançamentos ({formatBRL(closingValidation.expensesSumCents)}) não
+                        bate com o total da fatura (
+                        {formatBRL(closingValidation.declaredTotalCents)}) — algo pode ter ficado de
                         fora
                       </p>
                       <p className="text-[11px] text-amber-900/80 mt-0.5 leading-relaxed">
-                        Diferença detectada: {formatBRL(closingValidation.diffCents)}. Revise as
-                        páginas da fatura ou adicione os itens faltantes manualmente.
+                        Diferença detectada: {formatBRL(closingValidation.diffCents)} (
+                        {closingValidation.itemCount} lançamentos válidos encontrados). Revise os
+                        itens ou confira se alguma página ficou sem extração.
                       </p>
                     </div>
                   </div>
@@ -2011,10 +2042,10 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                                 )}
                                 {item.isNonExpense && (
                                   <span
-                                    title="Quitação de fatura anterior, ajuste, encargo ou IOF detectado em código. Desmarcada por padrão para não inflar despesas do mês."
+                                    title="Quitação de fatura anterior, ajuste, estorno, encargo ou IOF detectado em código. Desmarcada por padrão para não inflar despesas do mês."
                                     className="font-bold text-[10px] bg-slate-100 text-slate-700 border border-slate-300 px-1.5 py-0.2 rounded shrink-0 flex items-center gap-0.5"
                                   >
-                                    <span>🛡 Não é despesa</span>
+                                    <span>Não é despesa</span>
                                   </span>
                                 )}
                                 {!item.category_id ? (
@@ -2576,6 +2607,22 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                   )
                 })}
               </div>
+
+              {/* Alerta de Divergência de Fechamento no Rodapé de Confirmação (Item 2 do plano IA à prova de falhas) */}
+              {closingValidation && !closingValidation.matches && (
+                <div
+                  role="alert"
+                  aria-live="polite"
+                  className="p-2.5 sm:p-3 rounded-xl bg-amber-500/10 border border-amber-500/40 text-amber-950 text-xs flex items-center gap-2 shrink-0 shadow-2xs"
+                >
+                  <span className="text-amber-700 font-bold text-sm shrink-0">⚠</span>
+                  <p className="font-semibold text-[11px] sm:text-xs leading-snug flex-1">
+                    A soma dos lançamentos ({formatBRL(closingValidation.expensesSumCents)}) não
+                    bate com o total da fatura ({formatBRL(closingValidation.declaredTotalCents)}) —
+                    algo pode ter ficado de fora
+                  </p>
+                </div>
+              )}
 
               {/* Totalizador Rodapé */}
               <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/80 flex items-center justify-between text-xs shrink-0">

@@ -286,7 +286,10 @@ export function isDeterministicNonExpense(description: string): boolean {
   // Padrões de encargos e IOF
   const isCharges = norm.includes('encargo') || norm.includes('encargos') || norm.includes('iof')
 
-  return isPayment || isAdjustment || isCharges
+  // Padrões de estornos de cobrança
+  const isReversal = norm.includes('estorno')
+
+  return isPayment || isAdjustment || isCharges || isReversal
 }
 
 export interface DedupableTransaction {

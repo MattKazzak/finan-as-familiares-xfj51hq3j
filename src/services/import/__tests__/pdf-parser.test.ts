@@ -107,9 +107,11 @@ describe('pdf-parser service', () => {
       expect(isDeterministicNonExpense('Quitacao de Fatura')).toBe(true)
     })
 
-    it('intercepta ajustes, encargos e IOF', () => {
+    it('intercepta ajustes, estornos, encargos e IOF', () => {
       expect(isDeterministicNonExpense('AJUSTE DE CREDITO')).toBe(true)
       expect(isDeterministicNonExpense('Ajuste a debito')).toBe(true)
+      expect(isDeterministicNonExpense('Estorno de compra')).toBe(true)
+      expect(isDeterministicNonExpense('ESTORNO PARCIAL')).toBe(true)
       expect(isDeterministicNonExpense('ENCARGOS DE FINANCIAMENTO')).toBe(true)
       expect(isDeterministicNonExpense('IOF COMPRA INTERNACIONAL')).toBe(true)
       expect(isDeterministicNonExpense('IOF DIARIO')).toBe(true)

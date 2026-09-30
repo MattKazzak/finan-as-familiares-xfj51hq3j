@@ -45,6 +45,13 @@ export interface ParsePdfAiResult {
   error?: string
 }
 
+export interface ParsePdfChunkProgress {
+  currentPage: number
+  totalPages: number
+  stage: 'reading' | 'extracting' | 'merging' | 'categorizing'
+  message?: string
+}
+
 /**
  * Invoca a Edge Function 'batch-categorize' no modo PDF com texto bruto.
  * A IA especializada extrai todas as compras/estornos reais, descarta ruídos,

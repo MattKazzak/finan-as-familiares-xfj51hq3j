@@ -230,7 +230,7 @@ describe('ImportStatementDialog - IA à prova de falhas na fatura PDF', () => {
     })
 
     // Deve exibir o badge "não é despesa" no item de pagamento recebido
-    expect(screen.getByText('🛡 Não é despesa')).toBeDefined()
+    expect(screen.getByText('Não é despesa')).toBeDefined()
 
     // O item normal (Drogasil) deve estar selecionado (1 de 2 selecionado)
     expect(screen.getByText(/Selecionar todos \(1\/2\)/i)).toBeDefined()
@@ -267,12 +267,12 @@ describe('ImportStatementDialog - IA à prova de falhas na fatura PDF', () => {
     fireEvent.change(input, { target: { files: [file] } })
 
     await waitFor(() => {
-      expect(screen.getByRole('alert')).toBeDefined()
+      expect(screen.getAllByRole('alert').length).toBeGreaterThanOrEqual(1)
     })
 
     // Verifica texto do alerta de fechamento
-    expect(screen.getByText(/não bate com o total da fatura/i)).toBeDefined()
-    expect(screen.getByText(/algo ficou de fora/i)).toBeDefined()
+    expect(screen.getAllByText(/não bate com o total da fatura/i).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText(/algo pode ter ficado de fora/i).length).toBeGreaterThanOrEqual(1)
   })
 
   it('validação de fechamento: NÃO exibe aviso quando a soma bate com o total declarado', async () => {

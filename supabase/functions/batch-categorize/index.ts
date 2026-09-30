@@ -232,25 +232,26 @@ CATÁLOGO REAL DE CATEGORIAS DA FAMÍLIA:
 ${catalogPrompt}
 
 REGRAS CRÍTICAS DE EXTRAÇÃO DE FATURA:
-1. COMPLETUDE ABSOLUTA (NUNCA TRUNCAR):
-   - Extraia TODOS os lançamentos do texto fornecido, do primeiro ao último.
-   - NÃO pare até o fim do texto. Nunca omita linhas por falta de espaço ou resumo.
-   - Cada compra individual deve virar um objeto no array "transactions".
+1. COMPLETUDE ABSOLUTA E NÃO-TRUNCAMENTO (REGRA MÁXIMA):
+   - Percorra o texto até o fim, não pare antes da última linha da última página. Se houver limite, extraia o máximo e nunca interrompa silenciosamente no meio.
+   - NÃO pare até a última linha de compras. É PROIBIDO parar após 10 ou 15 lançamentos se houver mais linhas no texto.
+   - Nunca omita linhas de transações por resumo, cansaço ou limite de amostragem.
+   - Cada compra, parcela ou estorno individual DEVE virar um objeto no array "transactions".
 
 2. O QUE EXTRAIR:
-   - Todas as compras de bens e serviços nacionais e internacionais (ex: "UBER", "IFOOD", "MERCADO LIVRE", "DROGASIL", "NETFLIX", "POSTO", "CARREFOUR", "PAG*...").
+   - Todas as compras de bens e serviços nacionais e internacionais (ex: "UBER", "IFOOD", "MERCADO LIVRE", "DROGASIL", "NETFLIX", "POSTO", "CARREFOUR", "PAG*...", compras físicas e online).
    - Compras parceladas (identificar o sufixo ou padrão de parcela, ex: "02/10", "3/12").
    - Estornos e reembolsos reais (marcar amountCents com o valor positivo e type="income").
 
-3. O QUE DESCARTAR ABSOLUTAMENTE (NÃO SÃO COMPRAS):
-   - Pagamentos da fatura anterior e quitações: linhas como "Pagamento recebido em…", "Pagamento de fatura", "Pagamento efetuado", "Pagamento de título", "Pagamento mínimo", "Pagto fatura". Elas NÃO são despesas novas do mês, são quitações da fatura passada e DEVEM SER COMPLETAMENTE DESCARTADAS.
+3. O QUE DESCARTAR ABSOLUTAMENTE (NÃO SÃO COMPRAS NEM DESPESAS DO MÊS):
+   - Pagamentos da fatura anterior e quitações: linhas como "Pagamento recebido em…", "Pagamento de fatura", "Pagamento efetuado", "Pagamento de título", "Pagamento mínimo", "Pagamento parcial", "Pagto fatura", "Aut. Pagto", "Quitação de fatura". Elas NÃO são despesas novas do mês, representam quitação de fatura passada e DEVEM SER COMPLETAMENTE DESCARTADAS.
    - Cabeçalhos e rodapés institucionais, dados do titular, agência, conta, CNPJ/CPF, endereços e CEP.
    - Telefones, SAC, WhatsApp, Ouvidoria (ex: "0800", "3003", "4004").
    - Limites de crédito (ex: "Limite Total", "Limite Disponível", "Limite Utilizado", "Limite de Saque").
    - Tabelas de cotação de dólar ou pontos de fidelidade.
 
 4. TOTAL DECLARADO DA FATURA ("declaredTotalCents"):
-   - Se o trecho contiver o resumo/cabeçalho da fatura indicando o total a pagar da fatura (ex: "Total da fatura R$ 1.250,50", "Valor total da fatura: 1.250,50", "Total desta fatura: R$ 850,00"), capture esse valor em centavos (número inteiro positivo) na propriedade "declaredTotalCents".
+   - Se o trecho contiver o resumo/cabeçalho da fatura indicando o total a pagar da fatura (ex: "Total da fatura R$ 1.250,50", "Valor total da fatura: 1.250,50", "Total desta fatura: R$ 850,00", "Total a pagar: R$ ..."), capture esse valor em centavos (número inteiro positivo) na propriedade "declaredTotalCents".
    - Se este trecho NÃO contiver o total geral declarado da fatura (por exemplo, página do meio com apenas lançamentos), retorne null para "declaredTotalCents".
 
 5. EXEMPLO FEW-SHOT DE EXTRAÇÃO E DESCARTE CORRETO:
@@ -315,9 +316,9 @@ ${rawText.slice(0, 100000)}
 --- FIM DO TEXTO ---
 
 Instruções cruciais:
-1. Extraia TODOS os lançamentos sem exceção e sem truncamento (não pare até o fim do texto).
-2. Se houver total geral declarado da fatura no texto, capture em declaredTotalCents (número inteiro em centavos), senão retorne null.
-3. Descarte pagamentos anteriores de fatura (ex: "Pagamento recebido em..."), limites e dados cadastrais.
+1. Percorra o texto até o fim, não pare antes da última linha da última página; se houver limite, extraia o máximo e sinalize. Extraia TODOS os lançamentos sem exceção e sem truncamento — nunca pare após 10-15 itens se houver mais linhas de compra no texto.
+2. Se houver total geral declarado da fatura no texto (ex: "Total desta fatura", "Total a pagar", "Total da fatura"), capture em declaredTotalCents (número inteiro positivo em centavos), senão retorne null.
+3. Descarte pagamentos anteriores de fatura (ex: "Pagamento recebido em...", "Pagamento de fatura", "Pagamento efetuado"), pois são quitações anteriores e não despesas novas.
 4. Classifique cada transação usando IDs válidos do catálogo familiar.`
       const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
