@@ -20,8 +20,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useFamily } from '@/hooks/use-family'
 import { useToast } from '@/hooks/use-toast'
+import { useImportSession } from '@/contexts/ImportSessionContext'
 import { CategoryIcon, AVAILABLE_ICONS } from '@/components/common/CategoryIcon'
 import { formatBRL, parseBRLToCents, formatNumberBRL } from '@/lib/formatters'
 import {
@@ -159,9 +161,12 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
   onOpenChange,
   onSuccess,
 }) => {
+  const navigate = useNavigate()
+  const location = useLocation()
   const { family, members, categories, addNewCategory, triggerRefresh, setLastImportSummary } =
     useFamily()
   const { toast } = useToast()
+  const { setImportSession } = useImportSession()
 
   // Estados do fluxo
   const [step, setStep] = useState<'upload' | 'review'>('upload')
@@ -930,7 +935,26 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
       }
 
       setItems(reviewList)
-      setStep('review')
+
+      // Encaminha para a nova rota dedicada /importar (item 1 do plano)
+      const currentFileInfo = {
+        name: file.name,
+        size: file.size,
+        format: isPdf ? 'Fatura PDF' : 'Extrato OFX',
+      }
+
+      setImportSession({
+        items: reviewList,
+        fileInfo: currentFileInfo,
+        declaredTotalCents,
+        failedPages,
+        sourceRoute: location.pathname || '/carteira',
+      })
+
+      // Fecha o modal de upload e navega para /importar
+      handleDialogChange(false)
+      navigate('/importar')
+      return
     } catch (err: any) {
       console.error('Erro na importação:', err)
       setErrorMessage(err?.message || 'Erro inesperado ao processar o extrato.')

@@ -96,6 +96,8 @@ export default function Layout() {
         return 'Carteira de Investimentos'
       case '/perfil':
         return 'Família & Configurações'
+      case '/importar':
+        return 'Revisão de Importação'
       default:
         return 'Finanças da Família'
     }

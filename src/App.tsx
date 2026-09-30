@@ -4,6 +4,7 @@ import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AuthProvider, useAuth } from '@/hooks/use-auth'
 import { FamilyProvider } from '@/hooks/use-family'
+import { ImportSessionProvider } from '@/contexts/ImportSessionContext'
 import Layout from '@/components/Layout'
 import Login from '@/pages/Login'
 import ResetPassword from '@/pages/ResetPassword'
@@ -12,6 +13,7 @@ import Wallet from '@/pages/Wallet'
 import Goals from '@/pages/Goals'
 import Investments from '@/pages/Investments'
 import Profile from '@/pages/Profile'
+import ImportReviewPage from '@/pages/ImportReviewPage'
 import NotFound from '@/pages/NotFound'
 import { InviteAcceptPage } from '@/pages/InviteAcceptPage'
 import { Loader2 } from 'lucide-react'
@@ -75,7 +77,9 @@ function ProtectedLayout() {
 
   return (
     <FamilyProvider>
-      <Layout />
+      <ImportSessionProvider>
+        <Layout />
+      </ImportSessionProvider>
     </FamilyProvider>
   )
 }
@@ -138,6 +142,7 @@ const App = () => (
             <Route path="/metas" element={<Goals />} />
             <Route path="/investimentos" element={<Investments />} />
             <Route path="/perfil" element={<Profile />} />
+            <Route path="/importar" element={<ImportReviewPage />} />
           </Route>
 
           {/* Rota de erro 404 */}

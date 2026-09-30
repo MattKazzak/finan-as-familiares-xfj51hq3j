@@ -6,6 +6,26 @@ import * as pdfParser from '@/services/import/pdf-parser'
 import * as aiCategorizer from '@/services/ai-categorizer'
 
 // Mocks dos contextos e serviços
+const mockNavigate = vi.fn()
+const mockSetImportSession = vi.fn()
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom')
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+    useLocation: () => ({ pathname: '/carteira' }),
+  }
+})
+
+vi.mock('@/contexts/ImportSessionContext', () => ({
+  useImportSession: () => ({
+    session: null,
+    setImportSession: mockSetImportSession,
+    clearImportSession: vi.fn(),
+  }),
+}))
+
 vi.mock('@/hooks/use-family', () => ({
   useFamily: () => ({
     family: { id: 'fam-test', name: 'Família Teste' },
@@ -220,30 +240,31 @@ describe('ImportStatementDialog - IA à prova de falhas na fatura PDF', () => {
     const input = document.querySelector('input[type="file"]') as HTMLInputElement
     fireEvent.change(input, { target: { files: [file] } })
 
-    // Avança para a etapa de revisão
+    // Redireciona para /importar com a sessão configurada
     await waitFor(() => {
-      expect(
-        screen.getByText(
-          'Revisão de lançamentos: ajuste categorias, membros, datas e confirme a importação',
-        ),
-      ).toBeDefined()
+      expect(mockSetImportSession).toHaveBeenCalled()
+      expect(mockNavigate).toHaveBeenCalledWith('/importar')
     })
 
-    // Deve exibir o badge "não é despesa" no item de pagamento recebido
-    expect(screen.getByText('Não é despesa')).toBeDefined()
+    const sessionArg = mockSetImportSession.mock.calls[0][0]
+    expect(sessionArg.items.length).toBe(2)
+    // Deve marcar quitação como isNonExpense e desmarcada
+    const nonExpense = sessionArg.items.find((i: any) => i.isNonExpense)
+    expect(nonExpense).toBeDefined()
+    expect(nonExpense.selected).toBe(false)
 
-    // O item normal (Drogasil) deve estar selecionado (1 de 2 selecionado)
-    expect(screen.getByText(/Selecionar todos \(1\/2\)/i)).toBeDefined()
+    // O item normal (Drogasil) deve estar selecionado
+    const normalItem = sessionArg.items.find((i: any) => !i.isNonExpense)
+    expect(normalItem.selected).toBe(true)
   })
 
-  it('validação de fechamento: exibe informativo sutil "Revise os itens antes de confirmar" quando soma NÃO bate com o total declarado (sem alertas alarmistas)', async () => {
+  it('validação de fechamento: passa total declarado para a sessão em /importar', async () => {
     vi.spyOn(pdfParser, 'extractRawTextFromPdf').mockResolvedValueOnce({
       rawText: 'Fatura com total R$ 500,00',
       pageCount: 1,
       pages: [{ pageNumber: 1, text: 'Fatura com total R$ 500,00' }],
     })
 
-    // Total declarado é R$ 500,00 (50000 cents), mas a IA só retornou R$ 89,90 (8990 cents)
     vi.spyOn(aiCategorizer, 'parsePdfWithAI').mockResolvedValueOnce({
       success: true,
       declaredTotalCents: 50000,
@@ -267,96 +288,15 @@ describe('ImportStatementDialog - IA à prova de falhas na fatura PDF', () => {
     fireEvent.change(input, { target: { files: [file] } })
 
     await waitFor(() => {
-      expect(screen.getByText(/Revisão de lançamentos/i)).toBeDefined()
+      expect(mockNavigate).toHaveBeenCalledWith('/importar')
     })
 
-    // Sem banners amarelos alarmistas
-    expect(screen.queryByText(/não bate com o total da fatura/i)).toBeNull()
-    expect(screen.queryByText(/algo pode ter ficado de fora/i)).toBeNull()
-
-    // Exibe texto exato sutil
-    expect(screen.getAllByText('Revise os itens antes de confirmar').length).toBeGreaterThanOrEqual(
-      1,
-    )
+    const sessionArg = mockSetImportSession.mock.calls[0][0]
+    expect(sessionArg.declaredTotalCents).toBe(50000)
+    expect(sessionArg.items.length).toBe(1)
   })
 
-  it('validação de fechamento: exibe badge "✔ Fatura conciliada (R$ X.XXX,XX)" quando a soma bate 100%', async () => {
-    vi.spyOn(pdfParser, 'extractRawTextFromPdf').mockResolvedValueOnce({
-      rawText: 'Fatura com total R$ 89,90',
-      pageCount: 1,
-      pages: [{ pageNumber: 1, text: 'Fatura com total R$ 89,90' }],
-    })
-
-    // Total declarado e soma batem exatamente (8990 cents = R$ 89,90)
-    vi.spyOn(aiCategorizer, 'parsePdfWithAI').mockResolvedValueOnce({
-      success: true,
-      declaredTotalCents: 8990,
-      transactions: [
-        {
-          date: '2025-02-05',
-          description: 'DROGASIL SAO PAULO',
-          cleanMerchant: 'Drogasil',
-          amountCents: 8990,
-          type: 'expense',
-          confidence: 0.95,
-          categoryId: 'cat-2',
-        },
-      ],
-    })
-
-    render(<ImportStatementDialog open={true} onOpenChange={vi.fn()} />)
-
-    const file = new File(['mock content'], 'fatura_fevereiro.pdf', { type: 'application/pdf' })
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement
-    fireEvent.change(input, { target: { files: [file] } })
-
-    await waitFor(() => {
-      expect(screen.getByText(/Revisão de lançamentos/i)).toBeDefined()
-    })
-
-    // Badge sutil no rodapé com o formato exato
-    expect(screen.getByText(/✔ Fatura conciliada \(R\$ 89,90\)/i)).toBeDefined()
-    expect(screen.queryByText(/não bate com o total da fatura/i)).toBeNull()
-  })
-  it('validação de fechamento: NÃO exibe aviso quando o total declarado não foi identificado (sem falso positivo)', async () => {
-    vi.spyOn(pdfParser, 'extractRawTextFromPdf').mockResolvedValueOnce({
-      rawText: 'Fatura sem total explícito',
-      pageCount: 1,
-      pages: [{ pageNumber: 1, text: 'Fatura sem total explícito' }],
-    })
-
-    // declaredTotalCents: null -> sem falso positivo
-    vi.spyOn(aiCategorizer, 'parsePdfWithAI').mockResolvedValueOnce({
-      success: true,
-      declaredTotalCents: null,
-      transactions: [
-        {
-          date: '2025-02-05',
-          description: 'DROGASIL SAO PAULO',
-          cleanMerchant: 'Drogasil',
-          amountCents: 8990,
-          type: 'expense',
-          confidence: 0.95,
-          categoryId: 'cat-2',
-        },
-      ],
-    })
-
-    render(<ImportStatementDialog open={true} onOpenChange={vi.fn()} />)
-
-    const file = new File(['mock content'], 'fatura_fevereiro.pdf', { type: 'application/pdf' })
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement
-    fireEvent.change(input, { target: { files: [file] } })
-
-    await waitFor(() => {
-      expect(screen.getByText(/Revisão de lançamentos/i)).toBeDefined()
-    })
-
-    expect(screen.queryByRole('alert')).toBeNull()
-    expect(screen.queryByText(/não bate com o total da fatura/i)).toBeNull()
-  })
-
-  it('extração em blocos paralelos com deduplicação entre páginas', async () => {
+  it('extração em blocos paralelos com deduplicação entre páginas enviada para a rota /importar', async () => {
     // 2 páginas no PDF
     vi.spyOn(pdfParser, 'extractRawTextFromPdf').mockResolvedValueOnce({
       rawText: 'Página 1 e Página 2',
@@ -427,7 +367,7 @@ describe('ImportStatementDialog - IA à prova de falhas na fatura PDF', () => {
     fireEvent.change(input, { target: { files: [file] } })
 
     await waitFor(() => {
-      expect(screen.getByText(/Revisão de lançamentos/i)).toBeDefined()
+      expect(mockNavigate).toHaveBeenCalledWith('/importar')
     })
 
     // Foram 2 chamadas paralelas para parsePdfWithAI
@@ -436,11 +376,12 @@ describe('ImportStatementDialog - IA à prova de falhas na fatura PDF', () => {
     expect(parseSpy).toHaveBeenCalledWith('Conteúdo Página 2', 'fam-test')
 
     // Das 4 transações extraídas, 1 era duplicata exata de Uber (mesma data + desc + valor)
-    // Resultado deve conter exatamente 3 transações válidas deduplicadas
-    expect(screen.getByText('3 válidos')).toBeDefined()
+    // Resultado enviado para a sessão deve conter exatamente 3 transações válidas deduplicadas
+    const sessionArg = mockSetImportSession.mock.calls[0][0]
+    expect(sessionArg.items.length).toBe(3)
   })
 
-  it('falha de 1 página não aborta importação quando outras páginas retornam transações (exibe aviso no topo)', async () => {
+  it('falha de 1 página não aborta importação quando outras páginas retornam transações (registra failedPages na sessão)', async () => {
     // 2 páginas no PDF: Página 1 falha, Página 2 tem sucesso
     vi.spyOn(pdfParser, 'extractRawTextFromPdf').mockResolvedValueOnce({
       rawText: 'Página 1 e Página 2',
@@ -484,21 +425,14 @@ describe('ImportStatementDialog - IA à prova de falhas na fatura PDF', () => {
     const input = document.querySelector('input[type="file"]') as HTMLInputElement
     fireEvent.change(input, { target: { files: [file] } })
 
-    // Deve abrir a tela de revisão pois a página 2 teve transações
+    // Deve navegar para /importar pois a página 2 teve transações
     await waitFor(() => {
-      expect(screen.getByText(/Revisão de lançamentos/i)).toBeDefined()
+      expect(mockNavigate).toHaveBeenCalledWith('/importar')
     })
 
-    // 1 item válido importado da página 2
-    expect(screen.getByText('1 válidos')).toBeDefined()
-
-    // Aviso amigável da página 1 que falhou deve estar visível
-    expect(
-      screen.getByText(/Não foi possível ler completamente a página 1 da fatura/i),
-    ).toBeDefined()
-    expect(
-      screen.getByText(/Verifique se faltam transações ou se a soma final confere/i),
-    ).toBeDefined()
+    const sessionArg = mockSetImportSession.mock.calls[0][0]
+    expect(sessionArg.items.length).toBe(1)
+    expect(sessionArg.failedPages).toEqual([1])
   })
 
   it('card de erro total exibe botões "Tentar novamente" e "Escolher outro arquivo" quando todas as páginas falharem', async () => {
@@ -566,8 +500,9 @@ describe('ImportStatementDialog - IA à prova de falhas na fatura PDF', () => {
     fireEvent.click(retryBtn)
 
     await waitFor(() => {
-      expect(screen.getByText(/Revisão de lançamentos/i)).toBeDefined()
+      expect(mockNavigate).toHaveBeenCalledWith('/importar')
     })
-    expect(screen.getByText('1 válidos')).toBeDefined()
+    const sessionArg = mockSetImportSession.mock.calls[0][0]
+    expect(sessionArg.items.length).toBe(1)
   })
 })
