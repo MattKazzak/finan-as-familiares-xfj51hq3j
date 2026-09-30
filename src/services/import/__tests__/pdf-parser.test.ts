@@ -100,11 +100,20 @@ describe('pdf-parser service', () => {
     it('intercepta quitações e pagamentos de fatura anterior', () => {
       expect(isDeterministicNonExpense('Pagamento recebido em 05/02/2025')).toBe(true)
       expect(isDeterministicNonExpense('PAGAMENTO DE FATURA')).toBe(true)
+      expect(isDeterministicNonExpense('Pagamento de fatura -5.443,36')).toBe(true)
       expect(isDeterministicNonExpense('Pagamento Efetuado')).toBe(true)
       expect(isDeterministicNonExpense('PAGTO FATURA')).toBe(true)
       expect(isDeterministicNonExpense('Pagamento Mínimo')).toBe(true)
       expect(isDeterministicNonExpense('PAGAMENTO TITULO')).toBe(true)
       expect(isDeterministicNonExpense('Quitacao de Fatura')).toBe(true)
+    })
+
+    it('intercepta limites de crédito, saldos rotativos e opções de parcelamento futuro', () => {
+      expect(isDeterministicNonExpense('Limite Total: R$ 20.000,00')).toBe(true)
+      expect(isDeterministicNonExpense('Limite Disponível: R$ 15.450,09')).toBe(true)
+      expect(isDeterministicNonExpense('Limite de Saque')).toBe(true)
+      expect(isDeterministicNonExpense('Saldo Financiado Rotativo')).toBe(true)
+      expect(isDeterministicNonExpense('Parcelamento de Fatura Futura')).toBe(true)
     })
 
     it('intercepta ajustes, estornos, encargos e IOF', () => {

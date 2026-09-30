@@ -274,7 +274,20 @@ export function isDeterministicNonExpense(description: string): boolean {
     norm.includes('pagamentocartao') ||
     norm.includes('quitacaodefatura') ||
     norm.includes('pagtoantecipado') ||
-    norm.includes('autpagto')
+    norm.includes('autpagto') ||
+    norm.includes('pagtodebito') ||
+    norm.includes('pagamentodebito')
+
+  // Padrões de limites e informativos de saldo
+  const isLimitOrBalanceInfo =
+    norm.includes('limitetotal') ||
+    norm.includes('limitedisponivel') ||
+    norm.includes('limitesaque') ||
+    norm.includes('limiteutilizado') ||
+    norm.includes('saldofinanciado') ||
+    norm.includes('saldorotativo') ||
+    norm.includes('parcelamentodefatura') ||
+    norm.includes('parcelamentofatura')
 
   // Padrões de ajustes de fatura
   const isAdjustment =
@@ -289,7 +302,7 @@ export function isDeterministicNonExpense(description: string): boolean {
   // Padrões de estornos de cobrança
   const isReversal = norm.includes('estorno')
 
-  return isPayment || isAdjustment || isCharges || isReversal
+  return isPayment || isLimitOrBalanceInfo || isAdjustment || isCharges || isReversal
 }
 
 export interface DedupableTransaction {

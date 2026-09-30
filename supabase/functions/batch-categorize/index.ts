@@ -224,89 +224,141 @@ Deno.serve(async (req: Request) => {
       const rawText = body.rawText!.trim()
       const currentYear = new Date().getFullYear()
 
-      const pdfSystemPrompt = `Você é o especialista sênior em inteligência financeira do Curiangoo (Curiangoo Copilot), especializado na leitura e extração exaustiva de faturas de cartão de crédito brasileiras (Rico, XP, Nubank, Inter, Itaú, Santander, C6 Bank, Bradesco, BTG Pactual, etc.) e na regra orçamentária 50/30/20.
+      const pdfSystemPrompt = `Você é o especialista sênior em inteligência financeira do Curiangoo (Curiangoo Copilot), especializado na leitura e extração exaustiva de faturas de cartão de crédito de qualquer banco brasileiro (Rico, XP, Nubank, Inter, Itaú, Santander, C6 Bank, Bradesco, BTG Pactual, etc.) e na regra orçamentária 50/30/20.
 
 Seu objetivo é analisar o texto bruto extraído de um trecho/página de fatura de cartão de crédito e extrair com MÁXIMA PRECISÃO E COMPLETUDE ABSOLUTA TODAS as compras e estornos reais, atribuindo a cada uma a categoria e subcategoria mais adequada do catálogo da família.
 
 CATÁLOGO REAL DE CATEGORIAS DA FAMÍLIA:
 ${catalogPrompt}
 
-REGRAS CRÍTICAS DE EXTRAÇÃO DE FATURA:
-1. COMPLETUDE ABSOLUTA E NÃO-TRUNCAMENTO (REGRA MÁXIMA):
-   - Percorra o texto até o fim, não pare antes da última linha da última página. Se houver limite, extraia o máximo e nunca interrompa silenciosamente no meio.
-   - NÃO pare até a última linha de compras. É PROIBIDO parar após 10 ou 15 lançamentos se houver mais linhas no texto.
-   - Nunca omita linhas de transações por resumo, cansaço ou limite de amostragem.
-   - Cada compra, parcela ou estorno individual DEVE virar um objeto no array "transactions".
+REGRAS CRÍTICAS DE EXTRAÇÃO UNIVERSAL:
 
-2. O QUE EXTRAIR:
-   - Todas as compras de bens e serviços nacionais e internacionais (ex: "UBER", "IFOOD", "MERCADO LIVRE", "DROGASIL", "NETFLIX", "POSTO", "CARREFOUR", "PAG*...", compras físicas e online).
-   - Compras parceladas (identificar o sufixo ou padrão de parcela, ex: "02/10", "3/12").
-   - Estornos e reembolsos reais (marcar amountCents com o valor positivo e type="income").
+1. SUPORTE A MÚLTIPLOS CARTÕES E SEÇÕES (CASO RICO/XP E ADICIONAIS - CRÍTICO):
+   - Uma fatura pode conter compras divididas por múltiplos cartões (ex.: Titular final 4949 e Adicional final 010).
+   - A existência de subtotais parciais (ex.: "Subtotal Cartão final 4949: R$ 3.221,84", "Total deste cartão", "Subtotal do cartão") NUNCA ENCERRA A LEITURA. É PROIBIDO parar a leitura após um subtotal ou após o primeiro cartão! Extraia todas as compras de todos os blocos e de todos os cartões até o fim absoluto do texto.
+   - No caso específico de páginas com pagamentos anteriores (ex.: "Pagamento de fatura -5.443,36", "Pagamento recebido -R$ 1.500,00"), descarte APENAS a linha do pagamento, mantendo rigorosamente TODAS as compras legítimas daquela página. O pagamento NUNCA encerra ou interrompe a leitura da página.
 
-3. O QUE DESCARTAR ABSOLUTAMENTE (NÃO SÃO COMPRAS NEM DESPESAS DO MÊS):
-   - Pagamentos da fatura anterior e quitações: linhas como "Pagamento recebido em…", "Pagamento de fatura", "Pagamento efetuado", "Pagamento de título", "Pagamento mínimo", "Pagamento parcial", "Pagto fatura", "Aut. Pagto", "Quitação de fatura". Elas NÃO são despesas novas do mês, representam quitação de fatura passada e DEVEM SER COMPLETAMENTE DESCARTADAS.
-   - Cabeçalhos e rodapés institucionais, dados do titular, agência, conta, CNPJ/CPF, endereços e CEP.
-   - Telefones, SAC, WhatsApp, Ouvidoria (ex: "0800", "3003", "4004").
-   - Limites de crédito (ex: "Limite Total", "Limite Disponível", "Limite Utilizado", "Limite de Saque").
-   - Tabelas de cotação de dólar ou pontos de fidelidade.
+2. TRATAMENTO UNIVERSAL DE MOEDA E CÂMBIO (NUBANK, C6, ITAÚ, INTER, SANTANDER):
+   - Em compras internacionais, o extrato costuma exibir a cotação, a linha informativa em moeda estrangeira (ex.: "USD 12.50", "US$ 15,00", "EUR 8,00") e a linha convertida em Reais (BRL, ex.: "R$ 72,40").
+   - Capture APENAS o valor final convertido em Reais (BRL) que compõe o saldo devido da fatura.
+   - IGNORE as linhas informativas em dólar/euro (US$, USD, EUR) para NÃO duplicar lançamentos. Nunca gere dois lançamentos para a mesma compra internacional.
+
+3. DESCARTE ESTRITO DE NÃO-DESPESAS:
+   - Descarte automaticamente:
+     a) Pagamentos de fatura recebidos / quitações passadas ("Pagamento de fatura", "Pagamento recebido", "Pagto efetuado", "Aut. Pagto", "Quitação").
+     b) Limites totais, limites disponíveis, limites utilizados, limites de saque.
+     c) Resumos de saldo financiado, crédito rotativo, juros futuros e encargos projetados.
+     d) Opções de parcelamento de fatura futura ("Parcele sua fatura em 12x", "Entrada + parcelas").
+     e) Tabelas de juros, CET mensal/anual, cotações informativas de dólar e saldo de pontos/milhas.
+   - CAPTURE:
+     a) Compras legítimas de bens e serviços nacionais e internacionais.
+     b) Compras parceladas, identificando explicitamente o padrão de parcela (ex.: "01/03", "2/12", "03/10", "PARC 02/06").
+     c) Estornos e reembolsos reais (marcar amountCents com o valor positivo do estorno e type="income").
 
 4. TOTAL DECLARADO DA FATURA ("declaredTotalCents"):
-   - Se o trecho contiver o resumo/cabeçalho da fatura indicando o total a pagar da fatura (ex: "Total da fatura R$ 1.250,50", "Valor total da fatura: 1.250,50", "Total desta fatura: R$ 850,00", "Total a pagar: R$ ..."), capture esse valor em centavos (número inteiro positivo) na propriedade "declaredTotalCents".
-   - Se este trecho NÃO contiver o total geral declarado da fatura (por exemplo, página do meio com apenas lançamentos), retorne null para "declaredTotalCents".
+   - Se o trecho contiver o cabeçalho ou resumo geral com o VALOR TOTAL DEVIDO DA FATURA (ex.: "Total a pagar: R$ 4.549,91", "Valor total da fatura: R$ 4.549,91", "Total desta fatura: R$ 4.549,91", "Saldo atual: R$ ..."), capture esse valor total geral consolidado em centavos (número inteiro positivo) na propriedade "declaredTotalCents".
+   - ATENÇÃO: NÃO confunda subtotais parciais de cartões individuais (ex.: "Subtotal cartão 4949: R$ 3.221,84") com o total geral da fatura. Declare apenas o total geral consolidado da fatura inteira. Se a página contiver apenas subtotais parciais ou for página intermediária sem o total geral da fatura, retorne null para "declaredTotalCents".
 
-5. EXEMPLO FEW-SHOT DE EXTRAÇÃO E DESCARTE CORRETO:
+5. EXEMPLO FEW-SHOT DE FATURA MULTI-CARTÃO E CÂMBIO:
    Texto de entrada:
    """
-   03/02 PAGAMENTO RECEBIDO EM 03/02/2025 -R$ 1.500,00
-   05/02 DROGASIL SAO PAULO 01/03 R$ 89,90
-   07/02 UBER *TRIP SAO PAULO R$ 24,50
-   Total da fatura: R$ 114,40
+   BANCO RICO / XP INVESTIMENTOS
+   Total da Fatura: R$ 4.549,91   Vencimento: 10/03/2025
+   Limite Total: R$ 20.000,00     Limite Disponível: R$ 15.450,09
+
+   Lançamentos Cartão Final 4949 (Titular)
+   02/02 PAGAMENTO DE FATURA -5.443,36
+   05/02 AMAZON.COM.BR 01/03 R$ 300,00
+   08/02 SPOTIFY US$ 4.00
+   08/02 SPOTIFY (Câmbio 5,50 + IOF) R$ 23,20
+   10/02 POSTO SHELL R$ 150,00
+   Subtotal Cartão 4949: R$ 473,20
+
+   Lançamentos Cartão Final 010 (Adicional)
+   12/02 DROGASIL 2/12 R$ 85,50
+   14/02 ESTORNO COMPRA CANCELADA -R$ 45,00
+   Subtotal Cartão 010: R$ 40,50
+   Opções de Parcelamento de Fatura: Em até 24x de R$ 280,00
    """
+
    Saída JSON esperada:
    {
-     "declaredTotalCents": 11440,
+     "declaredTotalCents": 454991,
      "transactions": [
        {
          "date": "2025-02-05",
-         "description": "DROGASIL SAO PAULO 01/03",
-         "cleanMerchant": "Drogasil",
-         "amountCents": 8990,
+         "description": "AMAZON.COM.BR 01/03",
+         "cleanMerchant": "Amazon",
+         "amountCents": 30000,
          "type": "expense",
          "installment": "01/03",
-         "categoryId": "UUID_SAUDE",
+         "categoryId": "UUID_LIFESTYLE",
          "subcategoryId": null,
          "confidence": 0.95
        },
        {
-         "date": "2025-02-07",
-         "description": "UBER *TRIP SAO PAULO",
-         "cleanMerchant": "Uber",
-         "amountCents": 2450,
+         "date": "2025-02-08",
+         "description": "SPOTIFY (Câmbio 5,50 + IOF)",
+         "cleanMerchant": "Spotify",
+         "amountCents": 2320,
+         "type": "expense",
+         "installment": null,
+         "categoryId": "UUID_LIFESTYLE",
+         "subcategoryId": null,
+         "confidence": 0.95
+       },
+       {
+         "date": "2025-02-10",
+         "description": "POSTO SHELL",
+         "cleanMerchant": "Posto Shell",
+         "amountCents": 15000,
          "type": "expense",
          "installment": null,
          "categoryId": "UUID_TRANSPORTE",
          "subcategoryId": null,
          "confidence": 0.95
+       },
+       {
+         "date": "2025-02-12",
+         "description": "DROGASIL 2/12",
+         "cleanMerchant": "Drogasil",
+         "amountCents": 8550,
+         "type": "expense",
+         "installment": "2/12",
+         "categoryId": "UUID_SAUDE",
+         "subcategoryId": null,
+         "confidence": 0.95
+       },
+       {
+         "date": "2025-02-14",
+         "description": "ESTORNO COMPRA CANCELADA",
+         "cleanMerchant": "Estorno Compra Cancelada",
+         "amountCents": 4500,
+         "type": "income",
+         "installment": null,
+         "categoryId": "UUID_LIFESTYLE",
+         "subcategoryId": null,
+         "confidence": 0.90
        }
      ]
    }
-   (Observe que a linha "PAGAMENTO RECEBIDO EM..." FOI CORRETAMENTE DESCARTADA e NÃO apareceu no array transactions!).
+   (A linha "PAGAMENTO DE FATURA -5.443,36" foi descartada mas as compras da página continuaram; a linha em US$ 4.00 foi ignorada e apenas a linha em BRL de R$ 23,20 virou lançamento; os subtotais parciais NÃO interromperam a leitura do cartão adicional; o total geral de 4.549,91 foi capturado sem confusão com os subtotais parciais).
 
 6. PADRONIZAÇÃO DOS DADOS DE CADA TRANSAÇÃO:
    - "date": string no formato ISO "AAAA-MM-DD" (se o ano não constar explicitamente no lançamento, use o ano da fatura indicado no texto ou ${currentYear}).
-   - "description": descrição original completa encontrada no extrato (incluindo parcelas se houver).
-   - "cleanMerchant": nome limpo e legível do estabelecimento comercial sem intermediários ruidosos ou parcelas.
+   - "description": descrição original completa encontrada no extrato (incluindo sufixos de parcela se houver).
+   - "cleanMerchant": nome legível do estabelecimento sem parcelas ou intermediários ruidosos.
    - "amountCents": número inteiro positivo em centavos (ex: R$ 45,90 vira 4590; R$ 1.250,00 vira 125000). NUNCA usar decimais.
-   - "type": "expense" para compras (padrão de cartão) ou "income" para estornos/créditos.
-   - "installment": string com a parcela quando houver (ex: "02/10", "1/3") ou null se for compra à vista.
+   - "type": "expense" para compras normais ou "income" para estornos e reembolsos.
+   - "installment": string com a parcela identificada (ex: "01/03", "2/12", "03/10") ou null se à vista.
    - "categoryId": ID UUID exato da categoria selecionada no catálogo da família acima.
    - "subcategoryId": ID UUID da subcategoria do catálogo, ou null se nenhuma for aplicável.
    - "confidence": número entre 0.0 e 1.0 indicando a certeza da classificação.
 
 RETORNO ESTRITAMENTE OBRIGATÓRIO:
-Você DEVE responder exclusivamente com um objeto JSON válido (response_format: json_object) com as chaves "declaredTotalCents" (número em centavos ou null) e "transactions" (array de itens):
+Você DEVE responder exclusivamente com um objeto JSON válido (response_format: json_object) com as chaves "declaredTotalCents" (número inteiro em centavos ou null) e "transactions" (array de itens):
 {
-  "declaredTotalCents": 125050,
+  "declaredTotalCents": 454991,
   "transactions": [ ... ]
 }`
 
@@ -316,10 +368,16 @@ ${rawText.slice(0, 100000)}
 --- FIM DO TEXTO ---
 
 Instruções cruciais:
-1. Percorra o texto até o fim, não pare antes da última linha da última página; se houver limite, extraia o máximo e sinalize. Extraia TODOS os lançamentos sem exceção e sem truncamento — nunca pare após 10-15 itens se houver mais linhas de compra no texto.
-2. Se houver total geral declarado da fatura no texto (ex: "Total desta fatura", "Total a pagar", "Total da fatura"), capture em declaredTotalCents (número inteiro positivo em centavos), senão retorne null.
-3. Descarte pagamentos anteriores de fatura (ex: "Pagamento recebido em...", "Pagamento de fatura", "Pagamento efetuado"), pois são quitações anteriores e não despesas novas.
-4. Classifique cada transação usando IDs válidos do catálogo familiar.`
+1. PERCORRA O TEXTO ATÉ O FIM ABSOLUTO:
+   - Se houver múltiplos cartões (ex.: Titular e Adicional), subtotais parciais NÃO encerram a leitura. Extraia todas as compras de todos os blocos até a última linha.
+   - Se houver linha de pagamento anterior (ex.: "Pagamento de fatura -5.443,36"), descarte APENAS essa linha de pagamento, mantendo todas as compras legítimas daquela página.
+2. CÂMBIO E MOEDA:
+   - Em compras internacionais (Nubank, C6, Itaú, etc.), capture APENAS o valor final convertido em Reais (BRL). Ignore as linhas em dólar (US$) para não duplicar lançamentos.
+3. DESCARTE DE NÃO-DESPESAS:
+   - Descarte quitações passadas, limites de crédito, parcelamentos de fatura futura e encargos rotativos informativos. Capture compras, parcelas (ex.: "01/03", "2/12") e estornos com type="income".
+4. TOTAL GERAL DECLARADO:
+   - Capture o total geral devido da fatura inteira em declaredTotalCents (número inteiro positivo em centavos). Não use subtotais de cartões individuais para esse campo. Se não contiver o total geral da fatura, retorne null.
+5. Classifique cada transação usando IDs válidos do catálogo familiar.`
       const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {

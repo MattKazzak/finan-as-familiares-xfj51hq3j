@@ -1113,28 +1113,38 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
   }, [items])
 
   // Validação de fechamento da fatura:
-  // Compara a soma dos lançamentos de despesas (saídas) com o total declarado pela fatura.
-  // Tolerância pequena de arredondamento: ±R$ 0,05 (5 centavos).
+  // Compara a soma líquida de todas as compras e estornos extraídos de todos os blocos/cartões
+  // com o valor total devido da fatura declarado no cabeçalho.
+  // Em faturas com estornos reais (type='income' e não marcados como quitação), o total devido da fatura
+  // é despesas menos estornos (ou a soma de despesas se não houver estornos).
+  // Tolerância de fechamento: ±R$ 0,05 (5 centavos).
   const closingValidation = useMemo(() => {
     if (!declaredTotalCents || declaredTotalCents <= 0) {
       return null
     }
 
-    // Soma das saídas (despesas não estornadas) de todos os itens reais extraídos
-    // (itens não marcados como isNonExpense)
-    const expensesSum = items
-      .filter((i) => i.type === 'expense' && !i.isNonExpense)
-      .reduce((acc, curr) => acc + curr.amount_cents, 0)
+    // Itens legítimos do mês (excluindo linhas de quitação de fatura/limites marcadas como isNonExpense)
+    const validExpenseItems = items.filter((i) => i.type === 'expense' && !i.isNonExpense)
+    const validIncomeReversals = items.filter((i) => i.type === 'income' && !i.isNonExpense)
 
-    const diffCents = Math.abs(expensesSum - declaredTotalCents)
+    const expensesSum = validExpenseItems.reduce((acc, curr) => acc + curr.amount_cents, 0)
+    const reversalsSum = validIncomeReversals.reduce((acc, curr) => acc + curr.amount_cents, 0)
+
+    // Saldo líquido devido: despesas menos estornos legítimos
+    const netSum = expensesSum - reversalsSum
+
+    // Avalia fechamento tanto pelo líquido (quando há estornos legítimos) quanto pela soma bruta de despesas
+    const diffNet = Math.abs(netSum - declaredTotalCents)
+    const diffGross = Math.abs(expensesSum - declaredTotalCents)
+    const diffCents = Math.min(diffNet, diffGross)
     const matches = diffCents <= 5 // tolerância de ±5 centavos (R$ 0,05)
 
     return {
       declaredTotalCents,
-      expensesSumCents: expensesSum,
+      expensesSumCents: diffNet < diffGross && reversalsSum > 0 ? netSum : expensesSum,
       diffCents,
       matches,
-      itemCount: items.filter((i) => i.type === 'expense' && !i.isNonExpense).length,
+      itemCount: validExpenseItems.length + validIncomeReversals.length,
     }
   }, [items, declaredTotalCents])
 
