@@ -95,14 +95,44 @@ vi.mock('@/services/recurring-incomes', () => ({
   processAutoRecurringIncomes: vi.fn(() => Promise.resolve()),
 }))
 
-describe('Home Page - Card Orçamento em 3 Baldes (50/30/20)', () => {
+describe('Home Page - Card Orçamento em 3 Baldes', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockFamily = {
       id: 'fam-1',
       name: 'Silva',
       monthly_net_income_cents: 600000,
+      budget_model: '50_30_20',
     }
+    // Mock padrão de orçamentos (50% = 3.000, 30% = 1.800, 20% = 1.200)
+    vi.mocked(transactionsService.fetchDefaultBudgets).mockResolvedValue([
+      {
+        id: 'bg-1',
+        family_id: 'fam-1',
+        category_id: 'cat-1',
+        subcategory_id: null,
+        amount_cents: 300000,
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'bg-2',
+        family_id: 'fam-1',
+        category_id: 'cat-2',
+        subcategory_id: null,
+        amount_cents: 180000,
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'bg-3',
+        family_id: 'fam-1',
+        category_id: 'cat-3',
+        subcategory_id: null,
+        amount_cents: 120000,
+        created_at: new Date().toISOString(),
+      },
+    ])
+    vi.mocked(transactionsService.fetchMonthBudgetOverrides).mockResolvedValue([])
+    vi.mocked(transactionsService.fetchTransactions).mockResolvedValue(mockTransactions)
   })
 
   it('renderiza o título "Orçamento em 3 Baldes" e remove o antigo "Orçamento do Mês"', async () => {
@@ -112,32 +142,134 @@ describe('Home Page - Card Orçamento em 3 Baldes (50/30/20)', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText('Orçamento em 3 Baldes')).toBeDefined()
-    expect(screen.getByText('Modelo 50 / 30 / 20')).toBeDefined()
+    await waitFor(() => {
+      expect(screen.getByText('Orçamento em 3 Baldes')).toBeDefined()
+    })
+    expect(screen.getByText(/50 \/ 30 \/ 20/)).toBeDefined()
     expect(screen.queryByText('Orçamento do Mês')).toBeNull()
   })
 
-  it('exibe os 3 baldes simplificados com seus rótulos, percentuais e valores restantes calculados', async () => {
+  it('exibe os 3 baldes simplificados com seus rótulos, percentuais e valores restantes calculados a partir dos tetos reais', async () => {
     render(
       <MemoryRouter>
         <Home />
       </MemoryRouter>,
     )
 
-    // Necessidades (50% de 6.000 = 3.000, gasto 1.500 -> resta 1.500)
-    expect(screen.getByText('Necessidades')).toBeDefined()
+    await waitFor(() => {
+      expect(screen.getByText('Necessidades')).toBeDefined()
+    })
+
+    // Necessidades (3.000 / 6.000 = 50%, gasto 1.500 -> resta 1.500)
     expect(screen.getByText('(50%)')).toBeDefined()
     expect(screen.getByText(/resta R\$\s*1\.500,00/i)).toBeDefined()
 
-    // Estilo de Vida (30% de 6.000 = 1.800, gasto 600 -> resta 1.200)
+    // Estilo de Vida (1.800 / 6.000 = 30%, gasto 600 -> resta 1.200)
     expect(screen.getByText('Estilo de Vida')).toBeDefined()
     expect(screen.getByText('(30%)')).toBeDefined()
     expect(screen.getByText(/resta R\$\s*1\.200,00/i)).toBeDefined()
 
-    // Futuro & Metas (20% de 6.000 = 1.200, gasto 400 -> resta 800)
+    // Futuro & Metas (1.200 / 6.000 = 20%, gasto 400 -> resta 800)
     expect(screen.getByText('Futuro & Metas')).toBeDefined()
     expect(screen.getByText('(20%)')).toBeDefined()
     expect(screen.getByText(/resta R\$\s*800,00/i)).toBeDefined()
+  })
+
+  it('exibe percentuais dinâmicos e rótulo do modelo personalizado (ex: 60/25/15) a partir dos tetos reais', async () => {
+    mockFamily = {
+      id: 'fam-1',
+      name: 'Silva',
+      monthly_net_income_cents: 1000000, // R$ 10.000,00
+      budget_model: '60_25_15',
+    }
+
+    // Tetos reais: 60% (6.000), 25% (2.500), 15% (1.500)
+    vi.mocked(transactionsService.fetchDefaultBudgets).mockResolvedValue([
+      {
+        id: 'bg-1',
+        family_id: 'fam-1',
+        category_id: 'cat-1',
+        subcategory_id: null,
+        amount_cents: 600000,
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'bg-2',
+        family_id: 'fam-1',
+        category_id: 'cat-2',
+        subcategory_id: null,
+        amount_cents: 250000,
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'bg-3',
+        family_id: 'fam-1',
+        category_id: 'cat-3',
+        subcategory_id: null,
+        amount_cents: 150000,
+        created_at: new Date().toISOString(),
+      },
+    ])
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Modelo 60 / 25 / 15')).toBeDefined()
+    })
+
+    // Percentuais dinâmicos derivados dos tetos reais sobre os R$ 10.000 de renda
+    expect(screen.getByText('(60%)')).toBeDefined()
+    expect(screen.getByText('(25%)')).toBeDefined()
+    expect(screen.getByText('(15%)')).toBeDefined()
+  })
+
+  it('respeita overrides pontuais do mês corrente nos tetos dos baldes', async () => {
+    mockFamily = {
+      id: 'fam-1',
+      name: 'Silva',
+      monthly_net_income_cents: 1000000, // R$ 10.000
+      budget_model: '50_30_20',
+    }
+
+    // Default: cat-1 = 4.000 (40%)
+    vi.mocked(transactionsService.fetchDefaultBudgets).mockResolvedValue([
+      {
+        id: 'bg-1',
+        family_id: 'fam-1',
+        category_id: 'cat-1',
+        subcategory_id: null,
+        amount_cents: 400000,
+        created_at: new Date().toISOString(),
+      },
+    ])
+    // Override deste mês: cat-1 subiu para 5.500 (55%)
+    const currentMonth = new Date().toISOString().slice(0, 7)
+    vi.mocked(transactionsService.fetchMonthBudgetOverrides).mockResolvedValue([
+      {
+        id: 'ov-1',
+        family_id: 'fam-1',
+        category_id: 'cat-1',
+        subcategory_id: null,
+        month: currentMonth,
+        amount_cents: 550000,
+        created_at: new Date().toISOString(),
+      },
+    ])
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => {
+      // 5.500 / 10.000 = 55%
+      expect(screen.getByText('(55%)')).toBeDefined()
+    })
   })
 
   it('exibe o mês de referência no cabeçalho e não exibe o número herói safe-to-spend', async () => {
@@ -147,8 +279,12 @@ describe('Home Page - Card Orçamento em 3 Baldes (50/30/20)', () => {
       </MemoryRouter>,
     )
 
+    await waitFor(() => {
+      expect(screen.getByText('Orçamento em 3 Baldes')).toBeDefined()
+    })
+
     // O cabeçalho deve exibir o modelo e o mês de referência formatado
-    expect(screen.getByText('Modelo 50 / 30 / 20')).toBeDefined()
+    expect(screen.getByText(/50 \/ 30 \/ 20/)).toBeDefined()
     // O herói "Livre para gastar este mês" foi completamente removido
     expect(screen.queryByText(/Livre para gastar este mês/i)).toBeNull()
     expect(screen.queryByText(/Atenção/i)).toBeNull()

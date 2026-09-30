@@ -165,6 +165,7 @@ export type Database = {
       families: {
         Row: {
           avatar_url: string | null
+          budget_model: string | null
           created_at: string
           created_by: string | null
           id: string
@@ -173,6 +174,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          budget_model?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -181,6 +183,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          budget_model?: string | null
           created_at?: string
           created_by?: string | null
           id?: string

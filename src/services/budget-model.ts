@@ -1,7 +1,7 @@
 import { TransactionCategory } from '@/types/finance'
 import { BUDGET_PRESETS, matchCategoryToPresetKey } from '@/types/budget-presets'
 import { upsertDefaultBudget } from '@/services/transactions'
-import { updateCategory } from '@/services/family'
+import { updateCategory, updateFamilyDetails } from '@/services/family'
 
 export interface ApplyPresetResult {
   appliedCount: number

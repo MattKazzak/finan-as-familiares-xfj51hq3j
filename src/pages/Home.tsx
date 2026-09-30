@@ -1,7 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFamily } from '@/hooks/use-family'
-import { fetchTransactions } from '@/services/transactions'
+import {
+  fetchTransactions,
+  fetchDefaultBudgets,
+  fetchMonthBudgetOverrides,
+} from '@/services/transactions'
 import { processAutoRecurringIncomes } from '@/services/recurring-incomes'
 import {
   formatBRL,
@@ -17,7 +21,8 @@ import { NewTransactionDialog } from '@/components/transactions/NewTransactionDi
 import { formatTransactionTitle, groupInstallmentTransactions } from '@/services/installments'
 import { deleteTransaction } from '@/services/transactions'
 import { useToast } from '@/hooks/use-toast'
-import type { Transaction } from '@/types/finance'
+import type { Transaction, DefaultBudget, Budget } from '@/types/finance'
+import { BUDGET_PRESET_ITEMS } from '@/types/budget-presets'
 import {
   TrendingUp,
   TrendingDown,
@@ -52,6 +57,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [defaultBudgets, setDefaultBudgets] = useState<DefaultBudget[]>([])
+  const [monthOverrides, setMonthOverrides] = useState<Budget[]>([])
 
   // Diálogo de detalhe e edição
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null)
@@ -77,11 +84,17 @@ export default function Home() {
         console.warn('Erro ao auto-lançar receitas fixas no Início:', autoErr)
       }
 
-      const allTx = await fetchTransactions({
-        familyId: family.id,
-        memberId: selectedMemberId,
-      })
+      const [allTx, defBgs, overrides] = await Promise.all([
+        fetchTransactions({
+          familyId: family.id,
+          memberId: selectedMemberId,
+        }),
+        fetchDefaultBudgets(family.id),
+        fetchMonthBudgetOverrides(family.id, currentMonthStr),
+      ])
       setTransactions(allTx)
+      setDefaultBudgets(defBgs)
+      setMonthOverrides(overrides)
     } catch (err: any) {
       console.error('Erro ao carregar dados do início:', err)
       toast({
@@ -187,73 +200,181 @@ export default function Home() {
     return map
   }, [categories])
 
-  // Agregação dos 3 Baldes (Necessidades 50%, Estilo de Vida 30%, Futuro 20%)
+  // Rótulo amigável do modelo de orçamento (lido de family.budget_model com fallback)
+  const budgetModelLabel = useMemo(() => {
+    const modelId = family?.budget_model
+    if (modelId) {
+      const found = BUDGET_PRESET_ITEMS.find((item) => item.id === modelId)
+      if (found) {
+        return found.name
+      }
+      // Variações conhecidas adicionais (ex.: 60_25_15)
+      if (modelId === '60_25_15') {
+        return 'Modelo 60 / 25 / 15'
+      }
+    }
+    return 'Modelo 50 / 30 / 20'
+  }, [family?.budget_model])
+
+  // Agregação dos 3 Baldes com TETOS REAIS (mesma fonte e cálculo da aba Orçamentos / Wallet.tsx)
   const bucketsData = useMemo(() => {
     const netIncomeCents = family?.monthly_net_income_cents || 0
 
-    // Tetos sugeridos do modelo padrão 50/30/20 sobre a renda líquida
-    // Se renda não estiver configurada, degrada com elegância para 0
-    const suggestedLimits = {
-      essentials: Math.round((netIncomeCents * 50) / 100),
-      lifestyle: Math.round((netIncomeCents * 30) / 100),
-      future: Math.round((netIncomeCents * 20) / 100),
-    }
+    // 1. Mapeamento de orçamentos padrão e overrides por categoria e subcategoria
+    const defCatBudgetMap: Record<string, DefaultBudget> = {}
+    const defSubBudgetMap: Record<string, DefaultBudget> = {}
+    defaultBudgets.forEach((b) => {
+      if (b.subcategory_id) {
+        defSubBudgetMap[b.subcategory_id] = b
+      } else {
+        defCatBudgetMap[b.category_id] = b
+      }
+    })
 
-    // Soma dos gastos do mês corrente agregados por cada bucket a partir das transações ativas de despesa
-    let spentEssentials = 0
-    let spentLifestyle = 0
-    let spentFuture = 0
+    const overrideCatBudgetMap: Record<string, Budget> = {}
+    const overrideSubBudgetMap: Record<string, Budget> = {}
+    monthOverrides.forEach((b) => {
+      if (b.subcategory_id) {
+        overrideSubBudgetMap[b.subcategory_id] = b
+      } else {
+        overrideCatBudgetMap[b.category_id] = b
+      }
+    })
 
+    // 2. Gastos por categoria das despesas no mês corrente
+    const catSpentMap: Record<string, number> = {}
     transactions.forEach((tx) => {
       if (tx.type === 'expense' && tx.transaction_date.slice(0, 7) === currentMonthStr) {
-        const bucket = tx.category_id
-          ? categoryBucketMap.get(tx.category_id) || 'lifestyle'
-          : 'lifestyle'
-        if (bucket === 'essentials') {
-          spentEssentials += tx.amount_cents
-        } else if (bucket === 'future') {
-          spentFuture += tx.amount_cents
-        } else {
-          spentLifestyle += tx.amount_cents
+        if (tx.category_id) {
+          catSpentMap[tx.category_id] = (catSpentMap[tx.category_id] || 0) + tx.amount_cents
         }
       }
     })
 
-    // Percentuais de consumo (ou 0 se teto for 0)
-    const essentialsPercent =
-      suggestedLimits.essentials > 0
-        ? Math.round((spentEssentials / suggestedLimits.essentials) * 100)
+    // 3. Totais por balde (budgetCents e spentCents)
+    const bucketsSummary = {
+      essentials: { budgetCents: 0, spentCents: 0 },
+      lifestyle: { budgetCents: 0, spentCents: 0 },
+      future: { budgetCents: 0, spentCents: 0 },
+    }
+
+    const expenseCategories = categories.filter((c) => c.type === 'expense')
+
+    expenseCategories.forEach((cat) => {
+      // Subcategorias
+      const subcats = cat.subcategories || []
+      const subcatsLimitSum = subcats.reduce((acc, sub) => {
+        const subOverride = overrideSubBudgetMap[sub.id]
+        const subDefault = defSubBudgetMap[sub.id]
+        const limit = subOverride
+          ? subOverride.amount_cents
+          : subDefault
+            ? subDefault.amount_cents
+            : 0
+        return acc + limit
+      }, 0)
+
+      const catOverride = overrideCatBudgetMap[cat.id]
+      const catDefault = defCatBudgetMap[cat.id]
+      const explicitLimitCents = catOverride
+        ? catOverride.amount_cents
+        : catDefault
+          ? catDefault.amount_cents
+          : 0
+
+      // Quando a categoria possui tetos definidos nas subcategorias, usa a soma delas; senão, o pai
+      const limitCents = subcatsLimitSum > 0 ? subcatsLimitSum : explicitLimitCents
+      const spentCents = catSpentMap[cat.id] || 0
+
+      const bucket = categoryBucketMap.get(cat.id) || 'lifestyle'
+      bucketsSummary[bucket].budgetCents += limitCents
+      bucketsSummary[bucket].spentCents += spentCents
+    })
+
+    // Também inclui despesas sem categoria no balde lifestyle
+    transactions.forEach((tx) => {
+      if (
+        tx.type === 'expense' &&
+        tx.transaction_date.slice(0, 7) === currentMonthStr &&
+        !tx.category_id
+      ) {
+        bucketsSummary.lifestyle.spentCents += tx.amount_cents
+      }
+    })
+
+    // Percentuais DINÂMICOS sobre a renda líquida: Math.round((tetoDoBalde / rendaLiquidaTotal) * 100)
+    // Se renda líquida for 0/ausente, percentModel fica null ou omitido graciosamente (sem NaN/Infinity)
+    const essentialsIncomePct =
+      netIncomeCents > 0
+        ? Math.round((bucketsSummary.essentials.budgetCents / netIncomeCents) * 100)
+        : null
+    const lifestyleIncomePct =
+      netIncomeCents > 0
+        ? Math.round((bucketsSummary.lifestyle.budgetCents / netIncomeCents) * 100)
+        : null
+    const futureIncomePct =
+      netIncomeCents > 0
+        ? Math.round((bucketsSummary.future.budgetCents / netIncomeCents) * 100)
+        : null
+
+    // Percentuais de consumo (spent / limit)
+    const essentialsConsumptionPct =
+      bucketsSummary.essentials.budgetCents > 0
+        ? Math.round(
+            (bucketsSummary.essentials.spentCents / bucketsSummary.essentials.budgetCents) * 100,
+          )
         : 0
-    const lifestylePercent =
-      suggestedLimits.lifestyle > 0
-        ? Math.round((spentLifestyle / suggestedLimits.lifestyle) * 100)
+    const lifestyleConsumptionPct =
+      bucketsSummary.lifestyle.budgetCents > 0
+        ? Math.round(
+            (bucketsSummary.lifestyle.spentCents / bucketsSummary.lifestyle.budgetCents) * 100,
+          )
         : 0
-    const futurePercent =
-      suggestedLimits.future > 0 ? Math.round((spentFuture / suggestedLimits.future) * 100) : 0
+    const futureConsumptionPct =
+      bucketsSummary.future.budgetCents > 0
+        ? Math.round((bucketsSummary.future.spentCents / bucketsSummary.future.budgetCents) * 100)
+        : 0
 
     return {
       netIncomeCents,
       hasIncomeConfigured: netIncomeCents > 0,
       essentials: {
-        spentCents: spentEssentials,
-        limitCents: suggestedLimits.essentials,
-        percent: essentialsPercent,
-        isOver: spentEssentials > suggestedLimits.essentials && suggestedLimits.essentials > 0,
+        spentCents: bucketsSummary.essentials.spentCents,
+        limitCents: bucketsSummary.essentials.budgetCents,
+        percent: essentialsConsumptionPct,
+        percentIncome: essentialsIncomePct,
+        isOver:
+          bucketsSummary.essentials.spentCents > bucketsSummary.essentials.budgetCents &&
+          bucketsSummary.essentials.budgetCents > 0,
       },
       lifestyle: {
-        spentCents: spentLifestyle,
-        limitCents: suggestedLimits.lifestyle,
-        percent: lifestylePercent,
-        isOver: spentLifestyle > suggestedLimits.lifestyle && suggestedLimits.lifestyle > 0,
+        spentCents: bucketsSummary.lifestyle.spentCents,
+        limitCents: bucketsSummary.lifestyle.budgetCents,
+        percent: lifestyleConsumptionPct,
+        percentIncome: lifestyleIncomePct,
+        isOver:
+          bucketsSummary.lifestyle.spentCents > bucketsSummary.lifestyle.budgetCents &&
+          bucketsSummary.lifestyle.budgetCents > 0,
       },
       future: {
-        spentCents: spentFuture,
-        limitCents: suggestedLimits.future,
-        percent: futurePercent,
-        isOver: spentFuture > suggestedLimits.future && suggestedLimits.future > 0,
+        spentCents: bucketsSummary.future.spentCents,
+        limitCents: bucketsSummary.future.budgetCents,
+        percent: futureConsumptionPct,
+        percentIncome: futureIncomePct,
+        isOver:
+          bucketsSummary.future.spentCents > bucketsSummary.future.budgetCents &&
+          bucketsSummary.future.budgetCents > 0,
       },
     }
-  }, [family?.monthly_net_income_cents, transactions, currentMonthStr, categoryBucketMap])
+  }, [
+    family?.monthly_net_income_cents,
+    transactions,
+    currentMonthStr,
+    categoryBucketMap,
+    categories,
+    defaultBudgets,
+    monthOverrides,
+  ])
 
   // Transações recentes agrupadas estilo banco (compras parceladas agrupadas em linha única)
   const recentItems = useMemo(() => {
@@ -525,7 +646,7 @@ export default function Home() {
                   </h3>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="text-[10px] text-slate-400 font-medium block">
-                      Modelo 50 / 30 / 20
+                      {budgetModelLabel}
                     </span>
                     <span className="text-[10px] text-slate-300 font-normal select-none">·</span>
                     <span className="text-[10px] text-emerald-700 font-semibold break-words">
@@ -543,7 +664,7 @@ export default function Home() {
                   key: 'essentials',
                   name: 'Necessidades',
                   emoji: '🛡️',
-                  percentModel: '50%',
+                  percentIncome: bucketsData.essentials.percentIncome,
                   spent: bucketsData.essentials.spentCents,
                   limit: bucketsData.essentials.limitCents,
                   percent: bucketsData.essentials.percent,
@@ -554,7 +675,7 @@ export default function Home() {
                   key: 'lifestyle',
                   name: 'Estilo de Vida',
                   emoji: '🏖️',
-                  percentModel: '30%',
+                  percentIncome: bucketsData.lifestyle.percentIncome,
                   spent: bucketsData.lifestyle.spentCents,
                   limit: bucketsData.lifestyle.limitCents,
                   percent: bucketsData.lifestyle.percent,
@@ -565,7 +686,7 @@ export default function Home() {
                   key: 'future',
                   name: 'Futuro & Metas',
                   emoji: '🎯',
-                  percentModel: '20%',
+                  percentIncome: bucketsData.future.percentIncome,
                   spent: bucketsData.future.spentCents,
                   limit: bucketsData.future.limitCents,
                   percent: bucketsData.future.percent,
@@ -579,19 +700,21 @@ export default function Home() {
 
                 return (
                   <div key={bucket.key} className="space-y-1.5">
-                    {/* Linha topo do balde: Nome completo + % do modelo à esquerda | Valor restante à direita */}
+                    {/* Linha topo do balde: Nome completo + % dinâmico do modelo à esquerda | Valor restante à direita */}
                     <div className="flex items-baseline justify-between gap-2 min-w-0">
                       <span className="font-semibold text-slate-800 text-xs flex items-center gap-1.5 min-w-0">
                         <span className="shrink-0">{bucket.emoji}</span>
                         <span className="font-bold break-words">{bucket.name}</span>
-                        <span className="text-[10px] text-slate-400 font-medium shrink-0">
-                          ({bucket.percentModel})
-                        </span>
+                        {bucket.percentIncome !== null && (
+                          <span className="text-[10px] text-slate-400 font-medium shrink-0">
+                            ({bucket.percentIncome}%)
+                          </span>
+                        )}
                       </span>
 
                       {/* Figura única de saldo restante / estourado / intacto */}
                       <span className="text-right shrink-0 tabular-nums">
-                        {bucketsData.hasIncomeConfigured ? (
+                        {bucket.limit > 0 ? (
                           isOver ? (
                             <span className="text-[11px] font-bold text-rose-600 break-words">
                               estourou {formatBRL(Math.abs(remaining))}
