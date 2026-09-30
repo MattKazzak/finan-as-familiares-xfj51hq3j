@@ -25,12 +25,102 @@ export interface ExtractedPdfTextResult {
   pageCount: number
 }
 
+export interface ExtractPdfOptions {
+  password?: string
+}
+
+export type PdfPasswordErrorKind = 'NEED_PASSWORD' | 'INCORRECT_PASSWORD'
+
+export class PdfPasswordProtectedError extends Error {
+  readonly kind: PdfPasswordErrorKind
+  readonly originalError?: unknown
+
+  constructor(
+    kind: PdfPasswordErrorKind,
+    message = kind === 'INCORRECT_PASSWORD'
+      ? 'Senha incorreta. Tente novamente.'
+      : 'Esta fatura é protegida por senha.',
+    originalError?: unknown,
+  ) {
+    super(message)
+    this.name = 'PdfPasswordProtectedError'
+    this.kind = kind
+    this.originalError = originalError
+    Object.setPrototypeOf(this, PdfPasswordProtectedError.prototype)
+  }
+}
+
+/**
+ * Verifica se um erro lançado pelo pdfjs-dist ou outro componente é de proteção de senha.
+ */
+export function isPdfPasswordError(err: unknown): err is PdfPasswordProtectedError {
+  if (err instanceof PdfPasswordProtectedError) return true
+  if (!err || typeof err !== 'object') return false
+  const anyErr = err as { name?: string; message?: string; code?: number }
+  if (anyErr.name === 'PasswordException') return true
+  const msg = String(anyErr.message || '').toLowerCase()
+  if (
+    msg.includes('no password given') ||
+    msg.includes('password exception') ||
+    msg.includes('password required') ||
+    msg.includes('incorrect password') ||
+    msg.includes('bad password') ||
+    msg.includes('invalid password')
+  ) {
+    return true
+  }
+  return false
+}
+
+/**
+ * Classifica a exceção do PDF.js em NEED_PASSWORD ou INCORRECT_PASSWORD.
+ */
+export function classifyPdfPasswordError(
+  err: unknown,
+  hadPassword = false,
+): PdfPasswordProtectedError {
+  if (err instanceof PdfPasswordProtectedError) {
+    return err
+  }
+
+  const anyErr = err as { name?: string; message?: string; code?: number } | null | undefined
+  const msg = String(anyErr?.message || '').toLowerCase()
+  const code = typeof anyErr?.code === 'number' ? anyErr.code : undefined
+
+  // No pdfjs-dist: PasswordResponses.NEED_PASSWORD = 1, PasswordResponses.INCORRECT_PASSWORD = 2
+  if (
+    code === 2 ||
+    msg.includes('incorrect') ||
+    msg.includes('bad password') ||
+    msg.includes('invalid password')
+  ) {
+    return new PdfPasswordProtectedError(
+      'INCORRECT_PASSWORD',
+      'Senha incorreta. Tente novamente.',
+      err,
+    )
+  }
+
+  if (hadPassword) {
+    // Se foi fornecida uma senha e ainda assim falhou por senha, é senha incorreta
+    return new PdfPasswordProtectedError(
+      'INCORRECT_PASSWORD',
+      'Senha incorreta. Tente novamente.',
+      err,
+    )
+  }
+
+  return new PdfPasswordProtectedError('NEED_PASSWORD', 'Esta fatura é protegida por senha.', err)
+}
+
 /**
  * Percorre todas as páginas do PDF e extrai todo o conteúdo textual bruto em uma única string (`rawText`).
  * Simples, robusto e livre de labirintos de regex.
+ * Suporta opção `password` para faturas protegidas.
  */
 export async function extractRawTextFromPdf(
   input: ArrayBuffer | File,
+  options?: ExtractPdfOptions,
 ): Promise<ExtractedPdfTextResult> {
   let buffer: ArrayBuffer
   if (input instanceof File) {
@@ -44,13 +134,27 @@ export async function extractRawTextFromPdf(
   }
 
   const pdfjs = await getPdfJs()
-  const loadingTask = pdfjs.getDocument({
+  const docParams: any = {
     data: new Uint8Array(buffer),
     useWorkerFetch: false,
     isEvalSupported: false,
-  })
+  }
 
-  const pdfDoc = await loadingTask.promise
+  if (options?.password) {
+    docParams.password = options.password
+  }
+
+  const loadingTask = pdfjs.getDocument(docParams)
+
+  let pdfDoc: any
+  try {
+    pdfDoc = await loadingTask.promise
+  } catch (docErr: any) {
+    if (isPdfPasswordError(docErr)) {
+      throw classifyPdfPasswordError(docErr, Boolean(options?.password))
+    }
+    throw docErr
+  }
   const pageCount = pdfDoc.numPages
   const pageTexts: string[] = []
 
@@ -85,12 +189,15 @@ export async function extractRawTextFromPdf(
 /**
  * Mantido para compatibilidade reversa ou testes que usem extractTextFromPdf
  */
-export async function extractTextFromPdf(pdfBuffer: ArrayBuffer): Promise<{
+export async function extractTextFromPdf(
+  pdfBuffer: ArrayBuffer,
+  options?: ExtractPdfOptions,
+): Promise<{
   fullText: string
   lines: string[]
   pageCount: number
 }> {
-  const { rawText, pageCount } = await extractRawTextFromPdf(pdfBuffer)
+  const { rawText, pageCount } = await extractRawTextFromPdf(pdfBuffer, options)
   const lines = rawText
     .split('\n')
     .map((l) => l.trim())

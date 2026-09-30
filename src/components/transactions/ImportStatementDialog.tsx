@@ -70,6 +70,11 @@ import {
   Maximize2,
   Minimize2,
   Tag,
+  Lock,
+  Eye,
+  EyeOff,
+  KeyRound,
+  RotateCcw,
 } from 'lucide-react'
 
 import {
@@ -84,7 +89,12 @@ import {
   parsePdfWithAI,
   type AiPdfTransactionItem,
 } from '@/services/ai-categorizer'
-import { extractRawTextFromPdf, generatePdfFitid } from '@/services/import/pdf-parser'
+import {
+  extractRawTextFromPdf,
+  generatePdfFitid,
+  isPdfPasswordError,
+  classifyPdfPasswordError,
+} from '@/services/import/pdf-parser'
 
 export interface ReviewItem {
   id: string
@@ -164,6 +174,13 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
   const [showBankGuide, setShowBankGuide] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
 
+  // Estados para PDF protegido por senha (em memória, nunca persistidos)
+  const [isPasswordProtected, setIsPasswordProtected] = useState(false)
+  const [pdfPassword, setPdfPassword] = useState('')
+  const [showPdfPassword, setShowPdfPassword] = useState(false)
+  const [pendingPdfFile, setPendingPdfFile] = useState<File | null>(null)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+
   // Itens em revisão
   const [items, setItems] = useState<ReviewItem[]>([])
   const [defaultMemberId, setDefaultMemberId] = useState<string>('')
@@ -239,7 +256,15 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
     },
   ]
 
-  // Resetar ao fechar
+  // Resetar ao fechar ou cancelar
+  const resetPasswordState = () => {
+    setIsPasswordProtected(false)
+    setPdfPassword('')
+    setShowPdfPassword(false)
+    setPendingPdfFile(null)
+    setPasswordError(null)
+  }
+
   const handleDialogChange = (isOpen: boolean) => {
     if (!isOpen) {
       setStep('upload')
@@ -254,12 +279,13 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
       setIsQuickCatOpen(false)
       setShowBankGuide(false)
       setIsExpanded(false)
+      resetPasswordState()
     }
     onOpenChange(isOpen)
   }
 
-  // Processamento do arquivo enviado
-  const handleProcessFile = async (file: File) => {
+  // Processamento do arquivo enviado (com suporte opcional a senha do PDF)
+  const handleProcessFile = async (file: File, explicitPassword?: string) => {
     if (!family) {
       setErrorMessage('Nenhuma família ativa identificada.')
       return
@@ -268,6 +294,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
     setParsing(true)
     setErrorMessage(null)
     setDiagnostics(null)
+    setPasswordError(null)
 
     const isPdf = file.name.toLowerCase().endsWith('.pdf')
     const isOfx = file.name.toLowerCase().endsWith('.ofx')
@@ -303,14 +330,41 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
       // FLUXO A: FATURA DE CARTÃO EM PDF VIA IA ESPECIALIZADA (batch-categorize)
       // =========================================================================
       if (isPdf) {
-        setIsAiCategorizing(true)
+        setIsAiCategorizing(false)
 
-        // 1. Extração pura de texto bruto com pdfjs-dist
+        // 1. Extração pura de texto bruto com pdfjs-dist (com senha opcional)
         let rawText = ''
         try {
-          const { rawText: extracted } = await extractRawTextFromPdf(file)
+          const { rawText: extracted } = await extractRawTextFromPdf(file, {
+            password: explicitPassword || (isPasswordProtected ? pdfPassword : ''),
+          })
           rawText = extracted
+          // Sucesso na extração: limpar estado de bloqueio por senha
+          setIsPasswordProtected(false)
+          setPasswordError(null)
+          setPendingPdfFile(null)
+          setPdfPassword('')
         } catch (pdfErr: any) {
+          if (isPdfPasswordError(pdfErr)) {
+            const classified = classifyPdfPasswordError(
+              pdfErr,
+              Boolean(explicitPassword || pdfPassword),
+            )
+            setIsPasswordProtected(true)
+            setPendingPdfFile(file)
+
+            if (classified.kind === 'INCORRECT_PASSWORD') {
+              setPasswordError('Senha incorreta. Tente novamente.')
+              setErrorMessage('Senha incorreta. Tente novamente.')
+            } else {
+              setPasswordError(null)
+              setErrorMessage(
+                'Esta fatura é protegida por senha. Digite a senha do PDF abaixo para continuar a importação.',
+              )
+            }
+            return
+          }
+
           throw new Error(
             pdfErr?.message || 'Não foi possível extrair o texto da fatura em PDF selecionada.',
           )
@@ -321,6 +375,8 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
             'O PDF parece ser uma imagem digitalizada sem camada de texto selecionável.',
           )
         }
+
+        setIsAiCategorizing(true)
 
         // 2. Envio do rawText diretamente para a Edge Function batch-categorize
         const aiResponse = await parsePdfWithAI(rawText, family.id)
@@ -738,6 +794,9 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
   }
 
   const validateAndProcessFile = (file: File) => {
+    // Ao iniciar novo arquivo, limpa qualquer estado anterior de senha
+    resetPasswordState()
+
     const ext = file.name.split('.').pop()?.toLowerCase() || ''
     if (ext !== 'ofx' && ext !== 'pdf') {
       if (ext === 'csv') {
@@ -752,6 +811,25 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
       return
     }
     handleProcessFile(file)
+  }
+
+  // Submissão da senha da fatura protegida
+  const handleSubmitPdfPassword = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!pendingPdfFile) return
+    if (!pdfPassword.trim()) {
+      setPasswordError('Informe a senha do PDF para continuar.')
+      return
+    }
+    setPasswordError(null)
+    await handleProcessFile(pendingPdfFile, pdfPassword)
+  }
+
+  // Cancelar desbloqueio e voltar ao estado normal de envio
+  const handleCancelPasswordPrompt = () => {
+    resetPasswordState()
+    setErrorMessage(null)
+    setDiagnostics(null)
   }
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1179,7 +1257,116 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           {/* ================= ETAPA 1: UPLOAD ================= */}
           {step === 'upload' ? (
             <div className="flex-1 overflow-y-auto py-6 space-y-5">
-              {errorMessage ? (
+              {/* Box amigável quando o PDF é protegido por senha */}
+              {isPasswordProtected && pendingPdfFile ? (
+                <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-950 text-xs space-y-3.5 shadow-2xs">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 mt-0.5">
+                      <Lock className="w-4 h-4 text-amber-700" />
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <strong className="font-bold text-amber-950 text-sm">
+                          Esta fatura é protegida por senha
+                        </strong>
+                        <span className="text-[10px] font-semibold text-amber-800 bg-amber-200/60 px-2 py-0.5 rounded-md truncate max-w-[200px]">
+                          {pendingPdfFile.name}
+                        </span>
+                      </div>
+                      <p className="text-xs text-amber-900/90 leading-relaxed">
+                        Muitos bancos protegem a fatura em PDF por segurança. Geralmente a senha é a
+                        sua <strong>data de nascimento</strong> (ex: DDMMAAAA ou DDMMAA) ou os{' '}
+                        <strong>primeiros/últimos dígitos do CPF</strong> (ex: os 5 ou 6 primeiros
+                        dígitos).
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Formulário de senha (em memória, nunca salvo) */}
+                  <form
+                    onSubmit={handleSubmitPdfPassword}
+                    className="pt-1 space-y-3 max-w-md w-full"
+                  >
+                    <div className="space-y-1.5">
+                      <label
+                        htmlFor="pdf-password-input"
+                        className="block text-xs font-semibold text-amber-950"
+                      >
+                        Senha do PDF
+                      </label>
+                      <div className="relative flex items-center">
+                        <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
+                        <Input
+                          id="pdf-password-input"
+                          type={showPdfPassword ? 'text' : 'password'}
+                          value={pdfPassword}
+                          onChange={(e) => {
+                            setPdfPassword(e.target.value)
+                            if (passwordError) setPasswordError(null)
+                          }}
+                          placeholder="Digite a senha da fatura"
+                          autoComplete="off"
+                          autoFocus
+                          disabled={parsing}
+                          className="h-10 pl-9 pr-10 text-xs sm:text-sm bg-white border-amber-300 focus-visible:ring-amber-500 rounded-xl"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPdfPassword((prev) => !prev)}
+                          className="absolute right-2.5 p-1 text-slate-400 hover:text-slate-700 focus:outline-hidden"
+                          aria-label={showPdfPassword ? 'Ocultar senha' : 'Ver senha'}
+                          tabIndex={-1}
+                        >
+                          {showPdfPassword ? (
+                            <EyeOff className="w-4 h-4" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+
+                      {passwordError ? (
+                        <p className="text-xs font-semibold text-rose-700 flex items-center gap-1 pt-0.5">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span>{passwordError}</span>
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1 flex-wrap">
+                      <Button
+                        type="submit"
+                        disabled={parsing || !pdfPassword.trim()}
+                        className="h-9 px-4 text-xs font-semibold bg-amber-700 hover:bg-amber-800 text-white rounded-xl shadow-2xs gap-1.5"
+                      >
+                        {parsing ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Desbloqueando...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="w-3.5 h-3.5" />
+                            <span>Desbloquear e Continuar</span>
+                          </>
+                        )}
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={parsing}
+                        onClick={handleCancelPasswordPrompt}
+                        className="h-9 text-xs text-slate-600 hover:text-slate-900 rounded-xl gap-1"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Escolher outro arquivo</span>
+                      </Button>
+                    </div>
+                  </form>
+                </div>
+              ) : errorMessage ? (
                 <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 text-xs space-y-3">
                   <div className="flex items-start gap-2.5">
                     <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
