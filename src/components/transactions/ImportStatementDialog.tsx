@@ -189,6 +189,8 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 
   // Validação de fechamento (total declarado vs soma dos lançamentos)
   const [declaredTotalCents, setDeclaredTotalCents] = useState<number | null>(null)
+  const [failedPages, setFailedPages] = useState<number[]>([])
+  const [currentFile, setCurrentFile] = useState<File | null>(null)
 
   // Itens em revisão
   const [items, setItems] = useState<ReviewItem[]>([])
@@ -290,6 +292,8 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
       setIsExpanded(false)
       setExtractionProgress('')
       setDeclaredTotalCents(null)
+      setFailedPages([])
+      setCurrentFile(null)
       resetPasswordState()
     }
     onOpenChange(isOpen)
@@ -308,6 +312,8 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
     setPasswordError(null)
     setExtractionProgress('')
     setDeclaredTotalCents(null)
+    setFailedPages([])
+    setCurrentFile(file)
 
     const isPdf = file.name.toLowerCase().endsWith('.pdf')
     const isOfx = file.name.toLowerCase().endsWith('.ofx')
@@ -421,45 +427,76 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           }
         }
 
-        let parallelPromises: Promise<any>[] = []
-        if (validPages.length > 0) {
-          parallelPromises = validPages.map((page) =>
-            parsePdfWithAI(page.text, family.id)
-              .then((res) => {
-                updateChunkProgress()
-                return res
-              })
-              .catch((err) => {
-                updateChunkProgress()
-                return {
+        // 2. Extração com pool de concorrência máxima de 2 páginas simultâneas
+        // Evita estourar rate limit da OpenAI mantendo paralelismo parcial
+        interface PageTask {
+          pageNumber: number
+          text: string
+        }
+
+        const tasks: PageTask[] =
+          validPages.length > 0
+            ? validPages.map((p, idx) => ({
+                pageNumber: p.pageNumber || idx + 1,
+                text: p.text,
+              }))
+            : [{ pageNumber: 1, text: extractedPdf.rawText || '' }]
+
+        interface PageExecutionResult {
+          pageNumber: number
+          res: any
+        }
+
+        const pageResults: PageExecutionResult[] = []
+        const CONCURRENCY_LIMIT = 2
+        let taskIndex = 0
+
+        async function worker() {
+          while (taskIndex < tasks.length) {
+            const currentTaskIdx = taskIndex++
+            const currentTask = tasks[currentTaskIdx]
+            try {
+              const res = await parsePdfWithAI(currentTask.text, family.id)
+              updateChunkProgress()
+              pageResults.push({ pageNumber: currentTask.pageNumber, res })
+            } catch (err: any) {
+              updateChunkProgress()
+              pageResults.push({
+                pageNumber: currentTask.pageNumber,
+                res: {
                   success: false,
                   transactions: [],
                   declaredTotalCents: null,
                   error: err?.message,
-                }
-              }),
-          )
-        } else {
-          parallelPromises = [
-            parsePdfWithAI(extractedPdf.rawText, family.id).then((res) => {
-              updateChunkProgress()
-              return res
-            }),
-          ]
+                },
+              })
+            }
+          }
         }
 
-        const pageResults = await Promise.all(parallelPromises)
+        const workerCount = Math.min(CONCURRENCY_LIMIT, tasks.length)
+        const workers = Array.from({ length: workerCount }, () => worker())
+        await Promise.all(workers)
 
         setExtractionProgress('Mesclando resultados e validando lançamentos...')
 
         // 3. Mesclar resultados e capturar total declarado (se identificável em alguma página)
         const allExtractedTransactions: AiPdfTransactionItem[] = []
         let identifiedDeclaredTotal: number | null = null
+        const currentFailedPages: number[] = []
 
-        for (const res of pageResults) {
-          if (res && Array.isArray(res.transactions)) {
+        // Ordenar os resultados por número de página original
+        pageResults.sort((a, b) => a.pageNumber - b.pageNumber)
+
+        for (const item of pageResults) {
+          const res = item.res
+          const hasTx = res && Array.isArray(res.transactions) && res.transactions.length > 0
+          if (hasTx) {
             allExtractedTransactions.push(...res.transactions)
+          } else if (!res?.success) {
+            currentFailedPages.push(item.pageNumber)
           }
+
           if (
             typeof res?.declaredTotalCents === 'number' &&
             res.declaredTotalCents > 0 &&
@@ -469,13 +506,17 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           }
         }
 
+        // Se TODAS as páginas falharem e não houver nenhuma transação
         if (allExtractedTransactions.length === 0) {
-          const firstError = pageResults.find((r) => r?.error)?.error
+          const firstError = pageResults.find((r) => r.res?.error)?.res?.error
           throw new Error(
             firstError ||
-              'A IA não conseguiu identificar lançamentos de compras nesta fatura em PDF.',
+              'Tivemos uma instabilidade temporária ao comunicar com a inteligência de leitura da fatura. Tente novamente em instantes.',
           )
         }
+
+        // Se algumas páginas falharam mas outras tiveram transações: salva failedPages para o aviso na revisão
+        setFailedPages(currentFailedPages)
 
         // 4. Deduplicação entre blocos/páginas (mesma data + descrição normalizada + valor)
         const deduplicatedTransactions = deduplicateExtractedTransactions(allExtractedTransactions)
@@ -1511,6 +1552,42 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                     </div>
                   </div>
 
+                  {/* Ações amigáveis: Tentar novamente / Escolher outro arquivo */}
+                  <div className="flex items-center gap-2 pt-1 flex-wrap">
+                    {currentFile ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={parsing}
+                        onClick={() => handleProcessFile(currentFile)}
+                        className="h-8 px-3.5 text-xs font-semibold bg-amber-700 hover:bg-amber-800 text-white rounded-xl shadow-2xs gap-1.5"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Tentar novamente</span>
+                      </Button>
+                    ) : null}
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={parsing}
+                      onClick={() => {
+                        setErrorMessage(null)
+                        setDiagnostics(null)
+                        setCurrentFile(null)
+                        setFailedPages([])
+                        if (fileInputRef.current) {
+                          fileInputRef.current.value = ''
+                        }
+                      }}
+                      className="h-8 text-xs text-amber-900 hover:text-amber-950 hover:bg-amber-100/60 rounded-xl gap-1"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Escolher outro arquivo</span>
+                    </Button>
+                  </div>
+
                   {diagnostics ? (
                     <div className="bg-white/80 rounded-xl p-3 border border-amber-200/60 space-y-2 text-xs">
                       <div className="font-semibold text-slate-800 flex items-center gap-1.5">
@@ -1750,6 +1827,28 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           {/* ================= ETAPA 2: REVISÃO ANTES DE SALVAR ================= */}
           {step === 'review' ? (
             <div className="flex-1 flex flex-col min-h-0 pt-2 space-y-3">
+              {/* Aviso de páginas falhadas (se alguma falhou mas outras trouxeram lançamentos) */}
+              {failedPages.length > 0 && (
+                <div
+                  role="alert"
+                  className="p-3 sm:p-3.5 rounded-2xl bg-amber-500/10 border-2 border-amber-500/40 text-amber-950 text-xs shadow-xs space-y-1 shrink-0"
+                >
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-base sm:text-lg shrink-0 mt-0.5 leading-none">⚠</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-amber-950 text-xs sm:text-sm leading-snug">
+                        Não foi possível ler completamente a página {failedPages.join(', ')} da
+                        fatura.
+                      </p>
+                      <p className="text-[11px] text-amber-900/80 mt-0.5 leading-relaxed">
+                        Verifique se faltam transações ou se a soma final confere. As transações das
+                        demais páginas foram carregadas abaixo.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Aviso no Topo de Fechamento da Fatura (Item 2 do plano IA à prova de falhas) */}
               {closingValidation && !closingValidation.matches && (
                 <div

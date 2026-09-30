@@ -143,15 +143,83 @@ describe('ai-categorizer service (parsePdfWithAI)', () => {
     expect(result.transactions).toEqual(mockExtracted)
   })
 
-  it('trata erro retornado pela Edge Function sem quebrar', async () => {
-    vi.mocked(supabase.functions.invoke).mockResolvedValueOnce({
+  it('trata erro non-2xx cru e converte para mensagem PT-BR amigável sem vazar inglês técnico', async () => {
+    // Simula o erro que ocorreu no usuário: FunctionsHttpError "Edge Function returned a non-2xx status code"
+    vi.mocked(supabase.functions.invoke).mockResolvedValue({
       data: null,
-      error: { message: 'Erro na chamada da IA' } as any,
+      error: {
+        message: 'Edge Function returned a non-2xx status code',
+        context: {
+          status: 500,
+          json: vi
+            .fn()
+            .mockResolvedValue({ error: 'OPENAI_ERROR', message: 'Internal Server Error' }),
+        },
+      } as any,
     })
 
     const result = await parsePdfWithAI('Algum texto', 'fam-456')
     expect(result.success).toBe(false)
     expect(result.transactions).toEqual([])
-    expect(result.error).toContain('Erro na chamada da IA')
+    expect(result.error).not.toContain('non-2xx')
+    expect(result.error).not.toContain('Edge Function')
+    expect(result.error).toBe(
+      'Tivemos uma instabilidade temporária ao comunicar com a inteligência de leitura da fatura. Tente novamente em instantes.',
+    )
+  })
+
+  it('trata erro 429 de rate limit com mensagem específica amigável em PT-BR', async () => {
+    vi.mocked(supabase.functions.invoke).mockResolvedValue({
+      data: null,
+      error: {
+        message: 'Rate limit reached',
+        context: {
+          status: 429,
+          json: vi.fn().mockResolvedValue({ error: 'RATE_LIMIT', message: 'Too many requests' }),
+        },
+      } as any,
+    })
+
+    const result = await parsePdfWithAI('Algum texto', 'fam-456')
+    expect(result.success).toBe(false)
+    expect(result.transactions).toEqual([])
+    expect(result.error).toBe(
+      'Serviço de inteligência temporariamente ocupado. Por favor, aguarde alguns segundos e tente novamente.',
+    )
+  })
+
+  it('executa retry com backoff para status transitórios (429/5xx) até ter sucesso', async () => {
+    // 1ª tentativa: falha com 502
+    // 2ª tentativa: sucesso
+    vi.mocked(supabase.functions.invoke)
+      .mockResolvedValueOnce({
+        data: null,
+        error: {
+          message: 'Edge Function returned a non-2xx status code',
+          context: { status: 502 },
+        } as any,
+      })
+      .mockResolvedValueOnce({
+        data: {
+          transactions: [
+            {
+              date: '2025-05-12',
+              description: 'TESTE RETRY',
+              cleanMerchant: 'Teste',
+              amountCents: 1000,
+              type: 'expense',
+              categoryId: 'cat-1',
+              confidence: 0.9,
+            },
+          ],
+          totalExtracted: 1,
+        },
+        error: null,
+      })
+
+    const result = await parsePdfWithAI('Algum texto', 'fam-456')
+    expect(result.success).toBe(true)
+    expect(result.transactions.length).toBe(1)
+    expect(supabase.functions.invoke).toHaveBeenCalledTimes(2)
   })
 })

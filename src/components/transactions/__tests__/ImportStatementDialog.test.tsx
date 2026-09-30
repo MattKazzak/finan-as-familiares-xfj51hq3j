@@ -434,4 +434,135 @@ describe('ImportStatementDialog - IA à prova de falhas na fatura PDF', () => {
     // Resultado deve conter exatamente 3 transações válidas deduplicadas
     expect(screen.getByText('3 válidos')).toBeDefined()
   })
+
+  it('falha de 1 página não aborta importação quando outras páginas retornam transações (exibe aviso no topo)', async () => {
+    // 2 páginas no PDF: Página 1 falha, Página 2 tem sucesso
+    vi.spyOn(pdfParser, 'extractRawTextFromPdf').mockResolvedValueOnce({
+      rawText: 'Página 1 e Página 2',
+      pageCount: 2,
+      pages: [
+        { pageNumber: 1, text: 'Conteúdo Página 1 que falha' },
+        { pageNumber: 2, text: 'Conteúdo Página 2 com sucesso' },
+      ],
+    })
+
+    vi.spyOn(aiCategorizer, 'parsePdfWithAI')
+      // Página 1 falha
+      .mockResolvedValueOnce({
+        success: false,
+        transactions: [],
+        declaredTotalCents: null,
+        error: 'Instabilidade temporária',
+      })
+      // Página 2 tem sucesso
+      .mockResolvedValueOnce({
+        success: true,
+        declaredTotalCents: 5590,
+        transactions: [
+          {
+            date: '2025-02-08',
+            description: 'NETFLIX.COM',
+            cleanMerchant: 'Netflix',
+            amountCents: 5590,
+            type: 'expense',
+            confidence: 0.98,
+            categoryId: 'cat-3',
+          },
+        ],
+      })
+
+    render(<ImportStatementDialog open={true} onOpenChange={vi.fn()} />)
+
+    const file = new File(['mock content'], 'fatura_com_falha_parcial.pdf', {
+      type: 'application/pdf',
+    })
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(input, { target: { files: [file] } })
+
+    // Deve abrir a tela de revisão pois a página 2 teve transações
+    await waitFor(() => {
+      expect(screen.getByText(/Revisão de lançamentos/i)).toBeDefined()
+    })
+
+    // 1 item válido importado da página 2
+    expect(screen.getByText('1 válidos')).toBeDefined()
+
+    // Aviso amigável da página 1 que falhou deve estar visível
+    expect(
+      screen.getByText(/Não foi possível ler completamente a página 1 da fatura/i),
+    ).toBeDefined()
+    expect(
+      screen.getByText(/Verifique se faltam transações ou se a soma final confere/i),
+    ).toBeDefined()
+  })
+
+  it('card de erro total exibe botões "Tentar novamente" e "Escolher outro arquivo" quando todas as páginas falharem', async () => {
+    vi.spyOn(pdfParser, 'extractRawTextFromPdf').mockResolvedValueOnce({
+      rawText: 'Página com falha total',
+      pageCount: 1,
+      pages: [{ pageNumber: 1, text: 'Página com falha total' }],
+    })
+
+    const parseSpy = vi.spyOn(aiCategorizer, 'parsePdfWithAI').mockResolvedValueOnce({
+      success: false,
+      transactions: [],
+      error:
+        'Tivemos uma instabilidade temporária ao comunicar com a inteligência de leitura da fatura. Tente novamente em instantes.',
+    })
+
+    render(<ImportStatementDialog open={true} onOpenChange={vi.fn()} />)
+
+    const file = new File(['mock content'], 'fatura_falha_total.pdf', {
+      type: 'application/pdf',
+    })
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(input, { target: { files: [file] } })
+
+    await waitFor(() => {
+      expect(screen.getByText(/Não foi possível identificar lançamentos no arquivo/i)).toBeDefined()
+    })
+
+    // Mensagem amigável sem texto técnico em inglês
+    expect(
+      screen.getByText(
+        'Tivemos uma instabilidade temporária ao comunicar com a inteligência de leitura da fatura. Tente novamente em instantes.',
+      ),
+    ).toBeDefined()
+    expect(screen.queryByText(/non-2xx/i)).toBeNull()
+    expect(screen.queryByText(/Edge Function returned/i)).toBeNull()
+
+    // Botões Tentar novamente e Escolher outro arquivo
+    const retryBtn = screen.getByRole('button', { name: /Tentar novamente/i })
+    const chooseAnotherBtn = screen.getByRole('button', { name: /Escolher outro arquivo/i })
+    expect(retryBtn).toBeDefined()
+    expect(chooseAnotherBtn).toBeDefined()
+
+    // Testar "Tentar novamente" sem reselecionar
+    vi.spyOn(pdfParser, 'extractRawTextFromPdf').mockResolvedValueOnce({
+      rawText: 'Página com falha total',
+      pageCount: 1,
+      pages: [{ pageNumber: 1, text: 'Página com falha total' }],
+    })
+    parseSpy.mockResolvedValueOnce({
+      success: true,
+      transactions: [
+        {
+          date: '2025-02-08',
+          description: 'NETFLIX.COM',
+          cleanMerchant: 'Netflix',
+          amountCents: 5590,
+          type: 'expense',
+          confidence: 0.98,
+          categoryId: 'cat-3',
+        },
+      ],
+    })
+
+    fireEvent.click(retryBtn)
+
+    await waitFor(() => {
+      expect(screen.getByText(/Revisão de lançamentos/i)).toBeDefined()
+    })
+    expect(screen.getByText('1 válidos')).toBeDefined()
+  })
 })
