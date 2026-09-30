@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { ChevronDown, AlertTriangle, AlertCircle, Sparkles, Edit3, ShieldAlert } from 'lucide-react'
 import { formatBRL } from '@/lib/formatters'
+import { getBudgetModelTargets } from '@/services/budget-model'
 import type { Family, TransactionCategory } from '@/types/finance'
 import type { BucketsSummaryData } from '@/components/wallet/BudgetOverviewCard'
 
@@ -84,16 +85,21 @@ export function BudgetAlertsFarol({
         })
       }
 
-      // 2. Baldes no limite ou acima da meta recomendada (50/30/20)
+      // 2. Baldes no limite ou acima da meta recomendada (derivada do modelo orçamentário da família)
       if (netIncomeCents > 0) {
+        const modelTargets = getBudgetModelTargets(family?.budget_model)
         const bucketChecks: Array<{
           key: 'essentials' | 'lifestyle' | 'future'
           label: string
           targetPercent: number
         }> = [
-          { key: 'essentials', label: 'Balde Essenciais', targetPercent: 50 },
-          { key: 'lifestyle', label: 'Balde Estilo de Vida', targetPercent: 30 },
-          { key: 'future', label: 'Balde Futuro & Metas', targetPercent: 20 },
+          { key: 'essentials', label: 'Balde Essenciais', targetPercent: modelTargets.essentials },
+          {
+            key: 'lifestyle',
+            label: 'Balde Estilo de Vida',
+            targetPercent: modelTargets.lifestyle,
+          },
+          { key: 'future', label: 'Balde Futuro & Metas', targetPercent: modelTargets.future },
         ]
 
         bucketChecks.forEach((b) => {
@@ -223,6 +229,7 @@ export function BudgetAlertsFarol({
       }
     }, [
       netIncomeCents,
+      family?.budget_model,
       totalBudgetPercentOfIncome,
       totalBudget,
       bucketsSummary,

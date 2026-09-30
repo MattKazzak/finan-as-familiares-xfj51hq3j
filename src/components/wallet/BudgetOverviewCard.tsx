@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Sparkles, CheckCircle2, TrendingUp, Home, Coffee } from 'lucide-react'
 import { formatBRL } from '@/lib/formatters'
+import { getBudgetModelTargets } from '@/services/budget-model'
 import type { Family } from '@/types/finance'
 
 export interface BucketStat {
@@ -334,8 +335,8 @@ export function BudgetOverviewCard({
                 {/* Badge informativa de alocação de cota vs meta da renda */}
                 {(() => {
                   if (netIncomeCents <= 0) return null
-                  const targetPercent =
-                    cfg.key === 'essentials' ? 50 : cfg.key === 'lifestyle' ? 30 : 20
+                  const targets = getBudgetModelTargets(family?.budget_model)
+                  const targetPercent = targets[cfg.key]
                   const metaCents = Math.round(netIncomeCents * (targetPercent / 100))
 
                   const diff = metaCents - data.budgetCents

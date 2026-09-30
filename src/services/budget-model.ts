@@ -3,6 +3,35 @@ import { BUDGET_PRESETS, matchCategoryToPresetKey } from '@/types/budget-presets
 import { upsertDefaultBudget } from '@/services/transactions'
 import { updateCategory, updateFamilyDetails } from '@/services/family'
 
+export interface BudgetModelTargets {
+  essentials: number
+  lifestyle: number
+  future: number
+}
+
+/**
+ * Retorna os alvos percentuais por balde ({ essentials, lifestyle, future })
+ * derivados do modelo cadastrado na família (family.budget_model).
+ *
+ * Mapeamento:
+ * - '60_25_15' -> { essentials: 60, lifestyle: 25, future: 15 }
+ * - '70_20_10' -> { essentials: 70, lifestyle: 20, future: 10 }
+ * - '60_20_20' -> { essentials: 60, lifestyle: 20, future: 20 }
+ * - '50_30_20' ou qualquer outro / fallback -> { essentials: 50, lifestyle: 30, future: 20 }
+ */
+export function getBudgetModelTargets(modelId?: string | null): BudgetModelTargets {
+  if (modelId === '60_25_15') {
+    return { essentials: 60, lifestyle: 25, future: 15 }
+  }
+  if (modelId === '70_20_10') {
+    return { essentials: 70, lifestyle: 20, future: 10 }
+  }
+  if (modelId === '60_20_20') {
+    return { essentials: 60, lifestyle: 20, future: 20 }
+  }
+  return { essentials: 50, lifestyle: 30, future: 20 }
+}
+
 export interface ApplyPresetResult {
   appliedCount: number
   totalBudgetCents: number

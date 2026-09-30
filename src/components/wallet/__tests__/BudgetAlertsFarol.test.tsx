@@ -229,4 +229,64 @@ describe('BudgetAlertsFarol', () => {
     // Categoria do balde futuro NÃO está na lista
     expect(screen.queryByText('Reserva de Emergência')).toBeNull()
   })
+
+  it('com budget_model 60_25_15 e tetos plenos (60%/25%/15%), o Farol NÃO acusa nenhum balde acima da meta', () => {
+    const family602515: Family = {
+      ...mockFamily,
+      budget_model: '60_25_15',
+    }
+
+    // Tetos exatamente escalados no modelo 60/25/15:
+    // Essenciais: 60% = R$ 6.000,00
+    // Lifestyle: 25% = R$ 2.500,00
+    // Future: 15% = R$ 1.500,00
+    const summary602515: BucketsSummaryData = {
+      essentials: {
+        budgetCents: 600000,
+        spentCents: 400000,
+        percentIncome: 60,
+      },
+      lifestyle: {
+        budgetCents: 250000,
+        spentCents: 150000,
+        percentIncome: 25,
+      },
+      future: {
+        budgetCents: 150000,
+        spentCents: 50000,
+        percentIncome: 15,
+      },
+      other: {
+        budgetCents: 0,
+        spentCents: 0,
+        percentIncome: 0,
+      },
+    }
+
+    render(
+      <BudgetAlertsFarol
+        family={family602515}
+        bucketsSummary={summary602515}
+        totalBudget={1000000}
+        totalBudgetPercentOfIncome={100}
+        categoryList={[
+          {
+            category: mockExpenseCategory,
+            limitCents: 600000,
+            spentCents: 400000,
+            percent: 66,
+            isOver: false,
+          },
+        ]}
+        currentDate={new Date('2026-04-15')}
+        monthKey="2026-04"
+        onOpenCategoryEditor={vi.fn()}
+      />,
+    )
+
+    // Nenhum balde deve ser acusado como acima da meta
+    expect(screen.queryByText(/acima da meta/i)).toBeNull()
+    expect(screen.queryByText(/balde no limite/i)).toBeNull()
+    expect(screen.getByText('Tudo dentro das metas este mês')).toBeDefined()
+  })
 })
