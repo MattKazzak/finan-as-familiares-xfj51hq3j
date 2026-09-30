@@ -72,6 +72,13 @@ export async function applyBudgetPreset(
     totalBudgetCents += targetAmountCents
   }
 
+  // Persistir o modelo de orçamento na família
+  try {
+    await updateFamilyDetails(familyId, { budget_model: presetId })
+  } catch (err) {
+    console.warn('Não foi possível persistir budget_model na família:', err)
+  }
+
   const percentOfIncome =
     netIncomeCents > 0 ? Math.round((totalBudgetCents / netIncomeCents) * 100) : 0
 

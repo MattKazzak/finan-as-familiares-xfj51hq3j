@@ -227,20 +227,32 @@ export function OnboardingWizardDialog({
     try {
       setIsActivating(true)
 
-      // Atualiza o nome da família em public.families.name via updateFamilyDetails / updateFamily
+      // Atualiza o nome da família e o budget_model em public.families via updateFamilyDetails / updateFamily
       const normalizedName = normalizeFamilyName(trimmedName)
       try {
         if (updateFamily) {
-          await updateFamily({ name: normalizedName })
+          await updateFamily({
+            name: normalizedName,
+            monthly_net_income_cents: parsedNetIncomeCents,
+            budget_model: selectedModelId,
+          })
         } else {
-          await updateFamilyDetails(family.id, { name: normalizedName })
+          await updateFamilyDetails(family.id, {
+            name: normalizedName,
+            monthly_net_income_cents: parsedNetIncomeCents,
+            budget_model: selectedModelId,
+          })
         }
       } catch (famErr) {
         console.warn(
           'Erro ao atualizar nome da família no onboarding, tentando updateFamilyDetails direto:',
           famErr,
         )
-        await updateFamilyDetails(family.id, { name: normalizedName })
+        await updateFamilyDetails(family.id, {
+          name: normalizedName,
+          monthly_net_income_cents: parsedNetIncomeCents,
+          budget_model: selectedModelId,
+        })
       }
 
       // Executa a ativação com RPC atômica (ou fallback controlado)

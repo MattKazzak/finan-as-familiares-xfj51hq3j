@@ -645,8 +645,8 @@ export async function seedStandardizedCategoriesAndApplyPlan({
     // Fallback: método cliente se a RPC falhar
     await updateFamilyDetails(familyId, {
       monthly_net_income_cents: monthlyNetIncomeCents,
+      budget_model: modelPresetId,
     })
-
     const { data: existingCategories, error: fetchCatError } = await (supabase as any)
       .from('transaction_categories')
       .select('id, name, budget_bucket, sort_order')

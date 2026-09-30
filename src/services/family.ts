@@ -274,7 +274,12 @@ export async function acceptFamilyInvite(code: string): Promise<{
 
 export async function updateFamilyDetails(
   familyId: string,
-  updates: { name?: string; avatar_url?: string | null; monthly_net_income_cents?: number | null },
+  updates: {
+    name?: string
+    avatar_url?: string | null
+    monthly_net_income_cents?: number | null
+    budget_model?: string | null
+  },
 ) {
   const payload = { ...updates }
   if (payload.name !== undefined) {

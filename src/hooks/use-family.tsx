@@ -44,6 +44,7 @@ interface FamilyContextType {
     name?: string
     avatar_url?: string | null
     monthly_net_income_cents?: number | null
+    budget_model?: string | null
   }) => Promise<Family>
   uploadFamilyAvatar: (file: File) => Promise<string>
   addMember: (name: string) => Promise<FamilyMember>
@@ -305,6 +306,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     name?: string
     avatar_url?: string | null
     monthly_net_income_cents?: number | null
+    budget_model?: string | null
   }) => {
     if (!family) throw new Error('Família não carregada')
     const updated = await updateFamilyDetails(family.id, updates)

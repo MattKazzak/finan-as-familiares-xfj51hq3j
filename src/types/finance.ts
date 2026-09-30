@@ -9,6 +9,7 @@ export interface Family {
   name: string
   avatar_url?: string | null
   monthly_net_income_cents?: number | null
+  budget_model?: string | null
   created_by: string | null
   created_at: string
 }
