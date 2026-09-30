@@ -506,6 +506,34 @@ describe('ImportStatementDialog - IA à prova de falhas na fatura PDF', () => {
     expect(sessionArg.items.length).toBe(1)
   })
 
+  it('exibe mensagem orientadora amigável quando o PDF realmente não possui camada de texto', async () => {
+    vi.spyOn(pdfParser, 'extractRawTextFromPdf').mockResolvedValueOnce({
+      rawText: '',
+      pageCount: 1,
+      pages: [{ pageNumber: 1, text: '' }],
+    })
+
+    render(<ImportStatementDialog open={true} onOpenChange={vi.fn()} />)
+
+    const file = new File(['mock scanned pdf'], 'fatura_imagem.pdf', { type: 'application/pdf' })
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(input, { target: { files: [file] } })
+
+    await waitFor(() => {
+      expect(screen.getByText(/Não foi possível identificar lançamentos no arquivo/i)).toBeDefined()
+    })
+
+    expect(
+      screen.getByText(
+        'Não conseguimos identificar o texto desta fatura. Se ela foi gerada como imagem pelo seu banco, experimente baixar o extrato pelo computador ou importar o arquivo OFX/CSV.',
+      ),
+    ).toBeDefined()
+
+    // Botões devem estar disponíveis
+    expect(screen.getByRole('button', { name: /Tentar novamente/i })).toBeDefined()
+    expect(screen.getByRole('button', { name: /Escolher outro arquivo/i })).toBeDefined()
+  })
+
   it('fechar seletor secundário (categoria/detalhe) não fecha o diálogo pai nem reseta progresso', () => {
     // Renderiza com items no review interno
     const onOpenChange = vi.fn()

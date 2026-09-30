@@ -423,7 +423,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
         )
         if (validPages.length === 0 && (!extractedPdf.rawText || !extractedPdf.rawText.trim())) {
           throw new Error(
-            'O PDF parece ser uma imagem digitalizada sem camada de texto selecionável.',
+            'Não conseguimos identificar o texto desta fatura. Se ela foi gerada como imagem pelo seu banco, experimente baixar o extrato pelo computador ou importar o arquivo OFX/CSV.',
           )
         }
 

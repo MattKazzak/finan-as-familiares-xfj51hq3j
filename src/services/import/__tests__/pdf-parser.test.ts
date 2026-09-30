@@ -7,7 +7,10 @@ import {
   deduplicateExtractedTransactions,
   isDeterministicNonExpense,
   normalizeDescriptionForDedup,
+  extractRawTextFromPdf,
 } from '../pdf-parser'
+import * as pdfjsDist from 'pdfjs-dist'
+import { vi } from 'vitest'
 
 describe('pdf-parser service', () => {
   it('gera FITID determinístico curto a partir de data, descrição e valor', () => {
@@ -143,6 +146,113 @@ describe('pdf-parser service', () => {
     it('normaliza removendo acentos, pontuações e caixa alta', () => {
       expect(normalizeDescriptionForDedup('PAG*Drogasil S/A (01/03)')).toBe('pagdrogasilsa0103')
       expect(normalizeDescriptionForDedup('Açougue & Cia.')).toBe('acouguecia')
+    })
+  })
+
+  describe('extractRawTextFromPdf - CMap, estrutura de páginas e quebras de linha', () => {
+    it('chama getDocument com cMapUrl e cMapPacked configurados e preserva numeração de página e quebras de linha', async () => {
+      const mockGetDocument = vi.spyOn(pdfjsDist, 'getDocument').mockReturnValue({
+        promise: Promise.resolve({
+          numPages: 2,
+          getPage: vi.fn((pageNum: number) => {
+            if (pageNum === 1) {
+              return Promise.resolve({
+                getTextContent: () =>
+                  Promise.resolve({
+                    items: [
+                      { str: 'Cartão Rico Visa Infinite', transform: [1, 0, 0, 1, 10, 700] },
+                      { str: 'Final 4949', transform: [1, 0, 0, 1, 200, 700] },
+                      { str: '15/02 UBER *TRIP', transform: [1, 0, 0, 1, 10, 650] },
+                      { str: 'R$ 24,90', transform: [1, 0, 0, 1, 200, 650] },
+                    ],
+                  }),
+              })
+            }
+            // Página 2 com pouco ou nenhum texto para testar preservação de pageNumber
+            return Promise.resolve({
+              getTextContent: () =>
+                Promise.resolve({
+                  items: [{ str: 'Total da fatura R$ 4.549,91', transform: [1, 0, 0, 1, 10, 700] }],
+                }),
+            })
+          }),
+        }),
+      } as any)
+
+      const buffer = new ArrayBuffer(64)
+      const result = await extractRawTextFromPdf(buffer)
+
+      expect(mockGetDocument).toHaveBeenCalled()
+      const firstCallArg = mockGetDocument.mock.calls[0][0] as any
+      expect(firstCallArg.cMapUrl).toBeDefined()
+      expect(firstCallArg.cMapUrl).toContain('/cmaps/')
+      expect(firstCallArg.cMapPacked).toBe(true)
+      // Não deve ter flags restritivas
+      expect(firstCallArg.isEvalSupported).toBeUndefined()
+      expect(firstCallArg.useWorkerFetch).toBeUndefined()
+
+      // Validação das páginas extraídas
+      expect(result.pageCount).toBe(2)
+      expect(result.pages).toHaveLength(2)
+      expect(result.pages[0].pageNumber).toBe(1)
+      expect(result.pages[1].pageNumber).toBe(2)
+
+      // Quebras de linha preservadas entre alturas Y diferentes
+      expect(result.pages[0].text).toContain(
+        'Cartão Rico Visa Infinite Final 4949\n15/02 UBER *TRIP R$ 24,90',
+      )
+      expect(result.pages[1].text).toBe('Total da fatura R$ 4.549,91')
+      expect(result.rawText).toContain('Total da fatura R$ 4.549,91')
+
+      mockGetDocument.mockRestore()
+    })
+
+    it('ativa fallback secundário caso a primeira tentativa retorne texto vazio', async () => {
+      let callCount = 0
+      const mockGetDocument = vi
+        .spyOn(pdfjsDist, 'getDocument')
+        .mockImplementation((params: any) => {
+          callCount++
+          if (callCount === 1) {
+            // Tentativa primária: retorna páginas com texto vazio (ex: falha de CMap no ambiente)
+            return {
+              promise: Promise.resolve({
+                numPages: 1,
+                getPage: () =>
+                  Promise.resolve({
+                    getTextContent: () =>
+                      Promise.resolve({
+                        items: [{ str: '', transform: [1, 0, 0, 1, 0, 0] }],
+                      }),
+                  }),
+              }),
+            } as any
+          }
+          // Tentativa de fallback: retorna texto válido
+          return {
+            promise: Promise.resolve({
+              numPages: 1,
+              getPage: () =>
+                Promise.resolve({
+                  getTextContent: () =>
+                    Promise.resolve({
+                      items: [
+                        { str: 'Lançamento Fallback R$ 100,00', transform: [1, 0, 0, 1, 10, 500] },
+                      ],
+                    }),
+                }),
+            }),
+          } as any
+        })
+
+      const buffer = new ArrayBuffer(64)
+      const result = await extractRawTextFromPdf(buffer)
+
+      expect(callCount).toBe(2)
+      expect(result.pages[0].text).toBe('Lançamento Fallback R$ 100,00')
+      expect(result.rawText).toBe('Lançamento Fallback R$ 100,00')
+
+      mockGetDocument.mockRestore()
     })
   })
 })

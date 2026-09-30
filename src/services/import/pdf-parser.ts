@@ -140,60 +140,145 @@ export async function extractRawTextFromPdf(
   }
 
   const pdfjs = await getPdfJs()
-  const docParams: any = {
-    data: new Uint8Array(buffer),
-    useWorkerFetch: false,
-    isEvalSupported: false,
+  const version = pdfjs.version || '4.10.38'
+  const cMapUrl = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/cmaps/`
+  const standardFontDataUrl = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/standard_fonts/`
+
+  // Função auxiliar para tentar extrair texto de um documento aberto
+  async function extractPagesFromDoc(pdfDoc: any): Promise<{
+    pages: ExtractedPdfPage[]
+    rawText: string
+    pageCount: number
+    hasAnyText: boolean
+  }> {
+    const pageCount = pdfDoc.numPages || 0
+    const pages: ExtractedPdfPage[] = []
+
+    for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
+      const page = await pdfDoc.getPage(pageNum)
+      const textContent = await page.getTextContent()
+
+      // Agrupar itens de texto preservando quebras de linha entre itens de alturas diferentes (linhas visuais)
+      // e mantendo espaçamento apropriado
+      const lines: string[] = []
+      let currentLine: string[] = []
+      let lastY: number | null = null
+
+      for (const item of textContent.items) {
+        if ('str' in item && typeof item.str === 'string') {
+          const text = item.str.trim()
+          if (!text) continue
+
+          const itemY =
+            Array.isArray(item.transform) && item.transform.length >= 6
+              ? Math.round(item.transform[5])
+              : null
+
+          if (lastY !== null && itemY !== null && Math.abs(itemY - lastY) > 2) {
+            if (currentLine.length > 0) {
+              lines.push(currentLine.join(' '))
+              currentLine = []
+            }
+          }
+
+          currentLine.push(text)
+          if (itemY !== null) {
+            lastY = itemY
+          }
+        }
+      }
+
+      if (currentLine.length > 0) {
+        lines.push(currentLine.join(' '))
+      }
+
+      const pageText = lines.join('\n').trim()
+      // Preservar a numeração REAL das páginas mesmo quando tem pouco texto
+      pages.push({
+        pageNumber: pageNum,
+        text: pageText,
+      })
+    }
+
+    const nonBlankPages = pages.filter((p) => p.text.length > 0)
+    const rawText = nonBlankPages.map((p) => p.text).join('\n\n')
+
+    return {
+      pages,
+      rawText,
+      pageCount,
+      hasAnyText: nonBlankPages.length > 0,
+    }
   }
 
-  if (options?.password) {
-    docParams.password = options.password
+  // Tentativa 1: Configuração moderna completa com cMapUrl e standardFontDataUrl
+  const buildDocParams = (extra: Record<string, any> = {}) => {
+    const params: any = {
+      data: new Uint8Array(buffer),
+      cMapUrl,
+      cMapPacked: true,
+      standardFontDataUrl,
+      ...extra,
+    }
+    if (options?.password) {
+      params.password = options.password
+    }
+    return params
   }
 
-  const loadingTask = pdfjs.getDocument(docParams)
+  let primaryDoc: any = null
+  let primaryError: any = null
 
-  let pdfDoc: any
   try {
-    pdfDoc = await loadingTask.promise
+    const loadingTask = pdfjs.getDocument(buildDocParams())
+    primaryDoc = await loadingTask.promise
   } catch (docErr: any) {
     if (isPdfPasswordError(docErr)) {
       throw classifyPdfPasswordError(docErr, Boolean(options?.password))
     }
-    throw docErr
+    primaryError = docErr
   }
-  const pageCount = pdfDoc.numPages
-  const pageTexts: string[] = []
 
-  for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
-    const page = await pdfDoc.getPage(pageNum)
-    const textContent = await page.getTextContent()
-
-    // Agrupar itens de texto preservando a ordem de leitura
-    const pageStrings: string[] = []
-    for (const item of textContent.items) {
-      if ('str' in item && typeof item.str === 'string') {
-        const text = item.str.trim()
-        if (text) {
-          pageStrings.push(text)
+  if (primaryDoc) {
+    try {
+      const result = await extractPagesFromDoc(primaryDoc)
+      if (result.hasAnyText) {
+        return {
+          rawText: result.rawText,
+          pageCount: result.pageCount,
+          pages: result.pages,
         }
       }
-    }
-
-    if (pageStrings.length > 0) {
-      pageTexts.push(pageStrings.join(' '))
+    } catch (extractErr) {
+      console.warn('[pdf-parser] Erro na extração principal, tentando fallback:', extractErr)
     }
   }
 
-  const pages: ExtractedPdfPage[] = pageTexts.map((text, idx) => ({
-    pageNumber: idx + 1,
-    text,
-  }))
-  const rawText = pageTexts.join('\n\n')
-
-  return {
-    rawText,
-    pageCount,
-    pages,
+  // Fallback: tentar sem cMapUrl/com disableFontFace ou parâmetros alternativos se a primária falhou ou retornou texto vazio
+  console.warn('[pdf-parser] Tentando extração alternativa de fallback para PDF...')
+  try {
+    const fallbackTask = pdfjs.getDocument(
+      buildDocParams({
+        disableFontFace: true,
+        useSystemFonts: true,
+      }),
+    )
+    const fallbackDoc = await fallbackTask.promise
+    const fallbackResult = await extractPagesFromDoc(fallbackDoc)
+    return {
+      rawText: fallbackResult.rawText,
+      pageCount: fallbackResult.pageCount,
+      pages: fallbackResult.pages,
+    }
+  } catch (fallbackErr: any) {
+    if (isPdfPasswordError(fallbackErr)) {
+      throw classifyPdfPasswordError(fallbackErr, Boolean(options?.password))
+    }
+    // Se o primário deu erro específico de carregamento, lançar o erro original
+    if (primaryError) {
+      throw primaryError
+    }
+    throw fallbackErr
   }
 }
 
