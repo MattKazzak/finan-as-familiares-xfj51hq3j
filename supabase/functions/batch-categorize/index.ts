@@ -224,55 +224,89 @@ Deno.serve(async (req: Request) => {
       const rawText = body.rawText!.trim()
       const currentYear = new Date().getFullYear()
 
-      const pdfSystemPrompt = `Você é o especialista sênior em inteligência financeira do Curiangoo (Curiangoo Copilot), especializado na leitura e extração de faturas de cartão de crédito brasileiras (Rico, XP, Nubank, Inter, Itaú, Santander, C6 Bank, Bradesco, BTG Pactual, etc.) e na regra orçamentária 50/30/20.
+      const pdfSystemPrompt = `Você é o especialista sênior em inteligência financeira do Curiangoo (Curiangoo Copilot), especializado na leitura e extração exaustiva de faturas de cartão de crédito brasileiras (Rico, XP, Nubank, Inter, Itaú, Santander, C6 Bank, Bradesco, BTG Pactual, etc.) e na regra orçamentária 50/30/20.
 
-Seu objetivo é analisar o texto bruto extraído de um PDF de fatura de cartão de crédito e extrair com máxima precisão TODAS as compras e estornos reais, atribuindo a cada uma a categoria e subcategoria mais adequada do catálogo da família.
+Seu objetivo é analisar o texto bruto extraído de um trecho/página de fatura de cartão de crédito e extrair com MÁXIMA PRECISÃO E COMPLETUDE ABSOLUTA TODAS as compras e estornos reais, atribuindo a cada uma a categoria e subcategoria mais adequada do catálogo da família.
 
 CATÁLOGO REAL DE CATEGORIAS DA FAMÍLIA:
 ${catalogPrompt}
 
 REGRAS CRÍTICAS DE EXTRAÇÃO DE FATURA:
-1. O QUE EXTRAIR:
+1. COMPLETUDE ABSOLUTA (NUNCA TRUNCAR):
+   - Extraia TODOS os lançamentos do texto fornecido, do primeiro ao último.
+   - NÃO pare até o fim do texto. Nunca omita linhas por falta de espaço ou resumo.
+   - Cada compra individual deve virar um objeto no array "transactions".
+
+2. O QUE EXTRAIR:
    - Todas as compras de bens e serviços nacionais e internacionais (ex: "UBER", "IFOOD", "MERCADO LIVRE", "DROGASIL", "NETFLIX", "POSTO", "CARREFOUR", "PAG*...").
    - Compras parceladas (identificar o sufixo ou padrão de parcela, ex: "02/10", "3/12").
    - Estornos e reembolsos reais (marcar amountCents com o valor positivo e type="income").
 
-2. O QUE DESCARTAR ABSOLUTAMENTE (NÃO SÃO COMPRAS):
+3. O QUE DESCARTAR ABSOLUTAMENTE (NÃO SÃO COMPRAS):
+   - Pagamentos da fatura anterior e quitações: linhas como "Pagamento recebido em…", "Pagamento de fatura", "Pagamento efetuado", "Pagamento de título", "Pagamento mínimo", "Pagto fatura". Elas NÃO são despesas novas do mês, são quitações da fatura passada e DEVEM SER COMPLETAMENTE DESCARTADAS.
    - Cabeçalhos e rodapés institucionais, dados do titular, agência, conta, CNPJ/CPF, endereços e CEP.
    - Telefones, SAC, WhatsApp, Ouvidoria (ex: "0800", "3003", "4004").
-   - Resumos e totais da fatura (ex: "Resumo da Fatura", "Total da fatura R$...", "Total desta fatura", "Fatura Anterior", "Subtotal").
    - Limites de crédito (ex: "Limite Total", "Limite Disponível", "Limite Utilizado", "Limite de Saque").
-   - Pagamentos da fatura (ex: "Pagamento de fatura", "Pagamento recebido", "Pagamento efetuado", "Pagamento de título", "Pagamento mínimo", "Pagto fatura").
-   - Encargos, CET, multas ou juros de mora a menos que discriminados como lançamento do período.
    - Tabelas de cotação de dólar ou pontos de fidelidade.
 
-3. PADRONIZAÇÃO DOS DADOS DE CADA TRANSAÇÃO:
+4. TOTAL DECLARADO DA FATURA ("declaredTotalCents"):
+   - Se o trecho contiver o resumo/cabeçalho da fatura indicando o total a pagar da fatura (ex: "Total da fatura R$ 1.250,50", "Valor total da fatura: 1.250,50", "Total desta fatura: R$ 850,00"), capture esse valor em centavos (número inteiro positivo) na propriedade "declaredTotalCents".
+   - Se este trecho NÃO contiver o total geral declarado da fatura (por exemplo, página do meio com apenas lançamentos), retorne null para "declaredTotalCents".
+
+5. EXEMPLO FEW-SHOT DE EXTRAÇÃO E DESCARTE CORRETO:
+   Texto de entrada:
+   """
+   03/02 PAGAMENTO RECEBIDO EM 03/02/2025 -R$ 1.500,00
+   05/02 DROGASIL SAO PAULO 01/03 R$ 89,90
+   07/02 UBER *TRIP SAO PAULO R$ 24,50
+   Total da fatura: R$ 114,40
+   """
+   Saída JSON esperada:
+   {
+     "declaredTotalCents": 11440,
+     "transactions": [
+       {
+         "date": "2025-02-05",
+         "description": "DROGASIL SAO PAULO 01/03",
+         "cleanMerchant": "Drogasil",
+         "amountCents": 8990,
+         "type": "expense",
+         "installment": "01/03",
+         "categoryId": "UUID_SAUDE",
+         "subcategoryId": null,
+         "confidence": 0.95
+       },
+       {
+         "date": "2025-02-07",
+         "description": "UBER *TRIP SAO PAULO",
+         "cleanMerchant": "Uber",
+         "amountCents": 2450,
+         "type": "expense",
+         "installment": null,
+         "categoryId": "UUID_TRANSPORTE",
+         "subcategoryId": null,
+         "confidence": 0.95
+       }
+     ]
+   }
+   (Observe que a linha "PAGAMENTO RECEBIDO EM..." FOI CORRETAMENTE DESCARTADA e NÃO apareceu no array transactions!).
+
+6. PADRONIZAÇÃO DOS DADOS DE CADA TRANSAÇÃO:
    - "date": string no formato ISO "AAAA-MM-DD" (se o ano não constar explicitamente no lançamento, use o ano da fatura indicado no texto ou ${currentYear}).
    - "description": descrição original completa encontrada no extrato (incluindo parcelas se houver).
-   - "cleanMerchant": nome limpo e legível do estabelecimento comercial sem intermediários ruidosos ou parcelas (ex: "MP *DROGASIL 02/03" vira "Drogasil", "PAG*RESTAURANTE" vira "Restaurante", "UBER *TRIP HELP" vira "Uber").
+   - "cleanMerchant": nome limpo e legível do estabelecimento comercial sem intermediários ruidosos ou parcelas.
    - "amountCents": número inteiro positivo em centavos (ex: R$ 45,90 vira 4590; R$ 1.250,00 vira 125000). NUNCA usar decimais.
    - "type": "expense" para compras (padrão de cartão) ou "income" para estornos/créditos.
-   - "installment": string com a parcela quando houver (ex: "02/10", "1/3") ou undefined/null se for compra à vista.
-   - "categoryId": ID UUID exato da categoria selecionada no catálogo da família acima. OBRIGATÓRIO usar um ID real existente!
+   - "installment": string com a parcela quando houver (ex: "02/10", "1/3") ou null se for compra à vista.
+   - "categoryId": ID UUID exato da categoria selecionada no catálogo da família acima.
    - "subcategoryId": ID UUID da subcategoria do catálogo, ou null se nenhuma for aplicável.
    - "confidence": número entre 0.0 e 1.0 indicando a certeza da classificação.
 
 RETORNO ESTRITAMENTE OBRIGATÓRIO:
-Você DEVE responder exclusivamente com um objeto JSON válido (response_format: json_object) com a chave "transactions", contendo o array com os itens extraídos:
+Você DEVE responder exclusivamente com um objeto JSON válido (response_format: json_object) com as chaves "declaredTotalCents" (número em centavos ou null) e "transactions" (array de itens):
 {
-  "transactions": [
-    {
-      "date": "AAAA-MM-DD",
-      "description": "string original",
-      "cleanMerchant": "string limpa",
-      "amountCents": 1234,
-      "type": "expense",
-      "installment": "02/10",
-      "categoryId": "UUID",
-      "subcategoryId": "UUID ou null",
-      "confidence": 0.95
-    }
-  ]
+  "declaredTotalCents": 125050,
+  "transactions": [ ... ]
 }`
 
       const pdfUserPrompt = `Texto bruto extraído da fatura em PDF:
@@ -280,8 +314,11 @@ Você DEVE responder exclusivamente com um objeto JSON válido (response_format:
 ${rawText.slice(0, 100000)}
 --- FIM DO TEXTO ---
 
-Extraia todas as compras e estornos reais, descarte ruídos/limites/pagamentos de fatura, e classifique cada transação com IDs válidos do catálogo da família.`
-
+Instruções cruciais:
+1. Extraia TODOS os lançamentos sem exceção e sem truncamento (não pare até o fim do texto).
+2. Se houver total geral declarado da fatura no texto, capture em declaredTotalCents (número inteiro em centavos), senão retorne null.
+3. Descarte pagamentos anteriores de fatura (ex: "Pagamento recebido em..."), limites e dados cadastrais.
+4. Classifique cada transação usando IDs válidos do catálogo familiar.`
       const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -340,9 +377,13 @@ Extraia todas as compras e estornos reais, descarte ruídos/limites/pagamentos d
       }
 
       const rawItems: any[] = Array.isArray(parsed?.transactions) ? parsed.transactions : []
+      const rawDeclaredTotal = parsed?.declaredTotalCents
+      const declaredTotalCents: number | null =
+        typeof rawDeclaredTotal === 'number' && rawDeclaredTotal > 0
+          ? Math.round(rawDeclaredTotal)
+          : null
 
-      // Higienizar e validar transações contra o catálogo real
-      const sanitizedTransactions: PdfExtractedTransactionItem[] = []
+      // Higienizar e validar transações contra o catálogo real      const sanitizedTransactions: PdfExtractedTransactionItem[] = []
       for (const item of rawItems) {
         if (!item || typeof item !== 'object') continue
 
@@ -396,6 +437,7 @@ Extraia todas as compras e estornos reais, descarte ruídos/limites/pagamentos d
       return new Response(
         JSON.stringify({
           transactions: sanitizedTransactions,
+          declaredTotalCents,
           totalExtracted: sanitizedTransactions.length,
           mode: 'pdf',
         }),

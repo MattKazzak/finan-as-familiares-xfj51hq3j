@@ -20,9 +20,15 @@ async function getPdfJs() {
   return pdfjsLibPromise
 }
 
+export interface ExtractedPdfPage {
+  pageNumber: number
+  text: string
+}
+
 export interface ExtractedPdfTextResult {
   rawText: string
   pageCount: number
+  pages: ExtractedPdfPage[]
 }
 
 export interface ExtractPdfOptions {
@@ -178,11 +184,16 @@ export async function extractRawTextFromPdf(
     }
   }
 
+  const pages: ExtractedPdfPage[] = pageTexts.map((text, idx) => ({
+    pageNumber: idx + 1,
+    text,
+  }))
   const rawText = pageTexts.join('\n\n')
 
   return {
     rawText,
     pageCount,
+    pages,
   }
 }
 
@@ -223,4 +234,86 @@ export function generatePdfFitid(date: string, description: string, amountCents:
   }
   const positive = Math.abs(hash).toString(36)
   return `PDF-${date.replace(/-/g, '')}-${positive}`
+}
+
+/**
+ * Normaliza uma string de descrição para fins de comparação e deduplicação:
+ * remove acentos, caracteres não alfanuméricos e espaços extras.
+ */
+export function normalizeDescriptionForDedup(desc: string): string {
+  return (desc || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+}
+
+/**
+ * Filtro determinístico pós-IA (em código, NÃO no prompt):
+ * Intercepta pagamentos de fatura, quitações anteriores, ajustes, encargos e IOF.
+ * Retorna true se a descrição indicar uma linha não-despesa que deve vir
+ * DESMARCADA por padrão e com selo "não é despesa".
+ *
+ * NOTA DE PRODUTO: Não interceptar "tarifa" (decisão acordada com a usuária).
+ */
+export function isDeterministicNonExpense(description: string): boolean {
+  if (!description) return false
+  const norm = normalizeDescriptionForDedup(description)
+
+  // Padrões de pagamento de fatura anterior / quitação
+  const isPayment =
+    norm.includes('pagamentorecebido') ||
+    norm.includes('pagamentodefatura') ||
+    norm.includes('pagamentoefetuado') ||
+    norm.includes('pagamentofatura') ||
+    norm.includes('pagtodefatura') ||
+    norm.includes('pagtoextrato') ||
+    norm.includes('pagamentotitulo') ||
+    norm.includes('pagamentominimo') ||
+    norm.includes('pagamentoparcial') ||
+    norm.includes('pagamentocartao') ||
+    norm.includes('quitacaodefatura') ||
+    norm.includes('pagtoantecipado') ||
+    norm.includes('autpagto')
+
+  // Padrões de ajustes de fatura
+  const isAdjustment =
+    norm.includes('ajuste') ||
+    norm.includes('estornoajuste') ||
+    norm.includes('ajustedebito') ||
+    norm.includes('ajustecredito')
+
+  // Padrões de encargos e IOF
+  const isCharges = norm.includes('encargo') || norm.includes('encargos') || norm.includes('iof')
+
+  return isPayment || isAdjustment || isCharges
+}
+
+export interface DedupableTransaction {
+  date: string
+  description: string
+  cleanMerchant?: string
+  amountCents: number
+  [key: string]: any
+}
+
+/**
+ * Remove duplicatas entre blocos/páginas (mesma data + descrição normalizada + valor).
+ * Preserva o primeiro item encontrado e descarta réplicas geradas por sobreposição
+ * de páginas ou cabeçalhos repetidos.
+ */
+export function deduplicateExtractedTransactions<T extends DedupableTransaction>(items: T[]): T[] {
+  const seen = new Set<string>()
+  const result: T[] = []
+
+  for (const item of items) {
+    const normDesc = normalizeDescriptionForDedup(item.cleanMerchant || item.description)
+    const key = `${item.date}_${normDesc}_${item.amountCents}`
+    if (!seen.has(key)) {
+      seen.add(key)
+      result.push(item)
+    }
+  }
+
+  return result
 }

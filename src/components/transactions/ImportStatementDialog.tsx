@@ -94,6 +94,9 @@ import {
   generatePdfFitid,
   isPdfPasswordError,
   classifyPdfPasswordError,
+  deduplicateExtractedTransactions,
+  isDeterministicNonExpense,
+  type ExtractedPdfTextResult,
 } from '@/services/import/pdf-parser'
 
 export interface ReviewItem {
@@ -126,6 +129,8 @@ export interface ReviewItem {
   reconciliationStatus?: MatchStatus // 'unmatched' | 'single_match' | 'multiple_candidates'
   reconciliationCandidates?: Transaction[] // Lista de candidatas manuais (em caso de múltiplas)
   reconciliationReason?: string // Explicação para o usuário
+  // Filtro determinístico pós-IA (quitação de fatura anterior, ajuste, encargos, IOF)
+  isNonExpense?: boolean
 }
 
 interface ImportStatementDialogProps {
@@ -162,6 +167,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
   const [step, setStep] = useState<'upload' | 'review'>('upload')
   const [parsing, setParsing] = useState(false)
   const [isAiCategorizing, setIsAiCategorizing] = useState(false)
+  const [extractionProgress, setExtractionProgress] = useState<string>('')
   const [saving, setSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [diagnostics, setDiagnostics] = useState<ParseDiagnostics | null>(null)
@@ -180,6 +186,9 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
   const [showPdfPassword, setShowPdfPassword] = useState(false)
   const [pendingPdfFile, setPendingPdfFile] = useState<File | null>(null)
   const [passwordError, setPasswordError] = useState<string | null>(null)
+
+  // Validação de fechamento (total declarado vs soma dos lançamentos)
+  const [declaredTotalCents, setDeclaredTotalCents] = useState<number | null>(null)
 
   // Itens em revisão
   const [items, setItems] = useState<ReviewItem[]>([])
@@ -279,6 +288,8 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
       setIsQuickCatOpen(false)
       setShowBankGuide(false)
       setIsExpanded(false)
+      setExtractionProgress('')
+      setDeclaredTotalCents(null)
       resetPasswordState()
     }
     onOpenChange(isOpen)
@@ -295,6 +306,8 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
     setErrorMessage(null)
     setDiagnostics(null)
     setPasswordError(null)
+    setExtractionProgress('')
+    setDeclaredTotalCents(null)
 
     const isPdf = file.name.toLowerCase().endsWith('.pdf')
     const isOfx = file.name.toLowerCase().endsWith('.ofx')
@@ -328,17 +341,19 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 
       // =========================================================================
       // FLUXO A: FATURA DE CARTÃO EM PDF VIA IA ESPECIALIZADA (batch-categorize)
+      // "IA À PROVA DE FALHAS": Extração por blocos/páginas paralelas + dedup +
+      // validação de fechamento + filtro determinístico pós-IA
       // =========================================================================
       if (isPdf) {
         setIsAiCategorizing(false)
+        setExtractionProgress('Lendo páginas do documento PDF...')
 
-        // 1. Extração pura de texto bruto com pdfjs-dist (com senha opcional)
-        let rawText = ''
+        // 1. Extração pura de texto bruto por páginas com pdfjs-dist (com senha opcional)
+        let extractedPdf: ExtractedPdfTextResult
         try {
-          const { rawText: extracted } = await extractRawTextFromPdf(file, {
+          extractedPdf = await extractRawTextFromPdf(file, {
             password: explicitPassword || (isPasswordProtected ? pdfPassword : ''),
           })
-          rawText = extracted
           // Sucesso na extração: limpar estado de bloqueio por senha
           setIsPasswordProtected(false)
           setPasswordError(null)
@@ -370,23 +385,72 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           )
         }
 
-        if (!rawText.trim()) {
+        const validPages = (extractedPdf.pages || []).filter(
+          (p) => p.text && p.text.trim().length > 0,
+        )
+        if (validPages.length === 0 && (!extractedPdf.rawText || !extractedPdf.rawText.trim())) {
           throw new Error(
             'O PDF parece ser uma imagem digitalizada sem camada de texto selecionável.',
           )
         }
 
         setIsAiCategorizing(true)
+        const totalPages = validPages.length > 0 ? validPages.length : 1
 
-        // 2. Envio do rawText diretamente para a Edge Function batch-categorize
-        const aiResponse = await parsePdfWithAI(rawText, family.id)
-        if (!aiResponse.success || aiResponse.transactions.length === 0) {
+        setExtractionProgress(
+          totalPages === 1
+            ? 'Analisando fatura com IA (GPT-4o mini)...'
+            : `Extraindo lançamentos de ${totalPages} páginas em paralelo...`,
+        )
+
+        // 2. Extração em blocos em chamadas PARALELAS (requisito de performance acordado)
+        let parallelPromises: Promise<any>[] = []
+        if (validPages.length > 0) {
+          parallelPromises = validPages.map((page) =>
+            parsePdfWithAI(page.text, family.id).catch((err) => ({
+              success: false,
+              transactions: [],
+              declaredTotalCents: null,
+              error: err?.message,
+            })),
+          )
+        } else {
+          parallelPromises = [parsePdfWithAI(extractedPdf.rawText, family.id)]
+        }
+
+        const pageResults = await Promise.all(parallelPromises)
+
+        setExtractionProgress('Mesclando resultados e validando lançamentos...')
+
+        // 3. Mesclar resultados e capturar total declarado (se identificável em alguma página)
+        const allExtractedTransactions: AiPdfTransactionItem[] = []
+        let identifiedDeclaredTotal: number | null = null
+
+        for (const res of pageResults) {
+          if (res && Array.isArray(res.transactions)) {
+            allExtractedTransactions.push(...res.transactions)
+          }
+          if (
+            typeof res?.declaredTotalCents === 'number' &&
+            res.declaredTotalCents > 0 &&
+            !identifiedDeclaredTotal
+          ) {
+            identifiedDeclaredTotal = res.declaredTotalCents
+          }
+        }
+
+        if (allExtractedTransactions.length === 0) {
+          const firstError = pageResults.find((r) => r?.error)?.error
           throw new Error(
-            aiResponse.error ||
+            firstError ||
               'A IA não conseguiu identificar lançamentos de compras nesta fatura em PDF.',
           )
         }
 
+        // 4. Deduplicação entre blocos/páginas (mesma data + descrição normalizada + valor)
+        const deduplicatedTransactions = deduplicateExtractedTransactions(allExtractedTransactions)
+
+        setDeclaredTotalCents(identifiedDeclaredTotal)
         setFileInfo({
           name: file.name,
           size: file.size,
@@ -395,8 +459,8 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
         setIgnoredLines([])
         setFileWarnings([])
 
-        // 3. Montar itens para a tela de revisão
-        const reviewList: ReviewItem[] = aiResponse.transactions.map(
+        // 5. Montar itens para a tela de revisão aplicando filtro determinístico pós-IA
+        const reviewList: ReviewItem[] = deduplicatedTransactions.map(
           (tx: AiPdfTransactionItem, idx: number) => {
             const description = tx.cleanMerchant || tx.description
             const amountCents = tx.amountCents
@@ -404,6 +468,12 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
             const txType: TransactionType = tx.type === 'income' ? 'income' : 'expense'
             const fitid = generatePdfFitid(date, description, amountCents)
             const txId = `pdf-${idx}-${Date.now()}`
+
+            // Filtro determinístico pós-IA (em código): linhas de pagamento/ajuste/encargo/IOF
+            // Marcadas como isNonExpense = true e DESMARCADAS por padrão
+            const isNonExpense =
+              isDeterministicNonExpense(tx.description) ||
+              isDeterministicNonExpense(tx.cleanMerchant)
 
             // 1ª camada: verificar se existe regra prévia no banco
             const ruleMatch = matchCategorization(description, txType, categories, loadedRules)
@@ -532,6 +602,9 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 ? matchedManualTransaction.member_id
                 : activeMemberId
 
+            // Itens com flag "não é despesa" vêm DESMARCADOS por padrão
+            const isSelected = !dupMatch && !isNonExpense
+
             return {
               id: txId,
               date,
@@ -544,7 +617,9 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
               subcategory_id: initialSub,
               rememberRule: !!initialCat,
               source: isReconciledManual ? 'manual' : source,
-              aiReasoning: 'Extraído e classificado pela IA financeira do Curiangoo',
+              aiReasoning: isNonExpense
+                ? 'Identificado como quitação, ajuste ou encargo (não é despesa nova)'
+                : 'Extraído e classificado pela IA financeira do Curiangoo',
               aiConfidence: tx.confidence,
               isDuplicate: !!dupMatch,
               duplicateReason: dupMatch
@@ -556,12 +631,13 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
               matchedProjectId,
               matchedGroupId,
               generateFutureInstallments: isFirstInstallment,
-              selected: !dupMatch,
+              selected: isSelected,
               isReconciledManual,
               matchedManualTransaction,
               reconciliationStatus,
               reconciliationCandidates,
               reconciliationReason,
+              isNonExpense,
             }
           },
         )
@@ -946,6 +1022,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
   // Estatísticas da revisão
   const selectedCount = useMemo(() => items.filter((i) => i.selected).length, [items])
   const duplicateCount = useMemo(() => items.filter((i) => i.isDuplicate).length, [items])
+  const nonExpenseCount = useMemo(() => items.filter((i) => i.isNonExpense).length, [items])
   const mergedCount = useMemo(() => items.filter((i) => i.isReconciledManual).length, [items])
   const multipleCandidatesCount = useMemo(
     () => items.filter((i) => i.reconciliationStatus === 'multiple_candidates').length,
@@ -963,6 +1040,32 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
       })
     return { inc, exp }
   }, [items])
+
+  // Validação de fechamento da fatura:
+  // Compara a soma dos lançamentos de despesas (saídas) com o total declarado pela fatura.
+  // Tolerância pequena de arredondamento: ±R$ 0,05 (5 centavos).
+  const closingValidation = useMemo(() => {
+    if (!declaredTotalCents || declaredTotalCents <= 0) {
+      return null
+    }
+
+    // Soma das saídas (despesas não estornadas) de todos os itens reais extraídos
+    // (itens não marcados como isNonExpense)
+    const expensesSum = items
+      .filter((i) => i.type === 'expense' && !i.isNonExpense)
+      .reduce((acc, curr) => acc + curr.amount_cents, 0)
+
+    const diffCents = Math.abs(expensesSum - declaredTotalCents)
+    const matches = diffCents <= 5 // tolerância de ±5 centavos (R$ 0,05)
+
+    return {
+      declaredTotalCents,
+      expensesSumCents: expensesSum,
+      diffCents,
+      matches,
+      itemCount: items.filter((i) => i.type === 'expense' && !i.isNonExpense).length,
+    }
+  }, [items, declaredTotalCents])
 
   // Salvar no banco
   const handleSaveImported = async () => {
@@ -1486,14 +1589,14 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 <h3 className="font-bold text-base text-slate-800">
                   {parsing
                     ? isAiCategorizing
-                      ? 'Aplicando categorização por IA (GPT-4o mini)...'
-                      : 'Processando e analisando extrato ou fatura...'
+                      ? extractionProgress || 'Aplicando inteligência por IA (GPT-4o mini)...'
+                      : extractionProgress || 'Processando e analisando extrato ou fatura...'
                     : 'Arraste seu arquivo OFX ou PDF de fatura aqui'}
                 </h3>
                 <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 mb-4">
                   {parsing
                     ? isAiCategorizing
-                      ? 'Consultando o Copilot IA para sugerir categorias estritas do seu catálogo familiar...'
+                      ? 'Extraindo todas as páginas em paralelo com IA à prova de falhas e conferindo total...'
                       : 'Lendo lançamentos, identificando parcelas e aplicando regras cadastradas...'
                     : 'Ou clique para selecionar o arquivo (.ofx ou fatura em .pdf) do seu dispositivo'}
                 </p>
@@ -1617,6 +1720,30 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           {/* ================= ETAPA 2: REVISÃO ANTES DE SALVAR ================= */}
           {step === 'review' ? (
             <div className="flex-1 flex flex-col min-h-0 pt-2 space-y-3">
+              {/* Aviso Persistente de Fechamento da Fatura (Item 2 do plano IA à prova de falhas) */}
+              {closingValidation && !closingValidation.matches && (
+                <div
+                  role="alert"
+                  className="p-3 sm:p-3.5 rounded-2xl bg-amber-500/10 border-2 border-amber-500/40 text-amber-950 text-xs shadow-xs space-y-1 shrink-0"
+                >
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-base sm:text-lg shrink-0 mt-0.5 leading-none">⚠</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-amber-950 text-xs sm:text-sm leading-snug">
+                        A soma dos {closingValidation.itemCount} lançamentos (
+                        {formatBRL(closingValidation.expensesSumCents)}) não bate com o total da
+                        fatura ({formatBRL(closingValidation.declaredTotalCents)}) — algo ficou de
+                        fora
+                      </p>
+                      <p className="text-[11px] text-amber-900/80 mt-0.5 leading-relaxed">
+                        Diferença detectada: {formatBRL(closingValidation.diffCents)}. Revise as
+                        páginas da fatura ou adicione os itens faltantes manualmente.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Barra de Ações Rápidas no Topo */}
               <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
                 <div className="flex items-center gap-3 flex-wrap">
@@ -1660,6 +1787,14 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                     <span className="text-[11px] font-semibold text-amber-700 bg-amber-100/80 border border-amber-200 px-2 py-0.5 rounded-full flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" />
                       {duplicateCount} duplicata(s)
+                    </span>
+                  )}
+
+                  {/* Badge de linhas interceptadas pelo filtro determinístico ("não é despesa") */}
+                  {nonExpenseCount > 0 && (
+                    <span className="text-[11px] font-semibold text-slate-700 bg-slate-200/90 border border-slate-300 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3 text-slate-600" />
+                      {nonExpenseCount} quitação/ajuste (não é despesa)
                     </span>
                   )}
 
@@ -1872,6 +2007,14 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                                   >
                                     <AlertTriangle className="w-2.5 h-2.5 text-amber-700" />
                                     <span>Duplicada</span>
+                                  </span>
+                                )}
+                                {item.isNonExpense && (
+                                  <span
+                                    title="Quitação de fatura anterior, ajuste, encargo ou IOF detectado em código. Desmarcada por padrão para não inflar despesas do mês."
+                                    className="font-bold text-[10px] bg-slate-100 text-slate-700 border border-slate-300 px-1.5 py-0.2 rounded shrink-0 flex items-center gap-0.5"
+                                  >
+                                    <span>🛡 Não é despesa</span>
                                   </span>
                                 )}
                                 {!item.category_id ? (

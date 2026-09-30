@@ -4,6 +4,9 @@ import {
   isPdfPasswordError,
   classifyPdfPasswordError,
   PdfPasswordProtectedError,
+  deduplicateExtractedTransactions,
+  isDeterministicNonExpense,
+  normalizeDescriptionForDedup,
 } from '../pdf-parser'
 
 describe('pdf-parser service', () => {
@@ -53,5 +56,82 @@ describe('pdf-parser service', () => {
     )
     expect(errAfterAttempt.kind).toBe('INCORRECT_PASSWORD')
     expect(errAfterAttempt.message).toBe('Senha incorreta. Tente novamente.')
+  })
+
+  describe('deduplicateExtractedTransactions', () => {
+    it('remove duplicatas entre blocos (mesma data + descrição normalizada + valor)', () => {
+      const items = [
+        {
+          date: '2025-02-10',
+          description: 'DROGASIL SAO PAULO',
+          cleanMerchant: 'Drogasil',
+          amountCents: 4590,
+        },
+        {
+          date: '2025-02-10',
+          description: 'DROGASIL SÃO PAULO',
+          cleanMerchant: 'Drogasil',
+          amountCents: 4590, // Duplicata da fronteira de páginas
+        },
+        {
+          date: '2025-02-11',
+          description: 'UBER *TRIP',
+          cleanMerchant: 'Uber',
+          amountCents: 2450,
+        },
+        {
+          date: '2025-02-10',
+          description: 'DROGASIL',
+          cleanMerchant: 'Drogasil',
+          amountCents: 3200, // Valor diferente -> NÃO é duplicata
+        },
+      ]
+
+      const deduplicated = deduplicateExtractedTransactions(items)
+      expect(deduplicated).toHaveLength(3)
+      expect(deduplicated[0].cleanMerchant).toBe('Drogasil')
+      expect(deduplicated[0].amountCents).toBe(4590)
+      expect(deduplicated[1].cleanMerchant).toBe('Uber')
+      expect(deduplicated[2].amountCents).toBe(3200)
+    })
+  })
+
+  describe('isDeterministicNonExpense', () => {
+    it('intercepta quitações e pagamentos de fatura anterior', () => {
+      expect(isDeterministicNonExpense('Pagamento recebido em 05/02/2025')).toBe(true)
+      expect(isDeterministicNonExpense('PAGAMENTO DE FATURA')).toBe(true)
+      expect(isDeterministicNonExpense('Pagamento Efetuado')).toBe(true)
+      expect(isDeterministicNonExpense('PAGTO FATURA')).toBe(true)
+      expect(isDeterministicNonExpense('Pagamento Mínimo')).toBe(true)
+      expect(isDeterministicNonExpense('PAGAMENTO TITULO')).toBe(true)
+      expect(isDeterministicNonExpense('Quitacao de Fatura')).toBe(true)
+    })
+
+    it('intercepta ajustes, encargos e IOF', () => {
+      expect(isDeterministicNonExpense('AJUSTE DE CREDITO')).toBe(true)
+      expect(isDeterministicNonExpense('Ajuste a debito')).toBe(true)
+      expect(isDeterministicNonExpense('ENCARGOS DE FINANCIAMENTO')).toBe(true)
+      expect(isDeterministicNonExpense('IOF COMPRA INTERNACIONAL')).toBe(true)
+      expect(isDeterministicNonExpense('IOF DIARIO')).toBe(true)
+    })
+
+    it('NÃO intercepta tarifa (regra explícita: não aprovado)', () => {
+      expect(isDeterministicNonExpense('Tarifa de anuidade')).toBe(false)
+      expect(isDeterministicNonExpense('TARIFA BANCARIA')).toBe(false)
+    })
+
+    it('NÃO intercepta compras normais', () => {
+      expect(isDeterministicNonExpense('Uber *Trip')).toBe(false)
+      expect(isDeterministicNonExpense('IFOOD *RESTAURANTE')).toBe(false)
+      expect(isDeterministicNonExpense('DROGASIL 01/03')).toBe(false)
+      expect(isDeterministicNonExpense('MERCADO LIVRE')).toBe(false)
+    })
+  })
+
+  describe('normalizeDescriptionForDedup', () => {
+    it('normaliza removendo acentos, pontuações e caixa alta', () => {
+      expect(normalizeDescriptionForDedup('PAG*Drogasil S/A (01/03)')).toBe('pagdrogasilsa0103')
+      expect(normalizeDescriptionForDedup('Açougue & Cia.')).toBe('acouguecia')
+    })
   })
 })

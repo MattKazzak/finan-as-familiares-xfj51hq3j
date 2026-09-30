@@ -30,6 +30,7 @@ export interface AiPdfTransactionItem {
 interface BatchCategorizeResponse {
   suggestions?: AiCategorizationSuggestion[]
   transactions?: AiPdfTransactionItem[]
+  declaredTotalCents?: number | null
   totalProcessed?: number
   totalExtracted?: number
   mode?: 'batch' | 'pdf'
@@ -37,15 +38,23 @@ interface BatchCategorizeResponse {
   message?: string
 }
 
+export interface ParsePdfAiResult {
+  success: boolean
+  transactions: AiPdfTransactionItem[]
+  declaredTotalCents?: number | null
+  error?: string
+}
+
 /**
  * Invoca a Edge Function 'batch-categorize' no modo PDF com texto bruto.
- * A IA especializada extrai todas as compras/estornos reais, descarta ruídos
+ * A IA especializada extrai todas as compras/estornos reais, descarta ruídos,
+ * captura o valor total declarado da fatura quando identificável
  * e já classifica cada transação no catálogo da família.
  */
 export async function parsePdfWithAI(
   rawText: string,
   familyId?: string,
-): Promise<{ success: boolean; transactions: AiPdfTransactionItem[]; error?: string }> {
+): Promise<ParsePdfAiResult> {
   if (!rawText || !rawText.trim()) {
     return {
       success: false,
@@ -86,6 +95,10 @@ export async function parsePdfWithAI(
     return {
       success: true,
       transactions: data.transactions,
+      declaredTotalCents:
+        typeof data.declaredTotalCents === 'number' && data.declaredTotalCents > 0
+          ? Math.round(data.declaredTotalCents)
+          : null,
     }
   } catch (err: any) {
     console.warn('Exceção ao processar PDF com IA:', err)
