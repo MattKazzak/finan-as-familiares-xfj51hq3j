@@ -203,6 +203,9 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
   const [categorizationRules, setCategorizationRules] = useState<CategorizationRule[]>([])
   // Accordion na revisão do extrato: ID do item atualmente expandido (null = todos recolhidos)
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
+  // Estado para edição rápida de categoria e modal secundário de detalhes adicionais
+  const [categoryPickerItemId, setCategoryPickerItemId] = useState<string | null>(null)
+  const [detailModalItemId, setDetailModalItemId] = useState<string | null>(null)
 
   // Estado para criar categoria rápida inline
   const [isQuickCatOpen, setIsQuickCatOpen] = useState(false)
@@ -286,6 +289,8 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
       setStep('upload')
       setItems([])
       setExpandedItemId(null)
+      setCategoryPickerItemId(null)
+      setDetailModalItemId(null)
       setErrorMessage(null)
       setDiagnostics(null)
       setFileInfo(null)
@@ -1390,57 +1395,79 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
     }
   }
 
+  const itemForDetailModal = useMemo(
+    () => items.find((i) => i.id === detailModalItemId) || null,
+    [items, detailModalItemId],
+  )
+
+  const itemForCategoryPicker = useMemo(
+    () => items.find((i) => i.id === categoryPickerItemId) || null,
+    [items, categoryPickerItemId],
+  )
+
   return (
     <>
       <Dialog open={open} onOpenChange={handleDialogChange}>
         <DialogContent
-          className={`flex flex-col p-3 sm:p-6 overflow-hidden transition-all duration-200 border-slate-200/90 shadow-2xl ${
-            /* Mobile: quase full-screen com cantos suaves */
-            'w-[calc(100vw-1rem)] h-[calc(100dvh-1rem)] max-w-none max-h-none rounded-2xl sm:w-auto sm:h-auto'
+          className={`flex flex-col p-0 overflow-hidden transition-all duration-200 border-slate-200/90 shadow-2xl ${
+            /* Mobile (< sm): tela cheia fixa em h-[100dvh], max-h-none, rounded-none, sem margens externas */
+            'w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[94vw] sm:max-w-5xl sm:h-[88vh] sm:max-h-[88vh] sm:rounded-2xl'
           } ${
-            /* Desktop (sm+): tamanho padrão espaçoso ou expandido */
-            isExpanded
-              ? 'sm:w-[98vw] sm:max-w-7xl sm:h-[94vh] sm:max-h-[94vh] sm:rounded-2xl'
-              : 'sm:w-[94vw] sm:max-w-6xl sm:h-[88vh] sm:max-h-[88vh] sm:rounded-2xl'
+            /* Desktop (sm+): expandido se solicitado */
+            isExpanded ? 'sm:w-[98vw] sm:max-w-7xl sm:h-[94vh] sm:max-h-[94vh]' : ''
           }`}
         >
-          <DialogHeader className="shrink-0 pb-3 border-b border-slate-100">
+          {/* Header FIXO no topo */}
+          <DialogHeader className="shrink-0 px-3.5 sm:px-6 py-3 border-b border-slate-100 bg-white/95 backdrop-blur-md z-10">
             <div className="flex items-center justify-between gap-2 pr-7 sm:pr-8">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-base shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm sm:text-base shrink-0 shadow-2xs">
                   📥
                 </div>
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 truncate">
-                      Importar Extrato Bancário
-                    </DialogTitle>
-                    {step === 'review' && fileInfo ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-md">
-                        <span>{fileInfo.format}</span>
-                        <span className="text-emerald-400">•</span>
-                        <span className="max-w-[140px] sm:max-w-[220px] truncate">
-                          {fileInfo.name}
+                  {step === 'review' ? (
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                      <DialogTitle className="text-sm sm:text-base font-bold text-slate-900 truncate">
+                        Revisar Lançamentos ({items.length})
+                      </DialogTitle>
+                      {/* Badge de conciliação integrado ao lado do total */}
+                      {closingValidation?.matches ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shadow-2xs">
+                          <span>
+                            ✔ Conciliada ({formatBRL(closingValidation.declaredTotalCents)})
+                          </span>
                         </span>
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="text-xs text-slate-500 truncate mt-0.5">
+                      ) : closingValidation && !closingValidation.matches ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                          <span>Fatura ({formatBRL(closingValidation.declaredTotalCents)})</span>
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <DialogTitle className="text-sm sm:text-base font-bold text-slate-900 truncate">
+                        Importar Extrato Bancário
+                      </DialogTitle>
+                    </div>
+                  )}
+                  <p className="text-[11px] sm:text-xs text-slate-500 truncate mt-0.5">
                     {step === 'upload'
-                      ? 'Extratos OFX e faturas de cartão em PDF com conciliação automática e inteligência de categorias.'
-                      : `Revisão de lançamentos: ajuste categorias, membros, datas e confirme a importação`}
+                      ? 'Extratos OFX e faturas de cartão em PDF com conciliação automática.'
+                      : fileInfo
+                        ? `${fileInfo.format} • ${fileInfo.name}`
+                        : `${items.length} lançamentos identificados`}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex items-center gap-1 shrink-0">
                 {step === 'review' ? (
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setStep('upload')}
-                    className="text-xs h-8 rounded-xl px-2.5"
-                    title="Enviar outro extrato"
+                    className="text-[11px] sm:text-xs h-7 sm:h-8 rounded-lg sm:rounded-xl px-2 sm:px-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    title="Trocar arquivo de extrato"
                   >
                     <span>Trocar arquivo</span>
                   </Button>
@@ -1470,7 +1497,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 
           {/* ================= ETAPA 1: UPLOAD ================= */}
           {step === 'upload' ? (
-            <div className="flex-1 overflow-y-auto py-6 space-y-5">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-5">
               {/* Box amigável quando o PDF é protegido por senha */}
               {isPasswordProtected && pendingPdfFile ? (
                 <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-950 text-xs space-y-3.5 shadow-2xs">
@@ -1866,7 +1893,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 
           {/* ================= ETAPA 2: REVISÃO ANTES DE SALVAR ================= */}
           {step === 'review' ? (
-            <div className="flex-1 flex flex-col min-h-0 pt-2 space-y-3">
+            <div className="flex-1 flex flex-col min-h-0 p-3 sm:p-5 space-y-2.5 sm:space-y-3">
               {/* Aviso de páginas falhadas (se alguma falhou mas outras trouxeram lançamentos) */}
               {failedPages.length > 0 && (
                 <div
@@ -1889,7 +1916,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 </div>
               )}
 
-              {/* Informativo sutil de apoio em caso de divergência residual (sem alarmes sonoros/amarelos fortes) */}
+              {/* Informativo sutil de apoio em caso de divergência residual */}
               {closingValidation && !closingValidation.matches && (
                 <div
                   role="status"
@@ -1903,15 +1930,15 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
               )}
 
               {/* Barra de Ações Rápidas no Topo */}
-              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
-                <div className="flex items-center gap-3 flex-wrap">
+              <div className="bg-slate-50 p-2.5 sm:p-3 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-3 shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                   {/* Selecionar / Desmarcar Todos */}
-                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                  <label className="flex items-center gap-1.5 sm:gap-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
                     <input
                       type="checkbox"
                       checked={selectedCount === items.length && items.length > 0}
                       onChange={(e) => handleToggleSelectAll(e.target.checked)}
-                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4"
                     />
                     <span>
                       Selecionar todos ({selectedCount}/{items.length})
@@ -1919,48 +1946,32 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                   </label>
 
                   {/* Badge de lançamentos válidos */}
-                  <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-100/80 border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="text-[10px] sm:text-[11px] font-semibold text-emerald-800 bg-emerald-100/80 border border-emerald-200 px-2 sm:px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <ShieldCheck className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-emerald-600" />
                     {items.length} válidos
                   </span>
 
-                  {/* Badge de Mescla com Lançamento Manual (Conciliação Inteligente) */}
+                  {/* Badge de Mescla com Lançamento Manual */}
                   {mergedCount > 0 && (
-                    <span className="text-[11px] font-bold text-teal-800 bg-teal-100/90 border border-teal-300 px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+                    <span className="text-[10px] sm:text-[11px] font-bold text-teal-800 bg-teal-100/90 border border-teal-300 px-2 sm:px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
                       <span>🔗</span>
-                      <span>{mergedCount} mesclada(s) com manual</span>
-                    </span>
-                  )}
-
-                  {/* Aviso de múltiplas candidatas */}
-                  {multipleCandidatesCount > 0 && (
-                    <span className="text-[11px] font-semibold text-indigo-800 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <span>⚡</span>
-                      <span>{multipleCandidatesCount} com múltiplos manuais</span>
+                      <span>{mergedCount} mesclada(s)</span>
                     </span>
                   )}
 
                   {/* Alerta de duplicatas */}
                   {duplicateCount > 0 && (
-                    <span className="text-[11px] font-semibold text-amber-700 bg-amber-100/80 border border-amber-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <span className="text-[10px] sm:text-[11px] font-semibold text-amber-700 bg-amber-100/80 border border-amber-200 px-2 sm:px-2.5 py-0.5 rounded-full flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" />
-                      {duplicateCount} duplicata(s)
+                      {duplicateCount} duplicada(s)
                     </span>
                   )}
 
-                  {/* Badge de linhas interceptadas pelo filtro determinístico ("não é despesa") */}
+                  {/* Badge quitação/ajuste */}
                   {nonExpenseCount > 0 && (
-                    <span className="text-[11px] font-semibold text-slate-700 bg-slate-200/90 border border-slate-300 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <span className="text-[10px] sm:text-[11px] font-semibold text-slate-700 bg-slate-200/90 border border-slate-300 px-2 sm:px-2.5 py-0.5 rounded-full flex items-center gap-1">
                       <ShieldCheck className="w-3 h-3 text-slate-600" />
-                      {nonExpenseCount} quitação/ajuste (não é despesa)
-                    </span>
-                  )}
-
-                  {/* Alerta de pendentes de categoria */}
-                  {uncategorizedCount > 0 && (
-                    <span className="text-[11px] font-semibold text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-purple-600" />
-                      {uncategorizedCount} pendente(s) de categoria
+                      {nonExpenseCount} quitação/ajuste
                     </span>
                   )}
                 </div>
@@ -1970,7 +1981,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                   <div className="flex items-center gap-1.5 text-xs text-slate-600">
                     <span className="hidden sm:inline">Atribuir a:</span>
                     <Select value={defaultMemberId} onValueChange={handleApplyMemberToAll}>
-                      <SelectTrigger className="h-8 text-xs bg-white w-32 rounded-xl">
+                      <SelectTrigger className="h-8 text-xs bg-white w-28 sm:w-32 rounded-xl">
                         <SelectValue placeholder="Membro" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1997,7 +2008,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 
               {/* Avisos e Filtro de Ruído Expansível */}
               {ignoredLines.length > 0 && (
-                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-2.5 text-xs">
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-2.5 text-xs shrink-0">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 text-slate-700 font-medium">
                       <Info className="w-3.5 h-3.5 text-slate-500" />
@@ -2006,7 +2017,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                           {ignoredLines.length}
                         </strong>{' '}
                         {ignoredLines.length === 1 ? 'linha ignorada' : 'linhas ignoradas'} pelo
-                        filtro de segurança (cabeçalho, rodapé ou sem data/valor)
+                        filtro
                       </span>
                     </div>
                     <button
@@ -2014,7 +2025,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                       onClick={() => setShowIgnoredLines((prev) => !prev)}
                       className="text-[11px] font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1 hover:underline"
                     >
-                      <span>{showIgnoredLines ? 'Ocultar detalhes' : 'Ver linhas ignoradas'}</span>
+                      <span>{showIgnoredLines ? 'Ocultar' : 'Ver linhas ignoradas'}</span>
                       {showIgnoredLines ? (
                         <ChevronUp className="w-3.5 h-3.5" />
                       ) : (
@@ -2024,7 +2035,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                   </div>
 
                   {showIgnoredLines && (
-                    <div className="mt-2.5 pt-2 border-t border-slate-200/70 max-h-36 overflow-y-auto space-y-1 pr-1 font-mono text-[11px]">
+                    <div className="mt-2 pt-2 border-t border-slate-200/70 max-h-32 overflow-y-auto space-y-1 font-mono text-[11px]">
                       {ignoredLines.map((ign, idx) => (
                         <div
                           key={idx}
@@ -2044,779 +2055,664 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 </div>
               )}
 
-              {/* Lista Scrollável de Transações com padrão Accordion Tap-to-Expand */}
-              <div className="flex-1 overflow-y-auto space-y-2 pr-1 border border-slate-200/80 rounded-2xl bg-slate-50/40 p-2">
+              {/* LISTA COMPACTA DE LANÇAMENTOS - ESTILO EXTRATO PREMIUM */}
+              <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-slate-100/90 -mx-1 sm:mx-0 px-1 pr-1.5 overscroll-contain">
                 {items.map((item) => {
-                  const isIncome = item.type === 'income'
                   const currentCategory = categories.find((c) => c.id === item.category_id)
-                  const filteredCategories = categories.filter((c) => c.type === item.type)
-                  const availableSubcategories = currentCategory?.subcategories || []
-                  const isOpen = expandedItemId === item.id
+                  const isIncome = item.type === 'income'
+                  const memberName = members.find((m) => m.id === item.member_id)?.name
 
                   return (
                     <div
                       key={item.id}
-                      className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
-                        isOpen
-                          ? 'bg-amber-50/40 border-amber-300 shadow-md ring-2 ring-amber-400/40'
-                          : item.isDuplicate
-                            ? 'bg-amber-50/60 border-amber-200 shadow-2xs hover:bg-amber-50'
-                            : item.selected
-                              ? 'bg-white border-slate-200/90 shadow-2xs hover:bg-slate-50/80'
-                              : 'opacity-60 bg-slate-100/70 border-slate-200/60 shadow-2xs'
+                      className={`group py-2.5 px-2 rounded-xl transition-colors flex items-center justify-between gap-2.5 ${
+                        item.selected ? 'hover:bg-slate-50/90' : 'opacity-40 bg-slate-50/40'
                       }`}
                     >
-                      {/* ================= 1. LINHA RECOLHIDA (TAP-TO-EXPAND HEADER) ================= */}
-                      <div className="p-2.5 sm:p-3 flex items-center justify-between gap-2 min-h-[44px]">
-                        {/* Checkbox de seleção para importação */}
+                      {/* Checkbox de seleção */}
+                      <input
+                        type="checkbox"
+                        checked={item.selected}
+                        onChange={() => handleToggleItem(item.id)}
+                        aria-label={`Selecionar ${item.description}`}
+                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 shrink-0 cursor-pointer"
+                      />
+
+                      {/* Lado Esquerdo: Ícone da categoria em badge arredondado + Título em negrito + Subtítulo leve */}
+                      <div
+                        onClick={() => setDetailModalItemId(item.id)}
+                        className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer select-none"
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            setDetailModalItemId(item.id)
+                          }
+                        }}
+                      >
+                        {/* Ícone de categoria em badge arredondado */}
                         <div
-                          className="shrink-0 flex items-center pr-1"
-                          onClick={(e) => e.stopPropagation()}
+                          className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-2xs text-white"
+                          style={{
+                            backgroundColor: currentCategory?.color || '#94A3B8',
+                          }}
                         >
-                          <input
-                            type="checkbox"
-                            checked={item.selected}
-                            onChange={() => handleToggleItem(item.id)}
-                            className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                            title={
-                              item.selected ? 'Desmarcar da importação' : 'Marcar para importação'
-                            }
-                          />
+                          {currentCategory?.icon ? (
+                            <CategoryIcon
+                              name={currentCategory.icon}
+                              className="w-4 h-4 text-white"
+                            />
+                          ) : (
+                            <Tag className="w-4 h-4 text-white" />
+                          )}
                         </div>
 
-                        {/* Botão de toque em toda a linha para abrir o accordion */}
-                        <button
-                          type="button"
-                          role="button"
-                          aria-expanded={isOpen}
-                          onClick={() =>
-                            setExpandedItemId((prev) => (prev === item.id ? null : item.id))
-                          }
-                          className="flex items-center justify-between gap-2.5 min-w-0 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-xl select-none"
-                        >
-                          {/* Lado esquerdo: Ícone da categoria + Descrição + Badges */}
-                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                            <div
-                              className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 shadow-2xs"
-                              style={{
-                                backgroundColor: currentCategory?.color || '#F59E0B',
-                                color: '#FFFFFF',
-                              }}
-                            >
-                              {currentCategory?.icon ? (
-                                <CategoryIcon name={currentCategory.icon} className="w-3.5 h-3.5" />
-                              ) : (
-                                <Tag className="w-3.5 h-3.5" />
-                              )}
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                              <p
-                                className="font-bold text-xs sm:text-sm text-slate-900 truncate leading-tight"
-                                title={item.description}
-                              >
-                                {item.description || 'Transação sem descrição'}
-                              </p>
-                              <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-slate-500 mt-0.5 min-w-0 flex-wrap">
-                                <span className="tabular-nums font-mono text-slate-600 shrink-0">
-                                  {item.date}
-                                </span>
-                                {item.isReconciledManual && (
-                                  <span
-                                    title={
-                                      item.reconciliationReason ||
-                                      'Transação manual correspondente vinculada sem duplicar orçamento'
-                                    }
-                                    className="font-bold text-[10px] bg-teal-100 text-teal-900 border border-teal-300 px-1.5 py-0.2 rounded shrink-0 flex items-center gap-0.5"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <span>🔗 Mesclada com lançamento manual</span>
-                                  </span>
-                                )}
-                                {!item.isReconciledManual &&
-                                  item.reconciliationStatus === 'multiple_candidates' && (
-                                    <span
-                                      title={item.reconciliationReason}
-                                      className="font-semibold text-[10px] bg-indigo-100 text-indigo-900 border border-indigo-300 px-1.5 py-0.2 rounded shrink-0 flex items-center gap-0.5"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      <span>
-                                        ⚡ {item.reconciliationCandidates?.length} candidatas
-                                        manuais (decida na expansão)
-                                      </span>
-                                    </span>
-                                  )}
-                                {item.isInstallment && (
-                                  <span className="font-bold text-[10px] bg-purple-100 text-purple-900 border border-purple-300/80 px-1.5 py-0.2 rounded shrink-0 flex items-center gap-0.5">
-                                    <span>
-                                      {item.installmentCurrent}/{item.installmentTotal}
-                                    </span>
-                                  </span>
-                                )}
-                                {item.matchedProjectId && (
-                                  <span className="font-semibold text-[10px] bg-blue-100 text-blue-900 border border-blue-300/80 px-1.5 py-0.2 rounded shrink-0 flex items-center gap-0.5">
-                                    <span>Converte projeção</span>
-                                  </span>
-                                )}
-                                {item.isDuplicate && (
-                                  <span
-                                    title={item.duplicateReason}
-                                    className="font-semibold text-[10px] bg-amber-100 text-amber-900 border border-amber-300/80 px-1.5 py-0.2 rounded shrink-0 flex items-center gap-0.5"
-                                  >
-                                    <AlertTriangle className="w-2.5 h-2.5 text-amber-700" />
-                                    <span>Duplicada</span>
-                                  </span>
-                                )}
-                                {item.isNonExpense && (
-                                  <span
-                                    title="Quitação de fatura anterior, ajuste, estorno, encargo ou IOF detectado em código. Desmarcada por padrão para não inflar despesas do mês."
-                                    className="font-bold text-[10px] bg-slate-100 text-slate-700 border border-slate-300 px-1.5 py-0.2 rounded shrink-0 flex items-center gap-0.5"
-                                  >
-                                    <span>Não é despesa</span>
-                                  </span>
-                                )}
-                                {!item.category_id ? (
-                                  <span className="font-semibold text-[10px] bg-amber-100 text-amber-900 border border-amber-300/80 px-1.5 py-0.2 rounded font-mono shrink-0">
-                                    Pendente
-                                  </span>
-                                ) : (
-                                  <span className="flex items-center gap-1.5 min-w-0 flex-wrap text-slate-600 font-medium">
-                                    <span className="truncate">• {currentCategory?.name}</span>
-                                    {item.source === 'ai_suggestion' && (
-                                      <span
-                                        title={
-                                          item.aiReasoning
-                                            ? `IA: ${item.aiReasoning}`
-                                            : 'Classificação sugerida pela IA'
-                                        }
-                                        className="inline-flex items-center gap-0.5 text-[10px] font-bold text-violet-700 bg-violet-50 border border-violet-200/80 px-1.5 py-0.2 rounded-full shrink-0"
-                                      >
-                                        <span>✨ IA</span>
-                                      </span>
-                                    )}
-                                  </span>
-                                )}{' '}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Lado direito: Valor alinhado + Chevron */}
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span
-                              className={`font-extrabold text-xs sm:text-sm tabular-nums whitespace-nowrap ${
-                                isIncome ? 'text-emerald-700' : 'text-red-600'
-                              }`}
-                            >
-                              {isIncome ? '+' : '−'} {formatBRL(item.amount_cents)}
+                        {/* Textos: Estabelecimento limpo em negrito + Subtítulo leve (data, parcela, membro) */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-xs sm:text-sm text-slate-900 truncate block max-w-[160px] xs:max-w-[200px] sm:max-w-xs">
+                              {item.description}
                             </span>
-                            <div className="w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
-                              {isOpen ? (
-                                <ChevronUp className="w-3.5 h-3.5 transition-transform" />
-                              ) : (
-                                <ChevronDown className="w-3.5 h-3.5 transition-transform" />
-                              )}
-                            </div>
+                            {item.isDuplicate && (
+                              <span className="text-[10px] font-semibold text-amber-700 bg-amber-100/90 border border-amber-300 px-1.5 py-0.2 rounded shrink-0">
+                                Duplicata
+                              </span>
+                            )}
+                            {item.isReconciledManual && (
+                              <span className="text-[10px] font-semibold text-teal-800 bg-teal-100 border border-teal-300 px-1.5 py-0.2 rounded shrink-0">
+                                🔗 Mesclada
+                              </span>
+                            )}
                           </div>
-                        </button>
+
+                          {/* Subtítulo leve com data (ex: 11/07), badge de parcela "7/10" discreto e nome do membro */}
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 truncate mt-0.5">
+                            <span className="font-medium text-slate-600">
+                              {item.date ? item.date.slice(5).replace('-', '/') : ''}
+                            </span>
+                            {item.isInstallment && (
+                              <span className="font-semibold text-[10px] text-purple-700 bg-purple-100/90 px-1.5 py-0.2 rounded-md shrink-0">
+                                {item.installmentCurrent}/{item.installmentTotal}
+                              </span>
+                            )}
+                            {memberName && (
+                              <>
+                                <span className="text-slate-300">•</span>
+                                <span className="truncate max-w-[70px] sm:max-w-none">
+                                  {memberName}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </div>
 
-                      {/* ================= 2. PAINEL EXPANDIDO COM OS CONTROLES COMPLETOS ================= */}
-                      <div
-                        className={`grid transition-all duration-200 ease-out ${
-                          isOpen
-                            ? 'grid-rows-[1fr] opacity-100'
-                            : 'grid-rows-[0fr] opacity-0 pointer-events-none'
-                        }`}
-                      >
-                        <div className="overflow-hidden">
-                          <div className="p-3 sm:p-4 pt-1 sm:pt-1 border-t border-slate-200/80 space-y-3 bg-gradient-to-b from-amber-50/20 to-white/95">
-                            {/* Bloco de Conciliação Inteligente com Lançamento Manual (Smart Matching) */}
-                            {item.matchedManualTransaction ||
-                            item.reconciliationStatus === 'multiple_candidates' ? (
-                              <div
-                                className={`p-3 rounded-xl border text-xs space-y-2.5 ${
-                                  item.isReconciledManual
-                                    ? 'bg-teal-50/80 border-teal-200 text-teal-950'
-                                    : 'bg-indigo-50/80 border-indigo-200 text-indigo-950'
-                                }`}
-                              >
-                                <div className="flex items-start justify-between gap-2 flex-wrap">
-                                  <div className="flex items-center gap-1.5 font-bold">
-                                    <span className="text-sm">🔗</span>
-                                    <span>
-                                      {item.isReconciledManual
-                                        ? 'Mesclada com lançamento manual'
-                                        : 'Correspondência manual detectada'}
-                                    </span>
-                                    {item.isReconciledManual && (
-                                      <span className="text-[10px] font-semibold text-teal-800 bg-white/80 border border-teal-300 px-1.5 py-0.2 rounded-full">
-                                        Ativo
-                                      </span>
-                                    )}
-                                  </div>
+                      {/* Lado Direito: Valor monetário + Pílula clicável com categoria e ✨ */}
+                      <div className="flex flex-col items-end shrink-0 gap-1 pl-1">
+                        <span
+                          className={`font-bold text-xs sm:text-sm tabular-nums ${
+                            isIncome ? 'text-emerald-700' : 'text-slate-900'
+                          }`}
+                        >
+                          {isIncome ? '+ ' : '− '}
+                          {formatBRL(item.amount_cents)}
+                        </span>
 
-                                  {/* Toggle / Checkbox de mescla */}
-                                  <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold px-2.5 py-1 rounded-lg bg-white shadow-2xs border border-teal-300 text-teal-900 hover:bg-teal-50">
-                                    <input
-                                      type="checkbox"
-                                      checked={item.isReconciledManual ?? false}
-                                      onChange={(e) => {
-                                        const shouldMerge = e.target.checked
-                                        if (shouldMerge) {
-                                          const targetManual =
-                                            item.matchedManualTransaction ||
-                                            item.reconciliationCandidates?.[0] ||
-                                            null
-                                          handleUpdateItemField(item.id, 'isReconciledManual', true)
-                                          if (targetManual) {
-                                            handleUpdateItemField(
-                                              item.id,
-                                              'matchedManualTransaction',
-                                              targetManual,
-                                            )
-                                            if (targetManual.category_id) {
-                                              handleUpdateItemField(
-                                                item.id,
-                                                'category_id',
-                                                targetManual.category_id,
-                                              )
-                                            }
-                                            if (targetManual.subcategory_id) {
-                                              handleUpdateItemField(
-                                                item.id,
-                                                'subcategory_id',
-                                                targetManual.subcategory_id,
-                                              )
-                                            }
-                                            if (targetManual.member_id) {
-                                              handleUpdateItemField(
-                                                item.id,
-                                                'member_id',
-                                                targetManual.member_id,
-                                              )
-                                            }
-                                          }
-                                        } else {
-                                          handleUpdateItemField(
-                                            item.id,
-                                            'isReconciledManual',
-                                            false,
-                                          )
-                                        }
-                                      }}
-                                      className="rounded border-teal-400 text-teal-600 focus:ring-teal-500 w-3.5 h-3.5"
-                                    />
-                                    <span>
-                                      {item.isReconciledManual
-                                        ? '🔗 Mesclada (desmarque se forem compras distintas)'
-                                        : 'Vincular e mesclar com este lançamento'}
-                                    </span>
-                                  </label>
-                                </div>
-
-                                {/* Informações da transação manual vinculada */}
-                                {item.matchedManualTransaction && (
-                                  <div className="bg-white/90 rounded-lg p-2.5 border border-teal-200/80 space-y-1 text-[11px]">
-                                    <div className="flex items-center justify-between text-slate-700">
-                                      <span className="font-semibold text-slate-900">
-                                        Lançamento manual no app:
-                                      </span>
-                                      <span className="font-mono text-slate-600 font-medium">
-                                        Data: {item.matchedManualTransaction.transaction_date}
-                                      </span>
-                                    </div>
-                                    <div className="text-slate-800 font-medium truncate">
-                                      "
-                                      {item.matchedManualTransaction.description || 'Sem descrição'}
-                                      "
-                                      {item.matchedManualTransaction.category?.name ? (
-                                        <span className="text-teal-700 font-semibold ml-2">
-                                          • {item.matchedManualTransaction.category.name}
-                                          {item.matchedManualTransaction.subcategory?.name
-                                            ? ` / ${item.matchedManualTransaction.subcategory.name}`
-                                            : ''}
-                                        </span>
-                                      ) : null}
-                                      {item.matchedManualTransaction.member?.name ? (
-                                        <span className="text-slate-500 ml-2">
-                                          ({item.matchedManualTransaction.member.name})
-                                        </span>
-                                      ) : null}
-                                    </div>
-                                    <p className="text-[10px] text-teal-900/80 pt-0.5">
-                                      {item.isReconciledManual
-                                        ? '✓ O FITID do banco será vinculado à transação manual existente, preservando categoria, subcategoria e membro. O valor será contabilizado uma única vez no orçamento.'
-                                        : 'Se mantiver desmarcado, uma nova transação será importada e a transação manual permanecerá independente.'}
-                                    </p>
-                                  </div>
-                                )}
-
-                                {/* Se houver múltiplas candidatas, permitir seleção da candidata desejada */}
-                                {!item.isReconciledManual &&
-                                  (item.reconciliationCandidates?.length || 0) > 1 && (
-                                    <div className="space-y-1.5 pt-1">
-                                      <span className="font-semibold text-slate-800 text-[11px] block">
-                                        Escolha qual lançamento manual corresponde a esta despesa:
-                                      </span>
-                                      <div className="space-y-1 max-h-32 overflow-y-auto">
-                                        {item.reconciliationCandidates?.map((cand) => (
-                                          <div
-                                            key={cand.id}
-                                            className="flex items-center justify-between gap-2 p-2 rounded-lg bg-white border border-indigo-200 text-[11px]"
-                                          >
-                                            <div className="min-w-0 flex-1">
-                                              <span className="font-bold text-slate-800 block truncate">
-                                                {cand.description || 'Sem descrição'}
-                                              </span>
-                                              <span className="text-[10px] text-slate-500">
-                                                {cand.transaction_date} •{' '}
-                                                {cand.category?.name || 'Sem categoria'} •{' '}
-                                                {cand.member?.name || 'Membro'}
-                                              </span>
-                                            </div>
-                                            <Button
-                                              type="button"
-                                              size="sm"
-                                              variant="outline"
-                                              onClick={() => {
-                                                handleUpdateItemField(
-                                                  item.id,
-                                                  'isReconciledManual',
-                                                  true,
-                                                )
-                                                handleUpdateItemField(
-                                                  item.id,
-                                                  'matchedManualTransaction',
-                                                  cand,
-                                                )
-                                                if (cand.category_id) {
-                                                  handleUpdateItemField(
-                                                    item.id,
-                                                    'category_id',
-                                                    cand.category_id,
-                                                  )
-                                                }
-                                                if (cand.subcategory_id) {
-                                                  handleUpdateItemField(
-                                                    item.id,
-                                                    'subcategory_id',
-                                                    cand.subcategory_id,
-                                                  )
-                                                }
-                                                if (cand.member_id) {
-                                                  handleUpdateItemField(
-                                                    item.id,
-                                                    'member_id',
-                                                    cand.member_id,
-                                                  )
-                                                }
-                                              }}
-                                              className="h-7 text-[10px] px-2 font-bold rounded-lg bg-teal-50 text-teal-800 border-teal-300 hover:bg-teal-100 shrink-0"
-                                            >
-                                              🔗 Mesclar com esta
-                                            </Button>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                              </div>
-                            ) : null}
-
-                            {/* Linha 1: Descrição editável, Data, Toggle Receita/Despesa e Membro */}
-                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 pt-1">
-                              {/* Descrição */}
-                              <div className="sm:col-span-5">
-                                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
-                                  Descrição
-                                </label>
-                                <Input
-                                  value={item.description}
-                                  onChange={(e) =>
-                                    handleUpdateItemField(item.id, 'description', e.target.value)
-                                  }
-                                  className="h-8 text-xs font-semibold bg-white border-slate-300 focus:border-emerald-600 rounded-xl"
-                                />
-                              </div>
-
-                              {/* Data */}
-                              <div className="sm:col-span-3">
-                                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
-                                  Data
-                                </label>
-                                <input
-                                  type="date"
-                                  value={item.date}
-                                  onChange={(e) =>
-                                    handleUpdateItemField(item.id, 'date', e.target.value)
-                                  }
-                                  className="h-8 w-full text-xs text-slate-800 bg-white border border-slate-300 rounded-xl px-2.5 font-medium focus:outline-none focus:border-emerald-600"
-                                />
-                              </div>
-
-                              {/* Toggle Receita / Despesa */}
-                              <div className="sm:col-span-2">
-                                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
-                                  Tipo
-                                </label>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleUpdateItemField(
-                                      item.id,
-                                      'type',
-                                      isIncome ? 'expense' : 'income',
-                                    )
-                                  }
-                                  className={`h-8 w-full text-xs font-bold rounded-xl flex items-center justify-center gap-1 transition-colors border ${
-                                    isIncome
-                                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200'
-                                      : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
-                                  }`}
-                                >
-                                  {isIncome ? (
-                                    <>
-                                      <ArrowUpRight className="w-3.5 h-3.5" /> Receita
-                                    </>
-                                  ) : (
-                                    <>
-                                      <ArrowDownRight className="w-3.5 h-3.5" /> Despesa
-                                    </>
-                                  )}
-                                </button>
-                              </div>
-
-                              {/* Membro */}
-                              <div className="sm:col-span-2">
-                                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
-                                  Membro
-                                </label>
-                                <Select
-                                  value={item.member_id}
-                                  onValueChange={(val) =>
-                                    handleUpdateItemField(item.id, 'member_id', val)
-                                  }
-                                >
-                                  <SelectTrigger className="h-8 text-xs bg-white border-slate-300 rounded-xl">
-                                    <SelectValue placeholder="Membro" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {members.map((m) => (
-                                      <SelectItem key={m.id} value={m.id} className="text-xs">
-                                        {m.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-
-                            {/* Detalhes de Parcelamento quando detectado */}
-                            {item.isInstallment && (
-                              <div className="p-3 bg-purple-50/70 border border-purple-200/90 rounded-xl space-y-2 text-xs">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-bold text-purple-950 flex items-center gap-1.5">
-                                    <span>📦 Despesa Parcelada Detectada</span>
-                                    <span className="bg-purple-200/80 text-purple-900 px-2 py-0.5 rounded-full font-mono text-[11px]">
-                                      Parcela {item.installmentCurrent} de {item.installmentTotal}
-                                    </span>
-                                  </span>
-                                  {item.matchedProjectId ? (
-                                    <span className="text-[10px] font-semibold text-blue-800 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
-                                      ✓ Projeção existente encontrada no mês
-                                    </span>
-                                  ) : null}
-                                </div>
-
-                                {item.matchedProjectId ? (
-                                  <p className="text-[11px] text-purple-800 leading-relaxed">
-                                    Esta parcela corresponde a uma projeção futura já cadastrada. Ao
-                                    importar, ela será convertida de <em>projetada</em> para{' '}
-                                    <strong>confirmada</strong> sem gerar duplicidade.
-                                  </p>
-                                ) : item.installmentCurrent === 1 &&
-                                  (item.installmentTotal || 1) > 1 ? (
-                                  <label className="flex items-start gap-2 cursor-pointer select-none text-[11px] text-purple-950 font-medium">
-                                    <input
-                                      type="checkbox"
-                                      checked={item.generateFutureInstallments ?? true}
-                                      onChange={(e) =>
-                                        handleUpdateItemField(
-                                          item.id,
-                                          'generateFutureInstallments',
-                                          e.target.checked,
-                                        )
-                                      }
-                                      className="mt-0.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500"
-                                    />
-                                    <span>
-                                      <strong>
-                                        Gerar automaticamente as {(item.installmentTotal || 1) - 1}{' '}
-                                        parcelas futuras
-                                      </strong>{' '}
-                                      como despesas projetadas nos próximos meses (mesmo dia,
-                                      categoria e valor).
-                                    </span>
-                                  </label>
-                                ) : (
-                                  <p className="text-[11px] text-purple-800 leading-relaxed">
-                                    Parcela intermediária sem projeção prévia identificada. Será
-                                    criada como despesa confirmada deste mês.
-                                  </p>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Linha 2: Categoria e Subcategoria */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
-                              {/* Categoria */}
-                              <div>
-                                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block mb-1">
-                                  Categoria
-                                </label>
-                                <Select
-                                  value={item.category_id || 'none'}
-                                  onValueChange={(val) => {
-                                    if (val === 'CREATE_NEW') {
-                                      openQuickCategoryModal(item.id)
-                                    } else {
-                                      handleUpdateItemField(
-                                        item.id,
-                                        'category_id',
-                                        val === 'none' ? null : val,
-                                      )
-                                    }
-                                  }}
-                                >
-                                  <SelectTrigger
-                                    className={`h-9 text-xs bg-white rounded-xl shadow-2xs font-medium border-2 ${
-                                      !item.category_id
-                                        ? 'text-amber-900 border-amber-400 bg-amber-50/40'
-                                        : 'text-slate-900 border-slate-300'
-                                    }`}
-                                  >
-                                    <SelectValue placeholder="Sem categoria">
-                                      {currentCategory ? (
-                                        <span className="flex items-center gap-1.5 truncate">
-                                          <CategoryIcon
-                                            name={currentCategory.icon}
-                                            className="w-3.5 h-3.5 shrink-0"
-                                          />
-                                          <span className="truncate">{currentCategory.name}</span>
-                                        </span>
-                                      ) : (
-                                        <span className="text-slate-400">Sem categoria</span>
-                                      )}
-                                    </SelectValue>
-                                  </SelectTrigger>
-                                  <SelectContent className="max-h-72">
-                                    <SelectItem value="none" className="text-xs text-slate-500">
-                                      Sem categoria
-                                    </SelectItem>
-                                    {filteredCategories.map((c) => (
-                                      <SelectItem
-                                        key={c.id}
-                                        value={c.id}
-                                        className="text-xs py-1.5"
-                                      >
-                                        <span className="flex items-center gap-1.5">
-                                          <CategoryIcon name={c.icon} className="w-3.5 h-3.5" />
-                                          {c.name}
-                                        </span>
-                                      </SelectItem>
-                                    ))}
-                                    <SelectItem
-                                      value="CREATE_NEW"
-                                      className="text-xs font-semibold text-emerald-700 border-t mt-1"
-                                    >
-                                      + Criar nova categoria
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              {/* Subcategoria */}
-                              <div>
-                                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block mb-1">
-                                  Subcategoria
-                                </label>
-                                <Select
-                                  value={item.subcategory_id || 'none'}
-                                  onValueChange={(val) =>
-                                    handleUpdateItemField(
-                                      item.id,
-                                      'subcategory_id',
-                                      val === 'none' ? null : val,
-                                    )
-                                  }
-                                  disabled={availableSubcategories.length === 0}
-                                >
-                                  <SelectTrigger className="h-9 text-xs w-full rounded-xl bg-white border-slate-300 shadow-2xs font-medium">
-                                    <SelectValue
-                                      placeholder={
-                                        availableSubcategories.length === 0
-                                          ? 'Sem subcategorias nesta categoria'
-                                          : 'Subcategoria opcional...'
-                                      }
-                                    />
-                                  </SelectTrigger>
-                                  <SelectContent className="max-h-60">
-                                    <SelectItem value="none" className="text-xs text-slate-500">
-                                      Sem subcategoria
-                                    </SelectItem>
-                                    {availableSubcategories.map((sub) => (
-                                      <SelectItem key={sub.id} value={sub.id} className="text-xs">
-                                        {sub.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-
-                            {/* Lembrar regra para compras futuras */}
-                            {item.category_id && (
-                              <div className="pt-0.5">
-                                <label className="flex items-center gap-2 cursor-pointer text-xs select-none">
-                                  <input
-                                    type="checkbox"
-                                    checked={item.rememberRule ?? true}
-                                    onChange={(e) =>
-                                      handleUpdateItemField(
-                                        item.id,
-                                        'rememberRule',
-                                        e.target.checked,
-                                      )
-                                    }
-                                    className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
-                                  />
-                                  <span className="text-slate-700 font-medium flex items-center gap-1.5 text-[11px]">
-                                    <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                    <span>Lembrar para compras futuras com este nome</span>
-                                  </span>
-                                </label>
-                                {item.source === 'ai_suggestion' && item.aiReasoning && (
-                                  <p className="text-[10px] text-violet-700 mt-0.5 italic flex items-center gap-1">
-                                    <span>✨ IA:</span>
-                                    <span>{item.aiReasoning}</span>
-                                  </p>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Ações da linha expandida: Remover ou Concluir e Recolher */}
-                            <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRemoveItem(item.id)}
-                                className="rounded-xl text-xs text-red-600 hover:text-red-700 hover:bg-red-50 h-8 gap-1.5"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                <span>Remover do extrato</span>
-                              </Button>
-
-                              <Button
-                                type="button"
-                                size="sm"
-                                onClick={() => setExpandedItemId(null)}
-                                className="rounded-xl text-xs font-bold gap-1 bg-slate-900 hover:bg-slate-800 text-white h-8 px-3"
-                              >
-                                <Check className="w-3.5 h-3.5" />
-                                <span>Concluir</span>
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
+                        {/* Pílula clicável de categoria (1 clique para abrir seletor de categorias direto) */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setCategoryPickerItemId(item.id)
+                          }}
+                          className={`inline-flex items-center gap-1 max-w-[120px] xs:max-w-[140px] sm:max-w-[180px] text-[10px] sm:text-[11px] font-medium px-2 py-0.5 rounded-full transition-all border ${
+                            currentCategory
+                              ? 'bg-emerald-50 text-emerald-900 border-emerald-200 hover:bg-emerald-100/80 active:bg-emerald-200/70'
+                              : 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100 active:bg-amber-200/70'
+                          }`}
+                          title="Clique para trocar a categoria em 1 clique"
+                        >
+                          <span className="truncate">
+                            {currentCategory ? currentCategory.name : 'Sem categoria'}
+                          </span>
+                          <span className="shrink-0 text-[10px]">✨</span>
+                        </button>
                       </div>
                     </div>
                   )
                 })}
               </div>
-
-              {/* Totalizador Rodapé e Conciliação */}
-              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shrink-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-slate-500 font-medium">
-                    {selectedCount} de {items.length} transações prontas para importar
-                  </span>
-
-                  {/* Badge de Fatura Conciliada quando 100% conferida */}
-                  {closingValidation && closingValidation.matches && (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2.5 py-0.5 rounded-full shadow-2xs">
-                      <span>
-                        ✔ Fatura conciliada ({formatBRL(closingValidation.declaredTotalCents)})
-                      </span>
-                    </span>
-                  )}
-
-                  {/* Informativo sutil de apoio quando há divergência residual (sem alarmes) */}
-                  {closingValidation && !closingValidation.matches && (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 bg-slate-200/70 border border-slate-300 px-2.5 py-0.5 rounded-full">
-                      <Info className="w-3 h-3 text-slate-500 shrink-0" />
-                      <span>Revise os itens antes de confirmar</span>
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-3 shrink-0">
-                  {totalAmountSelected.inc > 0 ? (
-                    <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded">
-                      <span>Entradas: +{formatBRL(totalAmountSelected.inc)}</span>
-                    </span>
-                  ) : null}
-                  {totalAmountSelected.exp > 0 ? (
-                    <span className="text-red-700 font-bold bg-red-50 px-2 py-0.5 rounded">
-                      <span>Saídas: −{formatBRL(totalAmountSelected.exp)}</span>
-                    </span>
-                  ) : null}{' '}
-                </div>
-              </div>
             </div>
           ) : null}
 
-          {/* Footer do Diálogo */}
-          <DialogFooter className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0">
+          {/* Rodapé FIXO na base (Sticky Bottom Bar) com sombra e blur */}
+          <div className="shrink-0 border-t border-slate-100 bg-white/95 backdrop-blur-md p-3 sm:p-4 z-10 shadow-lg">
             {step === 'upload' ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleDialogChange(false)}
-                className="w-full sm:w-auto text-xs"
-              >
-                Cancelar
-              </Button>
-            ) : (
-              <>
+              <div className="flex items-center justify-between gap-2">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setStep('upload')}
-                  disabled={saving}
-                  className="w-full sm:w-auto text-xs"
+                  onClick={() => handleDialogChange(false)}
+                  className="w-full sm:w-auto text-xs h-9 rounded-xl"
                 >
-                  Voltar
+                  Cancelar
                 </Button>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-center gap-2 sm:justify-between">
+                <div className="hidden sm:flex items-center gap-2 text-xs text-slate-500 font-medium">
+                  <span>
+                    {selectedCount} de {items.length} selecionadas
+                  </span>
+                  {totalAmountSelected.inc > 0 ? (
+                    <span className="text-emerald-700 font-semibold">
+                      +{formatBRL(totalAmountSelected.inc)}
+                    </span>
+                  ) : null}
+                </div>
 
                 <Button
                   type="button"
                   onClick={handleSaveImported}
                   disabled={saving || selectedCount === 0}
-                  className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm"
+                  className="w-full sm:w-auto min-h-[46px] h-12 px-6 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-sm rounded-xl shadow-md transition-all gap-2 flex items-center justify-center"
                 >
                   {saving ? (
                     <>
-                      <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
-                      Importando...
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Importando...</span>
                     </>
                   ) : (
-                    `Importar ${selectedCount} ${selectedCount === 1 ? 'Transação' : 'Transações'}`
+                    <span>
+                      Importar {selectedCount} {selectedCount === 1 ? 'Transação' : 'Transações'}
+                      {totalAmountSelected.exp > 0 || totalAmountSelected.inc > 0 ? (
+                        <>
+                          {' '}
+                          •{' '}
+                          {formatBRL(
+                            totalAmountSelected.exp > 0
+                              ? totalAmountSelected.exp
+                              : totalAmountSelected.inc,
+                          )}
+                        </>
+                      ) : null}
+                    </span>
                   )}
                 </Button>
-              </>
+              </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL SECUNDÁRIO 1: SELETOR RÁPIDO DE CATEGORIAS (1 CLIQUE) */}
+      <Dialog
+        open={Boolean(categoryPickerItemId && itemForCategoryPicker)}
+        onOpenChange={(openVal) => {
+          if (!openVal) setCategoryPickerItemId(null)
+        }}
+      >
+        <DialogContent className="max-w-sm w-[92vw] rounded-2xl p-4 sm:p-5 max-h-[85vh] flex flex-col">
+          <DialogHeader className="pb-2 border-b border-slate-100">
+            <DialogTitle className="text-base font-bold text-slate-900">
+              Escolher Categoria
+            </DialogTitle>
+            <p className="text-xs text-slate-500 truncate">
+              {itemForCategoryPicker?.description || 'Transação'}
+            </p>
+          </DialogHeader>
+
+          <div className="py-2 space-y-1 max-h-[60vh] overflow-y-auto pr-1">
+            <button
+              type="button"
+              onClick={() => {
+                if (categoryPickerItemId) {
+                  handleUpdateItemField(categoryPickerItemId, 'category_id', null)
+                }
+                setCategoryPickerItemId(null)
+              }}
+              className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors ${
+                !itemForCategoryPicker?.category_id
+                  ? 'bg-amber-50 text-amber-900 font-bold border border-amber-200'
+                  : 'hover:bg-slate-100 text-slate-600'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-lg bg-slate-200 flex items-center justify-center text-slate-500 font-bold">
+                  —
+                </span>
+                <span>Sem categoria</span>
+              </span>
+              {!itemForCategoryPicker?.category_id && <Check className="w-4 h-4 text-amber-700" />}
+            </button>
+
+            {categories
+              .filter((c) => (itemForCategoryPicker ? c.type === itemForCategoryPicker.type : true))
+              .map((cat) => {
+                const isSelected = itemForCategoryPicker?.category_id === cat.id
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => {
+                      if (categoryPickerItemId) {
+                        handleUpdateItemField(categoryPickerItemId, 'category_id', cat.id)
+                      }
+                      setCategoryPickerItemId(null)
+                    }}
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors ${
+                      isSelected
+                        ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200'
+                        : 'hover:bg-slate-50 text-slate-800'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-white shrink-0 shadow-2xs"
+                        style={{ backgroundColor: cat.color || '#3B82F6' }}
+                      >
+                        {cat.icon ? (
+                          <CategoryIcon name={cat.icon} className="w-3.5 h-3.5" />
+                        ) : (
+                          <Tag className="w-3.5 h-3.5" />
+                        )}
+                      </span>
+                      <span className="truncate">{cat.name}</span>
+                    </span>
+                    {isSelected && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
+                  </button>
+                )
+              })}
+          </div>
+
+          <DialogFooter className="pt-2 border-t border-slate-100 flex items-center justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const targetId = categoryPickerItemId
+                setCategoryPickerItemId(null)
+                if (targetId) openQuickCategoryModal(targetId)
+              }}
+              className="text-xs text-emerald-700 border-emerald-200 hover:bg-emerald-50 rounded-xl"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              <span>Nova Categoria</span>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setCategoryPickerItemId(null)}
+              className="text-xs text-slate-500 rounded-xl"
+            >
+              Fechar
+            </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL SECUNDÁRIO 2: DETALHES ADICIONAIS SOB DEMANDA (DATA, MEMBRO, EXCLUSÃO) */}
+      <Dialog
+        open={Boolean(detailModalItemId && itemForDetailModal)}
+        onOpenChange={(openVal) => {
+          if (!openVal) setDetailModalItemId(null)
+        }}
+      >
+        <DialogContent className="max-w-md w-[92vw] rounded-2xl p-4 sm:p-6 space-y-4 max-h-[88vh] overflow-y-auto">
+          <DialogHeader className="pb-2 border-b border-slate-100">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-base font-bold text-slate-900">
+                Detalhes do Lançamento
+              </DialogTitle>
+              {itemForDetailModal && (
+                <span
+                  className={`font-extrabold text-sm tabular-nums ${
+                    itemForDetailModal.type === 'income' ? 'text-emerald-700' : 'text-slate-900'
+                  }`}
+                >
+                  {itemForDetailModal.type === 'income' ? '+' : '−'}{' '}
+                  {formatBRL(itemForDetailModal.amount_cents)}
+                </span>
+              )}
+            </div>
+          </DialogHeader>
+
+          {itemForDetailModal && (
+            <div className="space-y-3.5 text-xs">
+              {/* Descrição */}
+              <div>
+                <Label className="text-[11px] font-bold text-slate-600 block mb-1">Descrição</Label>
+                <Input
+                  value={itemForDetailModal.description}
+                  onChange={(e) =>
+                    handleUpdateItemField(itemForDetailModal.id, 'description', e.target.value)
+                  }
+                  className="h-9 text-xs rounded-xl"
+                />
+              </div>
+
+              {/* Data e Tipo */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <Label className="text-[11px] font-bold text-slate-600 block mb-1">Data</Label>
+                  <input
+                    type="date"
+                    value={itemForDetailModal.date}
+                    onChange={(e) =>
+                      handleUpdateItemField(itemForDetailModal.id, 'date', e.target.value)
+                    }
+                    className="h-9 w-full text-xs text-slate-800 bg-white border border-slate-200 rounded-xl px-2.5 font-medium focus:outline-none focus:border-emerald-600"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-[11px] font-bold text-slate-600 block mb-1">Tipo</Label>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleUpdateItemField(
+                        itemForDetailModal.id,
+                        'type',
+                        itemForDetailModal.type === 'income' ? 'expense' : 'income',
+                      )
+                    }
+                    className={`h-9 w-full text-xs font-bold rounded-xl flex items-center justify-center gap-1 border transition-colors ${
+                      itemForDetailModal.type === 'income'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : 'bg-rose-50 text-rose-700 border-rose-200'
+                    }`}
+                  >
+                    {itemForDetailModal.type === 'income' ? (
+                      <>
+                        <ArrowUpRight className="w-3.5 h-3.5" /> Receita
+                      </>
+                    ) : (
+                      <>
+                        <ArrowDownRight className="w-3.5 h-3.5" /> Despesa
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Membro responsável */}
+              <div>
+                <Label className="text-[11px] font-bold text-slate-600 block mb-1">
+                  Membro Responsável
+                </Label>
+                <Select
+                  value={itemForDetailModal.member_id}
+                  onValueChange={(val) =>
+                    handleUpdateItemField(itemForDetailModal.id, 'member_id', val)
+                  }
+                >
+                  <SelectTrigger className="h-9 text-xs bg-white rounded-xl">
+                    <SelectValue placeholder="Selecione o membro" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {members.map((m) => (
+                      <SelectItem key={m.id} value={m.id} className="text-xs">
+                        {m.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Subcategoria se houver */}
+              {(() => {
+                const cat = categories.find((c) => c.id === itemForDetailModal.category_id)
+                const subs = cat?.subcategories || []
+                if (subs.length === 0) return null
+                return (
+                  <div>
+                    <Label className="text-[11px] font-bold text-slate-600 block mb-1">
+                      Subcategoria ({cat?.name})
+                    </Label>
+                    <Select
+                      value={itemForDetailModal.subcategory_id || 'none'}
+                      onValueChange={(val) =>
+                        handleUpdateItemField(
+                          itemForDetailModal.id,
+                          'subcategory_id',
+                          val === 'none' ? null : val,
+                        )
+                      }
+                    >
+                      <SelectTrigger className="h-9 text-xs bg-white rounded-xl">
+                        <SelectValue placeholder="Subcategoria opcional" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none" className="text-xs text-slate-500">
+                          Nenhuma
+                        </SelectItem>
+                        {subs.map((s) => (
+                          <SelectItem key={s.id} value={s.id} className="text-xs">
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )
+              })()}
+
+              {/* Conciliação Manual se disponível */}
+              {itemForDetailModal.matchedManualTransaction && (
+                <div className="p-3 rounded-xl bg-teal-50 border border-teal-200 text-teal-950 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold flex items-center gap-1">
+                      <span>🔗</span> Lançamento manual vinculado
+                    </span>
+                    <label className="flex items-center gap-1.5 cursor-pointer font-semibold">
+                      <input
+                        type="checkbox"
+                        checked={itemForDetailModal.isReconciledManual ?? false}
+                        onChange={(e) =>
+                          handleUpdateItemField(
+                            itemForDetailModal.id,
+                            'isReconciledManual',
+                            e.target.checked,
+                          )
+                        }
+                        className="rounded border-teal-400 text-teal-600 focus:ring-teal-500 w-3.5 h-3.5"
+                      />
+                      <span>Mesclar</span>
+                    </label>
+                  </div>
+                  <p className="text-[11px] text-teal-900/80">
+                    "{itemForDetailModal.matchedManualTransaction.description}" em{' '}
+                    {itemForDetailModal.matchedManualTransaction.transaction_date}
+                  </p>
+                </div>
+              )}
+
+              {/* Se houver múltiplas candidatas manuais, permitir selecionar uma */}
+              {!itemForDetailModal.isReconciledManual &&
+                (itemForDetailModal.reconciliationCandidates?.length || 0) > 1 && (
+                  <div className="space-y-1.5 pt-1">
+                    <span className="font-semibold text-slate-800 text-[11px] block">
+                      Escolha qual lançamento manual corresponde a esta despesa:
+                    </span>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {itemForDetailModal.reconciliationCandidates?.map((cand) => (
+                        <div
+                          key={cand.id}
+                          className="flex items-center justify-between gap-2 p-2 rounded-lg bg-white border border-indigo-200 text-[11px]"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <span className="font-bold text-slate-800 block truncate">
+                              {cand.description || 'Sem descrição'}
+                            </span>
+                            <span className="text-[10px] text-slate-500">
+                              {cand.transaction_date} • {cand.category?.name || 'Sem categoria'} •{' '}
+                              {cand.member?.name || 'Membro'}
+                            </span>
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              handleUpdateItemField(
+                                itemForDetailModal.id,
+                                'isReconciledManual',
+                                true,
+                              )
+                              handleUpdateItemField(
+                                itemForDetailModal.id,
+                                'matchedManualTransaction',
+                                cand,
+                              )
+                              if (cand.category_id) {
+                                handleUpdateItemField(
+                                  itemForDetailModal.id,
+                                  'category_id',
+                                  cand.category_id,
+                                )
+                              }
+                              if (cand.subcategory_id) {
+                                handleUpdateItemField(
+                                  itemForDetailModal.id,
+                                  'subcategory_id',
+                                  cand.subcategory_id,
+                                )
+                              }
+                              if (cand.member_id) {
+                                handleUpdateItemField(
+                                  itemForDetailModal.id,
+                                  'member_id',
+                                  cand.member_id,
+                                )
+                              }
+                            }}
+                            className="h-7 text-[10px] px-2 font-bold rounded-lg bg-teal-50 text-teal-800 border-teal-300 hover:bg-teal-100 shrink-0"
+                          >
+                            🔗 Mesclar
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              {/* Detalhes de Parcelamento quando detectado */}
+              {itemForDetailModal.isInstallment && (
+                <div className="p-3 bg-purple-50/70 border border-purple-200/90 rounded-xl space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-purple-950 flex items-center gap-1.5">
+                      <span>📦 Despesa Parcelada</span>
+                      <span className="bg-purple-200/80 text-purple-900 px-2 py-0.5 rounded-full font-mono text-[11px]">
+                        Parcela {itemForDetailModal.installmentCurrent} de{' '}
+                        {itemForDetailModal.installmentTotal}
+                      </span>
+                    </span>
+                    {itemForDetailModal.matchedProjectId ? (
+                      <span className="text-[10px] font-semibold text-blue-800 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
+                        ✓ Projeção existente encontrada no mês
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {itemForDetailModal.matchedProjectId ? (
+                    <p className="text-[11px] text-purple-800 leading-relaxed">
+                      Esta parcela corresponde a uma projeção futura já cadastrada. Ao importar, ela
+                      será convertida de <em>projetada</em> para <strong>confirmada</strong> sem
+                      gerar duplicidade.
+                    </p>
+                  ) : itemForDetailModal.installmentCurrent === 1 &&
+                    (itemForDetailModal.installmentTotal || 1) > 1 ? (
+                    <label className="flex items-start gap-2 cursor-pointer select-none text-[11px] text-purple-950 font-medium">
+                      <input
+                        type="checkbox"
+                        checked={itemForDetailModal.generateFutureInstallments ?? true}
+                        onChange={(e) =>
+                          handleUpdateItemField(
+                            itemForDetailModal.id,
+                            'generateFutureInstallments',
+                            e.target.checked,
+                          )
+                        }
+                        className="mt-0.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                      />
+                      <span>
+                        <strong>
+                          Gerar automaticamente as {(itemForDetailModal.installmentTotal || 1) - 1}{' '}
+                          parcelas futuras
+                        </strong>{' '}
+                        como despesas projetadas nos próximos meses.
+                      </span>
+                    </label>
+                  ) : (
+                    <p className="text-[11px] text-purple-800 leading-relaxed">
+                      Parcela intermediária sem projeção prévia identificada. Será criada como
+                      despesa confirmada deste mês.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Lembrar regra para compras futuras */}
+              {itemForDetailModal.category_id && (
+                <div className="pt-0.5">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs select-none">
+                    <input
+                      type="checkbox"
+                      checked={itemForDetailModal.rememberRule ?? true}
+                      onChange={(e) =>
+                        handleUpdateItemField(
+                          itemForDetailModal.id,
+                          'rememberRule',
+                          e.target.checked,
+                        )
+                      }
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                    />
+                    <span className="text-slate-700 font-medium flex items-center gap-1.5 text-[11px]">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>Lembrar categoria para lançamentos futuros com este nome</span>
+                    </span>
+                  </label>
+                  {itemForDetailModal.source === 'ai_suggestion' &&
+                    itemForDetailModal.aiReasoning && (
+                      <p className="text-[10px] text-violet-700 mt-0.5 italic flex items-center gap-1">
+                        <span>✨ Sugestão por IA:</span>
+                        <span>{itemForDetailModal.aiReasoning}</span>
+                      </p>
+                    )}
+                </div>
+              )}
+
+              {/* Botões do Rodapé de Detalhes: Excluir / Concluir */}
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    handleRemoveItem(itemForDetailModal.id)
+                    setDetailModalItemId(null)
+                  }}
+                  className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl h-8 gap-1"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Excluir do extrato</span>
+                </Button>
+
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setDetailModalItemId(null)}
+                  className="text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-xl h-8 px-4"
+                >
+                  Pronto
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
