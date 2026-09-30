@@ -64,7 +64,8 @@ export function BudgetAlertsFarol({
       ).getDate()
       const currentDay = isCurrentViewingMonth ? now.getDate() : 1
       const daysRemaining = Math.max(0, daysInMonth - currentDay)
-
+      const daysRemainingSuffix =
+        daysRemaining > 0 && isCurrentViewingMonth ? ` (${daysRemaining}d restantes)` : ''
       const regular: SmartAlertItem[] = []
       const critical: SmartAlertItem[] = []
       let overCount = 0
@@ -165,7 +166,7 @@ export function BudgetAlertsFarol({
             categoryId: item.category.id,
             categoryName: item.category.name,
             title: item.category.name,
-            detail: `90%+ consumido · restam ${formatBRL(remaining)}${daysRemaining > 0 && isCurrentViewingMonth ? ` (${daysRemaining}d restantes)` : ''}`,
+            detail: `90%+ consumido · restam ${formatBRL(remaining)}${daysRemainingSuffix}`,
             metric: `${item.percent}%`,
             priority: 15,
           })
@@ -179,7 +180,7 @@ export function BudgetAlertsFarol({
             categoryId: item.category.id,
             categoryName: item.category.name,
             title: item.category.name,
-            detail: `Atenção preventiva: ${item.percent}% do teto consumido${daysRemaining > 0 && isCurrentViewingMonth ? ` (${daysRemaining}d restantes)` : ''}`,
+            detail: `Atenção preventiva: ${item.percent}% do teto consumido${daysRemainingSuffix}`,
             metric: `${item.percent}%`,
             priority: 20,
           })
@@ -395,7 +396,7 @@ export function BudgetAlertsFarol({
                           {alert.categoryName}
                         </span>
                         <span className="text-[11px] sm:text-xs text-slate-500 truncate">
-                          {alert.detail}
+                          <span>{alert.detail}</span>
                         </span>
                       </div>
                     </div>

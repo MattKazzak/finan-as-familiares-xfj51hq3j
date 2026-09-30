@@ -345,7 +345,7 @@ export function BudgetOverviewCard({
                     return (
                       <div className="mt-1.5 flex items-center">
                         <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 leading-tight break-words">
-                          ✨ + {formatBRL(diff)} livres para alocar
+                          <span>✨ + {formatBRL(diff)} livres para alocar</span>
                         </span>
                       </div>
                     )
@@ -355,7 +355,7 @@ export function BudgetOverviewCard({
                     return (
                       <div className="mt-1.5 flex items-center">
                         <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200/80 leading-tight">
-                          ✓ Cota 100% alocada
+                          <span>✓ Cota 100% alocada</span>
                         </span>
                       </div>
                     )
@@ -364,7 +364,7 @@ export function BudgetOverviewCard({
                   return (
                     <div className="mt-1.5 flex items-center">
                       <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/80 leading-tight break-words">
-                        ⚠️ {formatBRL(Math.abs(diff))} acima da meta sugerida
+                        <span>⚠️ {formatBRL(Math.abs(diff))} acima da meta sugerida</span>
                       </span>
                     </div>
                   )

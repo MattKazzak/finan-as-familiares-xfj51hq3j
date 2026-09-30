@@ -315,6 +315,43 @@ export default function WalletPage() {
   // Estado para abrir editor de categoria diretamente de um alerta do Farol
   const [activeAlertEditCategory, setActiveAlertEditCategory] =
     useState<TransactionCategory | null>(null)
+  const [mountedAlertEditCategory, setMountedAlertEditCategory] =
+    useState<TransactionCategory | null>(null)
+  const [isAlertEditorOpen, setIsAlertEditorOpen] = useState(false)
+
+  useEffect(() => {
+    if (activeAlertEditCategory) {
+      setMountedAlertEditCategory(activeAlertEditCategory)
+      setIsAlertEditorOpen(true)
+    }
+  }, [activeAlertEditCategory])
+
+  // Estados para abrir editores a partir do menu mobile (fora do portal do DropdownMenu)
+  const [editingCategoryFromMenu, setEditingCategoryFromMenu] =
+    useState<TransactionCategory | null>(null)
+  const [mountedCategoryFromMenu, setMountedCategoryFromMenu] =
+    useState<TransactionCategory | null>(null)
+  const [isMenuCategoryEditorOpen, setIsMenuCategoryEditorOpen] = useState(false)
+
+  useEffect(() => {
+    if (editingCategoryFromMenu) {
+      setMountedCategoryFromMenu(editingCategoryFromMenu)
+      setIsMenuCategoryEditorOpen(true)
+    }
+  }, [editingCategoryFromMenu])
+
+  const [addingSubcatForCategory, setAddingSubcatForCategory] =
+    useState<TransactionCategory | null>(null)
+  const [mountedAddingSubcatCategory, setMountedAddingSubcatCategory] =
+    useState<TransactionCategory | null>(null)
+  const [isMenuSubcatEditorOpen, setIsMenuSubcatEditorOpen] = useState(false)
+
+  useEffect(() => {
+    if (addingSubcatForCategory) {
+      setMountedAddingSubcatCategory(addingSubcatForCategory)
+      setIsMenuSubcatEditorOpen(true)
+    }
+  }, [addingSubcatForCategory])
 
   const [isNewSubcatDialogOpen, setIsNewSubcatDialogOpen] = useState(false)
   const [categoryForNewSubcat, setCategoryForNewSubcat] = useState<TransactionCategory | null>(null)
@@ -1893,8 +1930,8 @@ export default function WalletPage() {
                       <span className="text-base sm:text-lg font-semibold text-slate-500 mr-1.5">
                         {consumedPrefix}
                       </span>
-                      <span>
-                        {formatBRL(categoryBudgetData.totalSpent)}{' '}
+                      <span className="inline-flex items-baseline gap-1.5 flex-wrap">
+                        <span>{formatBRL(categoryBudgetData.totalSpent)}</span>
                         <span className="text-sm font-medium text-slate-400">
                           de {formatBRL(categoryBudgetData.totalBudget)}
                         </span>
@@ -2371,133 +2408,31 @@ export default function WalletPage() {
                                     align="end"
                                     className="w-52 max-w-[calc(100vw-2rem)] rounded-2xl shadow-xl p-1.5 text-xs"
                                   >
-                                    <CategoryEditorPopover
-                                      category={item.category}
-                                      initialLimitCents={item.defaultLimitCents || item.limitCents}
-                                      bucketsSummary={categoryBudgetData.bucketsSummary}
-                                      family={family}
-                                      trigger={
-                                        <button
-                                          type="button"
-                                          className="w-full flex items-center gap-2 py-2 px-2.5 rounded-xl cursor-pointer text-slate-700 hover:bg-slate-100 transition-colors text-xs text-left min-h-[40px] touch-manipulation"
-                                        >
-                                          <Edit3 className="w-4 h-4 text-slate-500 shrink-0" />
-                                          <span className="font-medium">Editar categoria</span>
-                                        </button>
-                                      }
-                                      onSave={async (data) => {
-                                        try {
-                                          await editCategory(item.category.id, {
-                                            name: data.name,
-                                            type: data.type,
-                                            color: data.color,
-                                            icon: data.icon,
-                                            budget_bucket: data.budget_bucket,
-                                          })
-                                          if (
-                                            data.type === 'expense' &&
-                                            typeof data.budget_amount_cents === 'number'
-                                          ) {
-                                            const newLimit = Math.max(0, data.budget_amount_cents)
-                                            // Sincronização IMEDIATA no estado local defaultBudgets e monthOverrides
-                                            // Recalcula na mesma hora percentual da categoria, do balde e Farol global
-                                            setDefaultBudgets((prev) => {
-                                              const exists = prev.some(
-                                                (b) =>
-                                                  b.category_id === item.category.id &&
-                                                  !b.subcategory_id,
-                                              )
-                                              if (exists) {
-                                                return prev.map((b) =>
-                                                  b.category_id === item.category.id &&
-                                                  !b.subcategory_id
-                                                    ? { ...b, amount_cents: newLimit }
-                                                    : b,
-                                                )
-                                              }
-                                              return [
-                                                ...prev,
-                                                {
-                                                  id: `temp-${Date.now()}`,
-                                                  family_id: family.id,
-                                                  category_id: item.category.id,
-                                                  subcategory_id: null,
-                                                  amount_cents: newLimit,
-                                                  created_at: new Date().toISOString(),
-                                                  updated_at: new Date().toISOString(),
-                                                } as any,
-                                              ]
-                                            })
-                                            if (item.hasOverride) {
-                                              setMonthOverrides((prev) =>
-                                                prev.filter(
-                                                  (b) =>
-                                                    !(
-                                                      b.category_id === item.category.id &&
-                                                      !b.subcategory_id
-                                                    ),
-                                                ),
-                                              )
-                                            }
-                                            await upsertDefaultBudget(
-                                              family.id,
-                                              item.category.id,
-                                              newLimit,
-                                              null,
-                                            )
-                                            if (item.hasOverride) {
-                                              await resetMonthBudgetToDefault(
-                                                family.id,
-                                                item.category.id,
-                                                monthKey,
-                                                null,
-                                              )
-                                            }
-                                          }
-                                          triggerRefresh()
-                                          await loadMonthData()
-                                        } catch (err: any) {
-                                          console.error('Erro ao editar categoria:', err)
-                                          toast({
-                                            title: 'Erro ao editar categoria',
-                                            description: err?.message || 'Tente novamente.',
-                                            variant: 'destructive',
-                                          })
-                                        }
+                                    <DropdownMenuItem
+                                      onSelect={(e) => {
+                                        e.preventDefault()
+                                        setTimeout(() => {
+                                          setEditingCategoryFromMenu(item.category)
+                                        }, 50)
                                       }}
-                                    />
+                                      className="gap-2 py-2 px-2.5 rounded-xl cursor-pointer text-slate-700 focus:bg-slate-100 min-h-[40px]"
+                                    >
+                                      <Edit3 className="w-4 h-4 text-slate-500 shrink-0" />
+                                      <span className="font-medium">Editar categoria</span>
+                                    </DropdownMenuItem>
 
-                                    {/* Nova Subcategoria no menu mobile */}
-                                    <SubcategoryEditorPopover
-                                      parentCategoryName={item.category.name}
-                                      trigger={
-                                        <button
-                                          type="button"
-                                          className="w-full flex items-center gap-2 py-2 px-2.5 rounded-xl cursor-pointer text-slate-700 hover:bg-slate-100 transition-colors text-xs text-left min-h-[40px] touch-manipulation"
-                                        >
-                                          <Plus className="w-4 h-4 text-emerald-600 shrink-0" />
-                                          <span className="font-medium">Nova subcategoria</span>
-                                        </button>
-                                      }
-                                      onSave={async (data) => {
-                                        try {
-                                          await addNewSubcategory(item.category.id, data.name)
-                                          setExpandedBudgetCategories((prev) => ({
-                                            ...prev,
-                                            [item.category.id]: true,
-                                          }))
-                                          triggerRefresh()
-                                          await loadMonthData()
-                                        } catch (err: any) {
-                                          console.error('Erro ao criar subcategoria:', err)
-                                          toast({
-                                            title: 'Erro ao criar subcategoria',
-                                            description: err?.message || 'Tente novamente.',
-                                            variant: 'destructive',
-                                          })
-                                        }
+                                    <DropdownMenuItem
+                                      onSelect={(e) => {
+                                        e.preventDefault()
+                                        setTimeout(() => {
+                                          setAddingSubcatForCategory(item.category)
+                                        }, 50)
                                       }}
-                                    />
+                                      className="gap-2 py-2 px-2.5 rounded-xl cursor-pointer text-slate-700 focus:bg-slate-100 min-h-[40px]"
+                                    >
+                                      <Plus className="w-4 h-4 text-emerald-600 shrink-0" />
+                                      <span className="font-medium">Nova subcategoria</span>
+                                    </DropdownMenuItem>
 
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem
@@ -2575,7 +2510,7 @@ export default function WalletPage() {
                                       <span className="inline-flex items-baseline gap-1 flex-wrap">
                                         <span className="text-slate-600 font-medium">R$ 0,00</span>
                                         <span className="text-[11px] text-slate-400 font-normal">
-                                          (Sem teto alocado)
+                                          <span>(Sem teto alocado)</span>
                                         </span>
                                       </span>
                                     )}
@@ -3101,28 +3036,34 @@ export default function WalletPage() {
               </div>
             </div>
 
-            {/* Editor de categoria controlado aberto via clique em item de alerta do Farol */}
-            {activeAlertEditCategory &&
+            {/* Editor de categoria controlado aberto via clique em item de alerta do Farol (renderizado de forma estável para evitar desmontagem abrupta de portal durante animações) */}
+            {mountedAlertEditCategory &&
               (() => {
                 const item = categoryBudgetData.list.find(
-                  (it) => it.category.id === activeAlertEditCategory.id,
+                  (it) => it.category.id === mountedAlertEditCategory.id,
                 )
                 const initialLimit = item?.defaultLimitCents || item?.limitCents || 0
 
                 return (
                   <CategoryEditorPopover
-                    key={`alert-edit-${activeAlertEditCategory.id}`}
-                    category={activeAlertEditCategory}
-                    open={true}
+                    key={`alert-edit-${mountedAlertEditCategory.id}`}
+                    category={mountedAlertEditCategory}
+                    open={isAlertEditorOpen}
                     onOpenChange={(isOpen) => {
-                      if (!isOpen) setActiveAlertEditCategory(null)
+                      setIsAlertEditorOpen(isOpen)
+                      if (!isOpen) {
+                        setTimeout(() => {
+                          setActiveAlertEditCategory(null)
+                          setMountedAlertEditCategory(null)
+                        }, 300)
+                      }
                     }}
                     initialLimitCents={initialLimit}
                     bucketsSummary={categoryBudgetData.bucketsSummary}
                     family={family}
                     onSave={async (data) => {
                       try {
-                        await editCategory(activeAlertEditCategory.id, {
+                        await editCategory(mountedAlertEditCategory.id, {
                           name: data.name,
                           type: data.type,
                           color: data.color,
@@ -3137,11 +3078,11 @@ export default function WalletPage() {
                           setDefaultBudgets((prev) => {
                             const exists = prev.some(
                               (b) =>
-                                b.category_id === activeAlertEditCategory.id && !b.subcategory_id,
+                                b.category_id === mountedAlertEditCategory.id && !b.subcategory_id,
                             )
                             if (exists) {
                               return prev.map((b) =>
-                                b.category_id === activeAlertEditCategory.id && !b.subcategory_id
+                                b.category_id === mountedAlertEditCategory.id && !b.subcategory_id
                                   ? { ...b, amount_cents: newLimit }
                                   : b,
                               )
@@ -3151,7 +3092,7 @@ export default function WalletPage() {
                               {
                                 id: `temp-${Date.now()}`,
                                 family_id: family!.id,
-                                category_id: activeAlertEditCategory.id,
+                                category_id: mountedAlertEditCategory.id,
                                 subcategory_id: null,
                                 amount_cents: newLimit,
                                 created_at: new Date().toISOString(),
@@ -3164,7 +3105,7 @@ export default function WalletPage() {
                               prev.filter(
                                 (b) =>
                                   !(
-                                    b.category_id === activeAlertEditCategory.id &&
+                                    b.category_id === mountedAlertEditCategory.id &&
                                     !b.subcategory_id
                                   ),
                               ),
@@ -3172,20 +3113,24 @@ export default function WalletPage() {
                           }
                           await upsertDefaultBudget(
                             family!.id,
-                            activeAlertEditCategory.id,
+                            mountedAlertEditCategory.id,
                             newLimit,
                             null,
                           )
                           if (item?.hasOverride) {
                             await resetMonthBudgetToDefault(
                               family!.id,
-                              activeAlertEditCategory.id,
+                              mountedAlertEditCategory.id,
                               monthKey,
                               null,
                             )
                           }
                         }
-                        setActiveAlertEditCategory(null)
+                        setIsAlertEditorOpen(false)
+                        setTimeout(() => {
+                          setActiveAlertEditCategory(null)
+                          setMountedAlertEditCategory(null)
+                        }, 300)
                         triggerRefresh()
                         await loadMonthData()
                       } catch (err: any) {
@@ -3200,6 +3145,157 @@ export default function WalletPage() {
                   />
                 )
               })()}
+
+            {/* Editor de categoria aberto a partir do menu mobile (⋯), montado no nível superior fora do DropdownMenuContent */}
+            {mountedCategoryFromMenu &&
+              (() => {
+                const item = categoryBudgetData.list.find(
+                  (it) => it.category.id === mountedCategoryFromMenu.id,
+                )
+                const initialLimit = item?.defaultLimitCents || item?.limitCents || 0
+
+                return (
+                  <CategoryEditorPopover
+                    key={`menu-edit-${mountedCategoryFromMenu.id}`}
+                    category={mountedCategoryFromMenu}
+                    open={isMenuCategoryEditorOpen}
+                    onOpenChange={(isOpen) => {
+                      setIsMenuCategoryEditorOpen(isOpen)
+                      if (!isOpen) {
+                        setTimeout(() => {
+                          setEditingCategoryFromMenu(null)
+                          setMountedCategoryFromMenu(null)
+                        }, 300)
+                      }
+                    }}
+                    initialLimitCents={initialLimit}
+                    bucketsSummary={categoryBudgetData.bucketsSummary}
+                    family={family}
+                    onSave={async (data) => {
+                      try {
+                        await editCategory(mountedCategoryFromMenu.id, {
+                          name: data.name,
+                          type: data.type,
+                          color: data.color,
+                          icon: data.icon,
+                          budget_bucket: data.budget_bucket,
+                        })
+                        if (
+                          data.type === 'expense' &&
+                          typeof data.budget_amount_cents === 'number'
+                        ) {
+                          const newLimit = Math.max(0, data.budget_amount_cents)
+                          setDefaultBudgets((prev) => {
+                            const exists = prev.some(
+                              (b) =>
+                                b.category_id === mountedCategoryFromMenu.id && !b.subcategory_id,
+                            )
+                            if (exists) {
+                              return prev.map((b) =>
+                                b.category_id === mountedCategoryFromMenu.id && !b.subcategory_id
+                                  ? { ...b, amount_cents: newLimit }
+                                  : b,
+                              )
+                            }
+                            return [
+                              ...prev,
+                              {
+                                id: `temp-${Date.now()}`,
+                                family_id: family.id,
+                                category_id: mountedCategoryFromMenu.id,
+                                subcategory_id: null,
+                                amount_cents: newLimit,
+                                created_at: new Date().toISOString(),
+                                updated_at: new Date().toISOString(),
+                              } as any,
+                            ]
+                          })
+                          if (item?.hasOverride) {
+                            setMonthOverrides((prev) =>
+                              prev.filter(
+                                (b) =>
+                                  !(
+                                    b.category_id === mountedCategoryFromMenu.id &&
+                                    !b.subcategory_id
+                                  ),
+                              ),
+                            )
+                          }
+                          await upsertDefaultBudget(
+                            family.id,
+                            mountedCategoryFromMenu.id,
+                            newLimit,
+                            null,
+                          )
+                          if (item?.hasOverride) {
+                            await resetMonthBudgetToDefault(
+                              family.id,
+                              mountedCategoryFromMenu.id,
+                              monthKey,
+                              null,
+                            )
+                          }
+                        }
+                        setIsMenuCategoryEditorOpen(false)
+                        setTimeout(() => {
+                          setEditingCategoryFromMenu(null)
+                          setMountedCategoryFromMenu(null)
+                        }, 300)
+                        triggerRefresh()
+                        await loadMonthData()
+                      } catch (err: any) {
+                        console.error('Erro ao editar categoria:', err)
+                        toast({
+                          title: 'Erro ao editar categoria',
+                          description: err?.message || 'Tente novamente.',
+                          variant: 'destructive',
+                        })
+                      }
+                    }}
+                  />
+                )
+              })()}
+
+            {/* Editor de nova subcategoria aberto a partir do menu mobile (⋯), montado no nível superior fora do DropdownMenuContent */}
+            {mountedAddingSubcatCategory && (
+              <SubcategoryEditorPopover
+                key={`menu-new-subcat-${mountedAddingSubcatCategory.id}`}
+                parentCategoryName={mountedAddingSubcatCategory.name}
+                open={isMenuSubcatEditorOpen}
+                onOpenChange={(isOpen) => {
+                  setIsMenuSubcatEditorOpen(isOpen)
+                  if (!isOpen) {
+                    setTimeout(() => {
+                      setAddingSubcatForCategory(null)
+                      setMountedAddingSubcatCategory(null)
+                    }, 300)
+                  }
+                }}
+                onSave={async (data) => {
+                  try {
+                    await addNewSubcategory(mountedAddingSubcatCategory.id, data.name)
+                    setExpandedBudgetCategories((prev) => ({
+                      ...prev,
+                      [mountedAddingSubcatCategory.id]: true,
+                    }))
+                    setIsMenuSubcatEditorOpen(false)
+                    setTimeout(() => {
+                      setAddingSubcatForCategory(null)
+                      setMountedAddingSubcatCategory(null)
+                    }, 300)
+                    triggerRefresh()
+                    await loadMonthData()
+                  } catch (err: any) {
+                    console.error('Erro ao criar subcategoria:', err)
+                    toast({
+                      title: 'Erro ao criar subcategoria',
+                      description: err?.message || 'Tente novamente.',
+                      variant: 'destructive',
+                    })
+                  }
+                }}
+              />
+            )}
           </div>
         ) : null}
       </div>
