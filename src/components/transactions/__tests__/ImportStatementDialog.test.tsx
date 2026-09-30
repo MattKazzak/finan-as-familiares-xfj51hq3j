@@ -236,7 +236,7 @@ describe('ImportStatementDialog - IA à prova de falhas na fatura PDF', () => {
     expect(screen.getByText(/Selecionar todos \(1\/2\)/i)).toBeDefined()
   })
 
-  it('validação de fechamento: exibe aviso quando soma NÃO bate com o total declarado', async () => {
+  it('validação de fechamento: exibe informativo sutil "Revise os itens antes de confirmar" quando soma NÃO bate com o total declarado (sem alertas alarmistas)', async () => {
     vi.spyOn(pdfParser, 'extractRawTextFromPdf').mockResolvedValueOnce({
       rawText: 'Fatura com total R$ 500,00',
       pageCount: 1,
@@ -267,22 +267,27 @@ describe('ImportStatementDialog - IA à prova de falhas na fatura PDF', () => {
     fireEvent.change(input, { target: { files: [file] } })
 
     await waitFor(() => {
-      expect(screen.getAllByRole('alert').length).toBeGreaterThanOrEqual(1)
+      expect(screen.getByText(/Revisão de lançamentos/i)).toBeDefined()
     })
 
-    // Verifica texto do alerta de fechamento
-    expect(screen.getAllByText(/não bate com o total da fatura/i).length).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByText(/algo pode ter ficado de fora/i).length).toBeGreaterThanOrEqual(1)
+    // Sem banners amarelos alarmistas
+    expect(screen.queryByText(/não bate com o total da fatura/i)).toBeNull()
+    expect(screen.queryByText(/algo pode ter ficado de fora/i)).toBeNull()
+
+    // Exibe texto exato sutil
+    expect(screen.getAllByText('Revise os itens antes de confirmar').length).toBeGreaterThanOrEqual(
+      1,
+    )
   })
 
-  it('validação de fechamento: NÃO exibe aviso quando a soma bate com o total declarado', async () => {
+  it('validação de fechamento: exibe badge "✔ Fatura conciliada (R$ X.XXX,XX)" quando a soma bate 100%', async () => {
     vi.spyOn(pdfParser, 'extractRawTextFromPdf').mockResolvedValueOnce({
       rawText: 'Fatura com total R$ 89,90',
       pageCount: 1,
       pages: [{ pageNumber: 1, text: 'Fatura com total R$ 89,90' }],
     })
 
-    // Total declarado e soma batem exatamente (8990 cents)
+    // Total declarado e soma batem exatamente (8990 cents = R$ 89,90)
     vi.spyOn(aiCategorizer, 'parsePdfWithAI').mockResolvedValueOnce({
       success: true,
       declaredTotalCents: 8990,
@@ -309,10 +314,10 @@ describe('ImportStatementDialog - IA à prova de falhas na fatura PDF', () => {
       expect(screen.getByText(/Revisão de lançamentos/i)).toBeDefined()
     })
 
-    expect(screen.queryByRole('alert')).toBeNull()
+    // Badge sutil no rodapé com o formato exato
+    expect(screen.getByText(/✔ Fatura conciliada \(R\$ 89,90\)/i)).toBeDefined()
     expect(screen.queryByText(/não bate com o total da fatura/i)).toBeNull()
   })
-
   it('validação de fechamento: NÃO exibe aviso quando o total declarado não foi identificado (sem falso positivo)', async () => {
     vi.spyOn(pdfParser, 'extractRawTextFromPdf').mockResolvedValueOnce({
       rawText: 'Fatura sem total explícito',

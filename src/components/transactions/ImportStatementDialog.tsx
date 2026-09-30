@@ -1139,6 +1139,12 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
     const diffCents = Math.min(diffNet, diffGross)
     const matches = diffCents <= 5 // tolerância de ±5 centavos (R$ 0,05)
 
+    if (!matches) {
+      console.info(
+        `[ImportStatement] Divergência residual na conciliação da fatura: soma=${netSum} / despesas=${expensesSum} vs declarado=${declaredTotalCents} (dif=${diffCents} centavos).`,
+      )
+    }
+
     return {
       declaredTotalCents,
       expensesSumCents: diffNet < diffGross && reversalsSum > 0 ? netSum : expensesSum,
@@ -1859,28 +1865,16 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 </div>
               )}
 
-              {/* Aviso no Topo de Fechamento da Fatura (Item 2 do plano IA à prova de falhas) */}
+              {/* Informativo sutil de apoio em caso de divergência residual (sem alarmes sonoros/amarelos fortes) */}
               {closingValidation && !closingValidation.matches && (
                 <div
-                  role="alert"
-                  className="p-3 sm:p-3.5 rounded-2xl bg-amber-500/10 border-2 border-amber-500/40 text-amber-950 text-xs shadow-xs space-y-1 shrink-0"
+                  role="status"
+                  className="p-2 sm:p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs flex items-center gap-2 shrink-0"
                 >
-                  <div className="flex items-start gap-2.5">
-                    <span className="text-base sm:text-lg shrink-0 mt-0.5 leading-none">⚠</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-amber-950 text-xs sm:text-sm leading-snug">
-                        A soma dos lançamentos ({formatBRL(closingValidation.expensesSumCents)}) não
-                        bate com o total da fatura (
-                        {formatBRL(closingValidation.declaredTotalCents)}) — algo pode ter ficado de
-                        fora
-                      </p>
-                      <p className="text-[11px] text-amber-900/80 mt-0.5 leading-relaxed">
-                        Diferença detectada: {formatBRL(closingValidation.diffCents)} (
-                        {closingValidation.itemCount} lançamentos válidos encontrados). Revise os
-                        itens ou confira se alguma página ficou sem extração.
-                      </p>
-                    </div>
-                  </div>
+                  <Info className="w-4 h-4 text-slate-500 shrink-0" />
+                  <p className="text-[11px] sm:text-xs text-slate-600 leading-snug flex-1">
+                    Revise os itens antes de confirmar
+                  </p>
                 </div>
               )}
 
@@ -2717,28 +2711,32 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 })}
               </div>
 
-              {/* Alerta de Divergência de Fechamento no Rodapé de Confirmação (Item 2 do plano IA à prova de falhas) */}
-              {closingValidation && !closingValidation.matches && (
-                <div
-                  role="alert"
-                  aria-live="polite"
-                  className="p-2.5 sm:p-3 rounded-xl bg-amber-500/10 border border-amber-500/40 text-amber-950 text-xs flex items-center gap-2 shrink-0 shadow-2xs"
-                >
-                  <span className="text-amber-700 font-bold text-sm shrink-0">⚠</span>
-                  <p className="font-semibold text-[11px] sm:text-xs leading-snug flex-1">
-                    A soma dos lançamentos ({formatBRL(closingValidation.expensesSumCents)}) não
-                    bate com o total da fatura ({formatBRL(closingValidation.declaredTotalCents)}) —
-                    algo pode ter ficado de fora
-                  </p>
-                </div>
-              )}
+              {/* Totalizador Rodapé e Conciliação */}
+              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shrink-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-slate-500 font-medium">
+                    {selectedCount} de {items.length} transações prontas para importar
+                  </span>
 
-              {/* Totalizador Rodapé */}
-              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/80 flex items-center justify-between text-xs shrink-0">
-                <span className="text-slate-500 font-medium">
-                  {selectedCount} de {items.length} transações prontas para importar
-                </span>
-                <div className="flex items-center gap-3">
+                  {/* Badge de Fatura Conciliada quando 100% conferida */}
+                  {closingValidation && closingValidation.matches && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2.5 py-0.5 rounded-full shadow-2xs">
+                      <span>
+                        ✔ Fatura conciliada ({formatBRL(closingValidation.declaredTotalCents)})
+                      </span>
+                    </span>
+                  )}
+
+                  {/* Informativo sutil de apoio quando há divergência residual (sem alarmes) */}
+                  {closingValidation && !closingValidation.matches && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 bg-slate-200/70 border border-slate-300 px-2.5 py-0.5 rounded-full">
+                      <Info className="w-3 h-3 text-slate-500 shrink-0" />
+                      <span>Revise os itens antes de confirmar</span>
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0">
                   {totalAmountSelected.inc > 0 ? (
                     <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded">
                       <span>Entradas: +{formatBRL(totalAmountSelected.inc)}</span>

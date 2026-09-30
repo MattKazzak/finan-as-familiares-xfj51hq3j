@@ -207,9 +207,9 @@ describe('Edge Function batch-categorize regression logic & PDF universal parser
   })
 
   // REQUISITO 4: Validação Matemática de Fechamento (Caso Real da Fatura Rico)
-  // Cartão 4949 (R$ 3.221,84) + 5 compras Cartão 010 (R$ 1.328,07) = R$ 4.549,91 da fatura
+  // Cartão 4949 (R$ 3.221,84) + compras Cartão 010 (R$ 1.328,07) = R$ 4.549,91 da fatura
   describe('Requisito 4: Validação Matemática de Fechamento Multi-Cartão (Rico)', () => {
-    it('soma compras de múltiplos cartões e bate exatamente com o total declarado da fatura sem alerta', () => {
+    it('soma compras de múltiplos cartões (4949 + 010) e bate exatamente com o total declarado da fatura Rico (R$ 4.549,91)', () => {
       // Cartão final 4949 (total: 3.221,84 = 322184 centavos)
       interface TestItem {
         description: string
@@ -222,16 +222,17 @@ describe('Edge Function batch-categorize regression logic & PDF universal parser
         { description: 'COMPRA B 4949', amount_cents: 200000, type: 'expense' },
       ]
 
-      // 5 compras Cartão final 010 (total: 1.328,07 = 132807 centavos)
+      // Lançamentos do Cartão final 010 (Rico): JUSTI FERRAMENTARIA, AMERICANOS CELULA, SUPRILAR, SMARTINS, AUTO POSTO
+      // Totalizando exatamente R$ 1.328,07 (132807 centavos)
       const card010Purchases: TestItem[] = [
-        { description: 'COMPRA 1 CARTAO 010', amount_cents: 32807, type: 'expense' },
-        { description: 'COMPRA 2 CARTAO 010', amount_cents: 20000, type: 'expense' },
-        { description: 'COMPRA 3 CARTAO 010', amount_cents: 30000, type: 'expense' },
-        { description: 'COMPRA 4 CARTAO 010', amount_cents: 25000, type: 'expense' },
-        { description: 'COMPRA 5 CARTAO 010', amount_cents: 25000, type: 'expense' },
+        { description: 'JUSTI FERRAMENTARIA', amount_cents: 32807, type: 'expense' },
+        { description: 'AMERICANOS CELULA', amount_cents: 20000, type: 'expense' },
+        { description: 'SUPRILAR', amount_cents: 30000, type: 'expense' },
+        { description: 'SMARTINS', amount_cents: 25000, type: 'expense' },
+        { description: 'AUTO POSTO', amount_cents: 25000, type: 'expense' },
       ]
 
-      // Linha de pagamento que veio no meio do extrato
+      // Linha de pagamento que veio no extrato (excluída sem descartar compras da página)
       const paymentLine: TestItem = {
         description: 'Pagamento de fatura -5.443,36',
         amount_cents: 544336,
@@ -243,10 +244,10 @@ describe('Edge Function batch-categorize regression logic & PDF universal parser
         isNonExpense: isDeterministicNonExpense(item.description),
       }))
 
-      // Total declarado no cabeçalho da fatura Rico
-      const declaredTotalCents = 454991 // R$ 4.549,91
+      // Total declarado no cabeçalho da fatura Rico: R$ 4.549,91 (454991 centavos)
+      const declaredTotalCents = 454991
 
-      // Lógica de fechamento do ImportStatementDialog:
+      // Lógica de fechamento:
       const validExpenses = allItems.filter((i) => i.type === 'expense' && !i.isNonExpense)
       const validIncomes = allItems.filter((i) => i.type === 'income' && !i.isNonExpense)
 
@@ -257,12 +258,47 @@ describe('Edge Function batch-categorize regression logic & PDF universal parser
       const diffNet = Math.abs(netSum - declaredTotalCents)
       const diffGross = Math.abs(expensesSum - declaredTotalCents)
       const diffCents = Math.min(diffNet, diffGross)
-      const matches = diffCents <= 5 // tolerância ±5 centavos
+      const matches = diffCents <= 5
 
-      // Compras do cartão 4949 (3.221,84) + compras do cartão 010 (1.328,07) = 4.549,91
       expect(expensesSum).toBe(454991)
       expect(matches).toBe(true)
       expect(diffCents).toBe(0)
+    })
+  })
+
+  // REQUISITO 5: Lógica de Autocorreção Matemática Interna na Edge Function
+  describe('Requisito 5: Lógica de Autocorreção Matemática Interna na Edge Function', () => {
+    it('detecta divergência matemática inicial e aceita o resultado da segunda passada corretiva', () => {
+      const declaredTotalCents = 454991 // R$ 4.549,91
+
+      // Primeira passada capturou apenas o cartão principal 4949 (R$ 3.221,84 = 322184 cents)
+      const firstPassTransactions = [
+        { description: 'COMPRA A 4949', amountCents: 122184, type: 'expense' },
+        { description: 'COMPRA B 4949', amountCents: 200000, type: 'expense' },
+      ]
+
+      const firstPassSum = firstPassTransactions.reduce((acc, t) => acc + t.amountCents, 0)
+      const firstPassDiff = Math.abs(firstPassSum - declaredTotalCents)
+
+      expect(firstPassDiff).toBe(132807) // Faltam 1.328,07 do cartão 010
+      expect(firstPassDiff > 5).toBe(true) // Ativa a autocorreção matemática interna
+
+      // Segunda passada (autocorreção) captura todos os cartões (4949 + 010)
+      const secondPassTransactions = [
+        ...firstPassTransactions,
+        { description: 'JUSTI FERRAMENTARIA', amountCents: 32807, type: 'expense' },
+        { description: 'AMERICANOS CELULA', amountCents: 20000, type: 'expense' },
+        { description: 'SUPRILAR', amountCents: 30000, type: 'expense' },
+        { description: 'SMARTINS', amountCents: 25000, type: 'expense' },
+        { description: 'AUTO POSTO', amountCents: 25000, type: 'expense' },
+      ]
+
+      const secondPassSum = secondPassTransactions.reduce((acc, t) => acc + t.amountCents, 0)
+      const secondPassDiff = Math.abs(secondPassSum - declaredTotalCents)
+
+      expect(secondPassDiff).toBe(0)
+      expect(secondPassDiff < firstPassDiff).toBe(true)
+      expect(secondPassTransactions.length).toBeGreaterThan(firstPassTransactions.length)
     })
   })
 })

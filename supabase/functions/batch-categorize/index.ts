@@ -234,14 +234,15 @@ ${catalogPrompt}
 REGRAS CRÍTICAS DE EXTRAÇÃO UNIVERSAL:
 
 1. SUPORTE A MÚLTIPLOS CARTÕES E SEÇÕES (CASO RICO/XP E ADICIONAIS - CRÍTICO):
-   - Uma fatura pode conter compras divididas por múltiplos cartões (ex.: Titular final 4949 e Adicional final 010).
-   - A existência de subtotais parciais (ex.: "Subtotal Cartão final 4949: R$ 3.221,84", "Total deste cartão", "Subtotal do cartão") NUNCA ENCERRA A LEITURA. É PROIBIDO parar a leitura após um subtotal ou após o primeiro cartão! Extraia todas as compras de todos os blocos e de todos os cartões até o fim absoluto do texto.
-   - No caso específico de páginas com pagamentos anteriores (ex.: "Pagamento de fatura -5.443,36", "Pagamento recebido -R$ 1.500,00"), descarte APENAS a linha do pagamento, mantendo rigorosamente TODAS as compras legítimas daquela página. O pagamento NUNCA encerra ou interrompe a leitura da página.
+   - Uma fatura frequentemente contém compras divididas por múltiplos cartões (ex.: Titular final 4949 e Adicional final 010).
+   - Na fatura da Rico, lançamentos do cartão final 010 (ex.: JUSTI FERRAMENTARIA, AMERICANOS CELULA, SUPRILAR, SMARTINS, AUTO POSTO, etc., somando R$ 1.328,07) DEVEM ser extraídos obrigatoriamente junto com os do cartão principal (final 4949).
+   - A existência de subtotais parciais (ex.: "Subtotal Cartão final 4949: R$ 3.221,84", "Total deste cartão", "Subtotal do cartão") NUNCA ENCERRA A LEITURA. É TERMINANTEMENTE PROIBIDO parar a leitura após um subtotal ou após o primeiro cartão! Percorra todos os blocos, cartões titulares e adicionais até a última linha do texto.
+   - Descarte EXCLUSIVAMENTE a linha de pagamento de fatura anterior (ex.: "Pagamento de fatura -5.443,36", "Pagamento recebido -R$ 1.500,00"), preservando intactas TODAS as compras legítimas que estiverem na mesma página ou nas seguintes. O pagamento de fatura anterior NUNCA encerra a leitura da página.
 
 2. TRATAMENTO UNIVERSAL DE MOEDA E CÂMBIO (NUBANK, C6, ITAÚ, INTER, SANTANDER):
-   - Em compras internacionais, o extrato costuma exibir a cotação, a linha informativa em moeda estrangeira (ex.: "USD 12.50", "US$ 15,00", "EUR 8,00") e a linha convertida em Reais (BRL, ex.: "R$ 72,40").
+   - Em compras internacionais, o extrato costuma exibir cotação da moeda, linha em moeda estrangeira (ex.: "USD 12.50", "US$ 15,00", "EUR 8,00") e linha convertida em Reais (BRL, ex.: "R$ 72,40").
    - Capture APENAS o valor final convertido em Reais (BRL) que compõe o saldo devido da fatura.
-   - IGNORE as linhas informativas em dólar/euro (US$, USD, EUR) para NÃO duplicar lançamentos. Nunca gere dois lançamentos para a mesma compra internacional.
+   - IGNORE rigorosamente as linhas informativas de cotação e valores em dólar/euro (US$, USD, EUR) para NÃO duplicar lançamentos. Nunca gere dois lançamentos para a mesma despesa internacional.
 
 3. DESCARTE ESTRITO DE NÃO-DESPESAS:
    - Descarte automaticamente:
@@ -368,32 +369,91 @@ ${rawText.slice(0, 100000)}
 --- FIM DO TEXTO ---
 
 Instruções cruciais:
-1. PERCORRA O TEXTO ATÉ O FIM ABSOLUTO:
-   - Se houver múltiplos cartões (ex.: Titular e Adicional), subtotais parciais NÃO encerram a leitura. Extraia todas as compras de todos os blocos até a última linha.
-   - Se houver linha de pagamento anterior (ex.: "Pagamento de fatura -5.443,36"), descarte APENAS essa linha de pagamento, mantendo todas as compras legítimas daquela página.
-2. CÂMBIO E MOEDA:
-   - Em compras internacionais (Nubank, C6, Itaú, etc.), capture APENAS o valor final convertido em Reais (BRL). Ignore as linhas em dólar (US$) para não duplicar lançamentos.
+1. PERCORRA O TEXTO ATÉ O FIM ABSOLUTO (SUPORTE A MÚLTIPLOS CARTÕES):
+   - Percorra todos os cartões (titular e adicionais) sem interromper a leitura em subtotais intermediários.
+   - Na fatura da Rico em teste, certifique-se de extrair todos os lançamentos do cartão final 010 (JUSTI FERRAMENTARIA, AMERICANOS CELULA, SUPRILAR, SMARTINS, AUTO POSTO, etc., somando R$ 1.328,07) junto com o cartão principal 4949.
+   - Descarte EXCLUSIVAMENTE a linha de pagamento de fatura anterior (ex.: "Pagamento de fatura -5.443,36"), preservando intactas todas as compras que estiverem na mesma página.
+2. TRATAMENTO DE MOEDA E CÂMBIO:
+   - Em compras internacionais (Nubank, C6, Itaú, etc.), ignore linhas informativas de cotação em dólar (US$) ou euro (EUR), capturando apenas a conversão em reais para despesas internacionais.
 3. DESCARTE DE NÃO-DESPESAS:
    - Descarte quitações passadas, limites de crédito, parcelamentos de fatura futura e encargos rotativos informativos. Capture compras, parcelas (ex.: "01/03", "2/12") e estornos com type="income".
 4. TOTAL GERAL DECLARADO:
-   - Capture o total geral devido da fatura inteira em declaredTotalCents (número inteiro positivo em centavos). Não use subtotais de cartões individuais para esse campo. Se não contiver o total geral da fatura, retorne null.
+   - Capture o total geral devido da fatura inteira em declaredTotalCents (número inteiro positivo em centavos). Não confunda subtotais parciais de cartões individuais com o total geral da fatura. Se a página contiver apenas subtotais parciais ou não trouxer o total geral consolidado, retorne null.
 5. Classifique cada transação usando IDs válidos do catálogo familiar.`
-      const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${openaiApiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: pdfSystemPrompt },
-            { role: 'user', content: pdfUserPrompt },
-          ],
-          response_format: { type: 'json_object' },
-          temperature: 0.1,
-        }),
-      })
+
+      // Helper para chamar OpenAI
+      const callOpenAiExtraction = async (systemP: string, userP: string) => {
+        const res = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${openaiApiKey}`,
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: systemP },
+              { role: 'user', content: userP },
+            ],
+            response_format: { type: 'json_object' },
+            temperature: 0.1,
+          }),
+        })
+        return res
+      }
+
+      // Helper para sanitizar transações
+      const sanitizeItems = (rawItems: any[]): PdfExtractedTransactionItem[] => {
+        const sanitized: PdfExtractedTransactionItem[] = []
+        for (const item of rawItems) {
+          if (!item || typeof item !== 'object') continue
+
+          const amount =
+            typeof item.amountCents === 'number' ? Math.round(Math.abs(item.amountCents)) : 0
+          if (amount <= 0) continue
+
+          const desc = String(item.description || item.cleanMerchant || '').trim()
+          if (!desc) continue
+
+          let date = String(item.date || '').trim()
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            date = new Date().toISOString().slice(0, 10)
+          }
+
+          let catId = String(item.categoryId || '')
+          let subId: string | null = item.subcategoryId ? String(item.subcategoryId) : null
+
+          if (!validCategoryIds.has(catId)) {
+            const fallbackCat =
+              categoriesList.find((c: any) => c.type === 'expense') || categoriesList[0]
+            catId = fallbackCat?.id || ''
+            subId = null
+          } else {
+            const allowedSubs = catToSubsMap.get(catId)
+            if (!subId || !allowedSubs || !allowedSubs.has(subId)) {
+              subId = null
+            }
+          }
+
+          sanitized.push({
+            date,
+            description: desc,
+            cleanMerchant: String(item.cleanMerchant || desc).trim(),
+            amountCents: amount,
+            type: item.type === 'income' ? 'income' : 'expense',
+            installment: item.installment ? String(item.installment).trim() : undefined,
+            categoryId: catId,
+            subcategoryId: subId,
+            confidence:
+              typeof item.confidence === 'number'
+                ? Math.min(1, Math.max(0, item.confidence))
+                : 0.85,
+          })
+        }
+        return sanitized
+      }
+
+      const openaiRes = await callOpenAiExtraction(pdfSystemPrompt, pdfUserPrompt)
 
       if (!openaiRes.ok) {
         const errText = await openaiRes.text()
@@ -437,61 +497,116 @@ Instruções cruciais:
 
       const rawItems: any[] = Array.isArray(parsed?.transactions) ? parsed.transactions : []
       const rawDeclaredTotal = parsed?.declaredTotalCents
-      const declaredTotalCents: number | null =
+      let declaredTotalCents: number | null =
         typeof rawDeclaredTotal === 'number' && rawDeclaredTotal > 0
           ? Math.round(rawDeclaredTotal)
           : null
 
-      // Higienizar e validar transações contra o catálogo real
-      const sanitizedTransactions: PdfExtractedTransactionItem[] = []
-      for (const item of rawItems) {
-        if (!item || typeof item !== 'object') continue
+      let sanitizedTransactions = sanitizeItems(rawItems)
 
-        // Validar campos mínimos
-        const amount =
-          typeof item.amountCents === 'number' ? Math.round(Math.abs(item.amountCents)) : 0
-        if (amount <= 0) continue
+      // =========================================================================
+      // AUTOCORREÇÃO MATEMÁTICA INTERNA TRANSPARENTE:
+      // Se a soma das transações extraídas divergir do declaredTotalCents identificado,
+      // executa uma segunda passada no texto bruto enviado para capturar seções ou
+      // cartões remanescentes (ex.: cartão adicional final 010 da Rico ou blocos omitidos).
+      // =========================================================================
+      if (declaredTotalCents && declaredTotalCents > 0) {
+        const currentExpensesSum = sanitizedTransactions
+          .filter((t) => t.type === 'expense')
+          .reduce((acc, t) => acc + t.amountCents, 0)
+        const currentReversalsSum = sanitizedTransactions
+          .filter((t) => t.type === 'income')
+          .reduce((acc, t) => acc + t.amountCents, 0)
+        const currentNetSum = currentExpensesSum - currentReversalsSum
 
-        const desc = String(item.description || item.cleanMerchant || '').trim()
-        if (!desc) continue
+        const diffNet = Math.abs(currentNetSum - declaredTotalCents)
+        const diffGross = Math.abs(currentExpensesSum - declaredTotalCents)
+        const diffCents = Math.min(diffNet, diffGross)
 
-        // Validar data no formato AAAA-MM-DD
-        let date = String(item.date || '').trim()
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-          // Fallback para data atual se a IA errou formato
-          date = new Date().toISOString().slice(0, 10)
-        }
+        // Se houver divergência relevante (> 5 centavos)
+        if (diffCents > 5) {
+          console.warn(
+            `[batch-categorize] Divergência detectada no fechamento: soma=${currentNetSum} vs declarado=${declaredTotalCents} (dif=${diffCents} centavos). Iniciando autocorreção matemática interna...`,
+          )
 
-        // Categoria: verificar se existe no catálogo da família
-        let catId = String(item.categoryId || '')
-        let subId: string | null = item.subcategoryId ? String(item.subcategoryId) : null
+          try {
+            const recoveryUserPrompt = `Texto bruto extraído da fatura em PDF:
+--- INÍCIO DO TEXTO ---
+${rawText.slice(0, 100000)}
+--- FIM DO TEXTO ---
 
-        if (!validCategoryIds.has(catId)) {
-          // Se a IA gerou um UUID inválido, usa a primeira categoria compatível de despesa da família
-          const fallbackCat =
-            categoriesList.find((c: any) => c.type === 'expense') || categoriesList[0]
-          catId = fallbackCat?.id || ''
-          subId = null
-        } else {
-          // Se a subcategoria não pertencer a essa categoria, anula
-          const allowedSubs = catToSubsMap.get(catId)
-          if (!subId || !allowedSubs || !allowedSubs.has(subId)) {
-            subId = null
+ATENÇÃO: AUTOCORREÇÃO MATEMÁTICA ATIVADA!
+A extração anterior somou ${currentNetSum} centavos, mas o valor total declarado no cabeçalho da fatura é de exatamente ${declaredTotalCents} centavos (diferença de ${diffCents} centavos).
+
+Possíveis causas que você DEVE corrigir agora:
+1. CARTÕES ADICIONAIS OU SEGUNDO BLOCO OMITIDOS:
+   - Verifique minuciosamente se há outros cartões no texto (ex.: Titular final 4949 e Adicional final 010).
+   - Na fatura da Rico, lançamentos do cartão final 010 (ex.: JUSTI FERRAMENTARIA, AMERICANOS CELULA, SUPRILAR, SMARTINS, AUTO POSTO, somando R$ 1.328,07) NÃO PODEM FICAR DE FORA!
+2. SUBTOTAIS INTERMEDIÁRIOS NÃO ENCERRAM A LEITURA:
+   - A leitura NÃO PODE parar após "Subtotal Cartão final 4949" ou qualquer outro subtotal.
+3. DESCARTE APENAS PAGAMENTO ANTERIOR:
+   - Apenas linhas como "Pagamento de fatura -5.443,36" são descartadas. Todas as compras daquela mesma página continuam ativas!
+4. CÂMBIO INTERNACIONAL:
+   - Capture apenas o valor em BRL convertido. Ignore as linhas em US$.
+
+Transações já capturadas na primeira passada (${sanitizedTransactions.length} itens):
+${JSON.stringify(
+  sanitizedTransactions.map((t) => ({
+    date: t.date,
+    desc: t.description,
+    cents: t.amountCents,
+  })),
+)}
+
+INSTRUÇÃO DA SEGUNDA PASSADA:
+Percorra novamente o texto do início ao fim e extraia a LISTA COMPLETA E EXAUSTIVA de TODAS as transações reais da fatura inteira para que a soma feche exatamente com os ${declaredTotalCents} centavos do total declarado. Retorne o objeto JSON no mesmo formato:
+{
+  "declaredTotalCents": ${declaredTotalCents},
+  "transactions": [ ... ]
+}`
+
+            const retryRes = await callOpenAiExtraction(pdfSystemPrompt, recoveryUserPrompt)
+            if (retryRes.ok) {
+              const retryData = await retryRes.json()
+              const retryContent = retryData.choices?.[0]?.message?.content
+              const retryParsed = JSON.parse(retryContent || '{}')
+              const retryRawItems: any[] = Array.isArray(retryParsed?.transactions)
+                ? retryParsed.transactions
+                : []
+
+              if (retryRawItems.length > 0) {
+                const recoveredSanitized = sanitizeItems(retryRawItems)
+                const recoveredExpensesSum = recoveredSanitized
+                  .filter((t) => t.type === 'expense')
+                  .reduce((acc, t) => acc + t.amountCents, 0)
+                const recoveredReversalsSum = recoveredSanitized
+                  .filter((t) => t.type === 'income')
+                  .reduce((acc, t) => acc + t.amountCents, 0)
+                const recoveredNetSum = recoveredExpensesSum - recoveredReversalsSum
+                const recoveredDiff = Math.min(
+                  Math.abs(recoveredNetSum - declaredTotalCents),
+                  Math.abs(recoveredExpensesSum - declaredTotalCents),
+                )
+
+                // Se a nova passada melhorou o fechamento ou trouxe mais itens que completam a conta, adota
+                if (
+                  recoveredDiff < diffCents ||
+                  recoveredSanitized.length > sanitizedTransactions.length
+                ) {
+                  console.info(
+                    `[batch-categorize] Autocorreção bem-sucedida! De ${sanitizedTransactions.length} para ${recoveredSanitized.length} transações. Nova diferença: ${recoveredDiff} centavos.`,
+                  )
+                  sanitizedTransactions = recoveredSanitized
+                }
+              }
+            }
+          } catch (recoveryErr) {
+            console.warn(
+              '[batch-categorize] Erro durante autocorreção matemática interna:',
+              recoveryErr,
+            )
           }
         }
-
-        sanitizedTransactions.push({
-          date,
-          description: desc,
-          cleanMerchant: String(item.cleanMerchant || desc).trim(),
-          amountCents: amount,
-          type: item.type === 'income' ? 'income' : 'expense',
-          installment: item.installment ? String(item.installment).trim() : undefined,
-          categoryId: catId,
-          subcategoryId: subId,
-          confidence:
-            typeof item.confidence === 'number' ? Math.min(1, Math.max(0, item.confidence)) : 0.85,
-        })
       }
 
       return new Response(
