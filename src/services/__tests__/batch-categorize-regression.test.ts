@@ -267,6 +267,63 @@ describe('Edge Function batch-categorize regression logic & PDF universal parser
   })
 
   // REQUISITO 5: Lógica de Autocorreção Matemática Interna na Edge Function
+  // REQUISITO: Blindagem definitiva contra linhas de resumo, cabeçalhos e termos institucionais
+  describe('Blindagem Definitiva de Cabeçalhos e Resumos (Requisitos 1 e 2)', () => {
+    it('separa estritamente declaredTotalCents e NUNCA empurra TOTAL FATURA ou TOTAL A PAGAR para a lista de transações', () => {
+      const rawText = `
+        BANCO RICO / XP INVESTIMENTOS
+        TOTAL FATURA: R$ 518,93   Vencimento: 10/03/2025
+        TOTAL A PAGAR: R$ 518,93
+        LIMITE TOTAL: R$ 10.000,00
+        PAGAMENTO MINIMO: R$ 100,00
+
+        05/02 RESTAURANTE SABOR R$ 120,00
+        06/02 DROGASIL R$ 45,50
+        08/02 SUPERMERCADO EXTRA R$ 353,43
+      `
+
+      // 1. Simulação do extrator capturando declaredTotalCents do cabeçalho
+      const declaredTotalMatch = rawText.match(
+        /TOTAL\s+(?:A\s+PAGAR|DA\s+FATURA|FATURA)[:\s]+R\$\s*([\d.,]+)/i,
+      )
+      let declaredTotalCents: number | null = null
+      if (declaredTotalMatch) {
+        const cleaned = declaredTotalMatch[1].replace(/\./g, '').replace(',', '.')
+        declaredTotalCents = Math.round(parseFloat(cleaned) * 100)
+      }
+
+      expect(declaredTotalCents).toBe(51893)
+
+      // 2. Linhas brutas da fatura
+      const rawTransactionsFromText = [
+        { description: 'TOTAL FATURA', amountCents: 51893, type: 'expense' as const },
+        { description: 'TOTAL A PAGAR', amountCents: 51893, type: 'expense' as const },
+        { description: 'LIMITE TOTAL', amountCents: 1000000, type: 'expense' as const },
+        { description: 'PAGAMENTO MINIMO', amountCents: 10000, type: 'expense' as const },
+        { description: 'RESTAURANTE SABOR', amountCents: 12000, type: 'expense' as const },
+        { description: 'DROGASIL', amountCents: 4550, type: 'expense' as const },
+        { description: 'SUPERMERCADO EXTRA', amountCents: 35343, type: 'expense' as const },
+      ]
+
+      // 3. Aplicação da blindagem determinística
+      const validTransactions = rawTransactionsFromText.filter(
+        (t) => !isDeterministicNonExpense(t.description),
+      )
+
+      expect(validTransactions).toHaveLength(3)
+      expect(validTransactions.map((t) => t.description)).toEqual([
+        'RESTAURANTE SABOR',
+        'DROGASIL',
+        'SUPERMERCADO EXTRA',
+      ])
+
+      // 4. Verificação matemática: soma das transações válidas fecha perfeitamente com declaredTotalCents
+      const totalExpenses = validTransactions.reduce((acc, t) => acc + t.amountCents, 0)
+      expect(totalExpenses).toBe(51893)
+      expect(totalExpenses).toBe(declaredTotalCents)
+    })
+  })
+
   describe('Requisito 5: Lógica de Autocorreção Matemática Interna na Edge Function', () => {
     it('detecta divergência matemática inicial e aceita o resultado da segunda passada corretiva', () => {
       const declaredTotalCents = 454991 // R$ 4.549,91

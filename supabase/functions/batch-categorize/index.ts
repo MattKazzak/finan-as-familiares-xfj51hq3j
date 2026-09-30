@@ -1,6 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
+import { isNonTransactionLine } from '../_shared/non-transaction.ts'
 
 interface BatchTransactionItem {
   tempId: string
@@ -226,6 +227,8 @@ Deno.serve(async (req: Request) => {
 
       const pdfSystemPrompt = `Você é o especialista sênior em inteligência financeira do Curiangoo (Curiangoo Copilot), especializado na leitura e extração exaustiva de faturas de cartão de crédito de qualquer banco brasileiro (Rico, XP, Nubank, Inter, Itaú, Santander, C6 Bank, Bradesco, BTG Pactual, etc.) e na regra orçamentária 50/30/20.
 
+ATENÇÃO MÁXIMA: NUNCA crie transações para o cabeçalho/resumo da fatura ('Total Fatura', 'Pagamento Mínimo', 'Limite', 'Pagamento de fatura recebido'). Extraia estritamente compras de bens e serviços ou estornos listados no detalhamento dos cartões.
+
 Seu objetivo é analisar o texto bruto extraído de um trecho/página de fatura de cartão de crédito e extrair com MÁXIMA PRECISÃO E COMPLETUDE ABSOLUTA TODAS as compras e estornos reais, atribuindo a cada uma a categoria e subcategoria mais adequada do catálogo da família.
 
 CATÁLOGO REAL DE CATEGORIAS DA FAMÍLIA:
@@ -244,13 +247,14 @@ REGRAS CRÍTICAS DE EXTRAÇÃO UNIVERSAL:
    - Capture APENAS o valor final convertido em Reais (BRL) que compõe o saldo devido da fatura.
    - IGNORE rigorosamente as linhas informativas de cotação e valores em dólar/euro (US$, USD, EUR) para NÃO duplicar lançamentos. Nunca gere dois lançamentos para a mesma despesa internacional.
 
-3. DESCARTE ESTRITO DE NÃO-DESPESAS:
-   - Descarte automaticamente:
-     a) Pagamentos de fatura recebidos / quitações passadas ("Pagamento de fatura", "Pagamento recebido", "Pagto efetuado", "Aut. Pagto", "Quitação").
-     b) Limites totais, limites disponíveis, limites utilizados, limites de saque.
-     c) Resumos de saldo financiado, crédito rotativo, juros futuros e encargos projetados.
-     d) Opções de parcelamento de fatura futura ("Parcele sua fatura em 12x", "Entrada + parcelas").
-     e) Tabelas de juros, CET mensal/anual, cotações informativas de dólar e saldo de pontos/milhas.
+3. DESCARTE ESTRITO DE NÃO-DESPESAS (BLINDAGEM DETERMINÍSTICA):
+   - ATENÇÃO MÁXIMA: NUNCA crie transações para o cabeçalho/resumo da fatura ('Total Fatura', 'Pagamento Mínimo', 'Limite', 'Pagamento de fatura recebido'). Extraia estritamente compras de bens e serviços ou estornos listados no detalhamento dos cartões.
+   - Descarte sumariamente:
+     a) Totais e Saldos: "TOTAL FATURA", "TOTAL DA FATURA", "VALOR TOTAL", "TOTAL A PAGAR", "VALOR DA FATURA", "SALDO DA FATURA", "TOTAL DESTA FATURA", "SALDO ANTERIOR", "SALDO ATUAL", "SALDO DEVEDOR", "SALDO REMANESCENTE", "SUBTOTAL", "SUB-TOTAL", "TOTAL DOS LANCAMENTOS", "TOTAL DE COMPRAS".
+     b) Pagamentos e Quitações: "PAGAMENTO DE FATURA", "PAGAMENTO RECEBIDO", "PGTO FATURA", "PAGTO FATURA", "PAGAMENTO EFETUADO", "PAGAMENTO ON-LINE", "CREDITO DE PAGAMENTO", "RECEBIMENTO DE FATURA".
+     c) Limites e Crédito: "LIMITE TOTAL", "LIMITE DE CREDITO", "LIMITE DISPONIVEL", "LIMITE UTILIZADO", "LIMITE PARA SAQUE", "LIMITE A VISTA", "LIMITE PARCELADO".
+     d) Parcelamento e Mínimo: "PAGAMENTO MINIMO", "PAGTO MINIMO", "VALOR MINIMO", "PARCELAMENTO DE FATURA", "PARCELA FACIL", "FATURA PARCELADA", "OPCAO DE PARCELAMENTO", "FINANCIAMENTO ROTATIVO".
+     e) Encargos e Institucionais: "CUSTO EFETIVO TOTAL", "CET ANUAL", "CET MENSAL", "PROJECAO DE ENCARGOS", "TAXA DE JUROS", "OUVIDORIA", "CANAIS DE ATENDIMENTO".
    - CAPTURE:
      a) Compras legítimas de bens e serviços nacionais e internacionais.
      b) Compras parceladas, identificando explicitamente o padrão de parcela (ex.: "01/03", "2/12", "03/10", "PARC 02/06").
@@ -258,6 +262,7 @@ REGRAS CRÍTICAS DE EXTRAÇÃO UNIVERSAL:
 
 4. TOTAL DECLARADO DA FATURA ("declaredTotalCents"):
    - Se o trecho contiver o cabeçalho ou resumo geral com o VALOR TOTAL DEVIDO DA FATURA (ex.: "Total a pagar: R$ 4.549,91", "Valor total da fatura: R$ 4.549,91", "Total desta fatura: R$ 4.549,91", "Saldo atual: R$ ..."), capture esse valor total geral consolidado em centavos (número inteiro positivo) na propriedade "declaredTotalCents".
+   - REGRA DE OURO: O valor de "TOTAL FATURA" ou "TOTAL A PAGAR" deve ser capturado EXCLUSIVAMENTE para a propriedade "declaredTotalCents", e NUNCA ser empurrado para o array "transactions".
    - ATENÇÃO: NÃO confunda subtotais parciais de cartões individuais (ex.: "Subtotal cartão 4949: R$ 3.221,84") com o total geral da fatura. Declare apenas o total geral consolidado da fatura inteira. Se a página contiver apenas subtotais parciais ou for página intermediária sem o total geral da fatura, retorne null para "declaredTotalCents".
 
 5. EXEMPLO FEW-SHOT DE FATURA MULTI-CARTÃO E CÂMBIO:
@@ -386,9 +391,10 @@ Instruções cruciais:
 2. TRATAMENTO DE MOEDA E CÂMBIO:
    - Em compras internacionais (Nubank, C6, Itaú, etc.), ignore linhas informativas de cotação em dólar (US$) ou euro (EUR), capturando apenas a conversão em reais para despesas internacionais.
 3. DESCARTE DE NÃO-DESPESAS:
-   - Descarte quitações passadas, limites de crédito, parcelamentos de fatura futura e encargos rotativos informativos. Capture compras, parcelas (ex.: "01/03", "2/12") e estornos com type="income".
+   - ATENÇÃO MÁXIMA: NUNCA crie transações para o cabeçalho/resumo da fatura ('Total Fatura', 'Pagamento Mínimo', 'Limite', 'Pagamento de fatura recebido'). Extraia estritamente compras de bens e serviços ou estornos listados no detalhamento dos cartões.
+   - Descarte quitações passadas, limites de crédito, parcelamentos de fatura futura, termos institucionais e encargos rotativos informativos. Capture compras, parcelas (ex.: "01/03", "2/12") e estornos com type="income".
 4. TOTAL GERAL DECLARADO:
-   - Capture o total geral devido da fatura inteira em declaredTotalCents (número inteiro positivo em centavos). Não confunda subtotais parciais de cartões individuais com o total geral da fatura. Se a página contiver apenas subtotais parciais ou não trouxer o total geral consolidado, retorne null.
+   - Capture o total geral devido da fatura inteira em declaredTotalCents (número inteiro positivo em centavos). O valor de "TOTAL FATURA" ou "TOTAL A PAGAR" pertence EXCLUSIVAMENTE a declaredTotalCents e NUNCA deve ir para o array de transações. Se a página contiver apenas subtotais parciais ou não trouxer o total geral consolidado, retorne null.
 5. Classifique cada transação usando IDs válidos do catálogo familiar.`
 
       // Helper para chamar OpenAI
@@ -412,18 +418,24 @@ Instruções cruciais:
         return res
       }
 
-      // Helper para sanitizar transações
+      // Helper para sanitizar transações (com blocklist determinística universal pós-IA)
       const sanitizeItems = (rawItems: any[]): PdfExtractedTransactionItem[] => {
         const sanitized: PdfExtractedTransactionItem[] = []
         for (const item of rawItems) {
           if (!item || typeof item !== 'object') continue
 
+          const desc = String(item.description || item.cleanMerchant || '').trim()
+          const cleanM = String(item.cleanMerchant || desc).trim()
+          if (!desc) continue
+
+          // BLINDAGEM DETERMINÍSTICA: Descarte sumário de linhas de resumo, cabeçalhos, limites e pagamentos
+          if (isNonTransactionLine(desc) || isNonTransactionLine(cleanM)) {
+            continue
+          }
+
           const amount =
             typeof item.amountCents === 'number' ? Math.round(Math.abs(item.amountCents)) : 0
           if (amount <= 0) continue
-
-          const desc = String(item.description || item.cleanMerchant || '').trim()
-          if (!desc) continue
 
           let date = String(item.date || '').trim()
           if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {

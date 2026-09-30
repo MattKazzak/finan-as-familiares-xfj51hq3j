@@ -6,6 +6,7 @@ import {
   parseInstallmentFromDescription,
   type ParsedInstallmentInfo,
 } from '@/services/installments'
+import { isNonTransactionLine } from '@/services/import/pdf-parser'
 
 export interface ParsedRawTransaction {
   id: string // temporário único no preview
@@ -317,6 +318,14 @@ export function isNoiseLine(line: string): { isNoise: boolean; reason?: string }
   for (const kw of NOISE_KEYWORDS) {
     if (clean.includes(kw)) {
       return { isNoise: true, reason: `Contém palavra-chave de rodapé/cabeçalho: "${kw}"` }
+    }
+  }
+
+  // 3.1. Blocklist determinística de não-transações
+  if (isNonTransactionLine(line)) {
+    return {
+      isNoise: true,
+      reason: 'Identificado como resumo de fatura, limite ou termo institucional',
     }
   }
 

@@ -106,6 +106,7 @@ import {
   classifyPdfPasswordError,
   deduplicateExtractedTransactions,
   isDeterministicNonExpense,
+  isNonTransactionLine,
   type ExtractedPdfTextResult,
 } from '@/services/import/pdf-parser'
 
@@ -546,7 +547,13 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
         setFailedPages(currentFailedPages)
 
         // 4. Deduplicação entre blocos/páginas (mesma data + descrição normalizada + valor)
-        const deduplicatedTransactions = deduplicateExtractedTransactions(allExtractedTransactions)
+        // com descarte sumário adicional de qualquer linha de resumo / cabeçalho / não-transação
+        const deduplicatedTransactions = deduplicateExtractedTransactions(
+          allExtractedTransactions,
+        ).filter(
+          (tx) =>
+            !isNonTransactionLine(tx.description) && !isNonTransactionLine(tx.cleanMerchant || ''),
+        )
 
         setDeclaredTotalCents(identifiedDeclaredTotal)
         setFileInfo({
@@ -570,6 +577,8 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
             // Filtro determinístico pós-IA (em código): linhas de pagamento/ajuste/encargo/IOF
             // Marcadas como isNonExpense = true e DESMARCADAS por padrão
             const isNonExpense =
+              isNonTransactionLine(tx.description) ||
+              isNonTransactionLine(tx.cleanMerchant || '') ||
               isDeterministicNonExpense(tx.description) ||
               isDeterministicNonExpense(tx.cleanMerchant)
 

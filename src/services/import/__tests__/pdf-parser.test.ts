@@ -8,6 +8,8 @@ import {
   isDeterministicNonExpense,
   normalizeDescriptionForDedup,
   extractRawTextFromPdf,
+  isNonTransactionLine,
+  NON_TRANSACTION_TERMS,
 } from '../pdf-parser'
 import * as pdfjsDist from 'pdfjs-dist'
 import { vi } from 'vitest'
@@ -253,6 +255,122 @@ describe('pdf-parser service', () => {
       expect(result.rawText).toBe('Lançamento Fallback R$ 100,00')
 
       mockGetDocument.mockRestore()
+    })
+  })
+
+  describe('isNonTransactionLine - Blindagem determinística universal de faturas', () => {
+    it('reconhece e descarta todas as categorias do Requisito 1 de blocklist', () => {
+      // 1. Totais e Saldos
+      expect(isNonTransactionLine('TOTAL FATURA')).toBe(true)
+      expect(isNonTransactionLine('Total da Fatura')).toBe(true)
+      expect(isNonTransactionLine('VALOR TOTAL')).toBe(true)
+      expect(isNonTransactionLine('TOTAL A PAGAR: R$ 518,93')).toBe(true)
+      expect(isNonTransactionLine('valor da fatura')).toBe(true)
+      expect(isNonTransactionLine('SALDO DA FATURA')).toBe(true)
+      expect(isNonTransactionLine('Total Desta Fatura')).toBe(true)
+      expect(isNonTransactionLine('Saldo Anterior')).toBe(true)
+      expect(isNonTransactionLine('saldo atual')).toBe(true)
+      expect(isNonTransactionLine('SALDO DEVEDOR')).toBe(true)
+      expect(isNonTransactionLine('Saldo Remanescente')).toBe(true)
+      expect(isNonTransactionLine('SUBTOTAL')).toBe(true)
+      expect(isNonTransactionLine('Sub-total')).toBe(true)
+      expect(isNonTransactionLine('TOTAL DOS LANÇAMENTOS')).toBe(true)
+      expect(isNonTransactionLine('Total de Compras')).toBe(true)
+
+      // 2. Pagamentos e Quitações
+      expect(isNonTransactionLine('PAGAMENTO DE FATURA')).toBe(true)
+      expect(isNonTransactionLine('Pagamento de Fatura -5.443,36')).toBe(true)
+      expect(isNonTransactionLine('Pagamento Recebido')).toBe(true)
+      expect(isNonTransactionLine('PGTO FATURA')).toBe(true)
+      expect(isNonTransactionLine('PAGTO FATURA')).toBe(true)
+      expect(isNonTransactionLine('Pagamento Efetuado')).toBe(true)
+      expect(isNonTransactionLine('PAGAMENTO ON-LINE')).toBe(true)
+      expect(isNonTransactionLine('Crédito de Pagamento')).toBe(true)
+      expect(isNonTransactionLine('Recebimento de Fatura')).toBe(true)
+
+      // 3. Limites e Crédito
+      expect(isNonTransactionLine('LIMITE TOTAL')).toBe(true)
+      expect(isNonTransactionLine('Limite de Crédito')).toBe(true)
+      expect(isNonTransactionLine('LIMITE DISPONÍVEL')).toBe(true)
+      expect(isNonTransactionLine('Limite Utilizado')).toBe(true)
+      expect(isNonTransactionLine('Limite para Saque')).toBe(true)
+      expect(isNonTransactionLine('LIMITE A VISTA')).toBe(true)
+      expect(isNonTransactionLine('Limite Parcelado')).toBe(true)
+
+      // 4. Parcelamento e Mínimo
+      expect(isNonTransactionLine('PAGAMENTO MÍNIMO')).toBe(true)
+      expect(isNonTransactionLine('Pagto Mínimo')).toBe(true)
+      expect(isNonTransactionLine('Valor Mínimo')).toBe(true)
+      expect(isNonTransactionLine('PARCELAMENTO DE FATURA')).toBe(true)
+      expect(isNonTransactionLine('Parcela Fácil')).toBe(true)
+      expect(isNonTransactionLine('FATURA PARCELADA')).toBe(true)
+      expect(isNonTransactionLine('Opção de Parcelamento')).toBe(true)
+      expect(isNonTransactionLine('Financiamento Rotativo')).toBe(true)
+
+      // 5. Encargos e Institucionais
+      expect(isNonTransactionLine('CUSTO EFETIVO TOTAL')).toBe(true)
+      expect(isNonTransactionLine('CET ANUAL')).toBe(true)
+      expect(isNonTransactionLine('CET Mensal')).toBe(true)
+      expect(isNonTransactionLine('Projeção de Encargos')).toBe(true)
+      expect(isNonTransactionLine('Taxa de Juros')).toBe(true)
+      expect(isNonTransactionLine('OUVIDORIA')).toBe(true)
+      expect(isNonTransactionLine('Ouvidoria 0800 722 0048')).toBe(true)
+      expect(isNonTransactionLine('CANAIS DE ATENDIMENTO')).toBe(true)
+    })
+
+    it('NÃO descarta compras legítimas com nomes parecidos', () => {
+      // Estabelecimentos legítimos que não são linhas de cabeçalho/resumo
+      expect(isNonTransactionLine('PADARIA BOM LIMITE')).toBe(false)
+      expect(isNonTransactionLine('RESTAURANTE SEM LIMITE')).toBe(false)
+      expect(isNonTransactionLine('FARMACIA TOTAL')).toBe(false)
+      expect(isNonTransactionLine('POSTO TOTAL COMBUSTIVEIS')).toBe(false)
+      expect(isNonTransactionLine('SUPERMERCADO MINIMO')).toBe(false)
+      expect(isNonTransactionLine('BAR E LANCHONETE SALDO')).toBe(false)
+      expect(isNonTransactionLine('UBER *TRIP')).toBe(false)
+      expect(isNonTransactionLine('AMAZON.COM.BR 01/03')).toBe(false)
+      expect(isNonTransactionLine('NETFLIX.COM')).toBe(false)
+      expect(isNonTransactionLine('DROGASIL')).toBe(false)
+      expect(isNonTransactionLine('SPOTIFY')).toBe(false)
+      expect(isNonTransactionLine('IFOOD *RESTAURANTE')).toBe(false)
+    })
+
+    it('deduplicateExtractedTransactions descarta sumariamente linhas de não-transação', () => {
+      const items = [
+        {
+          date: '2025-02-10',
+          description: 'TOTAL FATURA',
+          cleanMerchant: 'Total Fatura',
+          amountCents: 51893,
+        },
+        {
+          date: '2025-02-10',
+          description: 'PAGAMENTO MINIMO',
+          cleanMerchant: 'Pagamento Minimo',
+          amountCents: 10000,
+        },
+        {
+          date: '2025-02-10',
+          description: 'LIMITE TOTAL',
+          cleanMerchant: 'Limite Total',
+          amountCents: 500000,
+        },
+        {
+          date: '2025-02-11',
+          description: 'MERCADO BOM PRECO',
+          cleanMerchant: 'Mercado Bom Preço',
+          amountCents: 15420,
+        },
+        {
+          date: '2025-02-12',
+          description: 'UBER *TRIP',
+          cleanMerchant: 'Uber',
+          amountCents: 2490,
+        },
+      ]
+
+      const deduplicated = deduplicateExtractedTransactions(items)
+      expect(deduplicated).toHaveLength(2)
+      expect(deduplicated.map((d) => d.description)).toEqual(['MERCADO BOM PRECO', 'UBER *TRIP'])
     })
   })
 })

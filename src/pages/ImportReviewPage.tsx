@@ -41,6 +41,7 @@ import { CATEGORY_COLORS } from '@/components/categories/CategoryEditorPopover'
 import { formatBRL } from '@/lib/formatters'
 import { normalizeText, extractPatternFromDescription } from '@/services/import/categorization'
 import { findSimilarReviewItems } from '@/services/import/similar-matcher'
+import { isNonTransactionLine } from '@/services/import/pdf-parser'
 import {
   generateInstallmentTransactions,
   cleanInstallmentBaseDescription,
@@ -64,8 +65,10 @@ export default function ImportPage() {
 
   const { session, setImportSession, clearImportSession } = useImportSession()
 
-  // Lista de itens em revisão carregados da sessão
-  const [items, setItems] = useState<ReviewItem[]>(() => session?.items || [])
+  // Lista de itens em revisão carregados da sessão (filtrando linhas de não-transação)
+  const [items, setItems] = useState<ReviewItem[]>(() =>
+    (session?.items || []).filter((it) => !isNonTransactionLine(it.description)),
+  )
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false)
 
@@ -88,9 +91,10 @@ export default function ImportPage() {
   // Se a sessão atualizar externamente
   useEffect(() => {
     if (session?.items && session.items.length > 0) {
-      setItems(session.items)
-      if (!selectedItemId) {
-        setSelectedItemId(session.items[0].id)
+      const sanitized = session.items.filter((it) => !isNonTransactionLine(it.description))
+      setItems(sanitized)
+      if (!selectedItemId && sanitized.length > 0) {
+        setSelectedItemId(sanitized[0].id)
       }
     }
   }, [session])

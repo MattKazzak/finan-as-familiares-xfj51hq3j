@@ -334,6 +334,171 @@ export function normalizeDescriptionForDedup(desc: string): string {
 }
 
 /**
+ * Normaliza texto preservando espaços para correspondência de expressões/termos compostos.
+ */
+export function normalizeTextWithSpaces(text: string): string {
+  return (text || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * Regex para testar palavra exata delimitada por bordas de palavra ou início/fim de string
+ */
+function containsExactWordOrPhrase(text: string, phrase: string): boolean {
+  if (!text || !phrase) return false
+  const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(`(^|\\s)${escaped}(\\s|$)`, 'i')
+  return regex.test(text)
+}
+
+/**
+ * Termos canônicos da Blocklist Determinística de Não-Transações.
+ * Conforme Requisito 1:
+ * - Totais e Saldos
+ * - Pagamentos e Quitações
+ * - Limites e Crédito
+ * - Parcelamento e Mínimo
+ * - Encargos e Institucionais
+ */
+export const NON_TRANSACTION_TERMS: readonly string[] = [
+  // Totais e Saldos
+  'TOTAL FATURA',
+  'TOTAL DA FATURA',
+  'VALOR TOTAL',
+  'TOTAL A PAGAR',
+  'VALOR DA FATURA',
+  'SALDO DA FATURA',
+  'TOTAL DESTA FATURA',
+  'SALDO ANTERIOR',
+  'SALDO ATUAL',
+  'SALDO DEVEDOR',
+  'SALDO REMANESCENTE',
+  'SUBTOTAL',
+  'SUB-TOTAL',
+  'TOTAL DOS LANCAMENTOS',
+  'TOTAL DE COMPRAS',
+
+  // Pagamentos e Quitações
+  'PAGAMENTO DE FATURA',
+  'PAGAMENTO RECEBIDO',
+  'PGTO FATURA',
+  'PAGTO FATURA',
+  'PAGAMENTO EFETUADO',
+  'PAGAMENTO ON-LINE',
+  'CREDITO DE PAGAMENTO',
+  'RECEBIMENTO DE FATURA',
+
+  // Limites e Crédito
+  'LIMITE TOTAL',
+  'LIMITE DE CREDITO',
+  'LIMITE DISPONIVEL',
+  'LIMITE UTILIZADO',
+  'LIMITE PARA SAQUE',
+  'LIMITE A VISTA',
+  'LIMITE PARCELADO',
+
+  // Parcelamento e Mínimo
+  'PAGAMENTO MINIMO',
+  'PAGTO MINIMO',
+  'VALOR MINIMO',
+  'PARCELAMENTO DE FATURA',
+  'PARCELA FACIL',
+  'FATURA PARCELADA',
+  'OPCAO DE PARCELAMENTO',
+  'FINANCIAMENTO ROTATIVO',
+
+  // Encargos e Institucionais
+  'CUSTO EFETIVO TOTAL',
+  'CET ANUAL',
+  'CET MENSAL',
+  'PROJECAO DE ENCARGOS',
+  'TAXA DE JUROS',
+  'OUVIDORIA',
+  'CANAIS DE ATENDIMENTO',
+] as const
+
+// Cache das versões normalizadas (com espaço e sem espaço) dos termos da blocklist
+const NORMALIZED_NON_TRANSACTION_SPACED: string[] = NON_TRANSACTION_TERMS.map((t) =>
+  normalizeTextWithSpaces(t),
+)
+const NORMALIZED_NON_TRANSACTION_COMPACT: string[] = NON_TRANSACTION_TERMS.map((t) =>
+  normalizeDescriptionForDedup(t),
+)
+
+/**
+ * Função utilitária determinística universal:
+ * Verifica se uma descrição (ou linha de extrato) corresponde a uma linha de resumo,
+ * cabeçalho, limite, pagamento de fatura ou termo institucional que DEVE ser SUMARIAMENTE
+ * descartada do array de transações a importar.
+ *
+ * Case-insensitive, sem acentuação.
+ * Garante que compras legítimas cujo nome contenha substrings isoladas NÃO sejam descartadas
+ * (ex.: estabelecimento "SUPERMERCADO LIMITE", "AUTO POSTO OUVIDORIA" só cai se casar com a frase institucional,
+ * enquanto palavras compostas como "LIMITE TOTAL", "LIMITE DE CREDITO", "TOTAL FATURA" são bloqueadas).
+ */
+export function isNonTransactionLine(description: string): boolean {
+  if (!description) return false
+
+  const spaced = normalizeTextWithSpaces(description)
+  if (!spaced) return false
+
+  const compact = normalizeDescriptionForDedup(description)
+
+  // 1. Verificação por frase / palavra exata
+  for (let i = 0; i < NORMALIZED_NON_TRANSACTION_SPACED.length; i++) {
+    const termSpaced = NORMALIZED_NON_TRANSACTION_SPACED[i]
+    const termCompact = NORMALIZED_NON_TRANSACTION_COMPACT[i]
+
+    // Se o termo tem 1 única palavra (ex: "OUVIDORIA", "SUBTOTAL")
+    if (!termSpaced.includes(' ')) {
+      // Exige casamento com palavra isolada para evitar falsos positivos
+      // como "SUPERMERCADO OUVIDORIA" caindo se for um nome composto que contenha a palavra?
+      // "OUVIDORIA" é termo estritamente institucional. Se a linha for "OUVIDORIA" ou contiver a palavra "OUVIDORIA",
+      // containsExactWordOrPhrase garante que "OUVIDORIA" como palavra inteira seja descartada,
+      // mas "SUBTOTAL" também.
+      if (containsExactWordOrPhrase(spaced, termSpaced)) {
+        return true
+      }
+      if (
+        termCompact.length >= 7 &&
+        (compact === termCompact ||
+          compact.startsWith(termCompact) ||
+          compact.endsWith(termCompact))
+      ) {
+        return true
+      }
+    } else {
+      // Termo composto com 2+ palavras (ex: "TOTAL FATURA", "LIMITE TOTAL", "PAGAMENTO DE FATURA", "CET ANUAL")
+      if (spaced.includes(termSpaced)) {
+        return true
+      }
+      if (termCompact.length >= 6 && compact.includes(termCompact)) {
+        return true
+      }
+    }
+  }
+
+  // 2. Termos institucionais e canais específicos com variações usuais
+  if (spaced.includes('central de atendimento') || compact.includes('centraldeatendimento')) {
+    return true
+  }
+  if (
+    spaced.includes('sac 0800') ||
+    spaced.includes('ouvidoria 0800') ||
+    compact.includes('ouvidoria0800')
+  ) {
+    return true
+  }
+
+  return false
+}
+
+/**
  * Filtro determinístico pós-IA (em código, NÃO no prompt):
  * Intercepta pagamentos de fatura, quitações anteriores, ajustes, encargos e IOF.
  * Retorna true se a descrição indicar uma linha não-despesa que deve vir
@@ -408,6 +573,11 @@ export function deduplicateExtractedTransactions<T extends DedupableTransaction>
   const result: T[] = []
 
   for (const item of items) {
+    // Filtragem sumária de linhas de resumo / cabeçalho / termos institucionais
+    if (isNonTransactionLine(item.description) || isNonTransactionLine(item.cleanMerchant || '')) {
+      continue
+    }
+
     const normDesc = normalizeDescriptionForDedup(item.cleanMerchant || item.description)
     const key = `${item.date}_${normDesc}_${item.amountCents}`
     if (!seen.has(key)) {
