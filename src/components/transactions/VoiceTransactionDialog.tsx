@@ -41,7 +41,6 @@ export interface ChatMessage {
     | 'falta_valor'
     | 'clarificacao'
     | 'clarificacao_categoria'
-    | 'invalido'
     | 'consulta'
     | 'acao'
   aiError?: string | null
@@ -84,6 +83,10 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
   // Mini-Chat: Histórico de mensagens mantido em memória durante a sessão do modal
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  const messagesRef = useRef<ChatMessage[]>([])
+  useEffect(() => {
+    messagesRef.current = messages
+  }, [messages])
   const [inputVal, setInputVal] = useState('')
 
   // Estado da transação parcial em 2 turnos (sobrevive a reinícios do microfone e mensagens)
@@ -294,11 +297,18 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             ? buildPreviousContext(existingPartial)
             : null
 
+        // Captura as últimas mensagens da conversa para enviar como memória contínua à Edge Function
+        const historyForAi = messagesRef.current.slice(-6).map((m) => ({
+          role: m.sender === 'user' ? ('user' as const) : ('assistant' as const),
+          content: m.text,
+        }))
+
         const parsed = await parseVoiceWithAi({
           texto: textToProcess,
           familyId: family?.id,
           categories,
           contexto_anterior: previousContext,
+          historico_mensagens: historyForAi,
         })
 
         // Intenção de Desfazer / Cancelar último lançamento
@@ -629,7 +639,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           return
         }
 
-        // Caso 8: Inválido ou erro
+        // Caso 8: Inválido ou erro — renderizado exclusivamente como mensagem em balão de chat natural
         const fallbackMsg =
           parsed.friendlyMessage ||
           "Não consegui entender esse lançamento financeiro. Tente algo como: 'Almoço 45 reais no débito no restaurante' ou 'supermercado do zé 180 no pix'"
@@ -641,9 +651,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             sender: 'assistant',
             text: fallbackMsg,
             timestamp: new Date(),
-            cardData: parsed,
-            cardType: 'invalido',
-            aiError: parsed.aiError || null,
           },
         ])
       } catch (err: any) {
@@ -653,9 +660,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           {
             id: `assistant-${Date.now()}`,
             sender: 'assistant',
-            text: 'Ocorreu uma falha ao interpretar seu comando. Tente falar novamente.',
+            text: 'Ocorreu uma falha ao interpretar seu comando. Pode repetir ou digitar aqui?',
             timestamp: new Date(),
-            cardType: 'invalido',
             aiError: err?.message || 'Falha de conexão',
           },
         ])
@@ -1306,19 +1312,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     handleApplyAndPersistCategory(option, cardData, structuredOpt)
   }
 
-  // Reiniciar escuta para tentar novamente (usado pelo card inválido)
-  const handleRetryListening = () => {
-    setPendingTransaction(null)
-    pendingTransactionRef.current = null
-    setTextoFalado('')
-    setMissingAmountInput('')
-    setIsListeningForAmountOnly(false)
-    isListeningForAmountOnlyRef.current = false
-    latestTranscriptRef.current = ''
-    finalBufferRef.current = ''
-    startRecording()
-  }
-
   // Executar lançamento autônomo diretamente no Supabase sem fechar o diálogo
   const executeAutonomousTransaction = useCallback(
     async (txData: ParsedVoiceTransaction) => {
@@ -1751,36 +1744,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     )
   }
 
-  // Renderizador do Card invalido no Chat
-  const renderInvalidCard = (msg: ChatMessage) => {
-    return (
-      <div className="mt-2.5 rounded-2xl border border-amber-200 bg-amber-50/80 p-3 text-left space-y-2">
-        {msg.aiError ? (
-          <div
-            role="alert"
-            data-testid="invalid-error-card"
-            className="border border-rose-200 rounded-xl bg-rose-50 p-2.5 text-xs text-rose-900"
-          >
-            <span className="font-bold block text-rose-950">Erro de Conexão com IA:</span>
-            <span className="font-mono text-[11px] break-words">{msg.aiError}</span>
-          </div>
-        ) : (
-          <p className="text-xs text-amber-900 leading-relaxed font-medium">
-            Dica: Fale o item e o valor, ex: &apos;Almoço 45 reais no débito no restaurante&apos;.
-          </p>
-        )}
-
-        <Button
-          type="button"
-          onClick={handleRetryListening}
-          className="bg-[#064E3B] hover:bg-emerald-900 text-white rounded-xl font-bold text-xs h-9 gap-1.5 w-full shadow-xs"
-        >
-          <Mic className="w-3.5 h-3.5 text-emerald-300" />🎤 Falar Novamente
-        </Button>
-      </div>
-    )
-  }
-
   const quickPrompts = [
     { label: '🎙️ "Almoço 35 reais"', text: 'Almoço 35 reais' },
     { label: '📊 "Quanto ainda posso gastar?"', text: 'Quanto ainda posso gastar?' },
@@ -1894,9 +1857,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                       msg.cardType === 'clarificacao_categoria') &&
                     msg.cardData &&
                     renderClarificationCategoryCard(msg.cardData)}
-
-                  {/* Card inválido com dica e botão de retry */}
-                  {!isUser && msg.cardType === 'invalido' && renderInvalidCard(msg)}
                 </div>
 
                 {/* Chips de Sugestão Rápida tocáveis logo abaixo da saudação inicial */}

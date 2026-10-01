@@ -276,6 +276,7 @@ describe('voice-ai service (fim do fallback silencioso)', () => {
         texto: 'foi 80 reais no debito',
         familyId: 'fam-1',
         contexto_anterior: previousContext,
+        historico_mensagens: null,
         categorias: null,
       },
     })
@@ -307,5 +308,52 @@ describe('voice-ai service (fim do fallback silencioso)', () => {
     expect(res.acao).toBe('desfazer')
     expect(res.tipoResposta).toBe('acao')
     expect(res.friendlyMessage).toBe('Lançamento desfeito!')
+  })
+
+  it('envia historico_mensagens limitado às últimas 6 mensagens no payload da Edge Function', async () => {
+    vi.mocked(supabase.functions.invoke).mockResolvedValueOnce({
+      data: {
+        status: 'consulta',
+        tipo_resposta: 'consulta',
+        intencao: 'consulta',
+        resposta_consulta:
+          'Lancei seu almoço de R$ 35,00 em Alimentação › Restaurante no débito! 🍽️',
+        transacao: null,
+        pergunta_clarificacao: null,
+        opcoes_sugestao: null,
+        mensagem_amigavel:
+          'Lancei seu almoço de R$ 35,00 em Alimentação › Restaurante no débito! 🍽️',
+      },
+      error: null,
+    })
+
+    const historicoCompleto = [
+      { role: 'assistant' as const, content: 'Olá! O que vamos registrar?' },
+      { role: 'user' as const, content: 'msg 1' },
+      { role: 'assistant' as const, content: 'resp 1' },
+      { role: 'user' as const, content: 'msg 2' },
+      { role: 'assistant' as const, content: 'resp 2' },
+      { role: 'user' as const, content: 'almoço 35 no débito' },
+      { role: 'assistant' as const, content: 'Lançado: R$ 35,00 em Alimentação! 👍' },
+    ]
+
+    const res = await parseVoiceWithAi({
+      texto: 'onde você lançou o almoço?',
+      familyId: 'fam-1',
+      historico_mensagens: historicoCompleto,
+    })
+
+    expect(supabase.functions.invoke).toHaveBeenCalledWith('voice-parse', {
+      body: {
+        texto: 'onde você lançou o almoço?',
+        familyId: 'fam-1',
+        contexto_anterior: null,
+        historico_mensagens: historicoCompleto.slice(-6),
+        categorias: null,
+      },
+    })
+    expect(res.aiStatus).toBe('consulta')
+    expect(res.tipoResposta).toBe('consulta')
+    expect(res.respostaConsulta).toContain('Lancei seu almoço de R$ 35,00')
   })
 })

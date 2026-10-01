@@ -26,6 +26,11 @@ export interface CategoryPayloadInput {
   subcategories?: Array<{ id?: string; name: string }>
 }
 
+export interface ChatMessagePayload {
+  role: 'user' | 'assistant'
+  content: string
+}
+
 export interface ParseVoiceWithAiOptions {
   texto: string
   familyId?: string
@@ -37,6 +42,7 @@ export interface ParseVoiceWithAiOptions {
     subcategories?: Array<{ id: string; name: string }>
   }>
   contexto_anterior?: VoiceAiPreviousContext | null
+  historico_mensagens?: ChatMessagePayload[] | null
 }
 
 /**
@@ -48,6 +54,7 @@ export async function parseVoiceWithAi({
   familyId,
   categories = [],
   contexto_anterior,
+  historico_mensagens,
 }: ParseVoiceWithAiOptions): Promise<ParsedVoiceTransaction> {
   const trimmed = texto.trim()
   if (!trimmed) {
@@ -77,6 +84,10 @@ export async function parseVoiceWithAi({
         texto: trimmed,
         familyId,
         contexto_anterior: contexto_anterior || null,
+        historico_mensagens:
+          Array.isArray(historico_mensagens) && historico_mensagens.length > 0
+            ? historico_mensagens.slice(-6)
+            : null,
         categorias: serializedCategories.length > 0 ? serializedCategories : null,
       },
     })

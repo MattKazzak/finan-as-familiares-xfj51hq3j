@@ -383,7 +383,7 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     })
   })
 
-  it('comportamento "invalido": exibe mensagem acolhedora com botão [ 🎤 Falar Novamente ], sem card de confirmação', async () => {
+  it('comportamento "invalido": exibe mensagem acolhedora exclusivamente em balão de chat, sem card rústico nem botão "Falar Novamente"', async () => {
     mockParseVoiceWithAi.mockResolvedValueOnce({
       rawText: 'GPT ormini falando',
       amountCents: 0,
@@ -420,7 +420,8 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
           "Não consegui entender esse lançamento financeiro. Tente algo como: 'Almoço 45 reais no débito no restaurante' ou 'supermercado do zé 180 no pix'",
         ),
       ).toBeDefined()
-      expect(screen.getByText('🎤 Falar Novamente')).toBeDefined()
+      expect(screen.queryByText(/Falar Novamente/i)).toBeNull()
+      expect(screen.queryByTestId('invalid-error-card')).toBeNull()
       expect(screen.queryByText('✅ Confirmar Lançamento')).toBeNull()
     })
   })
@@ -1774,5 +1775,86 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     expect(screen.getByText('🎙️ "Almoço 35 reais"')).toBeDefined()
     expect(screen.getByText('📊 "Quanto ainda posso gastar?"')).toBeDefined()
     expect(screen.getByText('🔍 "Últimos lançamentos"')).toBeDefined()
+  })
+
+  it('regressão memória de chat: pergunta "onde você lançou o almoço?" não é filtrada e envia historico_mensagens das últimas 6 mensagens', async () => {
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    // Turno 1: usuário lança almoço
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'almoço 35 no débito',
+      amountCents: 3500,
+      amountFormatted: 'R$ 35,00',
+      type: 'expense',
+      description: 'Almoço',
+      confidence: 0.98,
+      processingSource: 'openai',
+      aiStatus: 'sucesso',
+      categoryNameSuggestion: 'Alimentação',
+      subcategoryNameSuggestion: 'Restaurante',
+      bucketSuggestion: 'lifestyle',
+      paymentMethod: 'debito',
+      friendlyMessage: 'Lançado: R$ 35,00 em Alimentação › Restaurante! 👍',
+    })
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Fale no microfone ou digite aqui...')
+    fireEvent.change(input, { target: { value: 'almoço 35 no débito' } })
+    fireEvent.click(screen.getByText('Enviar'))
+
+    await waitFor(() => {
+      expect(screen.getByText(/Lançado: R\$ 35,00 em Alimentação › Restaurante!/i)).toBeDefined()
+    })
+
+    // Turno 2: usuário pergunta "onde você lançou o almoço?"
+    mockParseVoiceWithAi.mockImplementationOnce(async (options) => {
+      expect(options.texto).toBe('onde você lançou o almoço?')
+      expect(Array.isArray(options.historico_mensagens)).toBe(true)
+      expect(options.historico_mensagens!.length).toBeGreaterThan(0)
+      expect(options.historico_mensagens!.length).toBeLessThanOrEqual(6)
+
+      // Verifica se o histórico contém a conversa anterior
+      const historyTexts = options.historico_mensagens!.map((m: any) => m.content)
+      expect(historyTexts.some((t: string) => t.includes('almoço 35 no débito'))).toBe(true)
+
+      return {
+        rawText: 'onde você lançou o almoço?',
+        amountCents: 0,
+        amountFormatted: 'R$ 0,00',
+        type: 'expense',
+        description: 'onde você lançou o almoço?',
+        confidence: 0.95,
+        processingSource: 'openai',
+        aiStatus: 'consulta',
+        tipoResposta: 'consulta',
+        respostaConsulta:
+          'Lancei seu almoço de R$ 35,00 em Alimentação › Restaurante no débito! 🍽️',
+        friendlyMessage: 'Lancei seu almoço de R$ 35,00 em Alimentação › Restaurante no débito! 🍽️',
+      }
+    })
+
+    fireEvent.change(input, { target: { value: 'onde você lançou o almoço?' } })
+    fireEvent.click(screen.getByText('Enviar'))
+
+    await waitFor(() => {
+      // Pergunta do usuário como balão
+      expect(screen.getByText('onde você lançou o almoço?')).toBeDefined()
+      // Resposta natural da IA em balão de texto (sem card de erro ou retry)
+      expect(
+        screen.getByText(
+          'Lancei seu almoço de R$ 35,00 em Alimentação › Restaurante no débito! 🍽️',
+        ),
+      ).toBeDefined()
+      expect(screen.queryByText(/Falar Novamente/i)).toBeNull()
+      expect(screen.queryByTestId('invalid-error-card')).toBeNull()
+    })
   })
 })

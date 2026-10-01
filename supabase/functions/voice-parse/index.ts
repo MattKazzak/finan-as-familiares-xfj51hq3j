@@ -14,6 +14,11 @@ interface PreviousContextPayload {
   opcoes_sugestao?: any[] | null
 }
 
+interface ChatMessagePayloadItem {
+  role?: 'user' | 'assistant'
+  content?: string
+}
+
 interface CategoryPayloadItem {
   id?: string
   name: string
@@ -26,6 +31,7 @@ interface RequestPayload {
   texto?: string
   familyId?: string
   contexto_anterior?: PreviousContextPayload | null
+  historico_mensagens?: ChatMessagePayloadItem[] | null
   categorias?: CategoryPayloadItem[] | null
 }
 
@@ -212,7 +218,13 @@ Deno.serve(async (req: Request) => {
         normalizedText.includes('orçamento') ||
         normalizedText.includes('orcamento') ||
         normalizedText.includes('quanto gastei') ||
-        normalizedText.includes('quanto sobrou'))
+        normalizedText.includes('quanto sobrou') ||
+        normalizedText.includes('onde você lançou') ||
+        normalizedText.includes('onde voce lancou') ||
+        normalizedText.includes('onde você colocou') ||
+        normalizedText.includes('qual foi o valor') ||
+        normalizedText.includes('o que você anotou') ||
+        normalizedText.includes('o que você lançou'))
 
     // 1. Categorias: utilize body.categorias enviado pelo front-end sempre que disponível (sem query no banco)
     let categoriesList: any[] = []
@@ -511,8 +523,17 @@ DIRETRIZES DE INTELIGÊNCIA REAL (PADRÃO OURO):
 3. NÚMEROS PUROS E SLOT-FILLING (REGRA DE TURNO 2):
   - Se a mensagem contiver um número isolado como "12", "12 reais", "doze", "doze reais", "52", "52 reais", "cinquenta e dois" e havia contexto anterior sem valor (status anterior 'falta_valor'), capture esse número como o valor da transação pendente.
   - MESCLE com a descrição do contexto anterior e RETORNE IMEDIATAMENTE "status": "sucesso" com a transação completa, sem re-perguntar.
-4. CONSULTAS FINANCEIRAS (QUANTO POSSO GASTAR / SALDO):
+4. CONSULTAS FINANCEIRAS E MEMÓRIA DA CONVERSA RECENTE:
+  - Quando o usuário fizer perguntas contextuais sobre lançamentos que acabou de fazer (ex: "onde você lançou o almoço?", "qual foi o valor que você anotou?", "em qual categoria ficou?"), você DEVE responder conversacionalmente lendo o histórico recente de mensagens enviado.
+  - NUNCA marque essas perguntas contextuais como "invalido" e NUNCA peça para "falar novamente".
+  - Retorne:
+    * "status": "consulta"
+    * "tipo_resposta": "consulta"
+    * "transacao": null
+    * "resposta_consulta": resposta direta, acolhedora e precisa em português (ex: "Lancei seu almoço de R$ 35,00 em [Categoria] › [Subcategoria] no débito! 🍽️").
+    * "mensagem_amigavel": mesma resposta direta em linguagem natural.
   - Quando o usuário perguntar "Quanto ainda posso gastar?", "Como estão meus gastos?", responda de forma sintética, direta e acolhedora em 2-3 linhas, citando o saldo disponível do mês e a situação do balde de Estilo de Vida com base no resumo financeiro fornecido.
+  - Perguntas gerais fora do domínio financeiro ou ruído sem sentido podem retornar "invalido", mas com um texto curto e amigável para balão de chat (sem tom rústico de erro ou card).
 
 Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido (response_format: json_object) com o seguinte esquema:
 {
@@ -584,6 +605,26 @@ Comportamentos esperados:
    - Ruído, conversa desconexa sem sentido financeiro nem pergunta.
    - "status": "invalido"`
 
+    // Sanitização e validação das últimas 6 mensagens de histórico
+    const sanitizedHistory: Array<{ role: 'user' | 'assistant'; content: string }> = []
+    if (Array.isArray(body.historico_mensagens)) {
+      const rawHistory = body.historico_mensagens.slice(-6)
+      for (const msg of rawHistory) {
+        const role = msg?.role === 'assistant' ? 'assistant' : msg?.role === 'user' ? 'user' : null
+        const content = typeof msg?.content === 'string' ? msg.content.trim() : ''
+        if (role && content) {
+          sanitizedHistory.push({ role, content })
+        }
+      }
+    }
+
+    // Montagem das mensagens para a OpenAI: systemPrompt, seguido pelo histórico recente na ordem, e a mensagem atual
+    const openAiMessages = [
+      { role: 'system', content: systemPrompt },
+      ...sanitizedHistory,
+      { role: 'user', content: texto },
+    ]
+
     // Chamada à API da OpenAI
     const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -593,10 +634,7 @@ Comportamentos esperados:
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: texto },
-        ],
+        messages: openAiMessages,
         response_format: { type: 'json_object' },
         temperature: 0.2,
       }),
