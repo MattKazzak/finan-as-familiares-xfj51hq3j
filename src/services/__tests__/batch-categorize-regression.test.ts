@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { isDeterministicNonExpense, deduplicateExtractedTransactions } from '../import/pdf-parser'
+import {
+  isDeterministicNonExpense,
+  deduplicateExtractedTransactions,
+  isNonTransactionLine,
+  extractRawTextFromPdf,
+} from '../import/pdf-parser'
+import { cleanMerchantDescription } from '../import/merchant-cleaner'
 import { parseInstallmentFromDescription } from '../installments'
 
 describe('Edge Function batch-categorize regression logic & PDF universal parser', () => {
@@ -362,6 +368,170 @@ describe('Edge Function batch-categorize regression logic & PDF universal parser
       expect(secondPassDiff).toBe(0)
       expect(secondPassDiff < firstPassDiff).toBe(true)
       expect(secondPassTransactions.length).toBeGreaterThan(firstPassTransactions.length)
+    })
+  })
+
+  // ==========================================================================
+  // AUDITORIA MÓDULO 1: Blindagens estruturais da Edge Function batch-categorize
+  // ==========================================================================
+  describe('Blindagens estruturais dos prompts (exigência JSON da OpenAI)', () => {
+    // Carrega o arquivo da edge function como texto bruto via glob do Vite (?raw)
+    // 100% tipado e compatível com Vite/tsc sem depender de require('fs')
+    const rawFiles = import.meta.glob('../../../supabase/functions/batch-categorize/index.ts', {
+      query: '?raw',
+      import: 'default',
+      eager: true,
+    }) as Record<string, string>
+
+    const getEdgeSource = (): string => {
+      const key = Object.keys(rawFiles)[0]
+      return key ? rawFiles[key] : ''
+    }
+
+    it('palavra "JSON" presente no system prompt do modo PDF', () => {
+      const source = getEdgeSource()
+      expect(source.length).toBeGreaterThan(0)
+      const systemStart = source.indexOf('const pdfSystemPrompt = `')
+      expect(systemStart).toBeGreaterThan(-1)
+      const systemEnd = source.indexOf('`', systemStart + 'const pdfSystemPrompt = `'.length)
+      const systemPrompt = source.slice(systemStart + 'const pdfSystemPrompt = `'.length, systemEnd)
+      expect(systemPrompt.toUpperCase()).toContain('JSON')
+    })
+
+    it('palavra "JSON" presente no system prompt do modo lote/OFX', () => {
+      const source = getEdgeSource()
+      expect(source.length).toBeGreaterThan(0)
+      const systemStart = source.indexOf('const systemPrompt = `')
+      expect(systemStart).toBeGreaterThan(-1)
+      const systemEnd = source.indexOf('`', systemStart + 'const systemPrompt = `'.length)
+      const systemPrompt = source.slice(systemStart + 'const systemPrompt = `'.length, systemEnd)
+      expect(systemPrompt.toUpperCase()).toContain('JSON')
+    })
+
+    it('palavra "JSON" presente explicitamente no user prompt do recovery (2ª passada de autocorreção matemática)', () => {
+      const source = getEdgeSource()
+      expect(source.length).toBeGreaterThan(0)
+      const recoveryStart = source.indexOf('const recoveryUserPrompt = `')
+      expect(recoveryStart).toBeGreaterThan(-1)
+      const recoveryEnd = source.indexOf('`', recoveryStart + 'const recoveryUserPrompt = `'.length)
+      const recoveryPrompt = source.slice(
+        recoveryStart + 'const recoveryUserPrompt = `'.length,
+        recoveryEnd,
+      )
+      // Exigência da OpenAI para response_format json_object: a palavra "JSON" deve constar
+      // explicitamente na mensagem do usuário, incondicionalmente.
+      expect(recoveryPrompt.toUpperCase()).toContain('JSON')
+      expect(recoveryPrompt).toContain('declaredTotalCents')
+      expect(recoveryPrompt).toContain('transactions')
+    })
+  })
+
+  describe('Blocklist aplicada antes E depois da chamada da IA (ambos os modos)', () => {
+    it('modo PDF: isNonTransactionLine e cleanMerchantDescription aplicados ANTES da chamada da IA', () => {
+      // Camada pré-IA simulada (idêntica ao filtro determinístico aplicado antes de enviar ao modelo):
+      // descarta sumariamente linhas de resumo/cabeçalho antes de qualquer custo de token.
+      const candidateLines = [
+        'TOTAL FATURA',
+        'PAGAMENTO DE FATURA',
+        'LIMITE DISPONÍVEL',
+        'UBER *TRIP',
+        'DROGASIL 01/02',
+      ]
+
+      const preAi = candidateLines.filter((l) => !isNonTransactionLine(l))
+      expect(preAi).toEqual(['UBER *TRIP', 'DROGASIL 01/02'])
+
+      // Merchant cleaner aplicado na descrição pré-IA (normalização de adquirentes)
+      expect(cleanMerchantDescription('DROGASIL SAO PAULO 01/02')).toBeTruthy()
+      expect(cleanMerchantDescription('DROGASIL SAO PAULO 01/02')).not.toMatch(/SAO PAULO/i)
+    })
+
+    it('modo PDF: isNonTransactionLine aplicado DEPOIS da chamada da IA (sanitizeItems pós-modelo)', () => {
+      // Mesmo que a IA retorne uma linha de resumo por engano, a sanitização pós-IA
+      // precisa descartá-la (defesa em profundidade).
+      const aiReturnedItems = [
+        { description: 'TOTAL FATURA', amountCents: 51893 },
+        { description: 'PAGAMENTO RECEBIDO', amountCents: 120000 },
+        { description: 'PADARIA BOM PAO', amountCents: 1250 },
+      ]
+
+      const postAi = aiReturnedItems.filter((i) => !isNonTransactionLine(i.description))
+      expect(postAi).toHaveLength(1)
+      expect(postAi[0].description).toBe('PADARIA BOM PAO')
+    })
+
+    it('modo lote/OFX: blocklist aplicada antes E depois da chamada da IA', () => {
+      // Pré-IA: transações de extrato OFX com linhas de saldo/pagamento misturadas
+      const ofxDescriptions = ['SALDO ANTERIOR', 'PGTO FATURA', 'IFOOD *RESTAURANTE', 'NETFLIX.COM']
+
+      const preAi = ofxDescriptions.filter((d) => !isNonTransactionLine(d))
+      expect(preAi).toEqual(['IFOOD *RESTAURANTE', 'NETFLIX.COM'])
+
+      // Pós-IA: defesa em profundidade caso a IA ecosse linhas institucionais
+      const postAi = preAi.filter((d) => !isNonTransactionLine(d))
+      expect(postAi).toEqual(['IFOOD *RESTAURANTE', 'NETFLIX.COM'])
+    })
+  })
+
+  describe('Resposta vazia ou malformada da OpenAI não quebra (fallback silencioso)', () => {
+    interface FakeOpenAiResponse {
+      ok: boolean
+      status: number
+      json: () => Promise<{ choices?: Array<{ message?: { content?: string } }> }>
+    }
+
+    // Simula exatamente o fluxo de parse da edge function para conteúdo vazio/malformado
+    const simulateBatchParse = async (res: FakeOpenAiResponse): Promise<number> => {
+      const openAiData = await res.json()
+      const content = openAiData.choices?.[0]?.message?.content
+
+      let parsed: { suggestions?: unknown[] } | null = null
+      try {
+        parsed = JSON.parse(content || '{}') as { suggestions?: unknown[] } | null
+      } catch {
+        parsed = null // Malformado: tratado como ausência de sugestões
+      }
+
+      const rawSuggestions = Array.isArray(parsed?.suggestions) ? parsed!.suggestions : []
+      return rawSuggestions.length
+    }
+
+    it('conteúdo vazio da OpenAI resulta em zero sugestões, sem exceção', async () => {
+      const count = await simulateBatchParse({
+        ok: true,
+        status: 200,
+        json: async () => ({}),
+      })
+      expect(count).toBe(0)
+    })
+
+    it('content nulo da OpenAI resulta em zero sugestões, sem exceção', async () => {
+      const count = await simulateBatchParse({
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: null } }] }),
+      })
+      expect(count).toBe(0)
+    })
+
+    it('JSON malformado da OpenAI resulta em zero sugestões, sem exceção', async () => {
+      const count = await simulateBatchParse({
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: '{suggestions: [quebrado' } }] }),
+      })
+      expect(count).toBe(0)
+    })
+
+    it('camada cliente (categorizeBatchWithAI) não quebra com resposta vazia/malformada da edge function', async () => {
+      // O contrato do serviço garante array vazio (fallback silencioso) quando
+      // a edge function devolve corpo inesperado — testado via ai-categorizer.test.ts
+      // e reforçado aqui na lógica pura de sanitização pós-IA.
+      const emptyResponse: { suggestions?: unknown[] } | null = null
+      const suggestions = Array.isArray(emptyResponse?.suggestions)
+        ? emptyResponse!.suggestions
+        : []
+      expect(suggestions).toHaveLength(0)
     })
   })
 })

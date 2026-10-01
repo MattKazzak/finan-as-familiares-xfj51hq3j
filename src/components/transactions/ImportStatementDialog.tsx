@@ -1109,7 +1109,11 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
     setItems((prev) => prev.filter((item) => item.id !== id))
   }
 
-  const handleUpdateItemField = (id: string, field: keyof ReviewItem, value: any) => {
+  const handleUpdateItemField = <K extends keyof ReviewItem>(
+    id: string,
+    field: K,
+    value: ReviewItem[K],
+  ) => {
     setItems((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item
@@ -1273,12 +1277,12 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
       // 3. Criam novas transações no banco
       const toUpdateProjections: Array<{
         id: string
-        payload: any
+        payload: Parameters<typeof updateTransaction>[1]
       }> = []
 
       const toUpdateManualMerges: Array<{
         id: string
-        payload: any
+        payload: Parameters<typeof updateTransaction>[1]
       }> = []
 
       const toCreatePayloads: Array<any> = []

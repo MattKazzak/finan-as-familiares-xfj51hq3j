@@ -291,29 +291,6 @@ export async function extractRawTextFromPdf(
 }
 
 /**
- * Mantido para compatibilidade reversa ou testes que usem extractTextFromPdf
- */
-export async function extractTextFromPdf(
-  pdfBuffer: ArrayBuffer,
-  options?: ExtractPdfOptions,
-): Promise<{
-  fullText: string
-  lines: string[]
-  pageCount: number
-}> {
-  const { rawText, pageCount } = await extractRawTextFromPdf(pdfBuffer, options)
-  const lines = rawText
-    .split('\n')
-    .map((l) => l.trim())
-    .filter(Boolean)
-  return {
-    fullText: rawText,
-    lines,
-    pageCount,
-  }
-}
-
-/**
  * Gera hash determinístico curto para FITID a partir de data, descrição e valor
  */
 export function generatePdfFitid(date: string, description: string, amountCents: number): string {

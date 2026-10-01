@@ -33,6 +33,14 @@ interface AiCategorizationResultItem {
   needsReview?: boolean
 }
 
+interface CategoryWithSubcategories {
+  id: string
+  name: string
+  type: string
+  budget_bucket?: string | null
+  transaction_subcategories?: Array<{ id: string; name: string }> | null
+}
+
 interface PdfExtractedTransactionItem {
   date: string // AAAA-MM-DD
   description: string
@@ -53,7 +61,7 @@ interface PdfExtractedTransactionItem {
  * 1. Procura categoria com semântica de "Outros / Diversos" ou balde "lifestyle" ("Estilo de Vida").
  * 2. Se não existir, retorna categoryId: null com needsReview: true para escolha no Bottom Sheet.
  */
-function resolveSafeFallbackCategory(categoriesList: any[]): {
+function resolveSafeFallbackCategory(categoriesList: CategoryWithSubcategories[]): {
   categoryId: string | null
   needsReview: boolean
 } {
@@ -62,7 +70,7 @@ function resolveSafeFallbackCategory(categoriesList: any[]): {
   }
 
   // 1. Procura por nome com semântica de "Outros", "Diversos" ou "Outras Despesas"
-  const outrosCat = categoriesList.find((c: any) => {
+  const outrosCat = categoriesList.find((c: CategoryWithSubcategories) => {
     if (c.type && c.type !== 'expense') return false
     const norm = normalizeMerchantString(c.name || '')
     return (
@@ -78,7 +86,7 @@ function resolveSafeFallbackCategory(categoriesList: any[]): {
   }
 
   // 2. Procura categoria no balde "lifestyle" (Estilo de Vida), exceto essenciais como Moradia/Alimentação
-  const lifestyleCat = categoriesList.find((c: any) => {
+  const lifestyleCat = categoriesList.find((c: CategoryWithSubcategories) => {
     if (c.type && c.type !== 'expense') return false
     if (c.budget_bucket === 'lifestyle') {
       const norm = normalizeMerchantString(c.name || '')
@@ -241,7 +249,8 @@ Deno.serve(async (req: Request) => {
       console.error('Erro ao buscar categorias da família:', catError)
     }
 
-    const categoriesList = categoriesData || []
+    const categoriesList: CategoryWithSubcategories[] =
+      (categoriesData as CategoryWithSubcategories[]) || []
     if (categoriesList.length === 0) {
       return new Response(
         JSON.stringify({
@@ -256,12 +265,14 @@ Deno.serve(async (req: Request) => {
     }
 
     // Conjuntos para validação rigorosa de integridade
-    const validCategoryIds = new Set(categoriesList.map((c: any) => c.id))
+    const validCategoryIds = new Set<string>(
+      categoriesList.map((c: CategoryWithSubcategories) => c.id),
+    )
     const validSubcategoryIds = new Set<string>()
     const catToSubsMap = new Map<string, Set<string>>()
-    categoriesList.forEach((c: any) => {
+    categoriesList.forEach((c: CategoryWithSubcategories) => {
       const subSet = new Set<string>()
-      ;(c.transaction_subcategories || []).forEach((s: any) => {
+      ;(c.transaction_subcategories || []).forEach((s: { id: string; name: string }) => {
         if (s.id) {
           validSubcategoryIds.add(s.id)
           subSet.add(s.id)
@@ -272,9 +283,9 @@ Deno.serve(async (req: Request) => {
 
     // Formatar catálogo de categorias com baldes dinâmicos da família para o System Prompt
     const catalogPrompt = categoriesList
-      .map((cat: any) => {
+      .map((cat: CategoryWithSubcategories) => {
         const subs = (cat.transaction_subcategories || [])
-          .map((s: any) => `{"id": "${s.id}", "name": "${s.name}"}`)
+          .map((s: { id: string; name: string }) => `{"id": "${s.id}", "name": "${s.name}"}`)
           .join(', ')
         const bucket = cat.budget_bucket || 'lifestyle'
         return `- Categoria: id="${cat.id}", name="${cat.name}", type="${cat.type}", bucket="${bucket}", subcategories=[${subs}]`
@@ -372,7 +383,9 @@ Instruções:
       }
 
       // Helper para sanitizar transações (com merchant cleaner, seed determinístico e fallback seguro)
-      const sanitizeItems = (rawItems: any[]): PdfExtractedTransactionItem[] => {
+      const sanitizeItems = (
+        rawItems: Partial<PdfExtractedTransactionItem>[],
+      ): PdfExtractedTransactionItem[] => {
         const sanitized: PdfExtractedTransactionItem[] = []
         for (const item of rawItems) {
           if (!item || typeof item !== 'object') continue
@@ -530,7 +543,7 @@ ${rawText.slice(0, 100000)}
 AUTOCORREÇÃO MATEMÁTICA ATIVADA:
 A extração anterior somou ${currentNetSum} centavos, mas o total declarado da fatura é exatamente ${declaredTotalCents} centavos (diferença de ${diffCents} centavos).
 Verifique se há cartões adicionais ou blocos omitidos na leitura.
-Retorne o JSON completo corrigido com declaredTotalCents e transactions.`
+Retorne estritamente um objeto JSON válido completo com "declaredTotalCents" e o array "transactions".`
 
             const retryRes = await callOpenAiExtraction(pdfSystemPrompt, recoveryUserPrompt)
             if (retryRes.ok) {
