@@ -110,6 +110,8 @@ export function WalletModals() {
     handleConfirmDeleteSubcategory,
 
     // Modais auxiliares
+    recurringIncomes,
+    recurringOverrides,
     isApplyModelOpen,
     setIsApplyModelOpen,
     isRecurringIncomesOpen,
@@ -473,8 +475,8 @@ export function WalletModals() {
             setEditingRecurringRule(null)
           }
         }}
-        transactionToEdit={editingTx}
-        recurringRuleToEdit={editingRecurringRule}
+        initialData={editingTx}
+        recurringIncomeToEdit={editingRecurringRule}
         onSuccess={() => {
           triggerRefresh()
           loadMonthData()
@@ -529,7 +531,7 @@ export function WalletModals() {
         category={budgetDrawerCategory}
         subcategory={budgetDrawerSubcategory}
         filterType={budgetDrawerFilterType}
-        allTransactions={transactions}
+        transactions={transactions}
         currentDate={currentDate}
         onEditTransaction={(tx) => {
           setBudgetDrawerOpen(false)
@@ -548,8 +550,8 @@ export function WalletModals() {
 
       {/* 7. Modal de Exclusão com Verificação de Vínculo de Categoria */}
       <DeleteCategoryConfirmDialog
-        open={Boolean(categoryToDelete)}
-        onOpenChange={(open) => !open && setCategoryToDelete(null)}
+        isOpen={Boolean(categoryToDelete)}
+        onClose={() => setCategoryToDelete(null)}
         category={categoryToDelete}
         usageCount={categoryUsageCount}
         loading={loadingCatUsage}
@@ -558,8 +560,8 @@ export function WalletModals() {
 
       {/* 8. Modal de Exclusão com Verificação de Vínculo de Subcategoria */}
       <DeleteSubcategoryConfirmDialog
-        open={Boolean(subcategoryToDelete)}
-        onOpenChange={(open) => !open && setSubcategoryToDelete(null)}
+        isOpen={Boolean(subcategoryToDelete)}
+        onClose={() => setSubcategoryToDelete(null)}
         subcategory={subcategoryToDelete}
         parentCategoryName={subcatParentCategoryName}
         usageCount={subcategoryUsageCount}
@@ -574,7 +576,6 @@ export function WalletModals() {
           onOpenChange={setIsApplyModelOpen}
           family={family}
           categories={categories}
-          currentDate={currentDate}
           onSuccess={() => {
             triggerRefresh()
             loadMonthData()
@@ -587,16 +588,15 @@ export function WalletModals() {
         <RecurringIncomesDialog
           open={isRecurringIncomesOpen}
           onOpenChange={setIsRecurringIncomesOpen}
-          familyId={family.id}
-          members={members}
-          categories={categories}
-          currentDate={currentDate}
-          onEditRule={(rule) => {
+          currentMonthDate={currentDate}
+          recurringIncomes={recurringIncomes}
+          recurringOverrides={recurringOverrides}
+          onEditRecurringRule={(rule) => {
             setIsRecurringIncomesOpen(false)
             setEditingRecurringRule(rule)
             setIsEditTxOpen(true)
           }}
-          onRefresh={() => {
+          onSuccess={() => {
             triggerRefresh()
             loadMonthData()
           }}

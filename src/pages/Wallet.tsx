@@ -9,6 +9,7 @@ import type {
   TransactionCategory,
   TransactionSubcategory,
   RecurringIncome,
+  RecurringIncomeOverride,
 } from '@/types/finance'
 import {
   fetchTransactions,
@@ -242,13 +243,16 @@ export function WalletPage() {
     setLoading(true)
     try {
       try {
-        await processAutoRecurringIncomes(family.id, currentDate)
+        await processAutoRecurringIncomes({
+          familyId: family.id,
+          targetMonthStr: monthKey,
+        })
       } catch (procErr) {
         console.warn('Erro ao processar recorrentes automáticas:', procErr)
       }
 
       const [txs, defaults, overrides, recIncomes, recOverrides] = await Promise.all([
-        fetchTransactions(family.id, { month: monthKey }),
+        fetchTransactions({ familyId: family.id, month: monthKey }),
         fetchDefaultBudgets(family.id),
         fetchMonthBudgetOverrides(family.id, monthKey),
         fetchRecurringIncomes(family.id),
@@ -330,15 +334,15 @@ export function WalletPage() {
   // Agrupamento de parcelas e por dia
   const groupedTransactions = useMemo(() => {
     const groupedList = groupInstallmentTransactions(filteredTransactions, {
-      collapseIdenticalInstallments: true,
-      currentMonthKey: monthKey,
+      referenceDate: `${monthKey}-31`,
     })
 
     const byDate: Record<string, Transaction[]> = {}
     groupedList.forEach((item) => {
-      const dateKey = item.date
+      const tx = item.representativeTx as Transaction
+      const dateKey = item.transactionDate || tx.transaction_date
       if (!byDate[dateKey]) byDate[dateKey] = []
-      byDate[dateKey].push(item)
+      byDate[dateKey].push(tx)
     })
 
     const sortedDates = Object.keys(byDate).sort((a, b) => {
@@ -407,23 +411,23 @@ export function WalletPage() {
     setIsCategorizingPendingWithAi(true)
     try {
       const inputs = pendingTransactionsList.map((tx) => ({
-        id: tx.id,
+        tempId: tx.id,
         description: tx.description,
-        amount_cents: tx.amount_cents,
-        type: tx.type,
+        amountCents: tx.amount_cents,
+        date: tx.transaction_date,
       }))
 
-      const aiSuggestions = await categorizeBatchWithAI(inputs, categories)
+      const aiSuggestions = await categorizeBatchWithAI(inputs, family?.id)
       const suggestionsMap: Record<string, AiCategorizationSuggestion> = {}
       aiSuggestions.forEach((s) => {
-        suggestionsMap[s.id] = s
+        suggestionsMap[s.tempId] = s
       })
       setAiPendingSuggestions(suggestionsMap)
 
       const highConfidence = aiSuggestions.filter(
         (s) =>
-          s.category_id &&
-          categories.some((c) => c.id === s.category_id) &&
+          s.categoryId &&
+          categories.some((c) => c.id === s.categoryId) &&
           (s.confidence ?? 0) >= 0.7,
       )
 
@@ -431,9 +435,9 @@ export function WalletPage() {
         let appliedCount = 0
         for (const item of highConfidence) {
           try {
-            await updateTransaction(item.id, {
-              category_id: item.category_id,
-              subcategory_id: item.subcategory_id || null,
+            await updateTransaction(item.tempId, {
+              category_id: item.categoryId,
+              subcategory_id: item.subcategoryId || null,
             })
             appliedCount++
           } catch (updateErr) {
@@ -457,9 +461,10 @@ export function WalletPage() {
       }
     } catch (err: any) {
       console.error('Erro ao categorizar com IA:', err)
+      const errInfo = await extractAiErrorMessage(err)
       toast({
         title: 'Erro ao conectar à IA',
-        description: extractAiErrorMessage(err),
+        description: errInfo.message,
         variant: 'destructive',
       })
     } finally {
@@ -473,16 +478,24 @@ export function WalletPage() {
       await updateTransaction(data.transactionId, {
         category_id: data.categoryId,
         subcategory_id: data.subcategoryId || null,
+        description: data.description,
+        type: data.type,
+        member_id: data.memberId,
+        transaction_date: data.date,
       })
 
-      if (data.createRule && family) {
+      if (data.rememberRule && family) {
         try {
-          await upsertCategorizationRule(
-            family.id,
-            data.rulePattern,
-            data.categoryId,
-            data.subcategoryId || null,
-          )
+          const pattern =
+            extractPatternFromDescription(data.description) || normalizeText(data.description)
+          if (pattern) {
+            await upsertCategorizationRule({
+              family_id: family.id,
+              pattern,
+              category_id: data.categoryId,
+              subcategory_id: data.subcategoryId || null,
+            })
+          }
         } catch (ruleErr) {
           console.warn('Erro ao salvar regra automática:', ruleErr)
         }
@@ -491,7 +504,7 @@ export function WalletPage() {
       setExpandedPendingTxId(null)
       toast({
         title: 'Transação categorizada!',
-        description: data.createRule
+        description: data.rememberRule
           ? 'Regra salva. Lançamentos futuros semelhantes serão automáticos.'
           : undefined,
       })
@@ -510,13 +523,14 @@ export function WalletPage() {
   // Salvamento em lote para lançamentos de mesmo nome
   const handleSaveBatchSameName = async (data: SaveBatchSameNameData) => {
     try {
-      const allIds = [data.primaryTransactionId, ...data.matchingTransactionIds]
+      const allIds = data.transactionIds
       let count = 0
       for (const id of allIds) {
         try {
           await updateTransaction(id, {
             category_id: data.categoryId,
             subcategory_id: data.subcategoryId || null,
+            type: data.type,
           })
           count++
         } catch (updateErr) {
@@ -524,14 +538,20 @@ export function WalletPage() {
         }
       }
 
-      if (data.createRule && family) {
+      if (data.rememberRule && family) {
         try {
-          await upsertCategorizationRule(
-            family.id,
-            data.rulePattern,
-            data.categoryId,
-            data.subcategoryId || null,
-          )
+          const pattern =
+            data.pattern ||
+            extractPatternFromDescription(data.description) ||
+            normalizeText(data.description)
+          if (pattern) {
+            await upsertCategorizationRule({
+              family_id: family.id,
+              pattern,
+              category_id: data.categoryId,
+              subcategory_id: data.subcategoryId || null,
+            })
+          }
         } catch (ruleErr) {
           console.warn('Erro ao salvar regra automática:', ruleErr)
         }
@@ -540,7 +560,7 @@ export function WalletPage() {
       setExpandedPendingTxId(null)
       toast({
         title: `✨ ${count} ${count === 1 ? 'transação categorizada' : 'transações categorizadas'}!`,
-        description: data.createRule ? 'Regra permanente criada no seu assistente.' : undefined,
+        description: data.rememberRule ? 'Regra permanente criada no seu assistente.' : undefined,
       })
       triggerRefresh()
       await loadMonthData()
@@ -705,64 +725,49 @@ export function WalletPage() {
         : 0
 
     const bucketsSummary: BucketsSummaryData = {
-      essential: {
+      essentials: {
         budgetCents: 0,
         spentCents: 0,
-        percentOfIncome: 0,
-        targetPercent: family?.budget_model === '50_30_20' ? 50 : 60,
-        targetCents: 0,
-        categoriesCount: 0,
+        percentIncome: 0,
       },
       lifestyle: {
         budgetCents: 0,
         spentCents: 0,
-        percentOfIncome: 0,
-        targetPercent: family?.budget_model === '50_30_20' ? 30 : 25,
-        targetCents: 0,
-        categoriesCount: 0,
+        percentIncome: 0,
       },
       future: {
         budgetCents: 0,
         spentCents: 0,
-        percentOfIncome: 0,
-        targetPercent: family?.budget_model === '50_30_20' ? 20 : 15,
-        targetCents: 0,
-        categoriesCount: 0,
+        percentIncome: 0,
       },
-      freeInBudgetCents: 0,
-    }
-
-    if (family?.monthly_net_income_cents && family.monthly_net_income_cents > 0) {
-      const net = family.monthly_net_income_cents
-      bucketsSummary.essential.targetCents = Math.round(
-        (net * bucketsSummary.essential.targetPercent) / 100,
-      )
-      bucketsSummary.lifestyle.targetCents = Math.round(
-        (net * bucketsSummary.lifestyle.targetPercent) / 100,
-      )
-      bucketsSummary.future.targetCents = Math.round(
-        (net * bucketsSummary.future.targetPercent) / 100,
-      )
+      other: {
+        budgetCents: 0,
+        spentCents: 0,
+        percentIncome: 0,
+      },
     }
 
     list.forEach((item) => {
-      const bucket = item.category.budget_bucket
-      if (bucket && bucketsSummary[bucket]) {
+      const bucket = (item.category.budget_bucket as keyof BucketsSummaryData) || 'other'
+      if (bucketsSummary[bucket]) {
         bucketsSummary[bucket].budgetCents += item.limitCents
         bucketsSummary[bucket].spentCents += item.spentCents
-        bucketsSummary[bucket].categoriesCount += 1
+      } else {
+        bucketsSummary.other.budgetCents += item.limitCents
+        bucketsSummary.other.spentCents += item.spentCents
       }
     })
 
     if (family?.monthly_net_income_cents && family.monthly_net_income_cents > 0) {
       const net = family.monthly_net_income_cents
-      bucketsSummary.essential.percentOfIncome =
-        Math.round((bucketsSummary.essential.budgetCents / net) * 1000) / 10
-      bucketsSummary.lifestyle.percentOfIncome =
+      bucketsSummary.essentials.percentIncome =
+        Math.round((bucketsSummary.essentials.budgetCents / net) * 1000) / 10
+      bucketsSummary.lifestyle.percentIncome =
         Math.round((bucketsSummary.lifestyle.budgetCents / net) * 1000) / 10
-      bucketsSummary.future.percentOfIncome =
+      bucketsSummary.future.percentIncome =
         Math.round((bucketsSummary.future.budgetCents / net) * 1000) / 10
-      bucketsSummary.freeInBudgetCents = net - totalBudget
+      bucketsSummary.other.percentIncome =
+        Math.round((bucketsSummary.other.budgetCents / net) * 1000) / 10
     }
 
     return {
@@ -961,12 +966,10 @@ export function WalletPage() {
   const handleConfirmDeleteCategory = async () => {
     if (!categoryToDelete) return
     try {
-      const success = await removeCategory(categoryToDelete.id)
-      if (success) {
-        setCategoryToDelete(null)
-        triggerRefresh()
-        await loadMonthData()
-      }
+      await removeCategory(categoryToDelete.id)
+      setCategoryToDelete(null)
+      triggerRefresh()
+      await loadMonthData()
     } catch (err: any) {
       console.error('Erro ao excluir categoria:', err)
     }
@@ -997,12 +1000,10 @@ export function WalletPage() {
   const handleConfirmDeleteSubcategory = async () => {
     if (!subcategoryToDelete) return
     try {
-      const success = await removeSubcategory(subcategoryToDelete.id)
-      if (success) {
-        setSubcategoryToDelete(null)
-        triggerRefresh()
-        await loadMonthData()
-      }
+      await removeSubcategory(subcategoryToDelete.id)
+      setSubcategoryToDelete(null)
+      triggerRefresh()
+      await loadMonthData()
     } catch (err: any) {
       console.error('Erro ao excluir subcategoria:', err)
     }
@@ -1090,11 +1091,17 @@ export function WalletPage() {
     openCategoryTransactionsDrawer,
     addNewCategory,
     editCategory,
-    removeCategory,
+    removeCategory: async (id: string) => {
+      await removeCategory(id)
+      return true
+    },
     checkCategoryUsage,
     addNewSubcategory,
     editSubcategory,
-    removeSubcategory,
+    removeSubcategory: async (id: string) => {
+      await removeSubcategory(id)
+      return true
+    },
     checkSubcategoryUsage,
     reorderCategoriesList,
     reorderSubcategoriesList,

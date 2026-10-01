@@ -319,7 +319,7 @@ export function WalletBudgetsTab() {
             <CategoryEditorPopover
               title="Nova Categoria"
               defaultType="expense"
-              bucketsSummary={categoryBudgetData.bucketsSummary}
+              bucketsSummary={categoryBudgetData.bucketsSummary as any}
               family={family}
               trigger={
                 <button
@@ -374,7 +374,7 @@ export function WalletBudgetsTab() {
               <CategoryEditorPopover
                 title="Criar Primeira Categoria"
                 defaultType="expense"
-                bucketsSummary={categoryBudgetData.bucketsSummary}
+                bucketsSummary={categoryBudgetData.bucketsSummary as any}
                 family={family}
                 trigger={
                   <Button
@@ -531,7 +531,7 @@ export function WalletBudgetsTab() {
                           <CategoryEditorPopover
                             category={item.category}
                             initialLimitCents={item.defaultLimitCents || item.limitCents}
-                            bucketsSummary={categoryBudgetData.bucketsSummary}
+                            bucketsSummary={categoryBudgetData.bucketsSummary as any}
                             family={family}
                             trigger={
                               <button
@@ -1301,7 +1301,7 @@ export function WalletBudgetsTab() {
                 }
               }}
               initialLimitCents={initialLimit}
-              bucketsSummary={categoryBudgetData.bucketsSummary}
+              bucketsSummary={categoryBudgetData.bucketsSummary as any}
               family={family}
               onSave={async (data) => {
                 try {
@@ -1403,7 +1403,7 @@ export function WalletBudgetsTab() {
                 }
               }}
               initialLimitCents={initialLimit}
-              bucketsSummary={categoryBudgetData.bucketsSummary}
+              bucketsSummary={categoryBudgetData.bucketsSummary as any}
               family={family}
               onSave={async (data) => {
                 try {
