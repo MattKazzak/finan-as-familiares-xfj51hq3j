@@ -284,4 +284,28 @@ describe('voice-ai service (fim do fallback silencioso)', () => {
     expect(res.amountCents).toBe(8000)
     expect(res.paymentMethod).toBe('debito')
   })
+
+  it('suporta status "acao_executada" e tipo de resposta "acao" para desfazer e reclassificar', async () => {
+    vi.mocked(supabase.functions.invoke).mockResolvedValueOnce({
+      data: {
+        status: 'acao_executada',
+        acao: 'desfazer',
+        tipo_resposta: 'acao',
+        intencao: 'desfazer',
+        transacao: null,
+        mensagem_amigavel: 'Lançamento desfeito!',
+      },
+      error: null,
+    })
+
+    const res = await parseVoiceWithAi({
+      texto: 'desfaz esse gasto',
+      familyId: 'fam-1',
+    })
+
+    expect(res.aiStatus).toBe('acao_executada')
+    expect(res.acao).toBe('desfazer')
+    expect(res.tipoResposta).toBe('acao')
+    expect(res.friendlyMessage).toBe('Lançamento desfeito!')
+  })
 })

@@ -1713,4 +1713,22 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
       ).toBeDefined()
     })
   })
+
+  it('exibe saudação contextual dinâmica e chips de sugestão rápida', async () => {
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    // Chips de sugestão rápida tocáveis
+    expect(screen.getByText('🎙️ "Almoço 35 reais"')).toBeDefined()
+    expect(screen.getByText('📊 "Quanto ainda posso gastar?"')).toBeDefined()
+    expect(screen.getByText('🔍 "Últimos lançamentos"')).toBeDefined()
+  })
 })

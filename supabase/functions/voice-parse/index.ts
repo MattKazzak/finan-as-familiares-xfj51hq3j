@@ -211,12 +211,12 @@ Deno.serve(async (req: Request) => {
     }
     const { data: membersData } = await membersQuery
 
-    // Buscar família com monthly_net_income_cents
+    // Buscar família com monthly_net_income_cents e budget_model
     let familyData: any = null
     if (targetFamilyId) {
       const { data: fam } = await supabase
         .from('families')
-        .select('id, name, monthly_net_income_cents')
+        .select('id, name, monthly_net_income_cents, budget_model')
         .eq('id', targetFamilyId)
         .maybeSingle()
       familyData = fam
@@ -296,6 +296,27 @@ Deno.serve(async (req: Request) => {
     })
 
     const netIncomeCents = Number(familyData?.monthly_net_income_cents || 0)
+    const budgetModel = familyData?.budget_model || '60_25_15'
+
+    // Definir metas percentuais por balde baseadas no modelo (com 60/25/15 como padrão oficial da família)
+    let targets = { essentials: 60, lifestyle: 25, future: 15 }
+    if (budgetModel === '50_30_20') {
+      targets = { essentials: 50, lifestyle: 30, future: 20 }
+    } else if (budgetModel === '70_20_10') {
+      targets = { essentials: 70, lifestyle: 20, future: 10 }
+    } else if (budgetModel === '60_20_20') {
+      targets = { essentials: 60, lifestyle: 20, future: 20 }
+    }
+
+    const targetEssentialsCents = Math.round((netIncomeCents * targets.essentials) / 100)
+    const targetLifestyleCents = Math.round((netIncomeCents * targets.lifestyle) / 100)
+    const targetGoalsCents = Math.round((netIncomeCents * targets.future) / 100)
+
+    const remainingLifestyleCents =
+      targetLifestyleCents > 0
+        ? Math.max(0, targetLifestyleCents - expensesByBucketCents.lifestyle)
+        : null
+
     const effectiveBudgetLimitCents =
       totalBudgetConfiguredCents > 0
         ? totalBudgetConfiguredCents
@@ -314,14 +335,15 @@ Deno.serve(async (req: Request) => {
     // Formatar contexto financeiro para a IA responder consultas
     const financialSummaryContext = `
 DADOS FINANCEIROS REAIS DA FAMÍLIA (MÊS ATUAL: ${currentMonthStr.slice(0, 7)}):
-- Total de despesas já realizadas este mês: ${formatCentsToBRL(totalExpenseMonthCents)} (em centavos: ${totalExpenseMonthCents})
-  * Necessidades Essenciais: ${formatCentsToBRL(expensesByBucketCents.essential)}
-  * Estilo de Vida: ${formatCentsToBRL(expensesByBucketCents.lifestyle)}
-  * Metas & Investimentos: ${formatCentsToBRL(expensesByBucketCents.goals)}
-- Total de receitas recebidas este mês: ${formatCentsToBRL(totalIncomeMonthCents)}
+- Modelo Orçamentário da Família: ${targets.essentials}/${targets.lifestyle}/${targets.future} (Essenciais ${targets.essentials}%, Estilo de Vida ${targets.lifestyle}%, Metas/Futuro ${targets.future}%)
 - Renda líquida mensal cadastrada da família: ${netIncomeCents > 0 ? formatCentsToBRL(netIncomeCents) : 'Não informada'}
-- Teto de orçamento configurado para o mês: ${effectiveBudgetLimitCents > 0 ? formatCentsToBRL(effectiveBudgetLimitCents) : 'Sem teto fixo cadastrado'}
-- Saldo restante disponível para gastar este mês: ${
+- Total de despesas já realizadas este mês: ${formatCentsToBRL(totalExpenseMonthCents)} (em centavos: ${totalExpenseMonthCents})
+  * Necessidades Essenciais: ${formatCentsToBRL(expensesByBucketCents.essential)}${targetEssentialsCents > 0 ? ` (Teto meta: ${formatCentsToBRL(targetEssentialsCents)})` : ''}
+  * Estilo de Vida: ${formatCentsToBRL(expensesByBucketCents.lifestyle)}${targetLifestyleCents > 0 ? ` (Teto meta: ${formatCentsToBRL(targetLifestyleCents)} | Disponível: ${formatCentsToBRL(remainingLifestyleCents ?? 0)})` : ''}
+  * Metas & Investimentos: ${formatCentsToBRL(expensesByBucketCents.goals)}${targetGoalsCents > 0 ? ` (Teto meta: ${formatCentsToBRL(targetGoalsCents)})` : ''}
+- Total de receitas recebidas este mês: ${formatCentsToBRL(totalIncomeMonthCents)}
+- Teto de orçamento total configurado para o mês: ${effectiveBudgetLimitCents > 0 ? formatCentsToBRL(effectiveBudgetLimitCents) : 'Sem teto fixo cadastrado'}
+- Saldo geral restante disponível para gastar este mês: ${
       remainingBudgetMonthCents !== null
         ? `${formatCentsToBRL(remainingBudgetMonthCents)} (baseado no teto de ${formatCentsToBRL(effectiveBudgetLimitCents)})`
         : `Você já gastou ${formatCentsToBRL(totalExpenseMonthCents)} este mês. Recebeu ${formatCentsToBRL(totalIncomeMonthCents)}. O saldo atual do mês é ${formatCentsToBRL(totalIncomeMonthCents - totalExpenseMonthCents)}.`
@@ -418,19 +440,20 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
   Se o usuário estiver informando apenas o valor ou forma de pagamento (ex: 'foi 80 reais', '80 no debito', '45 reais', 'paguei no pix 50', '80'), MESCLE as informações e retorne status 'sucesso' com a descrição do contexto anterior e o novo valor identificado.
 `
     }
-    const systemPrompt = `Você é o Curiangoo AI (Curiangoo Copilot), assistente financeiro inteligente do app Curiangoo para famílias brasileiras (Regra 50/30/20).
-Seu papel é duplo:
-1. PROCESSAR LANÇAMENTOS (fala/texto de gastos ou receitas) transformando-os em transação financeira com empatia e precisão.
-2. RESPONDER PERGUNTAS RÁPIDAS / CONSULTAS FINANCEIRAS com base nos dados reais da família informados abaixo (ex: "quanto ainda posso gastar esse mês?", "qual foi o maior gasto dessa semana?", "quanto gastei de mercado?").
+    const systemPrompt = `Você é o Curiangoo AI (Curiangoo Copilot), assistente financeiro inteligente do app Curiangoo para finanças familiares (Metodologia de 3 Baldes: 60/25/15 ou 50/30/20).
+Seu papel é triplo:
+1. LANÇAMENTO AUTÔNOMO (fala/texto de gastos ou receitas): transformar em transação financeira imediata, inferindo categoria e subcategoria com base no catálogo da família sem travar o usuário.
+2. RECLASSIFICAÇÃO, CORREÇÃO OU DESFAZER DE LANÇAMENTOS ANTERIORES: quando o usuário pedir para mudar categoria ("Supermercado não, coloca em hortifruti", "muda pra farmácia"), alterar valor ("não é esse valor, foi 70", "corrige o valor para 80"), trocar descrição ("não é arroz, é feijão") ou desfazer ("desfaz esse gasto", "cancela", "apaga").
+3. CONSULTAS FINANCEIRAS E ORIENTAÇÃO RÁPIDA: responder sintética e precisamente perguntas sobre saldo disponível, quanto pode gastar, despesas recentes e orçamentos por balde.
 
 ${previousContextPrompt}
 
 ${financialSummaryContext}
 
-Metodologia de 3 Baldes Orçamentários:
-1. "Necessidades Essenciais" (50%): moradia, aluguel, condomínio, luz, água, internet, supermercado, feira, açougue, saúde, remédios, plano de saúde, educação, transporte, combustível, Uber essencial, escola dos filhos.
-2. "Estilo de Vida" (30%): restaurantes, almoço fora, bar, cerveja, pizza, hambúrguer, lanches, delivery/iFood, cinema, passeios, lazer, viagens, compras de roupas, cuidados pessoais, streaming (Netflix, Spotify), jogos.
-3. "Metas & Investimentos" (20%): aportes, investimentos, poupança, reserva de emergência, ações, CDB, tesouro direto, previdência privada, metas de longo prazo.
+Metodologia de 3 Baldes Orçamentários da Família:
+1. "Necessidades Essenciais" (~60% ou 50%): moradia, aluguel, condomínio, luz, água, internet, supermercado, feira, açougue, saúde, remédios, plano de saúde, educação, transporte, combustível, Uber essencial, escola dos filhos.
+2. "Estilo de Vida" (~25% ou 30%): restaurantes, almoço fora, bar, cerveja, pizza, hambúrguer, lanches, delivery/iFood, cinema, passeios, lazer, viagens, compras de roupas, cuidados pessoais, streaming (Netflix, Spotify), jogos.
+3. "Metas & Investimentos" (~15% ou 20%): aportes, investimentos, poupança, reserva de emergência, ações, CDB, tesouro direto, previdência privada, metas de longo prazo.
 
 Categorias e Subcategorias cadastradas no perfil da família:
 ${categoriesContext || 'Nenhuma categoria específica cadastrada ainda.'}
@@ -438,39 +461,46 @@ ${categoriesContext || 'Nenhuma categoria específica cadastrada ainda.'}
 Membros da família cadastrados:
 ${membersContext || 'Membro padrão'}
 
-REGRAS SEMÂNTICAS CRÍTICAS, DISTINÇÃO VISUAL E VERDADE SOBRE O QUE JÁ ESTÁ CADASTRADO:
-1. CHECAGEM ESTRITA DA LISTA REAL DE CATEGORIAS DA FAMÍLIA:
-  - Verifique ESTRITAMENTE a lista de "Categorias e Subcategorias cadastradas no perfil da família".
-  - Se a categoria ou subcategoria NÃO estiver nessa lista, ela NÃO existe ainda no banco de dados. A IA JAMAIS deve dizer ou sugerir que ela já está cadastrada.
-  - Quando o usuário perguntar "Nós temos essa categoria?", responda honestamente e prestativo:
-    "Ainda não temos essa categoria cadastrada! Ela é uma sugestão que posso criar agora mesmo para deixar seus gastos de estética organizados. O que você prefere: criar a categoria nova 'Cuidados Pessoais' ou encaixar dentro da existente 'Lazer'?"
+DIRETRIZES DE INTELIGÊNCIA REAL (PADRÃO OURO):
+1. INFERÊNCIA AUTÔNOMA DE CATEGORIA:
+  - Quando descrição e valor existirem, SEMPRE infira e selecione a melhor categoria existente e subcategoria correspondente do catálogo da família acima.
+  - NÃO trave a tela com opções de escolha se a categoria puder ser inferida com razoável confiança!
+  - Retorne "status": "sucesso" com a categoria e subcategoria devidamente preenchidas.
+  - A mensagem deve ser concisa e natural.
 
-2. DISTINÇÃO VISUAL CLARA ENTRE "USAR EXISTENTE" E "CRIAR NOVA CATEGORIA" NAS OPÇÕES:
-  - As opções de clarificação (campo "opcoes_sugestao") devem explicitar no rótulo e carregar estruturadamente se a opção reaproveita uma categoria que a família JÁ possui ou se vai CRIAR uma nova:
-    * Se reaproveita categoria existente:
-      - Formato do rótulo: "📁 Usar existente: [Categoria] › subcategoria [Subcategoria]" (ex: "📁 Usar existente: Lazer › subcategoria Manicure")
-      - tipo: "existente"
-    * Se cria nova categoria:
-      - Formato do rótulo: "✨ Criar nova: [Nome da Nova Categoria] ([Balde])" (ex: "✨ Criar nova: Cuidados Pessoais (Estilo de Vida)")
-      - tipo: "nova"
-  - Sempre que houver uma categoria existente compatível no mesmo balde (ex: Lazer), dê a opção "📁 Usar existente" combinada com a opção "✨ Criar nova".
+2. AÇÕES DE CORREÇÃO, RECLASSIFICAÇÃO OU CANCELAMENTO:
+  - Se o usuário disser algo como "desfaz esse gasto", "cancela esse lançamento", "apaga a última", retorne:
+    * "status": "acao_executada" (ou "sucesso")
+    * "acao": "desfazer"
+    * "mensagem_amigavel": "Lançamento desfeito!"
+  - Se o usuário disser "Supermercado não, coloca em hortifruti", "muda para farmácia", "coloca em Lazer", identifique a nova categoria e subcategoria e retorne:
+    * "status": "sucesso"
+    * "acao": "reclassificar"
+    * "transacao" atualizada com a nova categoria/subcategoria.
+    * "mensagem_amigavel": "Ajustado para [Nome da Categoria/Subcategoria]!"
+  - Se o usuário disser "não é esse valor, foi 70", "corrige para 50 reais", retorne:
+    * "status": "sucesso"
+    * "acao": "ajustar_valor"
+    * "transacao" com novo valor.
+    * "mensagem_amigavel": "Valor corrigido para R$ [novo_valor]!"
+  - Se o usuário disser "não é arroz, é feijão", preserve o valor e categoria anteriores e atualize apenas a descrição:
+    * "status": "sucesso"
+    * "acao": "ajustar_descricao"
+    * "transacao" com nova descrição.
+    * "mensagem_amigavel": "Descrição corrigida para Feijão!"
 
-3. SERVIÇOS PESSOAIS, BELEZA, LAZER OU COMPRAS NUNCA DEVEM SER ALOCADOS EM CATEGORIAS FIXAS:
-  - Exemplos: Manicure, cabeleireiro, massagem, unhas, depilação, barbearia, compras de roupas, maquiagem, cinema pertencem SEMPRE a "Estilo de Vida", NUNCA a "Moradia", "Contas Fixas", "Saúde Básica" ou "Educação Básica".
+3. NÚMEROS PUROS E SLOT-FILLING:
+  - Se a mensagem contiver apenas um número como "52", "52 reais", "cinquenta e dois" e havia contexto anterior sem valor (ou ajustando valor), capture 52 como o valor da transação e combine com os dados anteriores.
 
-4. SE A DESPESA FOR CLARA COM VALOR, MAS NÃO HOUVER UMA CATEGORIA/SUBCATEGORIA DIRETA JÁ DEFINIDA:
-  - O status DEVE SER OBRIGATORIAMENTE "clarificacao_categoria".
-  - "tipo_resposta": "transacao"
-  - "transacao": preencha a transação com descrição, valor (float positivo em reais), tipo ("despesa" ou "receita"), balde correto, subcategoria provisória (ex: "Manicure") e categoria nula ou provisória.
-  - "mensagem_amigavel": "Identifiquei [descrição do gasto/item] R$ [VALOR]! Onde prefere organizar esse gasto?" (ex: "Identifiquei manicure R$ 267,00! Onde prefere organizar esse gasto?")
-  - "pergunta_clarificacao": "Onde prefere organizar esse lançamento?"
-  - "opcoes_sugestao": lista de objetos com tipo ("existente" ou "nova"), rotulo com emoji (📁 ou ✨), categoria, subcategoria e balde.
+4. CONSULTAS FINANCEIRAS (QUANTO POSSO GASTAR / SALDO):
+  - Quando o usuário perguntar "Quanto ainda posso gastar?", "Como estão meus gastos?", responda de forma sintética, direta e acolhedora em 2-3 linhas, citando o saldo disponível do mês e a situação do balde de Estilo de Vida com base no resumo financeiro fornecido.
 
 Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido (response_format: json_object) com o seguinte esquema:
 {
-  "status": "sucesso" | "clarificacao" | "clarificacao_categoria" | "falta_valor" | "invalido" | "consulta",
-  "tipo_resposta": "transacao" | "consulta" | "consultoria_categoria",
-  "intencao": "consultiva" | "escolha_categoria" | "consulta" | "transacao" | null,
+  "status": "sucesso" | "clarificacao" | "clarificacao_categoria" | "falta_valor" | "invalido" | "consulta" | "acao_executada",
+  "acao": "criar" | "reclassificar" | "ajustar_valor" | "ajustar_descricao" | "desfazer" | null,
+  "tipo_resposta": "transacao" | "consulta" | "consultoria_categoria" | "acao",
+  "intencao": "transacao" | "consulta" | "consultoria_categoria" | "correcao" | "desfazer" | null,
   "resposta_consulta": string | null,
   "transacao": {
     "descricao": string,
@@ -621,6 +651,7 @@ Comportamentos esperados:
       'falta_valor',
       'invalido',
       'consulta',
+      'acao_executada',
     ]
     const status = validStatuses.includes(parsedAiJson?.status) ? parsedAiJson.status : 'invalido'
 
@@ -677,11 +708,14 @@ Comportamentos esperados:
 
     const sanitizedResponse = {
       status,
+      acao: parsedAiJson?.acao ?? null,
       tipo_resposta: isConsulta
         ? 'consulta'
         : isConsultoriaCategoria
           ? 'consultoria_categoria'
-          : 'transacao',
+          : parsedAiJson?.acao === 'desfazer'
+            ? 'acao'
+            : 'transacao',
       intencao: parsedAiJson?.intencao ?? (isConsultoriaCategoria ? 'consultiva' : null),
       resposta_consulta: respostaConsulta,
       transacao: isConsulta ? null : (parsedAiJson?.transacao ?? null),

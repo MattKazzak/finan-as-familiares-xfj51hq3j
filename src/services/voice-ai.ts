@@ -9,15 +9,15 @@ import {
 export interface VoiceAiPreviousContext {
   descricao?: string
   estabelecimento?: string | null
-  categoria?: string
-  subcategoria?: string
-  balde?: string
-  tipo?: 'despesa' | 'receita'
   valor?: number | null
+  categoria?: string | null
+  subcategoria?: string | null
+  balde?: string | null
+  tipo?: 'despesa' | 'receita'
   status?: string | null
   opcoes_sugestao?: any[] | null
+  lastCreatedTransactionId?: string | null
 }
-
 export interface CategoryPayloadInput {
   id?: string
   name: string

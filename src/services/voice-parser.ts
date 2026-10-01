@@ -10,6 +10,7 @@ export type VoiceAiStatus =
   | 'falta_valor'
   | 'invalido'
   | 'consulta'
+  | 'acao_executada'
 
 export interface VoiceAiTransaction {
   descricao: string
@@ -38,8 +39,24 @@ export type VoiceAiSuggestionItem = string | StructuredSuggestionOption
 
 export interface VoiceAiResponse {
   status: VoiceAiStatus
-  tipo_resposta?: 'transacao' | 'consulta' | 'consultoria_categoria'
-  intencao?: 'consultiva' | 'escolha_categoria' | 'consulta' | 'transacao' | string | null
+  acao?:
+    | 'criar'
+    | 'reclassificar'
+    | 'ajustar_valor'
+    | 'ajustar_descricao'
+    | 'desfazer'
+    | string
+    | null
+  tipo_resposta?: 'transacao' | 'consulta' | 'consultoria_categoria' | 'acao'
+  intencao?:
+    | 'consultiva'
+    | 'escolha_categoria'
+    | 'consulta'
+    | 'transacao'
+    | 'correcao'
+    | 'desfazer'
+    | string
+    | null
   resposta_consulta?: string | null
   transacao: VoiceAiTransaction | null
   pergunta_clarificacao: string | null
@@ -66,8 +83,24 @@ export interface ParsedVoiceTransaction {
   // Campos da IA enriquecidos e transparência de processamento
   processingSource?: 'openai' | 'local'
   aiStatus?: VoiceAiStatus
-  tipoResposta?: 'transacao' | 'consulta' | 'consultoria_categoria'
-  intencao?: 'consultiva' | 'escolha_categoria' | 'consulta' | 'transacao' | string | null
+  acao?:
+    | 'criar'
+    | 'reclassificar'
+    | 'ajustar_valor'
+    | 'ajustar_descricao'
+    | 'desfazer'
+    | string
+    | null
+  tipoResposta?: 'transacao' | 'consulta' | 'consultoria_categoria' | 'acao'
+  intencao?:
+    | 'consultiva'
+    | 'escolha_categoria'
+    | 'consulta'
+    | 'transacao'
+    | 'correcao'
+    | 'desfazer'
+    | string
+    | null
   respostaConsulta?: string | null
   clarificationQuestion?: string | null
   clarificationOptions?: string[] | null
@@ -1332,11 +1365,16 @@ export function mapAiResponseToParsedTransaction(
     clarificacao_categoria: 0.85,
     invalido: 0.2,
     consulta: 0.95,
+    acao_executada: 0.95,
   }
 
   const isConsulta = aiData.status === 'consulta' || aiData.tipo_resposta === 'consulta'
   const isConsultoria =
     aiData.tipo_resposta === 'consultoria_categoria' || aiData.intencao === 'consultiva'
+  const isAcao =
+    aiData.status === 'acao_executada' ||
+    aiData.tipo_resposta === 'acao' ||
+    aiData.acao === 'desfazer'
 
   // Normalização de opções de sugestão para formato string[] e structuredOptions
   let clarificationOptions: string[] | null = null
@@ -1400,7 +1438,14 @@ export function mapAiResponseToParsedTransaction(
     confidence: confidenceByStatus[aiData.status] ?? 0.2,
     processingSource: 'openai',
     aiStatus: aiData.status,
-    tipoResposta: isConsulta ? 'consulta' : isConsultoria ? 'consultoria_categoria' : 'transacao',
+    acao: aiData.acao || null,
+    tipoResposta: isConsulta
+      ? 'consulta'
+      : isConsultoria
+        ? 'consultoria_categoria'
+        : isAcao
+          ? 'acao'
+          : 'transacao',
     intencao: aiData.intencao,
     respostaConsulta: aiData.resposta_consulta || (isConsulta ? aiData.mensagem_amigavel : null),
     clarificationQuestion: aiData.pergunta_clarificacao,

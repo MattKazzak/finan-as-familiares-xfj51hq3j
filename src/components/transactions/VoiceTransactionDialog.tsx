@@ -26,7 +26,7 @@ import { ParsedVoiceTransaction, StructuredSuggestionOption } from '@/services/v
 import { parseVoiceWithAi } from '@/services/voice-ai'
 import { useFamily } from '@/hooks/use-family'
 import { useToast } from '@/hooks/use-toast'
-import { createTransaction } from '@/services/transactions'
+import { createTransaction, updateTransaction, deleteTransaction } from '@/services/transactions'
 import { BUCKET_METADATA } from '@/types/budget-presets'
 import { BudgetBucket } from '@/types/finance'
 
@@ -43,7 +43,11 @@ export interface ChatMessage {
     | 'clarificacao_categoria'
     | 'invalido'
     | 'consulta'
+    | 'acao'
   aiError?: string | null
+  confirmedTxId?: string | null
+  undoAction?: () => void
+  editAction?: () => void
 }
 
 interface VoiceTransactionDialogProps {
@@ -84,6 +88,12 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
   // Estado da transação parcial em 2 turnos (sobrevive a reinícios do microfone e mensagens)
   const [pendingTransaction, setPendingTransaction] = useState<ParsedVoiceTransaction | null>(null)
+  const [lastCreatedTransactionId, setLastCreatedTransactionId] = useState<string | null>(null)
+  const lastCreatedTransactionIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    lastCreatedTransactionIdRef.current = lastCreatedTransactionId
+  }, [lastCreatedTransactionId])
 
   // Estados de voz e transcrição
   const [isListening, setIsListening] = useState(false)
@@ -173,20 +183,21 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     isListeningForAmountOnlyRef.current = false
   }, [clearSilenceTimer])
 
-  // Helper para construir contexto_anterior a partir de transação parcial pendente
+  // Helper para construir contexto_anterior a partir de transação parcial pendente ou última criada
   const buildPreviousContext = useCallback((base: ParsedVoiceTransaction | null) => {
-    if (!base) return null
+    if (!base && !lastCreatedTransactionIdRef.current) return null
     return {
-      descricao: base.description,
-      estabelecimento: base.establishment || null,
-      categoria: base.categoryNameSuggestion,
-      subcategoria: base.subcategoryNameSuggestion,
-      balde: base.bucketSuggestion,
-      tipo: base.type === 'income' ? ('receita' as const) : ('despesa' as const),
-      valor: base.amountCents > 0 ? base.amountCents / 100 : null,
-      status: base.aiStatus,
-      opcoes_sugestao: base.structuredOptions || base.clarificationOptions,
-      opcoes_estruturadas: base.structuredOptions || null,
+      descricao: base?.description,
+      estabelecimento: base?.establishment || null,
+      categoria: base?.categoryNameSuggestion,
+      subcategoria: base?.subcategoryNameSuggestion,
+      balde: base?.bucketSuggestion,
+      tipo: base?.type === 'income' ? ('receita' as const) : ('despesa' as const),
+      valor: base && base.amountCents > 0 ? base.amountCents / 100 : null,
+      status: base?.aiStatus,
+      opcoes_sugestao: base?.structuredOptions || base?.clarificationOptions,
+      opcoes_estruturadas: base?.structuredOptions || null,
+      lastCreatedTransactionId: lastCreatedTransactionIdRef.current,
     }
   }, [])
 
@@ -295,20 +306,73 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           contexto_anterior: previousContext,
         })
 
-        // Atalho conversacional: Se usuário falar/digitar "confirmar" / "confirma" com transação pronta pendente
-        const isConfirmIntent =
-          /^(confirmar|confirma|confirmado|pode confirmar|salvar|salva|gravar|grava|sim|ok|fechado|feito|confirme)$/i.test(
+        // Intenção de Desfazer / Cancelar último lançamento
+        const isUndoIntent =
+          parsed.acao === 'desfazer' ||
+          parsed.intencao === 'desfazer' ||
+          /^(desfaz|desfazer|cancela|cancelar|apaga|apagar|exclui|excluir|deleta|deletar)\b/i.test(
             textToProcess.replace(/[.!?]/g, '').trim(),
           )
 
-        if (
-          isConfirmIntent &&
-          existingPartial &&
-          existingPartial.amountCents > 0 &&
-          existingPartial.aiStatus === 'sucesso'
-        ) {
-          await handleConfirmTransaction(existingPartial)
+        if (isUndoIntent) {
+          await handleUndoLastTransaction()
           return
+        }
+
+        // Intenção de Reclassificação / Ajuste de transação anterior já lançada
+        const isCorrectionOfLastTx = Boolean(
+          lastCreatedTransactionIdRef.current &&
+          (parsed.acao === 'reclassificar' ||
+            parsed.acao === 'ajustar_valor' ||
+            parsed.acao === 'ajustar_descricao' ||
+            parsed.intencao === 'correcao' ||
+            /^(supermercado n[aã]o|n[aã]o \w+,? coloca em|coloca em|muda pra|muda para|altera para|n[aã]o [eé] esse valor|foi \d+|ops, n[aã]o [eé]|corrige)/i.test(
+              textToProcess,
+            )),
+        )
+
+        if (isCorrectionOfLastTx) {
+          const newDesc =
+            parsed.acao === 'ajustar_descricao' || /ops, n[aã]o [eé] \w+, [eé]/i.test(textToProcess)
+              ? parsed.description
+              : null
+          const newAmount =
+            parsed.acao === 'ajustar_valor' ||
+            (parsed.amountCents > 0 && /n[aã]o [eé] esse valor|foi \d+|valor/i.test(textToProcess))
+              ? parsed.amountCents
+              : null
+          const newCat = parsed.categoryNameSuggestion || null
+          const newSub = parsed.subcategoryNameSuggestion || null
+
+          const ok = await handleUpdateLastTransaction({
+            categoryName: newCat,
+            subcategoryName: newSub,
+            amountCents: newAmount,
+            description: newDesc,
+          })
+
+          if (ok) {
+            let reply = 'Lançamento atualizado!'
+            if (newCat) {
+              reply = `Ajustado para ${newSub ? `${newCat} › ${newSub}` : newCat}!`
+            } else if (newAmount) {
+              reply = `Valor corrigido para ${parsed.amountFormatted}!`
+            } else if (newDesc) {
+              reply = `Descrição corrigida para ${newDesc}!`
+            }
+
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `assistant-${Date.now()}`,
+                sender: 'assistant',
+                text: reply,
+                timestamp: new Date(),
+                cardType: 'acao',
+              },
+            ])
+            return
+          }
         }
 
         // Caso 1: Consulta rápida (resposta acolhedora da IA sem card de lançamento)
@@ -370,15 +434,22 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
               aiStatus: 'sucesso' as const,
             }
 
+            // Executa lançamento autônomo imediato no Supabase
+            const result = await executeAutonomousTransaction(confirmedData)
+            const catName = result?.categoryName || confirmedData.categoryNameSuggestion || 'Geral'
+            const subName = result?.subcategoryName || confirmedData.subcategoryNameSuggestion || ''
+            const txId = (result?.createdTx as any)?.id || null
+
             setMessages((prev) => [
               ...prev,
               {
                 id: `assistant-${Date.now()}`,
                 sender: 'assistant',
-                text: `Perfeito! Registrei o valor de ${parsed.amountFormatted}. Confira abaixo e confirme o lançamento:`,
+                text: `Lançado: ${confirmedData.amountFormatted} em ${catName}${subName ? ` › ${subName}` : ''} ✨`,
                 timestamp: new Date(),
                 cardData: confirmedData,
                 cardType: 'sucesso',
+                confirmedTxId: txId,
               },
             ])
             return
@@ -476,63 +547,19 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           return
         }
 
-        // Caso 6: Status 'clarificacao_categoria' vindo da IA (Human-in-the-Loop padrão ouro)
-        if (parsed.aiStatus === 'clarificacao_categoria' && parsed.amountCents > 0) {
-          setPendingTransaction(parsed)
-          pendingTransactionRef.current = parsed
-
-          // Composição com fallback inteligente: sempre inclui a descrição do gasto antes do valor
-          const desc = (parsed.description || existingPartial?.description || '').trim()
-          let friendlyMsg = parsed.friendlyMessage
-
-          if (!friendlyMsg) {
-            friendlyMsg =
-              desc && desc !== 'Despesa' && desc !== 'Receita'
-                ? `Identifiquei ${desc} ${parsed.amountFormatted}! Onde prefere organizar esse gasto?`
-                : `Identifiquei ${parsed.amountFormatted}! Onde prefere organizar esse gasto?`
-          } else if (desc && desc !== 'Despesa' && desc !== 'Receita') {
-            // Se a mensagem amigável não contiver a descrição do item, recompõe no formato padrão ouro
-            const descLower = desc.toLowerCase()
-            const msgLower = friendlyMsg.toLowerCase()
-            if (!msgLower.includes(descLower)) {
-              friendlyMsg = `Identifiquei ${desc} ${parsed.amountFormatted}! Onde prefere organizar esse gasto?`
-            }
-          }
-
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `assistant-${Date.now()}`,
-              sender: 'assistant',
-              text: friendlyMsg,
-              timestamp: new Date(),
-              cardData: parsed,
-              cardType: 'clarificacao_categoria',
-            },
-          ])
-          return
-        }
-
-        // Caso 6: Transação completa com sucesso logo no primeiro turno OU edição conversacional de transação pendente
-        if (parsed.aiStatus === 'sucesso' && parsed.amountCents > 0) {
+        // Caso 5: Lançamento com valor e descrição presentes (execução autônoma padrão ouro)
+        // Se a descrição e o valor existirem, lança diretamente no Supabase em vez de travar em card de formulário
+        if (
+          (parsed.aiStatus === 'sucesso' || parsed.aiStatus === 'clarificacao_categoria') &&
+          parsed.amountCents > 0
+        ) {
           let finalParsed = parsed
 
-          // Se já existia uma transação pendente pronta, mescla edições conversacionais parciais
-          // Exemplo: fala "na verdade foi 100 reais" ou "coloca em lazer"
           if (existingPartial && existingPartial.amountCents > 0) {
-            const isCorrectionOnlyAmount =
-              /^(na verdade|muda|corrige|altera|foi|era|coloca|para|sao|são)\b/i.test(
-                textToProcess,
-              ) || parsed.description.toLowerCase().includes('na verdade')
-
-            const mergedDesc = isCorrectionOnlyAmount
-              ? existingPartial.description
-              : parsed.description || existingPartial.description
-
             finalParsed = {
               ...existingPartial,
               ...parsed,
-              description: mergedDesc,
+              description: parsed.description || existingPartial.description,
               categoryNameSuggestion:
                 parsed.categoryNameSuggestion || existingPartial.categoryNameSuggestion,
               subcategoryNameSuggestion:
@@ -544,20 +571,22 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           setPendingTransaction(finalParsed)
           pendingTransactionRef.current = finalParsed
 
-          const isUpdate = Boolean(existingPartial && existingPartial.amountCents > 0)
-          const introMsg = isUpdate
-            ? `Atualizado! Identifiquei o ajuste para ${finalParsed.description} (${finalParsed.amountFormatted}). Confira e confirme o lançamento:`
-            : `Entendido! Identifiquei o lançamento de ${finalParsed.description} (${finalParsed.amountFormatted}). Toque em confirmar para registrar:`
+          // Executa lançamento autônomo no banco de dados
+          const result = await executeAutonomousTransaction(finalParsed)
+          const catName = result?.categoryName || finalParsed.categoryNameSuggestion || 'Geral'
+          const subName = result?.subcategoryName || finalParsed.subcategoryNameSuggestion || ''
+          const txId = (result?.createdTx as any)?.id || null
 
           setMessages((prev) => [
             ...prev,
             {
               id: `assistant-${Date.now()}`,
               sender: 'assistant',
-              text: introMsg,
+              text: `Lançado: ${finalParsed.amountFormatted} em ${catName}${subName ? ` › ${subName}` : ''} ✨`,
               timestamp: new Date(),
               cardData: finalParsed,
               cardType: 'sucesso',
+              confirmedTxId: txId,
             },
           ])
           return
@@ -876,14 +905,29 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     }
   }, [pendingTransaction?.aiStatus])
 
-  // Iniciar sessão do modal: zera histórico ao abrir e dispara escuta
+  // Gerar saudação contextual baseada na hora e membro ativo
+  const getContextualGreeting = useCallback(() => {
+    const hour = new Date().getHours()
+    const memberName = currentMember?.name || members[0]?.name || 'família'
+
+    if (hour >= 5 && hour < 12) {
+      return `Bom dia, ${memberName}! ☀️ O que vamos registrar hoje?`
+    }
+    if (hour >= 12 && hour < 18) {
+      return `Boa tarde, ${memberName}! ☕ Teve algum gasto agora há pouco?`
+    }
+    return `Boa noite, ${memberName}! 🌙 Vamos fechar os lançamentos do dia?`
+  }, [currentMember?.name, members])
+
+  // Iniciar sessão do modal: zera histórico ao abrir e dispara escuta com saudação dinâmica
   useEffect(() => {
     if (open) {
+      const greeting = getContextualGreeting()
       setMessages([
         {
           id: 'welcome-1',
           sender: 'assistant',
-          text: "Olá! Eu sou o Curiangoo Copilot, seu assistente financeiro. Registre receitas e despesas por voz, no seu ritmo — por exemplo: 'almoço, 35 reais, no Restaurante do Zé'. Você também pode consultar informações como: 'quanto ainda posso gastar este mês?'.",
+          text: greeting,
           timestamp: new Date(),
         },
       ])
@@ -893,6 +937,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       finalBufferRef.current = ''
       setPendingTransaction(null)
       pendingTransactionRef.current = null
+      setLastCreatedTransactionId(null)
+      lastCreatedTransactionIdRef.current = null
       setErrorMessage(null)
       setMissingAmountInput('')
       setIsListeningForAmountOnly(false)
@@ -1252,7 +1298,282 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     startRecording()
   }
 
-  // Confirmar lançamento diretamente no Supabase
+  // Executar lançamento autônomo diretamente no Supabase sem fechar o diálogo
+  const executeAutonomousTransaction = useCallback(
+    async (txData: ParsedVoiceTransaction) => {
+      if (!family || txData.amountCents <= 0) return null
+
+      try {
+        setIsSaving(true)
+
+        let targetCategory = categories.find((c) => {
+          if (c.type !== txData.type) return false
+          if (txData.categoryNameSuggestion) {
+            return c.name.toLowerCase() === txData.categoryNameSuggestion.toLowerCase()
+          }
+          return false
+        })
+
+        if (!targetCategory && txData.categoryNameSuggestion) {
+          targetCategory = categories.find(
+            (c) =>
+              c.type === txData.type &&
+              (c.name.toLowerCase().includes(txData.categoryNameSuggestion!.toLowerCase()) ||
+                txData.categoryNameSuggestion!.toLowerCase().includes(c.name.toLowerCase())),
+          )
+        }
+
+        // Se a categoria sugerida não existir, criar ou associar
+        if (!targetCategory && txData.categoryNameSuggestion) {
+          try {
+            const bucketKey = (
+              txData.bucketSuggestion === 'goals'
+                ? 'future'
+                : txData.bucketSuggestion === 'essential'
+                  ? 'essentials'
+                  : 'lifestyle'
+            ) as BudgetBucket
+            targetCategory = await addNewCategory(
+              txData.categoryNameSuggestion,
+              txData.type,
+              '#10B981',
+              'Tag',
+              bucketKey,
+            )
+          } catch (createErr) {
+            console.warn('Erro ao auto-criar categoria para o Copilot:', createErr)
+          }
+        }
+
+        if (!targetCategory) {
+          targetCategory = categories.find((c) => c.type === txData.type)
+        }
+
+        const categoryId = targetCategory?.id || null
+        let subcategoryId: string | null = null
+
+        if (targetCategory && txData.subcategoryNameSuggestion) {
+          const subName = txData.subcategoryNameSuggestion.trim()
+          const existingSub = targetCategory.subcategories?.find(
+            (s) => s.name.toLowerCase() === subName.toLowerCase(),
+          )
+
+          if (existingSub) {
+            subcategoryId = existingSub.id
+          } else if (subName) {
+            try {
+              const createdSub = await addNewSubcategory(targetCategory.id, subName)
+              if (createdSub?.id) {
+                subcategoryId = createdSub.id
+              }
+            } catch (subErr) {
+              console.warn('Não foi possível auto-criar subcategoria:', subErr)
+            }
+          }
+        }
+
+        const memberId = selectedMemberId || currentMember?.id || members[0]?.id || null
+
+        const created = await createTransaction({
+          family_id: family.id,
+          member_id: memberId,
+          category_id: categoryId,
+          subcategory_id: subcategoryId,
+          type: txData.type,
+          amount_cents: txData.amountCents,
+          description: txData.description || 'Lançamento por Voz',
+          transaction_date: new Date().toISOString().slice(0, 10),
+          status: 'confirmed',
+        })
+
+        const txId = (created as any)?.id || null
+        if (txId) {
+          setLastCreatedTransactionId(txId)
+          lastCreatedTransactionIdRef.current = txId
+        }
+
+        triggerRefresh()
+        if (onSuccess) onSuccess()
+
+        return {
+          createdTx: created,
+          categoryName: targetCategory?.name,
+          subcategoryName: txData.subcategoryNameSuggestion,
+        }
+      } catch (err: any) {
+        console.error('Erro ao executar lançamento autônomo:', err)
+        toast({
+          title: 'Erro ao registrar',
+          description: err?.message || 'Tente novamente.',
+          variant: 'destructive',
+        })
+        return null
+      } finally {
+        setIsSaving(false)
+      }
+    },
+    [
+      addNewCategory,
+      addNewSubcategory,
+      categories,
+      currentMember?.id,
+      family,
+      members,
+      onSuccess,
+      selectedMemberId,
+      toast,
+      triggerRefresh,
+    ],
+  )
+
+  // Desfazer última transação do contexto
+  const handleUndoLastTransaction = useCallback(
+    async (targetTxId?: string | null) => {
+      const idToDelete = targetTxId || lastCreatedTransactionIdRef.current
+      if (!idToDelete) {
+        toast({
+          title: 'Nenhum lançamento recente',
+          description: 'Não há transação recente para desfazer.',
+        })
+        return
+      }
+
+      try {
+        setIsSaving(true)
+        await deleteTransaction(idToDelete)
+        setLastCreatedTransactionId(null)
+        lastCreatedTransactionIdRef.current = null
+        setPendingTransaction(null)
+        pendingTransactionRef.current = null
+
+        triggerRefresh()
+        if (onSuccess) onSuccess()
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `assistant-${Date.now()}`,
+            sender: 'assistant',
+            text: 'Lançamento desfeito com sucesso! 🗑️',
+            timestamp: new Date(),
+            cardType: 'acao',
+          },
+        ])
+
+        toast({
+          title: 'Lançamento desfeito!',
+          description: 'A transação foi removida do extrato da família.',
+        })
+      } catch (err: any) {
+        console.error('Erro ao desfazer transação:', err)
+        toast({
+          title: 'Erro ao desfazer',
+          description: err?.message || 'Não foi possível cancelar o lançamento.',
+          variant: 'destructive',
+        })
+      } finally {
+        setIsSaving(false)
+      }
+    },
+    [onSuccess, toast, triggerRefresh],
+  )
+
+  // Abrir tela manual ou editar a transação
+  const handleEditLastTransaction = useCallback(
+    (txData?: ParsedVoiceTransaction | null) => {
+      const base = txData || pendingTransactionRef.current
+      if (!base) return
+
+      onOpenChange(false)
+      onOpenManualTransaction({
+        type: base.type,
+        amountCents: base.amountCents,
+        description: base.description,
+        categoryId: categories.find(
+          (c) => c.name.toLowerCase() === base.categoryNameSuggestion?.toLowerCase(),
+        )?.id,
+        memberId: selectedMemberId || currentMember?.id,
+      })
+    },
+    [categories, currentMember?.id, onOpenChange, onOpenManualTransaction, selectedMemberId],
+  )
+
+  // Atualizar transação anterior (reclassificação, valor ou descrição)
+  const handleUpdateLastTransaction = useCallback(
+    async (updates: {
+      categoryName?: string | null
+      subcategoryName?: string | null
+      amountCents?: number | null
+      description?: string | null
+    }) => {
+      const idToUpdate = lastCreatedTransactionIdRef.current
+      if (!idToUpdate) return false
+
+      try {
+        setIsSaving(true)
+        const payload: any = {}
+
+        if (updates.description) {
+          payload.description = updates.description
+        }
+        if (updates.amountCents && updates.amountCents > 0) {
+          payload.amount_cents = updates.amountCents
+        }
+        if (updates.categoryName) {
+          let cat = categories.find(
+            (c) =>
+              c.name.toLowerCase() === updates.categoryName!.toLowerCase() ||
+              c.name.toLowerCase().includes(updates.categoryName!.toLowerCase()) ||
+              updates.categoryName!.toLowerCase().includes(c.name.toLowerCase()),
+          )
+          if (!cat && family?.id) {
+            try {
+              cat = await addNewCategory(
+                updates.categoryName,
+                'expense',
+                '#10B981',
+                'Tag',
+                'lifestyle',
+              )
+            } catch {
+              // fallback
+            }
+          }
+          if (cat) {
+            payload.category_id = cat.id
+            if (updates.subcategoryName) {
+              const sub = cat.subcategories?.find(
+                (s) => s.name.toLowerCase() === updates.subcategoryName!.toLowerCase(),
+              )
+              if (sub) {
+                payload.subcategory_id = sub.id
+              } else {
+                try {
+                  const createdSub = await addNewSubcategory(cat.id, updates.subcategoryName)
+                  if (createdSub?.id) payload.subcategory_id = createdSub.id
+                } catch {
+                  // fallback
+                }
+              }
+            }
+          }
+        }
+
+        await updateTransaction(idToUpdate, payload)
+        triggerRefresh()
+        if (onSuccess) onSuccess()
+        return true
+      } catch (err) {
+        console.warn('Erro ao atualizar última transação:', err)
+        return false
+      } finally {
+        setIsSaving(false)
+      }
+    },
+    [addNewCategory, addNewSubcategory, categories, family?.id, onSuccess, triggerRefresh],
+  )
+
+  // Confirmar lançamento diretamente no Supabase (mantido para compatibilidade e testes)
   const handleConfirmTransaction = async (cardData?: ParsedVoiceTransaction | null) => {
     const dataToSave = cardData || pendingTransaction
     if (!family || !dataToSave) return
@@ -1267,85 +1588,12 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       return
     }
 
-    try {
-      setIsSaving(true)
-
-      let targetCategory = categories.find((c) => {
-        if (c.type !== dataToSave.type) return false
-        if (dataToSave.categoryNameSuggestion) {
-          return c.name.toLowerCase() === dataToSave.categoryNameSuggestion.toLowerCase()
-        }
-        return false
-      })
-
-      if (!targetCategory && dataToSave.categoryNameSuggestion) {
-        targetCategory = categories.find(
-          (c) =>
-            c.type === dataToSave.type &&
-            (c.name.toLowerCase().includes(dataToSave.categoryNameSuggestion!.toLowerCase()) ||
-              dataToSave.categoryNameSuggestion!.toLowerCase().includes(c.name.toLowerCase())),
-        )
-      }
-
-      if (!targetCategory) {
-        targetCategory = categories.find((c) => c.type === dataToSave.type)
-      }
-
-      const categoryId = targetCategory?.id || null
-      let subcategoryId: string | null = null
-
-      if (targetCategory && dataToSave.subcategoryNameSuggestion) {
-        const subName = dataToSave.subcategoryNameSuggestion.trim()
-        const existingSub = targetCategory.subcategories?.find(
-          (s) => s.name.toLowerCase() === subName.toLowerCase(),
-        )
-
-        if (existingSub) {
-          subcategoryId = existingSub.id
-        } else if (subName) {
-          try {
-            const createdSub = await addNewSubcategory(targetCategory.id, subName)
-            if (createdSub?.id) {
-              subcategoryId = createdSub.id
-            }
-          } catch (subErr) {
-            console.warn('Não foi possível auto-criar subcategoria:', subErr)
-          }
-        }
-      }
-
-      const memberId = selectedMemberId || currentMember?.id || members[0]?.id || null
-
-      await createTransaction({
-        family_id: family.id,
-        member_id: memberId,
-        category_id: categoryId,
-        subcategory_id: subcategoryId,
-        type: dataToSave.type,
-        amount_cents: dataToSave.amountCents,
-        description: dataToSave.description || 'Lançamento por Voz',
-        transaction_date: new Date().toISOString().slice(0, 10),
-        status: 'confirmed',
-      })
-
-      toast({
-        title: 'Lançamento registrado com sucesso! 🎉',
-        description: `${dataToSave.description} (${dataToSave.amountFormatted}) adicionado ao saldo da família.`,
-      })
-
-      triggerRefresh()
-      if (onSuccess) onSuccess()
-      onOpenChange(false)
-    } catch (err: any) {
-      console.error('Erro ao salvar lançamento de voz:', err)
-      toast({
-        title: 'Erro ao registrar',
-        description: err?.message || 'Tente novamente.',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsSaving(false)
-    }
+    await executeAutonomousTransaction(dataToSave)
+    toast({
+      title: 'Lançamento registrado com sucesso! 🎉',
+      description: `${dataToSave.description} (${dataToSave.amountFormatted}) adicionado ao saldo da família.`,
+    })
+    onOpenChange(false)
   }
 
   // Renderizador do Card Verde de Confirmação dentro do Chat
@@ -1460,6 +1708,29 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             <span className="truncate">{isSaving ? 'Salvando...' : '✅ Confirmar Lançamento'}</span>
           </Button>
         </div>
+      </div>
+    )
+  }
+
+  // Renderizador elegante de Micro-Links de Ação (Desfazer | Alterar)
+  const renderConfirmationMicroLinks = (msg: ChatMessage) => {
+    return (
+      <div className="mt-2 pt-2 border-t border-emerald-200/60 flex items-center gap-3 text-[11px]">
+        <button
+          type="button"
+          onClick={() => handleUndoLastTransaction(msg.confirmedTxId)}
+          className="text-rose-600 hover:text-rose-800 font-semibold underline underline-offset-2 transition-colors cursor-pointer"
+        >
+          Desfazer
+        </button>
+        <span className="text-slate-300">|</span>
+        <button
+          type="button"
+          onClick={() => handleEditLastTransaction(msg.cardData)}
+          className="text-emerald-700 hover:text-emerald-900 font-semibold underline underline-offset-2 transition-colors cursor-pointer"
+        >
+          Alterar
+        </button>
       </div>
     )
   }
@@ -1709,35 +1980,59 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     )
   }
 
+  const quickPrompts = [
+    { label: '🎙️ "Almoço 35 reais"', text: 'Almoço 35 reais' },
+    { label: '📊 "Quanto ainda posso gastar?"', text: 'Quanto ainda posso gastar?' },
+    { label: '🔍 "Últimos lançamentos"', text: 'Últimos lançamentos' },
+  ]
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-3xl border border-slate-200/90 bg-white p-4 sm:p-5 sm:max-w-md md:max-w-lg shadow-2xl flex flex-col max-h-[90vh] h-[640px]">
-        {/* Header do Copilot */}
+      <DialogContent className="rounded-3xl border border-slate-200/90 bg-white p-3.5 sm:p-5 sm:max-w-md md:max-w-lg shadow-2xl flex flex-col max-h-[92vh] h-[640px] w-[calc(100vw-1.5rem)] max-w-[calc(100vw-1.5rem)] sm:w-full overflow-hidden">
+        {/* Header Elegante do Copilot estilo Apple Intelligence */}
         <DialogHeader className="text-left space-y-0.5 pb-2 border-b border-slate-100 shrink-0">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
-                <Sparkles className="w-4 h-4 text-emerald-700" />
-              </span>
-              <div>
-                <DialogTitle className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-1.5">
-                  Curiangoo Copilot
-                  <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                    Mini-Chat IA
+            <div className="flex items-center gap-2.5 min-w-0">
+              {/* Avatar do Curiango com status verde ativo */}
+              <div className="relative shrink-0">
+                <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#064E3B] to-emerald-600 text-white flex items-center justify-center font-bold shadow-sm p-1.5">
+                  <img
+                    src="/icon.svg"
+                    alt="Curiangoo"
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                      const fb = e.currentTarget.nextElementSibling as HTMLElement
+                      if (fb) fb.style.display = 'inline-block'
+                    }}
+                  />
+                  <Bird className="w-5 h-5 text-white hidden" />
+                </div>
+                <span
+                  className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"
+                  title="Copilot Online"
+                />
+              </div>
+
+              <div className="min-w-0">
+                <DialogTitle className="text-sm sm:text-base font-bold text-slate-900 tracking-tight flex items-center gap-1.5">
+                  <span className="truncate">Curiango Copilot</span>
+                  <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
+                    IA Ativa
                   </span>
                 </DialogTitle>
-                <DialogDescription className="text-xs text-slate-500">
-                  Fale lançamentos ou faça perguntas sobre suas finanças
+                <DialogDescription className="text-[11px] sm:text-xs text-slate-500 truncate">
+                  Assistente financeiro da família
                 </DialogDescription>
               </div>
             </div>
 
             {/* Seletor de Membro */}
-            <div className="flex items-center gap-1 text-xs">
+            <div className="flex items-center gap-1 text-xs shrink-0">
               <select
                 value={selectedMemberId}
                 onChange={(e) => setSelectedMemberId(e.target.value)}
-                className="text-[11px] font-semibold text-slate-700 bg-slate-100 border border-slate-200 rounded-lg px-2 py-1 cursor-pointer"
+                className="text-[11px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg px-2 py-1 cursor-pointer transition-colors max-w-[110px] truncate"
                 title="Membro responsável"
               >
                 {members.map((m) => (
@@ -1765,9 +2060,9 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         {/* ================= CORPO DO MINI-CHAT: HISTÓRICO DE MENSAGENS ================= */}
         <div
           ref={chatScrollRef}
-          className="flex-1 overflow-y-auto pr-1 py-3 space-y-3 scroll-smooth text-xs"
+          className="flex-1 overflow-y-auto px-1 py-3 space-y-3 scroll-smooth text-xs"
         >
-          {messages.map((msg) => {
+          {messages.map((msg, index) => {
             const isUser = msg.sender === 'user'
 
             return (
@@ -1775,7 +2070,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 key={msg.id}
                 className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} animate-in fade-in-50 duration-150`}
               >
-                {/* Balão de Mensagem */}
+                {/* Balão de Mensagem Estilo iMessage / WhatsApp */}
                 <div
                   className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 shadow-xs ${
                     isUser
@@ -1783,52 +2078,53 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                       : 'bg-slate-100 text-slate-900 rounded-bl-xs border border-slate-200/80'
                   }`}
                 >
-                  {msg.id === 'welcome-1' ? (
-                    <p className="text-xs leading-relaxed whitespace-pre-wrap">
-                      Olá! Eu sou o Curiangoo Copilot, seu assistente financeiro.{' '}
-                      <span
-                        className="inline-flex items-center justify-center align-middle mx-0.5 w-4 h-4 rounded-full bg-[#064E3B] p-0.5 shadow-xs border border-emerald-500/30 overflow-hidden shrink-0"
-                        title="Curiangoo"
-                      >
-                        <img
-                          src="/icon.svg"
-                          alt="Curiangoo"
-                          className="w-full h-full object-contain rounded-full"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none'
-                            const fallback = e.currentTarget.nextElementSibling as HTMLElement
-                            if (fallback) fallback.style.display = 'inline-block'
-                          }}
-                        />
-                        <Bird className="w-2.5 h-2.5 text-white hidden" />
-                      </span>{' '}
-                      Registre receitas e despesas por voz, no seu ritmo — por exemplo:
-                      &apos;almoço, 35 reais, no Restaurante do Zé&apos;. Você também pode consultar
-                      informações como: &apos;quanto ainda posso gastar este mês?&apos;.
-                    </p>
-                  ) : (
-                    <p className="text-xs leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                  )}
+                  <p className="text-xs sm:text-[13px] leading-relaxed whitespace-pre-wrap">
+                    {msg.text}
+                  </p>
 
-                  {/* Cards Contextuais acoplados ao balão do assistente */}
+                  {/* Card sucesso com botão de confirmação se cardData estiver presente */}
                   {!isUser &&
                     msg.cardType === 'sucesso' &&
                     msg.cardData &&
                     renderSuccessCard(msg.cardData)}
 
+                  {/* Micro-links sutis de Desfazer e Alterar após confirmação de lançamento */}
+                  {!isUser &&
+                    (msg.confirmedTxId || (msg.cardType === 'sucesso' && !msg.cardData)) &&
+                    renderConfirmationMicroLinks(msg)}
+
+                  {/* Card falta_valor */}
                   {!isUser &&
                     msg.cardType === 'falta_valor' &&
                     msg.cardData &&
                     renderMissingAmountCard(msg.cardData)}
 
+                  {/* Card clarificacao_categoria e clarificacao */}
                   {!isUser &&
                     (msg.cardType === 'clarificacao' ||
                       msg.cardType === 'clarificacao_categoria') &&
                     msg.cardData &&
                     renderClarificationCategoryCard(msg.cardData)}
 
+                  {/* Card inválido */}
                   {!isUser && msg.cardType === 'invalido' && renderInvalidCard(msg)}
                 </div>
+
+                {/* Chips de Sugestão Rápida tocáveis logo abaixo da saudação inicial */}
+                {index === 0 && msg.id === 'welcome-1' && (
+                  <div className="flex flex-wrap gap-1.5 mt-2.5 max-w-full">
+                    {quickPrompts.map((prompt, pIdx) => (
+                      <button
+                        key={pIdx}
+                        type="button"
+                        onClick={() => handleStopAndProcess(prompt.text)}
+                        className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-900 border border-slate-200 text-slate-700 transition-all active:scale-95 shadow-2xs"
+                      >
+                        {prompt.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )
           })}
@@ -1838,15 +2134,15 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             <div className="flex items-start gap-2 animate-in fade-in duration-200">
               <div className="bg-slate-100 border border-slate-200/80 text-slate-700 rounded-2xl rounded-bl-xs px-3.5 py-2.5 flex items-center gap-2 shadow-xs">
                 <Loader2 className="w-3.5 h-3.5 text-emerald-700 animate-spin" />
-                <span className="text-xs font-semibold">Curiangoo Copilot pensando...</span>
+                <span className="text-xs font-semibold">Curiango Copilot pensando...</span>
               </div>
             </div>
           )}
 
-          {/* Transcrição em tempo real do microfone dentro do chat */}
+          {/* Transcrição em tempo real do microfone dentro do chat com animação suave de onda */}
           {isListening && textoFalado.trim() && (
             <div className="flex items-end justify-end animate-in fade-in duration-100">
-              <div className="bg-emerald-900/80 text-emerald-100 rounded-2xl rounded-br-xs px-3 py-2 italic text-xs max-w-[80%] border border-emerald-700">
+              <div className="bg-emerald-900/90 text-emerald-100 rounded-2xl rounded-br-xs px-3.5 py-2 italic text-xs max-w-[85%] border border-emerald-700 shadow-xs">
                 &ldquo;{textoFalado.trim()}&rdquo;
               </div>
             </div>
@@ -1932,17 +2228,20 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                   }}
                   className={`relative w-11 h-11 rounded-2xl flex items-center justify-center shadow-md transition-all duration-300 active:scale-95 ${
                     secondsRemaining === 3
-                      ? 'bg-[#064E3B] text-white shadow-emerald-900/30 animate-pulse'
+                      ? 'bg-[#064E3B] text-white shadow-emerald-900/30 ring-4 ring-emerald-400/40 animate-pulse'
                       : secondsRemaining === 2
-                        ? 'bg-emerald-800 text-white shadow-emerald-900/20'
+                        ? 'bg-emerald-800 text-white shadow-emerald-900/20 ring-2 ring-emerald-300/30'
                         : secondsRemaining === 1
                           ? 'bg-slate-600 text-slate-200 shadow-slate-900/10'
-                          : 'bg-[#064E3B] text-white shadow-emerald-900/30 animate-pulse'
+                          : 'bg-[#064E3B] text-white shadow-emerald-900/30 ring-4 ring-emerald-400/40 animate-pulse'
                   }`}
                   title="Toque para concluir"
                 >
+                  {/* Efeito de onda sutil ao redor do botão */}
+                  <span className="absolute inset-0 rounded-2xl bg-emerald-400/20 animate-ping pointer-events-none" />
+
                   <Mic
-                    className={`w-5 h-5 transition-colors duration-300 ${
+                    className={`w-5 h-5 relative z-10 transition-colors duration-300 ${
                       secondsRemaining === 1 ? 'text-slate-300' : 'text-emerald-300'
                     }`}
                   />
@@ -1950,7 +2249,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                     <span
                       key={secondsRemaining}
                       data-testid="mic-countdown-pill"
-                      className={`absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold font-mono flex items-center justify-center shadow-xs transition-all duration-300 animate-in zoom-in-75 ${
+                      className={`absolute -top-1.5 -right-1.5 z-20 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold font-mono flex items-center justify-center shadow-xs transition-all duration-300 animate-in zoom-in-75 ${
                         secondsRemaining === 3
                           ? 'bg-emerald-500 text-white ring-2 ring-white scale-100'
                           : secondsRemaining === 2
