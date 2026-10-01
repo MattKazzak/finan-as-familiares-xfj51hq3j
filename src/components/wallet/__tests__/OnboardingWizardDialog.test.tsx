@@ -165,4 +165,153 @@ describe('OnboardingWizardDialog', () => {
     resolveSeed()
     seedSpy.mockRestore()
   })
+
+  it('ao concluir com 60/25/15 selecionado, a RPC é chamada com p_model_preset_id="60_25_15" e NÃO há chamada de updateFamily com budget_model em paralelo', async () => {
+    const onboardingService = await import('@/services/onboarding')
+    const seedSpy = vi
+      .spyOn(onboardingService, 'seedStandardizedCategoriesAndApplyPlan')
+      .mockResolvedValueOnce({
+        createdCategoriesCount: 16,
+        createdSubcategoriesCount: 55,
+        totalBudgetCents: 500000,
+      })
+
+    // Mock do hook useFamily
+    const useFamilyModule = await import('@/hooks/use-family')
+    const mockUpdateFamily = vi.fn().mockResolvedValue({
+      ...mockFamily,
+      name: 'Família Silva',
+    })
+    const mockTriggerRefresh = vi.fn()
+
+    const useFamilySpy = vi.spyOn(useFamilyModule, 'useFamily').mockReturnValue({
+      family: mockFamily,
+      members: [],
+      categories: [],
+      selectedMemberId: null,
+      setSelectedMemberId: vi.fn(),
+      activeMemberId: null,
+      setActiveMemberId: vi.fn(),
+      currentMember: null,
+      isWhoIsUsingOpen: false,
+      setIsWhoIsUsingOpen: vi.fn(),
+      openWhoIsUsing: vi.fn(),
+      loading: false,
+      reloadFamily: vi.fn(),
+      updateFamily: mockUpdateFamily,
+      uploadFamilyAvatar: vi.fn(),
+      addMember: vi.fn(),
+      editMember: vi.fn(),
+      removeMember: vi.fn(),
+      leaveFamily: vi.fn(),
+      joinFamilyWithCode: vi.fn(),
+      addNewCategory: vi.fn(),
+      editCategory: vi.fn(),
+      removeCategory: vi.fn(),
+      checkCategoryUsage: vi.fn(),
+      addNewSubcategory: vi.fn(),
+      editSubcategory: vi.fn(),
+      removeSubcategory: vi.fn(),
+      checkSubcategoryUsage: vi.fn(),
+      reorderCategoriesList: vi.fn(),
+      reorderSubcategoriesList: vi.fn(),
+      isNewTransactionOpen: false,
+      setIsNewTransactionOpen: vi.fn(),
+      newTransactionDefaultType: 'expense',
+      newTransactionPrefill: null,
+      openNewTransaction: vi.fn(),
+      isActionSheetOpen: false,
+      setIsActionSheetOpen: vi.fn(),
+      openActionSheet: vi.fn(),
+      isRecurringIncomesOpen: false,
+      setIsRecurringIncomesOpen: vi.fn(),
+      openRecurringIncomes: vi.fn(),
+      isImportStatementOpen: false,
+      setIsImportStatementOpen: vi.fn(),
+      openImportStatement: vi.fn(),
+      isOnboardingOpen: false,
+      setIsOnboardingOpen: vi.fn(),
+      openOnboarding: vi.fn(),
+      lastImportSummary: null,
+      setLastImportSummary: vi.fn(),
+      refreshTrigger: 0,
+      triggerRefresh: mockTriggerRefresh,
+    })
+
+    render(
+      <OnboardingWizardDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        family={{ ...mockFamily, monthly_net_income_cents: 500000 }}
+      />,
+    )
+
+    // Etapa 1 -> Etapa 2
+    const step1Btn = screen.getByRole('button', { name: /Continuar para a Renda/i })
+    fireEvent.click(step1Btn)
+
+    // Etapa 2 -> Etapa 3
+    const step2Btn = screen.getByRole('button', { name: /Continuar para as 3 Caixas/i })
+    fireEvent.click(step2Btn)
+
+    // Etapa 3: Abre seletor de modelos e escolhe 60 / 25 / 15
+    const linkToggle = screen.getByText(/Prefere outro modelo\?/i)
+    fireEvent.click(linkToggle)
+
+    const model60Option = screen.getByText('Modelo 60 / 25 / 15')
+    fireEvent.click(model60Option)
+
+    // Clica em Concluir e Ativar meu Plano
+    const activateBtn = screen.getByRole('button', { name: /Concluir e Ativar meu Plano/i })
+    fireEvent.click(activateBtn)
+
+    // Verifica que seedStandardizedCategoriesAndApplyPlan foi chamado com modelPresetId = '60_25_15'
+    expect(seedSpy).toHaveBeenCalledWith({
+      familyId: mockFamily.id,
+      monthlyNetIncomeCents: 500000,
+      modelPresetId: '60_25_15',
+    })
+
+    // Verifica que updateFamily foi chamado APENAS para atualizar o nome da família,
+    // e NUNCA enviou budget_model ou monthly_net_income_cents (sem concorrência de escrita)
+    expect(mockUpdateFamily).toHaveBeenCalledTimes(1)
+    const updateFamilyCallArg = mockUpdateFamily.mock.calls[0][0]
+    expect(updateFamilyCallArg).toEqual({
+      name: 'Família Silva',
+    })
+    expect(updateFamilyCallArg.budget_model).toBeUndefined()
+    expect(updateFamilyCallArg.monthly_net_income_cents).toBeUndefined()
+
+    seedSpy.mockRestore()
+    useFamilySpy.mockRestore()
+  })
+
+  it('hidrata selectedModelId a partir do family.budget_model existente quando o wizard reabre', () => {
+    const familyWith60Model: Family = {
+      ...mockFamily,
+      monthly_net_income_cents: 600000,
+      budget_model: '60_25_15',
+    }
+
+    render(<OnboardingWizardDialog open={true} onOpenChange={vi.fn()} family={familyWith60Model} />)
+
+    // Avança até a etapa 3 para inspecionar os percentuais e tetos ativos
+    const step1Btn = screen.getByRole('button', { name: /Continuar para a Renda/i })
+    fireEvent.click(step1Btn)
+
+    const step2Btn = screen.getByRole('button', { name: /Continuar para as 3 Caixas/i })
+    fireEvent.click(step2Btn)
+
+    // No modelo 60_25_15 para R$ 6.000,00:
+    // Necessidades: 60% = R$ 3.600,00
+    // Estilo de Vida: 25% = R$ 1.500,00
+    // Futuro & Metas: 15% = R$ 900,00
+    expect(screen.getByText('Modelo 60 / 25 / 15')).toBeDefined()
+    expect(screen.getByText('60%')).toBeDefined()
+    expect(screen.getByText('25%')).toBeDefined()
+    expect(screen.getByText('15%')).toBeDefined()
+    expect(screen.getByText('R$ 3.600,00')).toBeDefined()
+    expect(screen.getByText('R$ 1.500,00')).toBeDefined()
+    expect(screen.getByText('R$ 900,00')).toBeDefined()
+  })
 })

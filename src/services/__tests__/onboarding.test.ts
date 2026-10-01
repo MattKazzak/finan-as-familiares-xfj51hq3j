@@ -131,4 +131,38 @@ describe('Seed de Categorias Padronizadas e Onboarding', () => {
 
     rpcSpy.mockRestore()
   })
+
+  it('quando modelo 60_25_15 é selecionado, activateFamilyOnboardingPlanRpc recebe modelPresetId="60_25_15"', async () => {
+    const rpcSpy = vi
+      .spyOn(familyService, 'activateFamilyOnboardingPlanRpc')
+      .mockResolvedValueOnce({
+        success: true,
+        family_id: 'fam-60-25-15',
+        monthly_net_income_cents: 600000,
+        model_preset_id: '60_25_15',
+        categories_count: 16,
+        subcategories_count: 55,
+        total_budget_cents: 600000,
+      })
+
+    const result = await seedStandardizedCategoriesAndApplyPlan({
+      familyId: 'fam-60-25-15',
+      monthlyNetIncomeCents: 600000,
+      modelPresetId: '60_25_15',
+    })
+
+    expect(rpcSpy).toHaveBeenCalledWith({
+      familyId: 'fam-60-25-15',
+      monthlyNetIncomeCents: 600000,
+      modelPresetId: '60_25_15',
+    })
+
+    expect(result).toEqual({
+      createdCategoriesCount: 16,
+      createdSubcategoriesCount: 55,
+      totalBudgetCents: 600000,
+    })
+
+    rpcSpy.mockRestore()
+  })
 })

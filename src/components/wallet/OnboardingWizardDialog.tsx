@@ -97,7 +97,13 @@ export function OnboardingWizardDialog({
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [familyNameInput, setFamilyNameInput] = useState<string>('')
   const [incomeInput, setIncomeInput] = useState<string>('')
-  const [selectedModelId, setSelectedModelId] = useState<BudgetModelId>('50_30_20')
+  const [selectedModelId, setSelectedModelId] = useState<BudgetModelId>(() => {
+    const existing = family?.budget_model
+    if (existing === '50_30_20' || existing === '60_25_15' || existing === '70_20_10') {
+      return existing
+    }
+    return '50_30_20'
+  })
   const [showModelPicker, setShowModelPicker] = useState<boolean>(false)
   const [isActivating, setIsActivating] = useState(false)
 
@@ -153,8 +159,20 @@ export function OnboardingWizardDialog({
       if (family?.monthly_net_income_cents && family.monthly_net_income_cents > 0) {
         setIncomeInput((family.monthly_net_income_cents / 100).toFixed(2).replace('.', ','))
       }
+
+      // Hidrata o modelo orçamentário do family.budget_model quando válido
+      const existingModel = family?.budget_model
+      if (
+        existingModel === '50_30_20' ||
+        existingModel === '60_25_15' ||
+        existingModel === '70_20_10'
+      ) {
+        setSelectedModelId(existingModel)
+      } else {
+        setSelectedModelId('50_30_20')
+      }
     }
-  }, [open, family?.id, user?.id, members])
+  }, [open, family?.id, family?.budget_model, family?.monthly_net_income_cents, user?.id, members])
 
   const parsedNetIncomeCents = useMemo(() => {
     return parseBRLToCents(incomeInput)
@@ -227,20 +245,25 @@ export function OnboardingWizardDialog({
     try {
       setIsActivating(true)
 
-      // Atualiza o nome da família e o budget_model em public.families via updateFamilyDetails / updateFamily
+      // Captura o modelo selecionado de forma imutável para esta operação (evita race condition)
+      const confirmedModelId: BudgetModelId =
+        selectedModelId === '60_25_15' || selectedModelId === '70_20_10'
+          ? selectedModelId
+          : '50_30_20'
+
       const normalizedName = normalizeFamilyName(trimmedName)
+
+      // Persistência ATÔMICA: atualiza APENAS o nome da família aqui.
+      // A gravação de budget_model e monthly_net_income_cents é delegada exclusivamente
+      // à RPC activate_family_onboarding_plan via seedStandardizedCategoriesAndApplyPlan.
       try {
         if (updateFamily) {
           await updateFamily({
             name: normalizedName,
-            monthly_net_income_cents: parsedNetIncomeCents,
-            budget_model: selectedModelId,
           })
         } else {
           await updateFamilyDetails(family.id, {
             name: normalizedName,
-            monthly_net_income_cents: parsedNetIncomeCents,
-            budget_model: selectedModelId,
           })
         }
       } catch (famErr) {
@@ -250,16 +273,14 @@ export function OnboardingWizardDialog({
         )
         await updateFamilyDetails(family.id, {
           name: normalizedName,
-          monthly_net_income_cents: parsedNetIncomeCents,
-          budget_model: selectedModelId,
         })
       }
 
-      // Executa a ativação com RPC atômica (ou fallback controlado)
+      // Executa a ativação com RPC atômica (grava budget_model, monthly_net_income_cents e categorias)
       await seedStandardizedCategoriesAndApplyPlan({
         familyId: family.id,
         monthlyNetIncomeCents: parsedNetIncomeCents,
-        modelPresetId: selectedModelId,
+        modelPresetId: confirmedModelId,
       })
 
       triggerRefresh?.()
@@ -274,8 +295,10 @@ export function OnboardingWizardDialog({
     } catch (err: any) {
       console.error('Erro ao ativar onboarding:', err)
       toast({
-        title: 'Erro ao configurar plano',
-        description: err?.message || 'Tente novamente.',
+        title: 'Não foi possível ativar seu plano',
+        description:
+          err?.message ||
+          'Ocorreu um erro ao configurar o orçamento da sua família. Por favor, tente novamente.',
         variant: 'destructive',
       })
     } finally {
