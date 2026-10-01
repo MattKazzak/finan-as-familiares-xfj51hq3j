@@ -448,8 +448,7 @@ Instruções:
           errText = `[Falha ao ler corpo do erro da OpenAI: ${readErr}]`
         }
         console.error(
-          `[batch-categorize] OpenAI API Error (PDF mode) - HTTP ${openaiRes.status}:`,
-          errText,
+          `[batch-categorize] OpenAI API Error (PDF mode) - HTTP ${openaiRes.status}: ${errText}`,
         )
         return new Response(
           JSON.stringify({
@@ -569,8 +568,7 @@ Retorne o JSON completo corrigido com declaredTotalCents e transactions.`
                 retryErrText = `[Falha ao ler corpo do erro: ${readErr}]`
               }
               console.error(
-                `[batch-categorize] OpenAI API Error (autocorreção matemática) - HTTP ${retryRes.status}:`,
-                retryErrText,
+                `[batch-categorize] OpenAI API Error (autocorreção matemática) - HTTP ${retryRes.status}: ${retryErrText}`,
               )
             }
           } catch (recoveryErr) {
@@ -696,8 +694,7 @@ ${JSON.stringify(
         errText = `[Falha ao ler corpo do erro da OpenAI: ${readErr}]`
       }
       console.error(
-        `[batch-categorize] OpenAI API Error (batch mode) - HTTP ${openaiRes.status}:`,
-        errText,
+        `[batch-categorize] OpenAI API Error (batch mode) - HTTP ${openaiRes.status}: ${errText}`,
       )
       return new Response(
         JSON.stringify({
