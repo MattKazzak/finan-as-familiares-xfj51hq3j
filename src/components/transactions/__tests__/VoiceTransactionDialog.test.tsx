@@ -1680,6 +1680,84 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     })
   })
 
+  it('regressão Bug 1: com pendingTransaction ativo em falta_valor, usuário falando "12 reais" envia imediatamente para parseVoiceWithAi com contexto_anterior e sem fallback local', async () => {
+    // 1º turno: fala sem valor "estacionamento rotativo"
+    mockParseVoiceWithAi.mockResolvedValueOnce({
+      rawText: 'estacionamento rotativo',
+      amountCents: 0,
+      amountFormatted: 'R$ 0,00',
+      type: 'expense',
+      description: 'Estacionamento rotativo',
+      confidence: 0.85,
+      processingSource: 'openai',
+      aiStatus: 'falta_valor',
+      categoryNameSuggestion: 'Transporte',
+      bucketSuggestion: 'essential',
+      clarificationQuestion: 'Quanto custou?',
+      friendlyMessage: 'Identifiquei Estacionamento rotativo. Quanto custou? 🚗',
+    })
+
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Fale no microfone ou digite aqui...')
+    fireEvent.change(input, { target: { value: 'estacionamento rotativo' } })
+    fireEvent.click(screen.getByText('Enviar'))
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Identifiquei Estacionamento rotativo\. Quanto custou\?/i),
+      ).toBeDefined()
+    })
+
+    // 2º turno: usuário responde falando "12 reais"
+    mockParseVoiceWithAi.mockImplementationOnce(
+      async ({ texto, contexto_anterior, categorias }) => {
+        expect(texto).toBe('12 reais')
+        expect(contexto_anterior).toEqual(
+          expect.objectContaining({
+            descricao: 'Estacionamento rotativo',
+            status: 'falta_valor',
+          }),
+        )
+        // Garante que a lista de categorias também foi enviada para otimização da Edge Function
+        expect(Array.isArray(categorias)).toBe(true)
+        expect(categorias?.length).toBeGreaterThan(0)
+
+        return {
+          rawText: '12 reais',
+          amountCents: 1200,
+          amountFormatted: 'R$ 12,00',
+          type: 'expense',
+          description: 'Estacionamento rotativo',
+          confidence: 0.98,
+          processingSource: 'openai',
+          aiStatus: 'sucesso',
+          categoryNameSuggestion: 'Transporte',
+          bucketSuggestion: 'essential',
+          friendlyMessage: 'Lançado: R$ 12,00 em Transporte! 👍',
+        }
+      },
+    )
+
+    fireEvent.change(input, { target: { value: '12 reais' } })
+    fireEvent.click(screen.getByText('Enviar'))
+
+    await waitFor(() => {
+      // Confirma que a mensagem foi processada pela IA e lançou sem re-imprimir pergunta
+      expect(screen.getByText(/Lançado: R\$ 12,00 em Transporte! 👍/i)).toBeDefined()
+      expect(screen.getByText('[Desfazer]')).toBeDefined()
+    })
+  })
+
   it('exibe saudação contextual dinâmica e chips de sugestão rápida', async () => {
     ;(window as any).SpeechRecognition = undefined
     ;(window as any).webkitSpeechRecognition = undefined

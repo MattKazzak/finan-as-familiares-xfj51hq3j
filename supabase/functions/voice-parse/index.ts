@@ -181,7 +181,40 @@ Deno.serve(async (req: Request) => {
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
     const sevenDaysAgoStr = sevenDaysAgo.toISOString().slice(0, 10)
 
-    // Buscar categorias e subcategorias (se não vierem completas no body ou mesclar)
+    // Otimização de Performance (Bug 2):
+    // Se a requisição for um lançamento de gasto/receita ou resposta de valor (contexto_anterior presente),
+    // pule as consultas pesadas de extrato, últimos 7 dias e orçamentos.
+    // Busque o resumo financeiro SOMENTE se a mensagem contiver termos consultivos explícitos.
+    const normalizedText = texto.toLowerCase()
+    const hasPreviousContext = Boolean(
+      body.contexto_anterior &&
+      (body.contexto_anterior.descricao ||
+        body.contexto_anterior.valor ||
+        body.contexto_anterior.categoria ||
+        body.contexto_anterior.status),
+    )
+
+    const isConsultativeQuery =
+      !hasPreviousContext &&
+      (normalizedText.includes('quanto posso gastar') ||
+        normalizedText.includes('quanto ainda posso') ||
+        normalizedText.includes('posso gastar') ||
+        normalizedText.includes('saldo') ||
+        normalizedText.includes('gastos da semana') ||
+        normalizedText.includes('gasto da semana') ||
+        normalizedText.includes('maior gasto') ||
+        normalizedText.includes('meus gastos') ||
+        normalizedText.includes('extrato') ||
+        normalizedText.includes('como estao meus') ||
+        normalizedText.includes('como estão meus') ||
+        normalizedText.includes('baldes') ||
+        normalizedText.includes('balde') ||
+        normalizedText.includes('orçamento') ||
+        normalizedText.includes('orcamento') ||
+        normalizedText.includes('quanto gastei') ||
+        normalizedText.includes('quanto sobrou'))
+
+    // 1. Categorias: utilize body.categorias enviado pelo front-end sempre que disponível (sem query no banco)
     let categoriesList: any[] = []
     if (Array.isArray(body.categorias) && body.categorias.length > 0) {
       categoriesList = body.categorias.map((c) => ({
@@ -204,136 +237,144 @@ Deno.serve(async (req: Request) => {
       categoriesList = categoriesData || []
     }
 
-    // Buscar membros da família
-    let membersQuery = supabase.from('family_members').select('id, name, is_admin')
+    // 2. Membros da família (apenas se targetFamilyId existir)
+    let membersData: any[] = []
     if (targetFamilyId) {
-      membersQuery = membersQuery.eq('family_id', targetFamilyId)
-    }
-    const { data: membersData } = await membersQuery
-
-    // Buscar família com monthly_net_income_cents e budget_model
-    let familyData: any = null
-    if (targetFamilyId) {
-      const { data: fam } = await supabase
-        .from('families')
-        .select('id, name, monthly_net_income_cents, budget_model')
-        .eq('id', targetFamilyId)
-        .maybeSingle()
-      familyData = fam
+      let membersQuery = supabase
+        .from('family_members')
+        .select('id, name, is_admin')
+        .eq('family_id', targetFamilyId)
+      const { data: mData } = await membersQuery
+      membersData = mData || []
     }
 
-    // Buscar transações do mês corrente
-    let monthTransactionsQuery = supabase
-      .from('transactions')
-      .select(
-        'id, amount_cents, type, description, transaction_date, category_id, transaction_categories(name, budget_bucket)',
-      )
-      .gte('transaction_date', currentMonthStr)
-      .lt('transaction_date', nextMonthStr)
-      .eq('status', 'confirmed')
+    // 3. Resumo financeiro condicional (economiza ~8 queries em lançamentos rápidos e turno 2)
+    let financialSummaryContext = ''
+    if (isConsultativeQuery) {
+      const currentYear = now.getFullYear()
+      const currentMonthNum = now.getMonth() + 1
+      const currentMonthStr = `${currentYear}-${String(currentMonthNum).padStart(2, '0')}-01`
+      const nextMonthStr = `${now.getMonth() === 11 ? currentYear + 1 : currentYear}-${String(
+        ((now.getMonth() + 1) % 12) + 1,
+      ).padStart(2, '0')}-01`
 
-    if (targetFamilyId) {
-      monthTransactionsQuery = monthTransactionsQuery.eq('family_id', targetFamilyId)
-    }
-    const { data: monthTransactions } = await monthTransactionsQuery
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      const sevenDaysAgoStr = sevenDaysAgo.toISOString().slice(0, 10)
 
-    // Buscar transações dos últimos 7 dias para consultas como "maior gasto da semana"
-    let recentTransactionsQuery = supabase
-      .from('transactions')
-      .select('id, amount_cents, type, description, transaction_date, transaction_categories(name)')
-      .gte('transaction_date', sevenDaysAgoStr)
-      .eq('type', 'expense')
-      .eq('status', 'confirmed')
-      .order('amount_cents', { ascending: false })
-      .limit(5)
+      // Executa as consultas financeiras em paralelo para máxima velocidade
+      const [famRes, monthTxRes, recentTxRes, budgetsRes] = await Promise.all([
+        targetFamilyId
+          ? supabase
+              .from('families')
+              .select('id, name, monthly_net_income_cents, budget_model')
+              .eq('id', targetFamilyId)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+        targetFamilyId
+          ? supabase
+              .from('transactions')
+              .select(
+                'id, amount_cents, type, description, transaction_date, category_id, transaction_categories(name, budget_bucket)',
+              )
+              .gte('transaction_date', currentMonthStr)
+              .lt('transaction_date', nextMonthStr)
+              .eq('status', 'confirmed')
+              .eq('family_id', targetFamilyId)
+          : Promise.resolve({ data: [] }),
+        targetFamilyId
+          ? supabase
+              .from('transactions')
+              .select(
+                'id, amount_cents, type, description, transaction_date, transaction_categories(name)',
+              )
+              .gte('transaction_date', sevenDaysAgoStr)
+              .eq('type', 'expense')
+              .eq('status', 'confirmed')
+              .eq('family_id', targetFamilyId)
+              .order('amount_cents', { ascending: false })
+              .limit(5)
+          : Promise.resolve({ data: [] }),
+        targetFamilyId
+          ? supabase
+              .from('budgets')
+              .select('amount_cents, category_id, transaction_categories(name, budget_bucket)')
+              .eq('month', currentMonthStr)
+              .eq('family_id', targetFamilyId)
+          : Promise.resolve({ data: [] }),
+      ])
 
-    if (targetFamilyId) {
-      recentTransactionsQuery = recentTransactionsQuery.eq('family_id', targetFamilyId)
-    }
-    const { data: topWeekExpenses } = await recentTransactionsQuery
+      const familyData: any = famRes.data
+      const monthTransactions: any[] = monthTxRes.data || []
+      const topWeekExpenses: any[] = recentTxRes.data || []
+      const monthlyBudgets: any[] = budgetsRes.data || []
 
-    // Buscar orçamentos (budgets ou default_budgets)
-    let budgetsQuery = supabase
-      .from('budgets')
-      .select('amount_cents, category_id, transaction_categories(name, budget_bucket)')
-      .eq('month', currentMonthStr)
-
-    if (targetFamilyId) {
-      budgetsQuery = budgetsQuery.eq('family_id', targetFamilyId)
-    }
-    const { data: monthlyBudgets } = await budgetsQuery
-
-    // Totais calculados
-    let totalExpenseMonthCents = 0
-    let totalIncomeMonthCents = 0
-    const expensesByBucketCents = {
-      essential: 0,
-      lifestyle: 0,
-      goals: 0,
-    }
-
-    ;(monthTransactions || []).forEach((tx: any) => {
-      const amount = Number(tx.amount_cents || 0)
-      if (tx.type === 'expense') {
-        totalExpenseMonthCents += amount
-        const bucket = tx.transaction_categories?.budget_bucket || 'lifestyle'
-        if (bucket === 'essential' || bucket === 'essentials') {
-          expensesByBucketCents.essential += amount
-        } else if (bucket === 'goals' || bucket === 'future') {
-          expensesByBucketCents.goals += amount
-        } else {
-          expensesByBucketCents.lifestyle += amount
-        }
-      } else if (tx.type === 'income') {
-        totalIncomeMonthCents += amount
+      let totalExpenseMonthCents = 0
+      let totalIncomeMonthCents = 0
+      const expensesByBucketCents = {
+        essential: 0,
+        lifestyle: 0,
+        goals: 0,
       }
-    })
 
-    // Orçamento total configurado (da tabela budgets ou da renda mensal)
-    let totalBudgetConfiguredCents = 0
-    ;(monthlyBudgets || []).forEach((b: any) => {
-      totalBudgetConfiguredCents += Number(b.amount_cents || 0)
-    })
+      monthTransactions.forEach((tx: any) => {
+        const amount = Number(tx.amount_cents || 0)
+        if (tx.type === 'expense') {
+          totalExpenseMonthCents += amount
+          const bucket = tx.transaction_categories?.budget_bucket || 'lifestyle'
+          if (bucket === 'essential' || bucket === 'essentials') {
+            expensesByBucketCents.essential += amount
+          } else if (bucket === 'goals' || bucket === 'future') {
+            expensesByBucketCents.goals += amount
+          } else {
+            expensesByBucketCents.lifestyle += amount
+          }
+        } else if (tx.type === 'income') {
+          totalIncomeMonthCents += amount
+        }
+      })
 
-    const netIncomeCents = Number(familyData?.monthly_net_income_cents || 0)
-    const budgetModel = familyData?.budget_model || '60_25_15'
+      let totalBudgetConfiguredCents = 0
+      monthlyBudgets.forEach((b: any) => {
+        totalBudgetConfiguredCents += Number(b.amount_cents || 0)
+      })
 
-    // Definir metas percentuais por balde baseadas no modelo (com 60/25/15 como padrão oficial da família)
-    let targets = { essentials: 60, lifestyle: 25, future: 15 }
-    if (budgetModel === '50_30_20') {
-      targets = { essentials: 50, lifestyle: 30, future: 20 }
-    } else if (budgetModel === '70_20_10') {
-      targets = { essentials: 70, lifestyle: 20, future: 10 }
-    } else if (budgetModel === '60_20_20') {
-      targets = { essentials: 60, lifestyle: 20, future: 20 }
-    }
+      const netIncomeCents = Number(familyData?.monthly_net_income_cents || 0)
+      const budgetModel = familyData?.budget_model || '60_25_15'
 
-    const targetEssentialsCents = Math.round((netIncomeCents * targets.essentials) / 100)
-    const targetLifestyleCents = Math.round((netIncomeCents * targets.lifestyle) / 100)
-    const targetGoalsCents = Math.round((netIncomeCents * targets.future) / 100)
+      let targets = { essentials: 60, lifestyle: 25, future: 15 }
+      if (budgetModel === '50_30_20') {
+        targets = { essentials: 50, lifestyle: 30, future: 20 }
+      } else if (budgetModel === '70_20_10') {
+        targets = { essentials: 70, lifestyle: 20, future: 10 }
+      } else if (budgetModel === '60_20_20') {
+        targets = { essentials: 60, lifestyle: 20, future: 20 }
+      }
 
-    const remainingLifestyleCents =
-      targetLifestyleCents > 0
-        ? Math.max(0, targetLifestyleCents - expensesByBucketCents.lifestyle)
-        : null
+      const targetEssentialsCents = Math.round((netIncomeCents * targets.essentials) / 100)
+      const targetLifestyleCents = Math.round((netIncomeCents * targets.lifestyle) / 100)
+      const targetGoalsCents = Math.round((netIncomeCents * targets.future) / 100)
 
-    const effectiveBudgetLimitCents =
-      totalBudgetConfiguredCents > 0
-        ? totalBudgetConfiguredCents
-        : netIncomeCents > 0
-          ? netIncomeCents
-          : 0
+      const remainingLifestyleCents =
+        targetLifestyleCents > 0
+          ? Math.max(0, targetLifestyleCents - expensesByBucketCents.lifestyle)
+          : null
 
-    const remainingBudgetMonthCents =
-      effectiveBudgetLimitCents > 0
-        ? Math.max(0, effectiveBudgetLimitCents - totalExpenseMonthCents)
-        : null
+      const effectiveBudgetLimitCents =
+        totalBudgetConfiguredCents > 0
+          ? totalBudgetConfiguredCents
+          : netIncomeCents > 0
+            ? netIncomeCents
+            : 0
 
-    const maiorGastoSemana =
-      topWeekExpenses && topWeekExpenses.length > 0 ? topWeekExpenses[0] : null
+      const remainingBudgetMonthCents =
+        effectiveBudgetLimitCents > 0
+          ? Math.max(0, effectiveBudgetLimitCents - totalExpenseMonthCents)
+          : null
 
-    // Formatar contexto financeiro para a IA responder consultas
-    const financialSummaryContext = `
+      const maiorGastoSemana =
+        topWeekExpenses && topWeekExpenses.length > 0 ? topWeekExpenses[0] : null
+
+      financialSummaryContext = `
 DADOS FINANCEIROS REAIS DA FAMÍLIA (MÊS ATUAL: ${currentMonthStr.slice(0, 7)}):
 - Modelo Orçamentário da Família: ${targets.essentials}/${targets.lifestyle}/${targets.future} (Essenciais ${targets.essentials}%, Estilo de Vida ${targets.lifestyle}%, Metas/Futuro ${targets.future}%)
 - Renda líquida mensal cadastrada da família: ${netIncomeCents > 0 ? formatCentsToBRL(netIncomeCents) : 'Não informada'}
@@ -344,16 +385,17 @@ DADOS FINANCEIROS REAIS DA FAMÍLIA (MÊS ATUAL: ${currentMonthStr.slice(0, 7)})
 - Total de receitas recebidas este mês: ${formatCentsToBRL(totalIncomeMonthCents)}
 - Teto de orçamento total configurado para o mês: ${effectiveBudgetLimitCents > 0 ? formatCentsToBRL(effectiveBudgetLimitCents) : 'Sem teto fixo cadastrado'}
 - Saldo geral restante disponível para gastar este mês: ${
-      remainingBudgetMonthCents !== null
-        ? `${formatCentsToBRL(remainingBudgetMonthCents)} (baseado no teto de ${formatCentsToBRL(effectiveBudgetLimitCents)})`
-        : `Você já gastou ${formatCentsToBRL(totalExpenseMonthCents)} este mês. Recebeu ${formatCentsToBRL(totalIncomeMonthCents)}. O saldo atual do mês é ${formatCentsToBRL(totalIncomeMonthCents - totalExpenseMonthCents)}.`
-    }
+        remainingBudgetMonthCents !== null
+          ? `${formatCentsToBRL(remainingBudgetMonthCents)} (baseado no teto de ${formatCentsToBRL(effectiveBudgetLimitCents)})`
+          : `Você já gastou ${formatCentsToBRL(totalExpenseMonthCents)} este mês. Recebeu ${formatCentsToBRL(totalIncomeMonthCents)}. O saldo atual do mês é ${formatCentsToBRL(totalIncomeMonthCents - totalExpenseMonthCents)}.`
+      }
 - Maior gasto dos últimos 7 dias: ${
-      maiorGastoSemana
-        ? `"${maiorGastoSemana.description || 'Gasto'}" no valor de ${formatCentsToBRL(Number(maiorGastoSemana.amount_cents || 0))} em ${maiorGastoSemana.transaction_date}${maiorGastoSemana.transaction_categories?.name ? ` (${maiorGastoSemana.transaction_categories.name})` : ''}`
-        : 'Nenhum gasto registrado nos últimos 7 dias.'
-    }
+        maiorGastoSemana
+          ? `"${maiorGastoSemana.description || 'Gasto'}" no valor de ${formatCentsToBRL(Number(maiorGastoSemana.amount_cents || 0))} em ${maiorGastoSemana.transaction_date}${maiorGastoSemana.transaction_categories?.name ? ` (${maiorGastoSemana.transaction_categories.name})` : ''}`
+          : 'Nenhum gasto registrado nos últimos 7 dias.'
+      }
 `
+    }
 
     // Formatar categorias e subcategorias para o System Prompt
     const categoriesContext = (categoriesList || [])
@@ -402,14 +444,16 @@ CONTEXTO ANTERIOR DE UMA TRANSAÇÃO EM ANDAMENTO NA SESSÃO:
 INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTENÇÃO:
 1. SE O STATUS ANTERIOR FOR 'falta_valor' (SLOT-FILLING DE VALOR):
   O usuário já disse o item anteriormente (ex: "${previousContext.descricao || 'item'}" em "${previousContext.estabelecimento || ''}").
-  Agora ele está informando apenas o valor (seja isolado como "52", "10", "trinta", "cinquenta e dois reais", "10 reais", "80 no débito", "paguei no pix 50", etc.).
-  - REGRA ABSOLUTA DE SLOT-FILLING:
-    * Capture o número/valor informado como o valor da transação anterior.
-    * MESCLE com o contexto anterior: preserve descricao "${previousContext.descricao || ''}", estabelecimento "${previousContext.estabelecimento || ''}".
-    * Escolha a melhor categoria e subcategoria existente da família para esse item.
-    * RETORNE "status": "sucesso"!
-    * Preencha a "transacao" completa com "valor", "categoria", "subcategoria", "balde" e "tipo".
-    * Em "mensagem_amigavel", gere uma confirmação natural, concisa e conversacional em uma única frase (ex: "Lançado: R$ 10,00 em Gastronomia › Lanches! 👍").
+  Agora ele está informando o valor — inclusive número isolado ou frase curta como "12", "12 reais", "doze", "doze reais", "52", "10", "trinta", "cinquenta e dois reais", "80 no débito", "paguei no pix 50", etc.
+  - REGRA ABSOLUTA DE SLOT-FILLING (TURNO 2):
+    * Número isolado ("12", "12 reais", "doze", etc.) quando há contexto anterior falta_valor É O VALOR da transação pendente!
+    * NUNCA re-pergunte o valor e NUNCA retorne "falta_valor" quando um número for fornecido.
+    * Capture o número/valor informado como o valor da transação anterior (ex: "12 reais" -> valor: 12.0).
+    * MESCLE com o contexto anterior: preserve descricao "${previousContext.descricao || ''}", estabelecimento "${previousContext.estabelecimento || ''}", tipo "${previousContext.tipo || 'despesa'}".
+    * Escolha a melhor categoria e subcategoria existente da família para esse item (ou use a categoria anterior "${previousContext.categoria || ''}").
+    * RETORNE OBRIGATORIAMENTE "status": "sucesso"!
+    * Preencha a "transacao" completa com "descricao", "estabelecimento", "valor", "categoria", "subcategoria", "balde" e "tipo".
+    * Em "mensagem_amigavel", gere uma confirmação natural, concisa e conversacional em uma única frase (ex: "Lançado: R$ 12,00 em ${previousContext.categoria || 'Geral'}! 👍").
 
 2. SE O STATUS ANTERIOR FOR 'clarificacao_categoria':
   - Se o usuário estiver escolhendo ou esclarecendo, selecione a categoria/subcategoria existente da família autonomamente e retorne "status": "sucesso" com a transação completa.
@@ -464,9 +508,9 @@ DIRETRIZES DE INTELIGÊNCIA REAL (PADRÃO OURO):
     * "transacao" com nova descrição.
     * "mensagem_amigavel": "Descrição corrigida para Feijão!"
 
-3. NÚMEROS PUROS E SLOT-FILLING:
-  - Se a mensagem contiver apenas um número como "52", "52 reais", "cinquenta e dois" e havia contexto anterior sem valor (ou ajustando valor), capture 52 como o valor da transação e combine com os dados anteriores.
-
+3. NÚMEROS PUROS E SLOT-FILLING (REGRA DE TURNO 2):
+  - Se a mensagem contiver um número isolado como "12", "12 reais", "doze", "doze reais", "52", "52 reais", "cinquenta e dois" e havia contexto anterior sem valor (status anterior 'falta_valor'), capture esse número como o valor da transação pendente.
+  - MESCLE com a descrição do contexto anterior e RETORNE IMEDIATAMENTE "status": "sucesso" com a transação completa, sem re-perguntar.
 4. CONSULTAS FINANCEIRAS (QUANTO POSSO GASTAR / SALDO):
   - Quando o usuário perguntar "Quanto ainda posso gastar?", "Como estão meus gastos?", responda de forma sintética, direta e acolhedora em 2-3 linhas, citando o saldo disponível do mês e a situação do balde de Estilo de Vida com base no resumo financeiro fornecido.
 

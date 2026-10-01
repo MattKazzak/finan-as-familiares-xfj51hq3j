@@ -461,26 +461,28 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
               },
             ])
             return
-          } else {
-            toast({
-              title: 'Valor não identificado',
-              description:
-                'Não conseguimos identificar o valor falado. Tente digitar ou falar novamente.',
-              variant: 'destructive',
-            })
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: `assistant-${Date.now()}`,
-                sender: 'assistant',
-                text: 'Não consegui identificar o valor em reais. Você pode falar apenas o número (ex: "80 reais") ou digitar abaixo.',
-                timestamp: new Date(),
-                cardData: existingPartial,
-                cardType: 'falta_valor',
-              },
-            ])
-            return
           }
+          // Caso a IA não tenha retornado amountCents > 0 diretamente mesmo com contexto falta_valor,
+          // NÃO re-imprime a pergunta anterior na tela nem repete "Identifiquei X. Quanto custou?".
+          // Mantém o estado pendente e orienta objetivamente uma única vez.
+          toast({
+            title: 'Valor não identificado',
+            description:
+              'Não conseguimos identificar o valor falado. Fale apenas o número ou digite abaixo.',
+            variant: 'destructive',
+          })
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `assistant-${Date.now()}`,
+              sender: 'assistant',
+              text: 'Não identifiquei o valor em reais. Fale apenas o número (ex: "12 reais") ou digite no campo abaixo.',
+              timestamp: new Date(),
+              cardData: existingPartial,
+              cardType: 'falta_valor',
+            },
+          ])
+          return
         }
 
         // Caso 4: Resposta Consultiva da IA / Pergunta reflexiva enquanto em clarificação de categoria
