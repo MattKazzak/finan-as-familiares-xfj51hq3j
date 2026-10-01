@@ -400,44 +400,19 @@ CONTEXTO ANTERIOR DE UMA TRANSAÇÃO EM ANDAMENTO NA SESSÃO:
 - Opções de sugestão oferecidas anteriormente: [${opcoesStr}]
 
 INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTENÇÃO:
-1. SE O STATUS ANTERIOR FOR 'clarificacao_categoria' (ou se havia opções de categoria sugeridas em aberto):
-  O usuário está em diálogo sobre como organizar a despesa "${previousContext.descricao || 'anterior'}" (${valorStr}).
-  Você DEVE AVALIAR RIGOROSAMENTE A INTENÇÃO da mensagem do usuário:
+1. SE O STATUS ANTERIOR FOR 'falta_valor' (SLOT-FILLING DE VALOR):
+  O usuário já disse o item anteriormente (ex: "${previousContext.descricao || 'item'}" em "${previousContext.estabelecimento || ''}").
+  Agora ele está informando apenas o valor (seja isolado como "52", "10", "trinta", "cinquenta e dois reais", "10 reais", "80 no débito", "paguei no pix 50", etc.).
+  - REGRA ABSOLUTA DE SLOT-FILLING:
+    * Capture o número/valor informado como o valor da transação anterior.
+    * MESCLE com o contexto anterior: preserve descricao "${previousContext.descricao || ''}", estabelecimento "${previousContext.estabelecimento || ''}".
+    * Escolha a melhor categoria e subcategoria existente da família para esse item.
+    * RETORNE "status": "sucesso"!
+    * Preencha a "transacao" completa com "valor", "categoria", "subcategoria", "balde" e "tipo".
+    * Em "mensagem_amigavel", gere uma confirmação natural, concisa e conversacional em uma única frase (ex: "Lançado: R$ 10,00 em Gastronomia › Lanches! 👍").
 
-  A) PERGUNTAS SOBRE EXISTÊNCIA DE CATEGORIA NO CATÁLOGO REAL:
-     - Exemplos: "Nós temos essa categoria?", "Já temos essa categoria cadastrada?", "Essa categoria já existe?", "A gente tem essa categoria?", "Já tá cadastrada?".
-     - REGRA ABSOLUTA DE VERDADE E PRECISÃO: Verifique ESTRITAMENTE a lista de "Categorias e Subcategorias cadastradas no perfil da família" abaixo.
-       * Se a categoria NÃO estiver explicitamente cadastrada nessa lista, JAMAIS AFIRME QUE ELA JÁ EXISTE!
-       * Responda de forma honesta, transparente e prestativa no espírito:
-         "Ainda não temos essa categoria cadastrada! Ela é uma sugestão que posso criar agora mesmo para deixar seus gastos de estética organizados. O que você prefere: criar a categoria nova 'Cuidados Pessoais' ou encaixar dentro da existente 'Lazer'?"
-       * "status": "clarificacao_categoria"
-       * "tipo_resposta": "consultoria_categoria"
-       * "intencao": "consultiva"
-       * Mantenha a transação pendente intacta e as opções estruturadas disponíveis nas pílulas.
-
-  B) INTENÇÃO CONSULTIVA / DÚVIDA / METACONVERSA / PERGUNTA REFLEXIVA:
-     - Exemplos: "Qual faz mais sentido?", "O que você acha?", "Qual a diferença?", "Me ajuda a escolher", "Tanto faz", "Não sei", "Qual você recomenda?", "O que é melhor?", "Por que separar?", "Explica pra mim".
-     - REGRA INVIOLÁVEL: NUNCA, SOB NENHUMA HIPÓTESE, assuma que respostas de dúvida, aconselhamento ou metalinguagem são nomes de categorias! Frases como "Qual faz mais sentido?" JAMAIS devem ser salvas ou criadas como nome de categoria!
-     - Comportamento no Modo Consultor Financeiro da Família:
-       * "status": "clarificacao_categoria"
-       * "tipo_resposta": "consultoria_categoria"
-       * "intencao": "consultiva"
-       * "transacao": Mantenha a transação pendente original INTACTA (mesma descrição "${previousContext.descricao || ''}", mesmo valor ${previousContext.valor || 'null'}, mesmo balde "${previousContext.balde || 'Estilo de Vida'}", mesmo tipo "${previousContext.tipo || 'despesa'}").
-       * "opcoes_sugestao": Mantenha as opções sugeridas no formato estruturado especificado abaixo.
-       * "mensagem_amigavel": Responda de forma consultiva, didática e empática, aplicando a melhor prática do orçamento 50/30/20 ao caso concreto. Explique por que separar estética/bem-estar ou itens específicos dos passeios e lazer geral ajuda a enxergar o orçamento real da família no fim do mês. Termine a resposta oferecendo as opções com clareza.
-       * "pergunta_clarificacao": "Quer que eu vincule na opção recomendada ou prefere a outra?"
-
-  C) INTENÇÃO DE ESCOLHA / CONFIRMAÇÃO DE CATEGORIA:
-     - Exemplos: "fechado em cuidados pessoais", "pode ser essa", "pode ser cuidados pessoais", "prefiro lazer", "coloca em lazer", "cuidados pessoais", "a primeira", "a segunda", "pode ser a primeira".
-     - Comportamento:
-       * "status": "sucesso"
-       * "tipo_resposta": "transacao"
-       * "intencao": "escolha_categoria"
-       * "transacao": Preencha a transação completa aplicando a categoria escolhida (e subcategoria correspondente), preservando a descrição "${previousContext.descricao || ''}", o valor ${previousContext.valor || 'null'} e o balde correspondente.
-       * "mensagem_amigavel": "Perfeito! Vinculei em [Categoria Escolhida]. Confira os detalhes e confirme o lançamento:"
-
-2. SE O STATUS ANTERIOR FOR 'falta_valor':
-  Se o usuário estiver informando apenas o valor ou forma de pagamento (ex: 'foi 80 reais', '80 no debito', '45 reais', 'paguei no pix 50', '80'), MESCLE as informações e retorne status 'sucesso' com a descrição do contexto anterior e o novo valor identificado.
+2. SE O STATUS ANTERIOR FOR 'clarificacao_categoria':
+  - Se o usuário estiver escolhendo ou esclarecendo, selecione a categoria/subcategoria existente da família autonomamente e retorne "status": "sucesso" com a transação completa.
 `
     }
     const systemPrompt = `Você é o Curiangoo AI (Curiangoo Copilot), assistente financeiro inteligente do app Curiangoo para finanças familiares (Metodologia de 3 Baldes: 60/25/15 ou 50/30/20).
@@ -543,21 +518,17 @@ Comportamentos esperados:
    - "subcategoria": use existente ou crie uma inteligente e específica.
    - "balde": classifique rigorosamente entre "Necessidades Essenciais", "Estilo de Vida" ou "Metas & Investimentos".
 
-3. "clarificacao_categoria" (LANÇAMENTO CLARO, MAS CATEGORIA NÃO CADASTRADA DIRETAMENTE):
-   - O usuário falou um gasto com valor compreensível (ex: "Manicure 140 reais", "Tatuagem 300 reais", "Personal trainer 200"), e não há correspondência direta com nenhuma categoria/subcategoria existente, OU há oportunidade de encaixar como subcategoria de uma categoria existente da família.
-   - "status": "clarificacao_categoria"
-   - "tipo_resposta": "transacao"
-   - "transacao": preencha descricao, valor, balde correto, subcategoria provisória.
-   - "mensagem_amigavel": "Identifiquei [descrição do gasto/item] R$ [VALOR]! Onde prefere organizar esse gasto?" (ex: "Identifiquei manicure R$ 140,00! Onde prefere organizar esse gasto?")
-   - "opcoes_sugestao": DUAS opções pertinentes. Se existir categoria da família compatível no mesmo balde, ofereça encaixar como subcategoria dela (ex: "Manicure › dentro de Lazer (Estilo de Vida)") e a outra como categoria nova (ex: "Cuidados Pessoais (Estilo de Vida)").
+3. "clarificacao_categoria" (DESATIVADA A FORÇAGEM DE ESCOLHA):
+   - A IA deve SEMPRE escolher a melhor categoria/subcategoria existente da família autonomamente, sem travar o usuário perguntando escolha entre existente vs nova.
+   - Portanto, para lançamentos com valor, retorne DIRETAMENTE "status": "sucesso" associando a melhor categoria existente do catálogo fornecido.
 
 4. "falta_valor" (LANÇAMENTO SEM VALOR):
-   - O usuário citou um item ou compra claro (ex: "uma caixa de cerveja na parada certa", "almoço no restaurante", "gasolina no posto"), mas NÃO disse o valor monetário.
+   - O usuário citou um item ou compra claro (ex: "coxinha na padaria", "uma caixa de cerveja na parada certa", "almoço no restaurante", "gasolina no posto"), mas NÃO disse o valor monetário.
    - "status": "falta_valor"
    - "tipo_resposta": "transacao"
-   - Preserve o item preenchendo "transacao" parcial com "valor": null.
+   - Preserve o item preenchendo "transacao" parcial com "valor": null, inferindo já a melhor categoria/subcategoria existente.
    - "pergunta_clarificacao": "Quanto custou?"
-   - "mensagem_amigavel": "Entendi: [Item]! Mas quanto custou?"
+   - "mensagem_amigavel": Responda de forma puramente conversacional e direta, estilo balão de chat (ex: "Identifiquei Coxinha na Padaria. Quanto custou? 🥐").
 
 5. "clarificacao" (VALOR EXISTE, MAS DESCRIÇÃO TOTALMENTE AMBÍGUA OU GÍRIA):
    - Há um valor monetário identificado, mas o termo é ambíguo ou gíria sem sentido financeiro reconhecível (ex: "pindamonhangaba 8 reais").

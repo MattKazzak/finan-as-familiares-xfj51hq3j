@@ -329,11 +329,9 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
       )
       // Balão do usuário à direita com o texto falado
       expect(screen.getByText('Almoço 45 reais no débito')).toBeDefined()
-      // Card verde com botão [ Confirmar Lançamento ] e SEM botões 'Ajustar' ou 'Falar de novo'
-      expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
-      expect(screen.queryByText('Ajustar')).toBeNull()
-      expect(screen.queryByText('Falar de novo')).toBeNull()
-      expect(screen.getByText('R$ 45,00')).toBeDefined()
+      // Mensagem conversacional com micro-link discreto [Desfazer]
+      expect(screen.getByText(/Lançado: R\$ 45,00 em Geral/i)).toBeDefined()
+      expect(screen.getByText('[Desfazer]')).toBeDefined()
     })
   })
 
@@ -380,8 +378,8 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     fireEvent.click(screen.getByText('Transporte / Passagem'))
 
     await waitFor(() => {
-      expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
-      expect(screen.getByText('R$ 8,00')).toBeDefined()
+      expect(screen.getByText(/Usando categoria existente "Transporte"/i)).toBeDefined()
+      expect(screen.getByText('[Desfazer]')).toBeDefined()
     })
   })
 
@@ -498,7 +496,7 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     expect(screen.getByTitle('Toque para começar a falar')).toBeDefined()
   })
 
-  it('no modo "Falar apenas o valor", ao concluir a fala encerra definitivamente sem reiniciar recognition', async () => {
+  it('no modo "falta_valor", usuário informa o valor e o lançamento é concluído com balão conversacional e link desfazer', async () => {
     // Começa com uma transação em falta_valor
     mockParseVoiceWithAi.mockResolvedValueOnce({
       rawText: 'almoço no centro',
@@ -512,7 +510,7 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
       categoryNameSuggestion: 'Alimentação',
       bucketSuggestion: 'essential',
       clarificationQuestion: 'Quanto custou?',
-      friendlyMessage: 'Entendi o almoço! Quanto custou?',
+      friendlyMessage: 'Identifiquei Almoço no centro. Quanto custou? 🥐',
     })
 
     let capturedRecognitionInstance: any = null
@@ -565,7 +563,7 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     capturedRecognitionInstance.onend()
 
     await waitFor(() => {
-      expect(screen.getByText('🎤 Falar apenas o valor')).toBeDefined()
+      expect(screen.getByText(/Identifiquei Almoço no centro\. Quanto custou\?/i)).toBeDefined()
     })
 
     // Mock para a resposta da IA com o valor
@@ -582,13 +580,6 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
       bucketSuggestion: 'essential',
     })
 
-    // Usuário clica no botão "Falar apenas o valor"
-    const amountOnlyBtn = screen.getByText('🎤 Falar apenas o valor')
-    fireEvent.click(amountOnlyBtn)
-
-    // O microfone foi reativado pelo clique explícito do usuário (startCallCount = 2)
-    expect(startCallCount).toBe(2)
-
     // Usuário fala "45 reais"
     capturedRecognitionInstance.onresult({
       results: [[{ transcript: '45 reais' }]],
@@ -597,18 +588,11 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     // Dispara onend (silêncio/fim de fala)
     capturedRecognitionInstance.onend()
 
-    // NÃO deve ter reiniciar automaticamente: startCallCount continua 2
-    expect(startCallCount).toBe(2)
-
     await waitFor(() => {
-      // Card verde exibido com o valor mesclado
-      expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
-      expect(screen.getByText('R$ 45,00')).toBeDefined()
+      // Mensagem conversacional de confirmação
+      expect(screen.getByText(/Lançado: R\$ 45,00/i)).toBeDefined()
+      expect(screen.getByText('[Desfazer]')).toBeDefined()
     })
-
-    // Microfone permanece em repouso
-    expect(startCallCount).toBe(2)
-    expect(screen.getByText('Microfone pronto')).toBeDefined()
   })
 
   it('garante que nenhum start() é disparado a partir de onend ou timers automáticos (apenas toque explícito ou abertura inicial)', async () => {
@@ -783,17 +767,12 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     await waitFor(() => {
       // 1. Fala do usuário aparece como balão à direita
       expect(screen.getByText('duas caixas de cerveja na parada certa')).toBeDefined()
-      // 2. Resposta do assistente perguntando o valor
+      // 2. Resposta conversacional do assistente perguntando o valor
       expect(
         screen.getByText(
           /Entendi:\s*2 caixas de cerveja na Parada Certa!\s*🍻\s*Mas quanto custou\?/i,
         ),
       ).toBeDefined()
-      // Card de falta_valor com input de R$
-      expect(
-        screen.getByText(/Entendi:\s*2 caixas de cerveja\s*em\s*Estilo de Vida/i),
-      ).toBeDefined()
-      expect(screen.getByPlaceholderText('0,00')).toBeDefined()
     })
 
     // Turno 2: Usuário responde digitando ou falando apenas "80"
@@ -826,10 +805,9 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     await waitFor(() => {
       // Mensagem do usuário "80" registrada no chat
       expect(screen.getByText('80')).toBeDefined()
-      // Card Verde de Confirmação MESCLADO com a transação pendente anterior
-      expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
-      expect(screen.getByText('2 caixas de cerveja')).toBeDefined()
-      expect(screen.getByText('R$ 80,00')).toBeDefined()
+      // Mensagem conversacional confirmando o lançamento com [Desfazer]
+      expect(screen.getByText(/Lançado: R\$ 80,00 em Estilo de Vida/i)).toBeDefined()
+      expect(screen.getByText('[Desfazer]')).toBeDefined()
     })
   })
 
@@ -1233,10 +1211,9 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     fireEvent.click(screen.getByText('Enviar'))
 
     await waitFor(() => {
-      // Agora sim: card verde montado após decisão final
-      expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
-      expect(screen.getByText('R$ 297,50')).toBeDefined()
-      expect(screen.getByText('Manicure')).toBeDefined()
+      // Confirmação conversacional após decisão final com link desfazer
+      expect(screen.getByText(/Criada nova categoria "Cuidados Pessoais"/i)).toBeDefined()
+      expect(screen.getByText('[Desfazer]')).toBeDefined()
     })
   })
 
@@ -1307,11 +1284,9 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
         'lifestyle',
       )
 
-      // 2. Card verde de confirmação aparece imediatamente preenchido
-      expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
-      expect(screen.getByText('Manicure')).toBeDefined()
-      expect(screen.getByText('R$ 140,00')).toBeDefined()
-      expect(screen.getByText(/Cuidados Pessoais/i)).toBeDefined()
+      // 2. Confirmação conversacional aparece imediatamente com link desfazer
+      expect(screen.getByText(/Criada nova categoria "Cuidados Pessoais"/i)).toBeDefined()
+      expect(screen.getByText('[Desfazer]')).toBeDefined()
     })
   })
 
@@ -1468,7 +1443,7 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     })
   })
 
-  it('salva transação e fecha modal quando o usuário clica em [ ✅ Confirmar Lançamento ]', async () => {
+  it('executa transação autônoma diretamente no Supabase e exibe confirmação e link [Desfazer]', async () => {
     mockCreateTransaction.mockResolvedValueOnce({ id: 'tx-1' })
 
     ;(window as any).SpeechRecognition = undefined
@@ -1487,12 +1462,6 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     fireEvent.click(screen.getByText('Enviar'))
 
     await waitFor(() => {
-      expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
-    })
-
-    fireEvent.click(screen.getByText('✅ Confirmar Lançamento'))
-
-    await waitFor(() => {
       expect(mockCreateTransaction).toHaveBeenCalledWith(
         expect.objectContaining({
           family_id: 'fam-1',
@@ -1501,11 +1470,8 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
         }),
       )
       expect(mockTriggerRefresh).toHaveBeenCalled()
-      expect(mockToast).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: expect.stringContaining('Lançamento registrado com sucesso'),
-        }),
-      )
+      expect(screen.getByText(/Lançado: R\$ 45,00/i)).toBeDefined()
+      expect(screen.getByText('[Desfazer]')).toBeDefined()
     })
   })
 
@@ -1624,7 +1590,7 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Usando categoria existente "Lazer"/i)).toBeDefined()
-      expect(screen.getByText('✅ Confirmar Lançamento')).toBeDefined()
+      expect(screen.getByText('[Desfazer]')).toBeDefined()
     })
   })
 

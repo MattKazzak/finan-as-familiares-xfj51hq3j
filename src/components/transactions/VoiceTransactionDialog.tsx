@@ -201,7 +201,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     }
   }, [])
 
-  // Mesclar novo valor com transação parcial pendente
+  // Mesclar novo valor com transação parcial pendente (delega merge inteligente à IA sem trava de regex local)
   const handleMergeAmountIntoTransaction = useCallback(
     (
       newAmountCents: number,
@@ -209,43 +209,38 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       mergedCandidate?: Partial<ParsedVoiceTransaction>,
     ): ParsedVoiceTransaction | null => {
       const base = pendingTransactionRef.current
-      if (!base || newAmountCents <= 0) return null
+      if (!base && !mergedCandidate) return null
 
-      const formatted = (newAmountCents / 100).toLocaleString('pt-BR', {
+      const activeBase = base || ({} as ParsedVoiceTransaction)
+      const cents = newAmountCents > 0 ? newAmountCents : mergedCandidate?.amountCents || 0
+
+      const formatted = (cents / 100).toLocaleString('pt-BR', {
         style: 'currency',
         currency: 'BRL',
       })
 
-      // Preservar sempre a descrição anterior, exceto se a nova for um item real e não apenas valor
-      const candidateDesc = mergedCandidate?.description?.trim()
-      const isCandidateDescJustAmount =
-        !candidateDesc ||
-        /^(\d+|r\$|reais|real|foi|no|na|via|pix|debito|débito|credito|crédito|dinheiro|\s)+$/i.test(
-          candidateDesc,
-        )
-
       const finalDescription =
-        !isCandidateDescJustAmount && candidateDesc ? candidateDesc : base.description
+        mergedCandidate?.description?.trim() || activeBase.description || 'Lançamento'
 
       const merged: ParsedVoiceTransaction = {
-        ...base,
+        ...activeBase,
         ...mergedCandidate,
-        amountCents: newAmountCents,
+        amountCents: cents,
         amountFormatted: formatted,
         description: finalDescription,
-        establishment: mergedCandidate?.establishment || base.establishment,
+        establishment: mergedCandidate?.establishment || activeBase.establishment,
         categoryNameSuggestion:
-          mergedCandidate?.categoryNameSuggestion || base.categoryNameSuggestion,
+          mergedCandidate?.categoryNameSuggestion || activeBase.categoryNameSuggestion,
         subcategoryNameSuggestion:
-          mergedCandidate?.subcategoryNameSuggestion || base.subcategoryNameSuggestion,
-        bucketSuggestion: mergedCandidate?.bucketSuggestion || base.bucketSuggestion,
+          mergedCandidate?.subcategoryNameSuggestion || activeBase.subcategoryNameSuggestion,
+        bucketSuggestion: mergedCandidate?.bucketSuggestion || activeBase.bucketSuggestion,
         paymentMethod:
-          paymentMethodOverride || mergedCandidate?.paymentMethod || base.paymentMethod,
+          paymentMethodOverride || mergedCandidate?.paymentMethod || activeBase.paymentMethod,
         aiStatus: 'sucesso',
-        confidence: 0.95,
+        confidence: mergedCandidate?.confidence || 0.95,
         clarificationQuestion: null,
         clarificationOptions: null,
-        friendlyMessage: null,
+        friendlyMessage: mergedCandidate?.friendlyMessage || null,
       }
 
       setPendingTransaction(merged)
@@ -400,9 +395,11 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           setPendingTransaction(parsed)
           pendingTransactionRef.current = parsed
 
+          const localDesc = parsed.establishment
+            ? `${parsed.description} na ${parsed.establishment}`
+            : parsed.description
           const friendlyMsg =
-            parsed.friendlyMessage ||
-            `Entendi: ${parsed.description}${parsed.establishment ? ` em ${parsed.establishment}` : ''}! 🍻 Mas quanto custou?`
+            parsed.friendlyMessage || `Identifiquei ${localDesc}. Quanto custou? 🥐`
 
           setMessages((prev) => [
             ...prev,
@@ -415,6 +412,11 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
               cardType: 'falta_valor',
             },
           ])
+
+          // Deixar o mic pronto para ouvir o valor
+          setTimeout(() => {
+            startRecording({ forAmountOnly: true })
+          }, 400)
           return
         }
 
@@ -429,6 +431,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
             const confirmedData = merged || {
               ...existingPartial,
+              ...parsed,
               amountCents: parsed.amountCents,
               amountFormatted: parsed.amountFormatted,
               aiStatus: 'sucesso' as const,
@@ -440,12 +443,17 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             const subName = result?.subcategoryName || confirmedData.subcategoryNameSuggestion || ''
             const txId = (result?.createdTx as any)?.id || null
 
+            const confirmationText =
+              parsed.friendlyMessage && !parsed.friendlyMessage.includes('?')
+                ? parsed.friendlyMessage
+                : `Lançado: ${confirmedData.amountFormatted} em ${catName}${subName ? ` › ${subName}` : ''}! 👍`
+
             setMessages((prev) => [
               ...prev,
               {
                 id: `assistant-${Date.now()}`,
                 sender: 'assistant',
-                text: `Lançado: ${confirmedData.amountFormatted} em ${catName}${subName ? ` › ${subName}` : ''} ✨`,
+                text: confirmationText,
                 timestamp: new Date(),
                 cardData: confirmedData,
                 cardType: 'sucesso',
@@ -577,12 +585,17 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           const subName = result?.subcategoryName || finalParsed.subcategoryNameSuggestion || ''
           const txId = (result?.createdTx as any)?.id || null
 
+          const launchText =
+            parsed.friendlyMessage && !parsed.friendlyMessage.includes('?')
+              ? parsed.friendlyMessage
+              : `Lançado: ${finalParsed.amountFormatted} em ${catName}${subName ? ` › ${subName}` : ''}! 👍`
+
           setMessages((prev) => [
             ...prev,
             {
               id: `assistant-${Date.now()}`,
               sender: 'assistant',
-              text: `Lançado: ${finalParsed.amountFormatted} em ${catName}${subName ? ` › ${subName}` : ''} ✨`,
+              text: launchText,
               timestamp: new Date(),
               cardData: finalParsed,
               cardType: 'sucesso',
@@ -895,7 +908,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     [clearSilenceTimer, handleStopAndProcess],
   )
 
-  // Auto-foco no input de valor quando entra no estado 'falta_valor'
+  // Auto-foco no input de valor quando entra no estado 'falta_valor' (se renderizado)
   useEffect(() => {
     if (pendingTransaction?.aiStatus === 'falta_valor') {
       const timer = setTimeout(() => {
@@ -977,8 +990,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     handleStopAndProcess(textToSend)
   }
 
-  // Confirmar valor digitado diretamente no card falta_valor
-  const handleConfirmMissingAmount = (e?: React.FormEvent) => {
+  // Confirmar valor digitado diretamente no card falta_valor (se chamado via fallback)
+  const handleConfirmMissingAmount = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     const base = pendingTransactionRef.current
     if (!base) return
@@ -1010,15 +1023,21 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
     const merged = handleMergeAmountIntoTransaction(cents)
     if (merged) {
+      const result = await executeAutonomousTransaction(merged)
+      const catName = result?.categoryName || merged.categoryNameSuggestion || 'Geral'
+      const subName = result?.subcategoryName || merged.subcategoryNameSuggestion || ''
+      const txId = (result?.createdTx as any)?.id || null
+
       setMessages((prev) => [
         ...prev,
         {
           id: `assistant-${Date.now()}`,
           sender: 'assistant',
-          text: `Valor de ${merged.amountFormatted} registrado! Confira o lançamento abaixo:`,
+          text: `Lançado: ${merged.amountFormatted} em ${catName}${subName ? ` › ${subName}` : ''}! 👍`,
           timestamp: new Date(),
           cardData: merged,
           cardType: 'sucesso',
+          confirmedTxId: txId,
         },
       ])
     }
@@ -1596,138 +1615,26 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     onOpenChange(false)
   }
 
-  // Renderizador do Card Verde de Confirmação dentro do Chat
-  const renderSuccessCard = (data: ParsedVoiceTransaction) => {
-    const bucketKey = (
-      data.bucketSuggestion === 'goals'
-        ? 'future'
-        : data.bucketSuggestion === 'essential'
-          ? 'essentials'
-          : data.bucketSuggestion || 'lifestyle'
-    ) as BudgetBucket
-    const bucketInfo = BUCKET_METADATA[bucketKey]
-    const bucketLabel = bucketInfo?.shortLabel || 'Estilo de Vida'
-    const categoryName = data.categoryNameSuggestion || 'Geral'
-    const isExpense = data.type !== 'income'
+  // Renderizadores de cards legados desativados na UI conversacional WhatsApp
+  // Mantidos como stubs no-op para preservar assinaturas se chamados
+  const renderSuccessCard = (_data: ParsedVoiceTransaction) => null
 
-    return (
-      <div className="mt-2.5 w-full rounded-2xl border border-emerald-300/80 bg-gradient-to-br from-emerald-50/95 via-teal-50/60 to-white p-3 sm:p-3.5 space-y-3 shadow-md text-left overflow-hidden">
-        {/* Cabeçalho: Tipo à esquerda + Precisão à direita */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span
-              className={`w-6 h-6 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-xs shrink-0 ${
-                isExpense ? 'bg-rose-600' : 'bg-emerald-600'
-              }`}
-            >
-              {isExpense ? (
-                <ArrowDownRight className="w-3.5 h-3.5 stroke-[2.5]" />
-              ) : (
-                <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
-              )}
-            </span>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 truncate">
-              {isExpense ? 'Despesa Detectada' : 'Receita Detectada'}
-            </span>
-          </div>
-
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0 whitespace-nowrap">
-            {Math.round(data.confidence * 100)}% precisão
-          </span>
-        </div>
-
-        {/* Bloco Central Mobile-First: Descrição, Valor em Destaque e Categorização Clara */}
-        <div className="space-y-2.5 rounded-xl bg-white/85 p-2.5 sm:p-3 border border-emerald-200/70 shadow-xs">
-          {/* Título / Descrição */}
-          <div className="space-y-0.5">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 block">
-              Descrição
-            </span>
-            <h4 className="text-sm font-bold text-slate-900 leading-snug break-words">
-              {data.description}
-            </h4>
-            {data.establishment && (
-              <p className="text-[11px] text-slate-500 break-words">
-                Local: <strong className="text-slate-700">{data.establishment}</strong>
-              </p>
-            )}
-          </div>
-
-          {/* Valor em destaque próprio */}
-          <div className="pt-2 border-t border-slate-100 flex flex-col">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-              Valor
-            </span>
-            <span
-              className={`text-2xl font-black tabular-nums tracking-tight break-words ${
-                isExpense ? 'text-slate-950' : 'text-emerald-700'
-              }`}
-            >
-              {data.amountCents > 0 ? data.amountFormatted : 'R$ 0,00'}
-            </span>
-          </div>
-
-          {/* Categoria e Balde bem visíveis em linhas/chips dedicados */}
-          <div className="pt-2 border-t border-slate-100 space-y-1.5">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 block">
-              Classificação Orçamentária
-            </span>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {/* Chip da Categoria */}
-              <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-100/90 text-[#064E3B] border border-emerald-300/80 max-w-full">
-                <Tag className="w-3 h-3 shrink-0 text-emerald-700" />
-                <span className="truncate" title={categoryName}>
-                  {categoryName}
-                  {data.subcategoryNameSuggestion ? ` › ${data.subcategoryNameSuggestion}` : ''}
-                </span>
-              </span>
-
-              {/* Chip do Balde Orçamentário */}
-              <span
-                className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg border max-w-full ${
-                  bucketInfo?.bgLight || 'bg-amber-50 text-amber-800 border-amber-200'
-                }`}
-                title={`Balde: ${bucketInfo?.name || bucketLabel}`}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0 opacity-80" />
-                <span className="truncate">{bucketLabel}</span>
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Botões de Ação no próprio balão de chat */}
-        <div className="pt-1 border-t border-emerald-200/70">
-          <Button
-            type="button"
-            onClick={() => handleConfirmTransaction(data)}
-            disabled={isSaving || data.amountCents <= 0}
-            className="w-full bg-[#064E3B] hover:bg-emerald-900 text-white rounded-xl font-bold text-xs h-11 gap-1.5 shadow-sm transition-all active:scale-[0.99]"
-          >
-            <CheckCircle2 className="w-4 h-4 text-emerald-300 shrink-0" />
-            <span className="truncate">{isSaving ? 'Salvando...' : '✅ Confirmar Lançamento'}</span>
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
-  // Renderizador elegante de Micro-Links de Ação (Desfazer | Alterar)
+  // Micro-link discreto [Desfazer] para reverter lançamento estilo WhatsApp
   const renderConfirmationMicroLinks = (msg: ChatMessage) => {
     return (
-      <div className="mt-2 pt-2 border-t border-emerald-200/60 flex items-center gap-3 text-[11px]">
+      <div className="mt-1.5 pt-1.5 border-t border-slate-200/70 flex items-center gap-2.5 text-[11px]">
         <button
           type="button"
           onClick={() => handleUndoLastTransaction(msg.confirmedTxId)}
           className="text-rose-600 hover:text-rose-800 font-semibold underline underline-offset-2 transition-colors cursor-pointer"
         >
-          Desfazer
+          [Desfazer]
         </button>
         <span className="text-slate-300">|</span>
         <button
           type="button"
           onClick={() => handleEditLastTransaction(msg.cardData)}
-          className="text-emerald-700 hover:text-emerald-900 font-semibold underline underline-offset-2 transition-colors cursor-pointer"
+          className="text-slate-500 hover:text-slate-700 font-semibold underline underline-offset-2 transition-colors cursor-pointer"
         >
           Alterar
         </button>
@@ -1735,115 +1642,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     )
   }
 
-  // Renderizador do Card falta_valor no Chat
-  const renderMissingAmountCard = (data: ParsedVoiceTransaction) => {
-    const bucketLabel = data.bucketSuggestion
-      ? BUCKET_METADATA[
-          (data.bucketSuggestion === 'goals'
-            ? 'future'
-            : data.bucketSuggestion === 'essential'
-              ? 'essentials'
-              : data.bucketSuggestion) as BudgetBucket
-        ]?.shortLabel || 'Estilo de Vida'
-      : 'Estilo de Vida'
-
-    return (
-      <div className="mt-2.5 rounded-2xl border border-sky-300 bg-gradient-to-br from-sky-50/95 to-white p-3.5 space-y-3 shadow-md">
-        <div className="space-y-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-sky-800 block">
-            📝 Item Identificado
-          </span>
-          <h4 className="text-sm font-bold text-slate-900 leading-snug break-words">
-            Entendi: {data.description} em {data.categoryNameSuggestion || bucketLabel}
-          </h4>
-          {data.establishment && (
-            <p className="text-[11px] text-sky-900">
-              Local: <strong>{data.establishment}</strong>
-            </p>
-          )}
-        </div>
-
-        <div className="space-y-2 pt-1 border-t border-sky-200">
-          <form onSubmit={handleConfirmMissingAmount} className="flex gap-2">
-            <div className="relative flex-1">
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">
-                R$
-              </span>
-              <Input
-                ref={missingAmountInputRef}
-                type="text"
-                inputMode="decimal"
-                placeholder="0,00"
-                value={missingAmountInput}
-                onChange={(e) => setMissingAmountInput(e.target.value)}
-                className="pl-8 text-sm font-bold tabular-nums rounded-xl h-9 bg-white border-slate-300 focus:border-emerald-500"
-                autoFocus
-              />
-            </div>
-            <Button
-              type="submit"
-              disabled={!missingAmountInput.trim()}
-              className="bg-[#064E3B] hover:bg-emerald-900 text-white rounded-xl font-bold text-xs h-9 px-3 shrink-0"
-            >
-              Confirmar
-            </Button>
-          </form>
-
-          <Button
-            type="button"
-            onClick={() => {
-              if (isListening) {
-                userStoppedManuallyRef.current = true
-                clearSilenceTimer()
-                const captured = latestTranscriptRef.current.trim()
-                const active = recognitionRef.current
-                recognitionRef.current = null
-                if (active) {
-                  try {
-                    active.stop()
-                  } catch {
-                    // silenciar
-                  }
-                }
-                setIsListening(false)
-                setAudioDetected(false)
-                if (captured) {
-                  handleStopAndProcess(captured)
-                } else {
-                  setIsListeningForAmountOnly(false)
-                  isListeningForAmountOnlyRef.current = false
-                }
-              } else {
-                setTextoFalado('')
-                latestTranscriptRef.current = ''
-                finalBufferRef.current = ''
-                startRecording({ forAmountOnly: true })
-              }
-            }}
-            className={`w-full rounded-xl font-bold text-xs h-9 gap-1.5 transition-all ${
-              isListening && isListeningForAmountOnly
-                ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse'
-                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 shadow-xs'
-            }`}
-          >
-            <Mic className="w-3.5 h-3.5 text-emerald-700" />
-            {isListening && isListeningForAmountOnly ? (
-              <span className="flex items-center gap-1.5">
-                <span>Ouvindo valor... fale agora</span>
-                {secondsRemaining !== null && (
-                  <span className="bg-white/25 px-1.5 py-0.5 rounded-full font-mono text-[10px]">
-                    {secondsRemaining}s
-                  </span>
-                )}
-              </span>
-            ) : (
-              '🎤 Falar apenas o valor'
-            )}
-          </Button>
-        </div>
-      </div>
-    )
-  }
+  const renderMissingAmountCard = (_data: ParsedVoiceTransaction) => null
 
   // Renderizador do Card clarificacao_categoria e clarificacao no Chat com pílulas interativas
   const renderClarificationCategoryCard = (data: ParsedVoiceTransaction) => {
@@ -2082,31 +1881,19 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                     {msg.text}
                   </p>
 
-                  {/* Card sucesso com botão de confirmação se cardData estiver presente */}
+                  {/* Micro-link discreto [Desfazer] para reverter lançamento estilo WhatsApp */}
                   {!isUser &&
-                    msg.cardType === 'sucesso' &&
-                    msg.cardData &&
-                    renderSuccessCard(msg.cardData)}
-
-                  {/* Micro-links sutis de Desfazer e Alterar após confirmação de lançamento */}
-                  {!isUser &&
-                    (msg.confirmedTxId || (msg.cardType === 'sucesso' && !msg.cardData)) &&
+                    (msg.confirmedTxId || msg.cardType === 'sucesso') &&
                     renderConfirmationMicroLinks(msg)}
 
-                  {/* Card falta_valor */}
-                  {!isUser &&
-                    msg.cardType === 'falta_valor' &&
-                    msg.cardData &&
-                    renderMissingAmountCard(msg.cardData)}
-
-                  {/* Card clarificacao_categoria e clarificacao */}
+                  {/* Card clarificacao_categoria e clarificacao com pílulas de categorização se necessário */}
                   {!isUser &&
                     (msg.cardType === 'clarificacao' ||
                       msg.cardType === 'clarificacao_categoria') &&
                     msg.cardData &&
                     renderClarificationCategoryCard(msg.cardData)}
 
-                  {/* Card inválido */}
+                  {/* Card inválido com dica e botão de retry */}
                   {!isUser && msg.cardType === 'invalido' && renderInvalidCard(msg)}
                 </div>
 
