@@ -7,7 +7,9 @@ describe('Edge Function batch-categorize regression logic & PDF universal parser
     // Simula exatamente o bloco de sanitização da Edge Function batch-categorize
     const validCategoryIds = new Set(['cat-saude', 'cat-transporte', 'cat-lifestyle'])
     const catToSubsMap = new Map<string, Set<string>>([['cat-saude', new Set(['sub-farmacia'])]])
-    const categoriesList = [{ id: 'cat-geral', type: 'expense' }]
+    const categoriesList = [
+      { id: 'cat-lifestyle', name: 'Estilo de Vida', type: 'expense', budget_bucket: 'lifestyle' },
+    ]
 
     const rawItems: any[] = [
       {
@@ -32,7 +34,7 @@ describe('Edge Function batch-categorize regression logic & PDF universal parser
         amountCents: 2450,
         date: '2025-05-16',
         type: 'expense',
-        categoryId: 'cat-invalida', // Fallback para primeira despesa
+        categoryId: 'cat-invalida', // Categoria inexistente -> busca Estilo de Vida ou Outros
         confidence: 0.9,
       },
     ]
@@ -44,9 +46,10 @@ describe('Edge Function batch-categorize regression logic & PDF universal parser
       amountCents: number
       type: 'expense' | 'income'
       installment?: string
-      categoryId: string
+      categoryId: string | null
       subcategoryId: string | null
       confidence: number
+      needsReview?: boolean
     }> = []
 
     for (const item of rawItems) {
@@ -64,14 +67,16 @@ describe('Edge Function batch-categorize regression logic & PDF universal parser
         date = new Date().toISOString().slice(0, 10)
       }
 
-      let catId = String(item.categoryId || '')
+      let catId: string | null = String(item.categoryId || '')
       let subId: string | null = item.subcategoryId ? String(item.subcategoryId) : null
+      let needsReview = false
 
       if (!validCategoryIds.has(catId)) {
-        const fallbackCat =
-          categoriesList.find((c: any) => c.type === 'expense') || categoriesList[0]
-        catId = fallbackCat?.id || ''
+        // Nova regra: busca Outros ou Estilo de Vida
+        const fallbackCat = categoriesList.find((c: any) => c.name === 'Estilo de Vida')
+        catId = fallbackCat?.id || null
         subId = null
+        needsReview = !catId
       } else {
         const allowedSubs = catToSubsMap.get(catId)
         if (!subId || !allowedSubs || !allowedSubs.has(subId)) {
@@ -90,6 +95,7 @@ describe('Edge Function batch-categorize regression logic & PDF universal parser
         subcategoryId: subId,
         confidence:
           typeof item.confidence === 'number' ? Math.min(1, Math.max(0, item.confidence)) : 0.85,
+        needsReview,
       })
     }
 
@@ -102,7 +108,7 @@ describe('Edge Function batch-categorize regression logic & PDF universal parser
 
     expect(sanitizedTransactions[1].cleanMerchant).toBe('Uber')
     expect(sanitizedTransactions[1].amountCents).toBe(2450)
-    expect(sanitizedTransactions[1].categoryId).toBe('cat-geral')
+    expect(sanitizedTransactions[1].categoryId).toBe('cat-lifestyle')
     expect(sanitizedTransactions[1].subcategoryId).toBeNull()
   })
 

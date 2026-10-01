@@ -9,10 +9,11 @@ export interface AiBatchTransactionInput {
 
 export interface AiCategorizationSuggestion {
   tempId: string
-  categoryId: string
+  categoryId: string | null
   subcategoryId?: string | null
   confidence: number
   reasoning: string
+  needsReview?: boolean
 }
 
 export interface AiPdfTransactionItem {
@@ -22,9 +23,10 @@ export interface AiPdfTransactionItem {
   amountCents: number
   type?: 'expense' | 'income'
   installment?: string
-  categoryId: string
+  categoryId: string | null
   subcategoryId?: string | null
   confidence: number
+  needsReview?: boolean
 }
 
 interface BatchCategorizeResponse {

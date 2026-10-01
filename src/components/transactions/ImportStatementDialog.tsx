@@ -45,6 +45,8 @@ import {
   extractPatternFromDescription,
   normalizeText,
 } from '@/services/import/categorization'
+import { cleanMerchantDescription } from '@/services/import/merchant-cleaner'
+import { resolveBrazilianMerchantSeed } from '@/services/import/brazilian-seeds'
 import { fetchCategorizationRules, upsertCategorizationRule } from '@/services/categorization-rules'
 import {
   createTransactionsBatch,
@@ -585,7 +587,15 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
             // 1ª camada: verificar se existe regra prévia no banco
             const ruleMatch = matchCategorization(description, txType, categories, loadedRules)
 
-            // Categoria final: regra do banco tem prioridade (1ª camada), senão sugestão da IA
+            // Camada Determinística Rápida 2: Seed Brasileiro em código
+            const seedMatch =
+              !ruleMatch && txType === 'expense'
+                ? resolveBrazilianMerchantSeed(description, categories) ||
+                  (tx.description ? resolveBrazilianMerchantSeed(tx.description, categories) : null)
+                : null
+
+            // Categoria final: regra do banco tem prioridade máxima (1ª camada),
+            // seguida pelo Seed Brasileiro (2ª camada), senão sugestão da IA (3ª camada)
             let finalCatId: string | null = null
             let finalSubId: string | null = null
             let source: ReviewItem['source'] = 'ai_suggestion'
@@ -594,6 +604,10 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
               finalCatId = ruleMatch.category.id
               finalSubId = ruleMatch.subcategory?.id || null
               source = ruleMatch.source || 'database_rule'
+            } else if (seedMatch) {
+              finalCatId = seedMatch.categoryId
+              finalSubId = seedMatch.subcategoryId || null
+              source = 'fallback_rule'
             } else if (tx.categoryId && categories.some((c) => c.id === tx.categoryId)) {
               finalCatId = tx.categoryId
               finalSubId = tx.subcategoryId || null
@@ -779,7 +793,19 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
       setFileWarnings(result.warnings || [])
 
       const reviewList: ReviewItem[] = result.transactions.map((tx: ParsedRawTransaction) => {
-        const matchResult = matchCategorization(tx.description, tx.type, categories, loadedRules)
+        // Higienizar descrição para match mais assertivo
+        const cleanedDesc = cleanMerchantDescription(tx.description)
+        const matchResult =
+          matchCategorization(tx.description, tx.type, categories, loadedRules) ||
+          (cleanedDesc ? matchCategorization(cleanedDesc, tx.type, categories, loadedRules) : null)
+
+        // Camada determinística 2: Seed Brasileiro
+        const seedResult =
+          !matchResult && tx.type === 'expense'
+            ? resolveBrazilianMerchantSeed(tx.description, categories) ||
+              (cleanedDesc ? resolveBrazilianMerchantSeed(cleanedDesc, categories) : null)
+            : null
+
         const instInfo = tx.installmentInfo || parseInstallmentFromDescription(tx.description)
         const isInstallment = instInfo.isInstallment && tx.type === 'expense'
         const currentInst = isInstallment ? instInfo.current : 1
@@ -881,21 +907,27 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
             ? matchedManualTransaction.category_id
             : matchResult
               ? matchResult.category.id
-              : null
+              : seedResult
+                ? seedResult.categoryId
+                : null
 
         const initialSubcategoryId =
           isReconciledManual && matchedManualTransaction
             ? matchedManualTransaction.subcategory_id || null
             : matchResult?.subcategory
               ? matchResult.subcategory.id
-              : null
+              : seedResult
+                ? seedResult.subcategoryId
+                : null
 
         const initialMemberId =
           isReconciledManual && matchedManualTransaction?.member_id
             ? matchedManualTransaction.member_id
             : activeMemberId
 
-        const initialSource = isReconciledManual ? 'manual' : matchResult?.source || undefined
+        const initialSource = isReconciledManual
+          ? 'manual'
+          : matchResult?.source || (seedResult ? 'fallback_rule' : undefined)
 
         return {
           id: tx.id,
@@ -926,7 +958,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
         }
       })
 
-      // Se houver transações sem regra cadastrada no banco, aciona a IA
+      // Se houver transações sem categoria (não resolvidas por regra nem pelo Seed Brasileiro), aciona a IA
       const uncategorizedItems = reviewList.filter((item) => !item.category_id && !item.isDuplicate)
       if (uncategorizedItems.length > 0) {
         setIsAiCategorizing(true)
@@ -945,15 +977,24 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 
             reviewList.forEach((item) => {
               const sug = suggestionMap.get(item.id)
-              if (sug && sug.categoryId) {
-                const catExists = categories.some((c) => c.id === sug.categoryId)
-                if (catExists) {
-                  item.category_id = sug.categoryId
-                  item.subcategory_id = sug.subcategoryId || null
+              if (sug) {
+                if (sug.categoryId) {
+                  const catExists = categories.some((c) => c.id === sug.categoryId)
+                  if (catExists) {
+                    item.category_id = sug.categoryId
+                    item.subcategory_id = sug.subcategoryId || null
+                    item.source = 'ai_suggestion'
+                    item.aiConfidence = sug.confidence
+                    item.aiReasoning = sug.reasoning
+                    item.rememberRule = true
+                  }
+                } else if (sug.needsReview) {
+                  // Categoria não encontrada ou sem Outros/Estilo de Vida -> permanece null para revisão
+                  item.category_id = null
+                  item.subcategory_id = null
                   item.source = 'ai_suggestion'
                   item.aiConfidence = sug.confidence
-                  item.aiReasoning = sug.reasoning
-                  item.rememberRule = true
+                  item.aiReasoning = sug.reasoning || 'Pendente de categorização pelo usuário'
                 }
               }
             })

@@ -260,7 +260,10 @@ export default function ImportPage() {
 
     items.forEach((item) => {
       if (!item.category_id) pendingCategory++
-      if (item.source === 'ai_suggestion' && (item.aiConfidence ?? 1) < 0.85) {
+      if (
+        item.source === 'ai_suggestion' &&
+        (!item.category_id || (item.aiConfidence ?? 1) < 0.85)
+      ) {
         lowConfidence++
       }
       if (item.type === 'expense') expenses++
@@ -282,7 +285,9 @@ export default function ImportPage() {
     let list = items.filter((item) => {
       if (currentFilter === 'pending_category') return !item.category_id
       if (currentFilter === 'low_confidence') {
-        return item.source === 'ai_suggestion' && (item.aiConfidence ?? 1) < 0.85
+        return (
+          !item.category_id || (item.source === 'ai_suggestion' && (item.aiConfidence ?? 1) < 0.85)
+        )
       }
       if (currentFilter === 'expenses') return item.type === 'expense'
       if (currentFilter === 'incomes') return item.type === 'income'

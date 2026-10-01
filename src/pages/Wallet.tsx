@@ -13,6 +13,8 @@ import {
 } from '@/services/transactions'
 import { upsertCategorizationRule } from '@/services/categorization-rules'
 import { normalizeText, extractPatternFromDescription } from '@/services/import/categorization'
+import { cleanMerchantDescription } from '@/services/import/merchant-cleaner'
+import { resolveBrazilianMerchantSeed } from '@/services/import/brazilian-seeds'
 import {
   TransactionInlineRow,
   SaveInlineCategoryData,
@@ -520,35 +522,69 @@ export default function WalletPage() {
     return transactions.filter((t) => !t.category_id)
   }, [transactions])
 
-  // Handler para categorizar pendentes com IA (GPT-4o mini)
+  // Handler para categorizar pendentes com IA (GPT-4o mini) e Seed Brasileiro
   const handleCategorizePendingWithAi = async () => {
     if (!family || pendingTransactionsList.length === 0 || isCategorizingPendingWithAi) return
     setIsCategorizingPendingWithAi(true)
     try {
-      const payload = pendingTransactionsList.map((t) => ({
-        tempId: t.id,
-        description: t.description || 'Transação',
-        amountCents: t.amount_cents,
-        date: t.transaction_date,
-      }))
+      // 1. Tentar resolver determinística e instantaneamente pelo Seed Brasileiro (0ms, 0 tokens)
+      const suggestionsMap: Record<string, AiCategorizationSuggestion> = {}
+      const pendingForAi: Array<{
+        tempId: string
+        description: string
+        amountCents: number
+        date?: string
+      }> = []
 
-      const suggestions = await categorizeBatchWithAI(payload, family.id)
-      if (suggestions && suggestions.length > 0) {
-        const map: Record<string, AiCategorizationSuggestion> = {}
-        suggestions.forEach((s) => {
-          map[s.tempId] = s
-        })
-        setAiPendingSuggestions((prev) => ({ ...prev, ...map }))
+      pendingTransactionsList.forEach((t) => {
+        const rawDesc = t.description || 'Transação'
+        const cleaned = cleanMerchantDescription(rawDesc)
+        const seedMatch =
+          resolveBrazilianMerchantSeed(rawDesc, categories) ||
+          (cleaned ? resolveBrazilianMerchantSeed(cleaned, categories) : null)
+
+        if (seedMatch) {
+          suggestionsMap[t.id] = {
+            tempId: t.id,
+            categoryId: seedMatch.categoryId,
+            subcategoryId: seedMatch.subcategoryId,
+            confidence: seedMatch.confidence,
+            reasoning: seedMatch.reasoning,
+            needsReview: false,
+          }
+        } else {
+          pendingForAi.push({
+            tempId: t.id,
+            description: cleaned || rawDesc,
+            amountCents: t.amount_cents,
+            date: t.transaction_date,
+          })
+        }
+      })
+
+      // 2. Chamar IA apenas para o que o seed não resolver
+      if (pendingForAi.length > 0) {
+        const aiSuggestions = await categorizeBatchWithAI(pendingForAi, family.id)
+        if (aiSuggestions && aiSuggestions.length > 0) {
+          aiSuggestions.forEach((s) => {
+            suggestionsMap[s.tempId] = s
+          })
+        }
+      }
+
+      const allSuggestions = Object.values(suggestionsMap)
+      if (allSuggestions.length > 0) {
+        setAiPendingSuggestions((prev) => ({ ...prev, ...suggestionsMap }))
 
         // Se nenhuma estava expandida, expande a primeira com sugestão
-        if (!expandedPendingTxId && suggestions[0]?.tempId) {
-          setExpandedPendingTxId(suggestions[0].tempId)
+        if (!expandedPendingTxId && allSuggestions[0]?.tempId) {
+          setExpandedPendingTxId(allSuggestions[0].tempId)
         }
 
         toast({
           title: '✨ Sugestões da IA geradas!',
-          description: `${suggestions.length} ${
-            suggestions.length === 1 ? 'lançamento analisado' : 'lançamentos analisados'
+          description: `${allSuggestions.length} ${
+            allSuggestions.length === 1 ? 'lançamento analisado' : 'lançamentos analisados'
           } com sucesso. Confira as sugestões nos accordions abaixo.`,
         })
       } else {
