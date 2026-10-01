@@ -128,6 +128,7 @@ export function WalletModals() {
   } = useWallet()
 
   // Resgatar nomes da categoria e subcategoria em edição de orçamento
+  const safeRecurringIncomes = recurringIncomes ?? []
   const editingBudgetCat = categories.find((c) => c.id === editingBudgetCatId)
   const editingBudgetSubcat = editingBudgetCat?.subcategories?.find(
     (s) => s.id === editingBudgetSubcatId,
@@ -475,8 +476,8 @@ export function WalletModals() {
             setEditingRecurringRule(null)
           }
         }}
-        initialData={editingTx}
-        recurringIncomeToEdit={editingRecurringRule}
+        editingTransaction={editingTx}
+        editingRecurringRule={editingRecurringRule}
         onSuccess={() => {
           triggerRefresh()
           loadMonthData()
@@ -532,40 +533,28 @@ export function WalletModals() {
         subcategory={budgetDrawerSubcategory}
         filterType={budgetDrawerFilterType}
         transactions={transactions}
-        currentDate={currentDate}
-        onEditTransaction={(tx) => {
-          setBudgetDrawerOpen(false)
-          setEditingTx(tx)
-          setIsEditTxOpen(true)
-        }}
-        onDeleteTransaction={(tx) => {
-          setBudgetDrawerOpen(false)
-          setTxToDelete(tx)
-        }}
-        onNewTransaction={() => {
-          setBudgetDrawerOpen(false)
-          openNewTransaction('expense')
+        onTransactionUpdated={() => {
+          triggerRefresh()
+          loadMonthData()
         }}
       />
 
       {/* 7. Modal de Exclusão com Verificação de Vínculo de Categoria */}
       <DeleteCategoryConfirmDialog
-        isOpen={Boolean(categoryToDelete)}
-        onClose={() => setCategoryToDelete(null)}
         category={categoryToDelete}
         usageCount={categoryUsageCount}
-        loading={loadingCatUsage}
+        loadingUsage={loadingCatUsage}
+        onClose={() => setCategoryToDelete(null)}
         onConfirm={handleConfirmDeleteCategory}
       />
 
       {/* 8. Modal de Exclusão com Verificação de Vínculo de Subcategoria */}
       <DeleteSubcategoryConfirmDialog
-        isOpen={Boolean(subcategoryToDelete)}
-        onClose={() => setSubcategoryToDelete(null)}
         subcategory={subcategoryToDelete}
         parentCategoryName={subcatParentCategoryName}
         usageCount={subcategoryUsageCount}
-        loading={loadingSubUsage}
+        loadingUsage={loadingSubUsage}
+        onClose={() => setSubcategoryToDelete(null)}
         onConfirm={handleConfirmDeleteSubcategory}
       />
 
@@ -589,7 +578,7 @@ export function WalletModals() {
           open={isRecurringIncomesOpen}
           onOpenChange={setIsRecurringIncomesOpen}
           currentMonthDate={currentDate}
-          recurringIncomes={recurringIncomes}
+          recurringIncomes={safeRecurringIncomes}
           recurringOverrides={recurringOverrides}
           onEditRecurringRule={(rule) => {
             setIsRecurringIncomesOpen(false)

@@ -1235,7 +1235,7 @@ export function WalletBudgetsTab() {
             <CategoryEditorPopover
               title="Nova Categoria"
               defaultType="expense"
-              bucketsSummary={categoryBudgetData.bucketsSummary}
+              bucketsSummary={categoryBudgetData.bucketsSummary as any}
               family={family}
               trigger={
                 <button
