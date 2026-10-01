@@ -254,4 +254,43 @@ describe('ai-categorizer service (parsePdfWithAI)', () => {
     expect(result.declaredTotalCents).toBe(8990)
     expect(result.error).toBeUndefined()
   })
+
+  it('remove caracteres de controle e ruídos de codificação antes de invocar a Edge Function', async () => {
+    vi.mocked(supabase.functions.invoke).mockResolvedValueOnce({
+      data: {
+        transactions: [],
+        totalExtracted: 0,
+        mode: 'pdf',
+      },
+      error: null,
+    })
+
+    // Texto com caracteres de controle típicos de PDFs bancários (NUL, form feed, replacement char, BOM)
+    const dirtyRawText =
+      'Extrato Rico\u0000\u0001\u000B\u000C\u001F\uFFFD\uFEFF\r\n05/04 RESTAURANTE R$ 120,00\u007F'
+
+    await parsePdfWithAI(dirtyRawText, 'fam-123')
+
+    expect(supabase.functions.invoke).toHaveBeenCalledTimes(1)
+    const invokedBody = vi.mocked(supabase.functions.invoke).mock.calls[0][1]?.body as any
+    expect(invokedBody.rawText).not.toContain('\u0000')
+    expect(invokedBody.rawText).not.toContain('\u0001')
+    expect(invokedBody.rawText).not.toContain('\u000B')
+    expect(invokedBody.rawText).not.toContain('\u000C')
+    expect(invokedBody.rawText).not.toContain('\u001F')
+    expect(invokedBody.rawText).not.toContain('\uFFFD')
+    expect(invokedBody.rawText).not.toContain('\uFEFF')
+    expect(invokedBody.rawText).not.toContain('\u007F')
+    expect(invokedBody.rawText).toContain('Extrato Rico\n05/04 RESTAURANTE R$ 120,00')
+  })
+
+  it('retorna erro se o texto tiver apenas caracteres de controle que são limpos para string vazia', async () => {
+    const onlyControlChars = '\u0000\u0001\u0002\u0008\u000B\u000C\u000E\u001F\uFFFD\uFEFF   '
+
+    const result = await parsePdfWithAI(onlyControlChars, 'fam-123')
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('O texto do PDF está vazio ou não pôde ser extraído.')
+    expect(supabase.functions.invoke).not.toHaveBeenCalled()
+  })
 })

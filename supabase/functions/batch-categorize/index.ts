@@ -3,6 +3,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 import { isNonTransactionLine } from '../_shared/non-transaction.ts'
 import { cleanMerchantDescription } from '../_shared/merchant-cleaner.ts'
+import { sanitizeRawText } from '../_shared/text-sanitizer.ts'
 import {
   resolveBrazilianMerchantSeed,
   normalizeMerchantString,
@@ -284,7 +285,8 @@ Deno.serve(async (req: Request) => {
     // CASO A: MODO PDF (rawText da fatura de cartão de crédito)
     // =========================================================================
     if (isPdfMode) {
-      const rawText = body.rawText!.trim()
+      // Sanitização rigorosa do rawText contra caracteres de controle ASCII e bytes corrompidos
+      const rawText = sanitizeRawText(body.rawText).trim()
       const currentYear = new Date().getFullYear()
 
       // Prompt enxuto, universalizado (sem exemplos hardcoded da Rico)
@@ -439,8 +441,16 @@ Instruções:
       const openaiRes = await callOpenAiExtraction(pdfSystemPrompt, pdfUserPrompt)
 
       if (!openaiRes.ok) {
-        const errText = await openaiRes.text()
-        console.error('OpenAI API Error in batch-categorize (PDF mode):', openaiRes.status, errText)
+        let errText = ''
+        try {
+          errText = await openaiRes.text()
+        } catch (readErr) {
+          errText = `[Falha ao ler corpo do erro da OpenAI: ${readErr}]`
+        }
+        console.error(
+          `[batch-categorize] OpenAI API Error (PDF mode) - HTTP ${openaiRes.status}:`,
+          errText,
+        )
         return new Response(
           JSON.stringify({
             error: 'OPENAI_ERROR',
@@ -551,6 +561,17 @@ Retorne o JSON completo corrigido com declaredTotalCents e transactions.`
                   sanitizedTransactions = recoveredSanitized
                 }
               }
+            } else {
+              let retryErrText = ''
+              try {
+                retryErrText = await retryRes.text()
+              } catch (readErr) {
+                retryErrText = `[Falha ao ler corpo do erro: ${readErr}]`
+              }
+              console.error(
+                `[batch-categorize] OpenAI API Error (autocorreção matemática) - HTTP ${retryRes.status}:`,
+                retryErrText,
+              )
             }
           } catch (recoveryErr) {
             console.warn('[batch-categorize] Erro durante autocorreção matemática:', recoveryErr)
@@ -574,7 +595,11 @@ Retorne o JSON completo corrigido com declaredTotalCents e transactions.`
     // =========================================================================
     // CASO B: MODO LOTE / OFX (array de transações já extraídas)
     // =========================================================================
-    const transactions = rawTransactions
+    // Sanitizar caracteres de controle de cada descrição antes do processamento
+    const transactions: BatchTransactionItem[] = rawTransactions.map((t) => ({
+      ...t,
+      description: sanitizeRawText(t.description).trim(),
+    }))
 
     // Camada Determinística Rápida 1: resolve transações que batem no Seed Brasileiro
     const finalSuggestions: AiCategorizationResultItem[] = []
@@ -664,8 +689,16 @@ ${JSON.stringify(
     })
 
     if (!openaiRes.ok) {
-      const errText = await openaiRes.text()
-      console.error('OpenAI API Error in batch-categorize (batch mode):', openaiRes.status, errText)
+      let errText = ''
+      try {
+        errText = await openaiRes.text()
+      } catch (readErr) {
+        errText = `[Falha ao ler corpo do erro da OpenAI: ${readErr}]`
+      }
+      console.error(
+        `[batch-categorize] OpenAI API Error (batch mode) - HTTP ${openaiRes.status}:`,
+        errText,
+      )
       return new Response(
         JSON.stringify({
           error: 'OPENAI_ERROR',

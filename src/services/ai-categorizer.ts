@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client'
+import { sanitizeRawText } from '@/services/import/text-sanitizer'
 
 export interface AiBatchTransactionInput {
   tempId: string
@@ -90,7 +91,8 @@ export async function extractAiErrorMessage(
     }
   }
 
-  // Se o backend retornou mensagem customizada já em PT-BR sem termos técnicos de infra
+  // Se o backend retornou mensagem customizada (ex: erro de validação, erro na comunicação)
+  // filtra termos técnicos de infraestrutura da Edge Function / status codes genéricos
   if (
     backendMessage &&
     !backendMessage.toLowerCase().includes('edge function') &&
@@ -184,7 +186,10 @@ export async function parsePdfWithAI(
   rawText: string,
   familyId?: string,
 ): Promise<ParsePdfAiResult> {
-  if (!rawText || !rawText.trim()) {
+  // Sanitiza contra caracteres de controle e ruídos de codificação antes de processar
+  const sanitized = sanitizeRawText(rawText)
+
+  if (!sanitized || !sanitized.trim()) {
     return {
       success: false,
       transactions: [],
@@ -201,7 +206,7 @@ export async function parsePdfWithAI(
         'batch-categorize',
         {
           body: {
-            rawText,
+            rawText: sanitized,
             familyId,
           },
         },
@@ -294,12 +299,18 @@ export async function categorizeBatchWithAI(
     return []
   }
 
+  // Sanitiza descrições das transações no cliente também
+  const sanitizedTransactions = transactions.map((t) => ({
+    ...t,
+    description: sanitizeRawText(t.description),
+  }))
+
   try {
     const { data, error } = await supabase.functions.invoke<BatchCategorizeResponse>(
       'batch-categorize',
       {
         body: {
-          transactions,
+          transactions: sanitizedTransactions,
           familyId,
         },
       },

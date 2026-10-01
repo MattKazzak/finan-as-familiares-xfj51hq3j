@@ -1,6 +1,7 @@
 // Leitor moderno e robusto de faturas de cartão de crédito e extratos em PDF
 // Extrai todo o conteúdo textual bruto (rawText) das páginas via pdfjs-dist
 // sem regexes rígidos ou heurísticas quebradiças, delegando a inteligência para a Edge Function.
+import { sanitizeRawText } from './text-sanitizer'
 
 // Configuração segura do worker do PDF.js
 let pdfjsLibPromise: Promise<typeof import('pdfjs-dist')> | null = null
@@ -203,11 +204,18 @@ export async function extractRawTextFromPdf(
     const nonBlankPages = pages.filter((p) => p.text.length > 0)
     const rawText = nonBlankPages.map((p) => p.text).join('\n\n')
 
+    // Sanitiza contra caracteres de controle inválidos originados por fontes/cmaps corrompidos
+    const sanitizedPages = pages.map((p) => ({
+      pageNumber: p.pageNumber,
+      text: sanitizeRawText(p.text),
+    }))
+    const sanitizedRawText = sanitizeRawText(rawText)
+
     return {
-      pages,
-      rawText,
+      pages: sanitizedPages,
+      rawText: sanitizedRawText,
       pageCount,
-      hasAnyText: nonBlankPages.length > 0,
+      hasAnyText: sanitizedPages.some((p) => p.text.trim().length > 0),
     }
   }
 
