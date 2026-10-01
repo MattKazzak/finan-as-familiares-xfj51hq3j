@@ -208,14 +208,4 @@ describe('NewTransactionDialog - Modal Unificado de Nova Transação', () => {
       expect(screen.getByText(/Contas & Rendas Recorrentes/i)).toBeDefined()
     })
   })
-
-  it('oferece botão de atalho para Falar com IA quando onOpenVoice é fornecido', () => {
-    const mockVoice = vi.fn()
-    render(<NewTransactionDialog open={true} onOpenChange={vi.fn()} onOpenVoice={mockVoice} />)
-
-    const voiceBtn = screen.getByTitle('Falar Lançamento com IA')
-    expect(voiceBtn).toBeDefined()
-    fireEvent.click(voiceBtn)
-    expect(mockVoice).toHaveBeenCalledTimes(1)
-  })
 })

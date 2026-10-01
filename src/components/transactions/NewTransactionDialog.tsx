@@ -47,7 +47,6 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Loader2,
-  Mic,
   Repeat,
   Layers,
   Minus,
@@ -569,13 +568,14 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
     }
   }
 
-  // Atalho para Lançamento por voz com IA
-  const handleTriggerVoice = () => {
+  // Atalho para Lançamento por voz com IA (se fornecido opcionalmente)
+  const _handleTriggerVoice = () => {
     onOpenChange(false)
     if (onOpenVoice) {
       onOpenVoice()
     }
   }
+  void _handleTriggerVoice
 
   // Conteúdo do formulário unificado (reutilizado tanto no Dialog desktop quanto no Bottom Sheet mobile)
   const renderFormBody = () => (
@@ -1056,19 +1056,6 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                     ? 'Editar Transação'
                     : 'Nova Transação'}
               </SheetTitle>
-
-              {/* Botão de Atalho para Falar com IA */}
-              {!editingRecurringRule && !editingTransaction && onOpenVoice ? (
-                <button
-                  type="button"
-                  onClick={handleTriggerVoice}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-100/80 hover:bg-emerald-200/80 px-2.5 py-1.5 rounded-xl border border-emerald-300/80 transition-colors shrink-0"
-                  title="Falar Lançamento com IA"
-                >
-                  <Mic className="w-3.5 h-3.5 text-emerald-700" />
-                  <span>Falar com IA</span>
-                </button>
-              ) : null}
             </div>
             <SheetDescription className="text-xs text-slate-500">
               {editingRecurringRule
@@ -1107,19 +1094,6 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                     : 'Registre uma despesa ou receita rápida no orçamento familiar.'}
               </DialogDescription>
             </div>
-
-            {/* Atalho de Falar com IA no desktop */}
-            {!editingRecurringRule && !editingTransaction && onOpenVoice ? (
-              <button
-                type="button"
-                onClick={handleTriggerVoice}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-100/80 hover:bg-emerald-200/80 px-2.5 py-1.5 rounded-xl border border-emerald-300/80 transition-colors shrink-0"
-                title="Falar Lançamento com IA"
-              >
-                <Mic className="w-3.5 h-3.5 text-emerald-700" />
-                <span>Falar com IA</span>
-              </button>
-            ) : null}
           </div>
         </DialogHeader>
 

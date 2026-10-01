@@ -259,8 +259,6 @@ export interface WalletContextType {
   // Modais de modelos e recorrentes
   isApplyModelOpen: boolean
   setIsApplyModelOpen: React.Dispatch<React.SetStateAction<boolean>>
-  isRecurringIncomesOpen: boolean
-  setIsRecurringIncomesOpen: React.Dispatch<React.SetStateAction<boolean>>
 
   // Modal legado de categoria e subcategoria
   isCategoryEditorOpen: boolean

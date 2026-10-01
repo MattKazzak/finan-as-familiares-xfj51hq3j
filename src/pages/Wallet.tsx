@@ -172,7 +172,6 @@ export function WalletPage() {
 
   // Modais adicionais
   const [isApplyModelOpen, setIsApplyModelOpen] = useState(false)
-  const [isRecurringIncomesOpen, setIsRecurringIncomesOpen] = useState(false)
 
   // Expandir / recolher subcategorias na listagem de orçamentos
   const [expandedBudgetCategories, setExpandedBudgetCategories] = useState<Record<string, boolean>>(
@@ -1154,8 +1153,6 @@ export function WalletPage() {
     handleMakeThisMonthDefault,
     isApplyModelOpen,
     setIsApplyModelOpen,
-    isRecurringIncomesOpen,
-    setIsRecurringIncomesOpen,
     isCategoryEditorOpen,
     setIsCategoryEditorOpen,
     categoryToEdit,

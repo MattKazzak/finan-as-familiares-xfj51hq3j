@@ -17,9 +17,11 @@ import { formatTransactionTitle } from '@/services/installments'
 import { CategoryIcon } from '@/components/common/CategoryIcon'
 import { TransactionInlineRow } from '@/components/transactions/TransactionInlineRow'
 import { extractPatternFromDescription, normalizeText } from '@/services/import/categorization'
+import { useFamily } from '@/hooks/use-family'
 import { useWallet } from './WalletContext'
 
 export function WalletTransactionsTab() {
+  const { openRecurringIncomes } = useFamily()
   const {
     lastImportSummary,
     setLastImportSummary,
@@ -33,7 +35,6 @@ export function WalletTransactionsTab() {
     monthNetCents,
     setIsFilterSheetOpen,
     activeFiltersCount,
-    setIsRecurringIncomesOpen,
     recurringIncomes,
     setFilterMemberIds,
     setFilterCategoryIds,
@@ -293,7 +294,7 @@ export function WalletTransactionsTab() {
           {/* Chip Discreto de Gestão de Recorrentes */}
           <button
             type="button"
-            onClick={() => setIsRecurringIncomesOpen(true)}
+            onClick={openRecurringIncomes}
             className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 h-8 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 transition-colors shadow-2xs active:scale-95 shrink-0"
             title="Gerenciar regras recorrentes mensais"
           >

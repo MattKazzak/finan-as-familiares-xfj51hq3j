@@ -25,7 +25,6 @@ import {
   DeleteSubcategoryConfirmDialog,
 } from '@/components/categories/DeleteCategoryConfirmDialog'
 import { CategoryTransactionsDrawer } from '@/components/wallet/CategoryTransactionsDrawer'
-import { RecurringIncomesDialog } from '@/components/wallet/RecurringIncomesDialog'
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
 import { TransactionDetailDialog } from '@/components/transactions/TransactionDetailDialog'
 import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
@@ -114,8 +113,6 @@ export function WalletModals() {
     recurringOverrides,
     isApplyModelOpen,
     setIsApplyModelOpen,
-    isRecurringIncomesOpen,
-    setIsRecurringIncomesOpen,
 
     // Modal de subcategoria legado
     isNewSubcatDialogOpen,
@@ -128,7 +125,6 @@ export function WalletModals() {
   } = useWallet()
 
   // Resgatar nomes da categoria e subcategoria em edição de orçamento
-  const safeRecurringIncomes = recurringIncomes ?? []
   const editingBudgetCat = categories.find((c) => c.id === editingBudgetCatId)
   const editingBudgetSubcat = editingBudgetCat?.subcategories?.find(
     (s) => s.id === editingBudgetSubcatId,
@@ -565,26 +561,6 @@ export function WalletModals() {
           onOpenChange={setIsApplyModelOpen}
           family={family}
           categories={categories}
-          onSuccess={() => {
-            triggerRefresh()
-            loadMonthData()
-          }}
-        />
-      )}
-
-      {/* 10. Diálogo de Gestão de Regras Recorrentes */}
-      {family && (
-        <RecurringIncomesDialog
-          open={isRecurringIncomesOpen}
-          onOpenChange={setIsRecurringIncomesOpen}
-          currentMonthDate={currentDate}
-          recurringIncomes={safeRecurringIncomes}
-          recurringOverrides={recurringOverrides}
-          onEditRecurringRule={(rule) => {
-            setIsRecurringIncomesOpen(false)
-            setEditingRecurringRule(rule)
-            setIsEditTxOpen(true)
-          }}
           onSuccess={() => {
             triggerRefresh()
             loadMonthData()

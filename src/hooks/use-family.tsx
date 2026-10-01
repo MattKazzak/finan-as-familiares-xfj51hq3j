@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode 
 import type {
   Family,
   FamilyMember,
+  RecurringIncome,
   TransactionCategory,
   TransactionSubcategory,
 } from '@/types/finance'
@@ -98,6 +99,8 @@ interface FamilyContextType {
     initialDescription?: string
     initialMemberId?: string
   } | null
+  editingRecurringRule?: RecurringIncome | null
+  setEditingRecurringRule?: (rule: RecurringIncome | null) => void
   openNewTransaction: (
     typeOrPrefill?:
       | 'income'
@@ -115,6 +118,7 @@ interface FamilyContextType {
           description?: string
           initialMemberId?: string
           memberId?: string
+          editingRecurringRule?: RecurringIncome | null
         },
   ) => void
   voiceTransactionData?: {
@@ -189,6 +193,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     initialDescription?: string
     initialMemberId?: string
   } | null>(null)
+  const [editingRecurringRule, setEditingRecurringRule] = useState<RecurringIncome | null>(null)
   const [lastImportSummary, setLastImportSummary] = useState<{
     total: number
     categorized: number
@@ -549,6 +554,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
           description?: string
           initialMemberId?: string
           memberId?: string
+          editingRecurringRule?: RecurringIncome | null
         },
   ) => {
     setIsActionSheetOpen(false)
@@ -564,17 +570,22 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         initialDescription: typeOrPrefill.initialDescription || typeOrPrefill.description,
         initialMemberId: typeOrPrefill.initialMemberId || typeOrPrefill.memberId,
       })
+      if ('editingRecurringRule' in typeOrPrefill) {
+        setEditingRecurringRule(typeOrPrefill.editingRecurringRule || null)
+      } else {
+        setEditingRecurringRule(null)
+      }
     } else {
       const targetType: 'income' | 'expense' = typeOrPrefill === 'income' ? 'income' : 'expense'
       setNewTransactionDefaultType(targetType)
       setNewTransactionPrefill(null)
+      setEditingRecurringRule(null)
     }
     setIsNewTransactionOpen(true)
   }
 
   const openActionSheet = () => {
-    // Redireciona diretamente para o novo modal unificado de Nova Transação
-    openNewTransaction('expense')
+    setIsActionSheetOpen(true)
   }
 
   const openRecurringIncomes = () => {
@@ -637,6 +648,8 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         setIsNewTransactionOpen,
         newTransactionDefaultType,
         newTransactionPrefill,
+        editingRecurringRule,
+        setEditingRecurringRule,
         openNewTransaction,
         voiceTransactionData,
         setVoiceTransactionData,

@@ -40,7 +40,6 @@ export function WalletBudgetsTab() {
     family,
     currentDate,
     monthKey,
-    setIsRecurringIncomesOpen,
     setIsApplyModelOpen,
     categoryBudgetData,
     setActiveAlertEditCategory,
@@ -105,13 +104,6 @@ export function WalletBudgetsTab() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={() => setIsRecurringIncomesOpen(true)}
-            className="text-xs font-medium text-slate-500 hover:text-emerald-700 underline underline-offset-2 px-1 py-1 rounded-md transition-colors"
-          >
-            Ver recorrentes 🔁
-          </button>
           <Button
             variant="outline"
             size="sm"
