@@ -3,7 +3,6 @@ import { Home, Wallet, Plus, Target, User, TrendingUp, LogOut, ChevronRight } fr
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { useFamily } from '@/hooks/use-family'
-import { NewTransactionActionSheet } from '@/components/transactions/NewTransactionActionSheet'
 import { RecurringIncomesDialog } from '@/components/wallet/RecurringIncomesDialog'
 import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
 import { VoiceTransactionDialog } from '@/components/transactions/VoiceTransactionDialog'
@@ -35,9 +34,6 @@ export default function Layout() {
     openNewTransaction,
     editingRecurringRule,
     setEditingRecurringRule,
-    isActionSheetOpen,
-    setIsActionSheetOpen,
-    openActionSheet,
     isRecurringIncomesOpen,
     setIsRecurringIncomesOpen,
     openRecurringIncomes,
@@ -145,8 +141,8 @@ export default function Layout() {
         {/* Botão Nova Transação Desktop */}
         <div className="p-4">
           <Button
-            onClick={openActionSheet}
-            className="w-full bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-semibold py-2.5 shadow-md shadow-emerald-700/20 rounded-xl flex items-center justify-center gap-2 transition-all transform active:scale-95"
+            onClick={() => openNewTransaction('expense')}
+            className="w-full bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-semibold py-2.5 shadow-md shadow-emerald-700/20 rounded-xl flex items-center justify-center gap-2 transition-all transform active:scale-95 cursor-pointer"
           >
             <Plus className="w-5 h-5" />
             Nova Transação
@@ -307,11 +303,11 @@ export default function Layout() {
               <span className="text-[10px]">Carteira</span>
             </NavLink>
 
-            {/* 3. FAB CENTRAL ELEVADO COM GRADIENTE: abre o Action Sheet com opções limpas */}
+            {/* 3. FAB CENTRAL ELEVADO COM GRADIENTE: abre direto o formulário de Nova Transação */}
             <div className="flex-1 flex justify-center -translate-y-5">
               <button
                 type="button"
-                onClick={openActionSheet}
+                onClick={() => openNewTransaction('expense')}
                 className="w-13 h-13 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-lg shadow-emerald-900/30 ring-4 ring-white active:scale-95 transition-transform cursor-pointer"
                 aria-label="Nova Transação"
               >
@@ -350,15 +346,6 @@ export default function Layout() {
 
       {/* FAB FLUTUANTE DO CURIANGO COPILOT (VOZ COM IA) */}
       <CuriangoFloatingButton onClick={() => setIsVoiceDialogOpen(true)} />
-
-      {/* ACTION SHEET GLOBAL DO FAB / NOVA TRANSAÇÃO */}
-      <NewTransactionActionSheet
-        open={isActionSheetOpen}
-        onOpenChange={setIsActionSheetOpen}
-        onSelectExpense={() => openNewTransaction('expense')}
-        onSelectIncome={() => openNewTransaction('income')}
-        onSelectRecurringIncomes={openRecurringIncomes}
-      />
 
       {/* DIÁLOGO GLOBAL DE LANÇAMENTO POR VOZ COM IA */}
       <VoiceTransactionDialog

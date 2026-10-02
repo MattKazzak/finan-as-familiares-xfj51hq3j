@@ -100,14 +100,17 @@ describe('NewTransactionDialog - Modal Unificado de Nova Transação', () => {
 
     // Toggle Despesa ativo por padrão
     const expenseBtn = screen.getByRole('button', { name: /Despesa/i })
-    expect(expenseBtn.className).toContain('bg-red-500')
+    expect(expenseBtn.className).toContain('bg-rose-500')
 
     // Toggle Receita disponível
     const incomeBtn = screen.getByRole('button', { name: /Receita/i })
     expect(incomeBtn.className).not.toContain('bg-emerald-600')
 
     // Toggle "Repetir todo mês" existe na tela
-    expect(screen.getByText('Repetir todo mês')).toBeDefined()
+    expect(screen.getByText(/Repetir todo mês/i)).toBeDefined()
+
+    // Link para gerenciar contas fixas está presente
+    expect(screen.getByText(/Gerenciar contas fixas/i)).toBeDefined()
   })
 
   it('permite carregar uma regra recorrente para edição através de editingRecurringRule', () => {
@@ -130,14 +133,14 @@ describe('NewTransactionDialog - Modal Unificado de Nova Transação', () => {
     )
 
     expect(screen.getByText('Editar Regra Recorrente')).toBeDefined()
-    const descInput = screen.getByPlaceholderText(/Ex\.:/i) as HTMLInputElement
+    const descInput = screen.getByPlaceholderText(/Ex:/i) as HTMLInputElement
     expect(descInput.value).toBe('Supermercado Mensal')
 
     const amountInput = screen.getByPlaceholderText('0,00') as HTMLInputElement
     expect(amountInput.value).toBe('1.250,00')
 
     expect(screen.getByText(/Regra Recorrente:/i)).toBeDefined()
-    expect(screen.getByRole('button', { name: /Salvar Regra/i })).toBeDefined()
+    expect(screen.getByRole('button', { name: /Salvar Regra Fixa/i })).toBeDefined()
   })
 
   it('permite alternar entre Despesa e Receita pelo toggle segmentado', () => {
@@ -148,7 +151,7 @@ describe('NewTransactionDialog - Modal Unificado de Nova Transação', () => {
     expect(incomeBtn.className).toContain('bg-emerald-600')
 
     const expenseBtn = screen.getByRole('button', { name: /Despesa/i })
-    expect(expenseBtn.className).not.toContain('bg-red-500')
+    expect(expenseBtn.className).not.toContain('bg-rose-500')
   })
 
   it('popula formulário diretamente via props initialType, initialAmountCents, initialDescription e initialCategoryId', () => {
@@ -167,7 +170,7 @@ describe('NewTransactionDialog - Modal Unificado de Nova Transação', () => {
     const amountInput = screen.getByPlaceholderText('0,00') as HTMLInputElement
     expect(amountInput.value).toBe('8.000,00')
 
-    const descInput = screen.getByPlaceholderText(/Ex\.:/i) as HTMLInputElement
+    const descInput = screen.getByPlaceholderText(/Ex:/i) as HTMLInputElement
     expect(descInput.value).toBe('Salário mensal')
 
     const incomeBtn = screen.getByRole('button', { name: /Receita/i })
@@ -188,7 +191,7 @@ describe('NewTransactionDialog - Modal Unificado de Nova Transação', () => {
     const amountInput = screen.getByPlaceholderText('0,00') as HTMLInputElement
     expect(amountInput.value).toBe('5.000,00')
 
-    const descInput = screen.getByPlaceholderText(/Ex\.:/i) as HTMLInputElement
+    const descInput = screen.getByPlaceholderText(/Ex:/i) as HTMLInputElement
     expect(descInput.value).toBe('Freelance')
   })
 

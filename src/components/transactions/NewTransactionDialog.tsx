@@ -5,7 +5,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from '@/components/ui/dialog'
 import {
   Sheet,
@@ -42,10 +41,9 @@ import {
 } from '@/services/import/categorization'
 import { parseBRLToCents, formatNumberBRL, formatBRL } from '@/lib/formatters'
 import { useToast } from '@/hooks/use-toast'
+import { CategoryIcon } from '@/components/common/CategoryIcon'
 import type { CategorizationRule, Transaction, RecurringIncome } from '@/types/finance'
 import {
-  ArrowDownRight,
-  ArrowUpRight,
   Loader2,
   Repeat,
   Layers,
@@ -53,6 +51,9 @@ import {
   Plus,
   Sparkles,
   Calendar,
+  Check,
+  ExternalLink,
+  ChevronDown,
 } from 'lucide-react'
 
 export interface NewTransactionPrefill {
@@ -91,7 +92,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
   initialAmountCents,
   initialDescription,
   initialMemberId,
-  onOpenVoice,
+  onOpenVoice: _onOpenVoice,
 }) => {
   const isMobile = useIsMobile()
   const {
@@ -103,6 +104,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
     newTransactionPrefill,
     triggerRefresh,
     setVoiceTransactionData,
+    openRecurringIncomes,
   } = useFamily()
   const { user } = useAuth()
   const { toast } = useToast()
@@ -136,6 +138,9 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [rememberRule, setRememberRule] = useState<boolean>(true)
+
+  // Expandir mais categorias além das 8 primeiras
+  const [showAllCategories, setShowAllCategories] = useState(false)
 
   // Feedback de auto-sugestão de categoria
   const [suggestedCategoryInfo, setSuggestedCategoryInfo] = useState<string | null>(null)
@@ -172,6 +177,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
 
     userManuallyChangedCategoryRef.current = false
     setSuggestedCategoryInfo(null)
+    setShowAllCategories(false)
 
     if (editingRecurringRule) {
       setType((editingRecurringRule.type || 'income') as 'income' | 'expense')
@@ -282,7 +288,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
   }
 
   // Ao alterar a categoria pai manualmente
-  const handleCategoryChange = (newCatId: string) => {
+  const handleCategorySelect = (newCatId: string) => {
     userManuallyChangedCategoryRef.current = true
     setCategoryId(newCatId)
     setSubcategoryId('none')
@@ -320,6 +326,10 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
   }
 
   const filteredCategories = categories.filter((c) => c.type === type)
+
+  // Subdivisão para exibição de chips (com botão Ver mais se muitas)
+  const visibleCategories = showAllCategories ? filteredCategories : filteredCategories.slice(0, 8)
+  const hasMoreCategories = filteredCategories.length > 8
 
   // Verifica se a transação sendo editada estava sem categoria
   const isEditingUncategorized = Boolean(editingTransaction && !editingTransaction.category_id)
@@ -438,7 +448,6 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
         // ==========================================
         // FLUXO DE RECORRÊNCIA: "Repetir todo mês"
         // ==========================================
-        // Cria a regra recorrente usando o mesmo modelo de Contas & Rendas Fixas (tabela recurring_incomes)
         const recurringRule = await createRecurringIncome({
           family_id: family.id,
           member_id: memberId,
@@ -473,7 +482,6 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
             status: initialStatus,
           })
         } catch (txErr: any) {
-          // Se duplicar idempotente no banco não quebra o fluxo
           console.warn('Lançamento inicial da recorrência gerou aviso:', txErr)
         }
 
@@ -568,209 +576,305 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
     }
   }
 
-  // Atalho para Lançamento por voz com IA (se fornecido opcionalmente)
-  const _handleTriggerVoice = () => {
+  // Abre o diálogo global de contas fixas recorrentes
+  const handleOpenRecurringManager = () => {
     onOpenChange(false)
-    if (onOpenVoice) {
-      onOpenVoice()
+    if (openRecurringIncomes) {
+      openRecurringIncomes()
     }
   }
-  void _handleTriggerVoice
 
-  // Conteúdo do formulário unificado (reutilizado tanto no Dialog desktop quanto no Bottom Sheet mobile)
+  // Conteúdo do formulário unificado (estilo Nubank / Copilot Money)
   const renderFormBody = () => (
-    <form onSubmit={handleSubmit} className="space-y-4 min-w-0">
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 min-w-0">
       {errorMsg ? (
-        <div className="p-3 text-xs bg-red-50 border border-red-200 text-red-700 rounded-xl">
-          <span>{errorMsg}</span>
+        <div className="p-3 text-xs bg-red-50 border border-red-200 text-red-700 rounded-2xl flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+          <span className="flex-1">{errorMsg}</span>
         </div>
       ) : null}
 
       {/* ========================================================
-          1. TOGGLE SEGMENTADO DESPESA / RECEITA NO TOPO
+          1. CABEÇALHO & SELETOR DE TIPO (Tabs modernas em pílula fluida)
           ======================================================== */}
-      <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-2xl">
+      <div className="relative p-1 bg-slate-100/90 rounded-full flex items-center border border-slate-200/60 shadow-inner">
         <button
           type="button"
           onClick={() => handleTypeChange('expense')}
-          className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
             type === 'expense'
-              ? 'bg-red-500 text-white shadow-sm shadow-red-500/20'
+              ? 'bg-rose-500 text-white shadow-md shadow-rose-500/25 scale-[1.01]'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <ArrowDownRight className="w-4 h-4 stroke-[2.5]" />
+          <span className="text-sm">💸</span>
           <span>Despesa</span>
         </button>
         <button
           type="button"
           onClick={() => handleTypeChange('income')}
-          className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
             type === 'income'
-              ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20'
+              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 scale-[1.01]'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
+          <span className="text-sm">💰</span>
           <span>Receita</span>
         </button>
       </div>
 
       {/* ========================================================
-          2. VALOR (BRL)
+          2. VALOR HERÓI (Tipografia imponente sem caixa cinza pesada)
           ======================================================== */}
-      <div>
-        <Label htmlFor="tx-amount" className="text-xs font-semibold text-slate-700">
-          Valor (R$)
-        </Label>
-        <div className="relative mt-1">
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-base">
+      <div className="text-center py-2 sm:py-3 space-y-1">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">
+          {type === 'expense' ? 'Quanto você gastou?' : 'Quanto você recebeu?'}
+        </span>
+        <div className="inline-flex items-baseline justify-center gap-1 max-w-full">
+          <span
+            className={`text-xl sm:text-2xl font-bold tracking-tight transition-colors ${
+              type === 'expense' ? 'text-rose-500' : 'text-emerald-600'
+            }`}
+          >
             R$
           </span>
-          <Input
+          <input
             id="tx-amount"
             type="text"
             inputMode="decimal"
             placeholder="0,00"
             value={amountStr}
             onChange={(e) => setAmountStr(e.target.value)}
-            className="pl-11 text-xl font-extrabold tabular-nums rounded-xl h-12"
+            className={`bg-transparent text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 tabular-nums text-center focus:outline-hidden placeholder:text-slate-300 w-full min-w-0 max-w-[280px] sm:max-w-xs transition-colors ${
+              amountStr ? (type === 'expense' ? 'text-rose-600' : 'text-emerald-700') : ''
+            }`}
             autoFocus={!isMobile}
           />
         </div>
       </div>
 
       {/* ========================================================
-          3. DESCRIÇÃO
+          3. CAMPO DE DESCRIÇÃO (Clean, espaçado e minimalista)
           ======================================================== */}
-      <div>
-        <div className="flex items-center justify-between mb-1">
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between px-1">
           <Label htmlFor="tx-desc" className="text-xs font-semibold text-slate-700">
             Descrição
           </Label>
           {suggestedCategoryInfo && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60 animate-in fade-in">
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/60 animate-in fade-in">
               <Sparkles className="w-3 h-3 text-emerald-600" />
               <span>{suggestedCategoryInfo}</span>
             </span>
           )}
         </div>
-        <Input
-          id="tx-desc"
-          type="text"
-          placeholder={
-            type === 'expense'
-              ? 'Ex.: Supermercado, Aluguel, Farmácia'
-              : 'Ex.: Salário, Pró-labore, Freelance'
-          }
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="rounded-xl"
-        />
+        <div className="relative">
+          <Input
+            id="tx-desc"
+            type="text"
+            placeholder={
+              type === 'expense'
+                ? 'Ex: Almoço de domingo, Mercado, Uber...'
+                : 'Ex: Salário, Freelance, Rendimentos...'
+            }
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="rounded-2xl bg-slate-50/70 border-slate-200/80 hover:border-slate-300 focus:bg-white focus:border-emerald-500 h-11 text-sm transition-all"
+          />
+        </div>
       </div>
 
       {/* ========================================================
-          4. MEMBRO DA FAMÍLIA (PRÉ-SELECIONADO COM O LOGADO) & CATEGORIA
+          4. SELEÇÃO DE CATEGORIAS (Chips / pílulas modernas e tocáveis)
           ======================================================== */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {/* Membro responsável */}
-        <div>
-          <Label className="text-xs font-semibold text-slate-700">Membro da Família</Label>
-          <Select value={memberId} onValueChange={setMemberId}>
-            <SelectTrigger className="mt-1 rounded-xl">
-              <SelectValue placeholder="Selecione o membro" />
-            </SelectTrigger>
-            <SelectContent className="max-w-[calc(100vw-2rem)]">
-              {members.map((m) => (
-                <SelectItem key={m.id} value={m.id}>
-                  <span>
-                    {m.name}
-                    {m.id === activeMemberId ? ' (Você)' : m.is_admin ? ' (Admin)' : ''}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between px-1">
+          <Label className="text-xs font-semibold text-slate-700">Categoria</Label>
+          {categoryId !== 'none' && (
+            <button
+              type="button"
+              onClick={() => {
+                setCategoryId('none')
+                setSubcategoryId('none')
+              }}
+              className="text-[11px] text-slate-400 hover:text-slate-600 cursor-pointer"
+            >
+              Limpar
+            </button>
+          )}
         </div>
 
-        {/* Categoria */}
-        <div>
-          <Label className="text-xs font-semibold text-slate-700">Categoria</Label>
-          <Select value={categoryId} onValueChange={handleCategoryChange}>
-            <SelectTrigger className="mt-1 rounded-xl">
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent className="max-w-[calc(100vw-2rem)]">
-              <SelectItem value="none">
-                <span>Sem categoria</span>
-              </SelectItem>
-              {filteredCategories.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  <span>{c.name}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Grade/flex de chips de categoria com ícones e cores suaves */}
+        <div className="flex flex-wrap gap-1.5">
+          {/* Chip "Sem categoria" */}
+          <button
+            type="button"
+            onClick={() => handleCategorySelect('none')}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5 cursor-pointer ${
+              categoryId === 'none'
+                ? 'bg-slate-800 text-white border-slate-800 shadow-xs'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+            }`}
+          >
+            <span>Sem categoria</span>
+            {categoryId === 'none' && <Check className="w-3 h-3" />}
+          </button>
+
+          {/* Chips das categorias */}
+          {visibleCategories.map((c) => {
+            const isSelected = categoryId === c.id
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => handleCategorySelect(c.id)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5 cursor-pointer ${
+                  isSelected
+                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/20 scale-[1.02]'
+                    : 'bg-white text-slate-700 border-slate-200/90 hover:border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                <CategoryIcon
+                  name={c.icon}
+                  className={`w-3.5 h-3.5 ${isSelected ? 'text-white' : 'text-slate-500'}`}
+                />
+                <span className="truncate max-w-[130px]">{c.name}</span>
+                {isSelected && <Check className="w-3 h-3 ml-0.5 shrink-0" />}
+              </button>
+            )
+          })}
+
+          {/* Botão Ver mais / Ver menos categorias se houver mais de 8 */}
+          {hasMoreCategories && (
+            <button
+              type="button"
+              onClick={() => setShowAllCategories((prev) => !prev)}
+              className="px-2.5 py-1.5 rounded-full text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100/70 border border-emerald-200/70 transition-all flex items-center gap-1 cursor-pointer"
+            >
+              <span>
+                {showAllCategories ? 'Ver menos' : `+${filteredCategories.length - 8} mais`}
+              </span>
+              <ChevronDown
+                className={`w-3 h-3 transition-transform ${showAllCategories ? 'rotate-180' : ''}`}
+              />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Subcategoria (aparece quando categoria estiver selecionada) */}
+      {/* Subcategorias (aparece quando categoria selecionada possui subcategorias) */}
       {categoryId !== 'none' && availableSubcategories.length > 0 ? (
-        <div className="bg-slate-50/90 p-3 rounded-2xl border border-slate-200/80">
-          <div className="flex items-center justify-between mb-1.5">
-            <Label className="text-xs font-semibold text-slate-700">
-              <span>Subcategoria </span>
-              <span className="text-[10px] text-slate-400 font-normal">(Opcional)</span>
+        <div className="space-y-1.5 pt-0.5 animate-in fade-in-50">
+          <div className="flex items-center justify-between px-1">
+            <Label className="text-[11px] font-semibold text-slate-600">
+              Subcategoria <span className="text-slate-400 font-normal">(opcional)</span>
             </Label>
-            {subcategoryId !== 'none' ? (
+            {subcategoryId !== 'none' && (
               <button
                 type="button"
                 onClick={() => setSubcategoryId('none')}
-                className="text-[11px] text-slate-400 hover:text-slate-600"
+                className="text-[11px] text-slate-400 hover:text-slate-600 cursor-pointer"
               >
-                <span>Limpar</span>
+                Geral
               </button>
-            ) : null}
+            )}
           </div>
-          <Select value={subcategoryId} onValueChange={setSubcategoryId}>
-            <SelectTrigger className="bg-white rounded-xl">
-              <SelectValue placeholder="Nenhuma (categoria geral)" />
-            </SelectTrigger>
-            <SelectContent className="max-w-[calc(100vw-2rem)]">
-              <SelectItem value="none">
-                <span>Nenhuma</span>
-              </SelectItem>
-              {availableSubcategories.map((sub) => (
-                <SelectItem key={sub.id} value={sub.id}>
-                  <span>{sub.name}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={() => setSubcategoryId('none')}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all cursor-pointer ${
+                subcategoryId === 'none'
+                  ? 'bg-slate-700 text-white border-slate-700'
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              Geral
+            </button>
+            {availableSubcategories.map((sub) => {
+              const isSubSelected = subcategoryId === sub.id
+              return (
+                <button
+                  key={sub.id}
+                  type="button"
+                  onClick={() => setSubcategoryId(sub.id)}
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all flex items-center gap-1 cursor-pointer ${
+                    isSubSelected
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className="truncate max-w-[120px]">{sub.name}</span>
+                  {isSubSelected && <Check className="w-2.5 h-2.5 shrink-0" />}
+                </button>
+              )
+            })}
+          </div>
         </div>
       ) : null}
 
       {/* ========================================================
-          5. DATA DA TRANSAÇÃO
+          5. MEMBROS DA FAMÍLIA (Pílulas/chips tocáveis e arredondadas)
           ======================================================== */}
-      <div>
-        <Label htmlFor="tx-date" className="text-xs font-semibold text-slate-700">
-          Data da Transação
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold text-slate-700 px-1">Quem pagou / recebeu?</Label>
+        <div className="flex flex-wrap gap-1.5">
+          {members.map((m) => {
+            const isSelected = memberId === m.id
+            const isYou = m.id === activeMemberId
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setMemberId(m.id)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5 cursor-pointer ${
+                  isSelected
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-xs scale-[1.01]'
+                    : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                <span className="w-4 h-4 rounded-full bg-slate-200 text-[10px] font-bold text-slate-700 flex items-center justify-center shrink-0">
+                  {m.name.charAt(0).toUpperCase()}
+                </span>
+                <span>{m.name}</span>
+                {isYou && (
+                  <span
+                    className={`text-[10px] font-normal ${
+                      isSelected ? 'text-slate-300' : 'text-slate-400'
+                    }`}
+                  >
+                    (Você)
+                  </span>
+                )}
+                {isSelected && <Check className="w-3 h-3 shrink-0 ml-0.5" />}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ========================================================
+          6. DATA DA TRANSAÇÃO
+          ======================================================== */}
+      <div className="space-y-1.5">
+        <Label htmlFor="tx-date" className="text-xs font-semibold text-slate-700 px-1">
+          Data
         </Label>
         <Input
           id="tx-date"
           type="date"
           value={transactionDate}
           onChange={(e) => handleDateChange(e.target.value)}
-          className="mt-1 rounded-xl"
+          className="rounded-2xl bg-slate-50/70 border-slate-200/80 hover:border-slate-300 focus:bg-white h-10 text-xs sm:text-sm"
         />
       </div>
 
       {/* ========================================================
-          6. NOVO TOGGLE: "Repetir todo mês" COM SELETOR DE DIA
+          7. SEÇÃO DE RECORRÊNCIA (Switch sutil e moderno + link para gerenciar fixos)
           ======================================================== */}
       {editingRecurringRule ? (
-        <div className="bg-gradient-to-br from-emerald-50/60 to-teal-50/40 p-3.5 rounded-2xl border border-emerald-200/80 space-y-3">
+        <div className="bg-emerald-50/50 p-3.5 rounded-2xl border border-emerald-200/70 space-y-3">
           <div className="flex items-center justify-between gap-3 bg-white p-2.5 rounded-xl border border-emerald-200/70">
             <div className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-emerald-700" />
@@ -803,22 +907,21 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           </p>
         </div>
       ) : !editingTransaction ? (
-        <div className="bg-gradient-to-br from-emerald-50/60 to-teal-50/40 p-3.5 rounded-2xl border border-emerald-200/80 space-y-3">
+        <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-2.5">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-start gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs mt-0.5">
-                <Repeat className="w-4 h-4 stroke-[2.4]" />
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 border border-emerald-200/60">
+                <Repeat className="w-4 h-4 stroke-[2.2]" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <Label
                   htmlFor="tx-repeat-switch"
-                  className="text-xs font-bold text-slate-900 cursor-pointer block"
+                  className="text-xs font-bold text-slate-900 cursor-pointer block leading-tight"
                 >
-                  Repetir todo mês
+                  Repetir todo mês (Fixo)
                 </Label>
-                <p className="text-[11px] text-slate-500 leading-snug">
-                  Cria regra recorrente de {type === 'income' ? 'receita fixa' : 'despesa fixa'} no
-                  orçamento da família.
+                <p className="text-[11px] text-slate-500 leading-tight mt-0.5 truncate">
+                  Alimenta o planejamento fixo do orçamento
                 </p>
               </div>
             </div>
@@ -836,10 +939,22 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
             />
           </div>
 
+          {/* Link discreto para gerenciar contas fixas */}
+          <div className="pt-1 flex items-center justify-between text-[11px]">
+            <button
+              type="button"
+              onClick={handleOpenRecurringManager}
+              className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-800 font-semibold hover:underline cursor-pointer"
+            >
+              <span>Gerenciar contas fixas 🔁</span>
+              <ExternalLink className="w-3 h-3" />
+            </button>
+          </div>
+
           {/* Seção expandida quando "Repetir todo mês" ativado */}
           {isRecurring && (
-            <div className="pt-2 border-t border-emerald-200/60 space-y-2.5 animate-in fade-in-50">
-              <div className="flex items-center justify-between gap-3 bg-white p-2.5 rounded-xl border border-emerald-200/70">
+            <div className="pt-2.5 border-t border-slate-200/70 space-y-2 animate-in fade-in-50">
+              <div className="flex items-center justify-between gap-3 bg-white p-2.5 rounded-xl border border-slate-200/90">
                 <div className="flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-emerald-700" />
                   <span className="text-xs font-semibold text-slate-800">Dia do mês</span>
@@ -867,7 +982,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
               <p className="text-[11px] text-emerald-900/80 leading-relaxed bg-emerald-100/40 p-2 rounded-xl border border-emerald-200/50">
                 🔄 <strong>Lançamento Automático:</strong> Esta{' '}
                 {type === 'income' ? 'renda' : 'despesa'} será integrada às{' '}
-                <strong>Contas & Rendas Recorrentes</strong> e lançada no extrato de cada mês no dia{' '}
+                <strong>Contas & Rendas Recorrentes</strong> e lançada no extrato todo dia{' '}
                 {dayOfMonth}.
               </p>
             </div>
@@ -876,17 +991,17 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
       ) : null}
 
       {/* ========================================================
-          7. SEÇÃO DE PARCELAMENTO (APENAS PARA DESPESAS AVULSAS NÃO RECORRENTES)
+          8. SEÇÃO DE PARCELAMENTO (APENAS PARA DESPESAS AVULSAS NÃO RECORRENTES)
           ======================================================== */}
       {!editingRecurringRule && !editingTransaction && type === 'expense' && !isRecurring && (
-        <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/90 space-y-3">
+        <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <Layers className="w-4 h-4 text-purple-600" />
               <Label className="text-xs font-bold text-slate-800">Parcelamento</Label>
             </div>
             {installmentsCount > 1 && (
-              <span className="text-[11px] font-bold text-purple-800 bg-purple-100 px-2 py-0.5 rounded-full">
+              <span className="text-[11px] font-bold text-purple-800 bg-purple-100 px-2.5 py-0.5 rounded-full">
                 {installmentsCount}x de{' '}
                 {formatBRL(
                   amountMode === 'total'
@@ -907,7 +1022,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                 type="button"
                 onClick={() => setInstallmentsCount((prev) => Math.max(1, prev - 1))}
                 disabled={installmentsCount <= 1}
-                className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:hover:bg-slate-100 flex items-center justify-center text-slate-700 transition-colors font-bold"
+                className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:hover:bg-slate-100 flex items-center justify-center text-slate-700 transition-colors font-bold cursor-pointer"
                 title="Diminuir parcelas"
               >
                 <Minus className="w-3.5 h-3.5" />
@@ -921,7 +1036,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                 type="button"
                 onClick={() => setInstallmentsCount((prev) => Math.min(48, prev + 1))}
                 disabled={installmentsCount >= 48}
-                className="w-8 h-8 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-900 flex items-center justify-center transition-colors font-bold"
+                className="w-8 h-8 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-900 flex items-center justify-center transition-colors font-bold cursor-pointer"
                 title="Aumentar parcelas"
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -930,14 +1045,14 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           </div>
 
           {installmentsCount > 1 && (
-            <div className="space-y-2 pt-1 border-t border-slate-200/70">
+            <div className="space-y-2 pt-1 border-t border-slate-200/70 animate-in fade-in-50">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-slate-600">O valor digitado acima é:</span>
                 <div className="flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-lg text-[11px] font-semibold">
                   <button
                     type="button"
                     onClick={() => setAmountMode('per_installment')}
-                    className={`px-2 py-1 rounded-md transition-all ${
+                    className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
                       amountMode === 'per_installment'
                         ? 'bg-white text-purple-950 shadow-2xs'
                         : 'text-slate-600 hover:text-slate-900'
@@ -948,7 +1063,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                   <button
                     type="button"
                     onClick={() => setAmountMode('total')}
-                    className={`px-2 py-1 rounded-md transition-all ${
+                    className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
                       amountMode === 'total'
                         ? 'bg-white text-purple-950 shadow-2xs'
                         : 'text-slate-600 hover:text-slate-900'
@@ -970,14 +1085,14 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
       )}
 
       {/* ========================================================
-          8. APRENDIZADO CONTÍNUO (LEMBRAR PARA TRANSAÇÕES FUTURAS)
+          9. APRENDIZADO CONTÍNUO (Lembrar para transações futuras)
           ======================================================== */}
       {categoryId !== 'none' && (
         <div
-          className={`p-2.5 rounded-xl border transition-colors ${
+          className={`p-3 rounded-2xl border transition-colors ${
             isEditingUncategorized
               ? 'bg-purple-50/70 border-purple-200'
-              : 'bg-slate-50 border-slate-200/80'
+              : 'bg-slate-50/70 border-slate-200/80'
           }`}
         >
           <label className="flex items-start gap-2.5 cursor-pointer text-xs select-none">
@@ -1001,42 +1116,49 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
       )}
 
       {/* ========================================================
-          BOTÕES DE AÇÃO DO RODAPÉ
+          10. BOTÃO DE AÇÃO PRINCIPAL (Cantos suaves rounded-2xl, altura generosa, toque confortável)
           ======================================================== */}
-      <div className="pt-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+      <div className="pt-2 sm:pt-3 space-y-2">
+        <Button
+          type="submit"
+          disabled={loading}
+          className={`w-full h-12 sm:h-13 font-bold rounded-2xl text-base shadow-lg transition-all active:scale-[0.99] cursor-pointer ${
+            type === 'expense'
+              ? 'bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white shadow-rose-500/25'
+              : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-emerald-600/25'
+          }`}
+        >
+          <span className="flex items-center justify-center gap-2">
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
+            <span>
+              {editingRecurringRule
+                ? 'Salvar Regra Fixa'
+                : editingTransaction
+                  ? 'Salvar Alterações'
+                  : type === 'expense'
+                    ? 'Confirmar Despesa'
+                    : 'Confirmar Receita'}
+            </span>
+          </span>
+        </Button>
+
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           onClick={() => {
             onOpenChange(false)
             if (setVoiceTransactionData) setVoiceTransactionData(null)
           }}
           disabled={loading}
-          className="w-full sm:w-auto rounded-xl"
+          className="w-full text-xs text-slate-500 hover:text-slate-800 h-9 rounded-xl cursor-pointer"
         >
           Cancelar
-        </Button>
-        <Button
-          type="submit"
-          disabled={loading}
-          className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md shadow-emerald-700/20"
-        >
-          <span className="flex items-center justify-center gap-2">
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-            <span>
-              {editingRecurringRule
-                ? 'Salvar Regra'
-                : editingTransaction
-                  ? 'Salvar Alterações'
-                  : 'Confirmar Lançamento'}
-            </span>
-          </span>
         </Button>
       </div>
     </form>
   )
 
-  // Em mobile (< sm / 768px), abre como BOTTOM SHEET elegante com largura total e margens adaptadas ao viewport
+  // Em mobile (< sm / 768px), abre como BOTTOM SHEET com rounded-t-3xl e drag handle sutil
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={onOpenChange}>
@@ -1044,25 +1166,23 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           side="bottom"
           className="rounded-t-3xl border-t border-slate-200/90 bg-white p-5 pb-8 max-h-[92vh] overflow-y-auto overflow-x-hidden min-w-0"
         >
-          {/* Barra superior suave de arraste */}
-          <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-3 -mt-1" />
+          {/* Puxador suave no topo (drag handle) */}
+          <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-3 -mt-1 shrink-0" />
 
-          <SheetHeader className="text-left space-y-1 mb-3">
-            <div className="flex items-center justify-between gap-2">
-              <SheetTitle className="text-lg font-bold text-slate-900 tracking-tight">
-                {editingRecurringRule
-                  ? 'Editar Regra Recorrente'
-                  : editingTransaction
-                    ? 'Editar Transação'
-                    : 'Nova Transação'}
-              </SheetTitle>
-            </div>
+          <SheetHeader className="text-left space-y-0.5 mb-2">
+            <SheetTitle className="text-lg font-bold text-slate-900 tracking-tight">
+              {editingRecurringRule
+                ? 'Editar Regra Recorrente'
+                : editingTransaction
+                  ? 'Editar Transação'
+                  : 'Nova Transação'}
+            </SheetTitle>
             <SheetDescription className="text-xs text-slate-500">
               {editingRecurringRule
                 ? 'Atualize os dados da regra recorrente mensal.'
                 : editingTransaction
                   ? 'Atualize os dados ou valores da transação registrada.'
-                  : 'Registre uma despesa ou receita rápida no orçamento familiar.'}
+                  : 'Preencha o valor e a categoria do lançamento.'}
             </SheetDescription>
           </SheetHeader>
 
@@ -1072,29 +1192,25 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
     )
   }
 
-  // Em desktop (>= sm), abre como DIALOG centralizado padrão shadcn
+  // Em desktop (>= sm), abre como DIALOG centralizado elegante com rounded-3xl
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg w-[95vw] rounded-3xl p-6 sm:p-7 max-h-[92vh] overflow-y-auto overflow-x-hidden min-w-0">
-        <DialogHeader>
-          <div className="flex items-center justify-between pr-6">
-            <div>
-              <DialogTitle className="text-xl font-bold text-slate-900">
-                {editingRecurringRule
-                  ? 'Editar Regra Recorrente'
-                  : editingTransaction
-                    ? 'Editar Transação'
-                    : 'Nova Transação'}
-              </DialogTitle>
-              <DialogDescription className="text-xs text-slate-500 mt-0.5">
-                {editingRecurringRule
-                  ? 'Atualize os dados da regra recorrente mensal.'
-                  : editingTransaction
-                    ? 'Atualize os dados ou valores da transação registrada.'
-                    : 'Registre uma despesa ou receita rápida no orçamento familiar.'}
-              </DialogDescription>
-            </div>
-          </div>
+      <DialogContent className="max-w-lg w-[95vw] rounded-3xl p-6 sm:p-7 max-h-[92vh] overflow-y-auto overflow-x-hidden min-w-0 border-slate-200 shadow-2xl">
+        <DialogHeader className="text-left">
+          <DialogTitle className="text-xl font-bold text-slate-900 tracking-tight">
+            {editingRecurringRule
+              ? 'Editar Regra Recorrente'
+              : editingTransaction
+                ? 'Editar Transação'
+                : 'Nova Transação'}
+          </DialogTitle>
+          <DialogDescription className="text-xs text-slate-500 mt-0.5">
+            {editingRecurringRule
+              ? 'Atualize os dados da regra recorrente mensal.'
+              : editingTransaction
+                ? 'Atualize os dados ou valores da transação registrada.'
+                : 'Preencha o valor e a categoria do lançamento.'}
+          </DialogDescription>
         </DialogHeader>
 
         {renderFormBody()}
@@ -1102,3 +1218,5 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
     </Dialog>
   )
 }
+
+export default NewTransactionDialog
