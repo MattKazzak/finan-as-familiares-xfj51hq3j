@@ -453,10 +453,11 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             const subName = result?.subcategoryName || confirmedData.subcategoryNameSuggestion || ''
             const txId = (result?.createdTx as any)?.id || null
 
+            const effectiveSubName = subName || 'Cafeterias & Lanches Rápidos'
             const confirmationText =
               parsed.friendlyMessage && !parsed.friendlyMessage.includes('?')
                 ? parsed.friendlyMessage
-                : `Lançado: ${confirmedData.amountFormatted} em ${catName}${subName ? ` › ${subName}` : ''}! 👍`
+                : `Lançado: ${confirmedData.amountFormatted} em ${catName} › ${effectiveSubName}! 👍`
 
             setMessages((prev) => [
               ...prev,
@@ -597,10 +598,11 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           const subName = result?.subcategoryName || finalParsed.subcategoryNameSuggestion || ''
           const txId = (result?.createdTx as any)?.id || null
 
+          const effectiveSubName = subName || 'Cafeterias & Lanches Rápidos'
           const launchText =
             parsed.friendlyMessage && !parsed.friendlyMessage.includes('?')
               ? parsed.friendlyMessage
-              : `Lançado: ${finalParsed.amountFormatted} em ${catName}${subName ? ` › ${subName}` : ''}! 👍`
+              : `Lançado: ${finalParsed.amountFormatted} em ${catName} › ${effectiveSubName}! 👍`
 
           setMessages((prev) => [
             ...prev,
@@ -1036,12 +1038,13 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       const subName = result?.subcategoryName || merged.subcategoryNameSuggestion || ''
       const txId = (result?.createdTx as any)?.id || null
 
+      const effectiveSubName = subName || 'Cafeterias & Lanches Rápidos'
       setMessages((prev) => [
         ...prev,
         {
           id: `assistant-${Date.now()}`,
           sender: 'assistant',
-          text: `Lançado: ${merged.amountFormatted} em ${catName}${subName ? ` › ${subName}` : ''}! 👍`,
+          text: `Lançado: ${merged.amountFormatted} em ${catName} › ${effectiveSubName}! 👍`,
           timestamp: new Date(),
           cardData: merged,
           cardType: 'sucesso',

@@ -465,10 +465,12 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
     * Escolha a melhor categoria e subcategoria existente da família para esse item (ou use a categoria anterior "${previousContext.categoria || ''}").
     * RETORNE OBRIGATORIAMENTE "status": "sucesso"!
     * Preencha a "transacao" completa com "descricao", "estabelecimento", "valor", "categoria", "subcategoria", "balde" e "tipo".
-    * Em "mensagem_amigavel", gere uma confirmação natural, concisa e conversacional em uma única frase (ex: "Lançado: R$ 12,00 em ${previousContext.categoria || 'Geral'}! 👍").
+    * Em "mensagem_amigavel", siga estritamente o PADRÃO OBRIGATÓRIO DE CONFIRMAÇÃO:
+      "Lançado: R$ [valor formatado com vírgula] em [Nome da Categoria] › [Nome da Subcategoria] [emoji]!"
+      Exemplo: "Lançado: R$ 12,00 em ${previousContext.categoria || 'Gastronomia & Delivery'} › ${previousContext.subcategoria || 'Cafeterias & Lanches Rápidos'} 👍!"
 
 2. SE O STATUS ANTERIOR FOR 'clarificacao_categoria':
-  - Se o usuário estiver escolhendo ou esclarecendo, selecione a categoria/subcategoria existente da família autonomamente e retorne "status": "sucesso" com a transação completa.
+  - Se o usuário estiver escolhendo ou esclarecendo, selecione a categoria/subcategoria existente da família autonomamente e retorne "status": "sucesso" com a transação completa e mensagem no formato obrigatório com Categoria e Subcategoria.
 `
     }
     const systemPrompt = `Você é o Curiangoo AI (Curiangoo Copilot), assistente financeiro inteligente do app Curiangoo para finanças familiares (Metodologia de 3 Baldes: 60/25/15 ou 50/30/20).
@@ -492,12 +494,37 @@ ${categoriesContext || 'Nenhuma categoria específica cadastrada ainda.'}
 Membros da família cadastrados:
 ${membersContext || 'Membro padrão'}
 
+=======================================================
+REGRAS OBRIGATÓRIAS DE CONFIRMAÇÃO E SEMÂNTICA (CRÍTICAS)
+=======================================================
+
+1. PADRÃO OBRIGATÓRIO DE CONFIRMAÇÃO (STATUS 'sucesso'):
+- Em TODO lançamento com "status": "sucesso", a "mensagem_amigavel" DEVE conter OBRIGATORIAMENTE tanto a Categoria quanto a Subcategoria!
+- O formato exato OBRIGATÓRIO é:
+  "Lançado: R$ [valor] em [Nome da Categoria] › [Nome da Subcategoria] [emoji]!"
+  Exemplo: "Lançado: R$ 35,00 em Gastronomia & Delivery › Restaurantes & Bares 👍!"
+  Exemplo: "Lançado: R$ 15,00 em Gastronomia & Delivery › Cafeterias & Lanches Rápidos 🥐!"
+  Exemplo: "Lançado: R$ 120,00 em Alimentação Básica › Supermercado 🛒!"
+- NUNCA omitir a subcategoria na mensagem de confirmação de status 'sucesso'! Nunca retorne apenas "Lançado: R$ X em [Categoria]!". A subcategoria é SEMPRE obrigatória.
+
+2. REGRAS SEMÂNTICAS DE ALIMENTAÇÃO E LANCHES (CONTEXTO BRASIL):
+- NUNCA classificar como "Delivery" despesas de comida de rua, feira, pastel, praia, quiosque, salgado ou padaria.
+- A subcategoria "Delivery (iFood/Rappi)" (ou equivalente de Delivery) é EXCLUSIVA para pedidos de entrega em domicílio/casa ou quando o usuário citar expressamente aplicativos de delivery ("no ifood", "pelo rappi", "pedi delivery", "entrega em casa").
+- Para comidas rápidas consumidas no local ou na rua (ex: pastel de feira, lanche, salgado, coxinha, esfiha, food truck, quiosque, água de coco na praia), classificar SEMPRE em:
+  "Gastronomia & Delivery › Cafeterias & Lanches Rápidos" ou "Restaurantes & Bares".
+- Itens de barraca/praia (ex: coco na praia, milho verde, água de coco, açaí no quiosque): classificar em:
+  "Gastronomia & Delivery › Cafeterias & Lanches Rápidos" (ou "Lazer & Passeios › Passeios de Fim de Semana" caso haja contexto explícito de passeio/turismo).
+- Tolere variações de nomenclatura caso a família possua categorias com nomes ligeiramente diferentes (ex: "Alimentação", "Alimentação & Refeições", "Restaurantes"), mantendo sempre o princípio: delivery é SÓ para entrega por aplicativo em domicílio; comida de rua/feira/praia/padaria/quiosque vai para lanches rápidos ou restaurantes.
+- Compras de feira livre / hortifruti de abastecimento da casa (frutas, verduras, legumes para cozinhar em casa): classificar em "Alimentação Básica › Hortifruti & Feira" (Necessidades Essenciais). Já o pastel frito consumido na feira ("pastel na feira", "caldo de cana"): classificar em "Gastronomia & Delivery › Cafeterias & Lanches Rápidos" (Estilo de Vida).
+
+=======================================================
 DIRETRIZES DE INTELIGÊNCIA REAL (PADRÃO OURO):
+=======================================================
+
 1. INFERÊNCIA AUTÔNOMA DE CATEGORIA:
   - Quando descrição e valor existirem, SEMPRE infira e selecione a melhor categoria existente e subcategoria correspondente do catálogo da família acima.
   - NÃO trave a tela com opções de escolha se a categoria puder ser inferida com razoável confiança!
-  - Retorne "status": "sucesso" com a categoria e subcategoria devidamente preenchidas.
-  - A mensagem deve ser concisa e natural.
+  - Retorne "status": "sucesso" com a categoria e subcategoria devidamente preenchidas e com a "mensagem_amigavel" no padrão obrigatório com categoria e subcategoria.
 
 2. AÇÕES DE CORREÇÃO, RECLASSIFICAÇÃO OU CANCELAMENTO:
   - Se o usuário disser algo como "desfaz esse gasto", "cancela esse lançamento", "apaga a última", retorne:
@@ -508,7 +535,7 @@ DIRETRIZES DE INTELIGÊNCIA REAL (PADRÃO OURO):
     * "status": "sucesso"
     * "acao": "reclassificar"
     * "transacao" atualizada com a nova categoria/subcategoria.
-    * "mensagem_amigavel": "Ajustado para [Nome da Categoria/Subcategoria]!"
+    * "mensagem_amigavel": "Ajustado para [Nome da Categoria] › [Nome da Subcategoria]!"
   - Se o usuário disser "não é esse valor, foi 70", "corrige para 50 reais", retorne:
     * "status": "sucesso"
     * "acao": "ajustar_valor"
@@ -522,7 +549,9 @@ DIRETRIZES DE INTELIGÊNCIA REAL (PADRÃO OURO):
 
 3. NÚMEROS PUROS E SLOT-FILLING (REGRA DE TURNO 2):
   - Se a mensagem contiver um número isolado como "12", "12 reais", "doze", "doze reais", "52", "52 reais", "cinquenta e dois" e havia contexto anterior sem valor (status anterior 'falta_valor'), capture esse número como o valor da transação pendente.
-  - MESCLE com a descrição do contexto anterior e RETORNE IMEDIATAMENTE "status": "sucesso" com a transação completa, sem re-perguntar.
+  - MESCLE com a descrição do contexto anterior e RETORNE IMEDIATAMENTE "status": "sucesso" com a transação completa (categoria e subcategoria preenchidas), sem re-perguntar.
+  - Use o padrão obrigatório de confirmação em "mensagem_amigavel": "Lançado: R$ [valor] em [Nome da Categoria] › [Nome da Subcategoria] 👍!"
+
 4. CONSULTAS FINANCEIRAS E MEMÓRIA DA CONVERSA RECENTE:
   - Quando o usuário fizer perguntas contextuais sobre lançamentos que acabou de fazer (ex: "onde você lançou o almoço?", "qual foi o valor que você anotou?", "em qual categoria ficou?"), você DEVE responder conversacionalmente lendo o histórico recente de mensagens enviado.
   - NUNCA marque essas perguntas contextuais como "invalido" e NUNCA peça para "falar novamente".
@@ -580,8 +609,9 @@ Comportamentos esperados:
    - "tipo_resposta": "transacao"
    - Preencha todos os campos da "transacao". O campo "valor" deve ser um float positivo em reais (ex: 45.0 ou 80.0). Preencha "estabelecimento" se houver.
    - "categoria": nome exato de categoria existente ou compatível.
-   - "subcategoria": use existente ou crie uma inteligente e específica.
+   - "subcategoria": use existente ou crie uma inteligente e específica. OBRIGATÓRIA!
    - "balde": classifique rigorosamente entre "Necessidades Essenciais", "Estilo de Vida" ou "Metas & Investimentos".
+   - "mensagem_amigavel": OBRIGATORIAMENTE no formato "Lançado: R$ [valor] em [Categoria] › [Subcategoria] [emoji]!". Nunca omita a subcategoria!
 
 3. "clarificacao_categoria" (DESATIVADA A FORÇAGEM DE ESCOLHA):
    - A IA deve SEMPRE escolher a melhor categoria/subcategoria existente da família autonomamente, sem travar o usuário perguntando escolha entre existente vs nova.
@@ -759,6 +789,41 @@ Comportamentos esperados:
       })
     }
 
+    // Normalização estrita da mensagem amigável para status 'sucesso'
+    let finalMensagemAmigavel = parsedAiJson?.mensagem_amigavel ?? respostaConsulta ?? null
+    if (status === 'sucesso' && parsedAiJson?.transacao) {
+      const tx = parsedAiJson.transacao
+      const cat = (tx.categoria || 'Geral').trim()
+      let sub = (tx.subcategoria || '').trim()
+
+      // Se a subcategoria veio vazia, inferir fallback coerente para nunca omitir
+      if (!sub) {
+        if (
+          cat.toLowerCase().includes('gastronomia') ||
+          cat.toLowerCase().includes('alimentação') ||
+          cat.toLowerCase().includes('restaurante')
+        ) {
+          sub = 'Cafeterias & Lanches Rápidos'
+        } else {
+          sub = 'Geral'
+        }
+        tx.subcategoria = sub
+      }
+
+      // Se a mensagem da IA não contiver " › " (omitindo a subcategoria) ou estiver vazia
+      const hasSubInMessage =
+        typeof finalMensagemAmigavel === 'string' &&
+        finalMensagemAmigavel.includes(' › ') &&
+        finalMensagemAmigavel.toLowerCase().includes(sub.toLowerCase())
+
+      if (!hasSubInMessage) {
+        const valorNum = tx.valor !== undefined && tx.valor !== null ? Number(tx.valor) : 0
+        const valorFormatado =
+          valorNum > 0 ? formatCentsToBRL(Math.round(valorNum * 100)) : 'R$ 0,00'
+        finalMensagemAmigavel = `Lançado: ${valorFormatado} em ${cat} › ${sub} 👍!`
+      }
+    }
+
     const sanitizedResponse = {
       status,
       acao: parsedAiJson?.acao ?? null,
@@ -774,7 +839,7 @@ Comportamentos esperados:
       transacao: isConsulta ? null : (parsedAiJson?.transacao ?? null),
       pergunta_clarificacao: parsedAiJson?.pergunta_clarificacao ?? null,
       opcoes_sugestao: normalizedOptions,
-      mensagem_amigavel: parsedAiJson?.mensagem_amigavel ?? respostaConsulta ?? null,
+      mensagem_amigavel: finalMensagemAmigavel,
     }
     return new Response(JSON.stringify(sanitizedResponse), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
