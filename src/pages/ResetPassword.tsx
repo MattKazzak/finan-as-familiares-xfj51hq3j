@@ -187,14 +187,14 @@ export default function ResetPassword() {
               Nova Senha
             </Label>
             <div className="relative mt-1">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <Input
                 id="new-password"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="No mínimo 6 caracteres"
-                className="pl-10 pr-10 h-11 rounded-xl"
+                className="pl-10 pr-11 h-11 rounded-xl"
                 required
                 autoFocus
                 disabled={submitting || Boolean(successMessage)}
@@ -202,9 +202,8 @@ export default function ResetPassword() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                tabIndex={-1}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
-                aria-label={showPassword ? 'Ocultar senha' : 'Ver senha'}
+                className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-r-xl"
+                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -217,27 +216,26 @@ export default function ResetPassword() {
               Confirmar Nova Senha
             </Label>
             <div className="relative mt-1">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <Input
                 id="confirm-new-password"
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Repita a nova senha"
-                className="pl-10 pr-10 h-11 rounded-xl"
+                className="pl-10 pr-11 h-11 rounded-xl"
                 required
                 disabled={submitting || Boolean(successMessage)}
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                tabIndex={-1}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
-                aria-label={showConfirmPassword ? 'Ocultar senha' : 'Ver senha'}
+                className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-r-xl"
+                aria-label={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
               >
                 {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
-            </div>
+            </div>{' '}
           </div>
 
           {/* Botão Salvar Nova Senha */}

@@ -250,6 +250,67 @@ describe('Fluxo de Reenvio de E-mail de Confirmação', () => {
     )
   })
 
+  it('alterna visibilidade da senha de login (Eye / EyeOff) alterando o input type', () => {
+    render(
+      <MemoryRouter>
+        <Login />
+      </MemoryRouter>,
+    )
+
+    const passInput = screen.getByLabelText(/^Senha$/i)
+    expect(passInput.getAttribute('type')).toBe('password')
+
+    // Botão de mostrar senha
+    const toggleBtn = screen.getByRole('button', { name: 'Mostrar senha' })
+    expect(toggleBtn).toBeDefined()
+    expect(toggleBtn.getAttribute('type')).toBe('button')
+
+    // Clica para mostrar senha
+    fireEvent.click(toggleBtn)
+    expect(passInput.getAttribute('type')).toBe('text')
+    expect(screen.getByRole('button', { name: 'Ocultar senha' })).toBeDefined()
+
+    // Clica para ocultar novamente
+    fireEvent.click(screen.getByRole('button', { name: 'Ocultar senha' }))
+    expect(passInput.getAttribute('type')).toBe('password')
+    expect(screen.getByRole('button', { name: 'Mostrar senha' })).toBeDefined()
+  })
+
+  it('no modo cadastro, possui botões de olho independentes para Senha e Confirmar Senha', () => {
+    render(
+      <MemoryRouter>
+        <Login />
+      </MemoryRouter>,
+    )
+
+    // Muda para aba cadastro
+    fireEvent.click(screen.getByText('Criar Nova Conta'))
+
+    const passInput = screen.getByLabelText(/^Senha$/i)
+    const confirmInput = screen.getByLabelText(/^Confirmar Senha$/i)
+
+    expect(passInput.getAttribute('type')).toBe('password')
+    expect(confirmInput.getAttribute('type')).toBe('password')
+
+    const toggleButtons = screen.getAllByRole('button', { name: 'Mostrar senha' })
+    expect(toggleButtons).toHaveLength(2)
+
+    // Clica apenas no primeiro botão (senha)
+    fireEvent.click(toggleButtons[0])
+    expect(passInput.getAttribute('type')).toBe('text')
+    expect(confirmInput.getAttribute('type')).toBe('password') // Continua password!
+
+    // Clica no segundo botão (confirmar senha)
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar senha' }))
+    expect(passInput.getAttribute('type')).toBe('text')
+    expect(confirmInput.getAttribute('type')).toBe('text')
+
+    // Oculta a primeira
+    fireEvent.click(screen.getAllByRole('button', { name: 'Ocultar senha' })[0])
+    expect(passInput.getAttribute('type')).toBe('password')
+    expect(confirmInput.getAttribute('type')).toBe('text')
+  })
+
   it('exibe toast de erro caso supabase.auth.resend falhe', async () => {
     mockSignIn.mockResolvedValueOnce({
       error: { message: 'email_not_confirmed' },

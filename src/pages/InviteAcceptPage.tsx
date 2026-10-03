@@ -17,6 +17,8 @@ import {
   Lock,
   Mail,
   User as UserIcon,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 import { isEmailNotConfirmedError } from '@/pages/Login'
 import { toast } from '@/hooks/use-toast'
@@ -42,6 +44,8 @@ export function InviteAcceptPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -293,6 +297,8 @@ export function InviteAcceptPage() {
                     onClick={() => {
                       setMode('signup')
                       setErrorMessage(null)
+                      setShowPassword(false)
+                      setShowConfirmPassword(false)
                     }}
                     className={`py-2 text-xs font-bold rounded-xl transition-all ${
                       mode === 'signup'
@@ -307,6 +313,8 @@ export function InviteAcceptPage() {
                     onClick={() => {
                       setMode('login')
                       setErrorMessage(null)
+                      setShowPassword(false)
+                      setShowConfirmPassword(false)
                     }}
                     className={`py-2 text-xs font-bold rounded-xl transition-all ${
                       mode === 'login'
@@ -379,16 +387,28 @@ export function InviteAcceptPage() {
                       Senha
                     </Label>
                     <div className="relative mt-1">
-                      <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                       <Input
                         id="convite-senha"
-                        type="password"
+                        type={showPassword ? 'text' : 'password'}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Mínimo 6 dígitos"
-                        className="pl-10 h-10 rounded-xl text-xs sm:text-sm"
+                        className="pl-10 pr-10 h-10 rounded-xl text-xs sm:text-sm"
                         required
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className="absolute right-0 top-0 h-10 w-10 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-r-xl"
+                        aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
                     </div>
                   </div>
 
@@ -401,20 +421,31 @@ export function InviteAcceptPage() {
                         Confirmar Senha
                       </Label>
                       <div className="relative mt-1">
-                        <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                         <Input
                           id="convite-confirma-senha"
-                          type="password"
+                          type={showConfirmPassword ? 'text' : 'password'}
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
                           placeholder="Repita a senha"
-                          className="pl-10 h-10 rounded-xl text-xs sm:text-sm"
+                          className="pl-10 pr-10 h-10 rounded-xl text-xs sm:text-sm"
                           required
                         />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword((prev) => !prev)}
+                          className="absolute right-0 top-0 h-10 w-10 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-r-xl"
+                          aria-label={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="w-4 h-4" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                        </button>
                       </div>
                     </div>
                   )}
-
                   <Button
                     type="submit"
                     disabled={actionLoading}
