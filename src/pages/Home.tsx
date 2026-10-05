@@ -34,6 +34,8 @@ import {
   ChevronRight,
   Users,
   Calendar,
+  Mic,
+  Sparkles,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -48,6 +50,7 @@ export default function Home() {
     selectedMemberId,
     setSelectedMemberId,
     openNewTransaction,
+    openVoiceDialog,
     refreshTrigger,
     triggerRefresh,
   } = useFamily()
@@ -640,6 +643,36 @@ export default function Home() {
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* ATALHO CURIANGOO COPILOT: Card/pílula de comando estilo input integrado ao topo abaixo do saldo */}
+          <div className="mt-4 pt-3.5 border-t border-white/10">
+            <button
+              type="button"
+              onClick={openVoiceDialog}
+              aria-label="Falar com o Curiango"
+              className="w-full group bg-white/95 hover:bg-white text-slate-800 rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 shadow-md hover:shadow-lg transition-all duration-200 border border-[#E5E5E5] flex items-center justify-between gap-2.5 cursor-pointer active:scale-[0.99] text-left touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
+            >
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#FCA311] via-[#fba825] to-[#ffb845] text-[#14213D] flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform">
+                  <Mic className="w-4 h-4 stroke-[2.5]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-xs sm:text-sm font-medium text-slate-600 group-hover:text-slate-900 transition-colors block leading-tight break-words">
+                    Falar com o Curiangoo...
+                  </span>
+                  <span className="text-[10px] text-slate-400 block leading-tight break-words sm:hidden">
+                    Toque para lançar por voz ou chat
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="hidden sm:inline-flex items-center text-[10px] font-semibold text-[#14213D] bg-[#FCA311]/20 border border-[#FCA311]/40 px-2 py-0.5 rounded-full">
+                  IA Copilot
+                </span>
+                <Sparkles className="w-4 h-4 text-[#FCA311] fill-[#FCA311]/30 shrink-0 group-hover:rotate-12 transition-transform" />
+              </div>
+            </button>
           </div>
         </div>
 

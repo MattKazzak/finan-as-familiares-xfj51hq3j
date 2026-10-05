@@ -124,6 +124,42 @@ describe('useFamily - Comportamento de Membro Ativo e "Quem está usando?"', () 
     expect(result.current.isWhoIsUsingOpen).toBe(true)
   })
 
+  it('controla a abertura do VoiceTransactionDialog via openVoiceDialog e setIsVoiceDialogOpen', async () => {
+    vi.spyOn(familyService, 'fetchFamilyData').mockResolvedValue({
+      family: {
+        id: 'fam-1',
+        name: 'Família Matheus',
+        monthly_net_income_cents: 600000,
+        avatar_url: null,
+        created_at: new Date().toISOString(),
+      } as any,
+      members: [{ id: 'm-1', name: 'Matheus', is_admin: true, family_id: 'fam-1' }] as any,
+      categories: [],
+      subcategories: [],
+    })
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <FamilyProvider>{children}</FamilyProvider>
+    )
+    const { result } = renderHook(() => useFamily(), { wrapper })
+
+    await vi.waitFor(() => {
+      expect(result.current.loading).toBe(false)
+    })
+
+    expect(result.current.isVoiceDialogOpen).toBe(false)
+
+    act(() => {
+      result.current.openVoiceDialog()
+    })
+    expect(result.current.isVoiceDialogOpen).toBe(true)
+
+    act(() => {
+      result.current.setIsVoiceDialogOpen(false)
+    })
+    expect(result.current.isVoiceDialogOpen).toBe(false)
+  })
+
   it('com 2 ou mais membros e membro já salvo no localStorage, NÃO abre o diálogo automaticamente', async () => {
     localStorage.setItem('financas_familiares_active_member_id', 'm-2')
 

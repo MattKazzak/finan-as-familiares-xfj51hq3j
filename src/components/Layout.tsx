@@ -45,10 +45,11 @@ export default function Layout() {
     setIsOnboardingOpen,
     categories,
     reloadFamily,
+    isVoiceDialogOpen,
+    setIsVoiceDialogOpen,
   } = useFamily()
 
   // Dados globais de receitas fixas para o modal compartilhado
-  const [isVoiceDialogOpen, setIsVoiceDialogOpen] = useState(false)
   const [globalRecurringIncomes, setGlobalRecurringIncomes] = useState<RecurringIncome[]>([])
   const [globalRecurringOverrides, setGlobalRecurringOverrides] = useState<
     RecurringIncomeOverride[]
@@ -323,16 +324,16 @@ export default function Layout() {
               )}
             </NavLink>
 
-            {/* 3. BOTÃO CENTRAL "+" (ABERTURA DIRETA DO NEW TRANSACTION DIALOG) */}
-            <div className="flex-1 flex items-center justify-center">
+            {/* 3. BOTÃO CENTRAL "+" (ABERTURA DIRETA DO NEW TRANSACTION DIALOG — 100% CONTIDO NA PÍLULA) */}
+            <div className="flex-1 flex items-center justify-center py-0.5">
               <button
                 type="button"
                 onClick={() => openNewTransaction('expense')}
-                className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#FCA311] via-[#fba825] to-[#ffb845] text-[#14213D] flex items-center justify-center shadow-md shadow-[#FCA311]/40 border-2 border-white active:scale-90 hover:scale-105 transition-all duration-200 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
+                className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#FCA311] via-[#fba825] to-[#ffb845] text-[#14213D] flex items-center justify-center shadow-sm shadow-[#FCA311]/30 border border-white/80 active:scale-90 hover:scale-105 transition-all duration-200 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
                 aria-label="Nova Transação"
                 title="Nova Transação"
               >
-                <Plus className="w-6 h-6 stroke-[3]" />
+                <Plus className="w-5 h-5 stroke-[2.8]" />
               </button>
             </div>
 

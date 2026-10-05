@@ -141,6 +141,9 @@ interface FamilyContextType {
   isOnboardingOpen: boolean
   setIsOnboardingOpen: (open: boolean) => void
   openOnboarding: () => void
+  isVoiceDialogOpen: boolean
+  setIsVoiceDialogOpen: (open: boolean) => void
+  openVoiceDialog: () => void
   lastImportSummary: {
     total: number
     categorized: number
@@ -182,6 +185,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   const [isImportStatementOpen, setIsImportStatementOpen] = useState(false)
   const [isWhoIsUsingOpen, setIsWhoIsUsingOpen] = useState(false)
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false)
+  const [isVoiceDialogOpen, setIsVoiceDialogOpen] = useState(false)
   const [newTransactionDefaultType, setNewTransactionDefaultType] = useState<'income' | 'expense'>(
     'expense',
   )
@@ -603,6 +607,10 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     setIsOnboardingOpen(true)
   }
 
+  const openVoiceDialog = useCallback(() => {
+    setIsVoiceDialogOpen(true)
+  }, [])
+
   // Se o activeMemberId apontar para um membro existente, ele é o currentMember do dispositivo;
   // senão faz fallback para o admin ou primeiro membro
   const currentMember =
@@ -665,6 +673,9 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         isOnboardingOpen,
         setIsOnboardingOpen,
         openOnboarding,
+        isVoiceDialogOpen,
+        setIsVoiceDialogOpen,
+        openVoiceDialog,
         lastImportSummary,
         setLastImportSummary,
         refreshTrigger,
