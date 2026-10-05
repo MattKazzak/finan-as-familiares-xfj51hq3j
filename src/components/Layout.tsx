@@ -6,7 +6,6 @@ import { useFamily } from '@/hooks/use-family'
 import { RecurringIncomesDialog } from '@/components/wallet/RecurringIncomesDialog'
 import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
 import { VoiceTransactionDialog } from '@/components/transactions/VoiceTransactionDialog'
-import { CuriangoFloatingButton } from '@/components/layout/CuriangoFloatingButton'
 import { ImportStatementDialog } from '@/components/transactions/ImportStatementDialog'
 import { WhoIsUsingDialog } from '@/components/common/WhoIsUsingDialog'
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
@@ -265,51 +264,75 @@ export default function Layout() {
         </header>
 
         {/* CONTEÚDO PRINCIPAL (max-width 1200px centralizado) */}
-        <main className="flex-1 w-full max-w-[1200px] mx-auto p-4 sm:p-6 pb-28 md:pb-8 overflow-x-hidden min-w-0">
+        <main className="flex-1 w-full max-w-[1200px] mx-auto p-4 sm:p-6 pb-32 md:pb-8 overflow-x-hidden min-w-0">
           <Outlet />
         </main>
 
-        {/* BANNER EDUCATIVO DE INSTALAÇÃO PWA (POSICIONADO ACIMA DO MENU INFERIOR) */}
+        {/* BANNER EDUCATIVO DE INSTALAÇÃO PWA (POSICIONADO ACIMA DO DOCK FLUTUANTE) */}
         <InstallPwaBanner variant="bottom-nav" />
 
-        {/* BOTTOM NAVIGATION (MOBILE APENAS < 768px) */}
-        <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-[#E5E5E5] z-40 px-2 py-1 shadow-lg shadow-black/5">
-          <div className="relative flex items-center justify-around h-14">
+        {/* DOCK FLUTUANTE EM PÍLULA (MOBILE APENAS < 768px, 360–412px SAFE) */}
+        <nav
+          aria-label="Navegação Principal"
+          className="md:hidden fixed bottom-3 sm:bottom-4 inset-x-0 z-40 px-3 sm:px-4 max-w-md mx-auto pointer-events-none"
+        >
+          <div className="pointer-events-auto w-full bg-white/85 dark:bg-[#14213D]/90 backdrop-blur-md border border-[#E5E5E5]/80 shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-full px-2 py-1.5 flex items-center justify-between transition-all">
             {/* 1. Início */}
             <NavLink
               to="/inicio"
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
-                  isActive ? 'text-[#FCA311] font-bold' : 'text-slate-400 hover:text-[#14213D]'
+                `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
+                  isActive ? 'text-[#FCA311] font-bold' : 'text-[#14213D]/60 hover:text-[#14213D]'
                 }`
               }
             >
-              <Home className="w-5 h-5 mb-0.5" />
-              <span className="text-[10px]">Início</span>
+              {({ isActive }) => (
+                <>
+                  <div
+                    className={`p-1 rounded-full transition-all duration-200 ${
+                      isActive ? 'bg-[#FCA311]/15 scale-105' : ''
+                    }`}
+                  >
+                    <Home className="w-5 h-5 stroke-[2.2]" />
+                  </div>
+                  <span className="text-[10px] tracking-tight mt-0.5 leading-none">Início</span>
+                </>
+              )}
             </NavLink>
 
             {/* 2. Carteira */}
             <NavLink
               to="/carteira"
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
-                  isActive ? 'text-[#FCA311] font-bold' : 'text-slate-400 hover:text-[#14213D]'
+                `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
+                  isActive ? 'text-[#FCA311] font-bold' : 'text-[#14213D]/60 hover:text-[#14213D]'
                 }`
               }
             >
-              <Wallet className="w-5 h-5 mb-0.5" />
-              <span className="text-[10px]">Carteira</span>
+              {({ isActive }) => (
+                <>
+                  <div
+                    className={`p-1 rounded-full transition-all duration-200 ${
+                      isActive ? 'bg-[#FCA311]/15 scale-105' : ''
+                    }`}
+                  >
+                    <Wallet className="w-5 h-5 stroke-[2.2]" />
+                  </div>
+                  <span className="text-[10px] tracking-tight mt-0.5 leading-none">Carteira</span>
+                </>
+              )}
             </NavLink>
 
-            {/* 3. FAB CENTRAL ELEVADO COM GRADIENTE: abre direto o formulário de Nova Transação (#FCA311) */}
-            <div className="flex-1 flex justify-center -translate-y-5">
+            {/* 3. BOTÃO CENTRAL "+" (ABERTURA DIRETA DO NEW TRANSACTION DIALOG) */}
+            <div className="flex-1 flex items-center justify-center">
               <button
                 type="button"
                 onClick={() => openNewTransaction('expense')}
-                className="w-13 h-13 rounded-full bg-gradient-to-tr from-[#FCA311] via-[#fba825] to-[#ffb845] text-[#14213D] flex items-center justify-center shadow-lg shadow-black/20 ring-4 ring-white active:scale-95 transition-transform cursor-pointer"
+                className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#FCA311] via-[#fba825] to-[#ffb845] text-[#14213D] flex items-center justify-center shadow-md shadow-[#FCA311]/40 border-2 border-white active:scale-90 hover:scale-105 transition-all duration-200 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
                 aria-label="Nova Transação"
+                title="Nova Transação"
               >
-                <Plus className="w-7 h-7 stroke-[2.8]" />
+                <Plus className="w-6 h-6 stroke-[3]" />
               </button>
             </div>
 
@@ -317,35 +340,52 @@ export default function Layout() {
             <NavLink
               to="/metas"
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
-                  isActive ? 'text-[#FCA311] font-bold' : 'text-slate-400 hover:text-[#14213D]'
+                `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
+                  isActive ? 'text-[#FCA311] font-bold' : 'text-[#14213D]/60 hover:text-[#14213D]'
                 }`
               }
             >
-              <Target className="w-5 h-5 mb-0.5" />
-              <span className="text-[10px]">Metas</span>
+              {({ isActive }) => (
+                <>
+                  <div
+                    className={`p-1 rounded-full transition-all duration-200 ${
+                      isActive ? 'bg-[#FCA311]/15 scale-105' : ''
+                    }`}
+                  >
+                    <Target className="w-5 h-5 stroke-[2.2]" />
+                  </div>
+                  <span className="text-[10px] tracking-tight mt-0.5 leading-none">Metas</span>
+                </>
+              )}
             </NavLink>
 
             {/* 5. Perfil */}
             <NavLink
               to="/perfil"
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
-                  isActive ? 'text-[#FCA311] font-bold' : 'text-slate-400 hover:text-[#14213D]'
+                `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
+                  isActive ? 'text-[#FCA311] font-bold' : 'text-[#14213D]/60 hover:text-[#14213D]'
                 }`
               }
             >
-              <User className="w-5 h-5 mb-0.5" />
-              <span className="text-[10px]">Perfil</span>
+              {({ isActive }) => (
+                <>
+                  <div
+                    className={`p-1 rounded-full transition-all duration-200 ${
+                      isActive ? 'bg-[#FCA311]/15 scale-105' : ''
+                    }`}
+                  >
+                    <User className="w-5 h-5 stroke-[2.2]" />
+                  </div>
+                  <span className="text-[10px] tracking-tight mt-0.5 leading-none">Perfil</span>
+                </>
+              )}
             </NavLink>
           </div>
         </nav>
       </div>
 
-      {/* FAB FLUTUANTE DO CURIANGO COPILOT (VOZ COM IA) */}
-      <CuriangoFloatingButton onClick={() => setIsVoiceDialogOpen(true)} />
-
-      {/* DIÁLOGO GLOBAL DE LANÇAMENTO POR VOZ COM IA */}
+      {/* DIÁLOGO GLOBAL DE LANÇAMENTO POR VOZ COM IA (Pronto para chamada via setIsVoiceDialogOpen) */}
       <VoiceTransactionDialog
         open={isVoiceDialogOpen}
         onOpenChange={setIsVoiceDialogOpen}

@@ -48,10 +48,10 @@ export function InstallPwaBanner({
     }
   }
 
-  // Posição calculada com espaçamento seguro para NÃO cobrir o menu inferior nem o FAB central '+'
+  // Posição calculada com espaçamento seguro para NÃO cobrir o Dock Flutuante inferior
   const positionClasses =
     variant === 'bottom-nav'
-      ? 'fixed bottom-[4.5rem] inset-x-3 z-30 max-w-lg mx-auto'
+      ? 'fixed bottom-20 inset-x-3 z-30 max-w-lg mx-auto'
       : 'fixed bottom-4 inset-x-3 z-30 max-w-lg mx-auto'
 
   return (
