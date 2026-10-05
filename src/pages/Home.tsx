@@ -15,7 +15,7 @@ import {
   formatRelativeDate,
 } from '@/lib/formatters'
 import { CountUp } from '@/components/common/CountUp'
-import { CategoryIcon } from '@/components/common/CategoryIcon'
+import { CategoryIcon, CategoryIconBox } from '@/components/common/CategoryIcon'
 import { TransactionDetailDialog } from '@/components/transactions/TransactionDetailDialog'
 import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
 import { formatTransactionTitle, groupInstallmentTransactions } from '@/services/installments'
@@ -1002,14 +1002,14 @@ export default function Home() {
                 >
                   {/* Bloco Esquerda: Ícone + Textos */}
                   <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-                    {/* Ícone de Categoria - Container neutro sofisticado CDS v1.0 */}
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
-                      <CategoryIcon
-                        name={tx.category?.icon}
-                        className="w-4 h-4"
-                        strokeWidth={1.5}
-                      />
-                    </div>
+                    {/* Ícone de Categoria - Container tingido suave CDS v1.0 */}
+                    <CategoryIconBox
+                      icon={tx.category?.icon}
+                      color={tx.category?.color}
+                      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 sm:mt-0"
+                      iconClassName="w-4 h-4"
+                      strokeWidth={1.5}
+                    />
 
                     {/* Bloco de Textos (Título + Metadados) */}
                     <div className="min-w-0 flex-1">

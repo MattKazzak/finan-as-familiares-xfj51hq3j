@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { formatBRL, formatDayGroupHeader } from '@/lib/formatters'
 import { formatTransactionTitle } from '@/services/installments'
-import { CategoryIcon } from '@/components/common/CategoryIcon'
+import { CategoryIcon, CategoryIconBox } from '@/components/common/CategoryIcon'
 import { TransactionInlineRow } from '@/components/transactions/TransactionInlineRow'
 import { extractPatternFromDescription, normalizeText } from '@/services/import/categorization'
 import { useFamily } from '@/hooks/use-family'
@@ -431,13 +431,13 @@ export function WalletTransactionsTab() {
                       }`}
                     >
                       <div className="flex items-center gap-3 flex-1 overflow-hidden">
-                        <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0">
-                          <CategoryIcon
-                            name={tx.category?.icon}
-                            className="w-4 h-4"
-                            strokeWidth={1.5}
-                          />
-                        </div>
+                        <CategoryIconBox
+                          icon={tx.category?.icon}
+                          color={tx.category?.color}
+                          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                          iconClassName="w-4 h-4"
+                          strokeWidth={1.5}
+                        />
 
                         <div className="overflow-hidden pr-2">
                           <div className="flex items-center gap-1.5 overflow-hidden flex-wrap">

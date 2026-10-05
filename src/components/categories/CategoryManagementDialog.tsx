@@ -27,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { CategoryIcon, AVAILABLE_ICONS } from '@/components/common/CategoryIcon'
+import { CategoryIcon, CategoryIconBox, AVAILABLE_ICONS } from '@/components/common/CategoryIcon'
 import { CATEGORY_COLORS, BUCKET_OPTIONS } from './CategoryEditorPopover'
 import { useFamily } from '@/hooks/use-family'
 import { useToast } from '@/hooks/use-toast'
@@ -489,12 +489,13 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-3 overflow-hidden">
-                      <div
-                        className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 shadow-2xs"
-                        style={{ backgroundColor: cat.color || '#64748B' }}
-                      >
-                        <CategoryIcon name={cat.icon} className="w-4 h-4" />
-                      </div>
+                      <CategoryIconBox
+                        icon={cat.icon}
+                        color={cat.color}
+                        className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-2xs"
+                        iconClassName="w-4 h-4"
+                        strokeWidth={1.5}
+                      />
                       <div className="overflow-hidden">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-bold text-slate-800 truncate">

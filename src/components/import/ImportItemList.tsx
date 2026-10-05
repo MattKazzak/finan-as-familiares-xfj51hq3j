@@ -96,20 +96,14 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
               />
             </div>
 
-            {/* Ícone de Categoria / Círculo */}
-            <div
+            {/* Ícone de Categoria com tint suave CDS */}
+            <CategoryIconBox
+              icon={cat?.icon}
+              color={cat?.color}
               className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-2xs"
-              style={{
-                backgroundColor: cat?.color || '#CBD5E1',
-                color: '#FFFFFF',
-              }}
-            >
-              {cat?.icon ? (
-                <CategoryIcon name={cat.icon} className="w-4 h-4" />
-              ) : (
-                <Tag className="w-4 h-4 text-slate-600" />
-              )}
-            </div>
+              iconClassName="w-4 h-4"
+              strokeWidth={1.5}
+            />
 
             {/* Dados Centrais */}
             <div className="min-w-0 flex-1">

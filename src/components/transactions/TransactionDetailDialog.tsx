@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { formatBRL, formatRelativeDate } from '@/lib/formatters'
-import { CategoryIcon } from '@/components/common/CategoryIcon'
+import { CategoryIcon, CategoryIconBox } from '@/components/common/CategoryIcon'
 import { formatTransactionTitle } from '@/services/installments'
 import type { Transaction } from '@/types/finance'
 import { ArrowDownRight, ArrowUpRight, Calendar, User, Edit3, Trash2, Sparkles } from 'lucide-react'
@@ -37,13 +37,13 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
       <DialogContent className="max-w-md w-[95vw] rounded-3xl p-6 bg-card/95 backdrop-blur-sm border border-border/40 shadow-curiango">
         <DialogHeader className="text-left">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0">
-              <CategoryIcon
-                name={transaction.category?.icon}
-                className="w-4 h-4"
-                strokeWidth={1.5}
-              />
-            </div>
+            <CategoryIconBox
+              icon={transaction.category?.icon}
+              color={transaction.category?.color}
+              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              iconClassName="w-4 h-4"
+              strokeWidth={1.5}
+            />
             <div className="overflow-hidden">
               <div className="flex items-center gap-2 flex-wrap">
                 <DialogTitle className="text-base sm:text-lg font-semibold text-[#14213D] dark:text-white leading-tight">
