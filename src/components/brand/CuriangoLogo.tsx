@@ -4,57 +4,53 @@ export interface CuriangoLogoProps extends React.SVGProps<SVGSVGElement> {
   size?: number | string
   color?: string
   className?: string
+  /**
+   * Mantido por retrocompatibilidade: a nova silhueta agora é nativamente sólida/preenchida.
+   */
   filled?: boolean
 }
 
 /**
- * CuriangoLogo — Símbolo do pássaro Curiango em traço contínuo minimalista (single-line / stroke style).
- * Representa o olhar vigilante, as asas voltadas para ascensão financeira e a elegância fintech.
- * Cores padrão: #FCA311 (laranja da marca) ou currentColor.
+ * CuriangoLogo — Símbolo oficial da marca Curiangoo:
+ * Silhueta sólida e minimalista do pássaro Curiango virado para a esquerda,
+ * com corpo arredondado, cauda longa e elegante afinando para a direita,
+ * olho circular branco na cabeça e linha curva branca sugerindo a dobra da asa.
+ * Cores padrão: #14213D (azul-marinho oficial) ou currentColor, com suporte total a #FCA311.
  */
 export const CuriangoLogo: React.FC<CuriangoLogoProps> = ({
   size = 28,
-  color = '#FCA311',
+  color = '#14213D',
   className = '',
-  filled = false,
+  // filled é mantido na assinatura para compatibilidade retroativa
+  filled: _filled,
   ...props
 }) => {
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 48 48"
+      viewBox="0 0 100 100"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       aria-hidden="true"
       {...props}
     >
-      {/* Traço contínuo minimalista do pássaro em voo / perfil estilizado */}
+      {/* Silhueta sólida do pássaro Curiango virado para a esquerda */}
       <path
-        d="M6 31C10 27 15 22 21 19C26 16.5 31 16 35 18C37 19 39 21 40 23.5C40.6 25 40.2 26.5 39 27.5C37.5 28.7 35 28.5 33 27C30.5 25.2 27.5 24 24 24C19 24 14 27 10 32C7.5 35 5 39 4 41C6 39.5 9 37.5 12 37C15 36.5 18 37 21 38.5C25 40.5 30 40 34 38C38 36 41 32 43 27C44 24.5 44 21 42 17C39.5 12 34 8 27 7C19.5 6 13 10 8 16"
-        stroke={color}
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        d="M 11.6 22.3 C 12.8 22.8 14.6 23.6 16.4 22.8 C 19.8 21.4 24.6 21.6 29.6 24.8 C 36.8 29.8 44.8 40.2 53.2 49.8 C 61.2 58.8 70.8 67.8 82.8 76.6 C 86.8 79.5 88.6 80.6 88.2 79.6 C 87.2 78.2 83.4 74.2 78.2 69.5 C 69.8 62.4 61.4 56.6 52.8 53.6 C 47.4 51.8 44.5 52.2 41.2 53.2 C 45.4 60.2 47.8 65.4 47.8 67.2 C 47.8 68.4 45.6 69.2 42.8 69.4 C 36.4 69.6 28.6 67.2 22.8 61.4 C 18.2 56.8 16.8 50.8 17.2 41.5 C 17.5 34.2 16.8 29.8 14.8 26.2 C 13.6 24.2 12.2 23.2 11.6 22.3 Z"
+        fill={color}
       />
-      {/* Asa superior estilizada em ascensão (pena contínua) */}
+      {/* Olho redondo branco na cabeça */}
+      <circle cx="22.2" cy="27.2" r="2.25" fill="#FFFFFF" />
+      {/* Linha curva branca suave sugerindo a asa / dobra elegante */}
       <path
-        d="M21 19C23 13 28 8 36 6C34 10 33 14 34 18"
-        stroke={color}
-        strokeWidth="2.5"
+        d="M 28.2 42.8 C 28.5 46.8 29.8 52.4 33.8 57 C 37 60.8 41 63.8 45.4 65.6"
+        stroke="#FFFFFF"
+        strokeWidth="2.2"
         strokeLinecap="round"
-        strokeLinejoin="round"
+        fill="none"
       />
-      {/* Ponto / olho discreto do pássaro */}
-      <circle cx="34" cy="22" r="1.5" fill={color} />
-      {filled && (
-        <path
-          d="M21 19C26 16.5 31 16 35 18C37 19 39 21 40 23.5C40.6 25 40.2 26.5 39 27.5C37.5 28.7 35 28.5 33 27C30.5 25.2 27.5 24 24 24C19 24 14 27 10 32C14 27 19 24 24 24Z"
-          fill={color}
-          fillOpacity="0.15"
-        />
-      )}
     </svg>
   )
 }
