@@ -58,28 +58,28 @@ export const BUCKET_METADATA: Record<
   essentials: {
     name: 'Essenciais (Necessidades)',
     shortLabel: 'Essenciais',
-    color: '#0284C7', // sky-600
-    bgLight: 'bg-sky-50 text-sky-800 border-sky-200',
-    borderColor: 'border-sky-500',
-    textColor: 'text-sky-700',
+    color: '#14213D', // slate-900 / navy oficial
+    bgLight: 'bg-slate-100/90 text-slate-800 border-slate-200',
+    borderColor: 'border-slate-800',
+    textColor: 'text-slate-900',
     description: 'Moradia, alimentação básica, saúde, contas essenciais e transporte necessário.',
   },
   lifestyle: {
     name: 'Estilo de Vida (Desejos & Conforto)',
     shortLabel: 'Estilo de Vida',
-    color: '#D97706', // amber-600
-    bgLight: 'bg-amber-50 text-amber-800 border-amber-200',
+    color: '#FCA311', // amber suave / ocre oficial
+    bgLight: 'bg-amber-50/70 text-amber-900 border-amber-200/80',
     borderColor: 'border-amber-500',
-    textColor: 'text-amber-700',
+    textColor: 'text-amber-800',
     description: 'Lazer, restaurantes, compras, hobbies, streaming e conforto pessoal.',
   },
   future: {
     name: 'Futuro & Metas (Investimentos & Reserva)',
     shortLabel: 'Futuro & Metas',
-    color: '#059669', // emerald-600
-    bgLight: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+    color: '#10B981', // esmeralda calmo
+    bgLight: 'bg-emerald-50/70 text-emerald-900 border-emerald-200/80',
     borderColor: 'border-emerald-500',
-    textColor: 'text-emerald-700',
+    textColor: 'text-emerald-800',
     description: 'Reserva de emergência, aposentadoria, investimentos e objetivos de longo prazo.',
   },
 }

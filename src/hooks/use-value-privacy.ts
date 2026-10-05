@@ -48,33 +48,40 @@ export function useValuePrivacy() {
  * 12:00 - 17:59: "Boa tarde" ☀️
  * 18:00 - 04:59: "Boa noite" 🌙
  */
+export type TimeGreetingPeriod = 'morning' | 'afternoon' | 'evening'
+
 export function getTimeGreeting(date: Date = new Date()): {
   greeting: string
+  period: TimeGreetingPeriod
   emoji: string
   fullGreeting: (name?: string | null) => string
 } {
   const hour = date.getHours() // Sempre horário LOCAL do dispositivo
 
   let greeting = 'Boa noite'
+  let period: TimeGreetingPeriod = 'evening'
   let emoji = '🌙'
 
   if (hour >= 5 && hour < 12) {
     greeting = 'Bom dia'
+    period = 'morning'
     emoji = '☕'
   } else if (hour >= 12 && hour < 18) {
     greeting = 'Boa tarde'
+    period = 'afternoon'
     emoji = '☀️'
   }
 
   return {
     greeting,
+    period,
     emoji,
     fullGreeting: (name?: string | null) => {
       const cleanName = (name || '').trim()
       if (cleanName) {
-        return `${greeting}, ${cleanName} ${emoji}`
+        return `${greeting}, ${cleanName}`
       }
-      return `${greeting}! ${emoji}`
+      return `${greeting}!`
     },
   }
 }

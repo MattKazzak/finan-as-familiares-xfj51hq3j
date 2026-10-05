@@ -110,12 +110,17 @@ const iconMap: Record<string, LucideIcon> = {
 interface CategoryIconProps {
   name: string | null | undefined
   className?: string
+  strokeWidth?: number
 }
 
-export const CategoryIcon: React.FC<CategoryIconProps> = ({ name, className = 'w-4 h-4' }) => {
-  if (!name) return <Tag className={className} />
+export const CategoryIcon: React.FC<CategoryIconProps> = ({
+  name,
+  className = 'w-4 h-4',
+  strokeWidth = 1.5,
+}) => {
+  if (!name) return <Tag className={className} strokeWidth={strokeWidth} />
   const IconComponent = iconMap[name] || HelpCircle
-  return <IconComponent className={className} />
+  return <IconComponent className={className} strokeWidth={strokeWidth} />
 }
 
 export const AVAILABLE_ICONS = [

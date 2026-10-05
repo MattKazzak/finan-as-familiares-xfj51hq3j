@@ -42,6 +42,13 @@ import {
   Eye,
   EyeOff,
   Bell,
+  SunMedium,
+  Coffee,
+  Moon,
+  Scale,
+  Shield,
+  Palmtree,
+  Target,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -83,7 +90,7 @@ export default function Home() {
     return {
       text: greetingData.fullGreeting(memberFirstName || 'Família'),
       rawGreeting: greetingData.greeting,
-      emoji: greetingData.emoji,
+      period: greetingData.period,
       memberName: memberFirstName || 'Família',
     }
   }, [currentMember?.name])
@@ -486,10 +493,20 @@ export default function Home() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 <h1
-                  className="text-base sm:text-lg md:text-xl font-extrabold text-[#14213D] tracking-tight leading-snug break-words"
+                  className="text-base sm:text-lg md:text-xl font-bold text-[#14213D] tracking-tight leading-snug break-words flex items-center gap-1.5"
                   title={timeGreeting.text}
                 >
-                  {timeGreeting.text}
+                  <span>{timeGreeting.text}</span>
+                  {timeGreeting.period === 'morning' ? (
+                    <Coffee className="w-4 h-4 text-muted-foreground shrink-0" strokeWidth={1.5} />
+                  ) : timeGreeting.period === 'afternoon' ? (
+                    <SunMedium
+                      className="w-4 h-4 text-muted-foreground shrink-0"
+                      strokeWidth={1.5}
+                    />
+                  ) : (
+                    <Moon className="w-4 h-4 text-muted-foreground shrink-0" strokeWidth={1.5} />
+                  )}
                 </h1>
               </div>
               <div className="flex items-center gap-1.5 flex-wrap">
@@ -600,21 +617,21 @@ export default function Home() {
           <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#FCA311]/15 rounded-full blur-3xl pointer-events-none" />
 
           <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-            <span className="text-xs uppercase font-extrabold tracking-wider text-[#FCA311]">
+            <span className="text-xs uppercase font-bold tracking-wider text-[#FCA311]">
               Saldo Total da Família
             </span>
             {trendPercentage !== 0 && (
               <div
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold shrink-0 ${
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 ${
                   trendPercentage > 0
                     ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                     : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
                 }`}
               >
                 {trendPercentage > 0 ? (
-                  <TrendingUp className="w-3.5 h-3.5" />
+                  <TrendingUp className="w-3.5 h-3.5" strokeWidth={1.5} />
                 ) : (
-                  <TrendingDown className="w-3.5 h-3.5" />
+                  <TrendingDown className="w-3.5 h-3.5" strokeWidth={1.5} />
                 )}
                 <span>
                   {trendPercentage > 0 ? `+${trendPercentage}%` : `${trendPercentage}%`} vs mês ant.
@@ -766,11 +783,11 @@ export default function Home() {
         {/* CARD ORÇAMENTO EM 3 BALDES (Desktop 4 col) */}
         <div className="md:col-span-4 bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div>
-            {/* Header do Card (ícone ⚖️ + título + subtítulo com mês de referência discreto) */}
+            {/* Header do Card (ícone Scale neutro + título + subtítulo com mês de referência discreto) */}
             <div className="flex items-center justify-between gap-2 mb-4 min-w-0">
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <div className="w-8 h-8 rounded-xl bg-[#E5E5E5] text-[#14213D] flex items-center justify-center font-bold text-base shadow-2xs shrink-0">
-                  ⚖️
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div className="w-8 h-8 rounded-xl bg-muted/60 text-muted-foreground flex items-center justify-center shrink-0">
+                  <Scale className="w-4 h-4 text-[#14213D]" strokeWidth={1.5} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <h3 className="font-bold text-sm text-[#14213D] leading-tight break-words">
@@ -781,7 +798,7 @@ export default function Home() {
                       {budgetModelLabel}
                     </span>
                     <span className="text-[10px] text-slate-300 font-normal select-none">·</span>
-                    <span className="text-[10px] text-[#14213D] font-bold break-words">
+                    <span className="text-[10px] text-[#14213D] font-semibold break-words">
                       {formatMonthYear(new Date())}
                     </span>
                   </div>
@@ -795,29 +812,29 @@ export default function Home() {
                 {
                   key: 'essentials',
                   name: 'Necessidades',
-                  emoji: '🛡️',
+                  Icon: Shield,
                   percentIncome: bucketsData.essentials.percentIncome,
                   spent: bucketsData.essentials.spentCents,
                   limit: bucketsData.essentials.limitCents,
                   percent: bucketsData.essentials.percent,
                   isOver: bucketsData.essentials.isOver,
-                  barBg: 'bg-indigo-600',
+                  barBg: 'bg-[#14213D]',
                 },
                 {
                   key: 'lifestyle',
                   name: 'Estilo de Vida',
-                  emoji: '🏖️',
+                  Icon: Palmtree,
                   percentIncome: bucketsData.lifestyle.percentIncome,
                   spent: bucketsData.lifestyle.spentCents,
                   limit: bucketsData.lifestyle.limitCents,
                   percent: bucketsData.lifestyle.percent,
                   isOver: bucketsData.lifestyle.isOver,
-                  barBg: 'bg-amber-500',
+                  barBg: 'bg-[#FCA311]',
                 },
                 {
                   key: 'future',
                   name: 'Futuro & Metas',
-                  emoji: '🎯',
+                  Icon: Target,
                   percentIncome: bucketsData.future.percentIncome,
                   spent: bucketsData.future.spentCents,
                   limit: bucketsData.future.limitCents,
@@ -829,14 +846,18 @@ export default function Home() {
                 const remaining = bucket.limit - bucket.spent
                 const hasSpent = bucket.spent > 0
                 const isOver = bucket.isOver
+                const BucketIcon = bucket.Icon
 
                 return (
                   <div key={bucket.key} className="space-y-1.5">
                     {/* Linha topo do balde: Nome completo + % dinâmico do modelo à esquerda | Valor restante à direita */}
                     <div className="flex items-baseline justify-between gap-2 min-w-0">
                       <span className="font-semibold text-slate-800 text-xs flex items-center gap-1.5 min-w-0">
-                        <span className="shrink-0">{bucket.emoji}</span>
-                        <span className="font-bold break-words">{bucket.name}</span>
+                        <BucketIcon
+                          className="w-3.5 h-3.5 text-muted-foreground shrink-0"
+                          strokeWidth={1.5}
+                        />
+                        <span className="font-semibold break-words">{bucket.name}</span>
                         {bucket.percentIncome !== null && (
                           <span className="text-[10px] text-slate-400 font-medium shrink-0">
                             ({bucket.percentIncome}%)
@@ -977,14 +998,13 @@ export default function Home() {
                 >
                   {/* Bloco Esquerda: Ícone + Textos */}
                   <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-                    {/* Ícone de Categoria */}
-                    <div
-                      className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center text-white shadow-sm shrink-0 mt-0.5 sm:mt-0"
-                      style={{
-                        backgroundColor: tx.category?.color || (isIncome ? '#10B981' : '#64748B'),
-                      }}
-                    >
-                      <CategoryIcon name={tx.category?.icon} className="w-5 h-5" />
+                    {/* Ícone de Categoria - Container uniforme e elegante */}
+                    <div className="w-9 h-9 rounded-xl bg-muted/60 text-muted-foreground flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                      <CategoryIcon
+                        name={tx.category?.icon}
+                        className="w-4 h-4 text-slate-700"
+                        strokeWidth={1.5}
+                      />
                     </div>
 
                     {/* Bloco de Textos (Título + Metadados) */}

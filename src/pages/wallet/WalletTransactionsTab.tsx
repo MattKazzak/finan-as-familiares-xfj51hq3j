@@ -66,16 +66,16 @@ export function WalletTransactionsTab() {
         <div className="rounded-3xl border border-[#E5E5E5] bg-gradient-to-r from-white via-[#E5E5E5]/25 to-white p-4 sm:p-5 shadow-sm space-y-3 animate-in fade-in-50 duration-200">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-2xl bg-[#14213D] text-[#FCA311] flex items-center justify-center font-bold text-lg shrink-0 shadow-xs">
-                {lastImportSummary.pending === 0 ? '🎉' : '📥'}
+              <div className="w-9 h-9 rounded-xl bg-muted/60 text-muted-foreground flex items-center justify-center font-bold text-base shrink-0">
+                {lastImportSummary.pending === 0 ? '✓' : '↓'}
               </div>
               <div className="flex-1">
-                <h4 className="font-extrabold text-sm sm:text-base text-slate-900 leading-tight">
+                <h4 className="font-semibold text-sm sm:text-base text-slate-900 leading-tight">
                   {lastImportSummary.pending === 0 ? (
-                    'Tudo categorizado! 🎉'
+                    'Tudo categorizado!'
                   ) : (
                     <>
-                      📥 Extrato importado: {lastImportSummary.categorized} de{' '}
+                      Extrato importado: {lastImportSummary.categorized} de{' '}
                       {lastImportSummary.total} transações categorizadas
                     </>
                   )}
@@ -210,15 +210,15 @@ export function WalletTransactionsTab() {
         /* Estado de Sucesso quando o usuário estava filtrando pendentes e terminou todas */
         <div className="rounded-3xl border border-[#E5E5E5] bg-[#E5E5E5]/30 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in-50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#14213D] text-[#FCA311] flex items-center justify-center font-bold text-lg shrink-0">
-              🎉
+            <div className="w-9 h-9 rounded-xl bg-muted/60 text-muted-foreground flex items-center justify-center font-bold text-base shrink-0">
+              ✓
             </div>
             <div>
-              <h4 className="font-extrabold text-sm sm:text-base text-[#14213D]">
-                Tudo categorizado! Parabéns!
+              <h4 className="font-semibold text-sm sm:text-base text-[#14213D]">
+                Tudo categorizado!
               </h4>
               <p className="text-xs text-slate-600">
-                Não há mais nenhuma transação pendente neste mês.
+                Não há transações pendentes de categorização neste mês.
               </p>
             </div>
           </div>
@@ -331,8 +331,8 @@ export function WalletTransactionsTab() {
         <div className="py-12 text-center text-slate-400 text-xs">Carregando transações...</div>
       ) : groupedTransactions.length === 0 ? (
         <div className="bg-white rounded-3xl p-10 text-center border border-slate-200/80 shadow-sm">
-          <div className="w-12 h-12 rounded-2xl bg-slate-100 mx-auto flex items-center justify-center text-slate-400 mb-2">
-            🏷️
+          <div className="w-10 h-10 rounded-xl bg-muted/60 mx-auto flex items-center justify-center text-muted-foreground mb-2">
+            <CategoryIcon name="Tag" className="w-5 h-5 text-muted-foreground" strokeWidth={1.5} />
           </div>
           <p className="font-bold text-slate-800 text-sm">Nenhuma transação encontrada</p>
           <p className="text-xs text-slate-500 mt-1 mb-4">
@@ -427,15 +427,12 @@ export function WalletTransactionsTab() {
                       }`}
                     >
                       <div className="flex items-center gap-3 flex-1 overflow-hidden">
-                        <div
-                          className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-sm shrink-0"
-                          style={{
-                            backgroundColor:
-                              tx.category?.color ||
-                              (isIncome ? '#10B981' : isProjected ? '#F59E0B' : '#64748B'),
-                          }}
-                        >
-                          <CategoryIcon name={tx.category?.icon} className="w-5 h-5" />
+                        <div className="w-9 h-9 rounded-xl bg-muted/60 text-muted-foreground flex items-center justify-center shrink-0">
+                          <CategoryIcon
+                            name={tx.category?.icon}
+                            className="w-4 h-4 text-slate-700"
+                            strokeWidth={1.5}
+                          />
                         </div>
 
                         <div className="overflow-hidden pr-2">

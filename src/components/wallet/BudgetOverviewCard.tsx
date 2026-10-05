@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Sparkles, CheckCircle2, TrendingUp, Home, Coffee } from 'lucide-react'
+import { Sparkles, CheckCircle2, Shield, Palmtree, Target } from 'lucide-react'
 import { formatBRL } from '@/lib/formatters'
 import { getBudgetModelTargets } from '@/services/budget-model'
 import type { Family } from '@/types/finance'
@@ -51,7 +51,7 @@ interface BucketMetaInfo {
   textDark: string
   badgeBg: string
   accentDot: string
-  icon: typeof Home
+  icon: typeof Shield
 }
 
 const BUCKETS_CONFIG: BucketMetaInfo[] = [
@@ -59,43 +59,43 @@ const BUCKETS_CONFIG: BucketMetaInfo[] = [
     key: 'essentials',
     label: 'Gastos Essenciais',
     sublabel: 'Moradia, Alimentação, Transporte, Saúde, Educação',
-    colorName: 'sky',
-    barColor: 'bg-sky-500',
-    barHoverColor: 'hover:bg-sky-600',
-    bgLight: 'bg-sky-50/70',
-    borderLight: 'border-sky-200/70',
-    textDark: 'text-sky-900',
-    badgeBg: 'bg-sky-100/90 text-sky-800',
-    accentDot: 'bg-sky-500',
-    icon: Home,
+    colorName: 'slate',
+    barColor: 'bg-[#14213D]',
+    barHoverColor: 'hover:bg-[#1a2b50]',
+    bgLight: 'bg-slate-50/90',
+    borderLight: 'border-slate-200',
+    textDark: 'text-slate-900',
+    badgeBg: 'bg-slate-200/80 text-slate-800',
+    accentDot: 'bg-[#14213D]',
+    icon: Shield,
   },
   {
     key: 'lifestyle',
     label: 'Estilo de Vida',
     sublabel: 'Lazer, Compras, Assinaturas, Cuidados & Bem-estar',
     colorName: 'amber',
-    barColor: 'bg-amber-500',
-    barHoverColor: 'hover:bg-amber-600',
-    bgLight: 'bg-amber-50/70',
-    borderLight: 'border-amber-200/70',
-    textDark: 'text-amber-900',
-    badgeBg: 'bg-amber-100/90 text-amber-900',
-    accentDot: 'bg-amber-500',
-    icon: Coffee,
+    barColor: 'bg-[#FCA311]',
+    barHoverColor: 'hover:bg-[#e5940f]',
+    bgLight: 'bg-amber-50/50',
+    borderLight: 'border-amber-200/60',
+    textDark: 'text-amber-950',
+    badgeBg: 'bg-amber-100/80 text-amber-900',
+    accentDot: 'bg-[#FCA311]',
+    icon: Palmtree,
   },
   {
     key: 'future',
     label: 'Futuro & Metas',
     sublabel: 'Reserva de Emergência, Aportes, Investimentos & Sonhos',
     colorName: 'emerald',
-    barColor: 'bg-emerald-500',
-    barHoverColor: 'hover:bg-emerald-600',
-    bgLight: 'bg-emerald-50/70',
-    borderLight: 'border-emerald-200/70',
-    textDark: 'text-emerald-900',
-    badgeBg: 'bg-emerald-100/90 text-emerald-800',
-    accentDot: 'bg-emerald-500',
-    icon: TrendingUp,
+    barColor: 'bg-emerald-600',
+    barHoverColor: 'hover:bg-emerald-700',
+    bgLight: 'bg-emerald-50/50',
+    borderLight: 'border-emerald-200/60',
+    textDark: 'text-emerald-950',
+    badgeBg: 'bg-emerald-100/80 text-emerald-900',
+    accentDot: 'bg-emerald-600',
+    icon: Target,
   },
 ]
 
@@ -151,8 +151,8 @@ export function BudgetOverviewCard({
 
   return (
     <section className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-xs relative overflow-hidden transition-all">
-      {/* Sutil detalhe de gradiente superior fluido */}
-      <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-sky-400 via-amber-400 to-emerald-400" />
+      {/* Sutil detalhe superior fluido com a paleta oficial */}
+      <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#14213D] via-[#FCA311] to-emerald-500" />
 
       {/* CABEÇALHO DO PAINEL FLUÍDO: Renda Líquida no topo com hierarquia clara e chamada de ação */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
@@ -178,7 +178,7 @@ export function BudgetOverviewCard({
 
           <div className="flex items-baseline gap-2 flex-wrap pt-0.5">
             <span className="text-xs text-slate-500 font-medium">Renda Líquida Familiar:</span>
-            <span className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight tabular-nums">
+            <span className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight tabular-nums">
               {formatBRL(netIncomeCents)}
             </span>
             <span className="text-xs text-slate-400 font-normal">/ mês</span>
@@ -237,10 +237,10 @@ export function BudgetOverviewCard({
               className={`h-full rounded-xl transition-all relative group flex items-center justify-center overflow-hidden cursor-pointer ${
                 BUCKETS_CONFIG[0].barColor
               } ${BUCKETS_CONFIG[0].barHoverColor} ${
-                selectedBucket === 'essentials' ? 'ring-2 ring-sky-600 ring-offset-1 z-10' : ''
+                selectedBucket === 'essentials' ? 'ring-2 ring-slate-800 ring-offset-1 z-10' : ''
               } ${selectedBucket !== 'all' && selectedBucket !== 'essentials' ? 'opacity-40' : 'opacity-100'}`}
             >
-              <span className="text-[10px] font-extrabold text-white truncate px-1 drop-shadow-2xs select-none">
+              <span className="text-[10px] font-bold text-white truncate px-1 drop-shadow-2xs select-none">
                 {bucketsSummary.essentials.percentIncome}%
               </span>
             </button>
@@ -256,10 +256,10 @@ export function BudgetOverviewCard({
               className={`h-full rounded-xl transition-all relative group flex items-center justify-center overflow-hidden cursor-pointer ${
                 BUCKETS_CONFIG[1].barColor
               } ${BUCKETS_CONFIG[1].barHoverColor} ${
-                selectedBucket === 'lifestyle' ? 'ring-2 ring-amber-600 ring-offset-1 z-10' : ''
+                selectedBucket === 'lifestyle' ? 'ring-2 ring-amber-500 ring-offset-1 z-10' : ''
               } ${selectedBucket !== 'all' && selectedBucket !== 'lifestyle' ? 'opacity-40' : 'opacity-100'}`}
             >
-              <span className="text-[10px] font-extrabold text-white truncate px-1 drop-shadow-2xs select-none">
+              <span className="text-[10px] font-bold text-slate-900 truncate px-1 drop-shadow-2xs select-none">
                 {bucketsSummary.lifestyle.percentIncome}%
               </span>
             </button>
@@ -276,7 +276,7 @@ export function BudgetOverviewCard({
                 selectedBucket === 'future' ? 'ring-2 ring-emerald-600 ring-offset-1 z-10' : ''
               } ${selectedBucket !== 'all' && selectedBucket !== 'future' ? 'opacity-40' : 'opacity-100'}`}
             >
-              <span className="text-[10px] font-extrabold text-white truncate px-1 drop-shadow-2xs select-none">
+              <span className="text-[10px] font-bold text-white truncate px-1 drop-shadow-2xs select-none">
                 {bucketsSummary.future.percentIncome}%
               </span>
             </button>
@@ -298,19 +298,22 @@ export function BudgetOverviewCard({
                   cfg.bgLight
                 } ${
                   isSelected
-                    ? `${cfg.borderLight} ring-2 ring-emerald-600/30 shadow-xs`
+                    ? `${cfg.borderLight} ring-2 ring-[#14213D]/20 shadow-xs`
                     : `${cfg.borderLight} hover:border-slate-300`
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className={`w-2 h-2 rounded-full ${cfg.accentDot} shrink-0`} />
-                    <span className={`text-xs font-bold truncate ${cfg.textDark}`}>
+                    <Icon
+                      className="w-3.5 h-3.5 text-muted-foreground shrink-0"
+                      strokeWidth={1.5}
+                    />
+                    <span className={`text-xs font-semibold truncate ${cfg.textDark}`}>
                       {cfg.label}
                     </span>
                   </div>
                   <span
-                    className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full tabular-nums shrink-0 ${cfg.badgeBg}`}
+                    className={`text-[11px] font-semibold px-2 py-0.5 rounded-full tabular-nums shrink-0 ${cfg.badgeBg}`}
                   >
                     {data.percentIncome}% da renda
                   </span>
@@ -318,10 +321,10 @@ export function BudgetOverviewCard({
 
                 <div className="mt-2 flex items-baseline justify-between gap-1 flex-wrap">
                   <div className="tabular-nums">
-                    <span className="text-sm sm:text-base font-extrabold text-slate-900">
+                    <span className="text-sm sm:text-base font-bold text-slate-900">
                       {formatBRL(data.spentCents)}
                     </span>
-                    <span className="text-xs font-medium text-slate-400 ml-1">
+                    <span className="text-xs font-normal text-slate-500 ml-1">
                       / {formatBRL(data.budgetCents)}
                     </span>
                   </div>

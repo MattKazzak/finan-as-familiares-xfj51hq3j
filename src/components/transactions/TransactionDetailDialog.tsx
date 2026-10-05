@@ -37,17 +37,16 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
       <DialogContent className="max-w-md w-[95vw] rounded-2xl p-6">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-sm"
-              style={{
-                backgroundColor: transaction.category?.color || (isIncome ? '#10B981' : '#EF4444'),
-              }}
-            >
-              <CategoryIcon name={transaction.category?.icon} className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-xl bg-muted/60 text-muted-foreground flex items-center justify-center shrink-0">
+              <CategoryIcon
+                name={transaction.category?.icon}
+                className="w-5 h-5 text-slate-700"
+                strokeWidth={1.5}
+              />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <DialogTitle className="text-lg font-bold text-slate-900 leading-tight">
+                <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 leading-tight">
                   <span>{formatTransactionTitle(transaction)}</span>
                 </DialogTitle>
                 {transaction.is_recurring ? (
@@ -113,23 +112,21 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
         <div className="space-y-3 py-1 text-sm">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <span className="text-slate-500 flex items-center gap-2">
-              <User className="w-4 h-4 text-slate-400" />
+              <User className="w-4 h-4 text-slate-400" strokeWidth={1.5} />
               <span>Responsável</span>
             </span>
-            <span className="font-semibold text-slate-800">
+            <span className="font-medium text-slate-800">
               <span>{transaction.member?.name || 'Membro da família'}</span>
             </span>
           </div>
 
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <span className="text-slate-500 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-slate-400" />
+              <Calendar className="w-4 h-4 text-slate-400" strokeWidth={1.5} />
               <span>Data</span>
             </span>
-            <span className="font-semibold text-slate-800">
-              <span>
-                {formatRelativeDate(transaction.transaction_date)} ({transaction.transaction_date})
-              </span>
+            <span className="font-medium text-slate-800">
+              <span>{formatRelativeDate(transaction.transaction_date)}</span>
             </span>
           </div>
         </div>
