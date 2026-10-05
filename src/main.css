@@ -9,15 +9,19 @@
 
 @layer base {
   :root {
-    /* Paleta Oficial Curiangoo:
-       #FFFFFF (branco puro)
-       #E5E5E5 (cinza claro: 0 0% 90%)
-       #FCA311 (laranja âmbar vibrante de ação: 37 97% 53%)
-       #14213D (azul-marinho escuro de identidade: 221 51% 16%)
-       #000000 (preto: 0 0% 0%)
+    /* Curiangoo Design System (CDS v1.0) Tokens:
+       Fundo Light: #F8F9FB (220 20% 98% / off-white acetinado)
+       Superfícies/Cards: Branco puro com transparência e desfoque
+       Texto Primário: #14213D (221 51% 16% azul-marinho profundo)
+       Texto Secundário: #64748B (215 16% 47% slate-500)
+       Texto Terciário: #94A3B8 (215 20% 65% slate-400)
+       Brand Accent: #FCA311 (37 97% 53% âmbar do Curiango)
+       Bordas Estruturais: rgba(20, 33, 61, 0.06) / 221 20% 90%
+       Semântica Financeira: Receita #059669 (160 84% 36%), Despesa #E11D48 (347 77% 50% bordeaux)
+       Baldes: Essenciais #14213D, Estilo de Vida #FCA311, Metas #10B981
     */
-    --background: 0 0% 100%;
-    --foreground: 0 0% 0%;
+    --background: 220 20% 98%;
+    --foreground: 221 51% 16%;
 
     --card: 0 0% 100%;
     --card-foreground: 221 51% 16%;
@@ -25,33 +29,37 @@
     --popover: 0 0% 100%;
     --popover-foreground: 221 51% 16%;
 
-    /* Primary de ação = #FCA311 (laranja/âmbar vibrante) com texto escuro para legibilidade máxima */
-    --primary: 37 97% 53%;
-    --primary-foreground: 221 51% 16%;
+    /* Brand Primary = #14213D (azul-marinho profundo para autoridade e textos principais) */
+    --primary: 221 51% 16%;
+    --primary-foreground: 0 0% 100%;
 
-    /* Secondary / Identidade profunda = #14213D (azul marinho escuro) */
-    --secondary: 221 51% 16%;
-    --secondary-foreground: 0 0% 100%;
+    /* Brand Accent = #FCA311 (âmbar do Curiango para micro-destaques e Copilot ativo) */
+    --accent-brand: 37 97% 53%;
+    --accent-brand-foreground: 221 51% 16%;
 
-    /* Muted = #E5E5E5 suave */
-    --muted: 0 0% 96%;
-    --muted-foreground: 221 25% 42%;
+    /* Secondary = #FCA311 ou slate suave */
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 221 51% 16%;
+
+    /* Muted = #64748B suave */
+    --muted: 220 14% 96%;
+    --muted-foreground: 215 16% 47%;
 
     /* Accent = suave com hover elegante */
-    --accent: 0 0% 92%;
+    --accent: 220 14% 94%;
     --accent-foreground: 221 51% 16%;
 
-    /* Destructive = Coral avermelhado harmonizado com azul-marinho */
-    --destructive: 0 74% 54%;
+    /* Destructive = #E11D48 (bordeaux/rubi fosco oficial CDS v1.0) */
+    --destructive: 347 77% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Sucesso/Receita financeiro semântico harmonizado */
+    /* Sucesso/Receita financeiro semântico = #059669 */
     --success: 160 84% 36%;
     --success-foreground: 0 0% 100%;
 
-    /* Bordas e inputs = #E5E5E5 */
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
+    /* Bordas estruturais sutis CDS v1.0: rgba(20, 33, 61, 0.06) */
+    --border: 221 20% 90%;
+    --input: 221 20% 90%;
     --ring: 37 97% 53%;
 
     --radius: 0.75rem;
@@ -73,29 +81,36 @@
   }
 
   .dark {
-    --background: 221 51% 10%;
+    /* Curiango Night (CDS v1.0 futuro): fundo #0B111E, cards #14213D */
+    --background: 222 45% 8%;
     --foreground: 0 0% 98%;
 
-    --card: 221 51% 14%;
+    --card: 221 51% 16%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 221 51% 14%;
+    --popover: 221 51% 16%;
     --popover-foreground: 0 0% 98%;
 
     --primary: 37 97% 53%;
     --primary-foreground: 221 51% 16%;
 
+    --accent-brand: 37 97% 53%;
+    --accent-brand-foreground: 221 51% 16%;
+
     --secondary: 221 35% 25%;
     --secondary-foreground: 0 0% 100%;
 
     --muted: 221 35% 20%;
-    --muted-foreground: 221 20% 70%;
+    --muted-foreground: 215 20% 65%;
 
     --accent: 221 35% 22%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 74% 54%;
+    --destructive: 347 77% 50%;
     --destructive-foreground: 0 0% 100%;
+
+    --success: 160 84% 36%;
+    --success-foreground: 0 0% 100%;
 
     --border: 221 35% 24%;
     --input: 221 35% 24%;

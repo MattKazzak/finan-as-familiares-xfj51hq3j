@@ -280,13 +280,15 @@ export default function Layout() {
           aria-label="Navegação Principal"
           className="md:hidden fixed bottom-3 sm:bottom-4 inset-x-0 z-40 px-3 sm:px-4 max-w-md mx-auto pointer-events-none"
         >
-          <div className="pointer-events-auto w-full bg-white/85 dark:bg-[#14213D]/90 backdrop-blur-md border border-[#E5E5E5]/80 shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-full px-2 py-1.5 flex items-center justify-between transition-all">
+          <div className="pointer-events-auto w-full bg-white/90 dark:bg-[#14213D]/90 backdrop-blur-md border border-border/40 shadow-curiango-dock rounded-full px-2 py-1.5 flex items-center justify-between transition-all">
             {/* 1. Início */}
             <NavLink
               to="/inicio"
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-[#FCA311] font-bold' : 'text-[#14213D]/60 hover:text-[#14213D]'
+                  isActive
+                    ? 'text-[#FCA311] font-semibold'
+                    : 'text-[#14213D]/60 hover:text-[#14213D]'
                 }`
               }
             >
@@ -297,7 +299,7 @@ export default function Layout() {
                       isActive ? 'bg-[#FCA311]/15 scale-105' : ''
                     }`}
                   >
-                    <Home className="w-5 h-5 stroke-[2.2]" />
+                    <Home className="w-5 h-5" strokeWidth={1.5} />
                   </div>
                   <span className="text-[10px] tracking-tight mt-0.5 leading-none">Início</span>
                 </>
@@ -309,7 +311,9 @@ export default function Layout() {
               to="/carteira"
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-[#FCA311] font-bold' : 'text-[#14213D]/60 hover:text-[#14213D]'
+                  isActive
+                    ? 'text-[#FCA311] font-semibold'
+                    : 'text-[#14213D]/60 hover:text-[#14213D]'
                 }`
               }
             >
@@ -320,7 +324,7 @@ export default function Layout() {
                       isActive ? 'bg-[#FCA311]/15 scale-105' : ''
                     }`}
                   >
-                    <Wallet className="w-5 h-5 stroke-[2.2]" />
+                    <Wallet className="w-5 h-5" strokeWidth={1.5} />
                   </div>
                   <span className="text-[10px] tracking-tight mt-0.5 leading-none">Carteira</span>
                 </>
@@ -336,7 +340,7 @@ export default function Layout() {
                 aria-label="Nova Transação"
                 title="Nova Transação"
               >
-                <Plus className="w-5 h-5 stroke-[2.8]" />
+                <Plus className="w-5 h-5" strokeWidth={1.5} />
               </button>
             </div>
 
@@ -345,7 +349,9 @@ export default function Layout() {
               to="/metas"
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-[#FCA311] font-bold' : 'text-[#14213D]/60 hover:text-[#14213D]'
+                  isActive
+                    ? 'text-[#FCA311] font-semibold'
+                    : 'text-[#14213D]/60 hover:text-[#14213D]'
                 }`
               }
             >
@@ -356,7 +362,7 @@ export default function Layout() {
                       isActive ? 'bg-[#FCA311]/15 scale-105' : ''
                     }`}
                   >
-                    <Target className="w-5 h-5 stroke-[2.2]" />
+                    <Target className="w-5 h-5" strokeWidth={1.5} />
                   </div>
                   <span className="text-[10px] tracking-tight mt-0.5 leading-none">Metas</span>
                 </>
@@ -368,7 +374,9 @@ export default function Layout() {
               to="/perfil"
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-[#FCA311] font-bold' : 'text-[#14213D]/60 hover:text-[#14213D]'
+                  isActive
+                    ? 'text-[#FCA311] font-semibold'
+                    : 'text-[#14213D]/60 hover:text-[#14213D]'
                 }`
               }
             >
@@ -379,7 +387,7 @@ export default function Layout() {
                       isActive ? 'bg-[#FCA311]/15 scale-105' : ''
                     }`}
                   >
-                    <User className="w-5 h-5 stroke-[2.2]" />
+                    <User className="w-5 h-5" strokeWidth={1.5} />
                   </div>
                   <span className="text-[10px] tracking-tight mt-0.5 leading-none">Perfil</span>
                 </>

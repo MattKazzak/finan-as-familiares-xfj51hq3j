@@ -52,6 +52,15 @@ export default {
           amber: '#FCA311',
           gray: '#E5E5E5',
         },
+        buckets: {
+          essentials: '#14213D',
+          lifestyle: '#FCA311',
+          goals: '#10B981',
+        },
+        finance: {
+          income: '#059669',
+          expense: '#E11D48',
+        },
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',
@@ -102,6 +111,8 @@ export default {
       boxShadow: {
         subtle: '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03)',
         elevation: '0 4px 20px rgba(0, 0, 0, 0.05)',
+        curiango: '0 10px 30px -10px rgba(20, 33, 61, 0.05), 0 2px 6px rgba(0, 0, 0, 0.02)',
+        'curiango-dock': '0 20px 40px -15px rgba(20, 33, 61, 0.12)',
       },
       transitionTimingFunction: {
         apple: 'cubic-bezier(0.42, 0, 0.58, 1)',

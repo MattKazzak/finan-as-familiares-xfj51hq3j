@@ -19,7 +19,7 @@ export const CuriangoFloatingButton: React.FC<CuriangoFloatingButtonProps> = ({ 
     <button
       type="button"
       onClick={onClick}
-      className="fixed z-40 bottom-20 right-4 md:bottom-6 md:right-6 group flex items-center justify-center w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-[#FCA311] via-[#fba825] to-[#ffb845] text-[#14213D] shadow-lg shadow-[#14213D]/25 border border-[#FCA311]/40 hover:shadow-xl hover:shadow-[#FCA311]/35 hover:scale-105 active:scale-95 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311] focus-visible:ring-offset-2 touch-manipulation cursor-pointer"
+      className="fixed z-40 bottom-20 right-4 md:bottom-6 md:right-6 group flex items-center justify-center w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-[#FCA311] via-[#fba825] to-[#ffb845] text-[#14213D] shadow-curiango-dock border border-[#FCA311]/40 hover:scale-105 active:scale-95 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311] focus-visible:ring-offset-2 touch-manipulation cursor-pointer"
       aria-label="Abrir Curiangoo Copilot por Voz"
       title="Curiangoo Copilot — Lançamento por Voz com IA"
     >
@@ -28,8 +28,14 @@ export const CuriangoFloatingButton: React.FC<CuriangoFloatingButtonProps> = ({ 
 
       {/* Ícone duplo: Microfone com faísca de IA */}
       <div className="relative flex items-center justify-center">
-        <Mic className="w-6 h-6 stroke-[2.4] text-[#14213D] drop-shadow-sm transition-transform group-hover:scale-110" />
-        <Sparkles className="w-3.5 h-3.5 text-white absolute -top-1.5 -right-2 fill-white drop-shadow animate-pulse" />
+        <Mic
+          className="w-6 h-6 text-[#14213D] drop-shadow-sm transition-transform group-hover:scale-110"
+          strokeWidth={1.5}
+        />
+        <Sparkles
+          className="w-3.5 h-3.5 text-white absolute -top-1.5 -right-2 fill-white drop-shadow animate-pulse"
+          strokeWidth={1.5}
+        />
       </div>
     </button>
   )

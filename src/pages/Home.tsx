@@ -529,7 +529,7 @@ export default function Home() {
               title="Curiangoo"
               aria-label="Curiangoo"
             >
-              <CuriangoLogo size={20} color="#14213D" />
+              <CuriangoLogo size={20} color="#FCA311" />
             </div>
 
             {/* 1. Botão de Privacidade: Alternar visibilidade de valores */}
@@ -660,11 +660,11 @@ export default function Home() {
 
           {/* Chips Receitas e Despesas do Mês: empilhados no mobile (< sm), 2 colunas a partir de sm: */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-white/10">
-            {/* Bloco Receitas do Mês (Semântica financeira verde harmonizado) */}
+            {/* Bloco Receitas do Mês (Semântica financeira verde harmonizado #059669) */}
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between gap-2 min-w-0 border border-white/10">
               <div className="flex items-start gap-2.5 sm:gap-3 min-w-0">
                 <div className="w-8 h-8 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-300 shrink-0 mt-0.5">
-                  <ArrowUpRight className="w-5 h-5 stroke-[2.5]" />
+                  <ArrowUpRight className="w-5 h-5" strokeWidth={1.5} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <span className="text-[10px] sm:text-[11px] uppercase font-bold tracking-wider text-emerald-200/90 block break-words">
@@ -733,10 +733,10 @@ export default function Home() {
               )}
             </div>
 
-            {/* Bloco Despesas do Mês (Semântica financeira vermelho coral harmonizado) */}
+            {/* Bloco Despesas do Mês (Semântica financeira bordeaux CDS v1.0 #E11D48) */}
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3 sm:p-3.5 flex items-start gap-2.5 sm:gap-3 min-w-0 border border-white/10">
               <div className="w-8 h-8 rounded-xl bg-rose-500/20 flex items-center justify-center text-rose-300 shrink-0 mt-0.5">
-                <ArrowDownRight className="w-5 h-5 stroke-[2.5]" />
+                <ArrowDownRight className="w-5 h-5" strokeWidth={1.5} />
               </div>
               <div className="min-w-0 flex-1 overflow-hidden">
                 <span className="text-[10px] sm:text-[11px] uppercase font-bold tracking-wider text-rose-200/90 block break-words">
@@ -781,16 +781,16 @@ export default function Home() {
         </div>
 
         {/* CARD ORÇAMENTO EM 3 BALDES (Desktop 4 col) */}
-        <div className="md:col-span-4 bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+        <div className="md:col-span-4 bg-card/90 backdrop-blur-sm rounded-3xl p-4 sm:p-6 border border-border/40 shadow-curiango flex flex-col justify-between">
           <div>
             {/* Header do Card (ícone Scale neutro + título + subtítulo com mês de referência discreto) */}
             <div className="flex items-center justify-between gap-2 mb-4 min-w-0">
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <div className="w-8 h-8 rounded-xl bg-muted/60 text-muted-foreground flex items-center justify-center shrink-0">
-                  <Scale className="w-4 h-4 text-[#14213D]" strokeWidth={1.5} />
+                <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0">
+                  <Scale className="w-4 h-4" strokeWidth={1.5} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-bold text-sm text-[#14213D] leading-tight break-words">
+                  <h3 className="font-semibold text-sm text-[#14213D] dark:text-white leading-tight break-words">
                     Orçamento em 3 Baldes
                   </h3>
                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -840,7 +840,7 @@ export default function Home() {
                   limit: bucketsData.future.limitCents,
                   percent: bucketsData.future.percent,
                   isOver: bucketsData.future.isOver,
-                  barBg: 'bg-emerald-600',
+                  barBg: 'bg-[#10B981]',
                 },
               ].map((bucket) => {
                 const remaining = bucket.limit - bucket.spent
@@ -896,7 +896,7 @@ export default function Home() {
                     <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-700 ${
-                          isOver ? 'bg-rose-500' : bucket.barBg
+                          isOver ? 'bg-[#E11D48]' : bucket.barBg
                         }`}
                         style={{
                           width: `${Math.min(bucket.percent, 100)}%`,
@@ -927,18 +927,20 @@ export default function Home() {
       </div>
 
       {/* 4. Seção Últimas Transações */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 p-4 sm:p-6 shadow-sm">
+      <div className="bg-card/90 backdrop-blur-sm rounded-3xl border border-border/40 p-4 sm:p-6 shadow-curiango">
         <div className="flex items-center justify-between mb-4 gap-2">
           <div className="min-w-0">
-            <h3 className="font-bold text-base text-slate-900 break-words">Últimas Transações</h3>
-            <p className="text-xs text-slate-500 break-words">
+            <h3 className="font-semibold text-base text-[#14213D] dark:text-white break-words">
+              Últimas Transações
+            </h3>
+            <p className="text-xs text-muted-foreground break-words">
               Histórico recente de receitas e despesas
             </p>
           </div>
           <Button
             variant="ghost"
             onClick={() => navigate('/carteira')}
-            className="text-xs font-bold text-[#14213D] hover:text-[#14213D] hover:bg-[#E5E5E5]/60 rounded-xl px-2.5 py-1.5 shrink-0 h-auto"
+            className="text-xs font-semibold text-[#14213D] hover:text-[#14213D] hover:bg-slate-100 rounded-xl px-2.5 py-1.5 shrink-0 h-auto"
           >
             <span>Ver todas</span>
             <ChevronRight className="w-4 h-4 ml-1 text-[#FCA311]" />
@@ -950,7 +952,7 @@ export default function Home() {
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="flex items-center justify-between p-3">
                 <div className="flex items-center gap-3">
-                  <Skeleton className="w-10 h-10 rounded-2xl" />
+                  <Skeleton className="w-10 h-10 rounded-xl" />
                   <div className="space-y-1">
                     <Skeleton className="h-4 w-32" />
                     <Skeleton className="h-3 w-20" />
@@ -963,23 +965,25 @@ export default function Home() {
         ) : recentItems.length === 0 ? (
           /* Empty State com ilustração line-art */
           <div className="py-12 flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded-3xl bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+            <div className="w-16 h-16 rounded-3xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 mb-3">
               <WalletCards className="w-8 h-8 stroke-[1.5]" />
             </div>
-            <h4 className="font-bold text-slate-800 text-sm">Nenhuma transação ainda</h4>
-            <p className="text-xs text-slate-500 mt-1 max-w-xs mb-4">
+            <h4 className="font-semibold text-slate-800 dark:text-slate-100 text-sm">
+              Nenhuma transação ainda
+            </h4>
+            <p className="text-xs text-muted-foreground mt-1 max-w-xs mb-4">
               Comece adicionando receitas ou despesas compartilhadas pela família.
             </p>
             <Button
               onClick={() => openNewTransaction('expense')}
-              className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold text-xs rounded-xl shadow-sm"
+              className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-semibold text-xs rounded-xl shadow-curiango"
             >
-              <Plus className="w-4 h-4 mr-1.5 stroke-[2.5]" />
+              <Plus className="w-4 h-4 mr-1.5 stroke-[1.5]" />
               Adicionar primeira transação
             </Button>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-border/40">
             {recentItems.map((item) => {
               const tx = item.representativeTx
               const isIncome = tx.type === 'income'
@@ -994,15 +998,15 @@ export default function Home() {
                     setSelectedTx(tx)
                     setIsDetailOpen(true)
                   }}
-                  className="flex items-start sm:items-center justify-between gap-3 py-3 px-2 sm:px-2.5 hover:bg-slate-50/90 rounded-2xl cursor-pointer transition-colors group"
+                  className="flex items-start sm:items-center justify-between gap-3 py-3 px-2 sm:px-2.5 hover:bg-slate-50/90 dark:hover:bg-slate-800/50 rounded-2xl cursor-pointer transition-colors group"
                 >
                   {/* Bloco Esquerda: Ícone + Textos */}
                   <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-                    {/* Ícone de Categoria - Container uniforme e elegante */}
-                    <div className="w-9 h-9 rounded-xl bg-muted/60 text-muted-foreground flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                    {/* Ícone de Categoria - Container neutro sofisticado CDS v1.0 */}
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
                       <CategoryIcon
                         name={tx.category?.icon}
-                        className="w-4 h-4 text-slate-700"
+                        className="w-4 h-4"
                         strokeWidth={1.5}
                       />
                     </div>
@@ -1012,41 +1016,44 @@ export default function Home() {
                       {/* Linha 1: Título completo + Badges de status/tipo (Parcelado estilo banco / Fixa) */}
                       <div className="flex flex-wrap items-center gap-1.5 min-w-0">
                         <p
-                          className="font-semibold text-xs sm:text-sm text-slate-900 group-hover:text-[#14213D] transition-colors break-words leading-tight"
+                          className="font-medium text-xs sm:text-sm text-[#14213D] dark:text-white group-hover:text-[#14213D] transition-colors break-words leading-tight"
                           title={displayTitle}
                         >
                           {displayTitle}
                         </p>
                         {item.isGroup ? (
                           <span
-                            className="inline-flex items-center text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/70 px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap"
+                            className="inline-flex items-center text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200/70 px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap"
                             title={`Compra parcelada: parcela ${item.currentInstallment} de ${item.totalInstallments}`}
                           >
                             Parcelado • {item.currentInstallment}/{item.totalInstallments}
                           </span>
                         ) : null}
                         {tx.is_recurring ? (
-                          <span className="inline-flex items-center text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300/60 px-1.5 py-0.2 rounded-md shrink-0">
+                          <span className="inline-flex items-center text-[9px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300/60 px-1.5 py-0.2 rounded-md shrink-0">
                             Fixa
                           </span>
                         ) : null}
                       </div>
 
                       {/* Linha 2: Metadados responsivos (Wrap amigável no mobile para não esmagar nada) */}
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 min-w-0 text-[11px] sm:text-xs">
-                        {/* DATA com ícone de calendário explícito - sempre legível e identificável */}
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 min-w-0 text-xs text-muted-foreground">
+                        {/* DATA com ícone de calendário explícito */}
                         <span
-                          className="inline-flex items-center gap-1 font-medium text-slate-600 bg-slate-100/80 px-1.5 py-0.5 rounded-md shrink-0 text-[11px] capitalize"
+                          className="inline-flex items-center gap-1 font-normal text-muted-foreground bg-slate-100/80 dark:bg-slate-800/80 px-1.5 py-0.5 rounded-md shrink-0 text-xs capitalize"
                           title={`Data: ${item.transactionDate}`}
                         >
-                          <Calendar className="w-3 h-3 text-slate-500 shrink-0" />
+                          <Calendar
+                            className="w-3 h-3 text-muted-foreground shrink-0"
+                            strokeWidth={1.5}
+                          />
                           <span>{formatRelativeDate(item.transactionDate)}</span>
                         </span>
 
                         <span className="text-slate-300 shrink-0 hidden xs:inline">•</span>
 
                         {/* Chip do membro */}
-                        <span className="inline-flex items-center gap-1 font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded-md shrink-0 text-[11px]">
+                        <span className="inline-flex items-center gap-1 font-normal text-muted-foreground bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md shrink-0 text-xs">
                           <span className="w-2.5 h-2.5 rounded-full bg-[#14213D] text-white flex items-center justify-center text-[7px] font-bold shrink-0">
                             {tx.member?.name?.charAt(0).toUpperCase() || 'M'}
                           </span>
@@ -1057,16 +1064,16 @@ export default function Home() {
 
                         {/* Categoria / Subcategoria ou Pendente */}
                         {tx.category ? (
-                          <span className="font-medium text-slate-500 text-[11px] break-words">
+                          <span className="font-normal text-muted-foreground text-xs break-words">
                             <span>{tx.category.name}</span>
                             {tx.subcategory && (
-                              <span className="text-[#14213D] font-semibold ml-1">
+                              <span className="text-[#14213D] dark:text-slate-200 font-medium ml-1">
                                 · {tx.subcategory.name}
                               </span>
                             )}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200/80 px-1.5 py-0.2 rounded shrink-0">
+                          <span className="inline-flex items-center text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200/80 px-1.5 py-0.2 rounded shrink-0">
                             Pendente
                           </span>
                         )}
@@ -1077,8 +1084,8 @@ export default function Home() {
                   {/* Bloco Direita: Valor alinhado e estável */}
                   <div className="text-right shrink-0 pl-1 pt-0.5 sm:pt-0">
                     <span
-                      className={`font-bold text-xs sm:text-sm md:text-base tabular-nums whitespace-nowrap ${
-                        isIncome ? 'text-emerald-600' : 'text-red-600'
+                      className={`font-semibold tracking-tight text-xs sm:text-sm md:text-base tabular-nums whitespace-nowrap ${
+                        isIncome ? 'text-[#059669]' : 'text-[#E11D48]'
                       }`}
                     >
                       {hideValues
@@ -1086,7 +1093,9 @@ export default function Home() {
                         : `${isIncome ? '+' : '−'} ${formatBRL(item.amountCents)}`}
                     </span>
                     {item.isGroup && (
-                      <span className="block text-[9px] text-slate-400 tabular-nums">/parcela</span>
+                      <span className="block text-[9px] text-muted-foreground tabular-nums">
+                        /parcela
+                      </span>
                     )}
                   </div>
                 </div>

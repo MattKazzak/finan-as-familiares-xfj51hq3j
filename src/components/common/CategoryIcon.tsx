@@ -51,6 +51,10 @@ import {
   Flame,
   Wifi,
   Landmark,
+  ArrowDownRight,
+  AlertCircle,
+  Hammer,
+  Dumbbell,
   LucideIcon,
 } from 'lucide-react'
 
@@ -105,6 +109,10 @@ const iconMap: Record<string, LucideIcon> = {
   Flame,
   Wifi,
   Landmark,
+  ArrowDownRight,
+  AlertCircle,
+  Hammer,
+  Dumbbell,
 }
 
 interface CategoryIconProps {
@@ -149,4 +157,8 @@ export const AVAILABLE_ICONS = [
   'Zap',
   'Coffee',
   'Gift',
+  'ArrowDownRight',
+  'AlertCircle',
+  'Hammer',
+  'Dumbbell',
 ]
