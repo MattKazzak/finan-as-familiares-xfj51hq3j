@@ -35,7 +35,7 @@ export function InstallInstructionsModal({
       <DialogContent className="max-w-sm w-[92vw] rounded-3xl p-6 bg-white border border-slate-100 shadow-2xl">
         <DialogHeader className="text-center sm:text-center">
           {/* Logo oficial do Curiangoo */}
-          <div className="mx-auto w-16 h-16 rounded-2xl bg-[#064E3B] p-2 shadow-lg shadow-emerald-950/20 mb-3 flex items-center justify-center border border-emerald-600/30">
+          <div className="mx-auto w-16 h-16 rounded-2xl bg-[#14213D] p-2 shadow-lg shadow-[#14213D]/25 mb-3 flex items-center justify-center border border-[#14213D]">
             <img
               src="/icon-192.png"
               alt="Curiangoo"

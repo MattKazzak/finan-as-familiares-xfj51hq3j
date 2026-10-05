@@ -64,7 +64,7 @@ export function InstallPwaBanner({
         <div className="bg-slate-900/95 backdrop-blur-md text-white border border-emerald-500/30 shadow-2xl shadow-emerald-950/40 rounded-2xl p-3.5 sm:p-4 ring-1 ring-white/10">
           <div className="flex items-start gap-3">
             {/* Ícone oficial Curiangoo com fallback */}
-            <div className="w-10 h-10 rounded-xl bg-[#064E3B] p-1 shrink-0 shadow-md flex items-center justify-center overflow-hidden border border-emerald-400/40">
+            <div className="w-10 h-10 rounded-xl bg-[#14213D] p-1 shrink-0 shadow-md flex items-center justify-center overflow-hidden border border-[#14213D]">
               <img
                 src="/icon-192.png"
                 alt="Curiangoo"
