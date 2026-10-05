@@ -20,6 +20,7 @@ import {
   EyeOff,
 } from 'lucide-react'
 import { InstallPwaBanner } from '@/components/common/InstallPwaBanner'
+import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 
 type AuthMode = 'login' | 'signup' | 'forgot_password'
 
@@ -232,16 +233,12 @@ export default function Login() {
       <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-[#14213D]/10 border border-[#E5E5E5] p-7 sm:p-8">
         {/* Logo & Marca */}
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-[#14213D] p-1.5 shadow-lg shadow-[#14213D]/25 mb-3 flex items-center justify-center overflow-hidden border border-[#14213D]">
-            <img
-              src="/icon-192.png"
-              alt="Curiangoo"
-              className="w-full h-full object-contain rounded-2xl"
-              onError={(e) => {
-                e.currentTarget.onerror = null
-                e.currentTarget.src = '/icon.svg'
-              }}
-            />
+          <div
+            data-testid="brand-logo-container"
+            aria-label="Curiangoo"
+            className="w-16 h-16 rounded-2xl bg-[#14213D] p-1.5 shadow-lg shadow-[#14213D]/25 mb-3 flex items-center justify-center overflow-hidden border border-[#14213D]"
+          >
+            <CuriangoLogo size={42} color="#FCA311" />
           </div>
           <h1 className="text-2xl font-black text-[#14213D] tracking-tight">Curiangoo</h1>
           <p className="text-xs sm:text-sm font-bold text-[#FCA311] mt-0.5">

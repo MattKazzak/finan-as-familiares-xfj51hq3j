@@ -18,9 +18,9 @@ import {
   ArrowUpRight,
   Send,
   Tag,
-  Bird,
   Folder,
 } from 'lucide-react'
+import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import { ParsedVoiceTransaction, StructuredSuggestionOption } from '@/services/voice-parser'
 import { parseVoiceWithAi } from '@/services/voice-ai'
 import { useFamily } from '@/hooks/use-family'
@@ -1701,18 +1701,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             <div className="flex items-center gap-2.5 min-w-0">
               {/* Avatar do Curiango com status verde ativo */}
               <div className="relative shrink-0">
-                <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#064E3B] to-emerald-600 text-white flex items-center justify-center font-bold shadow-sm p-1.5">
-                  <img
-                    src="/icon.svg"
-                    alt="Curiangoo"
-                    className="w-full h-full object-contain"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none'
-                      const fb = e.currentTarget.nextElementSibling as HTMLElement
-                      if (fb) fb.style.display = 'inline-block'
-                    }}
-                  />
-                  <Bird className="w-5 h-5 text-white hidden" />
+                <div className="w-9 h-9 rounded-2xl bg-[#14213D] text-white flex items-center justify-center font-bold shadow-sm p-1 border border-[#14213D]">
+                  <CuriangoLogo size={22} color="#FCA311" />
                 </div>
                 <span
                   className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"

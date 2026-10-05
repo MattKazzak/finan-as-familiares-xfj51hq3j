@@ -49,9 +49,9 @@ describe('Login / Cadastro Page Brand Header', () => {
       </MemoryRouter>,
     )
 
-    const brandImg = screen.getByAltText('Curiangoo')
-    expect(brandImg).toBeDefined()
-    expect(brandImg.getAttribute('src')).toBe('/icon-192.png')
+    const brandLogo = screen.getByTestId('brand-logo-container')
+    expect(brandLogo).toBeDefined()
+    expect(brandLogo.getAttribute('aria-label')).toBe('Curiangoo')
 
     expect(screen.getByRole('heading', { level: 1, name: 'Curiangoo' })).toBeDefined()
     expect(screen.getByText('Finanças Familiares no Prumo')).toBeDefined()
@@ -68,9 +68,9 @@ describe('Login / Cadastro Page Brand Header', () => {
     const signupTab = screen.getByText('Criar Nova Conta')
     fireEvent.click(signupTab)
 
-    const brandImg = screen.getByAltText('Curiangoo')
-    expect(brandImg).toBeDefined()
-    expect(brandImg.getAttribute('src')).toBe('/icon-192.png')
+    const brandLogo = screen.getByTestId('brand-logo-container')
+    expect(brandLogo).toBeDefined()
+    expect(brandLogo.getAttribute('aria-label')).toBe('Curiangoo')
 
     expect(screen.getByRole('heading', { level: 1, name: 'Curiangoo' })).toBeDefined()
     expect(screen.getByText('Finanças Familiares no Prumo')).toBeDefined()

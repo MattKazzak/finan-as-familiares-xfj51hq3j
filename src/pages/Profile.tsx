@@ -41,6 +41,7 @@ import {
 } from '@/lib/formatters'
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
 import { InstallInstructionsModal } from '@/components/common/InstallInstructionsModal'
+import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import { Sparkles, Landmark } from 'lucide-react'
 import packageJson from '../../package.json'
 import {
@@ -757,16 +758,12 @@ export default function ProfilePage() {
         <div className="bg-gradient-to-br from-[#14213D] via-[#192a4f] to-[#0e172a] rounded-3xl p-5 sm:p-6 text-white shadow-lg shadow-[#14213D]/25 border border-[#14213D]">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
-              <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 p-1 flex items-center justify-center shrink-0 shadow-inner">
-                <img
-                  src="/icon-192.png"
-                  alt="Curiangoo"
-                  className="w-full h-full object-contain rounded-xl"
-                  onError={(e) => {
-                    e.currentTarget.onerror = null
-                    e.currentTarget.src = '/icon.svg'
-                  }}
-                />
+              <div
+                data-testid="profile-install-logo"
+                aria-label="Curiangoo"
+                className="w-12 h-12 rounded-2xl bg-[#14213D] border border-white/20 p-1 flex items-center justify-center shrink-0 shadow-inner"
+              >
+                <CuriangoLogo size={32} color="#FCA311" />
               </div>
               <div className="min-w-0 flex-1">
                 <h3 className="font-bold text-base text-white flex items-center gap-1.5 leading-tight">

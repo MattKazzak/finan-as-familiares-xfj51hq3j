@@ -1,25 +1,33 @@
 import { describe, it, expect } from 'vitest'
+import manifest from '../../public/manifest.json'
 
 describe('PWA Manifest & Metadata', () => {
-  it('confirms manifest configuration matches official brand specs', () => {
-    const manifest = {
-      name: 'Curiangoo — Finanças Familiares',
-      short_name: 'Curiangoo',
-      start_url: '/',
-      display: 'standalone',
-      orientation: 'portrait',
-      theme_color: '#14213D',
-      background_color: '#FFFFFF',
-    }
-
+  it('valida propriedades essenciais do manifest.json', () => {
     expect(manifest.name).toBe('Curiangoo — Finanças Familiares')
     expect(manifest.short_name).toBe('Curiangoo')
-    expect(manifest.display).toBe('standalone')
     expect(manifest.theme_color).toBe('#14213D')
     expect(manifest.background_color).toBe('#FFFFFF')
+    expect(manifest.display).toBe('standalone')
+    expect(manifest.start_url).toBe('/')
   })
 
-  it('verifies brand assets are configured', () => {
-    expect(true).toBe(true)
+  it('valida configuração de ícones no manifest apontando para os novos SVGs', () => {
+    expect(Array.isArray(manifest.icons)).toBe(true)
+    expect(manifest.icons.length).toBeGreaterThanOrEqual(2)
+
+    const standardIcon = manifest.icons.find(
+      (icon: { purpose?: string; src: string }) =>
+        icon.purpose === 'any' || !icon.purpose || icon.src.includes('icon.svg'),
+    )
+    expect(standardIcon).toBeDefined()
+    expect(standardIcon?.src).toBe('/icon.svg')
+    expect(standardIcon?.type).toBe('image/svg+xml')
+
+    const maskableIcon = manifest.icons.find(
+      (icon: { purpose?: string }) => icon.purpose === 'maskable',
+    )
+    expect(maskableIcon).toBeDefined()
+    expect(maskableIcon?.src).toBe('/icon-maskable.svg')
+    expect(maskableIcon?.type).toBe('image/svg+xml')
   })
 })

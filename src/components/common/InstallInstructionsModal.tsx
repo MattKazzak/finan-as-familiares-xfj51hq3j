@@ -1,5 +1,6 @@
 import React from 'react'
 import { Share, PlusSquare, MoreVertical, Smartphone, Check } from 'lucide-react'
+import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import {
   Dialog,
   DialogContent,
@@ -35,16 +36,12 @@ export function InstallInstructionsModal({
       <DialogContent className="max-w-sm w-[92vw] rounded-3xl p-6 bg-white border border-slate-100 shadow-2xl">
         <DialogHeader className="text-center sm:text-center">
           {/* Logo oficial do Curiangoo */}
-          <div className="mx-auto w-16 h-16 rounded-2xl bg-[#14213D] p-2 shadow-lg shadow-[#14213D]/25 mb-3 flex items-center justify-center border border-[#14213D]">
-            <img
-              src="/icon-192.png"
-              alt="Curiangoo"
-              className="w-full h-full object-contain rounded-xl"
-              onError={(e) => {
-                e.currentTarget.onerror = null
-                e.currentTarget.src = '/icon.svg'
-              }}
-            />
+          <div
+            data-testid="install-modal-logo"
+            aria-label="Curiangoo"
+            className="mx-auto w-16 h-16 rounded-2xl bg-[#14213D] p-2 shadow-lg shadow-[#14213D]/25 mb-3 flex items-center justify-center border border-[#14213D]"
+          >
+            <CuriangoLogo size={40} color="#FCA311" />
           </div>
 
           <DialogTitle className="text-lg font-extrabold text-slate-900 tracking-tight flex items-center justify-center gap-1.5">
