@@ -206,6 +206,11 @@ Deno.serve(async (req: Request) => {
         normalizedText.includes('quanto ainda posso') ||
         normalizedText.includes('posso gastar') ||
         normalizedText.includes('saldo') ||
+        normalizedText.includes('quanto ganhei') ||
+        normalizedText.includes('quanto recebi') ||
+        normalizedText.includes('minhas receitas') ||
+        normalizedText.includes('minha receita') ||
+        normalizedText.includes('qual minha renda') ||
         normalizedText.includes('gastos da semana') ||
         normalizedText.includes('gasto da semana') ||
         normalizedText.includes('maior gasto') ||
@@ -371,35 +376,41 @@ Deno.serve(async (req: Request) => {
           ? Math.max(0, targetLifestyleCents - expensesByBucketCents.lifestyle)
           : null
 
-      const effectiveBudgetLimitCents =
+      // Teto de planejamento orçamentário configurado (NÃO É RECEITA NEM SALDO EM CONTA)
+      const plannedBudgetCapCents =
         totalBudgetConfiguredCents > 0
           ? totalBudgetConfiguredCents
           : netIncomeCents > 0
             ? netIncomeCents
             : 0
 
-      const remainingBudgetMonthCents =
-        effectiveBudgetLimitCents > 0
-          ? Math.max(0, effectiveBudgetLimitCents - totalExpenseMonthCents)
-          : null
+      // Saldo orçamentário restante para despesas com base no teto de planejamento
+      const remainingBudgetCapMonthCents =
+        plannedBudgetCapCents > 0 ? plannedBudgetCapCents - totalExpenseMonthCents : null
+
+      // Saldo financeiro real do mês (exclusivamente dinheiro real que entrou - despesas reais)
+      const realCashflowBalanceCents = totalIncomeMonthCents - totalExpenseMonthCents
 
       const maiorGastoSemana =
         topWeekExpenses && topWeekExpenses.length > 0 ? topWeekExpenses[0] : null
 
       financialSummaryContext = `
 DADOS FINANCEIROS REAIS DA FAMÍLIA (MÊS ATUAL: ${currentMonthStr.slice(0, 7)}):
+MÉTRICAS FINANCEIRAS DO MÊS:
+- receitas_mes: ${formatCentsToBRL(totalIncomeMonthCents)} (em centavos: ${totalIncomeMonthCents}). ATENÇÃO: É EXCLUSIVAMENTE a soma de transações reais confirmadas de entrada ('income') ocorridas no mês. NUNCA somar nem incluir teto_planejado_onboarding aqui. Se nenhuma transação de renda foi lançada no mês, o valor é R$ 0,00.
+- despesas_mes: ${formatCentsToBRL(totalExpenseMonthCents)} (em centavos: ${totalExpenseMonthCents}). Soma das transações reais confirmadas de saída ('expense') ocorridas no mês.
+- saldo_real_mes (receitas_mes - despesas_mes): ${formatCentsToBRL(realCashflowBalanceCents)}. Este é o saldo financeiro real acumulado das transações reais do mês atual.
+- teto_planejado_onboarding: ${netIncomeCents > 0 ? formatCentsToBRL(netIncomeCents) : 'Não informado'} [Teto de Planejamento dos Baldes (NÃO É RECEITA REAL, NÃO É SALÁRIO RECEBIDO, NÃO É SALDO EM CONTA)].
 - Modelo Orçamentário da Família: ${targets.essentials}/${targets.lifestyle}/${targets.future} (Essenciais ${targets.essentials}%, Estilo de Vida ${targets.lifestyle}%, Metas/Futuro ${targets.future}%)
-- Renda líquida mensal cadastrada da família: ${netIncomeCents > 0 ? formatCentsToBRL(netIncomeCents) : 'Não informada'}
-- Total de despesas já realizadas este mês: ${formatCentsToBRL(totalExpenseMonthCents)} (em centavos: ${totalExpenseMonthCents})
-  * Necessidades Essenciais: ${formatCentsToBRL(expensesByBucketCents.essential)}${targetEssentialsCents > 0 ? ` (Teto meta: ${formatCentsToBRL(targetEssentialsCents)})` : ''}
-  * Estilo de Vida: ${formatCentsToBRL(expensesByBucketCents.lifestyle)}${targetLifestyleCents > 0 ? ` (Teto meta: ${formatCentsToBRL(targetLifestyleCents)} | Disponível: ${formatCentsToBRL(remainingLifestyleCents ?? 0)})` : ''}
-  * Metas & Investimentos: ${formatCentsToBRL(expensesByBucketCents.goals)}${targetGoalsCents > 0 ? ` (Teto meta: ${formatCentsToBRL(targetGoalsCents)})` : ''}
-- Total de receitas recebidas este mês: ${formatCentsToBRL(totalIncomeMonthCents)}
-- Teto de orçamento total configurado para o mês: ${effectiveBudgetLimitCents > 0 ? formatCentsToBRL(effectiveBudgetLimitCents) : 'Sem teto fixo cadastrado'}
-- Saldo geral restante disponível para gastar este mês: ${
-        remainingBudgetMonthCents !== null
-          ? `${formatCentsToBRL(remainingBudgetMonthCents)} (baseado no teto de ${formatCentsToBRL(effectiveBudgetLimitCents)})`
-          : `Você já gastou ${formatCentsToBRL(totalExpenseMonthCents)} este mês. Recebeu ${formatCentsToBRL(totalIncomeMonthCents)}. O saldo atual do mês é ${formatCentsToBRL(totalIncomeMonthCents - totalExpenseMonthCents)}.`
+- Detalhamento de despesas por balde vs metas teóricas de planejamento:
+  * Necessidades Essenciais: ${formatCentsToBRL(expensesByBucketCents.essential)}${targetEssentialsCents > 0 ? ` (Teto meta teórico: ${formatCentsToBRL(targetEssentialsCents)})` : ''}
+  * Estilo de Vida: ${formatCentsToBRL(expensesByBucketCents.lifestyle)}${targetLifestyleCents > 0 ? ` (Teto meta teórico: ${formatCentsToBRL(targetLifestyleCents)} | Margem teórica restante: ${formatCentsToBRL(remainingLifestyleCents ?? 0)})` : ''}
+  * Metas & Investimentos: ${formatCentsToBRL(expensesByBucketCents.goals)}${targetGoalsCents > 0 ? ` (Teto meta teórico: ${formatCentsToBRL(targetGoalsCents)})` : ''}
+- Teto de orçamento planejado para o mês: ${plannedBudgetCapCents > 0 ? formatCentsToBRL(plannedBudgetCapCents) : 'Sem teto fixo cadastrado'}
+- Margem de teto orçamentário restante para gastar este mês: ${
+        remainingBudgetCapMonthCents !== null
+          ? `${formatCentsToBRL(remainingBudgetCapMonthCents)} (margem restante baseada no teto de planejamento de ${formatCentsToBRL(plannedBudgetCapCents)})`
+          : `Despesas realizadas: ${formatCentsToBRL(totalExpenseMonthCents)}.`
       }
 - Maior gasto dos últimos 7 dias: ${
         maiorGastoSemana
@@ -552,7 +563,12 @@ DIRETRIZES DE INTELIGÊNCIA REAL (PADRÃO OURO):
   - MESCLE com a descrição do contexto anterior e RETORNE IMEDIATAMENTE "status": "sucesso" com a transação completa (categoria e subcategoria preenchidas), sem re-perguntar.
   - Use o padrão obrigatório de confirmação em "mensagem_amigavel": "Lançado: R$ [valor] em [Nome da Categoria] › [Nome da Subcategoria] 👍!"
 
-4. CONSULTAS FINANCEIRAS E MEMÓRIA DA CONVERSA RECENTE:
+4. CONSULTAS FINANCEIRAS, REGRA CRÍTICA DE SALDO/RECEITAS E MEMÓRIA DA CONVERSA RECENTE:
+  - REGRA CRÍTICA DE DISTINÇÃO ENTRE RECEITA REAL E TETO DE PLANEJAMENTO:
+    Atenção: 'teto_planejado_onboarding' (ou 'monthly_net_income' da família) é apenas a meta teórica para divisão dos baldes orçamentários (60/25/15 ou 50/30/20). NUNCA considere esse valor como receita realizada, salário recebido ou saldo real em conta. NUNCA some esse teto com receitas reais. O dinheiro real que entrou no mês é única e exclusivamente 'receitas_mes' (soma das transações reais confirmadas de receita). Responda a consultas de saldo e receitas baseando-se no dinheiro que realmente entrou.
+    * Se o usuário perguntar "quanto ganhei esse mês?", "qual minha receita?", "quanto recebi?": responda EXCLUSIVAMENTE com o valor de 'receitas_mes'. Se 'receitas_mes' for zero ou não houver lançamentos de entrada, informe com clareza que nenhuma receita foi registrada no mês ainda (ou o valor de receitas_mes), podendo mencionar de forma totalmente separada a meta planejada apenas se for relevante para contexto.
+    * Se o usuário perguntar "qual meu saldo?" ou "quanto tenho?": o saldo do mês é obtido unicamente pelas transações reais ('saldo_real_mes' = receitas_mes - despesas_mes). NUNCA some a renda cadastrada do onboarding ao saldo em conta!
+    * Se o usuário perguntar "quanto ainda posso gastar?" ou sobre orçamentos/baldes: use a margem orçamentária dos baldes ou do teto planejado, explicando com clareza que se trata do teto orçamentário planejado.
   - Quando o usuário fizer perguntas contextuais sobre lançamentos que acabou de fazer (ex: "onde você lançou o almoço?", "qual foi o valor que você anotou?", "em qual categoria ficou?"), você DEVE responder conversacionalmente lendo o histórico recente de mensagens enviado.
   - NUNCA marque essas perguntas contextuais como "invalido" e NUNCA peça para "falar novamente".
   - Retorne:
@@ -561,7 +577,7 @@ DIRETRIZES DE INTELIGÊNCIA REAL (PADRÃO OURO):
     * "transacao": null
     * "resposta_consulta": resposta direta, acolhedora e precisa em português (ex: "Lancei seu almoço de R$ 35,00 em [Categoria] › [Subcategoria] no débito! 🍽️").
     * "mensagem_amigavel": mesma resposta direta em linguagem natural.
-  - Quando o usuário perguntar "Quanto ainda posso gastar?", "Como estão meus gastos?", responda de forma sintética, direta e acolhedora em 2-3 linhas, citando o saldo disponível do mês e a situação do balde de Estilo de Vida com base no resumo financeiro fornecido.
+  - Quando o usuário perguntar "Quanto ainda posso gastar?", "Como estão meus gastos?", responda de forma sintética, direta e acolhedora em 2-3 linhas, citando a margem do teto planejado do mês e a situação do balde de Estilo de Vida com base no resumo financeiro fornecido.
   - Perguntas gerais fora do domínio financeiro ou ruído sem sentido podem retornar "invalido", mas com um texto curto e amigável para balão de chat (sem tom rústico de erro ou card).
 
 Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido (response_format: json_object) com o seguinte esquema:
@@ -594,10 +610,11 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido (response_format: jso
 
 Comportamentos esperados:
 1. "consulta" (PERGUNTA / DÚVIDA / CONSULTA):
-   - O usuário fez uma pergunta sobre as finanças (ex.: "quanto ainda posso gastar esse mês?", "quanto gastei essa semana?", "qual foi o maior gasto?", "como estão meus gastos?").
+   - O usuário fez uma pergunta sobre as finanças (ex.: "quanto ainda posso gastar esse mês?", "quanto ganhei esse mês?", "qual meu saldo?", "quanto gastei essa semana?", "qual foi o maior gasto?", "como estão meus gastos?").
    - "status": "consulta"
    - "tipo_resposta": "consulta"
    - "transacao": null
+   - Respeite rigorosamente a REGRA CRÍTICA: receitas e saldo real baseiam-se única e exclusivamente em 'receitas_mes' e transações reais do mês, NUNCA em 'teto_planejado_onboarding'.
    - "resposta_consulta": Resposta direta, acolhedora, concisa e precisa em português brasileiro com os valores exatos em R$ formatados a partir do resumo financeiro fornecido.
    - "mensagem_amigavel": O mesmo texto de resposta amigável.
    - NUNCA crie card de despesa para consultas.
