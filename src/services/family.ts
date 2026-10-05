@@ -181,27 +181,20 @@ export async function fetchFamilyData() {
 }
 
 export async function addFamilyMember(familyId: string, name: string) {
-  const { data, error } = await (supabase as any)
-    .from('family_members')
-    .insert({
-      family_id: familyId,
-      name: name.trim(),
-      is_admin: false,
-    })
-    .select()
-    .single()
+  const { data, error } = await (supabase as any).rpc('add_family_member_without_account', {
+    p_family_id: familyId,
+    p_name: name.trim(),
+  })
 
   if (error) throw error
   return data as FamilyMember
 }
 
 export async function updateFamilyMember(id: string, name: string) {
-  const { data, error } = await (supabase as any)
-    .from('family_members')
-    .update({ name: name.trim() })
-    .eq('id', id)
-    .select()
-    .single()
+  const { data, error } = await (supabase as any).rpc('rename_family_member', {
+    p_member_id: id,
+    p_new_name: name.trim(),
+  })
 
   if (error) throw error
   return data as FamilyMember
@@ -238,7 +231,9 @@ export async function generateFamilyInvite(familyId: string): Promise<FamilyInvi
 export async function fetchFamilyInvites(familyId: string): Promise<FamilyInvite[]> {
   const { data, error } = await (supabase as any)
     .from('family_invites')
-    .select('*')
+    .select(
+      'id, code, role, status, uses_count, max_uses, expires_at, created_at, family_id, created_by, accepted_by, accepted_at',
+    )
     .eq('family_id', familyId)
     .order('created_at', { ascending: false })
 

@@ -696,6 +696,10 @@ export type Database = {
         }
         Returns: Json
       }
+      add_family_member_without_account: {
+        Args: { p_family_id: string; p_name: string }
+        Returns: Json
+      }
       create_new_family_workspace: {
         Args: { p_family_name: string; p_member_name: string }
         Returns: string
@@ -704,6 +708,10 @@ export type Database = {
       get_invite_preview: { Args: { p_code: string }; Returns: Json }
       leave_family: { Args: { p_family_id: string }; Returns: Json }
       remove_family_member: { Args: { p_member_id: string }; Returns: Json }
+      rename_family_member: {
+        Args: { p_member_id: string; p_new_name: string }
+        Returns: Json
+      }
       user_belongs_to_family: { Args: { f_id: string }; Returns: boolean }
     }
     Enums: {
