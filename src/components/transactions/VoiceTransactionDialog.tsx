@@ -17,7 +17,6 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Send,
-  Loader2,
   Tag,
   Bird,
   Folder,
@@ -258,6 +257,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       const isAmountOnly = isListeningForAmountOnlyRef.current
       const existingPartial = pendingTransactionRef.current
 
+      // No instante exato em que parar a escuta, desativa o mic
       stopListening()
 
       const textToProcess = (
@@ -267,6 +267,10 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       if (!textToProcess) {
         return
       }
+
+      // Exibe imediatamente o indicador de processamento ("digitando..." com bolinhas animadas)
+      // eliminando qualquer sensação de tela travada enquanto a IA processa
+      setIsProcessingAi(true)
 
       // Adiciona a fala do usuário como balão à direita no chat
       const userMsgId = `user-${Date.now()}`
@@ -284,7 +288,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       finalBufferRef.current = ''
 
       try {
-        setIsProcessingAi(true)
         const previousContext =
           isAmountOnly ||
           existingPartial?.aiStatus === 'falta_valor' ||
@@ -734,10 +737,9 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           setIsListening(true)
           setPermissionStatus('granted')
           setErrorMessage(null)
-          // Inicia contagem regressiva de silêncio inicial de 3s logo que o microfone começa a ouvir
+          // Inicia contagem regressiva de silêncio inicial de 1s logo que o microfone começa a ouvir
           scheduleSilenceProcessing()
         }
-
         recognition.onaudiostart = () => {
           setAudioDetected(true)
         }
@@ -773,14 +775,14 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           handleStopAndProcess(captured)
         }
 
-        // Temporizador de 3s (3000ms) de silêncio real com contagem regressiva visual
+        // Temporizador calibrado para 1000ms (1 segundo) de silêncio real
         const scheduleSilenceProcessing = () => {
           clearSilenceTimer()
 
-          const durationMs = 3000
+          const durationMs = 1000
           const endTime = Date.now() + durationMs
           silenceEndTimestampRef.current = endTime
-          setSecondsRemaining(3)
+          setSecondsRemaining(1)
 
           countdownIntervalRef.current = setInterval(() => {
             const now = Date.now()
@@ -793,7 +795,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
               }
             } else {
               const secs = Math.ceil(diffMs / 1000)
-              setSecondsRemaining(Math.min(3, Math.max(1, secs)))
+              setSecondsRemaining(Math.min(1, Math.max(1, secs)))
             }
           }, 100)
 
@@ -842,7 +844,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           latestTranscriptRef.current = fullTranscript
           setTextoFalado(fullTranscript)
 
-          // Reiniciar timer de 3s a cada fala detectada
+          // Reiniciar timer de 1s a cada fala detectada
           scheduleSilenceProcessing()
         }
 
@@ -1818,12 +1820,28 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             )
           })}
 
-          {/* Indicador de carregamento / IA processando */}
+          {/* Indicador de carregamento / IA digitando com bolinhas animadas (mobile-friendly, sem overflow) */}
           {isProcessingAi && (
-            <div className="flex items-start gap-2 animate-in fade-in duration-200">
-              <div className="bg-slate-100 border border-slate-200/80 text-slate-700 rounded-2xl rounded-bl-xs px-3.5 py-2.5 flex items-center gap-2 shadow-xs">
-                <Loader2 className="w-3.5 h-3.5 text-emerald-700 animate-spin" />
-                <span className="text-xs font-semibold">Curiango Copilot pensando...</span>
+            <div
+              data-testid="copilot-typing-indicator"
+              className="flex items-start gap-2 animate-in fade-in duration-150 max-w-full"
+            >
+              <div className="bg-slate-100 border border-slate-200/80 text-slate-700 rounded-2xl rounded-bl-xs px-3.5 py-2 flex items-center gap-2 shadow-xs">
+                <div className="flex items-center gap-1 py-0.5" aria-label="digitando...">
+                  <span
+                    className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-bounce"
+                    style={{ animationDelay: '0ms' }}
+                  />
+                  <span
+                    className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-bounce"
+                    style={{ animationDelay: '150ms' }}
+                  />
+                  <span
+                    className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-bounce"
+                    style={{ animationDelay: '300ms' }}
+                  />
+                </div>
+                <span className="text-xs font-medium text-slate-600">digitando...</span>
               </div>
             </div>
           )}
@@ -1847,13 +1865,9 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 <>
                   <span
                     className={`w-2 h-2 rounded-full transition-colors duration-300 ${
-                      secondsRemaining === 3
+                      secondsRemaining === 1
                         ? 'bg-emerald-500 animate-pulse'
-                        : secondsRemaining === 2
-                          ? 'bg-emerald-400'
-                          : secondsRemaining === 1
-                            ? 'bg-slate-400'
-                            : 'bg-emerald-500 animate-pulse'
+                        : 'bg-emerald-500 animate-pulse'
                     }`}
                   />
                   <span className="text-emerald-800 font-bold">
@@ -1870,13 +1884,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 {secondsRemaining !== null && (
                   <span
                     data-testid="silence-countdown-badge"
-                    className={`inline-flex items-center gap-1 font-mono text-[11px] font-bold px-1.5 py-0.5 rounded-full transition-all duration-300 ${
-                      secondsRemaining === 3
-                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 scale-100'
-                        : secondsRemaining === 2
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 scale-95 opacity-90'
-                          : 'bg-slate-200 text-slate-600 border border-slate-300 scale-90 opacity-75'
-                    }`}
+                    className="inline-flex items-center gap-1 font-mono text-[11px] font-bold px-1.5 py-0.5 rounded-full transition-all duration-300 bg-emerald-100 text-emerald-800 border border-emerald-300 scale-100"
                     title={`Enviando em ${secondsRemaining}s`}
                   >
                     <span>{secondsRemaining}s</span>
@@ -1915,36 +1923,18 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                       stopListening()
                     }
                   }}
-                  className={`relative w-11 h-11 rounded-2xl flex items-center justify-center shadow-md transition-all duration-300 active:scale-95 ${
-                    secondsRemaining === 3
-                      ? 'bg-[#064E3B] text-white shadow-emerald-900/30 ring-4 ring-emerald-400/40 animate-pulse'
-                      : secondsRemaining === 2
-                        ? 'bg-emerald-800 text-white shadow-emerald-900/20 ring-2 ring-emerald-300/30'
-                        : secondsRemaining === 1
-                          ? 'bg-slate-600 text-slate-200 shadow-slate-900/10'
-                          : 'bg-[#064E3B] text-white shadow-emerald-900/30 ring-4 ring-emerald-400/40 animate-pulse'
-                  }`}
+                  className="relative w-11 h-11 rounded-2xl flex items-center justify-center shadow-md transition-all duration-300 active:scale-95 bg-[#064E3B] text-white shadow-emerald-900/30 ring-4 ring-emerald-400/40 animate-pulse"
                   title="Toque para concluir"
                 >
                   {/* Efeito de onda sutil ao redor do botão */}
                   <span className="absolute inset-0 rounded-2xl bg-emerald-400/20 animate-ping pointer-events-none" />
 
-                  <Mic
-                    className={`w-5 h-5 relative z-10 transition-colors duration-300 ${
-                      secondsRemaining === 1 ? 'text-slate-300' : 'text-emerald-300'
-                    }`}
-                  />
+                  <Mic className="w-5 h-5 relative z-10 transition-colors duration-300 text-emerald-300" />
                   {secondsRemaining !== null && (
                     <span
                       key={secondsRemaining}
                       data-testid="mic-countdown-pill"
-                      className={`absolute -top-1.5 -right-1.5 z-20 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold font-mono flex items-center justify-center shadow-xs transition-all duration-300 animate-in zoom-in-75 ${
-                        secondsRemaining === 3
-                          ? 'bg-emerald-500 text-white ring-2 ring-white scale-100'
-                          : secondsRemaining === 2
-                            ? 'bg-emerald-400 text-white ring-2 ring-white scale-95 opacity-90'
-                            : 'bg-slate-500 text-slate-100 ring-2 ring-white scale-90 opacity-80'
-                      }`}
+                      className="absolute -top-1.5 -right-1.5 z-20 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold font-mono flex items-center justify-center shadow-xs transition-all duration-300 animate-in zoom-in-75 bg-emerald-500 text-white ring-2 ring-white scale-100"
                     >
                       {secondsRemaining}
                     </span>

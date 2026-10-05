@@ -657,6 +657,11 @@ Comportamentos esperados:
       { role: 'user', content: texto },
     ]
 
+    // Otimização de latência: se for consulta financeira que precise de resposta textual explicativa,
+    // permite até 400 tokens; para lançamentos, slot-filling e mensagens curtas, limita estritamente
+    // a 150 tokens para eliminar overhead de geração desnecessário e acelerar a resposta do Copilot.
+    const maxTokens = isConsultativeQuery ? 400 : 150
+
     // Chamada à API da OpenAI
     const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -669,6 +674,7 @@ Comportamentos esperados:
         messages: openAiMessages,
         response_format: { type: 'json_object' },
         temperature: 0.2,
+        max_tokens: maxTokens,
       }),
     })
 

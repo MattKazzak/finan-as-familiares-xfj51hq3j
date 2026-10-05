@@ -658,7 +658,7 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     expect(screen.getByText('Microfone pronto')).toBeDefined()
   })
 
-  it('processa somente após 3s de silêncio reais (silenceTimerRef 3000ms)', async () => {
+  it('processa somente após 1s de silêncio real (silenceTimerRef 1000ms)', async () => {
     vi.useFakeTimers()
     let capturedRecognitionInstance: any = null
 
@@ -702,25 +702,15 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
       results: [[{ transcript: 'Gasolina 100 reais' }]],
     })
 
-    // Logo após falar, a contagem regressiva inicia em 3s
+    // Logo após falar, o indicador de silêncio de 1s é ativado
     expect(screen.getByTestId('silence-countdown-badge')).toBeDefined()
-    expect(screen.getByTestId('mic-countdown-pill').textContent).toBe('3')
-
-    // Avança 1s: deve descer para 2s
-    vi.advanceTimersByTime(1000)
-    expect(screen.getByTestId('mic-countdown-pill').textContent).toBe('2')
-    expect(mockParseVoiceWithAi).not.toHaveBeenCalled()
-
-    // Avança mais 1s: deve descer para 1s
-    vi.advanceTimersByTime(1000)
     expect(screen.getByTestId('mic-countdown-pill').textContent).toBe('1')
+
+    // Avança 500ms: ainda não deve processar
+    vi.advanceTimersByTime(500)
     expect(mockParseVoiceWithAi).not.toHaveBeenCalled()
 
-    // Avança mais 600ms (total 2600ms): ainda não deve processar
-    vi.advanceTimersByTime(600)
-    expect(mockParseVoiceWithAi).not.toHaveBeenCalled()
-
-    // Avança mais 500ms (total > 3000ms de silêncio real)
+    // Avança mais 500ms (total 1000ms de silêncio real): dispara o processamento
     vi.advanceTimersByTime(500)
 
     expect(mockParseVoiceWithAi).toHaveBeenCalledWith(
