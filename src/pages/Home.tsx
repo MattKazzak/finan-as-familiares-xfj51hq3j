@@ -21,6 +21,9 @@ import { NewTransactionDialog } from '@/components/transactions/NewTransactionDi
 import { formatTransactionTitle, groupInstallmentTransactions } from '@/services/installments'
 import { deleteTransaction } from '@/services/transactions'
 import { useToast } from '@/hooks/use-toast'
+import { useValuePrivacy, getTimeGreeting } from '@/hooks/use-value-privacy'
+import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import type { Transaction, DefaultBudget, Budget } from '@/types/finance'
 import { BUDGET_PRESET_ITEMS } from '@/types/budget-presets'
 import {
@@ -36,6 +39,9 @@ import {
   Calendar,
   Mic,
   Sparkles,
+  Eye,
+  EyeOff,
+  Bell,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -56,6 +62,7 @@ export default function Home() {
   } = useFamily()
   const { toast } = useToast()
   const navigate = useNavigate()
+  const { hideValues, toggleHideValues, maskValue } = useValuePrivacy()
 
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -68,6 +75,18 @@ export default function Home() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [editingTx, setEditingTx] = useState<Transaction | null>(null)
   const [isEditOpen, setIsEditOpen] = useState(false)
+
+  // Saudação personalizada dinâmica baseada no horário LOCAL do usuário
+  const timeGreeting = useMemo(() => {
+    const greetingData = getTimeGreeting(new Date())
+    const memberFirstName = currentMember?.name ? currentMember.name.split(' ')[0] : null
+    return {
+      text: greetingData.fullGreeting(memberFirstName || 'Família'),
+      rawGreeting: greetingData.greeting,
+      emoji: greetingData.emoji,
+      memberName: memberFirstName || 'Família',
+    }
+  }, [currentMember?.name])
 
   // Mês atual formato YYYY-MM (baseado no horário local)
   const currentMonthStr = useMemo(() => {
@@ -433,44 +452,108 @@ export default function Home() {
     }
   }
 
+  const memberInitial = currentMember?.name?.charAt(0).toUpperCase() || 'F'
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto w-full min-w-0 overflow-x-hidden">
-      {/* 1. Header Saudação + Pull-to-refresh */}
-      <div className="flex items-start sm:items-center justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight break-words">
-              Olá, {currentMember?.name || 'Família'}! 👋
-            </h1>
-            {members.length > 1 && (
-              <button
-                type="button"
-                onClick={openWhoIsUsing}
-                className="text-[11px] font-semibold text-[#14213D] bg-[#E5E5E5]/60 hover:bg-[#FCA311]/20 px-2 py-0.5 rounded-full transition-colors flex items-center gap-1 border border-[#E5E5E5] shrink-0 cursor-pointer active:scale-95"
-                title="Trocar quem está usando"
-              >
-                <span>Trocar</span>
-                <span className="text-[9px]">▾</span>
-              </button>
-            )}
-          </div>
-          <p className="text-xs sm:text-sm text-slate-500 capitalize mt-1 break-words leading-tight">
-            {formatFullDate(new Date())} •{' '}
-            <span className="font-semibold text-[#14213D]">
-              {formatFamilyDisplayName(family?.name, 'Silva')}
-            </span>
-          </p>
-        </div>
+      {/* 1. NOVO HEADER FINTECH MODERNO (PADRÃO NUBANK / COPILOT MONEY + PÁSSARO CURIANGOO) */}
+      <header className="pt-1 pb-1">
+        <div className="flex items-center justify-between gap-3 min-w-0">
+          {/* Lado Esquerdo: Avatar arredondado do membro ativo + Saudação por horário + Subtítulo Curiangoo Família */}
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <button
+              type="button"
+              onClick={openWhoIsUsing}
+              className="relative shrink-0 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311] rounded-2xl active:scale-95 transition-transform cursor-pointer"
+              aria-label="Trocar membro ativo ou abrir perfil"
+              title={members.length > 1 ? 'Trocar perfil / membro' : 'Perfil do membro'}
+            >
+              <Avatar className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl border-2 border-[#14213D] shadow-sm transition-all group-hover:border-[#FCA311]">
+                <AvatarFallback className="bg-gradient-to-tr from-[#14213D] to-[#1f3159] text-white font-extrabold text-sm sm:text-base rounded-2xl">
+                  {memberInitial}
+                </AvatarFallback>
+              </Avatar>
+              {members.length > 1 && (
+                <span
+                  className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#FCA311] text-[#14213D] text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-2xs"
+                  title="Mais membros disponíveis"
+                >
+                  ▾
+                </span>
+              )}
+            </button>
 
-        <button
-          onClick={handlePullToRefresh}
-          disabled={refreshing}
-          className="p-2 text-slate-500 hover:text-[#14213D] hover:bg-[#E5E5E5]/60 rounded-xl transition-all active:scale-95 shrink-0"
-          title="Atualizar dados"
-        >
-          <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin text-[#FCA311]' : ''}`} />
-        </button>
-      </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <h1
+                  className="text-base sm:text-lg md:text-xl font-extrabold text-[#14213D] tracking-tight leading-snug break-words"
+                  title={timeGreeting.text}
+                >
+                  {timeGreeting.text}
+                </h1>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <p className="text-[11px] sm:text-xs text-slate-500 font-medium leading-none">
+                  Curiangoo Família
+                </p>
+                <span className="text-[10px] text-slate-300 select-none">·</span>
+                <span className="text-[11px] sm:text-xs font-semibold text-[#14213D] leading-none break-words">
+                  {formatFamilyDisplayName(family?.name, 'Silva')}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Lado Direito: Pássaro Curiangoo discreto + 2 Ícones Lineares Minimalistas (Privacidade de Valores + Notificações) */}
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            {/* Marca oficial do pássaro em traço contínuo minimalista */}
+            <div
+              className="hidden xs:flex items-center justify-center w-9 h-9 rounded-2xl bg-[#E5E5E5]/40 border border-[#E5E5E5] text-[#14213D] transition-transform hover:scale-105 select-none"
+              title="Curiangoo"
+              aria-label="Curiangoo"
+            >
+              <CuriangoLogo size={20} color="#14213D" />
+            </div>
+
+            {/* 1. Botão de Privacidade: Alternar visibilidade de valores */}
+            <button
+              type="button"
+              onClick={toggleHideValues}
+              className="p-2 sm:p-2.5 rounded-2xl text-slate-600 hover:text-[#14213D] hover:bg-[#E5E5E5]/60 border border-transparent hover:border-[#E5E5E5] transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
+              aria-label={hideValues ? 'Mostrar valores' : 'Ocultar valores'}
+              title={
+                hideValues
+                  ? 'Mostrar valores monetários'
+                  : 'Ocultar valores monetários (modo privacidade)'
+              }
+            >
+              {hideValues ? (
+                <EyeOff className="w-5 h-5 stroke-[2] text-[#FCA311]" />
+              ) : (
+                <Eye className="w-5 h-5 stroke-[2]" />
+              )}
+            </button>
+
+            {/* 2. Sininho de Notificações Discreto */}
+            <button
+              type="button"
+              onClick={() => {
+                toast({
+                  title: 'Notificações do Curiangoo',
+                  description: 'Você está em dia com todas as finanças e alertas da família!',
+                })
+              }}
+              className="relative p-2 sm:p-2.5 rounded-2xl text-slate-600 hover:text-[#14213D] hover:bg-[#E5E5E5]/60 border border-transparent hover:border-[#E5E5E5] transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
+              aria-label="Notificações"
+              title="Notificações da família"
+            >
+              <Bell className="w-5 h-5 stroke-[2]" />
+              {/* Ponto indicador sutil */}
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#FCA311] ring-2 ring-white" />
+            </button>
+          </div>
+        </div>
+      </header>
 
       {/* 2. Filtro Horizontal de Membros (Chips) */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none max-w-full">
@@ -544,7 +627,11 @@ export default function Home() {
             <Skeleton className="h-10 w-48 bg-white/20 rounded-lg my-2" />
           ) : (
             <div className="text-2xl sm:text-4xl font-extrabold tracking-tight tabular-nums my-2 break-words text-white">
-              <CountUp end={totalBalanceCents} formatter={(v) => formatBRL(v)} />
+              {hideValues ? (
+                <span>R$ ••••••</span>
+              ) : (
+                <CountUp end={totalBalanceCents} formatter={(v) => formatBRL(v)} />
+              )}
             </div>
           )}
 
@@ -568,12 +655,12 @@ export default function Home() {
                   </span>
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 mt-0.5">
                     <span className="text-base sm:text-lg font-bold text-white tabular-nums break-words">
-                      {formatBRL(monthIncomeCents)}
+                      {maskValue(formatBRL(monthIncomeCents))}
                     </span>
                     {/* Cenário (a): zero e previsto > 0 -> badge/texto sutil (Previsto: ...) */}
                     {monthIncomeCents === 0 && plannedIncomeCents > 0 && (
                       <span className="text-xs sm:text-[11px] font-medium text-white/70 break-words">
-                        (Previsto: {formatBRL(plannedIncomeCents)})
+                        (Previsto: {maskValue(formatBRL(plannedIncomeCents))})
                       </span>
                     )}
                     {/* Cenário (b.1): parcial (realizado < previsto) -> de {previsto} */}
@@ -581,7 +668,7 @@ export default function Home() {
                       plannedIncomeCents > 0 &&
                       monthIncomeCents < plannedIncomeCents && (
                         <span className="text-xs sm:text-[11px] font-medium text-white/70 break-words">
-                          de {formatBRL(plannedIncomeCents)}
+                          de {maskValue(formatBRL(plannedIncomeCents))}
                         </span>
                       )}
                     {/* Cenário (b.2): atingido ou superado -> ✓ Previsto atingido */}
@@ -639,7 +726,7 @@ export default function Home() {
                   Despesas do Mês
                 </span>
                 <span className="text-base sm:text-lg font-bold text-white tabular-nums break-words block mt-0.5">
-                  {formatBRL(monthExpenseCents)}
+                  {maskValue(formatBRL(monthExpenseCents))}
                 </span>
               </div>
             </div>
@@ -762,23 +849,23 @@ export default function Home() {
                         {bucket.limit > 0 ? (
                           isOver ? (
                             <span className="text-[11px] font-bold text-rose-600 break-words">
-                              estourou {formatBRL(Math.abs(remaining))}
+                              estourou {maskValue(formatBRL(Math.abs(remaining)))}
                             </span>
                           ) : !hasSpent ? (
                             <span className="text-[11px] font-semibold text-slate-700 break-words">
-                              resta {formatBRL(remaining)}{' '}
+                              resta {maskValue(formatBRL(remaining))}{' '}
                               <span className="text-[10px] text-slate-400 font-normal">
                                 (intacto)
                               </span>
                             </span>
                           ) : (
                             <span className="text-[11px] font-bold text-slate-700 break-words">
-                              resta {formatBRL(remaining)}
+                              resta {maskValue(formatBRL(remaining))}
                             </span>
                           )
                         ) : (
                           <span className="text-[11px] text-slate-400 font-medium">
-                            {formatBRL(bucket.spent)}
+                            {maskValue(formatBRL(bucket.spent))}
                           </span>
                         )}
                       </span>
@@ -974,7 +1061,9 @@ export default function Home() {
                         isIncome ? 'text-emerald-600' : 'text-red-600'
                       }`}
                     >
-                      {isIncome ? '+' : '−'} {formatBRL(item.amountCents)}
+                      {hideValues
+                        ? 'R$ ••••••'
+                        : `${isIncome ? '+' : '−'} ${formatBRL(item.amountCents)}`}
                     </span>
                     {item.isGroup && (
                       <span className="block text-[9px] text-slate-400 tabular-nums">/parcela</span>

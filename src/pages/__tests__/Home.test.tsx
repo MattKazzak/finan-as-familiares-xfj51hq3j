@@ -647,5 +647,52 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       const truncatedElements = container.querySelectorAll('.truncate')
       expect(truncatedElements.length).toBe(0)
     })
+
+    it('renderiza o novo Header moderno fintech com saudação por horário, subtítulo Curiangoo Família e botões de privacidade e notificações', async () => {
+      render(
+        <MemoryRouter>
+          <Home />
+        </MemoryRouter>,
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText(/Bom dia|Boa tarde|Boa noite/)).toBeDefined()
+      })
+
+      expect(screen.getByText('Curiangoo Família')).toBeDefined()
+      expect(screen.getByRole('button', { name: /mostrar valores|ocultar valores/i })).toBeDefined()
+      expect(screen.getByRole('button', { name: /notificações/i })).toBeDefined()
+      expect(
+        screen.getByRole('button', { name: /trocar membro ativo ou abrir perfil/i }),
+      ).toBeDefined()
+    })
+
+    it('botão de privacidade oculta o saldo e os valores monetários com máscara ao ser clicado', async () => {
+      render(
+        <MemoryRouter>
+          <Home />
+        </MemoryRouter>,
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Saldo Total da Família')).toBeDefined()
+      })
+
+      const privacyBtn = screen.getByRole('button', { name: /ocultar valores/i })
+      expect(privacyBtn).toBeDefined()
+
+      // Ao clicar, entra em modo privacidade
+      fireEvent.click(privacyBtn)
+
+      // Saldo mascarado
+      expect(screen.getByText('R$ ••••••')).toBeDefined()
+
+      // Clicar novamente restaura
+      const showBtn = screen.getByRole('button', { name: /mostrar valores/i })
+      fireEvent.click(showBtn)
+      await waitFor(() => {
+        expect(screen.queryByText('R$ ••••••')).toBeNull()
+      })
+    })
   })
 })

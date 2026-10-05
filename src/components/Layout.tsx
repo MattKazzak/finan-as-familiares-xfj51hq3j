@@ -1,5 +1,6 @@
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { Home, Wallet, Plus, Target, User, TrendingUp, LogOut, ChevronRight } from 'lucide-react'
+import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { useFamily } from '@/hooks/use-family'
@@ -122,18 +123,18 @@ export default function Layout() {
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-white flex flex-col md:flex-row text-[#000000] font-sans antialiased">
       {/* SIDEBAR DESKTOP (>= 768px) com identidade profunda #14213D */}
       <aside className="hidden md:flex md:w-60 flex-col bg-[#14213D] border-r border-[#14213D]/90 text-white fixed inset-y-0 left-0 z-40">
-        {/* Logo & Marca */}
+        {/* Logo & Marca Oficial Curiangoo */}
         <div className="p-5 border-b border-white/10 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FCA311] to-[#e08e08] flex items-center justify-center text-[#14213D] font-black shadow-md shadow-black/20">
-            <span className="text-lg">💰</span>
+          <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-[#FCA311] shadow-md shadow-black/20 shrink-0">
+            <CuriangoLogo size={24} color="#FCA311" />
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="font-extrabold text-sm text-white truncate">Finanças da Família</h1>
+            <h1 className="font-black text-sm text-white tracking-tight truncate">Curiangoo</h1>
             <p
               className="text-xs text-white/70 break-words line-clamp-2 leading-tight"
-              title={family ? formatFamilyDisplayName(family.name) : 'Controle Conjunto'}
+              title={family ? formatFamilyDisplayName(family.name) : 'Finanças da Família'}
             >
-              {family ? formatFamilyDisplayName(family.name) : 'Controle Conjunto'}
+              {family ? formatFamilyDisplayName(family.name) : 'Finanças da Família'}
             </p>
           </div>
         </div>
@@ -224,45 +225,47 @@ export default function Layout() {
 
       {/* ÁREA PRINCIPAL COM SCROLL */}
       <div className="flex-1 md:ml-60 flex flex-col min-h-screen bg-[#FFFFFF]">
-        {/* HEADER TOP (visível em desktop e mobile) */}
-        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E5E5E5] px-4 py-3 sm:px-6 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h2 className="text-base sm:text-lg font-bold text-[#14213D] tracking-tight">
-              {getHeaderTitle()}
-            </h2>
-          </div>
+        {/* HEADER TOP (visível em desktop e nas demais páginas; na Home (/inicio) o header moderno fintech já assume o topo no mobile e desktop, evitando cabeçalho duplicado ou barra cinza rígida) */}
+        {location.pathname !== '/inicio' && (
+          <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E5E5E5] px-4 py-3 sm:px-6 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-bold text-[#14213D] tracking-tight">
+                {getHeaderTitle()}
+              </h2>
+            </div>
 
-          <div className="flex items-center gap-3">
-            {members.length > 1 ? (
-              <div
-                onClick={openWhoIsUsing}
-                title="Toque para trocar quem está usando"
-                className="flex items-center gap-2 cursor-pointer group bg-[#E5E5E5]/40 hover:bg-[#FCA311]/15 px-2.5 py-1 rounded-full border border-[#E5E5E5] transition-all"
-              >
-                <Avatar className="w-7 h-7 border border-[#FCA311]/60 shadow-sm group-hover:ring-2 group-hover:ring-[#FCA311] transition-all">
-                  <AvatarFallback className="bg-gradient-to-tr from-[#14213D] to-[#1f3159] text-white font-bold text-xs">
-                    {userInitial}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-xs font-medium text-[#14213D] group-hover:text-[#14213D] transition-colors flex items-center gap-1">
-                  <span>{currentMember?.name || 'Família'}</span>
-                  <span className="text-[10px] text-slate-400">▾</span>
-                </span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 bg-[#E5E5E5]/40 px-2.5 py-1 rounded-full border border-[#E5E5E5]">
-                <Avatar className="w-7 h-7 border border-[#FCA311]/60 shadow-sm">
-                  <AvatarFallback className="bg-gradient-to-tr from-[#14213D] to-[#1f3159] text-white font-bold text-xs">
-                    {userInitial}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-xs font-medium text-[#14213D]">
-                  <span>{currentMember?.name || 'Família'}</span>
-                </span>
-              </div>
-            )}
-          </div>
-        </header>
+            <div className="flex items-center gap-3">
+              {members.length > 1 ? (
+                <div
+                  onClick={openWhoIsUsing}
+                  title="Toque para trocar quem está usando"
+                  className="flex items-center gap-2 cursor-pointer group bg-[#E5E5E5]/40 hover:bg-[#FCA311]/15 px-2.5 py-1 rounded-full border border-[#E5E5E5] transition-all"
+                >
+                  <Avatar className="w-7 h-7 border border-[#FCA311]/60 shadow-sm group-hover:ring-2 group-hover:ring-[#FCA311] transition-all">
+                    <AvatarFallback className="bg-gradient-to-tr from-[#14213D] to-[#1f3159] text-white font-bold text-xs">
+                      {userInitial}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-xs font-medium text-[#14213D] group-hover:text-[#14213D] transition-colors flex items-center gap-1">
+                    <span>{currentMember?.name || 'Família'}</span>
+                    <span className="text-[10px] text-slate-400">▾</span>
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 bg-[#E5E5E5]/40 px-2.5 py-1 rounded-full border border-[#E5E5E5]">
+                  <Avatar className="w-7 h-7 border border-[#FCA311]/60 shadow-sm">
+                    <AvatarFallback className="bg-gradient-to-tr from-[#14213D] to-[#1f3159] text-white font-bold text-xs">
+                      {userInitial}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-xs font-medium text-[#14213D]">
+                    <span>{currentMember?.name || 'Família'}</span>
+                  </span>
+                </div>
+              )}
+            </div>
+          </header>
+        )}
 
         {/* CONTEÚDO PRINCIPAL (max-width 1200px centralizado) */}
         <main className="flex-1 w-full max-w-[1200px] mx-auto p-4 sm:p-6 pb-32 md:pb-8 overflow-x-hidden min-w-0">
