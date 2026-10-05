@@ -657,10 +657,12 @@ Comportamentos esperados:
       { role: 'user', content: texto },
     ]
 
-    // Otimização de latência: se for consulta financeira que precise de resposta textual explicativa,
-    // permite até 400 tokens; para lançamentos, slot-filling e mensagens curtas, limita estritamente
-    // a 150 tokens para eliminar overhead de geração desnecessário e acelerar a resposta do Copilot.
-    const maxTokens = isConsultativeQuery ? 400 : 150
+    // Teto de tokens para evitar truncamento de JSON da OpenAI:
+    // O modelo gpt-4o-mini gera apenas os tokens necessários. Um teto de 1000 tokens garante
+    // que o JSON estruturado nunca seja cortado pela metade em nenhum caminho (lançamentos,
+    // slot-filling 'falta_valor', reclassificações ou consultas explicativas), mantendo a resposta
+    // ultrarrápida sem causar quebra de serialização.
+    const maxTokens = 1000
 
     // Chamada à API da OpenAI
     const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -714,19 +716,34 @@ Comportamentos esperados:
 
     const openAiData = await openaiRes.json()
     const content = openAiData.choices?.[0]?.message?.content
+    const finishReason = openAiData.choices?.[0]?.finish_reason
 
     let parsedAiJson: any = null
     try {
-      parsedAiJson = JSON.parse(content || '{}')
-    } catch (parseErr) {
-      console.error('Falha ao parsear JSON da OpenAI:', parseErr, content)
+      if (!content || typeof content !== 'string') {
+        throw new Error('Conteúdo retornado pela OpenAI vazio ou indefinido.')
+      }
+      parsedAiJson = JSON.parse(content)
+    } catch (parseErr: any) {
+      console.error(
+        `[voice-parse] Falha ao parsear JSON da OpenAI (finish_reason: ${finishReason ?? 'desconhecido'}):`,
+        parseErr?.message,
+        '| Conteúdo recebido:',
+        content,
+      )
+
+      // Fallback amigável com log claro no servidor:
+      // Se tivermos contexto anterior de slot-filling (falta_valor) ou valor na mensagem, tenta não frustrar o usuário
       return new Response(
         JSON.stringify({
           status: 'invalido',
+          error: 'JSON_PARSE_ERROR',
+          error_detail: `Falha ao interpretar resposta estruturada da IA (${parseErr?.message || 'SyntaxError'}). finish_reason: ${finishReason || 'n/a'}.`,
           transacao: null,
           pergunta_clarificacao: null,
           opcoes_sugestao: null,
-          mensagem_amigavel: 'Não foi possível processar a resposta da IA.',
+          mensagem_amigavel:
+            'Tive uma pequena falha ao processar a resposta da inteligência. Poderia repetir ou confirmar o valor?',
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
