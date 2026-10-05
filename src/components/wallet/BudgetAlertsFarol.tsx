@@ -273,7 +273,7 @@ export function BudgetAlertsFarol({
             <button
               type="button"
               onClick={onOpenModelDialog}
-              className="self-start sm:self-center shrink-0 px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 active:scale-95 text-white text-xs font-bold transition-all shadow-xs"
+              className="self-start sm:self-center shrink-0 px-3 py-1.5 rounded-xl bg-[#E11D48] hover:bg-[#be123c] active:scale-95 text-white text-xs font-semibold transition-all shadow-xs"
             >
               Ajustar Orçamento
             </button>
@@ -386,7 +386,7 @@ export function BudgetAlertsFarol({
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       <div className="shrink-0">
                         {isCrit ? (
-                          <AlertCircle className="w-4 h-4 text-red-600" />
+                          <AlertCircle className="w-4 h-4 text-[#E11D48]" />
                         ) : (
                           <AlertTriangle className="w-4 h-4 text-amber-600" />
                         )}

@@ -358,13 +358,13 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
         {/* Lado direito: Valor alinhado + Chevron */}
         <div className="flex items-center gap-2 shrink-0">
           <span
-            className={`font-extrabold text-xs sm:text-sm tabular-nums whitespace-nowrap ${
-              isOriginalIncome ? 'text-emerald-700' : 'text-red-600'
+            className={`font-semibold tracking-tight text-xs sm:text-sm tabular-nums whitespace-nowrap ${
+              isOriginalIncome ? 'text-[#059669]' : 'text-[#E11D48]'
             }`}
           >
             {isOriginalIncome ? '+' : '−'} {formatBRL(transaction.amount_cents)}
           </span>
-          <div className="w-6 h-6 rounded-lg bg-amber-100/70 text-amber-900 flex items-center justify-center shrink-0">
+          <div className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0">
             {isExpanded ? (
               <ChevronUp className="w-4 h-4 transition-transform duration-200" />
             ) : (
@@ -586,15 +586,15 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
 
             {/* Checkbox "Lembrar para compras futuras com este nome" (Marcado por padrão) */}
             <div className="pt-1 space-y-1">
-              <label className="flex items-center gap-2 text-xs text-slate-700 font-medium cursor-pointer select-none">
+              <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 font-medium cursor-pointer select-none">
                 <Checkbox
                   checked={rememberRule}
                   onCheckedChange={(checked) => setRememberRule(!!checked)}
                   disabled={disabled || saving || savingBatch}
-                  className="data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 rounded-md"
+                  className="data-[state=checked]:bg-[#059669] data-[state=checked]:border-[#059669] rounded-md"
                 />
                 <span className="flex items-center gap-1.5 leading-tight">
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <Sparkles className="w-3.5 h-3.5 text-[#059669] shrink-0" />
                   <span>Lembrar para compras futuras com este nome</span>
                 </span>
               </label>

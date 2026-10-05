@@ -128,41 +128,42 @@ export function CategoryTransactionsDrawer({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[88vh] flex flex-col">
-        <DrawerHeader className="text-left border-b border-border pb-3">
+      <DrawerContent className="max-h-[88vh] flex flex-col bg-card/95 backdrop-blur-sm border-t border-border/40 shadow-curiango">
+        <DrawerHeader className="text-left border-b border-border/40 pb-3">
           <div className="flex items-center gap-3">
             {category && (
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 shadow-sm"
-                style={{ backgroundColor: category.color || '#6366f1' }}
-              >
-                <CategoryIcon name={category.icon} className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0">
+                <CategoryIcon name={category.icon} className="w-4 h-4" strokeWidth={1.5} />
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <DrawerTitle className="text-base sm:text-lg font-semibold truncate flex items-center gap-2">
+              <DrawerTitle className="text-base sm:text-lg font-semibold text-[#14213D] dark:text-white truncate flex items-center gap-2">
                 <span>{getTitle()}</span>
                 {filterType === 'direct' && (
                   <Badge
                     variant="outline"
-                    className="text-xs font-normal text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-950/30"
+                    className="text-xs font-normal text-amber-700 border-amber-300 bg-amber-50 dark:bg-amber-950/30"
                   >
                     Direto
                   </Badge>
                 )}
               </DrawerTitle>
-              <DrawerDescription className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+              <DrawerDescription className="text-xs text-muted-foreground mt-0.5">
                 {getDescription()}
               </DrawerDescription>
             </div>
           </div>
         </DrawerHeader>
 
-        <div className="flex-1 overflow-y-auto px-4 py-3 divide-y divide-border">
+        <div className="flex-1 overflow-y-auto px-4 py-3 divide-y divide-border/40">
           {filteredTransactions.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground">
-              <AlertCircle className="w-10 h-10 mx-auto mb-2 opacity-40" />
-              <p className="text-sm font-medium">Nenhuma transação encontrada</p>
+              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 mx-auto mb-2 flex items-center justify-center">
+                <AlertCircle className="w-5 h-5 stroke-[1.5]" />
+              </div>
+              <p className="text-sm font-semibold text-[#14213D] dark:text-white">
+                Nenhuma transação encontrada
+              </p>
               <p className="text-xs text-muted-foreground mt-1">
                 Não há despesas registradas para este filtro no mês selecionado.
               </p>
@@ -174,40 +175,53 @@ export function CategoryTransactionsDrawer({
 
               return (
                 <div key={tx.id} className="py-3 first:pt-0 last:pb-0 space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start gap-1.5 flex-wrap">
-                        <p className="text-sm font-semibold text-foreground break-words leading-snug">
-                          {formatTransactionTitle(tx)}
-                        </p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0 mt-0.5">
+                        <CategoryIcon
+                          name={category?.icon || tx.category?.icon}
+                          className="w-4 h-4"
+                          strokeWidth={1.5}
+                        />
                       </div>
-                      <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 text-xs text-muted-foreground mt-1">
-                        <span className="flex items-center gap-1 shrink-0">
-                          <Calendar className="w-3 h-3" />
-                          {formatRelativeDate(tx.transaction_date)}
-                        </span>
-                        {tx.member && <span className="shrink-0">• {tx.member.name}</span>}
-                        {currentSubcat && (
-                          <span className="inline-flex items-center gap-1 text-primary font-medium shrink-0">
-                            <Tag className="w-3 h-3" />
-                            {currentSubcat.name}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start gap-1.5 flex-wrap">
+                          <p className="font-medium text-xs sm:text-sm text-[#14213D] dark:text-white break-words leading-tight">
+                            {formatTransactionTitle(tx)}
+                          </p>
+                        </div>
+                        <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 text-xs text-muted-foreground mt-1">
+                          <span className="flex items-center gap-1 shrink-0">
+                            <Calendar className="w-3 h-3 text-muted-foreground" strokeWidth={1.5} />
+                            {formatRelativeDate(tx.transaction_date)}
                           </span>
-                        )}
+                          {tx.member && <span className="shrink-0">• {tx.member.name}</span>}
+                          {currentSubcat && (
+                            <span className="inline-flex items-center gap-1 text-[#14213D] dark:text-slate-200 font-medium shrink-0">
+                              <Tag className="w-3 h-3 text-muted-foreground" strokeWidth={1.5} />
+                              {currentSubcat.name}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
                     <div className="text-right shrink-0">
                       <span
-                        className={`text-sm font-semibold flex items-center justify-end gap-0.5 ${
-                          tx.type === 'expense'
-                            ? 'text-foreground'
-                            : 'text-emerald-600 dark:text-emerald-400'
+                        className={`font-semibold tracking-tight text-xs sm:text-sm md:text-base tabular-nums flex items-center justify-end gap-0.5 ${
+                          tx.type === 'expense' ? 'text-[#E11D48]' : 'text-[#059669]'
                         }`}
                       >
                         {tx.type === 'expense' ? (
-                          <ArrowDownRight className="w-3.5 h-3.5 text-rose-500 inline" />
+                          <ArrowDownRight
+                            className="w-3.5 h-3.5 text-[#E11D48] inline"
+                            strokeWidth={1.5}
+                          />
                         ) : (
-                          <ArrowUpRight className="w-3.5 h-3.5 text-emerald-500 inline" />
+                          <ArrowUpRight
+                            className="w-3.5 h-3.5 text-[#059669] inline"
+                            strokeWidth={1.5}
+                          />
                         )}
                         {formatBRL(tx.amount_cents)}
                       </span>
@@ -216,9 +230,10 @@ export function CategoryTransactionsDrawer({
 
                   {/* Subcategory selection chips */}
                   {availableSubcategories.length > 0 && (
-                    <div className="pt-1">
+                    <div className="pt-1 pl-13">
                       <p className="text-[11px] text-muted-foreground mb-1.5 flex items-center gap-1 font-medium">
-                        <Tag className="w-3 h-3" /> Atribuir subcategoria:
+                        <Tag className="w-3 h-3 text-muted-foreground" strokeWidth={1.5} /> Atribuir
+                        subcategoria:
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {availableSubcategories.map((subcat) => {
@@ -229,13 +244,13 @@ export function CategoryTransactionsDrawer({
                               type="button"
                               disabled={isUpdating}
                               onClick={() => handleSubcategoryChange(tx, subcat.id)}
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all border ${
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs transition-all border ${
                                 isSelected
-                                  ? 'bg-primary text-primary-foreground border-primary font-medium shadow-xs'
-                                  : 'bg-muted/50 hover:bg-muted text-muted-foreground border-border hover:border-foreground/20'
+                                  ? 'bg-[#14213D] text-white border-[#14213D] font-medium shadow-xs'
+                                  : 'bg-slate-100/70 hover:bg-slate-200/80 text-slate-700 dark:text-slate-300 border-border/40'
                               } ${isUpdating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-95'}`}
                             >
-                              {isSelected && <Check className="w-3 h-3 stroke-[2.5]" />}
+                              {isSelected && <Check className="w-3 h-3 stroke-[2]" />}
                               <span>{subcat.name}</span>
                             </button>
                           )
@@ -245,7 +260,7 @@ export function CategoryTransactionsDrawer({
                             type="button"
                             disabled={isUpdating}
                             onClick={() => handleSubcategoryChange(tx, null)}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xl text-xs text-[#E11D48] hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 transition-colors cursor-pointer"
                           >
                             Limpar
                           </button>
@@ -259,9 +274,9 @@ export function CategoryTransactionsDrawer({
           )}
         </div>
 
-        <DrawerFooter className="border-t border-border pt-2 pb-4">
+        <DrawerFooter className="border-t border-border/40 pt-2 pb-4">
           <DrawerClose asChild>
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full rounded-xl">
               Fechar
             </Button>
           </DrawerClose>

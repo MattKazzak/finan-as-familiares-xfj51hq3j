@@ -63,14 +63,14 @@ export function WalletTransactionsTab() {
     <div className="space-y-5 mt-0 animate-in fade-in-50 duration-200">
       {/* 1. VISÃO DE RESUMO PÓS-IMPORTAÇÃO & SEÇÃO DE REVISÃO DE PENDENTES (Com Barra de Progresso) */}
       {lastImportSummary ? (
-        <div className="rounded-3xl border border-[#E5E5E5] bg-gradient-to-r from-white via-[#E5E5E5]/25 to-white p-4 sm:p-5 shadow-sm space-y-3 animate-in fade-in-50 duration-200">
+        <div className="rounded-3xl border border-border/40 bg-card/90 backdrop-blur-sm p-4 sm:p-5 shadow-curiango space-y-3 animate-in fade-in-50 duration-200">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-muted/60 text-muted-foreground flex items-center justify-center font-bold text-base shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0 font-semibold text-base">
                 {lastImportSummary.pending === 0 ? '✓' : '↓'}
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold text-sm sm:text-base text-slate-900 leading-tight">
+                <h4 className="font-semibold text-sm sm:text-base text-[#14213D] dark:text-white leading-tight">
                   {lastImportSummary.pending === 0 ? (
                     'Tudo categorizado!'
                   ) : (
@@ -80,7 +80,7 @@ export function WalletTransactionsTab() {
                     </>
                   )}
                 </h4>
-                <p className="text-xs text-slate-600 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   {lastImportSummary.pending === 0
                     ? 'Todas as transações do extrato estão devidamente classificadas nos 3 Baldes.'
                     : `${lastImportSummary.pending} transações pendentes de revisão. Toque em qualquer linha para abrir e categorizar.`}
@@ -94,10 +94,10 @@ export function WalletTransactionsTab() {
                   type="button"
                   size="sm"
                   onClick={() => setFilterOnlyPending((prev) => !prev)}
-                  className={`text-xs font-bold rounded-xl shadow-xs transition-all gap-1.5 ${
+                  className={`text-xs font-semibold rounded-xl shadow-xs transition-all gap-1.5 ${
                     filterOnlyPending
                       ? 'bg-amber-600 hover:bg-amber-700 text-white'
-                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                      : 'bg-[#059669] hover:bg-[#047857] text-white'
                   }`}
                 >
                   <Sparkles className="w-3.5 h-3.5" />
@@ -108,7 +108,7 @@ export function WalletTransactionsTab() {
                   </span>
                 </Button>
               ) : (
-                <span className="text-xs font-bold text-emerald-800 bg-emerald-100/80 px-2.5 py-1 rounded-xl">
+                <span className="text-xs font-semibold text-[#059669] bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 px-2.5 py-1 rounded-xl">
                   100% revisado
                 </span>
               )}
@@ -127,17 +127,17 @@ export function WalletTransactionsTab() {
           {/* Barra de Progresso da Revisão */}
           {lastImportSummary.total > 0 && (
             <div className="space-y-1.5 pt-1">
-              <div className="flex items-center justify-between text-[11px] font-bold text-slate-700">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700 dark:text-slate-300">
                 <span>Progresso da categorização</span>
-                <span className="tabular-nums text-emerald-800">
+                <span className="tabular-nums text-[#059669]">
                   {lastImportSummary.categorized} de {lastImportSummary.total} revisadas (
                   {Math.round((lastImportSummary.categorized / lastImportSummary.total) * 100)}
                   %)
                 </span>
               </div>
-              <div className="w-full bg-emerald-200/70 h-2.5 rounded-full overflow-hidden">
+              <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-emerald-600 rounded-full transition-all duration-500 ease-out"
+                  className="h-full bg-[#059669] rounded-full transition-all duration-500 ease-out"
                   style={{
                     width: `${Math.min(
                       100,
@@ -151,16 +151,16 @@ export function WalletTransactionsTab() {
         </div>
       ) : pendingTransactionsCount > 0 ? (
         /* Banner complementar quando há pendentes sem o lastImportSummary ativo */
-        <div className="rounded-3xl border border-amber-200 bg-amber-50/70 p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+        <div className="rounded-3xl border border-amber-200/80 bg-card/90 backdrop-blur-sm p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-curiango">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold shrink-0">
-              <Sparkles className="w-4 h-4 text-amber-700" />
+            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 text-[#FCA311]" strokeWidth={1.5} />
             </div>
             <div className="min-w-0 space-y-0.5">
-              <h4 className="font-bold text-xs sm:text-sm text-slate-900">
+              <h4 className="font-semibold text-xs sm:text-sm text-[#14213D] dark:text-white">
                 Lançamentos Pendentes ({pendingTransactionsCount})
               </h4>
-              <span className="text-[11px] text-slate-600 block">
+              <span className="text-[11px] text-muted-foreground block">
                 Você tem {pendingTransactionsCount}{' '}
                 {pendingTransactionsCount === 1 ? 'transação pendente' : 'transações pendentes'} de
                 categorização neste mês. Toque na linha para categorizar ou utilize a IA.
@@ -174,7 +174,7 @@ export function WalletTransactionsTab() {
               size="sm"
               onClick={handleCategorizePendingWithAi}
               disabled={isCategorizingPendingWithAi}
-              className="text-xs font-bold rounded-xl shrink-0 bg-violet-600 hover:bg-violet-700 text-white shadow-2xs gap-1.5 h-8 px-3"
+              className="text-xs font-semibold rounded-xl shrink-0 bg-violet-600 hover:bg-violet-700 text-white shadow-2xs gap-1.5 h-8 px-3"
             >
               {isCategorizingPendingWithAi ? (
                 <>
@@ -194,7 +194,7 @@ export function WalletTransactionsTab() {
               variant="outline"
               size="sm"
               onClick={() => setFilterOnlyPending((prev) => !prev)}
-              className={`text-xs font-bold rounded-xl shrink-0 h-8 ${
+              className={`text-xs font-semibold rounded-xl shrink-0 h-8 ${
                 filterOnlyPending
                   ? 'bg-amber-600 text-white border-amber-600 hover:bg-amber-700'
                   : 'border-amber-300 text-amber-900 hover:bg-amber-100/70 bg-white'
@@ -208,16 +208,16 @@ export function WalletTransactionsTab() {
         </div>
       ) : filterOnlyPending && pendingTransactionsCount === 0 ? (
         /* Estado de Sucesso quando o usuário estava filtrando pendentes e terminou todas */
-        <div className="rounded-3xl border border-[#E5E5E5] bg-[#E5E5E5]/30 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in-50">
+        <div className="rounded-3xl border border-border/40 bg-card/90 backdrop-blur-sm p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-curiango animate-in fade-in-50">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-muted/60 text-muted-foreground flex items-center justify-center font-bold text-base shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center font-semibold text-base shrink-0">
               ✓
             </div>
             <div>
-              <h4 className="font-semibold text-sm sm:text-base text-[#14213D]">
+              <h4 className="font-semibold text-sm sm:text-base text-[#14213D] dark:text-white">
                 Tudo categorizado!
               </h4>
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-muted-foreground">
                 Não há transações pendentes de categorização neste mês.
               </p>
             </div>
@@ -225,7 +225,7 @@ export function WalletTransactionsTab() {
           <Button
             size="sm"
             onClick={() => setFilterOnlyPending(false)}
-            className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] text-xs rounded-xl font-bold border-0"
+            className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] text-xs rounded-xl font-semibold border-0"
           >
             Ver todas as transações
           </Button>
@@ -234,34 +234,34 @@ export function WalletTransactionsTab() {
 
       {/* Summary Strip (3 Mini Cards) */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center gap-1.5 text-emerald-700 text-[11px] font-bold uppercase tracking-wider">
-            <ArrowUpRight className="w-3.5 h-3.5" />
+        <div className="bg-card/90 backdrop-blur-sm p-3 sm:p-4 rounded-2xl border border-border/40 shadow-curiango flex flex-col justify-between">
+          <div className="flex items-center gap-1.5 text-[#059669] text-[11px] font-semibold uppercase tracking-wider">
+            <ArrowUpRight className="w-3.5 h-3.5" strokeWidth={1.5} />
             <span>Receitas</span>
           </div>
-          <span className="text-sm sm:text-lg font-bold text-slate-900 tabular-nums mt-1 truncate">
+          <span className="text-sm sm:text-lg font-semibold tracking-tight text-[#059669] tabular-nums mt-1 truncate">
             {formatBRL(monthIncomeCents)}
           </span>
         </div>
 
-        <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center gap-1.5 text-red-600 text-[11px] font-bold uppercase tracking-wider">
-            <ArrowDownRight className="w-3.5 h-3.5" />
+        <div className="bg-card/90 backdrop-blur-sm p-3 sm:p-4 rounded-2xl border border-border/40 shadow-curiango flex flex-col justify-between">
+          <div className="flex items-center gap-1.5 text-[#E11D48] text-[11px] font-semibold uppercase tracking-wider">
+            <ArrowDownRight className="w-3.5 h-3.5" strokeWidth={1.5} />
             <span>Despesas</span>
           </div>
-          <span className="text-sm sm:text-lg font-bold text-slate-900 tabular-nums mt-1 truncate">
+          <span className="text-sm sm:text-lg font-semibold tracking-tight text-[#E11D48] tabular-nums mt-1 truncate">
             {formatBRL(monthExpenseCents)}
           </span>
         </div>
 
-        <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center gap-1.5 text-slate-500 text-[11px] font-bold uppercase tracking-wider">
-            <Scale className="w-3.5 h-3.5" />
+        <div className="bg-card/90 backdrop-blur-sm p-3 sm:p-4 rounded-2xl border border-border/40 shadow-curiango flex flex-col justify-between">
+          <div className="flex items-center gap-1.5 text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
+            <Scale className="w-3.5 h-3.5" strokeWidth={1.5} />
             <span>Saldo Mês</span>
           </div>
           <span
-            className={`text-sm sm:text-lg font-bold tabular-nums mt-1 truncate ${
-              monthNetCents >= 0 ? 'text-emerald-700' : 'text-red-600'
+            className={`text-sm sm:text-lg font-semibold tracking-tight tabular-nums mt-1 truncate ${
+              monthNetCents >= 0 ? 'text-[#059669]' : 'text-[#E11D48]'
             }`}
           >
             {formatBRL(monthNetCents)}
@@ -328,14 +328,18 @@ export function WalletTransactionsTab() {
 
       {/* Lista Agrupada por Dia com Ações de Swipe/Botões de Edição e Exclusão */}
       {loading ? (
-        <div className="py-12 text-center text-slate-400 text-xs">Carregando transações...</div>
+        <div className="py-12 text-center text-muted-foreground text-xs">
+          Carregando transações...
+        </div>
       ) : groupedTransactions.length === 0 ? (
-        <div className="bg-white rounded-3xl p-10 text-center border border-slate-200/80 shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-muted/60 mx-auto flex items-center justify-center text-muted-foreground mb-2">
-            <CategoryIcon name="Tag" className="w-5 h-5 text-muted-foreground" strokeWidth={1.5} />
+        <div className="bg-card/90 backdrop-blur-sm rounded-3xl p-10 text-center border border-border/40 shadow-curiango">
+          <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 mx-auto flex items-center justify-center shrink-0 mb-2">
+            <CategoryIcon name="Tag" className="w-4 h-4" strokeWidth={1.5} />
           </div>
-          <p className="font-bold text-slate-800 text-sm">Nenhuma transação encontrada</p>
-          <p className="text-xs text-slate-500 mt-1 mb-4">
+          <p className="font-semibold text-[#14213D] dark:text-white text-sm">
+            Nenhuma transação encontrada
+          </p>
+          <p className="text-xs text-muted-foreground mt-1 mb-4">
             {activeFiltersCount > 0
               ? 'Tente remover os filtros selecionados.'
               : 'Nenhum lançamento registrado neste mês. Você pode lançar manualmente ou importar seu extrato bancário.'}
@@ -344,16 +348,16 @@ export function WalletTransactionsTab() {
             <Button
               onClick={openImportStatement}
               variant="outline"
-              className="border-[#E5E5E5] text-[#14213D] hover:bg-[#E5E5E5]/50 text-xs rounded-xl"
+              className="border-border text-[#14213D] hover:bg-slate-100 text-xs rounded-xl"
             >
               <UploadCloud className="w-4 h-4 mr-1.5 text-[#14213D]" />
               Importar Extrato (OFX)
             </Button>
             <Button
               onClick={() => openNewTransaction('expense')}
-              className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] text-xs rounded-xl font-bold border-0"
+              className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] text-xs rounded-xl font-semibold border-0"
             >
-              <Plus className="w-4 h-4 mr-1.5 stroke-[2.5]" />
+              <Plus className="w-4 h-4 mr-1.5 stroke-[2]" />
               Adicionar primeira transação
             </Button>{' '}
           </div>
@@ -363,14 +367,14 @@ export function WalletTransactionsTab() {
           {groupedTransactions.map(([dateKey, dayTxs]) => (
             <div
               key={dateKey}
-              className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden"
+              className="bg-card/90 backdrop-blur-sm rounded-3xl border border-border/40 shadow-curiango overflow-hidden"
             >
               {/* Cabeçalho do dia */}
-              <div className="bg-slate-50/80 px-4 py-2 border-b border-slate-100 flex items-center justify-between">
-                <span className="font-bold text-xs text-slate-700">
+              <div className="bg-slate-50/80 dark:bg-slate-800/60 px-4 py-2 border-b border-border/40 flex items-center justify-between">
+                <span className="font-semibold text-xs text-[#14213D] dark:text-white">
                   {formatDayGroupHeader(dateKey)}
                 </span>
-                <span className="text-[11px] text-slate-400">
+                <span className="text-[11px] text-muted-foreground">
                   <span>
                     {dayTxs.length} {dayTxs.length === 1 ? 'item' : 'itens'}
                   </span>
@@ -378,7 +382,7 @@ export function WalletTransactionsTab() {
               </div>
 
               {/* Lista de itens do dia */}
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-border/40">
                 {dayTxs.map((tx) => {
                   const isPending = !tx.category_id
 
@@ -422,15 +426,15 @@ export function WalletTransactionsTab() {
                         setSelectedTx(tx)
                         setIsDetailOpen(true)
                       }}
-                      className={`flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group cursor-pointer ${
+                      className={`flex items-center justify-between p-3.5 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group cursor-pointer ${
                         isProjected ? 'bg-slate-50/50 border-l-4 border-l-amber-400 opacity-90' : ''
                       }`}
                     >
                       <div className="flex items-center gap-3 flex-1 overflow-hidden">
-                        <div className="w-9 h-9 rounded-xl bg-muted/60 text-muted-foreground flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0">
                           <CategoryIcon
                             name={tx.category?.icon}
-                            className="w-4 h-4 text-slate-700"
+                            className="w-4 h-4"
                             strokeWidth={1.5}
                           />
                         </div>
@@ -438,40 +442,42 @@ export function WalletTransactionsTab() {
                         <div className="overflow-hidden pr-2">
                           <div className="flex items-center gap-1.5 overflow-hidden flex-wrap">
                             <p
-                              className={`font-semibold text-sm group-hover:text-emerald-700 transition-colors truncate ${
-                                isProjected ? 'text-slate-700' : 'text-slate-900'
+                              className={`font-medium text-xs sm:text-sm group-hover:text-[#14213D] dark:group-hover:text-white transition-colors truncate ${
+                                isProjected
+                                  ? 'text-muted-foreground'
+                                  : 'text-[#14213D] dark:text-white'
                               }`}
                               title={formatTransactionTitle(tx)}
                             >
                               {formatTransactionTitle(tx)}
                             </p>
                             {isProjected && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-amber-100 text-amber-900 border border-dashed border-amber-400 px-1.5 py-0.2 rounded-md shrink-0">
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-amber-100 text-amber-900 border border-dashed border-amber-400 px-1.5 py-0.2 rounded-md shrink-0">
                                 <span>Previsto</span>
                               </span>
                             )}
                             {tx.is_recurring ? (
-                              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300/70 px-1.5 py-0.2 rounded-md shrink-0">
+                              <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300/70 px-1.5 py-0.2 rounded-md shrink-0">
                                 <Sparkles className="w-2.5 h-2.5" />
                                 <span>Fixa</span>
                               </span>
                             ) : null}
                           </div>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                          <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-normal text-muted-foreground bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
                               {tx.member?.name || 'Família'}
                             </span>
                             {tx.category ? (
-                              <span className="text-[11px] text-slate-500 font-medium truncate">
+                              <span className="text-xs text-muted-foreground truncate font-normal">
                                 <span>{tx.category.name}</span>
                                 {tx.subcategory && (
-                                  <span className="text-emerald-700 font-semibold ml-1">
+                                  <span className="text-[#14213D] dark:text-slate-200 font-medium ml-1">
                                     · {tx.subcategory.name}
                                   </span>
                                 )}
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200/80 px-1.5 py-0.2 rounded shrink-0">
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200/80 px-1.5 py-0.2 rounded shrink-0">
                                 <span>Pendente de categoria</span>
                               </span>
                             )}
@@ -481,12 +487,12 @@ export function WalletTransactionsTab() {
 
                       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                         <span
-                          className={`font-bold text-sm sm:text-base tabular-nums ${
+                          className={`font-semibold tracking-tight text-xs sm:text-sm md:text-base tabular-nums ${
                             isIncome
-                              ? 'text-emerald-600'
+                              ? 'text-[#059669]'
                               : isProjected
                                 ? 'text-amber-800 border-b border-dashed border-amber-400'
-                                : 'text-red-600'
+                                : 'text-[#E11D48]'
                           }`}
                         >
                           <span>
@@ -514,7 +520,7 @@ export function WalletTransactionsTab() {
                               e.stopPropagation()
                               setTxToDelete(tx)
                             }}
-                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-[#E11D48] hover:bg-rose-50 rounded-lg transition-colors"
                             title="Excluir"
                           >
                             <Trash2 className="w-4 h-4" />

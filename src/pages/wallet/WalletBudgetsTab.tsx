@@ -81,20 +81,20 @@ export function WalletBudgetsTab() {
   return (
     <div className="space-y-5 mt-0 animate-in fade-in-50 duration-200">
       {/* Cabeçalho da Aba Orçamentos: Ações Rápidas (Receitas Fixas & Modelo Sugerido) */}
-      <div className="flex items-center justify-between gap-2 flex-wrap bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
-            🎯
+      <div className="flex items-center justify-between gap-2 flex-wrap bg-card/90 backdrop-blur-sm p-3.5 rounded-2xl border border-border/40 shadow-curiango">
+        <div className="flex items-center gap-2.5">
+          <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0">
+            <span className="text-base select-none">🎯</span>
           </div>
           <div>
-            <h3 className="font-bold text-sm text-slate-900 leading-tight">
+            <h3 className="font-semibold text-sm text-[#14213D] dark:text-white leading-tight">
               Planejamento & Orçamentos
             </h3>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-muted-foreground">
               Tetos baseados em percentuais da renda líquida familiar com liberdade total
             </p>
-            <p className="text-[10px] text-slate-400 italic flex items-center gap-1 mt-0.5">
-              <GraduationCap className="w-3 h-3 text-slate-400 shrink-0 not-italic" />
+            <p className="text-[10px] text-muted-foreground italic flex items-center gap-1 mt-0.5">
+              <GraduationCap className="w-3 h-3 text-muted-foreground shrink-0 not-italic" />
               <span>
                 Modelos baseados em metodologias consagradas: 50/30/20 (Elizabeth Warren) e
                 variações para perfis de família.
@@ -108,7 +108,7 @@ export function WalletBudgetsTab() {
             variant="outline"
             size="sm"
             onClick={() => setIsApplyModelOpen(true)}
-            className="rounded-xl text-xs font-bold gap-1.5 border-[#E5E5E5] text-[#14213D] bg-[#E5E5E5]/60 hover:bg-[#FCA311]/20 h-8 shadow-xs"
+            className="rounded-xl text-xs font-semibold gap-1.5 border-border text-[#14213D] bg-slate-100/60 hover:bg-[#FCA311]/20 h-8 shadow-xs"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#FCA311]" />
             <span>Aplicar modelo sugerido</span>
@@ -181,27 +181,29 @@ export function WalletBudgetsTab() {
         const consumedPrefix = isFutureMonth ? 'Comprometido ' : 'Gasto '
 
         return (
-          <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm">
+          <div className="bg-card/90 backdrop-blur-sm rounded-3xl p-6 border border-border/40 shadow-curiango">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs uppercase font-bold tracking-wider text-slate-500">
+                <span className="text-xs uppercase font-semibold tracking-wider text-muted-foreground">
                   {cardTitle}
                 </span>
                 {isFutureMonth ? (
-                  <span className="text-[11px] text-slate-400 font-medium">
+                  <span className="text-[11px] text-muted-foreground font-medium">
                     · Teto mensal: {formatBRL(categoryBudgetData.totalBudget)}
                   </span>
                 ) : (
-                  <span className="text-[11px] text-slate-400 font-medium">· Padrão mensal</span>
+                  <span className="text-[11px] text-muted-foreground font-medium">
+                    · Padrão mensal
+                  </span>
                 )}
               </div>
               <span
-                className={`text-xs font-bold px-2.5 py-1 rounded-full self-start sm:self-auto ${
+                className={`text-xs font-semibold px-2.5 py-1 rounded-full self-start sm:self-auto ${
                   categoryBudgetData.isTotalOver
-                    ? 'bg-red-100 text-red-700'
+                    ? 'bg-rose-100 text-[#E11D48] dark:bg-rose-950/40'
                     : categoryBudgetData.totalPercent >= 75
-                      ? 'bg-amber-100 text-amber-800'
-                      : 'bg-emerald-100 text-emerald-800'
+                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40'
+                      : 'bg-emerald-100 text-[#059669] dark:bg-emerald-950/40'
                 }`}
               >
                 <span>{badgeText}</span>
@@ -209,37 +211,37 @@ export function WalletBudgetsTab() {
             </div>
 
             <div className="flex items-baseline justify-between mb-3">
-              <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 tabular-nums">
-                <span className="text-base sm:text-lg font-semibold text-slate-500 mr-1.5">
+              <span className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#14213D] dark:text-white tabular-nums">
+                <span className="text-base sm:text-lg font-medium text-muted-foreground mr-1.5">
                   {consumedPrefix}
                 </span>
                 <span className="inline-flex items-baseline gap-1.5 flex-wrap">
                   <span>{formatBRL(categoryBudgetData.totalSpent)}</span>
-                  <span className="text-sm font-medium text-slate-400">
+                  <span className="text-sm font-normal text-muted-foreground">
                     de {formatBRL(categoryBudgetData.totalBudget)}
                   </span>
                 </span>
               </span>
-              <span className="text-sm font-bold text-slate-600 tabular-nums">
+              <span className="text-sm font-semibold text-muted-foreground tabular-nums">
                 <span>{categoryBudgetData.totalPercent}%</span>
               </span>
             </div>
 
-            {/* Barra de Progresso com Limites: <75% Verde, 75-100% Âmbar, >100% Vermelho */}
-            <div className="w-full bg-slate-100 h-3.5 rounded-full overflow-hidden">
+            {/* Barra de Progresso com Limites CDS: <75% #059669, 75-100% #FCA311, >100% #E11D48 */}
+            <div className="w-full bg-slate-100 dark:bg-slate-800 h-3 rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-700 ${
                   categoryBudgetData.isTotalOver
-                    ? 'bg-red-500'
+                    ? 'bg-[#E11D48]'
                     : categoryBudgetData.totalPercent >= 75
-                      ? 'bg-amber-500'
-                      : 'bg-emerald-600'
+                      ? 'bg-[#FCA311]'
+                      : 'bg-[#059669]'
                 }`}
                 style={{ width: `${Math.min(categoryBudgetData.totalPercent, 100)}%` }}
               />
             </div>
 
-            <div className="text-[11px] text-slate-400 mt-2 text-right">
+            <div className="text-[11px] text-muted-foreground mt-2 text-right">
               <span>Tetos recorrentes mensais</span>
             </div>
           </div>
@@ -260,11 +262,13 @@ export function WalletBudgetsTab() {
       />
 
       {/* Lista de Orçamentos com Hierarquia Categoria Pai -> Subcategorias e Gestão Inline com Ícones */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm space-y-4">
+      <div className="bg-card/90 backdrop-blur-sm rounded-3xl border border-border/40 p-5 shadow-curiango space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h3 className="font-bold text-base text-slate-900">Categorias e Subcategorias</h3>
-            <p className="text-xs text-slate-500">
+            <h3 className="font-semibold text-base text-[#14213D] dark:text-white">
+              Categorias e Subcategorias
+            </h3>
+            <p className="text-xs text-muted-foreground">
               Clique na linha para definir teto. Use o lápis para editar, o + para criar
               subcategoria e a lixeira para excluir.
             </p>
