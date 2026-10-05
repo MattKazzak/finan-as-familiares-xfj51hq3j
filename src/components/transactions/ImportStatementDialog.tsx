@@ -87,6 +87,7 @@ import {
   EyeOff,
   KeyRound,
   RotateCcw,
+  Link2,
 } from 'lucide-react'
 
 import {

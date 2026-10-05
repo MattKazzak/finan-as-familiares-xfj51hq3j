@@ -54,6 +54,8 @@ import {
   Check,
   ExternalLink,
   ChevronDown,
+  ArrowDownRight,
+  ArrowUpRight,
 } from 'lucide-react'
 
 export interface NewTransactionPrefill {
