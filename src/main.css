@@ -11,7 +11,7 @@
   :root {
     /* Change the colors to match the design system */
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 0 0% 0%;
 
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
@@ -19,7 +19,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 160 84% 31%;
+    --primary: 221 50.6% 15.9%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 174 76% 26%;
@@ -28,7 +28,7 @@
     --muted: 210 40% 98%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 160 84% 95%;
+    --accent: 0 0% 89.8%;
     --accent-foreground: 160 84% 20%;
 
     --destructive: 0 84.2% 60.2%;
