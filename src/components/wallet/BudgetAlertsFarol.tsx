@@ -56,7 +56,8 @@ export function BudgetAlertsFarol({
   const { regularAlerts, criticalAlerts, summaryText, bucketLimitAlertCount, categoryOverCount } =
     useMemo(() => {
       const now = new Date()
-      const isCurrentViewingMonth = now.toISOString().slice(0, 7) === monthKey
+      const currentSystemMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+      const isCurrentViewingMonth = currentSystemMonthKey === monthKey
       const daysInMonth = new Date(
         currentDate.getFullYear(),
         currentDate.getMonth() + 1,

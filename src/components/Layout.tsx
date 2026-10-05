@@ -56,7 +56,7 @@ export default function Layout() {
   >([])
 
   const currentMonthDate = new Date()
-  const currentMonthStr = currentMonthDate.toISOString().slice(0, 7)
+  const currentMonthStr = `${currentMonthDate.getFullYear()}-${String(currentMonthDate.getMonth() + 1).padStart(2, '0')}`
 
   const loadGlobalRecurring = useCallback(async () => {
     if (!family) return

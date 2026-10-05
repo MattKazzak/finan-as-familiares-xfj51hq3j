@@ -92,7 +92,7 @@ export const RecurringIncomesDialog: React.FC<RecurringIncomesDialogProps> = ({
   const { family } = useFamily()
   const { toast } = useToast()
 
-  const currentMonthStr = currentMonthDate.toISOString().slice(0, 7)
+  const currentMonthStr = `${currentMonthDate.getFullYear()}-${String(currentMonthDate.getMonth() + 1).padStart(2, '0')}`
 
   // Mapeamento de overrides deste mês
   const overrideMap = new Map<string, RecurringIncomeOverride>()

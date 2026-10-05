@@ -220,7 +220,8 @@ export async function processAutoRecurringIncomes(params: {
   forceAllDays?: boolean // Se true, gera mesmo que o dia não tenha chegado ainda
 }): Promise<{ generatedCount: number; errors: string[] }> {
   const now = new Date()
-  const currentMonthStr = params.targetMonthStr || now.toISOString().slice(0, 7)
+  const currentMonthStr =
+    params.targetMonthStr || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   const todayDay = now.getDate()
   const monthDate = `${currentMonthStr}-01`
 
@@ -257,7 +258,7 @@ export async function processAutoRecurringIncomes(params: {
   })
 
   // Determinar se estamos no mês corrente, mês passado ou mês futuro
-  const systemMonthStr = now.toISOString().slice(0, 7)
+  const systemMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   const isPastMonth = currentMonthStr < systemMonthStr
   const isCurrentMonth = currentMonthStr === systemMonthStr
 

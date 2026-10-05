@@ -29,7 +29,9 @@ let mockCategories: any[] = [
   { id: 'cat-salario', name: 'Salário', type: 'income', budget_bucket: 'essentials' },
 ]
 
-const todayStr = new Date().toISOString().slice(0, 7) + '-10'
+const nowTest = new Date()
+const currentMonthTest = `${nowTest.getFullYear()}-${String(nowTest.getMonth() + 1).padStart(2, '0')}`
+const todayStr = `${currentMonthTest}-10`
 
 let mockTransactions: any[] = [
   // Necessidades: R$ 1.500
@@ -247,7 +249,7 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       },
     ])
     // Override deste mês: cat-1 subiu para 5.500 (55%)
-    const currentMonth = new Date().toISOString().slice(0, 7)
+    const currentMonth = currentMonthTest
     vi.mocked(transactionsService.fetchMonthBudgetOverrides).mockResolvedValue([
       {
         id: 'ov-1',
@@ -375,7 +377,7 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
         name: 'Silva',
         monthly_net_income_cents: 600000, // R$ 6.000,00 previsto
       }
-      const currentMonth = new Date().toISOString().slice(0, 7)
+      const currentMonth = currentMonthTest
       vi.mocked(transactionsService.fetchTransactions).mockResolvedValue([
         {
           id: 'tx-inc-partial',
@@ -413,7 +415,7 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
         name: 'Silva',
         monthly_net_income_cents: 600000, // R$ 6.000,00 previsto
       }
-      const currentMonth = new Date().toISOString().slice(0, 7)
+      const currentMonth = currentMonthTest
       vi.mocked(transactionsService.fetchTransactions).mockResolvedValue([
         {
           id: 'tx-inc-full',
@@ -451,7 +453,7 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
         name: 'Silva',
         monthly_net_income_cents: 0, // Sem previsão definida
       }
-      const currentMonth = new Date().toISOString().slice(0, 7)
+      const currentMonth = currentMonthTest
       vi.mocked(transactionsService.fetchTransactions).mockResolvedValue([
         {
           id: 'tx-inc-only',
@@ -483,13 +485,96 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       expect(screen.queryByText('[Registrar salário]')).toBeNull()
     })
 
+    it('desconsidera transações projetadas no saldo total, nas receitas/despesas do mês e nos baldes', async () => {
+      mockFamily = {
+        id: 'fam-1',
+        name: 'Silva',
+        monthly_net_income_cents: 600000,
+        budget_model: '50_30_20',
+      }
+      const currentMonth = currentMonthTest
+
+      // Despesa confirmada R$ 100, receita confirmada R$ 1.000
+      // Despesa projetada R$ 900 (não deve entrar no saldo nem nas despesas do mês)
+      // Receita projetada R$ 5.000 (não deve entrar no saldo nem nas receitas do mês)
+      vi.mocked(transactionsService.fetchTransactions).mockResolvedValue([
+        {
+          id: 'tx-conf-inc',
+          family_id: 'fam-1',
+          member_id: 'm-1',
+          category_id: 'cat-salario',
+          amount_cents: 100000,
+          type: 'income',
+          status: 'confirmed',
+          description: 'Salário Efetivado',
+          transaction_date: `${currentMonth}-01`,
+          created_at: `${currentMonth}-01T10:00:00Z`,
+        },
+        {
+          id: 'tx-conf-exp',
+          family_id: 'fam-1',
+          member_id: 'm-1',
+          category_id: 'cat-1',
+          amount_cents: 10000,
+          type: 'expense',
+          status: 'confirmed',
+          description: 'Conta de Luz',
+          transaction_date: `${currentMonth}-02`,
+          created_at: `${currentMonth}-02T10:00:00Z`,
+        },
+        {
+          id: 'tx-proj-exp',
+          family_id: 'fam-1',
+          member_id: 'm-1',
+          category_id: 'cat-2',
+          amount_cents: 90000,
+          type: 'expense',
+          status: 'projected',
+          description: 'TV Parcelada 2/10',
+          transaction_date: `${currentMonth}-15`,
+          created_at: `${currentMonth}-15T10:00:00Z`,
+        },
+        {
+          id: 'tx-proj-inc',
+          family_id: 'fam-1',
+          member_id: 'm-1',
+          category_id: 'cat-salario',
+          amount_cents: 500000,
+          type: 'income',
+          status: 'projected',
+          description: 'Receita futura projetada',
+          transaction_date: `${currentMonth}-25`,
+          created_at: `${currentMonth}-25T10:00:00Z`,
+        },
+      ])
+
+      render(
+        <MemoryRouter>
+          <Home />
+        </MemoryRouter>,
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Receitas do Mês')).toBeDefined()
+      })
+
+      // Receitas do mês: apenas R$ 1.000,00 (não R$ 6.000,00)
+      expect(screen.getByText('R$ 1.000,00')).toBeDefined()
+
+      // Despesas do mês: apenas R$ 100,00 (não R$ 1.000,00)
+      expect(screen.getByText('R$ 100,00')).toBeDefined()
+
+      // Saldo total: R$ 900,00 (R$ 1.000 - R$ 100)
+      expect(screen.getByText('R$ 900,00')).toBeDefined()
+    })
+
     it('não possui truncate nos elementos principais da Home (baldes 50/30/20, chips de membros, transações)', async () => {
       mockFamily = {
         id: 'fam-1',
         name: 'Silva',
         monthly_net_income_cents: 600000,
       }
-      const currentMonth = new Date().toISOString().slice(0, 7)
+      const currentMonth = currentMonthTest
       vi.mocked(transactionsService.fetchTransactions).mockResolvedValue([
         {
           id: 'tx-long-name',

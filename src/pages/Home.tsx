@@ -66,8 +66,11 @@ export default function Home() {
   const [editingTx, setEditingTx] = useState<Transaction | null>(null)
   const [isEditOpen, setIsEditOpen] = useState(false)
 
-  // Mês atual formato YYYY-MM
-  const currentMonthStr = useMemo(() => new Date().toISOString().slice(0, 7), [])
+  // Mês atual formato YYYY-MM (baseado no horário local)
+  const currentMonthStr = useMemo(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  }, [])
 
   const loadData = useCallback(async () => {
     if (!family) return
@@ -130,11 +133,14 @@ export default function Home() {
       let prevMIncome = 0
       let prevMExpense = 0
 
-      const prevMonth = new Date()
-      prevMonth.setMonth(prevMonth.getMonth() - 1)
-      const prevMonthStr = prevMonth.toISOString().slice(0, 7)
+      const now = new Date()
+      const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      const prevMonthStr = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}`
 
-      transactions.forEach((tx) => {
+      // Apenas transações confirmadas/efetivadas (não projetadas) contam para saldo e totais do mês
+      const effectiveTransactions = transactions.filter((tx) => tx.status !== 'projected')
+
+      effectiveTransactions.forEach((tx) => {
         const txMonth = tx.transaction_date.slice(0, 7)
         if (tx.type === 'income') {
           incomeTotal += tx.amount_cents
@@ -241,10 +247,14 @@ export default function Home() {
       }
     })
 
-    // 2. Gastos por categoria das despesas no mês corrente
+    // 2. Gastos por categoria das despesas no mês corrente (apenas não projetadas)
     const catSpentMap: Record<string, number> = {}
     transactions.forEach((tx) => {
-      if (tx.type === 'expense' && tx.transaction_date.slice(0, 7) === currentMonthStr) {
+      if (
+        tx.type === 'expense' &&
+        tx.status !== 'projected' &&
+        tx.transaction_date.slice(0, 7) === currentMonthStr
+      ) {
         if (tx.category_id) {
           catSpentMap[tx.category_id] = (catSpentMap[tx.category_id] || 0) + tx.amount_cents
         }
@@ -291,10 +301,11 @@ export default function Home() {
       bucketsSummary[bucket].spentCents += spentCents
     })
 
-    // Também inclui despesas sem categoria no balde lifestyle
+    // Também inclui despesas sem categoria no balde lifestyle (apenas não projetadas)
     transactions.forEach((tx) => {
       if (
         tx.type === 'expense' &&
+        tx.status !== 'projected' &&
         tx.transaction_date.slice(0, 7) === currentMonthStr &&
         !tx.category_id
       ) {
@@ -383,7 +394,8 @@ export default function Home() {
     // (inclusive sabendo o total de parcelas 10/10) e seleciona como representante a parcela
     // já atingida/confirmada mais recente (ex: 1/10 em 01/09/2026), sem que parcelas futuras de 2027
     // empurrem o parcelamento para o topo.
-    const todayStr = new Date().toISOString().slice(0, 10)
+    const now = new Date()
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     const grouped = groupInstallmentTransactions(transactions, { referenceDate: todayStr })
 
     // Filtra para garantir que apenas itens com data <= todayStr ou confirmados apareçam na Home
