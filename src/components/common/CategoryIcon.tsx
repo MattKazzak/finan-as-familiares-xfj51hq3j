@@ -1,4 +1,4 @@
-// Utilitário de mapeamento dinâmico de ícones Lucide
+// Utilitário de mapeamento dinâmico de ícones Lucide (CDS v1.0)
 import React from 'react'
 import {
   Utensils,

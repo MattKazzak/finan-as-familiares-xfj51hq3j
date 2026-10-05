@@ -8,7 +8,7 @@ import {
   Sparkles,
   Link2,
 } from 'lucide-react'
-import { CategoryIcon } from '@/components/common/CategoryIcon'
+import { CategoryIcon, CategoryIconBox } from '@/components/common/CategoryIcon'
 import { formatBRL } from '@/lib/formatters'
 import type { ReviewItem } from '@/components/transactions/ImportStatementDialog'
 import type { TransactionCategory, FamilyMember } from '@/types/finance'
