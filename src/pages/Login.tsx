@@ -228,11 +228,11 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/20 to-teal-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-7 sm:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-white via-[#E5E5E5]/30 to-slate-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-[#14213D]/10 border border-[#E5E5E5] p-7 sm:p-8">
         {/* Logo & Marca */}
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-[#064E3B] p-1.5 shadow-lg shadow-emerald-950/20 mb-3 flex items-center justify-center overflow-hidden border border-emerald-600/30">
+          <div className="w-16 h-16 rounded-2xl bg-[#14213D] p-1.5 shadow-lg shadow-[#14213D]/25 mb-3 flex items-center justify-center overflow-hidden border border-[#14213D]">
             <img
               src="/icon-192.png"
               alt="Curiangoo"
@@ -243,8 +243,8 @@ export default function Login() {
               }}
             />
           </div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Curiangoo</h1>
-          <p className="text-xs sm:text-sm font-medium text-emerald-800/90 mt-0.5">
+          <h1 className="text-2xl font-black text-[#14213D] tracking-tight">Curiangoo</h1>
+          <p className="text-xs sm:text-sm font-bold text-[#FCA311] mt-0.5">
             Finanças Familiares no Prumo
           </p>
           <p className="text-xs text-slate-500 mt-2 max-w-xs">
@@ -265,7 +265,7 @@ export default function Login() {
               onClick={() => switchMode('login')}
               className={`py-2 text-xs font-bold rounded-xl transition-all ${
                 mode === 'login'
-                  ? 'bg-white text-emerald-950 shadow-xs'
+                  ? 'bg-white text-[#14213D] shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -276,7 +276,7 @@ export default function Login() {
               onClick={() => switchMode('signup')}
               className={`py-2 text-xs font-bold rounded-xl transition-all ${
                 mode === 'signup'
-                  ? 'bg-white text-emerald-950 shadow-xs'
+                  ? 'bg-white text-[#14213D] shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -398,7 +398,7 @@ export default function Login() {
                   <button
                     type="button"
                     onClick={() => switchMode('forgot_password')}
-                    className="text-xs text-emerald-700 hover:text-emerald-800 font-medium hover:underline"
+                    className="text-xs text-[#14213D] hover:text-[#14213D] font-semibold hover:underline"
                   >
                     Esqueci minha senha
                   </button>
@@ -464,7 +464,7 @@ export default function Login() {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full h-11 mt-3 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-semibold rounded-xl shadow-md shadow-emerald-700/20 active:scale-98 transition-all"
+            className="w-full h-11 mt-3 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-xl shadow-md shadow-[#FCA311]/20 active:scale-98 transition-all border-0"
           >
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -497,7 +497,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => switchMode(mode === 'login' ? 'signup' : 'login')}
-                className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 underline transition-colors"
+                className="text-xs font-bold text-[#14213D] hover:text-[#14213D] underline transition-colors"
               >
                 {mode === 'login'
                   ? 'Ainda não tem conta? Crie o workspace da sua família'

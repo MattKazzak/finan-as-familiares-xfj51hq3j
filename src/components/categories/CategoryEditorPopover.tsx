@@ -552,7 +552,7 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
           type="submit"
           size="sm"
           disabled={saving || !name.trim() || (type === 'expense' && !budgetBucket)}
-          className="h-8 text-xs rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3.5"
+          className="h-8 text-xs rounded-xl bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold px-3.5 border-0"
         >
           <span className="flex items-center gap-1.5">
             {saving ? (

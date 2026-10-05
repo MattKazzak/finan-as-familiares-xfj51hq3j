@@ -259,7 +259,7 @@ export function ApplyBudgetModelDialog({
             <div
               key={s}
               className={`flex-1 h-1.5 rounded-full transition-all ${
-                step >= s ? 'bg-emerald-600' : 'bg-slate-200'
+                step >= s ? 'bg-[#FCA311]' : 'bg-[#E5E5E5]'
               }`}
             />
           ))}
@@ -344,7 +344,7 @@ export function ApplyBudgetModelDialog({
                     <div
                       className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
                         isSelected
-                          ? 'border-emerald-600 bg-emerald-600 text-white'
+                          ? 'border-[#FCA311] bg-[#FCA311] text-[#14213D]'
                           : 'border-slate-300'
                       }`}
                     >
@@ -539,7 +539,7 @@ export function ApplyBudgetModelDialog({
               type="button"
               size="sm"
               onClick={handleNext}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs gap-1.5"
+              className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-xl text-xs gap-1.5 border-0"
             >
               <span>Avançar</span>
               <ChevronRight className="w-3.5 h-3.5" />
@@ -550,7 +550,7 @@ export function ApplyBudgetModelDialog({
               size="sm"
               onClick={handleApply}
               disabled={isApplying}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs gap-1.5 shadow-sm"
+              className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-xl text-xs gap-1.5 shadow-sm border-0"
             >
               {isApplying ? (
                 <span className="flex items-center gap-1.5">

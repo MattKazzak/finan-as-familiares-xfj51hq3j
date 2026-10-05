@@ -63,10 +63,10 @@ export function WalletTransactionsTab() {
     <div className="space-y-5 mt-0 animate-in fade-in-50 duration-200">
       {/* 1. VISÃO DE RESUMO PÓS-IMPORTAÇÃO & SEÇÃO DE REVISÃO DE PENDENTES (Com Barra de Progresso) */}
       {lastImportSummary ? (
-        <div className="rounded-3xl border border-emerald-300 bg-gradient-to-r from-emerald-50 via-teal-50/60 to-emerald-50 p-4 sm:p-5 shadow-sm space-y-3 animate-in fade-in-50 duration-200">
+        <div className="rounded-3xl border border-[#E5E5E5] bg-gradient-to-r from-white via-[#E5E5E5]/25 to-white p-4 sm:p-5 shadow-sm space-y-3 animate-in fade-in-50 duration-200">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-xs">
+              <div className="w-9 h-9 rounded-2xl bg-[#14213D] text-[#FCA311] flex items-center justify-center font-bold text-lg shrink-0 shadow-xs">
                 {lastImportSummary.pending === 0 ? '🎉' : '📥'}
               </div>
               <div className="flex-1">
@@ -208,16 +208,16 @@ export function WalletTransactionsTab() {
         </div>
       ) : filterOnlyPending && pendingTransactionsCount === 0 ? (
         /* Estado de Sucesso quando o usuário estava filtrando pendentes e terminou todas */
-        <div className="rounded-3xl border border-emerald-300 bg-emerald-50/80 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in-50">
+        <div className="rounded-3xl border border-[#E5E5E5] bg-[#E5E5E5]/30 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in-50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-bold text-lg shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-[#14213D] text-[#FCA311] flex items-center justify-center font-bold text-lg shrink-0">
               🎉
             </div>
             <div>
-              <h4 className="font-extrabold text-sm sm:text-base text-emerald-950">
+              <h4 className="font-extrabold text-sm sm:text-base text-[#14213D]">
                 Tudo categorizado! Parabéns!
               </h4>
-              <p className="text-xs text-emerald-800">
+              <p className="text-xs text-slate-600">
                 Não há mais nenhuma transação pendente neste mês.
               </p>
             </div>
@@ -225,7 +225,7 @@ export function WalletTransactionsTab() {
           <Button
             size="sm"
             onClick={() => setFilterOnlyPending(false)}
-            className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs rounded-xl font-bold"
+            className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] text-xs rounded-xl font-bold border-0"
           >
             Ver todas as transações
           </Button>
@@ -278,14 +278,14 @@ export function WalletTransactionsTab() {
             onClick={() => setIsFilterSheetOpen(true)}
             className={`rounded-xl text-xs font-semibold gap-1.5 h-8 ${
               activeFiltersCount > 0
-                ? 'border-emerald-600 bg-emerald-50 text-emerald-700'
+                ? 'border-[#FCA311] bg-[#FCA311]/15 text-[#14213D]'
                 : 'text-slate-600'
             }`}
           >
             <Filter className="w-3.5 h-3.5" />
             <span>Filtrar</span>
             {activeFiltersCount > 0 && (
-              <span className="w-4 h-4 rounded-full bg-emerald-600 text-white text-[10px] flex items-center justify-center font-bold">
+              <span className="w-4 h-4 rounded-full bg-[#14213D] text-white text-[10px] flex items-center justify-center font-bold">
                 {activeFiltersCount}
               </span>
             )}
@@ -344,18 +344,18 @@ export function WalletTransactionsTab() {
             <Button
               onClick={openImportStatement}
               variant="outline"
-              className="border-emerald-600 text-emerald-800 hover:bg-emerald-50 text-xs rounded-xl"
+              className="border-[#E5E5E5] text-[#14213D] hover:bg-[#E5E5E5]/50 text-xs rounded-xl"
             >
-              <UploadCloud className="w-4 h-4 mr-1.5 text-emerald-600" />
+              <UploadCloud className="w-4 h-4 mr-1.5 text-[#14213D]" />
               Importar Extrato (OFX)
             </Button>
             <Button
               onClick={() => openNewTransaction('expense')}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded-xl"
+              className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] text-xs rounded-xl font-bold border-0"
             >
-              <Plus className="w-4 h-4 mr-1" />
-              Nova transação
-            </Button>
+              <Plus className="w-4 h-4 mr-1.5 stroke-[2.5]" />
+              Adicionar primeira transação
+            </Button>{' '}
           </div>
         </div>
       ) : (

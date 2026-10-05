@@ -63,7 +63,7 @@ export const ImportConfirmationFooter: React.FC<ImportConfirmationFooterProps> =
             type="button"
             onClick={onConfirm}
             disabled={saving || selectedCount === 0}
-            className="w-full sm:w-auto h-11 sm:h-10 px-5 text-xs sm:text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-md shadow-emerald-700/20 gap-2 transition-transform active:scale-[0.98]"
+            className="w-full sm:w-auto h-11 sm:h-10 px-5 text-xs sm:text-sm font-bold bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] rounded-xl shadow-md shadow-black/10 gap-2 transition-transform active:scale-[0.98] border-0"
           >
             {saving ? (
               <>

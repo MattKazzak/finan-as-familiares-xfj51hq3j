@@ -45,6 +45,13 @@ export default {
           DEFAULT: 'hsl(var(--secondary))',
           foreground: 'hsl(var(--secondary-foreground))',
         },
+        brand: {
+          DEFAULT: '#14213D',
+          dark: '#0e172a',
+          light: '#1f3159',
+          amber: '#FCA311',
+          gray: '#E5E5E5',
+        },
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',

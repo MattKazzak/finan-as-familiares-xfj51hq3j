@@ -2290,7 +2290,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                   type="button"
                   onClick={handleSaveImported}
                   disabled={saving || selectedCount === 0}
-                  className="w-full sm:w-auto min-h-[46px] h-12 px-6 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-sm rounded-xl shadow-md transition-all gap-2 flex items-center justify-center"
+                  className="w-full sm:w-auto min-h-[46px] h-12 px-6 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold text-sm rounded-xl shadow-md transition-all gap-2 flex items-center justify-center border-0"
                 >
                   {saving ? (
                     <>
@@ -3488,7 +3488,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 type="submit"
                 size="sm"
                 disabled={quickCatSaving}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold border-0"
               >
                 {quickCatSaving ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : null}
                 <span>Salvar Categoria</span>

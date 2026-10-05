@@ -281,24 +281,24 @@ export default function InvestmentsPage() {
 
         <Button
           onClick={openCreateDialog}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-sm gap-1.5"
+          className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold text-xs rounded-xl shadow-sm gap-1.5 border-0"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 stroke-[2.5]" />
           <span>+ Adicionar Ativo</span>
         </Button>
       </div>
 
       {/* 2. Resumo da Carteira no Topo */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Valor Total da Carteira */}
-        <div className="bg-gradient-to-br from-[#059669] to-[#0F766E] rounded-3xl p-6 text-white shadow-lg shadow-emerald-950/10">
-          <span className="text-xs uppercase font-bold tracking-wider text-emerald-100">
+        {/* Valor Total da Carteira - Hero Azul-Marinho #14213D */}
+        <div className="bg-gradient-to-br from-[#14213D] via-[#192a4f] to-[#0e172a] rounded-3xl p-6 text-white shadow-lg shadow-[#14213D]/20 border border-[#14213D]">
+          <span className="text-xs uppercase font-extrabold tracking-wider text-[#FCA311]">
             Valor Total da Carteira
           </span>
-          <div className="text-2xl sm:text-3xl font-extrabold tabular-nums mt-1.5">
+          <div className="text-2xl sm:text-3xl font-extrabold tabular-nums mt-1.5 text-white">
             {formatBRL(totalCurrentValueCents)}
           </div>
-          <p className="text-xs text-emerald-100/80 mt-1">Soma de todos os ativos atuais</p>
+          <p className="text-xs text-white/70 mt-1">Soma de todos os ativos atuais</p>
         </div>
 
         {/* Custo de Aquisição */}
@@ -382,9 +382,9 @@ export default function InvestmentsPage() {
             </p>
             <Button
               onClick={openCreateDialog}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl"
+              className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] text-xs font-bold rounded-xl shadow-sm"
             >
-              <Plus className="w-4 h-4 mr-1.5" />
+              <Plus className="w-4 h-4 mr-1.5 stroke-[2.5]" />
               Adicionar primeiro ativo
             </Button>
           </div>
@@ -625,9 +625,9 @@ export default function InvestmentsPage() {
               <Button
                 type="submit"
                 disabled={savingAsset}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold"
               >
-                {savingAsset && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {savingAsset && <Loader2 className="w-4 h-4 mr-2 animate-spin text-[#14213D]" />}
                 {editingAsset ? 'Salvar Alterações' : 'Adicionar'}
               </Button>
             </DialogFooter>

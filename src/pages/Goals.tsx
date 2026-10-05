@@ -216,7 +216,7 @@ export default function GoalsPage() {
         {goals.length > 0 && (
           <Button
             onClick={openCreateDialog}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-sm gap-1.5"
+            className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold text-xs rounded-xl shadow-sm gap-1.5 border-0"
           >
             <Plus className="w-4 h-4" />
             <span>+ Nova meta</span>
@@ -230,7 +230,7 @@ export default function GoalsPage() {
       ) : goals.length === 0 ? (
         /* Empty State */
         <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-sm">
-          <div className="w-16 h-16 rounded-3xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3">
+          <div className="w-16 h-16 rounded-3xl bg-[#E5E5E5] text-[#14213D] flex items-center justify-center mx-auto mb-3">
             <Target className="w-8 h-8 stroke-[1.5]" />
           </div>
           <h3 className="font-bold text-slate-800 text-base">Nenhuma meta definida</h3>
@@ -239,7 +239,7 @@ export default function GoalsPage() {
           </p>
           <Button
             onClick={openCreateDialog}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl"
+            className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] text-xs font-bold rounded-xl border-0"
           >
             <Plus className="w-4 h-4 mr-1.5" />
             Criar primeira meta
@@ -479,7 +479,7 @@ export default function GoalsPage() {
               <Button
                 type="submit"
                 disabled={saving}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold border-0"
               >
                 {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {editingGoal ? 'Salvar Alterações' : 'Criar Meta'}

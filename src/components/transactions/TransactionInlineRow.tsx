@@ -651,7 +651,7 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
                   type="submit"
                   size="sm"
                   disabled={!selectedCatId || saving || savingBatch}
-                  className="rounded-xl text-xs font-bold gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-9 px-4 min-w-[100px]"
+                  className="rounded-xl text-xs font-bold gap-1.5 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] shadow-sm h-9 px-4 min-w-[100px] border-0"
                 >
                   {saving ? (
                     <>

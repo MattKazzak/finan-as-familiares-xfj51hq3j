@@ -735,7 +735,7 @@ export const RecurringIncomesDialog: React.FC<RecurringIncomesDialogProps> = ({
                     type="submit"
                     size="sm"
                     disabled={savingOverride}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8 rounded-xl font-semibold"
+                    className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] text-xs h-8 rounded-xl font-bold border-0"
                   >
                     <span className="flex items-center gap-1.5">
                       {savingOverride ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}

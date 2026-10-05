@@ -121,7 +121,7 @@ export function InstallPwaBanner({
                   size="sm"
                   onClick={handleBannerActionClick}
                   disabled={installing}
-                  className="h-8 px-3 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition-all active:scale-95"
+                  className="h-8 px-3 text-xs bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition-all active:scale-95 border-0"
                 >
                   {hasNativePrompt ? (
                     <>

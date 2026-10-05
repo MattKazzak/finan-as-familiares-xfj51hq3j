@@ -108,9 +108,9 @@ export function WalletBudgetsTab() {
             variant="outline"
             size="sm"
             onClick={() => setIsApplyModelOpen(true)}
-            className="rounded-xl text-xs font-bold gap-1.5 border-emerald-600/30 text-emerald-800 bg-emerald-50 hover:bg-emerald-100/80 h-8 shadow-xs"
+            className="rounded-xl text-xs font-bold gap-1.5 border-[#E5E5E5] text-[#14213D] bg-[#E5E5E5]/60 hover:bg-[#FCA311]/20 h-8 shadow-xs"
           >
-            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+            <Sparkles className="w-3.5 h-3.5 text-[#FCA311]" />
             <span>Aplicar modelo sugerido</span>
           </Button>
         </div>
@@ -118,16 +118,16 @@ export function WalletBudgetsTab() {
 
       {/* CARD DE ONBOARDING LEVE (QUANDO A RENDA LÍQUIDA AINDA NÃO FOI DEFINIDA) */}
       {(!family?.monthly_net_income_cents || family.monthly_net_income_cents <= 0) && (
-        <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-emerald-950 text-white rounded-3xl p-5 shadow-sm border border-emerald-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in-50 duration-200">
+        <div className="bg-gradient-to-br from-[#14213D] via-[#192a4f] to-[#0e172a] text-white rounded-3xl p-5 shadow-sm border border-[#14213D] flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in-50 duration-200">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-emerald-300 shrink-0 mt-0.5">
+            <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-[#FCA311] shrink-0 mt-0.5">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
               <h4 className="font-extrabold text-sm sm:text-base text-white">
                 Defina a renda líquida mensal da família
               </h4>
-              <p className="text-xs text-emerald-100/80 mt-1 max-w-xl leading-relaxed">
+              <p className="text-xs text-white/80 mt-1 max-w-xl leading-relaxed">
                 O app calcula os tetos ideais automaticamente com base na metodologia de consultores
                 financeiros (Essenciais 57%, Estilo de Vida 21%, Futuro 22%), convertendo em reais e
                 oferecendo total flexibilidade de personalização.
@@ -137,9 +137,9 @@ export function WalletBudgetsTab() {
 
           <Button
             onClick={() => setIsApplyModelOpen(true)}
-            className="bg-white text-emerald-900 hover:bg-emerald-50 font-bold text-xs rounded-xl shadow-md self-start sm:self-center shrink-0 gap-1.5"
+            className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold text-xs rounded-xl shadow-md self-start sm:self-center shrink-0 gap-1.5 border-0"
           >
-            <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+            <Sparkles className="w-3.5 h-3.5 text-[#14213D]" />
             <span>Configurar em 3 passos</span>
           </Button>
         </div>
@@ -316,7 +316,7 @@ export function WalletBudgetsTab() {
               trigger={
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100/80 px-2.5 py-1.5 rounded-xl border border-emerald-600/20 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#14213D] hover:bg-[#E5E5E5] bg-[#E5E5E5]/60 px-2.5 py-1.5 rounded-xl border border-[#E5E5E5] transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Nova categoria</span>
@@ -371,7 +371,7 @@ export function WalletBudgetsTab() {
                 trigger={
                   <Button
                     size="sm"
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs gap-1.5"
+                    className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-xl text-xs gap-1.5 border-0"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Criar categoria</span>

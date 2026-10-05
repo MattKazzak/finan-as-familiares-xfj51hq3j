@@ -267,7 +267,7 @@ export function WalletModals() {
               <Button
                 type="submit"
                 disabled={savingBudget}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold"
+                className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] rounded-xl text-xs font-bold border-0"
               >
                 {savingBudget ? (
                   <>
@@ -323,7 +323,7 @@ export function WalletModals() {
                   onClick={() => setFilterType(null)}
                   className={`py-2 text-xs font-bold rounded-xl border transition-all ${
                     filterType === null
-                      ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
+                      ? 'border-[#FCA311] bg-[#FCA311]/15 text-[#14213D]'
                       : 'border-slate-200 text-slate-600'
                   }`}
                 >
@@ -345,7 +345,7 @@ export function WalletModals() {
                   onClick={() => setFilterType('income')}
                   className={`py-2 text-xs font-bold rounded-xl border transition-all ${
                     filterType === 'income'
-                      ? 'border-emerald-600 bg-emerald-50 text-emerald-700'
+                      ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
                       : 'border-slate-200 text-slate-600'
                   }`}
                 >
@@ -374,7 +374,7 @@ export function WalletModals() {
                         }}
                         className={`text-xs px-3 py-1.5 rounded-xl border font-medium transition-all ${
                           isSelected
-                            ? 'bg-emerald-600 text-white border-emerald-600'
+                            ? 'bg-[#14213D] text-white border-[#14213D]'
                             : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                         }`}
                       >
@@ -405,7 +405,7 @@ export function WalletModals() {
                       }}
                       className={`text-xs px-2.5 py-1.5 rounded-xl border font-medium transition-all flex items-center gap-1.5 ${
                         isSelected
-                          ? 'bg-emerald-600 text-white border-emerald-600'
+                          ? 'bg-[#14213D] text-white border-[#14213D]'
                           : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                       }`}
                     >
@@ -435,7 +435,7 @@ export function WalletModals() {
               <Button
                 type="button"
                 onClick={() => setIsFilterSheetOpen(false)}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold"
+                className="flex-1 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] rounded-xl text-xs font-bold border-0"
               >
                 Ver Resultados
               </Button>
@@ -630,7 +630,7 @@ export function WalletModals() {
               <Button
                 type="submit"
                 disabled={savingNewSubcat || !newSubcatName.trim()}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold"
+                className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] rounded-xl text-xs font-bold border-0"
               >
                 {savingNewSubcat ? 'Criando...' : 'Criar Subcategoria'}
               </Button>

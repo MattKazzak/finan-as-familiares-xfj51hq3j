@@ -404,12 +404,12 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto w-full min-w-0">
-      {/* 1. Card da Família (Hero Editável) - Design Limpo, sem lápis duplicados */}
-      <div className="bg-gradient-to-br from-[#059669] to-[#0F766E] rounded-3xl p-5 sm:p-6 text-white shadow-xl shadow-emerald-950/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
+      {/* 1. Card da Família (Hero Editável) - Identidade Azul-Marinho #14213D */}
+      <div className="bg-gradient-to-br from-[#14213D] via-[#192a4f] to-[#0e172a] rounded-3xl p-5 sm:p-6 text-white shadow-xl shadow-[#14213D]/20 border border-[#14213D] flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
         <div className="flex items-center gap-3.5 sm:gap-4 min-w-0 flex-1">
           {/* Avatar da Família com Inicial ou Imagem */}
           <div className="shrink-0">
-            <Avatar className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/20 backdrop-blur-sm border-2 border-white/30 text-white font-black text-2xl sm:text-3xl shadow-lg overflow-hidden">
+            <Avatar className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/10 backdrop-blur-sm border-2 border-[#FCA311]/50 text-white font-black text-2xl sm:text-3xl shadow-lg overflow-hidden">
               {family?.avatar_url && (
                 <AvatarImage
                   src={family.avatar_url}
@@ -417,22 +417,20 @@ export default function ProfilePage() {
                   className="w-full h-full object-cover"
                 />
               )}
-              <AvatarFallback className="bg-emerald-800/60 text-white font-black text-2xl sm:text-3xl flex items-center justify-center w-full h-full">
+              <AvatarFallback className="bg-[#14213D] text-[#FCA311] font-black text-2xl sm:text-3xl flex items-center justify-center w-full h-full">
                 {familyInitial}
               </AvatarFallback>
             </Avatar>
           </div>
 
           <div className="min-w-0 flex-1">
-            <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-100/90 block mb-0.5">
+            <span className="text-[10px] uppercase font-extrabold tracking-widest text-[#FCA311] block mb-0.5">
               Família Registrada
             </span>
             <h2 className="text-lg sm:text-2xl font-black tracking-tight text-white leading-tight break-words [text-wrap:balance]">
               {formatFamilyDisplayName(family?.name, 'Silva')}
             </h2>
-            <p className="text-xs text-emerald-100/80 mt-1 truncate">
-              Conta: {user?.email || 'Usuário'}
-            </p>
+            <p className="text-xs text-white/70 mt-1 truncate">Conta: {user?.email || 'Usuário'}</p>
           </div>
         </div>
 
@@ -443,7 +441,7 @@ export default function ProfilePage() {
           size="sm"
           className="bg-white/15 hover:bg-white/25 text-white border border-white/20 text-xs font-semibold rounded-xl h-9 px-3.5 shadow-sm shrink-0 w-full sm:w-auto justify-center gap-1.5"
         >
-          <Pencil className="w-3.5 h-3.5" />
+          <Pencil className="w-3.5 h-3.5 text-[#FCA311]" />
           <span>Editar Família</span>
         </Button>
       </div>
@@ -453,15 +451,15 @@ export default function ProfilePage() {
         {/* Cabeçalho padronizado: Ícone + Título + Badge + Descrição + Ação alinhada */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-[#E5E5E5] text-[#14213D] flex items-center justify-center font-bold shrink-0">
               <Landmark className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="font-bold text-base text-slate-900 leading-tight">
+                <h3 className="font-bold text-base text-[#14213D] leading-tight">
                   Renda Líquida Mensal Familiar
                 </h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E5E5E5] text-[#14213D] shrink-0">
                   Base dos cálculos
                 </span>
               </div>
@@ -476,9 +474,9 @@ export default function ProfilePage() {
             onClick={() => setIsApplyModelOpen(true)}
             variant="outline"
             size="sm"
-            className="text-xs font-semibold rounded-xl border-emerald-600/30 text-emerald-700 hover:bg-emerald-50 gap-1.5 h-9 shrink-0 w-full sm:w-auto justify-center"
+            className="text-xs font-bold rounded-xl border-[#E5E5E5] text-[#14213D] hover:bg-[#E5E5E5]/50 gap-1.5 h-9 shrink-0 w-full sm:w-auto justify-center"
           >
-            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+            <Sparkles className="w-3.5 h-3.5 text-[#FCA311]" />
             <span>Aplicar modelo sugerido</span>
           </Button>
         </div>
@@ -521,7 +519,7 @@ export default function ProfilePage() {
                     }
                   }}
                   disabled={savingIncome}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded-xl h-9 font-semibold flex-1 sm:flex-initial px-4"
+                  className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] text-xs rounded-xl h-9 font-bold flex-1 sm:flex-initial px-4"
                 >
                   Salvar
                 </Button>
@@ -556,7 +554,7 @@ export default function ProfilePage() {
                   setIncomeInputStr(curr > 0 ? formatNumberBRL(curr) : '')
                   setIsEditingIncome(true)
                 }}
-                className="text-xs text-emerald-700 hover:bg-emerald-50 rounded-xl h-8 px-2.5 font-semibold self-center"
+                className="text-xs text-[#14213D] hover:bg-[#E5E5E5]/60 rounded-xl h-8 px-2.5 font-bold self-center"
               >
                 <Edit3 className="w-3.5 h-3.5 mr-1" />
                 {family?.monthly_net_income_cents && family.monthly_net_income_cents > 0
@@ -606,13 +604,13 @@ export default function ProfilePage() {
                   }}
                   className={`p-3 rounded-2xl border text-left flex items-center justify-between transition-all min-w-0 ${
                     isSelected
-                      ? 'border-emerald-600 bg-emerald-50/70 shadow-sm ring-2 ring-emerald-600/20'
-                      : 'border-slate-200/80 hover:bg-slate-50 hover:border-slate-300'
+                      ? 'border-[#FCA311] bg-[#FCA311]/10 shadow-sm ring-2 ring-[#FCA311]/25'
+                      : 'border-[#E5E5E5] hover:bg-[#E5E5E5]/40 hover:border-slate-300'
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0 flex-1 overflow-hidden mr-2">
-                    <Avatar className="w-8 h-8 border border-emerald-200 shrink-0">
-                      <AvatarFallback className="bg-gradient-to-tr from-emerald-600 to-teal-700 text-white font-bold text-xs">
+                    <Avatar className="w-8 h-8 border border-[#FCA311]/50 shrink-0">
+                      <AvatarFallback className="bg-gradient-to-tr from-[#14213D] to-[#1f3159] text-[#FCA311] font-bold text-xs">
                         {member.name.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
@@ -625,7 +623,7 @@ export default function ProfilePage() {
                   </div>
 
                   {isSelected && (
-                    <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs shadow-sm shrink-0">
+                    <span className="w-5 h-5 rounded-full bg-[#FCA311] text-[#14213D] flex items-center justify-center text-xs shadow-sm shrink-0 font-black">
                       <Check className="w-3 h-3 stroke-[3]" />
                     </span>
                   )}
@@ -663,9 +661,9 @@ export default function ProfilePage() {
             {isFamilyAdmin ? (
               <Button
                 onClick={handleOpenInviteModal}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-sm gap-1.5 h-9 w-full sm:w-auto justify-center"
+                className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold text-xs rounded-xl shadow-sm gap-1.5 h-9 w-full sm:w-auto justify-center border-0"
               >
-                <UserPlus className="w-4 h-4" />
+                <UserPlus className="w-4 h-4 stroke-[2.5]" />
                 <span>Convidar membro</span>
               </Button>
             ) : (
@@ -756,7 +754,7 @@ export default function ProfilePage() {
 
       {/* 5. Atalho de Instalação no Celular (apenas quando não estiver em modo standalone) */}
       {!isStandalone && (
-        <div className="bg-gradient-to-br from-emerald-900 via-[#064E3B] to-teal-950 rounded-3xl p-5 sm:p-6 text-white shadow-lg shadow-emerald-950/15 border border-emerald-600/30">
+        <div className="bg-gradient-to-br from-[#14213D] via-[#192a4f] to-[#0e172a] rounded-3xl p-5 sm:p-6 text-white shadow-lg shadow-[#14213D]/25 border border-[#14213D]">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
               <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 p-1 flex items-center justify-center shrink-0 shadow-inner">
@@ -784,7 +782,7 @@ export default function ProfilePage() {
               type="button"
               onClick={handleInstallShortcutClick}
               disabled={isInstalling}
-              className="bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold text-xs rounded-xl h-9 px-4 shadow-md active:scale-95 transition-all w-full sm:w-auto shrink-0 flex items-center justify-center gap-1.5"
+              className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold text-xs rounded-xl h-9 px-4 shadow-md active:scale-95 transition-all w-full sm:w-auto shrink-0 flex items-center justify-center gap-1.5 border-0"
             >
               {isInstalling ? (
                 <>

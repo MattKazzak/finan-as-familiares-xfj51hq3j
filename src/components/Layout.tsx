@@ -119,18 +119,18 @@ export default function Layout() {
   const userInitial = currentMember?.name?.charAt(0).toUpperCase() || 'F'
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50 flex flex-col md:flex-row text-slate-900 font-sans antialiased">
-      {/* SIDEBAR DESKTOP (>= 768px) */}
-      <aside className="hidden md:flex md:w-60 flex-col bg-white border-r border-slate-200/80 fixed inset-y-0 left-0 z-40">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-white flex flex-col md:flex-row text-[#000000] font-sans antialiased">
+      {/* SIDEBAR DESKTOP (>= 768px) com identidade profunda #14213D */}
+      <aside className="hidden md:flex md:w-60 flex-col bg-[#14213D] border-r border-[#14213D]/90 text-white fixed inset-y-0 left-0 z-40">
         {/* Logo & Marca */}
-        <div className="p-5 border-b border-slate-100 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center text-white font-bold shadow-md shadow-emerald-900/10">
+        <div className="p-5 border-b border-white/10 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FCA311] to-[#e08e08] flex items-center justify-center text-[#14213D] font-black shadow-md shadow-black/20">
             <span className="text-lg">💰</span>
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="font-bold text-sm text-slate-900 truncate">Finanças da Família</h1>
+            <h1 className="font-extrabold text-sm text-white truncate">Finanças da Família</h1>
             <p
-              className="text-xs text-slate-500 break-words line-clamp-2 leading-tight"
+              className="text-xs text-white/70 break-words line-clamp-2 leading-tight"
               title={family ? formatFamilyDisplayName(family.name) : 'Controle Conjunto'}
             >
               {family ? formatFamilyDisplayName(family.name) : 'Controle Conjunto'}
@@ -138,13 +138,13 @@ export default function Layout() {
           </div>
         </div>
 
-        {/* Botão Nova Transação Desktop */}
+        {/* Botão Nova Transação Desktop - Primary de ação #FCA311 */}
         <div className="p-4">
           <Button
             onClick={() => openNewTransaction('expense')}
-            className="w-full bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-semibold py-2.5 shadow-md shadow-emerald-700/20 rounded-xl flex items-center justify-center gap-2 transition-all transform active:scale-95 cursor-pointer"
+            className="w-full bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold py-2.5 shadow-md shadow-black/20 rounded-xl flex items-center justify-center gap-2 transition-all transform active:scale-95 cursor-pointer border-0"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-5 h-5 stroke-[2.5]" />
             Nova Transação
           </Button>
         </div>
@@ -158,66 +158,64 @@ export default function Layout() {
               <NavLink
                 key={item.to}
                 to={item.to}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   isActive
-                    ? 'bg-emerald-50 text-emerald-800 font-semibold'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'bg-white/15 text-[#FCA311] shadow-xs'
+                    : 'text-white/75 hover:bg-white/10 hover:text-white'
                 }`}
               >
                 <Icon
                   className={`w-5 h-5 ${
-                    isActive ? 'text-emerald-700' : 'text-slate-400 group-hover:text-slate-600'
+                    isActive ? 'text-[#FCA311]' : 'text-white/60 group-hover:text-white'
                   }`}
                 />
                 <span className="flex-1">{item.label}</span>
-                {isActive && <ChevronRight className="w-4 h-4 text-emerald-600" />}
+                {isActive && <ChevronRight className="w-4 h-4 text-[#FCA311]" />}
               </NavLink>
             )
           })}
         </nav>
 
         {/* Rodapé do Perfil Desktop */}
-        <div className="p-4 border-t border-slate-100 flex items-center justify-between">
+        <div className="p-4 border-t border-white/10 flex items-center justify-between">
           {members.length > 1 ? (
             <button
               type="button"
               onClick={openWhoIsUsing}
               title="Trocar quem está usando"
-              className="flex items-center gap-2.5 text-left hover:bg-slate-50 p-1.5 rounded-xl transition-colors overflow-hidden flex-1 mr-1 cursor-pointer"
+              className="flex items-center gap-2.5 text-left hover:bg-white/10 p-1.5 rounded-xl transition-colors overflow-hidden flex-1 mr-1 cursor-pointer"
             >
-              <Avatar className="w-8 h-8 border border-emerald-200 shrink-0">
-                <AvatarFallback className="bg-emerald-100 text-emerald-800 font-bold text-xs">
+              <Avatar className="w-8 h-8 border border-[#FCA311]/50 shrink-0">
+                <AvatarFallback className="bg-[#FCA311] text-[#14213D] font-bold text-xs">
                   {userInitial}
                 </AvatarFallback>
               </Avatar>
               <div className="overflow-hidden">
-                <p className="text-xs font-semibold text-slate-800 truncate">
+                <p className="text-xs font-semibold text-white truncate">
                   {currentMember?.name || 'Família'}
                 </p>
-                <p className="text-[10px] text-emerald-600 truncate font-medium">
-                  Trocar usuário ▾
-                </p>
+                <p className="text-[10px] text-[#FCA311] truncate font-medium">Trocar usuário ▾</p>
               </div>
             </button>
           ) : (
             <div className="flex items-center gap-2.5 text-left p-1.5 rounded-xl overflow-hidden flex-1 mr-1">
-              <Avatar className="w-8 h-8 border border-emerald-200 shrink-0">
-                <AvatarFallback className="bg-emerald-100 text-emerald-800 font-bold text-xs">
+              <Avatar className="w-8 h-8 border border-[#FCA311]/50 shrink-0">
+                <AvatarFallback className="bg-[#FCA311] text-[#14213D] font-bold text-xs">
                   {userInitial}
                 </AvatarFallback>
               </Avatar>
               <div className="overflow-hidden">
-                <p className="text-xs font-semibold text-slate-800 truncate">
+                <p className="text-xs font-semibold text-white truncate">
                   {currentMember?.name || 'Família'}
                 </p>
-                <p className="text-[10px] text-slate-400 truncate font-medium">Administrador</p>
+                <p className="text-[10px] text-white/60 truncate font-medium">Administrador</p>
               </div>
             </div>
           )}
           <button
             onClick={handleSignOut}
             title="Sair da conta"
-            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+            className="p-1.5 text-white/60 hover:text-red-400 hover:bg-white/10 rounded-lg transition-colors shrink-0"
           >
             <LogOut className="w-4 h-4" />
           </button>
@@ -225,11 +223,11 @@ export default function Layout() {
       </aside>
 
       {/* ÁREA PRINCIPAL COM SCROLL */}
-      <div className="flex-1 md:ml-60 flex flex-col min-h-screen">
+      <div className="flex-1 md:ml-60 flex flex-col min-h-screen bg-[#FFFFFF]">
         {/* HEADER TOP (visível em desktop e mobile) */}
-        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200/60 px-4 py-3 sm:px-6 flex items-center justify-between">
+        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E5E5E5] px-4 py-3 sm:px-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h2 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">
+            <h2 className="text-base sm:text-lg font-bold text-[#14213D] tracking-tight">
               {getHeaderTitle()}
             </h2>
           </div>
@@ -239,26 +237,26 @@ export default function Layout() {
               <div
                 onClick={openWhoIsUsing}
                 title="Toque para trocar quem está usando"
-                className="flex items-center gap-2 cursor-pointer group bg-slate-50 hover:bg-emerald-50 px-2.5 py-1 rounded-full border border-slate-200/80 transition-all"
+                className="flex items-center gap-2 cursor-pointer group bg-[#E5E5E5]/40 hover:bg-[#FCA311]/15 px-2.5 py-1 rounded-full border border-[#E5E5E5] transition-all"
               >
-                <Avatar className="w-7 h-7 border border-emerald-200 shadow-sm group-hover:ring-2 group-hover:ring-emerald-400 transition-all">
-                  <AvatarFallback className="bg-gradient-to-tr from-emerald-600 to-teal-700 text-white font-bold text-xs">
+                <Avatar className="w-7 h-7 border border-[#FCA311]/60 shadow-sm group-hover:ring-2 group-hover:ring-[#FCA311] transition-all">
+                  <AvatarFallback className="bg-gradient-to-tr from-[#14213D] to-[#1f3159] text-white font-bold text-xs">
                     {userInitial}
                   </AvatarFallback>
                 </Avatar>
-                <span className="text-xs font-medium text-slate-700 group-hover:text-emerald-800 transition-colors flex items-center gap-1">
+                <span className="text-xs font-medium text-[#14213D] group-hover:text-[#14213D] transition-colors flex items-center gap-1">
                   <span>{currentMember?.name || 'Família'}</span>
                   <span className="text-[10px] text-slate-400">▾</span>
                 </span>
               </div>
             ) : (
-              <div className="flex items-center gap-2 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200/80">
-                <Avatar className="w-7 h-7 border border-emerald-200 shadow-sm">
-                  <AvatarFallback className="bg-gradient-to-tr from-emerald-600 to-teal-700 text-white font-bold text-xs">
+              <div className="flex items-center gap-2 bg-[#E5E5E5]/40 px-2.5 py-1 rounded-full border border-[#E5E5E5]">
+                <Avatar className="w-7 h-7 border border-[#FCA311]/60 shadow-sm">
+                  <AvatarFallback className="bg-gradient-to-tr from-[#14213D] to-[#1f3159] text-white font-bold text-xs">
                     {userInitial}
                   </AvatarFallback>
                 </Avatar>
-                <span className="text-xs font-medium text-slate-700">
+                <span className="text-xs font-medium text-[#14213D]">
                   <span>{currentMember?.name || 'Família'}</span>
                 </span>
               </div>
@@ -275,14 +273,14 @@ export default function Layout() {
         <InstallPwaBanner variant="bottom-nav" />
 
         {/* BOTTOM NAVIGATION (MOBILE APENAS < 768px) */}
-        <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200/80 z-40 px-2 py-1 shadow-lg shadow-slate-900/5">
+        <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-[#E5E5E5] z-40 px-2 py-1 shadow-lg shadow-black/5">
           <div className="relative flex items-center justify-around h-14">
             {/* 1. Início */}
             <NavLink
               to="/inicio"
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
-                  isActive ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-slate-600'
+                  isActive ? 'text-[#FCA311] font-bold' : 'text-slate-400 hover:text-[#14213D]'
                 }`
               }
             >
@@ -295,7 +293,7 @@ export default function Layout() {
               to="/carteira"
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
-                  isActive ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-slate-600'
+                  isActive ? 'text-[#FCA311] font-bold' : 'text-slate-400 hover:text-[#14213D]'
                 }`
               }
             >
@@ -303,15 +301,15 @@ export default function Layout() {
               <span className="text-[10px]">Carteira</span>
             </NavLink>
 
-            {/* 3. FAB CENTRAL ELEVADO COM GRADIENTE: abre direto o formulário de Nova Transação */}
+            {/* 3. FAB CENTRAL ELEVADO COM GRADIENTE: abre direto o formulário de Nova Transação (#FCA311) */}
             <div className="flex-1 flex justify-center -translate-y-5">
               <button
                 type="button"
                 onClick={() => openNewTransaction('expense')}
-                className="w-13 h-13 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-lg shadow-emerald-900/30 ring-4 ring-white active:scale-95 transition-transform cursor-pointer"
+                className="w-13 h-13 rounded-full bg-gradient-to-tr from-[#FCA311] via-[#fba825] to-[#ffb845] text-[#14213D] flex items-center justify-center shadow-lg shadow-black/20 ring-4 ring-white active:scale-95 transition-transform cursor-pointer"
                 aria-label="Nova Transação"
               >
-                <Plus className="w-7 h-7 stroke-[2.5]" />
+                <Plus className="w-7 h-7 stroke-[2.8]" />
               </button>
             </div>
 
@@ -320,7 +318,7 @@ export default function Layout() {
               to="/metas"
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
-                  isActive ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-slate-600'
+                  isActive ? 'text-[#FCA311] font-bold' : 'text-slate-400 hover:text-[#14213D]'
                 }`
               }
             >
@@ -333,7 +331,7 @@ export default function Layout() {
               to="/perfil"
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
-                  isActive ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-slate-600'
+                  isActive ? 'text-[#FCA311] font-bold' : 'text-slate-400 hover:text-[#14213D]'
                 }`
               }
             >

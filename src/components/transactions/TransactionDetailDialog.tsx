@@ -155,7 +155,7 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
               onOpenChange(false)
               onEdit(transaction)
             }}
-            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="flex-1 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold border-0"
           >
             <span className="flex items-center justify-center gap-2">
               <Edit3 className="w-4 h-4" />

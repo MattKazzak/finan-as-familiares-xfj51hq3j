@@ -150,14 +150,14 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/20 to-teal-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-7 sm:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-white via-[#E5E5E5]/30 to-slate-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-[#14213D]/10 border border-[#E5E5E5] p-7 sm:p-8">
         {/* Cabeçalho */}
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 flex items-center justify-center text-3xl shadow-lg shadow-emerald-700/20 mb-3 text-white">
-            <KeyRound className="w-8 h-8 text-white" />
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#14213D] to-[#1f3159] flex items-center justify-center text-3xl shadow-lg shadow-[#14213D]/20 mb-3 text-[#FCA311] border border-[#14213D]">
+            <KeyRound className="w-8 h-8 text-[#FCA311]" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-2xl font-black text-[#14213D] tracking-tight">
             Criar Nova Senha — Curiangoo
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-xs">
@@ -241,9 +241,10 @@ export default function ResetPassword() {
           {/* Botão Salvar Nova Senha */}
           <Button
             type="submit"
-            disabled={submitting || Boolean(successMessage)}
-            className="w-full h-11 mt-4 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-semibold rounded-xl shadow-md shadow-emerald-700/20 active:scale-98 transition-all"
+            disabled={loading}
+            className="w-full h-11 mt-4 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-xl shadow-md shadow-[#FCA311]/20 active:scale-98 transition-all border-0"
           >
+            {' '}
             {submitting ? (
               <span className="flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />

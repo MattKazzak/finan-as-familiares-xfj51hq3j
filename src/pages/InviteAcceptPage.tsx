@@ -200,14 +200,14 @@ export function InviteAcceptPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/20 to-teal-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-6 sm:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-white via-[#E5E5E5]/30 to-slate-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-[#14213D]/10 border border-[#E5E5E5] p-6 sm:p-8">
         {/* Cabeçalho */}
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-600/10 p-3 shadow-inner mb-3 flex items-center justify-center text-emerald-700">
+          <div className="w-14 h-14 rounded-2xl bg-[#E5E5E5] p-3 shadow-inner mb-3 flex items-center justify-center text-[#14213D]">
             <Users className="w-8 h-8" />
           </div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-black text-[#14213D] tracking-tight">
             Convite para Família
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
@@ -275,7 +275,7 @@ export function InviteAcceptPage() {
                 <Button
                   onClick={handleAcceptLoggedIn}
                   disabled={actionLoading}
-                  className="w-full h-11 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-semibold rounded-xl shadow-md shadow-emerald-700/20 active:scale-98 transition-all text-xs sm:text-sm"
+                  className="w-full h-11 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-xl shadow-md shadow-[#FCA311]/20 active:scale-98 transition-all text-xs sm:text-sm border-0"
                 >
                   {actionLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -449,7 +449,7 @@ export function InviteAcceptPage() {
                   <Button
                     type="submit"
                     disabled={actionLoading}
-                    className="w-full h-11 mt-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-semibold rounded-xl shadow-md shadow-emerald-700/20 active:scale-98 transition-all text-xs sm:text-sm"
+                    className="w-full h-11 mt-2 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-xl shadow-md shadow-[#FCA311]/20 active:scale-98 transition-all text-xs sm:text-sm border-0"
                   >
                     {actionLoading ? (
                       <Loader2 className="w-4 h-4 animate-spin mr-2" />
