@@ -274,29 +274,30 @@ export default function GoalsPage() {
             return (
               <div
                 key={goal.id}
-                className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
+                className="bg-card/90 backdrop-blur-sm rounded-2xl p-4 sm:p-5 border border-border/40 shadow-curiango hover:shadow-md transition-all flex flex-col justify-between group"
               >
                 <div>
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-sm shrink-0"
-                        style={{ backgroundColor: goal.category?.color || '#059669' }}
-                      >
-                        <CategoryIcon name={goal.category?.icon || 'Target'} className="w-5 h-5" />
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0">
+                        <CategoryIcon
+                          name={goal.category?.icon || 'Target'}
+                          className="w-4 h-4 text-[#10B981]"
+                          strokeWidth={1.5}
+                        />
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-900 text-base group-hover:text-emerald-700 transition-colors">
+                        <h4 className="font-semibold text-sm sm:text-base text-[#14213D] dark:text-white leading-tight">
                           {goal.name}
-                        </h3>
-                        {goal.category && (
-                          <span className="text-[11px] text-slate-400">
-                            Categoria: {goal.category.name}
-                          </span>
+                        </h4>
+                        {goal.deadline && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                            <Calendar className="w-3 h-3 text-muted-foreground" strokeWidth={1.5} />
+                            <span>Até {formatDeadline(goal.deadline)}</span>
+                          </div>
                         )}
                       </div>
                     </div>
-
                     <div className="flex items-center gap-1 opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => openEditDialog(goal)}
@@ -332,13 +333,12 @@ export default function GoalsPage() {
                     </div>
                   </div>
 
-                  {/* Anel / Barra de Progresso */}
-                  <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mb-4">
+                  {/* Anel / Barra de Progresso CDS */}
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden mb-4">
                     <div
-                      className="h-full rounded-full transition-all duration-700"
+                      className="h-full rounded-full transition-all duration-700 bg-[#10B981]"
                       style={{
                         width: `${percent}%`,
-                        backgroundColor: ringColor,
                       }}
                     />
                   </div>
