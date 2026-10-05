@@ -229,7 +229,7 @@ export default function GoalsPage() {
         <div className="py-12 text-center text-xs text-slate-400">Carregando metas...</div>
       ) : goals.length === 0 ? (
         /* Empty State */
-        <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-sm">
+        <div className="bg-card/90 backdrop-blur-sm rounded-3xl p-12 text-center border border-border/40 shadow-curiango">
           <div className="w-16 h-16 rounded-3xl bg-[#E5E5E5] text-[#14213D] flex items-center justify-center mx-auto mb-3">
             <Target className="w-8 h-8 stroke-[1.5]" />
           </div>
@@ -260,16 +260,6 @@ export default function GoalsPage() {
             }
             const remainingCents = Math.max(goal.target_amount_cents - savedCents, 0)
             const suggestionCents = Math.round(remainingCents / monthsLeft)
-
-            // Cor do anel conforme progresso
-            const ringColor =
-              percent >= 100
-                ? '#10B981'
-                : percent >= 50
-                  ? '#059669'
-                  : percent >= 25
-                    ? '#F59E0B'
-                    : '#3B82F6'
 
             return (
               <div
@@ -320,7 +310,7 @@ export default function GoalsPage() {
                   <div className="space-y-1 mb-4">
                     <div className="flex items-baseline justify-between text-xs">
                       <span className="text-slate-500 font-medium">Meta Total:</span>
-                      <span className="font-extrabold text-slate-900 text-base tabular-nums">
+                      <span className="font-semibold tracking-tight text-[#14213D] dark:text-white tabular-nums">
                         {formatBRL(goal.target_amount_cents)}
                       </span>
                     </div>
