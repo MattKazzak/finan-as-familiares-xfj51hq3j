@@ -84,7 +84,7 @@ export function WhoIsUsingDialog({ open, onOpenChange }: WhoIsUsingDialogProps) 
                 </div>
 
                 {isSelected ? (
-                  <div className="w-6 h-6 rounded-full bg-[#FCA311] text-[#14213D] flex items-center justify-center shadow-sm font-black">
+                  <div className="w-6 h-6 rounded-full bg-[#FCA311] text-[#14213D] flex items-center justify-center shadow-sm font-semibold">
                     <Check className="w-3.5 h-3.5 stroke-[3]" />
                   </div>
                 ) : null}

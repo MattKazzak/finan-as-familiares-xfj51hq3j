@@ -269,7 +269,7 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
             </span>
           </div>
         </div>
-        <span className="font-extrabold text-emerald-700 tabular-nums shrink-0 ml-2">
+        <span className="font-semibold text-emerald-700 tabular-nums shrink-0 ml-2">
           {formatBRL(transaction.amount_cents)}
         </span>
       </div>

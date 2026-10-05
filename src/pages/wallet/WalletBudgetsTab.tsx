@@ -124,7 +124,7 @@ export function WalletBudgetsTab() {
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="font-extrabold text-sm sm:text-base text-white">
+              <h4 className="font-semibold text-sm sm:text-base text-white">
                 Defina a renda líquida mensal da família
               </h4>
               <p className="text-xs text-white/80 mt-1 max-w-xl leading-relaxed">

@@ -129,7 +129,7 @@ export default function Layout() {
             <CuriangoLogo size={24} color="#FCA311" />
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="font-black text-sm text-white tracking-tight truncate">Curiangoo</h1>
+            <h1 className="font-semibold text-sm text-white tracking-tight truncate">Curiangoo</h1>
             <p
               className="text-xs text-white/70 break-words line-clamp-2 leading-tight"
               title={family ? formatFamilyDisplayName(family.name) : 'Finanças da Família'}

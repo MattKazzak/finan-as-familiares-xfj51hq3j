@@ -410,7 +410,7 @@ export default function ProfilePage() {
         <div className="flex items-center gap-3.5 sm:gap-4 min-w-0 flex-1">
           {/* Avatar da Família com Inicial ou Imagem */}
           <div className="shrink-0">
-            <Avatar className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/10 backdrop-blur-sm border-2 border-[#FCA311]/50 text-white font-black text-2xl sm:text-3xl shadow-lg overflow-hidden">
+            <Avatar className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/10 backdrop-blur-sm border-2 border-[#FCA311]/50 text-white font-semibold text-2xl sm:text-3xl shadow-lg overflow-hidden">
               {family?.avatar_url && (
                 <AvatarImage
                   src={family.avatar_url}
@@ -418,17 +418,17 @@ export default function ProfilePage() {
                   className="w-full h-full object-cover"
                 />
               )}
-              <AvatarFallback className="bg-[#14213D] text-[#FCA311] font-black text-2xl sm:text-3xl flex items-center justify-center w-full h-full">
+              <AvatarFallback className="bg-[#14213D] text-[#FCA311] font-semibold text-2xl sm:text-3xl flex items-center justify-center w-full h-full">
                 {familyInitial}
               </AvatarFallback>
             </Avatar>
           </div>
 
           <div className="min-w-0 flex-1">
-            <span className="text-[10px] uppercase font-extrabold tracking-widest text-[#FCA311] block mb-0.5">
+            <span className="text-[10px] uppercase font-semibold tracking-widest text-[#FCA311] block mb-0.5">
               Família Registrada
             </span>
-            <h2 className="text-lg sm:text-2xl font-black tracking-tight text-white leading-tight break-words [text-wrap:balance]">
+            <h2 className="text-lg sm:text-2xl font-semibold tracking-tight text-white leading-tight break-words [text-wrap:balance]">
               {formatFamilyDisplayName(family?.name, 'Silva')}
             </h2>
             <p className="text-xs text-white/70 mt-1 truncate">Conta: {user?.email || 'Usuário'}</p>
@@ -541,7 +541,7 @@ export default function ProfilePage() {
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
                   Renda Líquida Cadastrada
                 </span>
-                <span className="text-xl sm:text-2xl font-black text-slate-900 tabular-nums">
+                <span className="text-xl sm:text-2xl font-semibold text-slate-900 tabular-nums">
                   {family?.monthly_net_income_cents && family.monthly_net_income_cents > 0
                     ? formatBRL(family.monthly_net_income_cents)
                     : 'Não definida'}
@@ -624,7 +624,7 @@ export default function ProfilePage() {
                   </div>
 
                   {isSelected && (
-                    <span className="w-5 h-5 rounded-full bg-[#FCA311] text-[#14213D] flex items-center justify-center text-xs shadow-sm shrink-0 font-black">
+                    <span className="w-5 h-5 rounded-full bg-[#FCA311] text-[#14213D] flex items-center justify-center text-xs shadow-sm shrink-0 font-semibold">
                       <Check className="w-3 h-3 stroke-[3]" />
                     </span>
                   )}
@@ -865,7 +865,7 @@ export default function ProfilePage() {
                     className="w-full h-full object-cover"
                   />
                 )}
-                <AvatarFallback className="bg-emerald-700 text-white font-black text-3xl">
+                <AvatarFallback className="bg-emerald-700 text-white font-semibold text-3xl">
                   {familyInitial}
                 </AvatarFallback>
               </Avatar>
@@ -1073,7 +1073,7 @@ export default function ProfilePage() {
                   Código de Convite (6–8 caracteres)
                 </span>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xl sm:text-2xl font-black tracking-wider text-emerald-950 font-mono">
+                  <span className="text-xl sm:text-2xl font-semibold tracking-wider text-emerald-950 font-mono">
                     {currentInvite.code}
                   </span>
                   <Button

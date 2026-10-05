@@ -476,13 +476,13 @@ export default function Home() {
               title={members.length > 1 ? 'Trocar perfil / membro' : 'Perfil do membro'}
             >
               <Avatar className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl border-2 border-[#14213D] shadow-sm transition-all group-hover:border-[#FCA311]">
-                <AvatarFallback className="bg-gradient-to-tr from-[#14213D] to-[#1f3159] text-white font-extrabold text-sm sm:text-base rounded-2xl">
+                <AvatarFallback className="bg-gradient-to-tr from-[#14213D] to-[#1f3159] text-white font-semibold text-sm sm:text-base rounded-2xl">
                   {memberInitial}
                 </AvatarFallback>
               </Avatar>
               {members.length > 1 && (
                 <span
-                  className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#FCA311] text-[#14213D] text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-2xs"
+                  className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#FCA311] text-[#14213D] text-[9px] font-semibold rounded-full flex items-center justify-center border-2 border-white shadow-2xs"
                   title="Mais membros disponíveis"
                 >
                   ▾
@@ -643,7 +643,7 @@ export default function Home() {
           {loading ? (
             <Skeleton className="h-10 w-48 bg-white/20 rounded-lg my-2" />
           ) : (
-            <div className="text-2xl sm:text-4xl font-extrabold tracking-tight tabular-nums my-2 break-words text-white">
+            <div className="text-2xl sm:text-4xl font-semibold tracking-tight tabular-nums my-2 break-words text-white">
               {hideValues ? (
                 <span>R$ ••••••</span>
               ) : (

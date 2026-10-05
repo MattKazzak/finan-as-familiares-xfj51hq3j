@@ -157,7 +157,7 @@ export default function ResetPassword() {
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#14213D] to-[#1f3159] flex items-center justify-center text-3xl shadow-lg shadow-[#14213D]/20 mb-3 text-[#FCA311] border border-[#14213D]">
             <KeyRound className="w-8 h-8 text-[#FCA311]" />
           </div>
-          <h1 className="text-2xl font-black text-[#14213D] tracking-tight">
+          <h1 className="text-2xl font-semibold text-[#14213D] tracking-tight">
             Criar Nova Senha — Curiangoo
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-xs">

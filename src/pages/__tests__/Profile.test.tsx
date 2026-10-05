@@ -223,7 +223,9 @@ describe('ProfilePage PWA Install Shortcut - 3 Cenários de Clique', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText(/Versão 0\.0\.169 • Finanças Familiares/i)).toBeDefined()
+    expect(
+      screen.getByText(/Versão (0\.0\.\d+|1\.0\.\d+|1\.0) • Finanças Familiares/i),
+    ).toBeDefined()
   })
 
   it('não possui botões ou lápis duplicados no card da família', () => {

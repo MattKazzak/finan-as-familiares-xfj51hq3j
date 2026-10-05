@@ -292,10 +292,10 @@ export default function InvestmentsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Valor Total da Carteira - Hero Azul-Marinho #14213D */}
         <div className="bg-gradient-to-br from-[#14213D] via-[#192a4f] to-[#0e172a] rounded-3xl p-6 text-white shadow-lg shadow-[#14213D]/20 border border-[#14213D]">
-          <span className="text-xs uppercase font-extrabold tracking-wider text-[#FCA311]">
+          <span className="text-xs uppercase font-semibold tracking-wider text-[#FCA311]">
             Valor Total da Carteira
           </span>
-          <div className="text-2xl sm:text-3xl font-extrabold tabular-nums mt-1.5 text-white">
+          <div className="text-2xl sm:text-3xl font-semibold tabular-nums mt-1.5 text-white">
             {formatBRL(totalCurrentValueCents)}
           </div>
           <p className="text-xs text-white/70 mt-1">Soma de todos os ativos atuais</p>
@@ -333,7 +333,7 @@ export default function InvestmentsPage() {
               </span>
             </div>
             <div
-              className={`text-xl sm:text-2xl font-extrabold tabular-nums mt-1.5 flex items-center gap-1.5 ${
+              className={`text-xl sm:text-2xl font-semibold tabular-nums mt-1.5 flex items-center gap-1.5 ${
                 totalProfitCents >= 0 ? 'text-emerald-600' : 'text-red-600'
               }`}
             >
@@ -454,7 +454,7 @@ export default function InvestmentsPage() {
                   {/* Valor Total do Ativo e Rentabilidade */}
                   <div className="flex items-center justify-between sm:justify-end gap-4 pl-13 sm:pl-0">
                     <div className="text-left sm:text-right">
-                      <div className="text-sm sm:text-base font-extrabold text-slate-900 tabular-nums">
+                      <div className="text-sm sm:text-base font-semibold text-slate-900 tabular-nums">
                         {formatBRL(totalValCents)}
                       </div>
                       <div

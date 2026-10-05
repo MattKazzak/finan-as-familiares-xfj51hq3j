@@ -240,7 +240,7 @@ export default function Login() {
           >
             <CuriangoLogo size={42} color="#FCA311" />
           </div>
-          <h1 className="text-2xl font-black text-[#14213D] tracking-tight">Curiangoo</h1>
+          <h1 className="text-2xl font-semibold text-[#14213D] tracking-tight">Curiangoo</h1>
           <p className="text-xs sm:text-sm font-bold text-[#FCA311] mt-0.5">
             Finanças Familiares no Prumo
           </p>

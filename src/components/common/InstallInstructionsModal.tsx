@@ -44,7 +44,7 @@ export function InstallInstructionsModal({
             <CuriangoLogo size={40} color="#FCA311" />
           </div>
 
-          <DialogTitle className="text-lg font-extrabold text-slate-900 tracking-tight flex items-center justify-center gap-1.5">
+          <DialogTitle className="text-lg font-semibold text-slate-900 tracking-tight flex items-center justify-center gap-1.5">
             {isIos ? (
               <span className="inline-flex items-center gap-1.5">
                 <AppleIcon className="w-4 h-4 text-slate-800 shrink-0" />

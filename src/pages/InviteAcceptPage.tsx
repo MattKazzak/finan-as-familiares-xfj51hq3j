@@ -207,7 +207,7 @@ export function InviteAcceptPage() {
           <div className="w-14 h-14 rounded-2xl bg-[#E5E5E5] p-3 shadow-inner mb-3 flex items-center justify-center text-[#14213D]">
             <Users className="w-8 h-8" />
           </div>
-          <h1 className="text-xl sm:text-2xl font-black text-[#14213D] tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-semibold text-[#14213D] tracking-tight">
             Convite para Família
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
