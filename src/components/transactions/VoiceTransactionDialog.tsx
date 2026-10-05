@@ -110,10 +110,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  // Input de valor rápido no card falta_valor
-  const [missingAmountInput, setMissingAmountInput] = useState('')
   const [isListeningForAmountOnly, setIsListeningForAmountOnly] = useState(false)
-  const missingAmountInputRef = useRef<HTMLInputElement | null>(null)
 
   // Contagem regressiva visual do temporizador de silêncio (3s -> 2s -> 1s)
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null)
@@ -248,7 +245,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
       setPendingTransaction(merged)
       pendingTransactionRef.current = merged
-      setMissingAmountInput('')
       setIsListeningForAmountOnly(false)
       isListeningForAmountOnlyRef.current = false
       return merged
@@ -450,14 +446,19 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             // Executa lançamento autônomo imediato no Supabase
             const result = await executeAutonomousTransaction(confirmedData)
             const catName = result?.categoryName || confirmedData.categoryNameSuggestion || 'Geral'
-            const subName = result?.subcategoryName || confirmedData.subcategoryNameSuggestion || ''
+            const subName = (
+              result?.subcategoryName ||
+              confirmedData.subcategoryNameSuggestion ||
+              ''
+            ).trim()
             const txId = (result?.createdTx as any)?.id || null
 
-            const effectiveSubName = subName || 'Cafeterias & Lanches Rápidos'
             const confirmationText =
               parsed.friendlyMessage && !parsed.friendlyMessage.includes('?')
                 ? parsed.friendlyMessage
-                : `Lançado: ${confirmedData.amountFormatted} em ${catName} › ${effectiveSubName}! 👍`
+                : subName
+                  ? `Lançado: ${confirmedData.amountFormatted} em ${catName} › ${subName}! 👍`
+                  : `Lançado: ${confirmedData.amountFormatted} em ${catName}! 👍`
 
             setMessages((prev) => [
               ...prev,
@@ -595,14 +596,19 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           // Executa lançamento autônomo no banco de dados
           const result = await executeAutonomousTransaction(finalParsed)
           const catName = result?.categoryName || finalParsed.categoryNameSuggestion || 'Geral'
-          const subName = result?.subcategoryName || finalParsed.subcategoryNameSuggestion || ''
+          const subName = (
+            result?.subcategoryName ||
+            finalParsed.subcategoryNameSuggestion ||
+            ''
+          ).trim()
           const txId = (result?.createdTx as any)?.id || null
 
-          const effectiveSubName = subName || 'Cafeterias & Lanches Rápidos'
           const launchText =
             parsed.friendlyMessage && !parsed.friendlyMessage.includes('?')
               ? parsed.friendlyMessage
-              : `Lançado: ${finalParsed.amountFormatted} em ${catName} › ${effectiveSubName}! 👍`
+              : subName
+                ? `Lançado: ${finalParsed.amountFormatted} em ${catName} › ${subName}! 👍`
+                : `Lançado: ${finalParsed.amountFormatted} em ${catName}! 👍`
 
           setMessages((prev) => [
             ...prev,
@@ -918,16 +924,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     [clearSilenceTimer, handleStopAndProcess],
   )
 
-  // Auto-foco no input de valor quando entra no estado 'falta_valor' (se renderizado)
-  useEffect(() => {
-    if (pendingTransaction?.aiStatus === 'falta_valor') {
-      const timer = setTimeout(() => {
-        missingAmountInputRef.current?.focus()
-      }, 100)
-      return () => clearTimeout(timer)
-    }
-  }, [pendingTransaction?.aiStatus])
-
   // Gerar saudação contextual baseada na hora e membro ativo
   const getContextualGreeting = useCallback(() => {
     const hour = new Date().getHours()
@@ -963,7 +959,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       setLastCreatedTransactionId(null)
       lastCreatedTransactionIdRef.current = null
       setErrorMessage(null)
-      setMissingAmountInput('')
       setIsListeningForAmountOnly(false)
       isListeningForAmountOnlyRef.current = false
       hadErrorRef.current = false
@@ -978,7 +973,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       stopListening()
       setPermissionStatus('idle')
       setIsProcessingAi(false)
-      setMissingAmountInput('')
       setIsListeningForAmountOnly(false)
       setPendingTransaction(null)
       pendingTransactionRef.current = null
@@ -998,60 +992,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     if (!textToSend) return
     setInputVal('')
     handleStopAndProcess(textToSend)
-  }
-
-  // Confirmar valor digitado diretamente no card falta_valor (se chamado via fallback)
-  const handleConfirmMissingAmount = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault()
-    const base = pendingTransactionRef.current
-    if (!base) return
-
-    const cleaned = missingAmountInput.replace(/[^\d,.]/g, '').replace(',', '.')
-    const parsedNumber = parseFloat(cleaned)
-    const cents = !isNaN(parsedNumber) && parsedNumber > 0 ? Math.round(parsedNumber * 100) : 0
-
-    if (cents <= 0) {
-      toast({
-        title: 'Valor inválido',
-        description: 'Digite um valor em reais maior que zero.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    // Registra como fala do usuário no chat
-    const userMsgId = `user-${Date.now()}`
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: userMsgId,
-        sender: 'user',
-        text: `R$ ${missingAmountInput}`,
-        timestamp: new Date(),
-      },
-    ])
-
-    const merged = handleMergeAmountIntoTransaction(cents)
-    if (merged) {
-      const result = await executeAutonomousTransaction(merged)
-      const catName = result?.categoryName || merged.categoryNameSuggestion || 'Geral'
-      const subName = result?.subcategoryName || merged.subcategoryNameSuggestion || ''
-      const txId = (result?.createdTx as any)?.id || null
-
-      const effectiveSubName = subName || 'Cafeterias & Lanches Rápidos'
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `assistant-${Date.now()}`,
-          sender: 'assistant',
-          text: `Lançado: ${merged.amountFormatted} em ${catName} › ${effectiveSubName}! 👍`,
-          timestamp: new Date(),
-          cardData: merged,
-          cardType: 'sucesso',
-          confirmedTxId: txId,
-        },
-      ])
-    }
   }
 
   // Extrai nome limpo da categoria, subcategoria, balde e tipo de opção (existente vs nova)
@@ -1391,6 +1331,9 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
         const memberId = selectedMemberId || currentMember?.id || members[0]?.id || null
 
+        const now = new Date()
+        const localDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
         const created = await createTransaction({
           family_id: family.id,
           member_id: memberId,
@@ -1399,7 +1342,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           type: txData.type,
           amount_cents: txData.amountCents,
           description: txData.description || 'Lançamento por Voz',
-          transaction_date: new Date().toISOString().slice(0, 10),
+          transaction_date: localDateStr,
           status: 'confirmed',
         })
 
@@ -1613,10 +1556,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     onOpenChange(false)
   }
 
-  // Renderizadores de cards legados desativados na UI conversacional WhatsApp
-  // Mantidos como stubs no-op para preservar assinaturas se chamados
-  const renderSuccessCard = (_data: ParsedVoiceTransaction) => null
-
   // Micro-link discreto [Desfazer] para reverter lançamento estilo WhatsApp
   const renderConfirmationMicroLinks = (msg: ChatMessage) => {
     return (
@@ -1639,8 +1578,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       </div>
     )
   }
-
-  const renderMissingAmountCard = (_data: ParsedVoiceTransaction) => null
 
   // Renderizador do Card clarificacao_categoria e clarificacao no Chat com pílulas interativas
   const renderClarificationCategoryCard = (data: ParsedVoiceTransaction) => {

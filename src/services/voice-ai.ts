@@ -47,7 +47,7 @@ export interface ParseVoiceWithAiOptions {
 
 /**
  * Invoca a Edge Function 'voice-parse' no Supabase autenticado.
- * Se falhar por erro de rede ou indisponibilidade, faz fallback transparente para o parser local em pt-BR.
+ * Propaga explicitamente os erros da Edge Function e da OpenAI sem fallback local mascarado.
  */
 export async function parseVoiceWithAi({
   texto,

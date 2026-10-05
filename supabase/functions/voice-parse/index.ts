@@ -174,20 +174,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Buscar dados financeiros reais caso o usuário faça consultas financeiras
-    // Datas de referência do mês atual e últimos 7 dias
-    const now = new Date()
-    const currentYear = now.getFullYear()
-    const currentMonthNum = now.getMonth() + 1
-    const currentMonthStr = `${currentYear}-${String(currentMonthNum).padStart(2, '0')}-01`
-    const nextMonthStr = `${now.getMonth() === 11 ? currentYear + 1 : currentYear}-${String(
-      ((now.getMonth() + 1) % 12) + 1,
-    ).padStart(2, '0')}-01`
-
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-    const sevenDaysAgoStr = sevenDaysAgo.toISOString().slice(0, 10)
-
-    // Otimização de Performance (Bug 2):
+    // Otimização de Performance:
     // Se a requisição for um lançamento de gasto/receita ou resposta de valor (contexto_anterior presente),
     // pule as consultas pesadas de extrato, últimos 7 dias e orçamentos.
     // Busque o resumo financeiro SOMENTE se a mensagem contiver termos consultivos explícitos.
@@ -268,6 +255,7 @@ Deno.serve(async (req: Request) => {
     // 3. Resumo financeiro condicional (economiza ~8 queries em lançamentos rápidos e turno 2)
     let financialSummaryContext = ''
     if (isConsultativeQuery) {
+      const now = new Date()
       const currentYear = now.getFullYear()
       const currentMonthNum = now.getMonth() + 1
       const currentMonthStr = `${currentYear}-${String(currentMonthNum).padStart(2, '0')}-01`
@@ -276,7 +264,7 @@ Deno.serve(async (req: Request) => {
       ).padStart(2, '0')}-01`
 
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      const sevenDaysAgoStr = sevenDaysAgo.toISOString().slice(0, 10)
+      const sevenDaysAgoStr = `${sevenDaysAgo.getFullYear()}-${String(sevenDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(sevenDaysAgo.getDate()).padStart(2, '0')}`
 
       // Executa as consultas financeiras em paralelo para máxima velocidade
       const [famRes, monthTxRes, recentTxRes, budgetsRes] = await Promise.all([
@@ -478,17 +466,20 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
     * Preencha a "transacao" completa com "descricao", "estabelecimento", "valor", "categoria", "subcategoria", "balde" e "tipo".
     * Em "mensagem_amigavel", siga estritamente o PADRÃO OBRIGATÓRIO DE CONFIRMAÇÃO:
       "Lançado: R$ [valor formatado com vírgula] em [Nome da Categoria] › [Nome da Subcategoria] [emoji]!"
-      Exemplo: "Lançado: R$ 12,00 em ${previousContext.categoria || 'Gastronomia & Delivery'} › ${previousContext.subcategoria || 'Cafeterias & Lanches Rápidos'} 👍!"
+      Exemplo: "Lançado: R$ 12,00 em ${previousContext.categoria || 'Gastronomia & Delivery'}${previousContext.subcategoria ? ` › ${previousContext.subcategoria}` : ''} 👍!"
 
 2. SE O STATUS ANTERIOR FOR 'clarificacao_categoria':
-  - Se o usuário estiver escolhendo ou esclarecendo, selecione a categoria/subcategoria existente da família autonomamente e retorne "status": "sucesso" com a transação completa e mensagem no formato obrigatório com Categoria e Subcategoria.
+  - Se o usuário estiver escolhendo ou esclarecendo, selecione a categoria/subcategoria existente da família autonomamente e retorne "status": "sucesso" com a transação completa e mensagem no formato obrigatório.
 `
     }
+
     const systemPrompt = `Você é o Curiangoo AI (Curiangoo Copilot), assistente financeiro inteligente do app Curiangoo para finanças familiares (Metodologia de 3 Baldes: 60/25/15 ou 50/30/20).
 Seu papel é triplo:
 1. LANÇAMENTO AUTÔNOMO (fala/texto de gastos ou receitas): transformar em transação financeira imediata, inferindo categoria e subcategoria com base no catálogo da família sem travar o usuário.
 2. RECLASSIFICAÇÃO, CORREÇÃO OU DESFAZER DE LANÇAMENTOS ANTERIORES: quando o usuário pedir para mudar categoria ("Supermercado não, coloca em hortifruti", "muda pra farmácia"), alterar valor ("não é esse valor, foi 70", "corrige o valor para 80"), trocar descrição ("não é arroz, é feijão") ou desfazer ("desfaz esse gasto", "cancela", "apaga").
 3. CONSULTAS FINANCEIRAS E ORIENTAÇÃO RÁPIDA: responder sintética e precisamente perguntas sobre saldo disponível, quanto pode gastar, despesas recentes e orçamentos por balde.
+
+Em lançamentos de despesas ou receitas, seja 100% conciso. Limite-se a confirmar o lançamento no padrão acordado ('Lançado: R$ X em Categoria › Subcategoria! 👍'). NUNCA adicione palpites ou comentários espontâneos sobre baldes ('Estilo de Vida', 'Essenciais') a menos que o usuário pergunte expressamente sobre orçamentos ou baldes.
 
 ${previousContextPrompt}
 
@@ -510,23 +501,18 @@ REGRAS OBRIGATÓRIAS DE CONFIRMAÇÃO E SEMÂNTICA (CRÍTICAS)
 =======================================================
 
 1. PADRÃO OBRIGATÓRIO DE CONFIRMAÇÃO (STATUS 'sucesso'):
-- Em TODO lançamento com "status": "sucesso", a "mensagem_amigavel" DEVE conter OBRIGATORIAMENTE tanto a Categoria quanto a Subcategoria!
-- O formato exato OBRIGATÓRIO é:
+- Se houver subcategoria válida do catálogo da família:
   "Lançado: R$ [valor] em [Nome da Categoria] › [Nome da Subcategoria] [emoji]!"
   Exemplo: "Lançado: R$ 35,00 em Gastronomia & Delivery › Restaurantes & Bares 👍!"
-  Exemplo: "Lançado: R$ 15,00 em Gastronomia & Delivery › Cafeterias & Lanches Rápidos 🥐!"
-  Exemplo: "Lançado: R$ 120,00 em Alimentação Básica › Supermercado 🛒!"
-- NUNCA omitir a subcategoria na mensagem de confirmação de status 'sucesso'! Nunca retorne apenas "Lançado: R$ X em [Categoria]!". A subcategoria é SEMPRE obrigatória.
+- Se NÃO houver subcategoria válida do catálogo da família, salve só com a categoria principal (subcategoria nula) e confirme exatamente:
+  "Lançado: R$ [valor] em [Nome da Categoria] [emoji]!"
+- NUNCA invente ou force uma subcategoria inexistente.
 
 2. REGRAS SEMÂNTICAS DE ALIMENTAÇÃO E LANCHES (CONTEXTO BRASIL):
 - NUNCA classificar como "Delivery" despesas de comida de rua, feira, pastel, praia, quiosque, salgado ou padaria.
 - A subcategoria "Delivery (iFood/Rappi)" (ou equivalente de Delivery) é EXCLUSIVA para pedidos de entrega em domicílio/casa ou quando o usuário citar expressamente aplicativos de delivery ("no ifood", "pelo rappi", "pedi delivery", "entrega em casa").
-- Para comidas rápidas consumidas no local ou na rua (ex: pastel de feira, lanche, salgado, coxinha, esfiha, food truck, quiosque, água de coco na praia), classificar SEMPRE em:
-  "Gastronomia & Delivery › Cafeterias & Lanches Rápidos" ou "Restaurantes & Bares".
-- Itens de barraca/praia (ex: coco na praia, milho verde, água de coco, açaí no quiosque): classificar em:
-  "Gastronomia & Delivery › Cafeterias & Lanches Rápidos" (ou "Lazer & Passeios › Passeios de Fim de Semana" caso haja contexto explícito de passeio/turismo).
-- Tolere variações de nomenclatura caso a família possua categorias com nomes ligeiramente diferentes (ex: "Alimentação", "Alimentação & Refeições", "Restaurantes"), mantendo sempre o princípio: delivery é SÓ para entrega por aplicativo em domicílio; comida de rua/feira/praia/padaria/quiosque vai para lanches rápidos ou restaurantes.
-- Compras de feira livre / hortifruti de abastecimento da casa (frutas, verduras, legumes para cozinhar em casa): classificar em "Alimentação Básica › Hortifruti & Feira" (Necessidades Essenciais). Já o pastel frito consumido na feira ("pastel na feira", "caldo de cana"): classificar em "Gastronomia & Delivery › Cafeterias & Lanches Rápidos" (Estilo de Vida).
+- Para comidas rápidas consumidas no local ou na rua (ex: pastel de feira, lanche, salgado, coxinha, esfiha, food truck, quiosque, água de coco na praia), classificar em Lanches Rápidos ou Restaurantes.
+- Compras de feira livre / hortifruti de abastecimento da casa (frutas, verduras, legumes para cozinhar em casa): classificar em "Alimentação Básica › Hortifruti & Feira" (Necessidades Essenciais). Já o pastel frito consumido na feira ("pastel na feira", "caldo de cana"): classificar em Gastronomia/Lanches (Estilo de Vida).
 
 =======================================================
 DIRETRIZES DE INTELIGÊNCIA REAL (PADRÃO OURO):
@@ -535,7 +521,7 @@ DIRETRIZES DE INTELIGÊNCIA REAL (PADRÃO OURO):
 1. INFERÊNCIA AUTÔNOMA DE CATEGORIA:
   - Quando descrição e valor existirem, SEMPRE infira e selecione a melhor categoria existente e subcategoria correspondente do catálogo da família acima.
   - NÃO trave a tela com opções de escolha se a categoria puder ser inferida com razoável confiança!
-  - Retorne "status": "sucesso" com a categoria e subcategoria devidamente preenchidas e com a "mensagem_amigavel" no padrão obrigatório com categoria e subcategoria.
+  - Retorne "status": "sucesso" com a categoria e subcategoria preenchidas de forma legítima e com a "mensagem_amigavel" no padrão de confirmação.
 
 2. AÇÕES DE CORREÇÃO, RECLASSIFICAÇÃO OU CANCELAMENTO:
   - Se o usuário disser algo como "desfaz esse gasto", "cancela esse lançamento", "apaga a última", retorne:
@@ -560,8 +546,8 @@ DIRETRIZES DE INTELIGÊNCIA REAL (PADRÃO OURO):
 
 3. NÚMEROS PUROS E SLOT-FILLING (REGRA DE TURNO 2):
   - Se a mensagem contiver um número isolado como "12", "12 reais", "doze", "doze reais", "52", "52 reais", "cinquenta e dois" e havia contexto anterior sem valor (status anterior 'falta_valor'), capture esse número como o valor da transação pendente.
-  - MESCLE com a descrição do contexto anterior e RETORNE IMEDIATAMENTE "status": "sucesso" com a transação completa (categoria e subcategoria preenchidas), sem re-perguntar.
-  - Use o padrão obrigatório de confirmação em "mensagem_amigavel": "Lançado: R$ [valor] em [Nome da Categoria] › [Nome da Subcategoria] 👍!"
+  - MESCLE com a descrição do contexto anterior e RETORNE IMEDIATAMENTE "status": "sucesso" com a transação completa, sem re-perguntar.
+  - Use o padrão de confirmação em "mensagem_amigavel": "Lançado: R$ [valor] em [Nome da Categoria] › [Nome da Subcategoria] 👍!" ou "Lançado: R$ [valor] em [Nome da Categoria] 👍!".
 
 4. CONSULTAS FINANCEIRAS, REGRA CRÍTICA DE SALDO/RECEITAS E MEMÓRIA DA CONVERSA RECENTE:
   - REGRA CRÍTICA DE DISTINÇÃO ENTRE RECEITA REAL E TETO DE PLANEJAMENTO:
@@ -575,7 +561,7 @@ DIRETRIZES DE INTELIGÊNCIA REAL (PADRÃO OURO):
     * "status": "consulta"
     * "tipo_resposta": "consulta"
     * "transacao": null
-    * "resposta_consulta": resposta direta, acolhedora e precisa em português (ex: "Lancei seu almoço de R$ 35,00 em [Categoria] › [Subcategoria] no débito! 🍽️").
+    * "resposta_consulta": resposta direta, acolhedora e precisa em português.
     * "mensagem_amigavel": mesma resposta direta em linguagem natural.
   - Quando o usuário perguntar "Quanto ainda posso gastar?", "Como estão meus gastos?", responda de forma sintética, direta e acolhedora em 2-3 linhas, citando a margem do teto planejado do mês e a situação do balde de Estilo de Vida com base no resumo financeiro fornecido.
   - Perguntas gerais fora do domínio financeiro ou ruído sem sentido podem retornar "invalido", mas com um texto curto e amigável para balão de chat (sem tom rústico de erro ou card).
@@ -626,13 +612,12 @@ Comportamentos esperados:
    - "tipo_resposta": "transacao"
    - Preencha todos os campos da "transacao". O campo "valor" deve ser um float positivo em reais (ex: 45.0 ou 80.0). Preencha "estabelecimento" se houver.
    - "categoria": nome exato de categoria existente ou compatível.
-   - "subcategoria": use existente ou crie uma inteligente e específica. OBRIGATÓRIA!
+   - "subcategoria": use do catálogo da família se existir, ou derive coerente, ou null. NUNCA invente categorias inexistentes cravadas.
    - "balde": classifique rigorosamente entre "Necessidades Essenciais", "Estilo de Vida" ou "Metas & Investimentos".
-   - "mensagem_amigavel": OBRIGATORIAMENTE no formato "Lançado: R$ [valor] em [Categoria] › [Subcategoria] [emoji]!". Nunca omita a subcategoria!
+   - "mensagem_amigavel": se houver subcategoria, "Lançado: R$ [valor] em [Categoria] › [Subcategoria] [emoji]!". Se não houver subcategoria, "Lançado: R$ [valor] em [Categoria] [emoji]!".
 
 3. "clarificacao_categoria" (DESATIVADA A FORÇAGEM DE ESCOLHA):
    - A IA deve SEMPRE escolher a melhor categoria/subcategoria existente da família autonomamente, sem travar o usuário perguntando escolha entre existente vs nova.
-   - Portanto, para lançamentos com valor, retorne DIRETAMENTE "status": "sucesso" associando a melhor categoria existente do catálogo fornecido.
 
 4. "falta_valor" (LANÇAMENTO SEM VALOR):
    - O usuário citou um item ou compra claro (ex: "coxinha na padaria", "uma caixa de cerveja na parada certa", "almoço no restaurante", "gasolina no posto"), mas NÃO disse o valor monetário.
@@ -811,33 +796,29 @@ Comportamentos esperados:
     if (status === 'sucesso' && parsedAiJson?.transacao) {
       const tx = parsedAiJson.transacao
       const cat = (tx.categoria || 'Geral').trim()
-      let sub = (tx.subcategoria || '').trim()
+      const sub = tx.subcategoria ? tx.subcategoria.trim() : null
+      tx.subcategoria = sub || null
 
-      // Se a subcategoria veio vazia, inferir fallback coerente para nunca omitir
-      if (!sub) {
-        if (
-          cat.toLowerCase().includes('gastronomia') ||
-          cat.toLowerCase().includes('alimentação') ||
-          cat.toLowerCase().includes('restaurante')
-        ) {
-          sub = 'Cafeterias & Lanches Rápidos'
-        } else {
-          sub = 'Geral'
+      const valorNum = tx.valor !== undefined && tx.valor !== null ? Number(tx.valor) : 0
+      const valorFormatado = valorNum > 0 ? formatCentsToBRL(Math.round(valorNum * 100)) : 'R$ 0,00'
+
+      if (sub) {
+        const hasSubInMessage =
+          typeof finalMensagemAmigavel === 'string' &&
+          finalMensagemAmigavel.includes(' › ') &&
+          finalMensagemAmigavel.toLowerCase().includes(sub.toLowerCase())
+
+        if (!hasSubInMessage) {
+          finalMensagemAmigavel = `Lançado: ${valorFormatado} em ${cat} › ${sub} 👍!`
         }
-        tx.subcategoria = sub
-      }
+      } else {
+        const hasCatInMessage =
+          typeof finalMensagemAmigavel === 'string' &&
+          finalMensagemAmigavel.toLowerCase().includes(cat.toLowerCase())
 
-      // Se a mensagem da IA não contiver " › " (omitindo a subcategoria) ou estiver vazia
-      const hasSubInMessage =
-        typeof finalMensagemAmigavel === 'string' &&
-        finalMensagemAmigavel.includes(' › ') &&
-        finalMensagemAmigavel.toLowerCase().includes(sub.toLowerCase())
-
-      if (!hasSubInMessage) {
-        const valorNum = tx.valor !== undefined && tx.valor !== null ? Number(tx.valor) : 0
-        const valorFormatado =
-          valorNum > 0 ? formatCentsToBRL(Math.round(valorNum * 100)) : 'R$ 0,00'
-        finalMensagemAmigavel = `Lançado: ${valorFormatado} em ${cat} › ${sub} 👍!`
+        if (!hasCatInMessage || finalMensagemAmigavel.includes(' › ')) {
+          finalMensagemAmigavel = `Lançado: ${valorFormatado} em ${cat} 👍!`
+        }
       }
     }
 
