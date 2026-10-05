@@ -83,8 +83,8 @@ export function WalletBudgetsTab() {
       {/* Cabeçalho da Aba Orçamentos: Ações Rápidas (Receitas Fixas & Modelo Sugerido) */}
       <div className="flex items-center justify-between gap-2 flex-wrap bg-card/90 backdrop-blur-sm p-3.5 rounded-2xl border border-border/40 shadow-curiango">
         <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0">
-            <span className="text-base select-none">🎯</span>
+          <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-[#10B981] flex items-center justify-center shrink-0">
+            <Target className="w-5 h-5 select-none" strokeWidth={1.5} />
           </div>
           <div>
             <h3 className="font-semibold text-sm text-[#14213D] dark:text-white leading-tight">

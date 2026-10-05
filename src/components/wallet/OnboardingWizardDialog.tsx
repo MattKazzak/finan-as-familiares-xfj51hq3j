@@ -22,7 +22,7 @@ import {
   CheckCircle2,
   SlidersHorizontal,
   Shield,
-  Sun,
+  SunMedium,
   Target,
   ArrowRight,
   Home,
@@ -323,7 +323,7 @@ export function OnboardingWizardDialog({
             </span>
           </div>
 
-          <DialogTitle className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight break-words min-w-0">
+          <DialogTitle className="text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight break-words min-w-0">
             {step === 1 && 'Vamos criar o espaço da sua família'}
             {step === 2 && 'Renda Mensal Familiar'}
             {step === 3 && 'Seu Orçamento em 3 Caixas'}
@@ -425,7 +425,7 @@ export function OnboardingWizardDialog({
               </label>
 
               <div className="relative max-w-xs mx-auto w-full min-w-0">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-extrabold text-xl sm:text-2xl select-none">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-xl sm:text-2xl select-none">
                   R$
                 </span>
                 <Input
@@ -441,7 +441,7 @@ export function OnboardingWizardDialog({
                     }
                   }}
                   autoFocus
-                  className="pl-14 pr-4 h-16 text-2xl sm:text-3xl font-black tabular-nums bg-white border-slate-300 focus:border-emerald-600 focus:ring-emerald-500/20 text-slate-900 rounded-2xl shadow-xs"
+                  className="pl-14 pr-4 h-16 text-2xl sm:text-3xl font-semibold tabular-nums bg-white border-slate-300 focus:border-emerald-600 focus:ring-emerald-500/20 text-slate-900 rounded-2xl shadow-xs"
                 />
               </div>
 
@@ -493,13 +493,14 @@ export function OnboardingWizardDialog({
               {/* Caixa 1: Necessidades (50%) */}
               <div className="p-3.5 sm:p-4 rounded-2xl bg-sky-50/80 border border-sky-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs min-w-0 transition-all">
                 <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-                  <div className="w-10 h-10 rounded-xl bg-sky-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5 sm:mt-0">
-                    <Shield className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-xl bg-[#14213D] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5 sm:mt-0">
+                    <Shield className="w-5 h-5" strokeWidth={1.5} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                      <span className="font-bold text-sm text-sky-950 break-words">
-                        🛡️ Necessidades
+                      <span className="font-bold text-sm text-sky-950 break-words flex items-center gap-1.5">
+                        <Shield className="w-4 h-4 text-[#14213D]" strokeWidth={1.5} />
+                        <span>Necessidades</span>
                       </span>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-200/70 text-sky-800 shrink-0">
                         {currentModel.essentialsPct}%
@@ -511,7 +512,7 @@ export function OnboardingWizardDialog({
                   </div>
                 </div>
                 <div className="text-left sm:text-right shrink-0 pl-13 sm:pl-2 pt-1 sm:pt-0 border-t sm:border-t-0 border-sky-200/60 flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-center gap-x-2">
-                  <span className="text-base sm:text-lg md:text-xl font-black text-sky-950 tabular-nums break-words">
+                  <span className="text-base sm:text-lg md:text-xl font-semibold text-sky-950 tabular-nums break-words">
                     {formatBRL(bucketAmounts.essentials)}
                   </span>
                   <span className="text-[10px] font-medium text-sky-600 shrink-0">
@@ -523,13 +524,14 @@ export function OnboardingWizardDialog({
               {/* Caixa 2: Estilo de Vida (30%) */}
               <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50/80 border border-amber-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs min-w-0 transition-all">
                 <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5 sm:mt-0">
-                    <Sun className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-xl bg-[#FCA311] text-[#14213D] flex items-center justify-center shrink-0 shadow-sm mt-0.5 sm:mt-0">
+                    <SunMedium className="w-5 h-5" strokeWidth={1.5} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                      <span className="font-bold text-sm text-amber-950 break-words">
-                        🏖️ Estilo de Vida
+                      <span className="font-bold text-sm text-amber-950 break-words flex items-center gap-1.5">
+                        <SunMedium className="w-4 h-4 text-[#FCA311]" strokeWidth={1.5} />
+                        <span>Estilo de Vida</span>
                       </span>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200/70 text-amber-800 shrink-0">
                         {currentModel.lifestylePct}%
@@ -541,7 +543,7 @@ export function OnboardingWizardDialog({
                   </div>
                 </div>
                 <div className="text-left sm:text-right shrink-0 pl-13 sm:pl-2 pt-1 sm:pt-0 border-t sm:border-t-0 border-amber-200/60 flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-center gap-x-2">
-                  <span className="text-base sm:text-lg md:text-xl font-black text-amber-950 tabular-nums break-words">
+                  <span className="text-base sm:text-lg md:text-xl font-semibold text-amber-950 tabular-nums break-words">
                     {formatBRL(bucketAmounts.lifestyle)}
                   </span>
                   <span className="text-[10px] font-medium text-amber-600 shrink-0">
@@ -553,13 +555,14 @@ export function OnboardingWizardDialog({
               {/* Caixa 3: Futuro & Metas (20%) */}
               <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs min-w-0 transition-all">
                 <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-                  <div className="w-10 h-10 rounded-xl bg-[#14213D] text-[#FCA311] flex items-center justify-center shrink-0 shadow-sm mt-0.5 sm:mt-0">
-                    <Sparkles className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-xl bg-[#10B981] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5 sm:mt-0">
+                    <Target className="w-5 h-5" strokeWidth={1.5} />
                   </div>{' '}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                      <span className="font-bold text-sm text-emerald-950 break-words">
-                        🎯 Futuro & Metas
+                      <span className="font-bold text-sm text-emerald-950 break-words flex items-center gap-1.5">
+                        <Target className="w-4 h-4 text-[#10B981]" strokeWidth={1.5} />
+                        <span>Futuro & Metas</span>
                       </span>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-200/70 text-emerald-800 shrink-0">
                         {currentModel.futurePct}%
@@ -571,7 +574,7 @@ export function OnboardingWizardDialog({
                   </div>
                 </div>
                 <div className="text-left sm:text-right shrink-0 pl-13 sm:pl-2 pt-1 sm:pt-0 border-t sm:border-t-0 border-emerald-200/60 flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-center gap-x-2">
-                  <span className="text-base sm:text-lg md:text-xl font-black text-emerald-950 tabular-nums break-words">
+                  <span className="text-base sm:text-lg md:text-xl font-semibold text-emerald-950 tabular-nums break-words">
                     {formatBRL(bucketAmounts.future)}
                   </span>
                   <span className="text-[10px] font-medium text-emerald-600 shrink-0">

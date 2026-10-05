@@ -137,7 +137,9 @@ export function WalletModals() {
         <DialogContent className="max-w-md rounded-3xl p-6">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold flex items-center gap-2">
-              <span className="p-2 rounded-xl bg-emerald-50 text-emerald-700">🎯</span>
+              <span className="p-2 rounded-xl bg-emerald-50 text-emerald-700">
+                <Target className="w-5 h-5" strokeWidth={1.5} />
+              </span>
               <span>
                 {editingBudgetSubcat
                   ? `Teto de ${editingBudgetSubcat.name}`

@@ -60,16 +60,16 @@ export function getTimeGreeting(date: Date = new Date()): {
 
   let greeting = 'Boa noite'
   let period: TimeGreetingPeriod = 'evening'
-  let emoji = '🌙'
+  let emoji = ''
 
   if (hour >= 5 && hour < 12) {
     greeting = 'Bom dia'
     period = 'morning'
-    emoji = '☕'
+    emoji = ''
   } else if (hour >= 12 && hour < 18) {
     greeting = 'Boa tarde'
     period = 'afternoon'
-    emoji = '☀️'
+    emoji = ''
   }
 
   return {

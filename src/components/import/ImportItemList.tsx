@@ -112,26 +112,27 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
                   {item.description || 'Lançamento sem descrição'}
                 </span>
                 {item.isInstallment && (
-                  <span className="text-[10px] font-bold bg-purple-100 text-purple-900 border border-purple-200 px-1.5 py-0.2 rounded-md shrink-0">
+                  <span className="text-[10px] font-semibold bg-muted/70 text-slate-700 border border-border/40 px-1.5 py-0.2 rounded-md shrink-0">
                     {item.installmentCurrent}/{item.installmentTotal}
                   </span>
                 )}
                 {item.isDuplicate && (
                   <span
                     title={item.duplicateReason}
-                    className="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200 px-1.5 py-0.2 rounded-md shrink-0 flex items-center gap-0.5"
+                    className="text-[10px] font-semibold bg-amber-50 text-amber-900 border border-[#FCA311]/30 px-1.5 py-0.2 rounded-md shrink-0 flex items-center gap-0.5"
                   >
-                    <AlertTriangle className="w-2.5 h-2.5" /> Duplicada
+                    <AlertTriangle className="w-2.5 h-2.5 text-[#FCA311]" strokeWidth={1.5} />{' '}
+                    Duplicada
                   </span>
                 )}
                 {item.isNonExpense && (
-                  <span className="text-[10px] font-bold bg-slate-200 text-slate-700 px-1.5 py-0.2 rounded-md shrink-0">
+                  <span className="text-[10px] font-medium bg-muted/70 text-slate-600 border border-border/30 px-1.5 py-0.2 rounded-md shrink-0">
                     Não é despesa
                   </span>
                 )}
                 {item.isReconciledManual && (
-                  <span className="text-[10px] font-bold bg-teal-100 text-teal-900 border border-teal-300 px-1.5 py-0.2 rounded-md shrink-0 flex items-center gap-0.5">
-                    <Link2 className="w-2.5 h-2.5" /> Manual
+                  <span className="text-[10px] font-semibold bg-emerald-50 text-[#059669] border border-emerald-200/70 px-1.5 py-0.2 rounded-md shrink-0 flex items-center gap-0.5">
+                    <Link2 className="w-2.5 h-2.5" strokeWidth={1.5} /> Conciliado
                   </span>
                 )}
               </div>
@@ -148,17 +149,17 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
                     )}
                   </span>
                 ) : (
-                  <span className="font-bold text-amber-800 bg-amber-100/80 px-1.5 py-0.2 rounded">
+                  <span className="font-semibold text-amber-900 bg-amber-50 border border-[#FCA311]/30 px-1.5 py-0.2 rounded">
                     Pendente
                   </span>
                 )}
 
                 {item.source === 'ai_suggestion' && (
                   <span
-                    className="inline-flex items-center gap-0.5 text-[10px] font-bold text-violet-700 bg-violet-50 border border-violet-200 px-1.5 py-0.2 rounded-full"
+                    className="inline-flex items-center gap-0.5 text-[10px] font-medium text-slate-700 bg-muted/60 border border-border/40 px-1.5 py-0.2 rounded-full"
                     title={item.aiReasoning || 'Sugerido pela IA'}
                   >
-                    <Sparkles className="w-2.5 h-2.5" /> IA
+                    <Sparkles className="w-2.5 h-2.5 text-[#FCA311]" strokeWidth={1.5} /> IA
                     {typeof item.aiConfidence === 'number' && (
                       <span className="ml-0.5 font-normal">
                         {Math.round(item.aiConfidence * 100)}%
@@ -178,8 +179,8 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
             {/* Lado Direito: Valor */}
             <div className="text-right shrink-0">
               <span
-                className={`font-black text-xs sm:text-sm tabular-nums whitespace-nowrap block ${
-                  isIncome ? 'text-emerald-700' : 'text-slate-900'
+                className={`font-semibold text-xs sm:text-sm tabular-nums whitespace-nowrap block ${
+                  isIncome ? 'text-[#059669]' : 'text-slate-900'
                 }`}
               >
                 {isIncome ? '+' : '−'} {formatBRL(item.amount_cents)}

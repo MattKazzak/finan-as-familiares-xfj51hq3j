@@ -44,7 +44,7 @@ export const ImportQuickFilters: React.FC<ImportQuickFiltersProps> = ({
     label: string
     count: number
     icon?: React.ReactNode
-    badgeVariant?: 'default' | 'amber' | 'purple'
+    badgeVariant?: 'default' | 'amber'
   }> = [
     {
       id: 'all',
@@ -61,20 +61,20 @@ export const ImportQuickFilters: React.FC<ImportQuickFiltersProps> = ({
       id: 'low_confidence',
       label: 'IA Incerta',
       count: counts.lowConfidence,
-      icon: <Sparkles className="w-3 h-3 text-violet-600" />,
-      badgeVariant: 'purple',
+      icon: <Sparkles className="w-3 h-3 text-[#FCA311]" strokeWidth={1.5} />,
+      badgeVariant: 'default',
     },
     {
       id: 'expenses',
       label: 'Saídas',
       count: counts.expenses,
-      icon: <ArrowDownRight className="w-3 h-3 text-rose-500" />,
+      icon: <ArrowDownRight className="w-3 h-3 text-[#E11D48]" strokeWidth={1.5} />,
     },
     {
       id: 'incomes',
       label: 'Entradas',
       count: counts.incomes,
-      icon: <ArrowUpRight className="w-3 h-3 text-emerald-600" />,
+      icon: <ArrowUpRight className="w-3 h-3 text-[#059669]" strokeWidth={1.5} />,
     },
     ...(counts.duplicates > 0
       ? [
@@ -82,7 +82,7 @@ export const ImportQuickFilters: React.FC<ImportQuickFiltersProps> = ({
             id: 'duplicates' as QuickFilterType,
             label: 'Duplicadas',
             count: counts.duplicates,
-            icon: <AlertCircle className="w-3 h-3 text-amber-600" />,
+            icon: <AlertCircle className="w-3 h-3 text-[#FCA311]" strokeWidth={1.5} />,
             badgeVariant: 'amber' as const,
           },
         ]
@@ -113,10 +113,8 @@ export const ImportQuickFilters: React.FC<ImportQuickFiltersProps> = ({
                   isActive
                     ? 'bg-white/25 text-white'
                     : f.badgeVariant === 'amber'
-                      ? 'bg-amber-100 text-amber-800'
-                      : f.badgeVariant === 'purple'
-                        ? 'bg-purple-100 text-purple-800'
-                        : 'bg-slate-100 text-slate-600'
+                      ? 'bg-amber-50 text-amber-900 border border-[#FCA311]/30'
+                      : 'bg-muted/70 text-slate-600 border border-border/30'
                 }`}
               >
                 {f.count}
@@ -135,12 +133,12 @@ export const ImportQuickFilters: React.FC<ImportQuickFiltersProps> = ({
           onClick={onToggleSortByConfidence}
           className={`h-7 px-2.5 rounded-xl text-xs font-semibold gap-1.5 ${
             sortByConfidence
-              ? 'bg-violet-50 text-violet-800 border-violet-300'
+              ? 'bg-muted/80 text-slate-900 border-slate-300'
               : 'text-slate-600 border-slate-200'
           }`}
           title="Itens com menor certeza ou sem categoria aparecem primeiro"
         >
-          <Sparkles className="w-3 h-3 text-violet-600" />
+          <Sparkles className="w-3 h-3 text-[#FCA311]" strokeWidth={1.5} />
           <span>{sortByConfidence ? 'Ordenado por incerteza' : 'Priorizar incertos'}</span>
         </Button>
       </div>

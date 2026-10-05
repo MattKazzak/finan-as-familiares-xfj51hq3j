@@ -205,7 +205,7 @@ export default function ImportPage() {
 
     persistItems(updated)
     toast({
-      title: 'Categoria aplicada a semelhantes! 🎯',
+      title: 'Categoria aplicada a semelhantes!',
       description: `Aplicada a ${similar.length} lançamentos semelhantes nesta revisão.`,
     })
   }

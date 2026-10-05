@@ -108,9 +108,9 @@ describe('OnboardingWizardDialog', () => {
     fireEvent.click(continueBtn)
 
     // Valida que os nomes completos das caixas e descrições aparecem
-    expect(screen.getByText('🛡️ Necessidades')).toBeDefined()
-    expect(screen.getByText('🏖️ Estilo de Vida')).toBeDefined()
-    expect(screen.getByText('🎯 Futuro & Metas')).toBeDefined()
+    expect(screen.getByText('Necessidades')).toBeDefined()
+    expect(screen.getByText('Estilo de Vida')).toBeDefined()
+    expect(screen.getByText('Futuro & Metas')).toBeDefined()
     expect(screen.getByText('Moradia, alimentação, transporte, saúde e contas')).toBeDefined()
     expect(screen.getByText('Lazer, restaurantes, compras, assinaturas e pets')).toBeDefined()
     expect(screen.getByText('Reserva de emergência, investimentos e sonhos')).toBeDefined()

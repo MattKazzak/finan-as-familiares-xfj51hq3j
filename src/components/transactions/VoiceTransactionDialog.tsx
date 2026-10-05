@@ -932,12 +932,12 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     const memberName = currentMember?.name || members[0]?.name || 'família'
 
     if (hour >= 5 && hour < 12) {
-      return `Bom dia, ${memberName}! ☀️ O que vamos registrar hoje?`
+      return `Bom dia, ${memberName}! O que vamos registrar hoje?`
     }
     if (hour >= 12 && hour < 18) {
-      return `Boa tarde, ${memberName}! ☕ Teve algum gasto agora há pouco?`
+      return `Boa tarde, ${memberName}! Teve algum gasto agora há pouco?`
     }
-    return `Boa noite, ${memberName}! 🌙 Vamos fechar os lançamentos do dia?`
+    return `Boa noite, ${memberName}! Vamos fechar os lançamentos do dia?`
   }, [currentMember?.name, members])
 
   // Iniciar sessão do modal: zera histórico ao abrir e dispara escuta com saudação dinâmica

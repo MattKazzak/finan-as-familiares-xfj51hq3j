@@ -16,7 +16,7 @@ import Profile from '@/pages/Profile'
 import ImportReviewPage from '@/pages/ImportReviewPage'
 import NotFound from '@/pages/NotFound'
 import { InviteAcceptPage } from '@/pages/InviteAcceptPage'
-import { Loader2 } from 'lucide-react'
+import { Coins, Loader2 } from 'lucide-react'
 
 // Verifica síncronamente na URL se há indício de recuperação de senha (distinguindo estritamente de signup)
 function checkIsRecoveryUrl(): boolean {
@@ -60,8 +60,8 @@ function ProtectedLayout() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#14213D] to-[#1f3159] flex items-center justify-center text-[#FCA311] text-2xl shadow-lg shadow-[#14213D]/20 mb-4 animate-bounce border border-[#14213D]/30">
-          💰
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#14213D] to-[#1f3159] flex items-center justify-center text-[#FCA311] shadow-lg shadow-[#14213D]/20 mb-4 animate-bounce border border-[#14213D]/30">
+          <Coins className="w-7 h-7 text-[#FCA311]" strokeWidth={1.5} />
         </div>
         <div className="flex items-center gap-2 text-[#14213D] text-sm font-semibold">
           <Loader2 className="w-4 h-4 animate-spin text-[#FCA311]" />

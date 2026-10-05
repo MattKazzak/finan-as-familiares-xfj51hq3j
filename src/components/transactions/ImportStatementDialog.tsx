@@ -1950,7 +1950,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 
                 <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-800 mb-1">
-                    <Info className="w-3.5 h-3.5 text-purple-600" />
+                    <Info className="w-3.5 h-3.5 text-slate-600" strokeWidth={1.5} />
                     <span>Revisão Completa</span>
                   </div>
                   <p className="text-[11px] text-slate-500">
@@ -2024,8 +2024,11 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 
                   {/* Badge de Mescla com Lançamento Manual */}
                   {mergedCount > 0 && (
-                    <span className="text-[10px] sm:text-[11px] font-bold text-teal-800 bg-teal-100/90 border border-teal-300 px-2 sm:px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
-                      <span>🔗</span>
+                    <span className="text-[10px] sm:text-[11px] font-semibold text-[#059669] bg-emerald-50 border border-emerald-200/70 px-2 sm:px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+                      <Link2
+                        className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-[#059669]"
+                        strokeWidth={1.5}
+                      />
                       <span>{mergedCount} mesclada(s)</span>
                     </span>
                   )}
@@ -2194,8 +2197,9 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                               </span>
                             )}
                             {item.isReconciledManual && (
-                              <span className="text-[10px] font-semibold text-teal-800 bg-teal-100 border border-teal-300 px-1.5 py-0.2 rounded shrink-0">
-                                🔗 Mesclada
+                              <span className="text-[10px] font-semibold text-[#059669] bg-emerald-50 border border-emerald-200/70 px-1.5 py-0.2 rounded shrink-0 flex items-center gap-0.5">
+                                <Link2 className="w-2.5 h-2.5 text-[#059669]" strokeWidth={1.5} />{' '}
+                                Mesclada
                               </span>
                             )}
                           </div>
@@ -2206,7 +2210,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                               {item.date ? item.date.slice(5).replace('-', '/') : ''}
                             </span>
                             {item.isInstallment && (
-                              <span className="font-semibold text-[10px] text-purple-700 bg-purple-100/90 px-1.5 py-0.2 rounded-md shrink-0">
+                              <span className="font-semibold text-[10px] text-slate-700 bg-muted/70 border border-border/40 px-1.5 py-0.2 rounded-md shrink-0">
                                 {item.installmentCurrent}/{item.installmentTotal}
                               </span>
                             )}
@@ -2611,7 +2615,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 </SheetTitle>
                 {itemForDetailModal && (
                   <span
-                    className={`font-extrabold text-base tabular-nums shrink-0 ${
+                    className={`font-semibold text-base tabular-nums shrink-0 ${
                       itemForDetailModal.type === 'income' ? 'text-emerald-700' : 'text-slate-900'
                     }`}
                   >
@@ -2793,10 +2797,11 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 
                 {/* Conciliação Manual se disponível */}
                 {itemForDetailModal.matchedManualTransaction && (
-                  <div className="p-3 rounded-xl bg-teal-50 border border-teal-200 text-teal-950 space-y-1.5">
+                  <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200/80 text-emerald-950 space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold flex items-center gap-1">
-                        <span>🔗</span> Lançamento manual vinculado
+                      <span className="font-semibold flex items-center gap-1 text-[#059669]">
+                        <Link2 className="w-3.5 h-3.5" strokeWidth={1.5} /> Lançamento manual
+                        vinculado
                       </span>
                       <label className="flex items-center gap-1.5 cursor-pointer font-semibold min-h-[44px]">
                         <input
@@ -2809,12 +2814,12 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                               e.target.checked,
                             )
                           }
-                          className="rounded border-teal-400 text-teal-600 focus:ring-teal-500 w-4 h-4"
+                          className="rounded border-emerald-400 text-emerald-600 focus:ring-emerald-500 w-4 h-4"
                         />
                         <span>Mesclar</span>
                       </label>
                     </div>
-                    <p className="text-[11px] text-teal-900/80">
+                    <p className="text-[11px] text-emerald-900/80">
                       "{itemForDetailModal.matchedManualTransaction.description}" em{' '}
                       {itemForDetailModal.matchedManualTransaction.transaction_date}
                     </p>
@@ -2880,9 +2885,9 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                                   )
                                 }
                               }}
-                              className="min-h-[44px] text-[11px] px-3 font-bold rounded-lg bg-teal-50 text-teal-800 border-teal-300 hover:bg-teal-100 shrink-0"
+                              className="min-h-[44px] text-[11px] px-3 font-semibold rounded-lg bg-emerald-50 text-[#059669] border border-emerald-200 hover:bg-emerald-100 shrink-0"
                             >
-                              🔗 Mesclar
+                              <Link2 className="w-3 h-3 mr-1 inline" strokeWidth={1.5} /> Mesclar
                             </Button>
                           </div>
                         ))}
@@ -2892,31 +2897,31 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 
                 {/* Detalhes de Parcelamento quando detectado */}
                 {itemForDetailModal.isInstallment && (
-                  <div className="p-3 bg-purple-50/70 border border-purple-200/90 rounded-xl space-y-2 text-xs">
+                  <div className="p-3 bg-muted/60 border border-border/40 rounded-xl space-y-2 text-xs">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-purple-950 flex items-center gap-1.5">
-                        <span>📦 Despesa Parcelada</span>
-                        <span className="bg-purple-200/80 text-purple-900 px-2 py-0.5 rounded-full font-mono text-[11px]">
+                      <span className="font-semibold text-slate-900 flex items-center gap-1.5">
+                        <span>Despesa Parcelada</span>
+                        <span className="bg-muted text-slate-700 px-2 py-0.5 rounded-full font-mono text-[11px]">
                           Parcela {itemForDetailModal.installmentCurrent} de{' '}
                           {itemForDetailModal.installmentTotal}
                         </span>
                       </span>
                       {itemForDetailModal.matchedProjectId ? (
-                        <span className="text-[10px] font-semibold text-blue-800 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
+                        <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
                           ✓ Projeção existente
                         </span>
                       ) : null}
                     </div>
 
                     {itemForDetailModal.matchedProjectId ? (
-                      <p className="text-[11px] text-purple-800 leading-relaxed">
+                      <p className="text-[11px] text-slate-600 leading-relaxed">
                         Esta parcela corresponde a uma projeção futura já cadastrada. Ao importar,
                         ela será convertida de <em>projetada</em> para <strong>confirmada</strong>{' '}
                         sem gerar duplicidade.
                       </p>
                     ) : itemForDetailModal.installmentCurrent === 1 &&
                       (itemForDetailModal.installmentTotal || 1) > 1 ? (
-                      <label className="flex items-start gap-2 cursor-pointer select-none text-[11px] text-purple-950 font-medium">
+                      <label className="flex items-start gap-2 cursor-pointer select-none text-[11px] text-slate-700 font-medium">
                         <input
                           type="checkbox"
                           checked={itemForDetailModal.generateFutureInstallments ?? true}
@@ -2927,7 +2932,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                               e.target.checked,
                             )
                           }
-                          className="mt-0.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
+                          className="mt-0.5 rounded border-slate-300 text-slate-700 focus:ring-slate-500 w-4 h-4"
                         />
                         <span>
                           <strong>
@@ -2938,7 +2943,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                         </span>
                       </label>
                     ) : (
-                      <p className="text-[11px] text-purple-800 leading-relaxed">
+                      <p className="text-[11px] text-slate-600 leading-relaxed">
                         Parcela intermediária sem projeção prévia identificada. Será criada como
                         despesa confirmada deste mês.
                       </p>
@@ -2969,9 +2974,9 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                     </label>
                     {itemForDetailModal.source === 'ai_suggestion' &&
                       itemForDetailModal.aiReasoning && (
-                        <p className="text-[10px] text-violet-700 mt-0.5 italic flex items-center gap-1">
-                          <span>✨ Sugestão por IA:</span>
-                          <span>{itemForDetailModal.aiReasoning}</span>
+                        <p className="text-[10px] text-slate-600 mt-0.5 italic flex items-center gap-1">
+                          <Sparkles className="w-3 h-3 text-[#FCA311] inline" strokeWidth={1.5} />
+                          <span>Sugestão por IA: {itemForDetailModal.aiReasoning}</span>
                         </p>
                       )}
                   </div>
@@ -3037,7 +3042,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 </DialogTitle>
                 {itemForDetailModal && (
                   <span
-                    className={`font-extrabold text-sm tabular-nums ${
+                    className={`font-semibold text-sm tabular-nums ${
                       itemForDetailModal.type === 'income' ? 'text-emerald-700' : 'text-slate-900'
                     }`}
                   >
@@ -3172,10 +3177,11 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 
                 {/* Conciliação Manual se disponível */}
                 {itemForDetailModal.matchedManualTransaction && (
-                  <div className="p-3 rounded-xl bg-teal-50 border border-teal-200 text-teal-950 space-y-1.5">
+                  <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200/80 text-emerald-950 space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold flex items-center gap-1">
-                        <span>🔗</span> Lançamento manual vinculado
+                      <span className="font-semibold flex items-center gap-1 text-[#059669]">
+                        <Link2 className="w-3.5 h-3.5" strokeWidth={1.5} /> Lançamento manual
+                        vinculado
                       </span>
                       <label className="flex items-center gap-1.5 cursor-pointer font-semibold">
                         <input
@@ -3188,12 +3194,12 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                               e.target.checked,
                             )
                           }
-                          className="rounded border-teal-400 text-teal-600 focus:ring-teal-500 w-3.5 h-3.5"
+                          className="rounded border-emerald-400 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
                         />
                         <span>Mesclar</span>
                       </label>
                     </div>
-                    <p className="text-[11px] text-teal-900/80">
+                    <p className="text-[11px] text-emerald-900/80">
                       "{itemForDetailModal.matchedManualTransaction.description}" em{' '}
                       {itemForDetailModal.matchedManualTransaction.transaction_date}
                     </p>
@@ -3259,9 +3265,9 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                                   )
                                 }
                               }}
-                              className="h-7 text-[10px] px-2 font-bold rounded-lg bg-teal-50 text-teal-800 border-teal-300 hover:bg-teal-100 shrink-0"
+                              className="h-7 text-[10px] px-2 font-semibold rounded-lg bg-emerald-50 text-[#059669] border border-emerald-200 hover:bg-emerald-100 shrink-0"
                             >
-                              🔗 Mesclar
+                              <Link2 className="w-3 h-3 mr-1 inline" strokeWidth={1.5} /> Mesclar
                             </Button>
                           </div>
                         ))}
@@ -3271,31 +3277,31 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 
                 {/* Detalhes de Parcelamento quando detectado */}
                 {itemForDetailModal.isInstallment && (
-                  <div className="p-3 bg-purple-50/70 border border-purple-200/90 rounded-xl space-y-2 text-xs">
+                  <div className="p-3 bg-muted/60 border border-border/40 rounded-xl space-y-2 text-xs">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-purple-950 flex items-center gap-1.5">
-                        <span>📦 Despesa Parcelada</span>
-                        <span className="bg-purple-200/80 text-purple-900 px-2 py-0.5 rounded-full font-mono text-[11px]">
+                      <span className="font-semibold text-slate-900 flex items-center gap-1.5">
+                        <span>Despesa Parcelada</span>
+                        <span className="bg-muted text-slate-700 px-2 py-0.5 rounded-full font-mono text-[11px]">
                           Parcela {itemForDetailModal.installmentCurrent} de{' '}
                           {itemForDetailModal.installmentTotal}
                         </span>
                       </span>
                       {itemForDetailModal.matchedProjectId ? (
-                        <span className="text-[10px] font-semibold text-blue-800 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
+                        <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
                           ✓ Projeção existente encontrada no mês
                         </span>
                       ) : null}
                     </div>
 
                     {itemForDetailModal.matchedProjectId ? (
-                      <p className="text-[11px] text-purple-800 leading-relaxed">
+                      <p className="text-[11px] text-slate-600 leading-relaxed">
                         Esta parcela corresponde a uma projeção futura já cadastrada. Ao importar,
                         ela será convertida de <em>projetada</em> para <strong>confirmada</strong>{' '}
                         sem gerar duplicidade.
                       </p>
                     ) : itemForDetailModal.installmentCurrent === 1 &&
                       (itemForDetailModal.installmentTotal || 1) > 1 ? (
-                      <label className="flex items-start gap-2 cursor-pointer select-none text-[11px] text-purple-950 font-medium">
+                      <label className="flex items-start gap-2 cursor-pointer select-none text-[11px] text-slate-700 font-medium">
                         <input
                           type="checkbox"
                           checked={itemForDetailModal.generateFutureInstallments ?? true}
@@ -3306,7 +3312,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                               e.target.checked,
                             )
                           }
-                          className="mt-0.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                          className="mt-0.5 rounded border-slate-300 text-slate-700 focus:ring-slate-500"
                         />
                         <span>
                           <strong>
@@ -3317,7 +3323,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                         </span>
                       </label>
                     ) : (
-                      <p className="text-[11px] text-purple-800 leading-relaxed">
+                      <p className="text-[11px] text-slate-600 leading-relaxed">
                         Parcela intermediária sem projeção prévia identificada. Será criada como
                         despesa confirmada deste mês.
                       </p>
@@ -3348,9 +3354,9 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                     </label>
                     {itemForDetailModal.source === 'ai_suggestion' &&
                       itemForDetailModal.aiReasoning && (
-                        <p className="text-[10px] text-violet-700 mt-0.5 italic flex items-center gap-1">
-                          <span>✨ Sugestão por IA:</span>
-                          <span>{itemForDetailModal.aiReasoning}</span>
+                        <p className="text-[10px] text-slate-600 mt-0.5 italic flex items-center gap-1">
+                          <Sparkles className="w-3 h-3 text-[#FCA311] inline" strokeWidth={1.5} />
+                          <span>Sugestão por IA: {itemForDetailModal.aiReasoning}</span>
                         </p>
                       )}
                   </div>

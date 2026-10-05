@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { CategoryIcon, AVAILABLE_ICONS } from '@/components/common/CategoryIcon'
-import { Loader2, Plus, Home, Coffee, TrendingUp } from 'lucide-react'
+import { Loader2, Plus, Home, Coffee, TrendingUp, Shield, Scale } from 'lucide-react'
 import type { BudgetBucket, TransactionCategory } from '@/types/finance'
 import { useFamily } from '@/hooks/use-family'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -444,12 +444,18 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
               {/* Cenário 1 — Dentro da meta do balde (remainingBucketCents >= 0) */}
               {remainingBucketCents >= 0 && (
                 <div className="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200/80 text-emerald-950 text-xs leading-snug shadow-2xs space-y-1">
-                  <div>
-                    🛡️ Cota de {bucketDisplayName}: Você ainda tem{' '}
-                    <strong className="font-bold tabular-nums">
-                      {formatBRL(remainingBucketCents)}
-                    </strong>{' '}
-                    livres neste balde.
+                  <div className="flex items-start gap-1.5">
+                    <Shield
+                      className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5"
+                      strokeWidth={1.5}
+                    />
+                    <span>
+                      Cota de {bucketDisplayName}: Você ainda tem{' '}
+                      <strong className="font-bold tabular-nums">
+                        {formatBRL(remainingBucketCents)}
+                      </strong>{' '}
+                      livres neste balde.
+                    </span>
                   </div>
                   {freeInOtherBucketsCents > 0 && (
                     <div className="text-[11px] text-emerald-800/90 leading-tight pt-0.5 border-t border-emerald-200/50">
@@ -466,12 +472,18 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
               {/* Cenário 2 — Acima da meta do balde, mas equilibrado no geral (remainingBucketCents < 0 && remainingGlobalCents >= 0) */}
               {remainingBucketCents < 0 && remainingGlobalCents >= 0 && (
                 <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs leading-snug shadow-2xs">
-                  <span>
-                    ⚖️ Equilíbrio Global Mantido: Este balde passa a representar{' '}
-                    <strong className="font-bold tabular-nums">{percentIncome}%</strong> da renda
-                    (acima da meta de {bucketPercentInt}%), mas o orçamento geral da família segue
-                    equilibrado utilizando a folga dos outros baldes.
-                  </span>
+                  <div className="flex items-start gap-1.5">
+                    <Scale
+                      className="w-3.5 h-3.5 text-slate-600 shrink-0 mt-0.5"
+                      strokeWidth={1.5}
+                    />
+                    <span>
+                      Equilíbrio Global Mantido: Este balde passa a representar{' '}
+                      <strong className="font-bold tabular-nums">{percentIncome}%</strong> da renda
+                      (acima da meta de {bucketPercentInt}%), mas o orçamento geral da família segue
+                      equilibrado utilizando a folga dos outros baldes.
+                    </span>
+                  </div>
                 </div>
               )}
 

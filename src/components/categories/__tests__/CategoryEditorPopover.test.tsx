@@ -56,7 +56,7 @@ describe('CategoryEditorPopover - inteligência financeira das cotas e equilíbr
     expect(screen.getByText('10%')).toBeDefined()
 
     // Card de Cota do Balde deve exibir R$ 2.000,00 livres neste balde
-    expect(screen.getByText(/🛡️ Cota de Essenciais: Você ainda tem/i)).toBeDefined()
+    expect(screen.getByText(/Cota de Essenciais: Você ainda tem/i)).toBeDefined()
     expect(screen.getByText('R$ 2.000,00')).toBeDefined()
     expect(screen.getByText(/livres neste balde\./i)).toBeDefined()
 
@@ -111,7 +111,7 @@ describe('CategoryEditorPopover - inteligência financeira das cotas e equilíbr
     const limitInput = screen.getByLabelText(/Teto orçamentário mensal/i) as HTMLInputElement
     fireEvent.change(limitInput, { target: { value: '3.000' } })
 
-    expect(screen.getByText(/🛡️ Cota de Essenciais: Você ainda tem/i)).toBeDefined()
+    expect(screen.getByText(/Cota de Essenciais: Você ainda tem/i)).toBeDefined()
     expect(screen.getByText('R$ 0,00')).toBeDefined()
     expect(screen.getByText(/livres neste balde\./i)).toBeDefined()
   })
@@ -136,7 +136,7 @@ describe('CategoryEditorPopover - inteligência financeira das cotas e equilíbr
     const limitInput = screen.getByLabelText(/Teto orçamentário mensal/i) as HTMLInputElement
     fireEvent.change(limitInput, { target: { value: '4.000' } })
 
-    expect(screen.getByText(/⚖️ Equilíbrio Global Mantido:/i)).toBeDefined()
+    expect(screen.getByText(/Equilíbrio Global Mantido:/i)).toBeDefined()
     expect(screen.getByText('60%')).toBeDefined()
     expect(
       screen.getByText(
@@ -199,7 +199,7 @@ describe('CategoryEditorPopover - inteligência financeira das cotas e equilíbr
     const limitInput = screen.getByLabelText(/Teto orçamentário mensal/i) as HTMLInputElement
     fireEvent.change(limitInput, { target: { value: '1.000' } })
 
-    expect(screen.getByText(/🛡️ Cota de Essenciais: Você ainda tem/i)).toBeDefined()
+    expect(screen.getByText(/Cota de Essenciais: Você ainda tem/i)).toBeDefined()
     expect(screen.getByText('R$ 2.000,00')).toBeDefined()
     expect(screen.getByText('R$ 1.000,00')).toBeDefined()
     expect(
