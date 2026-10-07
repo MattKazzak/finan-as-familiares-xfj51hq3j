@@ -1,8 +1,10 @@
 // Tipos da aplicação Finanças da Família
 
 export type TransactionType = 'income' | 'expense'
+export const TRANSACTION_TYPES = ['income', 'expense'] as const
 
 export type AssetType = 'stock' | 'fii' | 'fixed_income' | 'crypto' | 'treasury' | 'other'
+export const ASSET_TYPES = ['stock', 'fii', 'fixed_income', 'crypto', 'treasury', 'other'] as const
 
 export interface Family {
   id: string
@@ -23,14 +25,18 @@ export interface FamilyMember {
   created_at: string
 }
 
+export type FamilyRole = 'admin' | 'member'
+export const FAMILY_ROLES = ['admin', 'member'] as const
+
 export type FamilyInviteStatus = 'pending' | 'accepted' | 'revoked' | 'expired'
+export const FAMILY_INVITE_STATUSES = ['pending', 'accepted', 'revoked', 'expired'] as const
 
 export interface FamilyInvite {
   id: string
   code: string
   family_id: string
   created_by: string
-  role: string
+  role: FamilyRole | string
   status: FamilyInviteStatus
   max_uses: number
   uses_count: number
@@ -50,6 +56,7 @@ export interface FamilyInvitePreview {
 }
 
 export type BudgetBucket = 'essentials' | 'lifestyle' | 'future'
+export const BUDGET_BUCKETS = ['essentials', 'lifestyle', 'future'] as const
 
 export interface TransactionCategory {
   id: string
@@ -116,6 +123,7 @@ export interface EffectiveRecurringIncome {
 }
 
 export type TransactionStatus = 'confirmed' | 'projected'
+export const TRANSACTION_STATUSES = ['confirmed', 'projected'] as const
 
 export interface Transaction {
   id: string
