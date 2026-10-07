@@ -3,6 +3,8 @@
  * Converte linguagem natural falada em transação estruturada.
  */
 
+import type { BudgetBucket } from '@/types/finance'
+
 export type VoiceAiStatus =
   | 'sucesso'
   | 'clarificacao'
@@ -78,7 +80,7 @@ export interface ParsedVoiceTransaction {
   paymentMethod?: 'pix' | 'debito' | 'credito' | 'dinheiro'
   categoryNameSuggestion?: string
   subcategoryNameSuggestion?: string
-  bucketSuggestion?: 'essential' | 'lifestyle' | 'goals'
+  bucketSuggestion?: BudgetBucket
   confidence: number
   // Campos da IA enriquecidos e transparência de processamento
   processingSource?: 'openai' | 'local'
@@ -532,7 +534,7 @@ export function suggestCategoryAndBucket(
   categoryName?: string
   categoryId?: string
   subcategoryName?: string
-  bucket?: 'essential' | 'lifestyle' | 'goals'
+  bucket?: BudgetBucket
   isExistingSubcategory?: boolean
 } {
   const norm = normalizeWord(description)
@@ -571,10 +573,10 @@ export function suggestCategoryAndBucket(
   const KEYWORD_MAP: Array<{
     keywords: string[]
     defaultCategory: string
-    bucket: 'essential' | 'lifestyle' | 'goals'
+    bucket: BudgetBucket
     candidateExistingCategories?: string[]
   }> = [
-    // Essencial
+    // Essenciais
     {
       keywords: [
         'supermercado',
@@ -588,7 +590,7 @@ export function suggestCategoryAndBucket(
         'hortifruti',
       ],
       defaultCategory: 'Alimentação',
-      bucket: 'essential',
+      bucket: 'essentials',
     },
     {
       keywords: [
@@ -603,7 +605,7 @@ export function suggestCategoryAndBucket(
         'saude',
       ],
       defaultCategory: 'Saúde',
-      bucket: 'essential',
+      bucket: 'essentials',
     },
     {
       keywords: [
@@ -619,7 +621,7 @@ export function suggestCategoryAndBucket(
         'casa',
       ],
       defaultCategory: 'Moradia',
-      bucket: 'essential',
+      bucket: 'essentials',
     },
     {
       keywords: [
@@ -635,12 +637,12 @@ export function suggestCategoryAndBucket(
         'troca de oleo',
       ],
       defaultCategory: 'Transporte',
-      bucket: 'essential',
+      bucket: 'essentials',
     },
     {
       keywords: ['escola', 'faculdade', 'curso', 'mensalidade', 'livro', 'caderno', 'educacao'],
       defaultCategory: 'Educação',
-      bucket: 'essential',
+      bucket: 'essentials',
     },
     // Estilo de Vida
     {
@@ -734,7 +736,7 @@ export function suggestCategoryAndBucket(
         'fundo',
       ],
       defaultCategory: 'Investimentos',
-      bucket: 'goals',
+      bucket: 'future',
     },
     // Receitas
     {
@@ -748,7 +750,7 @@ export function suggestCategoryAndBucket(
         'decimo terceiro',
       ],
       defaultCategory: 'Salário',
-      bucket: 'essential',
+      bucket: 'essentials',
     },
   ]
 
@@ -1315,18 +1317,16 @@ export function parseVoiceInput(
 }
 
 /**
- * Normaliza o nome do balde retornado pela IA para o enum interno ('essential' | 'lifestyle' | 'goals')
+ * Normaliza o nome do balde retornado pela IA para o enum interno canônico ('essentials' | 'lifestyle' | 'future')
  */
-export function normalizeBucketName(
-  baldeText?: string | null,
-): 'essential' | 'lifestyle' | 'goals' {
+export function normalizeBucketName(baldeText?: string | null): BudgetBucket {
   if (!baldeText) return 'lifestyle'
   const norm = normalizeWord(baldeText)
   if (norm.includes('essencia') || norm.includes('necessidade')) {
-    return 'essential'
+    return 'essentials'
   }
   if (norm.includes('meta') || norm.includes('invest')) {
-    return 'goals'
+    return 'future'
   }
   return 'lifestyle'
 }

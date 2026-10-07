@@ -188,7 +188,7 @@ export function WalletPage() {
   const [categoryEditorType, setCategoryEditorType] = useState<'income' | 'expense'>('expense')
   const [categoryEditorColor, setCategoryEditorColor] = useState('#10B981')
   const [categoryEditorIcon, setCategoryEditorIcon] = useState('tag')
-  const [categoryEditorBucket, setCategoryEditorBucket] = useState<any>('essential')
+  const [categoryEditorBucket, setCategoryEditorBucket] = useState<any>('essentials')
   const [savingCategoryEditor, setSavingCategoryEditor] = useState(false)
 
   const [isNewSubcatDialogOpen, setIsNewSubcatDialogOpen] = useState(false)

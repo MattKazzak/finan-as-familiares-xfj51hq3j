@@ -147,6 +147,8 @@ export function InviteAcceptPage() {
         if (data?.session) {
           try {
             const acceptRes = await acceptFamilyInvite(cleanCode)
+            sessionStorage.removeItem('curiangoo_pending_invite_code')
+            localStorage.removeItem('curiangoo_pending_invite_code')
             if (acceptRes?.member_id) {
               localStorage.setItem('financas_familiares_active_member_id', acceptRes.member_id)
             }
@@ -183,6 +185,8 @@ export function InviteAcceptPage() {
 
         try {
           const acceptRes = await acceptFamilyInvite(cleanCode)
+          sessionStorage.removeItem('curiangoo_pending_invite_code')
+          localStorage.removeItem('curiangoo_pending_invite_code')
           if (acceptRes?.member_id) {
             localStorage.setItem('financas_familiares_active_member_id', acceptRes.member_id)
           }

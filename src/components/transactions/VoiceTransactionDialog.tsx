@@ -1004,7 +1004,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   const parseCategoryOptionString = useCallback(
     (
       rawOption: string,
-      fallbackBucket?: 'essential' | 'lifestyle' | 'goals',
+      fallbackBucket?: BudgetBucket,
       availableOptions?: string[] | null,
       structuredOptions?: StructuredSuggestionOption[] | null,
     ) => {
@@ -1019,11 +1019,11 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             s.categoria.toLowerCase() === rawClean.toLowerCase(),
         )
         if (matched) {
-          let b: 'essential' | 'lifestyle' | 'goals' = fallbackBucket || 'lifestyle'
+          let b: BudgetBucket = fallbackBucket || 'lifestyle'
           if (matched.balde) {
             const low = matched.balde.toLowerCase()
-            if (low.includes('essencia') || low.includes('necessidade')) b = 'essential'
-            else if (low.includes('meta') || low.includes('invest')) b = 'goals'
+            if (low.includes('essencia') || low.includes('necessidade')) b = 'essentials'
+            else if (low.includes('meta') || low.includes('invest')) b = 'future'
             else b = 'lifestyle'
           }
           return {
@@ -1079,7 +1079,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         .replace(/^(usar\s+existente|criar\s+nova)\s*:\s*/i, '')
         .trim()
 
-      let bucket: 'essential' | 'lifestyle' | 'goals' = fallbackBucket || 'lifestyle'
+      let bucket: BudgetBucket = fallbackBucket || 'lifestyle'
       let subName: string | undefined
 
       // Extrair o balde entre parênteses no final, ex: "(Estilo de Vida)"
@@ -1088,9 +1088,9 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         catName = parenMatch[1].trim()
         const rawBucketInside = parenMatch[2].toLowerCase()
         if (rawBucketInside.includes('essencia') || rawBucketInside.includes('necessidade')) {
-          bucket = 'essential'
+          bucket = 'essentials'
         } else if (rawBucketInside.includes('meta') || rawBucketInside.includes('invest')) {
-          bucket = 'goals'
+          bucket = 'future'
         } else {
           bucket = 'lifestyle'
         }
@@ -1130,7 +1130,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       if (!base || base.amountCents <= 0) return
 
       let cleanCatName = ''
-      let resolvedBucket: 'essential' | 'lifestyle' | 'goals' = base.bucketSuggestion || 'lifestyle'
+      let resolvedBucket: BudgetBucket = base.bucketSuggestion || 'lifestyle'
       let subcategoryName: string | undefined
       let optionType: 'existente' | 'nova' = 'nova'
 
@@ -1140,8 +1140,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         optionType = structuredOption.tipo
         if (structuredOption.balde) {
           const low = structuredOption.balde.toLowerCase()
-          if (low.includes('essencia') || low.includes('necessidade')) resolvedBucket = 'essential'
-          else if (low.includes('meta') || low.includes('invest')) resolvedBucket = 'goals'
+          if (low.includes('essencia') || low.includes('necessidade')) resolvedBucket = 'essentials'
+          else if (low.includes('meta') || low.includes('invest')) resolvedBucket = 'future'
           else resolvedBucket = 'lifestyle'
         }
       } else {
@@ -1170,12 +1170,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       let wasCreated = false
       if (!matchedCategory && family?.id) {
         try {
-          const mappedBucket =
-            resolvedBucket === 'goals'
-              ? 'future'
-              : resolvedBucket === 'essential'
-                ? 'essentials'
-                : 'lifestyle'
+          const mappedBucket: BudgetBucket = resolvedBucket
 
           const createdCategory = await addNewCategory(
             cleanCatName,
@@ -1285,13 +1280,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         // Se a categoria sugerida não existir, criar ou associar
         if (!targetCategory && txData.categoryNameSuggestion) {
           try {
-            const bucketKey = (
-              txData.bucketSuggestion === 'goals'
-                ? 'future'
-                : txData.bucketSuggestion === 'essential'
-                  ? 'essentials'
-                  : 'lifestyle'
-            ) as BudgetBucket
+            const bucketKey: BudgetBucket = txData.bucketSuggestion || 'lifestyle'
             targetCategory = await addNewCategory(
               txData.categoryNameSuggestion,
               txData.type,
