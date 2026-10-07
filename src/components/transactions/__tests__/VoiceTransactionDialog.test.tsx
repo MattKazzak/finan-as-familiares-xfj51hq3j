@@ -52,6 +52,12 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
+    // Garantir consentimento prévio nos testes existentes de VoiceTransactionDialog
+    localStorage.setItem(
+      'curiangoo_ai_consent',
+      JSON.stringify({ consented: true, consentedAt: new Date().toISOString() }),
+    )
+
     // Default mock response: Sucesso
     mockParseVoiceWithAi.mockImplementation(async ({ texto }: { texto: string }) => {
       return {

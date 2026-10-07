@@ -259,56 +259,109 @@ export function extractAmountFromVoiceText(text: string): {
   const normalized = text.trim()
   if (!normalized) return { amountCents: 0, matchedText: '', cleanedText: text }
 
-  // 1. Procurar dígitos com centavos explícitos: ex: "R$ 45,90", "45,50 reais", "45.90"
-  const digitsWithCentsRegex = /(?:r\$\s*)?(\d+)[,.](\d{1,2})\s*(?:reais|real)?/i
-  const digitsMatch = normalized.match(digitsWithCentsRegex)
-  if (digitsMatch) {
-    const whole = parseInt(digitsMatch[1], 10)
-    let centsPart = digitsMatch[2]
-    if (centsPart.length === 1) centsPart += '0'
-    const cents = parseInt(centsPart.slice(0, 2), 10)
-    const amountCents = whole * 100 + cents
+  interface CandidateMatch {
+    amountCents: number
+    matchedText: string
+    startIndex: number
+    endIndex: number
+    hasExplicitTrigger: boolean
+    triggerDistance: number
+  }
 
-    return {
+  // 1 & 2. Extrair todos os candidatos numéricos baseados em dígitos
+  // Padrão completo que cobre centavos explícitos e inteiros com centavos por extenso
+  const digitRegex =
+    /(?:r\$\s*)?(\d+)(?:[,.](\d{1,2}))?(?:\s*(?:reais|real))?(?:\s*e\s*(\d{1,2})\s*centavos?)?/gi
+
+  // Gatilhos monetários para cálculo de proximidade
+  const triggerRegex = /(?:r\$|reais|real|centavos?)/gi
+  const triggers: Array<{ start: number; end: number }> = []
+  let tMatch: RegExpExecArray | null
+  while ((tMatch = triggerRegex.exec(normalized)) !== null) {
+    triggers.push({ start: tMatch.index, end: tMatch.index + tMatch[0].length })
+  }
+
+  const digitCandidates: CandidateMatch[] = []
+  let dMatch: RegExpExecArray | null
+
+  while ((dMatch = digitRegex.exec(normalized)) !== null) {
+    const fullMatch = dMatch[0].trim()
+    if (!fullMatch || !dMatch[1]) continue
+
+    const whole = parseInt(dMatch[1], 10)
+    let cents = 0
+
+    if (dMatch[2]) {
+      let centsPart = dMatch[2]
+      if (centsPart.length === 1) centsPart += '0'
+      cents = parseInt(centsPart.slice(0, 2), 10)
+    } else if (dMatch[3]) {
+      cents = parseInt(dMatch[3], 10)
+    }
+
+    const amountCents = whole * 100 + cents
+    if (amountCents <= 0) continue
+
+    const startIndex = dMatch.index
+    const endIndex = dMatch.index + dMatch[0].length
+
+    // Tem gatilho diretamente dentro do match (ex: "R$ 45", "45 reais", "45 centavos")
+    const hasExplicitTrigger = /(?:r\$|reais|real|centavos?)/i.test(fullMatch)
+
+    // Calcula distância mínima até qualquer gatilho no texto
+    let minDistance = Infinity
+    for (const tr of triggers) {
+      if (tr.start >= startIndex && tr.end <= endIndex) {
+        minDistance = 0
+        break
+      }
+      const dist = Math.min(Math.abs(startIndex - tr.end), Math.abs(tr.start - endIndex))
+      if (dist < minDistance) {
+        minDistance = dist
+      }
+    }
+
+    digitCandidates.push({
       amountCents,
-      matchedText: digitsMatch[0],
+      matchedText: fullMatch,
+      startIndex,
+      endIndex,
+      hasExplicitTrigger,
+      triggerDistance: minDistance,
+    })
+  }
+
+  // (1) Se houver candidato dígito com gatilho monetário explícito (R$ ou reais/real/centavos)
+  const explicitCandidates = digitCandidates.filter((c) => c.hasExplicitTrigger)
+  if (explicitCandidates.length > 0) {
+    // Escolhe o candidato mais prioritário (distância 0) e em caso de múltiplos, o de maior valor ou primeiro
+    const best = explicitCandidates[0]
+    return {
+      amountCents: best.amountCents,
+      matchedText: best.matchedText,
       cleanedText: normalized
-        .replace(digitsMatch[0], '')
+        .replace(best.matchedText, '')
         .replace(/\s{2,}/g, ' ')
         .trim(),
     }
   }
 
-  // 2. Procurar dígitos inteiros com ou sem "reais" e centavos por extenso
-  // Ex: "45 reais e 50 centavos", "45 reais"
-  const digitsWithCentavosRegex =
-    /(?:r\$\s*)?(\d+)\s*(?:reais|real)?(?:\s*e\s*(\d{1,2})\s*centavos?)?/i
-  const intWithCentavosMatch = normalized.match(digitsWithCentavosRegex)
-  if (intWithCentavosMatch && intWithCentavosMatch[1]) {
-    // Evitar capturar dígitos que sejam parte de outra coisa se não tiver "reais"
-    const hasExplicitCurrency = /r\$|reais|real/i.test(normalized)
-    const whole = parseInt(intWithCentavosMatch[1], 10)
-    const centavos = intWithCentavosMatch[2] ? parseInt(intWithCentavosMatch[2], 10) : 0
-
-    if (hasExplicitCurrency || whole > 0) {
-      // Se não tem currency explícita, só aceita se fizer sentido monetário
-      const fullMatch = intWithCentavosMatch[0]
-      // Apenas se tiver 'reais' ou for o único número
-      if (hasExplicitCurrency || /\b\d+\b/.test(fullMatch)) {
-        return {
-          amountCents: whole * 100 + centavos,
-          matchedText: fullMatch,
-          cleanedText: normalized
-            .replace(fullMatch, '')
-            .replace(/\s{2,}/g, ' ')
-            .trim(),
-        }
-      }
+  // (2) Entre múltiplos candidatos dígitos, o mais próximo de gatilho monetário (se triggerDistance < Infinity)
+  const candidatesNearTrigger = digitCandidates.filter((c) => c.triggerDistance < Infinity)
+  if (candidatesNearTrigger.length > 0) {
+    candidatesNearTrigger.sort((a, b) => a.triggerDistance - b.triggerDistance)
+    const best = candidatesNearTrigger[0]
+    return {
+      amountCents: best.amountCents,
+      matchedText: best.matchedText,
+      cleanedText: normalized
+        .replace(best.matchedText, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim(),
     }
   }
 
-  // 3. Procurar números por extenso (ex: "oitenta e cinco reais", "quarenta e cinco reais e cinquenta centavos")
-  // Tokenizar palavras
+  // (3) Procurar números por extenso (ex: "oitenta e cinco reais", "duzentos e cinquenta reais")
   const tokens = normalized.split(/\s+/)
   const isNumberWord = (word: string) => {
     const w = normalizeWord(word)
@@ -321,7 +374,6 @@ export function extractAmountFromVoiceText(text: string): {
     )
   }
 
-  // Achar sequências contínuas de palavras numéricas
   for (let start = 0; start < tokens.length; start++) {
     const firstWord = normalizeWord(tokens[start])
     if (
@@ -336,7 +388,6 @@ export function extractAmountFromVoiceText(text: string): {
         end++
       }
 
-      // tokens[start...end] é a sequência numérica inteira (reais)
       const numberWords = tokens.slice(start, end)
       const whole = parseWordsToNumber(numberWords)
 
@@ -358,7 +409,6 @@ export function extractAmountFromVoiceText(text: string): {
         if (currentIdx < tokens.length && normalizeWord(tokens[currentIdx]) === 'e') {
           const nextIdx = currentIdx + 1
           if (nextIdx < tokens.length) {
-            // Pode ser número dígito ou palavra
             if (/^\d{1,2}$/.test(tokens[nextIdx])) {
               const cVal = parseInt(tokens[nextIdx], 10)
               matchedWords.push(tokens[currentIdx], tokens[nextIdx])
@@ -405,6 +455,19 @@ export function extractAmountFromVoiceText(text: string): {
           cleanedText: cleaned,
         }
       }
+    }
+  }
+
+  // (4) Último caso: primeiro número da frase (mantém "gastei 50" -> 5000)
+  if (digitCandidates.length > 0) {
+    const firstCandidate = digitCandidates[0]
+    return {
+      amountCents: firstCandidate.amountCents,
+      matchedText: firstCandidate.matchedText,
+      cleanedText: normalized
+        .replace(firstCandidate.matchedText, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim(),
     }
   }
 

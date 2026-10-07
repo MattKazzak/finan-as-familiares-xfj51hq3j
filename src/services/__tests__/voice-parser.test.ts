@@ -45,6 +45,13 @@ describe('voice-parser', () => {
       const res3 = extractAmountFromVoiceText('cento e vinte reais no mercado')
       expect(res3.amountCents).toBe(12000)
     })
+
+    it('casos-alvo do bug: "paguei 2 coisas por 45 reais", "gastei 50", "45,90 no mercado", "duzentos e cinquenta reais"', () => {
+      expect(extractAmountFromVoiceText('paguei 2 coisas por 45 reais').amountCents).toBe(4500)
+      expect(extractAmountFromVoiceText('gastei 50').amountCents).toBe(5000)
+      expect(extractAmountFromVoiceText('45,90 no mercado').amountCents).toBe(4590)
+      expect(extractAmountFromVoiceText('duzentos e cinquenta reais').amountCents).toBe(25000)
+    })
   })
 
   describe('extractPaymentMethod', () => {

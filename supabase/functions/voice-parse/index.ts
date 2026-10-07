@@ -316,9 +316,9 @@ Deno.serve(async (req: Request) => {
       let totalExpenseMonthCents = 0
       let totalIncomeMonthCents = 0
       const expensesByBucketCents = {
-        essential: 0,
+        essentials: 0,
         lifestyle: 0,
-        goals: 0,
+        future: 0,
       }
 
       monthTransactions.forEach((tx: any) => {
@@ -327,9 +327,9 @@ Deno.serve(async (req: Request) => {
           totalExpenseMonthCents += amount
           const bucket = tx.transaction_categories?.budget_bucket || 'lifestyle'
           if (bucket === 'essential' || bucket === 'essentials') {
-            expensesByBucketCents.essential += amount
+            expensesByBucketCents.essentials += amount
           } else if (bucket === 'goals' || bucket === 'future') {
-            expensesByBucketCents.goals += amount
+            expensesByBucketCents.future += amount
           } else {
             expensesByBucketCents.lifestyle += amount
           }
@@ -391,9 +391,9 @@ MÉTRICAS FINANCEIRAS DO MÊS:
 - teto_planejado_onboarding: ${netIncomeCents > 0 ? formatCentsToBRL(netIncomeCents) : 'Não informado'} [Teto de Planejamento dos Baldes (NÃO É RECEITA REAL, NÃO É SALÁRIO RECEBIDO, NÃO É SALDO EM CONTA)].
 - Modelo Orçamentário da Família: ${targets.essentials}/${targets.lifestyle}/${targets.future} (Essenciais ${targets.essentials}%, Estilo de Vida ${targets.lifestyle}%, Metas/Futuro ${targets.future}%)
 - Detalhamento de despesas por balde vs metas teóricas de planejamento:
-  * Necessidades Essenciais: ${formatCentsToBRL(expensesByBucketCents.essential)}${targetEssentialsCents > 0 ? ` (Teto meta teórico: ${formatCentsToBRL(targetEssentialsCents)})` : ''}
+  * Necessidades Essenciais: ${formatCentsToBRL(expensesByBucketCents.essentials)}${targetEssentialsCents > 0 ? ` (Teto meta teórico: ${formatCentsToBRL(targetEssentialsCents)})` : ''}
   * Estilo de Vida: ${formatCentsToBRL(expensesByBucketCents.lifestyle)}${targetLifestyleCents > 0 ? ` (Teto meta teórico: ${formatCentsToBRL(targetLifestyleCents)} | Margem teórica restante: ${formatCentsToBRL(remainingLifestyleCents ?? 0)})` : ''}
-  * Metas & Investimentos: ${formatCentsToBRL(expensesByBucketCents.goals)}${targetGoalsCents > 0 ? ` (Teto meta teórico: ${formatCentsToBRL(targetGoalsCents)})` : ''}
+  * Metas & Investimentos: ${formatCentsToBRL(expensesByBucketCents.future)}${targetGoalsCents > 0 ? ` (Teto meta teórico: ${formatCentsToBRL(targetGoalsCents)})` : ''}
 - Teto de orçamento planejado para o mês: ${plannedBudgetCapCents > 0 ? formatCentsToBRL(plannedBudgetCapCents) : 'Sem teto fixo cadastrado'}
 - Margem de teto orçamentário restante para gastar este mês: ${
         remainingBudgetCapMonthCents !== null

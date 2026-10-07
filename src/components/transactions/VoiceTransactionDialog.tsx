@@ -48,6 +48,36 @@ export interface ChatMessage {
   editAction?: () => void
 }
 
+const AI_CONSENT_KEY = 'curiangoo_ai_consent'
+
+interface AiConsentData {
+  consented: boolean
+  consentedAt: string
+}
+
+function getAiConsent(): boolean {
+  try {
+    const raw = localStorage.getItem(AI_CONSENT_KEY)
+    if (!raw) return false
+    const parsed: AiConsentData = JSON.parse(raw)
+    return Boolean(parsed && parsed.consented === true)
+  } catch {
+    return false
+  }
+}
+
+function setAiConsent(consented: boolean) {
+  try {
+    const data: AiConsentData = {
+      consented,
+      consentedAt: new Date().toISOString(),
+    }
+    localStorage.setItem(AI_CONSENT_KEY, JSON.stringify(data))
+  } catch {
+    // ignorar indisponibilidade de localStorage
+  }
+}
+
 interface VoiceTransactionDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -81,6 +111,9 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   const { toast } = useToast()
 
   // Mini-Chat: Histórico de mensagens mantido em memória durante a sessão do modal
+  const [hasAiConsent, setHasAiConsent] = useState<boolean>(() => getAiConsent())
+  const [showConsentPrompt, setShowConsentPrompt] = useState<boolean>(false)
+
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const messagesRef = useRef<ChatMessage[]>([])
   useEffect(() => {
@@ -926,6 +959,27 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     [clearSilenceTimer, handleStopAndProcess],
   )
 
+  const handleAllowAiConsent = useCallback(() => {
+    setAiConsent(true)
+    setHasAiConsent(true)
+    setShowConsentPrompt(false)
+    setTimeout(() => {
+      startRecording()
+    }, 150)
+  }, [startRecording])
+
+  const handleDeclineAiConsent = useCallback(() => {
+    setShowConsentPrompt(false)
+    // "Agora não" não envia nada e permite digitação manual normalmente
+    onOpenChange(false)
+    onOpenManualTransaction({
+      type: 'expense',
+      amountCents: 0,
+      description: '',
+      memberId: selectedMemberId || currentMember?.id,
+    })
+  }, [currentMember?.id, onOpenChange, onOpenManualTransaction, selectedMemberId])
+
   // Gerar saudação contextual baseada na hora e membro ativo
   const getContextualGreeting = useCallback(() => {
     const hour = new Date().getHours()
@@ -943,6 +997,9 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   // Iniciar sessão do modal: zera histórico ao abrir e dispara escuta com saudação dinâmica
   useEffect(() => {
     if (open) {
+      const consented = getAiConsent()
+      setHasAiConsent(consented)
+
       const greeting = getContextualGreeting()
       setMessages([
         {
@@ -970,9 +1027,15 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       setSelectedMemberId(currentMember?.id || members[0]?.id || '')
       setPermissionStatus('idle')
 
-      startRecording()
+      if (!consented) {
+        setShowConsentPrompt(true)
+      } else {
+        setShowConsentPrompt(false)
+        startRecording()
+      }
     } else {
       stopListening()
+      setShowConsentPrompt(false)
       setPermissionStatus('idle')
       setIsProcessingAi(false)
       setIsListeningForAmountOnly(false)
@@ -992,6 +1055,12 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     clearSilenceTimer()
     const textToSend = inputVal.trim()
     if (!textToSend) return
+
+    if (!hasAiConsent && !getAiConsent()) {
+      setShowConsentPrompt(true)
+      return
+    }
+
     setInputVal('')
     handleStopAndProcess(textToSend)
   }
@@ -1835,6 +1904,49 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           )}
         </div>
 
+        {/* ================= MODAL / OVERLAY DE CONSENTIMENTO LGPD (IA) ================= */}
+        {showConsentPrompt && (
+          <div
+            data-testid="ai-consent-modal"
+            className="absolute inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3.5 sm:p-4 rounded-3xl animate-in fade-in duration-150"
+          >
+            <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-2xl border border-slate-200/90 max-w-sm w-full space-y-3.5 text-left">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 leading-snug">
+                  Permitir processamento por IA?
+                </h3>
+              </div>
+
+              <p className="text-xs text-slate-600 leading-relaxed">
+                O Curiangoo Copilot utiliza inteligência artificial para interpretar sua fala ou
+                texto e sugerir categorias e valores automaticamente. Nenhum dado é compartilhado
+                para fins externos. Deseja permitir o processamento por IA?
+              </p>
+
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleDeclineAiConsent}
+                  className="h-9 px-3 text-xs font-semibold rounded-xl text-slate-700 border-slate-300 hover:bg-slate-100"
+                >
+                  Agora não
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleAllowAiConsent}
+                  className="h-9 px-4 text-xs font-bold rounded-xl bg-[#064E3B] hover:bg-emerald-900 text-white shadow-xs"
+                >
+                  Permitir
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ================= RODAPÉ FIXO: CONTROLES SEMPRE VISÍVEIS ================= */}
         <div className="pt-2 border-t border-slate-100 shrink-0 space-y-2">
           {/* Status do microfone */}
@@ -1922,13 +2034,19 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
               ) : (
                 <button
                   type="button"
-                  onClick={() => startRecording()}
+                  onClick={() => {
+                    if (!hasAiConsent && !getAiConsent()) {
+                      setShowConsentPrompt(true)
+                    } else {
+                      startRecording()
+                    }
+                  }}
                   className="w-11 h-11 rounded-2xl bg-slate-100 border border-slate-300 text-slate-700 hover:bg-emerald-600 hover:text-white flex items-center justify-center shadow-xs transition-all active:scale-95"
                   title="Toque para começar a falar"
                 >
                   <MicOff className="w-5 h-5" />
                 </button>
-              )}
+              )}{' '}
             </div>
 
             {/* Input de Texto + Botão Enviar */}
