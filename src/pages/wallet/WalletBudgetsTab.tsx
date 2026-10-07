@@ -84,11 +84,11 @@ export function WalletBudgetsTab() {
       {/* Cabeçalho da Aba Orçamentos: Ações Rápidas (Receitas Fixas & Modelo Sugerido) */}
       <div className="flex items-center justify-between gap-2 flex-wrap bg-card/90 backdrop-blur-sm p-3.5 rounded-2xl border border-border/40 shadow-curiango">
         <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-[#10B981] flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-buckets-goals flex items-center justify-center shrink-0">
             <Target className="w-5 h-5 select-none" strokeWidth={1.5} />
           </div>
           <div>
-            <h3 className="font-semibold text-sm text-[#14213D] dark:text-white leading-tight">
+            <h3 className="font-semibold text-sm text-foreground dark:text-white leading-tight">
               Planejamento & Orçamentos
             </h3>
             <p className="text-[11px] text-muted-foreground">
@@ -109,9 +109,9 @@ export function WalletBudgetsTab() {
             variant="outline"
             size="sm"
             onClick={() => setIsApplyModelOpen(true)}
-            className="rounded-xl text-xs font-semibold gap-1.5 border-border text-[#14213D] bg-slate-100/60 hover:bg-[#FCA311]/20 h-8 shadow-xs"
+            className="rounded-xl text-xs font-semibold gap-1.5 border-border text-foreground bg-slate-100/60 hover:bg-brand-amber/20 h-8 shadow-xs"
           >
-            <Sparkles className="w-3.5 h-3.5 text-[#FCA311]" />
+            <Sparkles className="w-3.5 h-3.5 text-brand-amber" />
             <span>Aplicar modelo sugerido</span>
           </Button>
         </div>
@@ -119,9 +119,9 @@ export function WalletBudgetsTab() {
 
       {/* CARD DE ONBOARDING LEVE (QUANDO A RENDA LÍQUIDA AINDA NÃO FOI DEFINIDA) */}
       {(!family?.monthly_net_income_cents || family.monthly_net_income_cents <= 0) && (
-        <div className="bg-gradient-to-br from-[#14213D] via-[#192a4f] to-[#0e172a] text-white rounded-3xl p-5 shadow-sm border border-[#14213D] flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in-50 duration-200">
+        <div className="bg-gradient-to-br from-brand via-[#192a4f] to-brand-dark text-white rounded-3xl p-5 shadow-sm border border-brand flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in-50 duration-200">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-[#FCA311] shrink-0 mt-0.5">
+            <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-brand-amber shrink-0 mt-0.5">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
@@ -138,9 +138,9 @@ export function WalletBudgetsTab() {
 
           <Button
             onClick={() => setIsApplyModelOpen(true)}
-            className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold text-xs rounded-xl shadow-md self-start sm:self-center shrink-0 gap-1.5 border-0"
+            className="bg-brand-amber hover:bg-[#e08e08] text-brand font-bold text-xs rounded-xl shadow-md self-start sm:self-center shrink-0 gap-1.5 border-0"
           >
-            <Sparkles className="w-3.5 h-3.5 text-[#14213D]" />
+            <Sparkles className="w-3.5 h-3.5 text-brand" />
             <span>Configurar em 3 passos</span>
           </Button>
         </div>
@@ -201,10 +201,10 @@ export function WalletBudgetsTab() {
               <span
                 className={`text-xs font-semibold px-2.5 py-1 rounded-full self-start sm:self-auto ${
                   categoryBudgetData.isTotalOver
-                    ? 'bg-rose-100 text-[#E11D48] dark:bg-rose-950/40'
+                    ? 'bg-rose-100 text-finance-expense dark:bg-rose-950/40'
                     : categoryBudgetData.totalPercent >= 75
                       ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40'
-                      : 'bg-emerald-100 text-[#059669] dark:bg-emerald-950/40'
+                      : 'bg-emerald-100 text-finance-income dark:bg-emerald-950/40'
                 }`}
               >
                 <span>{badgeText}</span>
@@ -212,7 +212,7 @@ export function WalletBudgetsTab() {
             </div>
 
             <div className="flex items-baseline justify-between mb-3">
-              <span className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#14213D] dark:text-white tabular-nums">
+              <span className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground dark:text-white tabular-nums">
                 <span className="text-base sm:text-lg font-medium text-muted-foreground mr-1.5">
                   {consumedPrefix}
                 </span>
@@ -233,10 +233,10 @@ export function WalletBudgetsTab() {
               <div
                 className={`h-full rounded-full transition-all duration-700 ${
                   categoryBudgetData.isTotalOver
-                    ? 'bg-[#E11D48]'
+                    ? 'bg-finance-expense'
                     : categoryBudgetData.totalPercent >= 75
-                      ? 'bg-[#FCA311]'
-                      : 'bg-[#059669]'
+                      ? 'bg-brand-amber'
+                      : 'bg-finance-income'
                 }`}
                 style={{ width: `${Math.min(categoryBudgetData.totalPercent, 100)}%` }}
               />
@@ -266,7 +266,7 @@ export function WalletBudgetsTab() {
       <div className="bg-card/90 backdrop-blur-sm rounded-3xl border border-border/40 p-5 shadow-curiango space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h3 className="font-semibold text-base text-[#14213D] dark:text-white">
+            <h3 className="font-semibold text-base text-foreground dark:text-white">
               Categorias e Subcategorias
             </h3>
             <p className="text-xs text-muted-foreground">
@@ -321,7 +321,7 @@ export function WalletBudgetsTab() {
               trigger={
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#14213D] hover:bg-[#E5E5E5] bg-[#E5E5E5]/60 px-2.5 py-1.5 rounded-xl border border-[#E5E5E5] transition-colors"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:bg-brand-gray bg-brand-gray/60 px-2.5 py-1.5 rounded-xl border border-brand-gray transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Nova categoria</span>
@@ -376,7 +376,7 @@ export function WalletBudgetsTab() {
                 trigger={
                   <Button
                     size="sm"
-                    className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-xl text-xs gap-1.5 border-0"
+                    className="bg-brand-amber hover:bg-[#e08e08] text-brand font-bold rounded-xl text-xs gap-1.5 border-0"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Criar categoria</span>

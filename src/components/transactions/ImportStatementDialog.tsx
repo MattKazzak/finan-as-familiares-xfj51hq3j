@@ -2025,9 +2025,9 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 
                   {/* Badge de Mescla com Lançamento Manual */}
                   {mergedCount > 0 && (
-                    <span className="text-[10px] sm:text-[11px] font-semibold text-[#059669] bg-emerald-50 border border-emerald-200/70 px-2 sm:px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+                    <span className="text-[10px] sm:text-[11px] font-semibold text-finance-income bg-emerald-50 border border-emerald-200/70 px-2 sm:px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
                       <Link2
-                        className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-[#059669]"
+                        className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-finance-income"
                         strokeWidth={1.5}
                       />
                       <span>{mergedCount} mesclada(s)</span>
@@ -2198,8 +2198,11 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                               </span>
                             )}
                             {item.isReconciledManual && (
-                              <span className="text-[10px] font-semibold text-[#059669] bg-emerald-50 border border-emerald-200/70 px-1.5 py-0.2 rounded shrink-0 flex items-center gap-0.5">
-                                <Link2 className="w-2.5 h-2.5 text-[#059669]" strokeWidth={1.5} />{' '}
+                              <span className="text-[10px] font-semibold text-finance-income bg-emerald-50 border border-emerald-200/70 px-1.5 py-0.2 rounded shrink-0 flex items-center gap-0.5">
+                                <Link2
+                                  className="w-2.5 h-2.5 text-finance-income"
+                                  strokeWidth={1.5}
+                                />{' '}
                                 Mesclada
                               </span>
                             )}
@@ -2295,7 +2298,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                   type="button"
                   onClick={handleSaveImported}
                   disabled={saving || selectedCount === 0}
-                  className="w-full sm:w-auto min-h-[46px] h-12 px-6 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold text-sm rounded-xl shadow-md transition-all gap-2 flex items-center justify-center border-0"
+                  className="w-full sm:w-auto min-h-[46px] h-12 px-6 bg-brand-amber hover:bg-[#e08e08] text-brand font-bold text-sm rounded-xl shadow-md transition-all gap-2 flex items-center justify-center border-0"
                 >
                   {saving ? (
                     <>
@@ -2800,7 +2803,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 {itemForDetailModal.matchedManualTransaction && (
                   <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200/80 text-emerald-950 space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold flex items-center gap-1 text-[#059669]">
+                      <span className="font-semibold flex items-center gap-1 text-finance-income">
                         <Link2 className="w-3.5 h-3.5" strokeWidth={1.5} /> Lançamento manual
                         vinculado
                       </span>
@@ -2886,7 +2889,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                                   )
                                 }
                               }}
-                              className="min-h-[44px] text-[11px] px-3 font-semibold rounded-lg bg-emerald-50 text-[#059669] border border-emerald-200 hover:bg-emerald-100 shrink-0"
+                              className="min-h-[44px] text-[11px] px-3 font-semibold rounded-lg bg-emerald-50 text-finance-income border border-emerald-200 hover:bg-emerald-100 shrink-0"
                             >
                               <Link2 className="w-3 h-3 mr-1 inline" strokeWidth={1.5} /> Mesclar
                             </Button>
@@ -2976,7 +2979,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                     {itemForDetailModal.source === 'ai_suggestion' &&
                       itemForDetailModal.aiReasoning && (
                         <p className="text-[10px] text-slate-600 mt-0.5 italic flex items-center gap-1">
-                          <Sparkles className="w-3 h-3 text-[#FCA311] inline" strokeWidth={1.5} />
+                          <Sparkles className="w-3 h-3 text-brand-amber inline" strokeWidth={1.5} />
                           <span>Sugestão por IA: {itemForDetailModal.aiReasoning}</span>
                         </p>
                       )}
@@ -3180,7 +3183,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 {itemForDetailModal.matchedManualTransaction && (
                   <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200/80 text-emerald-950 space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold flex items-center gap-1 text-[#059669]">
+                      <span className="font-semibold flex items-center gap-1 text-finance-income">
                         <Link2 className="w-3.5 h-3.5" strokeWidth={1.5} /> Lançamento manual
                         vinculado
                       </span>
@@ -3266,7 +3269,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                                   )
                                 }
                               }}
-                              className="h-7 text-[10px] px-2 font-semibold rounded-lg bg-emerald-50 text-[#059669] border border-emerald-200 hover:bg-emerald-100 shrink-0"
+                              className="h-7 text-[10px] px-2 font-semibold rounded-lg bg-emerald-50 text-finance-income border border-emerald-200 hover:bg-emerald-100 shrink-0"
                             >
                               <Link2 className="w-3 h-3 mr-1 inline" strokeWidth={1.5} /> Mesclar
                             </Button>
@@ -3356,7 +3359,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                     {itemForDetailModal.source === 'ai_suggestion' &&
                       itemForDetailModal.aiReasoning && (
                         <p className="text-[10px] text-slate-600 mt-0.5 italic flex items-center gap-1">
-                          <Sparkles className="w-3 h-3 text-[#FCA311] inline" strokeWidth={1.5} />
+                          <Sparkles className="w-3 h-3 text-brand-amber inline" strokeWidth={1.5} />
                           <span>Sugestão por IA: {itemForDetailModal.aiReasoning}</span>
                         </p>
                       )}
@@ -3495,7 +3498,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 type="submit"
                 size="sm"
                 disabled={quickCatSaving}
-                className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold border-0"
+                className="bg-brand-amber hover:bg-[#e08e08] text-brand font-bold border-0"
               >
                 {quickCatSaving ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : null}
                 <span>Salvar Categoria</span>
