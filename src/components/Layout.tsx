@@ -120,12 +120,12 @@ export default function Layout() {
   const userInitial = currentMember?.name?.charAt(0).toUpperCase() || 'F'
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-white flex flex-col md:flex-row text-[#000000] font-sans antialiased">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-white flex flex-col md:flex-row text-foreground font-sans antialiased">
       {/* SIDEBAR DESKTOP (>= 768px) com identidade profunda #14213D */}
-      <aside className="hidden md:flex md:w-60 flex-col bg-[#14213D] border-r border-[#14213D]/90 text-white fixed inset-y-0 left-0 z-40">
+      <aside className="hidden md:flex md:w-60 flex-col bg-brand border-r border-brand/90 text-white fixed inset-y-0 left-0 z-40">
         {/* Logo & Marca Oficial Curiangoo */}
         <div className="p-5 border-b border-white/10 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-[#FCA311] shadow-md shadow-black/20 shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-brand-amber shadow-md shadow-black/20 shrink-0">
             <CuriangoLogo size={24} color="#FCA311" />
           </div>
           <div className="min-w-0 flex-1">
@@ -143,7 +143,7 @@ export default function Layout() {
         <div className="p-4">
           <Button
             onClick={() => openNewTransaction('expense')}
-            className="w-full bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold py-2.5 shadow-md shadow-black/20 rounded-xl flex items-center justify-center gap-2 transition-all transform active:scale-95 cursor-pointer border-0"
+            className="w-full bg-brand-amber hover:bg-[#e08e08] text-brand font-bold py-2.5 shadow-md shadow-black/20 rounded-xl flex items-center justify-center gap-2 transition-all transform active:scale-95 cursor-pointer border-0"
           >
             <Plus className="w-5 h-5 stroke-[2.5]" />
             Nova Transação
@@ -161,17 +161,17 @@ export default function Layout() {
                 to={item.to}
                 className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   isActive
-                    ? 'bg-white/15 text-[#FCA311] shadow-xs'
+                    ? 'bg-white/15 text-brand-amber shadow-xs'
                     : 'text-white/75 hover:bg-white/10 hover:text-white'
                 }`}
               >
                 <Icon
                   className={`w-5 h-5 ${
-                    isActive ? 'text-[#FCA311]' : 'text-white/60 group-hover:text-white'
+                    isActive ? 'text-brand-amber' : 'text-white/60 group-hover:text-white'
                   }`}
                 />
                 <span className="flex-1">{item.label}</span>
-                {isActive && <ChevronRight className="w-4 h-4 text-[#FCA311]" />}
+                {isActive && <ChevronRight className="w-4 h-4 text-brand-amber" />}
               </NavLink>
             )
           })}
@@ -186,8 +186,8 @@ export default function Layout() {
               title="Trocar quem está usando"
               className="flex items-center gap-2.5 text-left hover:bg-white/10 p-1.5 rounded-xl transition-colors overflow-hidden flex-1 mr-1 cursor-pointer"
             >
-              <Avatar className="w-8 h-8 border border-[#FCA311]/50 shrink-0">
-                <AvatarFallback className="bg-[#FCA311] text-[#14213D] font-bold text-xs">
+              <Avatar className="w-8 h-8 border border-brand-amber/50 shrink-0">
+                <AvatarFallback className="bg-brand-amber text-brand font-bold text-xs">
                   {userInitial}
                 </AvatarFallback>
               </Avatar>
@@ -195,13 +195,15 @@ export default function Layout() {
                 <p className="text-xs font-semibold text-white truncate">
                   {currentMember?.name || 'Família'}
                 </p>
-                <p className="text-[10px] text-[#FCA311] truncate font-medium">Trocar usuário ▾</p>
+                <p className="text-[10px] text-brand-amber truncate font-medium">
+                  Trocar usuário ▾
+                </p>
               </div>
             </button>
           ) : (
             <div className="flex items-center gap-2.5 text-left p-1.5 rounded-xl overflow-hidden flex-1 mr-1">
-              <Avatar className="w-8 h-8 border border-[#FCA311]/50 shrink-0">
-                <AvatarFallback className="bg-[#FCA311] text-[#14213D] font-bold text-xs">
+              <Avatar className="w-8 h-8 border border-brand-amber/50 shrink-0">
+                <AvatarFallback className="bg-brand-amber text-brand font-bold text-xs">
                   {userInitial}
                 </AvatarFallback>
               </Avatar>
@@ -224,12 +226,12 @@ export default function Layout() {
       </aside>
 
       {/* ÁREA PRINCIPAL COM SCROLL */}
-      <div className="flex-1 md:ml-60 flex flex-col min-h-screen bg-[#FFFFFF]">
+      <div className="flex-1 md:ml-60 flex flex-col min-h-screen bg-white">
         {/* HEADER TOP (visível em desktop e nas demais páginas; na Home (/inicio) o header moderno fintech já assume o topo no mobile e desktop, evitando cabeçalho duplicado ou barra cinza rígida) */}
         {location.pathname !== '/inicio' && (
-          <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E5E5E5] px-4 py-3 sm:px-6 flex items-center justify-between">
+          <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-border px-4 py-3 sm:px-6 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h2 className="text-base sm:text-lg font-bold text-[#14213D] tracking-tight">
+              <h2 className="text-base sm:text-lg font-bold text-brand tracking-tight">
                 {getHeaderTitle()}
               </h2>
             </div>
@@ -239,26 +241,26 @@ export default function Layout() {
                 <div
                   onClick={openWhoIsUsing}
                   title="Toque para trocar quem está usando"
-                  className="flex items-center gap-2 cursor-pointer group bg-[#E5E5E5]/40 hover:bg-[#FCA311]/15 px-2.5 py-1 rounded-full border border-[#E5E5E5] transition-all"
+                  className="flex items-center gap-2 cursor-pointer group bg-brand-gray/40 hover:bg-brand-amber/15 px-2.5 py-1 rounded-full border border-brand-gray transition-all"
                 >
-                  <Avatar className="w-7 h-7 border border-[#FCA311]/60 shadow-sm group-hover:ring-2 group-hover:ring-[#FCA311] transition-all">
-                    <AvatarFallback className="bg-gradient-to-tr from-[#14213D] to-[#1f3159] text-white font-bold text-xs">
+                  <Avatar className="w-7 h-7 border border-brand-amber/60 shadow-sm group-hover:ring-2 group-hover:ring-brand-amber transition-all">
+                    <AvatarFallback className="bg-gradient-to-tr from-brand to-brand-light text-white font-bold text-xs">
                       {userInitial}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-xs font-medium text-[#14213D] group-hover:text-[#14213D] transition-colors flex items-center gap-1">
+                  <span className="text-xs font-medium text-brand group-hover:text-brand transition-colors flex items-center gap-1">
                     <span>{currentMember?.name || 'Família'}</span>
                     <span className="text-[10px] text-slate-400">▾</span>
                   </span>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 bg-[#E5E5E5]/40 px-2.5 py-1 rounded-full border border-[#E5E5E5]">
-                  <Avatar className="w-7 h-7 border border-[#FCA311]/60 shadow-sm">
-                    <AvatarFallback className="bg-gradient-to-tr from-[#14213D] to-[#1f3159] text-white font-bold text-xs">
+                <div className="flex items-center gap-2 bg-brand-gray/40 px-2.5 py-1 rounded-full border border-brand-gray">
+                  <Avatar className="w-7 h-7 border border-brand-amber/60 shadow-sm">
+                    <AvatarFallback className="bg-gradient-to-tr from-brand to-brand-light text-white font-bold text-xs">
                       {userInitial}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-xs font-medium text-[#14213D]">
+                  <span className="text-xs font-medium text-brand">
                     <span>{currentMember?.name || 'Família'}</span>
                   </span>
                 </div>
@@ -280,15 +282,13 @@ export default function Layout() {
           aria-label="Navegação Principal"
           className="md:hidden fixed bottom-3 sm:bottom-4 inset-x-0 z-40 px-3 sm:px-4 max-w-md mx-auto pointer-events-none"
         >
-          <div className="pointer-events-auto w-full bg-white/90 dark:bg-[#14213D]/90 backdrop-blur-md border border-border/40 shadow-curiango-dock rounded-full px-2 py-1.5 flex items-center justify-between transition-all">
+          <div className="pointer-events-auto w-full bg-white/90 dark:bg-brand/90 backdrop-blur-md border border-border/40 shadow-curiango-dock rounded-full px-2 py-1.5 flex items-center justify-between transition-all">
             {/* 1. Início */}
             <NavLink
               to="/inicio"
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive
-                    ? 'text-[#FCA311] font-semibold'
-                    : 'text-[#14213D]/60 hover:text-[#14213D]'
+                  isActive ? 'text-brand-amber font-semibold' : 'text-brand/60 hover:text-brand'
                 }`
               }
             >
@@ -296,7 +296,7 @@ export default function Layout() {
                 <>
                   <div
                     className={`p-1 rounded-full transition-all duration-200 ${
-                      isActive ? 'bg-[#FCA311]/15 scale-105' : ''
+                      isActive ? 'bg-brand-amber/15 scale-105' : ''
                     }`}
                   >
                     <Home className="w-5 h-5" strokeWidth={1.5} />
@@ -311,9 +311,7 @@ export default function Layout() {
               to="/carteira"
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive
-                    ? 'text-[#FCA311] font-semibold'
-                    : 'text-[#14213D]/60 hover:text-[#14213D]'
+                  isActive ? 'text-brand-amber font-semibold' : 'text-brand/60 hover:text-brand'
                 }`
               }
             >
@@ -321,7 +319,7 @@ export default function Layout() {
                 <>
                   <div
                     className={`p-1 rounded-full transition-all duration-200 ${
-                      isActive ? 'bg-[#FCA311]/15 scale-105' : ''
+                      isActive ? 'bg-brand-amber/15 scale-105' : ''
                     }`}
                   >
                     <Wallet className="w-5 h-5" strokeWidth={1.5} />
@@ -336,11 +334,11 @@ export default function Layout() {
               <button
                 type="button"
                 onClick={() => openNewTransaction('expense')}
-                className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#FCA311] via-[#fba825] to-[#ffb845] text-[#14213D] flex items-center justify-center shadow-sm shadow-[#FCA311]/30 border border-white/80 active:scale-90 hover:scale-105 transition-all duration-200 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
+                className="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-amber via-[#fba825] to-[#ffb845] text-brand flex items-center justify-center shadow-sm shadow-brand-amber/30 border border-white/80 active:scale-90 hover:scale-105 transition-all duration-200 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-amber"
                 aria-label="Nova Transação"
                 title="Nova Transação"
               >
-                <Plus className="w-5 h-5" strokeWidth={1.5} />
+                <Plus className="w-5 h-5 stroke-[2.5]" />
               </button>
             </div>
 
@@ -349,9 +347,7 @@ export default function Layout() {
               to="/metas"
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive
-                    ? 'text-[#FCA311] font-semibold'
-                    : 'text-[#14213D]/60 hover:text-[#14213D]'
+                  isActive ? 'text-brand-amber font-semibold' : 'text-brand/60 hover:text-brand'
                 }`
               }
             >
@@ -359,7 +355,7 @@ export default function Layout() {
                 <>
                   <div
                     className={`p-1 rounded-full transition-all duration-200 ${
-                      isActive ? 'bg-[#FCA311]/15 scale-105' : ''
+                      isActive ? 'bg-brand-amber/15 scale-105' : ''
                     }`}
                   >
                     <Target className="w-5 h-5" strokeWidth={1.5} />
@@ -374,9 +370,7 @@ export default function Layout() {
               to="/perfil"
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive
-                    ? 'text-[#FCA311] font-semibold'
-                    : 'text-[#14213D]/60 hover:text-[#14213D]'
+                  isActive ? 'text-brand-amber font-semibold' : 'text-brand/60 hover:text-brand'
                 }`
               }
             >
@@ -384,7 +378,7 @@ export default function Layout() {
                 <>
                   <div
                     className={`p-1 rounded-full transition-all duration-200 ${
-                      isActive ? 'bg-[#FCA311]/15 scale-105' : ''
+                      isActive ? 'bg-brand-amber/15 scale-105' : ''
                     }`}
                   >
                     <User className="w-5 h-5" strokeWidth={1.5} />
@@ -393,7 +387,7 @@ export default function Layout() {
                 </>
               )}
             </NavLink>
-          </div>
+          </div>{' '}
         </nav>
       </div>
 

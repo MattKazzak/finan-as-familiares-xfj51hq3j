@@ -341,17 +341,17 @@ export function OnboardingWizardDialog({
         <div className="flex items-center gap-2 my-2 w-full min-w-0">
           <div
             className={`h-1.5 flex-1 min-w-0 rounded-full transition-all duration-300 ${
-              step >= 1 ? 'bg-[#FCA311]' : 'bg-[#E5E5E5]'
+              step >= 1 ? 'bg-brand-amber' : 'bg-brand-gray'
             }`}
           />
           <div
             className={`h-1.5 flex-1 rounded-full transition-colors ${
-              step >= 2 ? 'bg-[#FCA311]' : 'bg-[#E5E5E5]'
+              step >= 2 ? 'bg-brand-amber' : 'bg-brand-gray'
             }`}
           />
           <div
             className={`h-1.5 flex-1 rounded-full transition-colors ${
-              step >= 3 ? 'bg-[#FCA311]' : 'bg-[#E5E5E5]'
+              step >= 3 ? 'bg-brand-amber' : 'bg-brand-gray'
             }`}
           />{' '}
         </div>
@@ -404,7 +404,7 @@ export function OnboardingWizardDialog({
                 type="button"
                 onClick={handleNextFromStep1}
                 disabled={!familyNameInput.trim()}
-                className="w-full h-12 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-black/10 flex items-center justify-center gap-2 transition-all cursor-pointer border-0"
+                className="w-full h-12 bg-brand-amber hover:bg-[#e08e08] text-brand font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-black/10 flex items-center justify-center gap-2 transition-all cursor-pointer border-0"
               >
                 <span>Continuar para a Renda</span>
                 <ArrowRight className="w-4 h-4 shrink-0" />
@@ -465,7 +465,7 @@ export function OnboardingWizardDialog({
                 type="button"
                 onClick={handleNextFromStep2}
                 disabled={parsedNetIncomeCents <= 0}
-                className="w-full flex-1 h-12 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-black/10 flex items-center justify-center gap-2 transition-all cursor-pointer border-0"
+                className="w-full flex-1 h-12 bg-brand-amber hover:bg-[#e08e08] text-brand font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-black/10 flex items-center justify-center gap-2 transition-all cursor-pointer border-0"
               >
                 <span>Continuar para as 3 Caixas</span>
                 <ArrowRight className="w-4 h-4 shrink-0" />
@@ -493,13 +493,13 @@ export function OnboardingWizardDialog({
               {/* Caixa 1: Necessidades (50%) */}
               <div className="p-3.5 sm:p-4 rounded-2xl bg-sky-50/80 border border-sky-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs min-w-0 transition-all">
                 <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-                  <div className="w-10 h-10 rounded-xl bg-[#14213D] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5 sm:mt-0">
+                  <div className="w-10 h-10 rounded-xl bg-buckets-essentials text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5 sm:mt-0">
                     <Shield className="w-5 h-5" strokeWidth={1.5} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                       <span className="font-bold text-sm text-sky-950 break-words flex items-center gap-1.5">
-                        <Shield className="w-4 h-4 text-[#14213D]" strokeWidth={1.5} />
+                        <Shield className="w-4 h-4 text-buckets-essentials" strokeWidth={1.5} />
                         <span>Necessidades</span>
                       </span>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-200/70 text-sky-800 shrink-0">
@@ -524,13 +524,13 @@ export function OnboardingWizardDialog({
               {/* Caixa 2: Estilo de Vida (30%) */}
               <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50/80 border border-amber-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs min-w-0 transition-all">
                 <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-                  <div className="w-10 h-10 rounded-xl bg-[#FCA311] text-[#14213D] flex items-center justify-center shrink-0 shadow-sm mt-0.5 sm:mt-0">
+                  <div className="w-10 h-10 rounded-xl bg-buckets-lifestyle text-brand flex items-center justify-center shrink-0 shadow-sm mt-0.5 sm:mt-0">
                     <SunMedium className="w-5 h-5" strokeWidth={1.5} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                       <span className="font-bold text-sm text-amber-950 break-words flex items-center gap-1.5">
-                        <SunMedium className="w-4 h-4 text-[#FCA311]" strokeWidth={1.5} />
+                        <SunMedium className="w-4 h-4 text-buckets-lifestyle" strokeWidth={1.5} />
                         <span>Estilo de Vida</span>
                       </span>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200/70 text-amber-800 shrink-0">
@@ -555,13 +555,13 @@ export function OnboardingWizardDialog({
               {/* Caixa 3: Futuro & Metas (20%) */}
               <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs min-w-0 transition-all">
                 <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-                  <div className="w-10 h-10 rounded-xl bg-[#10B981] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5 sm:mt-0">
+                  <div className="w-10 h-10 rounded-xl bg-buckets-goals text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5 sm:mt-0">
                     <Target className="w-5 h-5" strokeWidth={1.5} />
                   </div>{' '}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                       <span className="font-bold text-sm text-emerald-950 break-words flex items-center gap-1.5">
-                        <Target className="w-4 h-4 text-[#10B981]" strokeWidth={1.5} />
+                        <Target className="w-4 h-4 text-buckets-goals" strokeWidth={1.5} />
                         <span>Futuro & Metas</span>
                       </span>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-200/70 text-emerald-800 shrink-0">
@@ -665,7 +665,7 @@ export function OnboardingWizardDialog({
                 type="button"
                 onClick={handleActivatePlan}
                 disabled={isActivating}
-                className="w-full flex-1 h-12 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-black/10 flex items-center justify-center gap-2 transition-all cursor-pointer min-w-0 px-4 disabled:opacity-75 disabled:cursor-not-allowed border-0"
+                className="w-full flex-1 h-12 bg-brand-amber hover:bg-[#e08e08] text-brand font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-black/10 flex items-center justify-center gap-2 transition-all cursor-pointer min-w-0 px-4 disabled:opacity-75 disabled:cursor-not-allowed border-0"
               >
                 {isActivating ? (
                   <span className="flex items-center justify-center gap-2 break-words text-center">

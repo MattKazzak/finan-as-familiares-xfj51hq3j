@@ -1690,7 +1690,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             <div className="flex items-center gap-2.5 min-w-0">
               {/* Avatar do Curiango com status verde ativo */}
               <div className="relative shrink-0">
-                <div className="w-9 h-9 rounded-2xl bg-[#14213D] text-white flex items-center justify-center font-bold shadow-sm p-1 border border-[#14213D]">
+                <div className="w-9 h-9 rounded-2xl bg-brand text-white flex items-center justify-center font-bold shadow-sm p-1 border border-brand">
                   <CuriangoLogo size={22} color="#FCA311" />
                 </div>
                 <span

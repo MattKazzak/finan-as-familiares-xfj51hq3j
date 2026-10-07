@@ -605,7 +605,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           onClick={() => handleTypeChange('expense')}
           className={`flex-1 flex items-center justify-center gap-1.5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
             type === 'expense'
-              ? 'bg-[#E11D48] text-white shadow-md shadow-[#E11D48]/25 scale-[1.01]'
+              ? 'bg-finance-expense text-white shadow-md shadow-finance-expense/25 scale-[1.01]'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
@@ -617,7 +617,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           onClick={() => handleTypeChange('income')}
           className={`flex-1 flex items-center justify-center gap-1.5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
             type === 'income'
-              ? 'bg-[#059669] text-white shadow-md shadow-[#059669]/25 scale-[1.01]'
+              ? 'bg-finance-income text-white shadow-md shadow-finance-income/25 scale-[1.01]'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
@@ -636,7 +636,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
         <div className="inline-flex items-baseline justify-center gap-1 max-w-full">
           <span
             className={`text-xl sm:text-2xl font-bold tracking-tight transition-colors ${
-              type === 'expense' ? 'text-[#E11D48]' : 'text-[#059669]'
+              type === 'expense' ? 'text-finance-expense' : 'text-finance-income'
             }`}
           >
             R$
@@ -649,7 +649,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
             value={amountStr}
             onChange={(e) => setAmountStr(e.target.value)}
             className={`bg-transparent text-3xl sm:text-4xl font-semibold tracking-tight text-slate-900 tabular-nums text-center focus:outline-hidden placeholder:text-slate-300 w-full min-w-0 max-w-[280px] sm:max-w-xs transition-colors ${
-              amountStr ? (type === 'expense' ? 'text-[#E11D48]' : 'text-[#059669]') : ''
+              amountStr ? (type === 'expense' ? 'text-finance-expense' : 'text-finance-income') : ''
             }`}
             autoFocus={!isMobile}
           />
@@ -1126,8 +1126,8 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           disabled={loading}
           className={`w-full h-12 sm:h-13 font-bold rounded-2xl text-base shadow-lg transition-all active:scale-[0.99] cursor-pointer ${
             type === 'expense'
-              ? 'bg-[#E11D48] hover:bg-[#c8143c] text-white shadow-[#E11D48]/25'
-              : 'bg-[#059669] hover:bg-[#047857] text-white shadow-[#059669]/25'
+              ? 'bg-finance-expense hover:bg-[#c8143c] text-white shadow-finance-expense/25'
+              : 'bg-finance-income hover:bg-[#047857] text-white shadow-finance-income/25'
           }`}
         >
           <span className="flex items-center justify-center gap-2">

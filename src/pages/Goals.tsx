@@ -216,7 +216,7 @@ export default function GoalsPage() {
         {goals.length > 0 && (
           <Button
             onClick={openCreateDialog}
-            className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold text-xs rounded-xl shadow-sm gap-1.5 border-0"
+            className="bg-brand-amber hover:bg-[#e08e08] text-brand font-bold text-xs rounded-xl shadow-sm gap-1.5 border-0"
           >
             <Plus className="w-4 h-4" />
             <span>+ Nova meta</span>
@@ -230,7 +230,7 @@ export default function GoalsPage() {
       ) : goals.length === 0 ? (
         /* Empty State */
         <div className="bg-card/90 backdrop-blur-sm rounded-3xl p-12 text-center border border-border/40 shadow-curiango">
-          <div className="w-16 h-16 rounded-3xl bg-[#E5E5E5] text-[#14213D] flex items-center justify-center mx-auto mb-3">
+          <div className="w-16 h-16 rounded-3xl bg-brand-gray text-brand flex items-center justify-center mx-auto mb-3">
             <Target className="w-8 h-8 stroke-[1.5]" />
           </div>
           <h3 className="font-bold text-slate-800 text-base">Nenhuma meta definida</h3>
@@ -239,7 +239,7 @@ export default function GoalsPage() {
           </p>
           <Button
             onClick={openCreateDialog}
-            className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] text-xs font-bold rounded-xl border-0"
+            className="bg-brand-amber hover:bg-[#e08e08] text-brand text-xs font-bold rounded-xl border-0"
           >
             <Plus className="w-4 h-4 mr-1.5" />
             Criar primeira meta
@@ -272,12 +272,12 @@ export default function GoalsPage() {
                       <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0">
                         <CategoryIcon
                           name={goal.category?.icon || 'Target'}
-                          className="w-4 h-4 text-[#10B981]"
+                          className="w-4 h-4 text-buckets-goals"
                           strokeWidth={1.5}
                         />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-sm sm:text-base text-[#14213D] dark:text-white leading-tight">
+                        <h4 className="font-semibold text-sm sm:text-base text-brand dark:text-white leading-tight">
                           {goal.name}
                         </h4>
                         {goal.deadline && (
@@ -310,7 +310,7 @@ export default function GoalsPage() {
                   <div className="space-y-1 mb-4">
                     <div className="flex items-baseline justify-between text-xs">
                       <span className="text-slate-500 font-medium">Meta Total:</span>
-                      <span className="font-semibold tracking-tight text-[#14213D] dark:text-white tabular-nums">
+                      <span className="font-semibold tracking-tight text-brand dark:text-white tabular-nums">
                         {formatBRL(goal.target_amount_cents)}
                       </span>
                     </div>
@@ -326,7 +326,7 @@ export default function GoalsPage() {
                   {/* Anel / Barra de Progresso CDS */}
                   <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden mb-4">
                     <div
-                      className="h-full rounded-full transition-all duration-700 bg-[#10B981]"
+                      className="h-full rounded-full transition-all duration-700 bg-buckets-goals"
                       style={{
                         width: `${percent}%`,
                       }}
@@ -469,7 +469,7 @@ export default function GoalsPage() {
               <Button
                 type="submit"
                 disabled={saving}
-                className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold border-0"
+                className="bg-brand-amber hover:bg-[#e08e08] text-brand font-bold border-0"
               >
                 {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {editingGoal ? 'Salvar Alterações' : 'Criar Meta'}

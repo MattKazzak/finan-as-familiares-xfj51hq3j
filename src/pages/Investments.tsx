@@ -281,7 +281,7 @@ export default function InvestmentsPage() {
 
         <Button
           onClick={openCreateDialog}
-          className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold text-xs rounded-xl shadow-sm gap-1.5 border-0"
+          className="bg-brand-amber hover:bg-[#e08e08] text-brand font-bold text-xs rounded-xl shadow-sm gap-1.5 border-0"
         >
           <Plus className="w-4 h-4 stroke-[2.5]" />
           <span>+ Adicionar Ativo</span>
@@ -291,8 +291,8 @@ export default function InvestmentsPage() {
       {/* 2. Resumo da Carteira no Topo */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Valor Total da Carteira - Hero Azul-Marinho #14213D */}
-        <div className="bg-gradient-to-br from-[#14213D] via-[#192a4f] to-[#0e172a] rounded-3xl p-6 text-white shadow-lg shadow-[#14213D]/20 border border-[#14213D]">
-          <span className="text-xs uppercase font-semibold tracking-wider text-[#FCA311]">
+        <div className="bg-gradient-to-br from-brand via-[#192a4f] to-brand-dark rounded-3xl p-6 text-white shadow-lg shadow-brand/20 border border-brand">
+          <span className="text-xs uppercase font-semibold tracking-wider text-brand-amber">
             Valor Total da Carteira
           </span>
           <div className="text-2xl sm:text-3xl font-semibold tabular-nums mt-1.5 text-white">
@@ -382,7 +382,7 @@ export default function InvestmentsPage() {
             </p>
             <Button
               onClick={openCreateDialog}
-              className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] text-xs font-bold rounded-xl shadow-sm"
+              className="bg-brand-amber hover:bg-[#e08e08] text-brand text-xs font-bold rounded-xl shadow-sm"
             >
               <Plus className="w-4 h-4 mr-1.5 stroke-[2.5]" />
               Adicionar primeiro ativo
@@ -625,9 +625,9 @@ export default function InvestmentsPage() {
               <Button
                 type="submit"
                 disabled={savingAsset}
-                className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold"
+                className="bg-brand-amber hover:bg-[#e08e08] text-brand font-bold"
               >
-                {savingAsset && <Loader2 className="w-4 h-4 mr-2 animate-spin text-[#14213D]" />}
+                {savingAsset && <Loader2 className="w-4 h-4 mr-2 animate-spin text-brand" />}
                 {editingAsset ? 'Salvar Alterações' : 'Adicionar'}
               </Button>
             </DialogFooter>
