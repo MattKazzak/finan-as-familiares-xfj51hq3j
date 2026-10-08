@@ -578,10 +578,10 @@ export default function ImportPage() {
             if (item.userNote && item.category_id) {
               const rawPattern = extractPatternFromDescription(item.description) || item.description
               await upsertCategorizationRule({
-                familyId: family.id,
+                family_id: family.id,
                 pattern: rawPattern.toUpperCase().trim(),
-                categoryId: item.category_id,
-                subcategoryId: item.subcategory_id || undefined,
+                category_id: item.category_id,
+                subcategory_id: item.subcategory_id || null,
               })
             }
           }

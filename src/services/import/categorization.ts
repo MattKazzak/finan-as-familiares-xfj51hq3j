@@ -61,6 +61,39 @@ export const AUTO_CATEGORIZATION_RULES: KeywordRule[] = [
     ],
   },
 
+  // 3. Trabalhos Extras & Autônomo (income)
+  {
+    categoryNames: ['Trabalhos Extras & Autônomo', 'Trabalhos Extras', 'Autônomo'],
+    type: 'income',
+    keywords: [
+      'FREELANCE',
+      'FREELANCER',
+      'BICO',
+      'MEI',
+      'AUTONOMO',
+      'AUTÔNOMO',
+      'COMISSAO',
+      'COMISSÃO',
+      'GORJETA',
+    ],
+  },
+
+  // 4. Outras Receitas (income)
+  {
+    categoryNames: ['Outras Receitas'],
+    type: 'income',
+    keywords: [
+      'REEMBOLSO',
+      'ESTORNO',
+      'CASHBACK',
+      'MILHAS',
+      'PRESENTE RECEBIDO',
+      'VENDA USADO',
+      'ENJOEI',
+      'OLX',
+    ],
+  },
+
   // 3. Moradia (essentials)
   // Keywords: aluguel, condominio, enel, sabesp, cpfl, luz, agua, comgas, vivo fibra, claro residencial
   {
@@ -308,6 +341,15 @@ export const AUTO_CATEGORIZATION_RULES: KeywordRule[] = [
       'CHURRASCARIA',
       'AIQFOME',
       'UBER EATS',
+      'SORVETE',
+      'SORVETERIA',
+      'ACAI',
+      'AÇAÍ',
+      'GELATO',
+      'BACIO DI LATTE',
+      'OAKBERRY',
+      'CONVENIENCIA',
+      'CONVENIÊNCIA',
     ],
   },
 

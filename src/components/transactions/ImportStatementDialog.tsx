@@ -1633,7 +1633,8 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                   {step === 'review' ? (
                     <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                       <DialogTitle className="text-sm sm:text-base font-bold text-slate-900 truncate">
-                        Revisar Lançamentos ({items.length})
+                        Revisar Lançamentos ({items.filter((i) => !i.isNonExpense).length}
+                        {items.some((i) => i.isNonExpense) ? ` • ${items.length} total` : ''})
                       </DialogTitle>
                       {/* Badge de conciliação integrado ao lado do total */}
                       {closingValidation?.matches ? (
@@ -1645,6 +1646,20 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                       ) : closingValidation && !closingValidation.matches ? (
                         <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
                           <span>Fatura ({formatBRL(closingValidation.declaredTotalCents)})</span>
+                        </span>
+                      ) : null}
+                      {/* Indicador de Total no cabeçalho: desconsidera isNonExpense e mostra Bruto x Líquido se divergirem */}
+                      {totalAmountSelected.exp > 0 || totalAmountSelected.gross > 0 ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-slate-700 bg-slate-100 border border-slate-200/80 px-2 py-0.5 rounded-full">
+                          {totalAmountSelected.gross > 0 &&
+                          totalAmountSelected.gross !== totalAmountSelected.exp ? (
+                            <span>
+                              Bruto: {formatBRL(totalAmountSelected.gross)} • Líq:{' '}
+                              {formatBRL(totalAmountSelected.exp)}
+                            </span>
+                          ) : (
+                            <span>Total: {formatBRL(totalAmountSelected.exp)}</span>
+                          )}
                         </span>
                       ) : null}
                     </div>
