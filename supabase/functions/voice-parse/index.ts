@@ -545,7 +545,7 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
     * Preencha a "transacao" completa com "descricao", "estabelecimento", "valor", "categoria", "subcategoria", "balde" e "tipo".
     * Em "mensagem_amigavel", siga estritamente o PADRÃO OBRIGATÓRIO DE CONFIRMAÇÃO:
       "Lançado: R$ [valor formatado com vírgula] em [Nome da Categoria] › [Nome da Subcategoria] [emoji]!"
-      Exemplo: "Lançado: R$ 12,00 em ${previousContext.categoria || 'Gastronomia & Delivery'}${previousContext.subcategoria ? ` › ${previousContext.subcategoria}` : ''} 👍!"
+      Exemplo: "Lançado: R$ 12,00 em ${previousContext.categoria || 'Restaurantes & Delivery'}${previousContext.subcategoria ? ` › ${previousContext.subcategoria}` : ''} 👍!"
 
 2. SE O STATUS ANTERIOR FOR 'clarificacao_categoria':
   - Se o usuário estiver escolhendo ou esclarecendo, selecione a categoria/subcategoria existente da família autonomamente e retorne "status": "sucesso" com a transação completa e mensagem no formato obrigatório.
@@ -582,7 +582,7 @@ REGRAS OBRIGATÓRIAS DE CONFIRMAÇÃO E SEMÂNTICA (CRÍTICAS)
 1. PADRÃO OBRIGATÓRIO DE CONFIRMAÇÃO (STATUS 'sucesso'):
 - Se houver subcategoria válida do catálogo da família:
   "Lançado: R$ [valor] em [Nome da Categoria] › [Nome da Subcategoria] [emoji]!"
-  Exemplo: "Lançado: R$ 35,00 em Gastronomia & Delivery › Restaurantes & Bares 👍!"
+  Exemplo: "Lançado: R$ 35,00 em Restaurantes & Delivery › Restaurantes & Bares 👍!"
 - Se NÃO houver subcategoria válida do catálogo da família, salve só com a categoria principal (subcategoria nula) e confirme exatamente:
   "Lançado: R$ [valor] em [Nome da Categoria] [emoji]!"
 - NUNCA invente ou force uma subcategoria inexistente.
@@ -590,8 +590,8 @@ REGRAS OBRIGATÓRIAS DE CONFIRMAÇÃO E SEMÂNTICA (CRÍTICAS)
 2. REGRAS SEMÂNTICAS DE ALIMENTAÇÃO E LANCHES (CONTEXTO BRASIL):
 - NUNCA classificar como "Delivery" despesas de comida de rua, feira, pastel, praia, quiosque, salgado ou padaria.
 - A subcategoria "Delivery (iFood/Rappi)" (ou equivalente de Delivery) é EXCLUSIVA para pedidos de entrega em domicílio/casa ou quando o usuário citar expressamente aplicativos de delivery ("no ifood", "pelo rappi", "pedi delivery", "entrega em casa").
-- Para comidas rápidas consumidas no local ou na rua (ex: pastel de feira, lanche, salgado, coxinha, esfiha, food truck, quiosque, água de coco na praia), classificar em Lanches Rápidos ou Restaurantes.
-- Compras de feira livre / hortifruti de abastecimento da casa (frutas, verduras, legumes para cozinhar em casa): classificar em "Alimentação Básica › Hortifruti & Feira" (Necessidades Essenciais). Já o pastel frito consumido na feira ("pastel na feira", "caldo de cana"): classificar em Gastronomia/Lanches (Estilo de Vida).
+- Para comidas rápidas consumidas no local ou na rua (ex: pastel de feira, lanche, salgado, coxinha, esfiha, food truck, quiosque, água de coco na praia), classificar em Fast Food & Lanches ou Restaurantes & Bares.
+- Compras de feira livre / hortifruti de abastecimento da casa (frutas, verduras, legumes para cozinhar em casa): classificar em "Alimentação › Hortifruti & Feira" (Necessidades Essenciais). Já o pastel frito consumido na feira ("pastel na feira", "caldo de cana"): classificar em Restaurantes & Delivery / Lanches (Estilo de Vida).
 
 =======================================================
 DIRETRIZES DE INTELIGÊNCIA REAL (PADRÃO OURO):

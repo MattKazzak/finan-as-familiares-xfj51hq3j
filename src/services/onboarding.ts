@@ -21,56 +21,8 @@ export interface CategorySeedDefinition {
 }
 
 /**
- * Taxonomia Padrão Ouro 50/30/20 Oficial do Curiangoo:
- * EXATAMENTE 14 categorias mestras distribuídas nos 3 baldes (5 essentials, 6 lifestyle, 3 future).
- *
- * Balde: Necessidades (50% - essentials):
- * 1. Moradia (Ícone: Home, Cor: Índigo #6366F1)
- *    Subcategorias: Aluguel / Condomínio, Energia Elétrica, Água & Saneamento, Gás, Internet & Fixo, Manutenção da Casa
- *    Keywords: aluguel, condominio, enel, sabesp, cpfl, luz, agua, comgas, vivo fibra, claro residencial
- * 2. Alimentação Básica (Ícone: ShoppingCart, Cor: Esmeralda #10B981)
- *    Subcategorias: Supermercado, Açougue & Peixaria, Hortifruti & Feira, Padaria do Dia a Dia
- *    Keywords: carrefour, assai, pao de acucar, atacadao, mercadinho, feira, acougue, swift, hortifruti
- * 3. Transporte Obrigatório (Ícone: Car, Cor: Azul #3B82F6)
- *    Subcategorias: Combustível, Transporte Público & Bilhete, Aplicativos do Dia a Dia (Uber/99), Estacionamento & Pedágio, Seguro & IPVA, Manutenção Básica
- *    Keywords: posto, shell, ipiranga, uber, 99, metro, sptrans, pedagio, sem parar, posto ipiranga
- * 4. Saúde & Cuidados Médicos (Ícone: HeartPulse, Cor: Vermelho/Rosa #EF4444)
- *    Subcategorias: Plano de Saúde, Farmácia & Medicamentos, Consultas & Exames, Odontologia
- *    Keywords: drogasil, droga raia, pague menos, unimed, bradesco saude, laboratorio, fleury, dentista, farmacia
- * 5. Educação Obrigatória (Ícone: GraduationCap, Cor: Violeta #8B5CF6)
- *    Subcategorias: Mensalidade Escolar / Faculdade, Material & Uniformes, Transporte Escolar
- *    Keywords: escola, colegio, faculdade, mensalidade, papelaria, van escolar
- *
- * Balde: Estilo de Vida (30% - lifestyle):
- * 6. Gastronomia & Delivery (Ícone: Utensils, Cor: Âmbar #F59E0B)
- *    Subcategorias: Restaurantes & Bares, Delivery (iFood/Rappi), Cafeterias & Lanches Rápidos
- *    Keywords: ifood, rappi, mcdonalds, outback, burger king, bar, choperia, cafeteria, starbucks, restaurante
- * 7. Lazer & Passeios (Ícone: Ticket, Cor: Laranja #F97316)
- *    Subcategorias: Cinema, Shows & Eventos, Viagens & Hospedagem, Passeios de Fim de Semana
- *    Keywords: cinemark, ingresso.com, sympla, airbnb, hotel, booking, passagem aerea, azul, gol, latam
- * 8. Cuidados Pessoais & Bem-estar (Ícone: Sparkles, Cor: Rosa #EC4899)
- *    Subcategorias: Barbearia / Salão de Beleza, Manicure & Estética, Cosméticos & Perfumaria, Academia & Esportes
- *    Keywords: smart fit, academia, boticario, sephora, salao, barbearia, natura, estetica
- * 9. Assinaturas & Conectividade (Ícone: Tv, Cor: Roxo #7C3AED)
- *    Subcategorias: Streaming de Vídeo & Música, Softwares & Apps, Clubes de Assinatura
- *    Keywords: netflix, spotify, amazon prime, youtube premium, hbo, max, disney, apple, google one
- * 10. Compras & Vestuário (Ícone: ShoppingBag, Cor: Amarelo escuro #D97706)
- *     Subcategorias: Roupas & Calçados, Eletrônicos & Gadgets, Decoração & Utilidades, Presentes
- *     Keywords: zara, renner, riachuelo, shein, shopee, mercado livre, amazon compras
- * 11. Pets (Ícone: PawPrint, Cor: Verde claro #84CC16)
- *     Subcategorias: Ração & Petiscos, Veterinário & Vacinas, Banho, Tosa & Acessórios
- *     Keywords: petz, cobasi, pet shop, veterinario, royal canin, premier pet
- *
- * Balde: Futuro & Metas (20% - future):
- * 12. Reserva de Emergência (Ícone: ShieldCheck, Cor: Esmeralda #10B981)
- *     Subcategorias: Aportes na Reserva, Resgates Emergenciais
- *     Keywords: tesouro selic, cdb liquidez diaria, reserva, caixinha nubank
- * 13. Metas & Grandes Sonhos (Ícone: Target, Cor: Ciano #06B6D4)
- *     Subcategorias: Troca de Carro, Casa Própria, Viagem Internacional, Reforma
- *     Keywords: fundo viagem, entrada apto, consorcio, meta
- * 14. Investimentos de Longo Prazo (Ícone: TrendingUp, Cor: Verde #059669)
- *     Subcategorias: Previdência Privada, Ações & Fundos Imobiliários, Aposentadoria
- *     Keywords: xp investimentos, btg, inter invest, previdencia, tesouro ipca
+ * Taxonomia Canônica Oficial do Curiangoo:
+ * 19 categorias mestras (15 despesas nos 3 baldes + 4 receitas) e 116 subcategorias.
  */
 export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
   // Essentials (Necessidades - 50%)
