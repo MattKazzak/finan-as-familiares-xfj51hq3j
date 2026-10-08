@@ -1494,6 +1494,19 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         const now = new Date()
         const localDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
+        const methodMap: Record<string, string> = {
+          pix: 'pix',
+          credito: 'credit',
+          credit: 'credit',
+          debito: 'debit',
+          debit: 'debit',
+          dinheiro: 'cash',
+          cash: 'cash',
+          voucher: 'voucher',
+          other: 'other',
+        }
+        const mappedPaymentMethod = txData.paymentMethod ? methodMap[txData.paymentMethod] || 'other' : 'other'
+
         const created = await createTransaction({
           family_id: family.id,
           member_id: memberId,
@@ -1503,6 +1516,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           amount_cents: txData.amountCents,
           description: txData.description || 'Lançamento por Voz',
           transaction_date: localDateStr,
+          payment_method: mappedPaymentMethod,
           status: 'confirmed',
         })
 

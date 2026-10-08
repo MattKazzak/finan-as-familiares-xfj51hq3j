@@ -13,6 +13,8 @@ import type {
 } from '@/types/finance'
 import {
   fetchTransactions,
+  fetchMonthAggregates,
+  type MonthAggregates,
   fetchDefaultBudgets,
   fetchMonthBudgetOverrides,
   upsertMonthBudgetOverride,
@@ -94,6 +96,16 @@ export function WalletPage() {
 
   // Dados carregados do backend
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [hasMoreTransactions, setHasMoreTransactions] = useState<boolean>(false)
+  const [loadingMore, setLoadingMore] = useState<boolean>(false)
+  const [monthAggregates, setMonthAggregates] = useState<MonthAggregates>({
+    incomeCents: 0,
+    expenseCents: 0,
+    netCents: 0,
+    spentByCat: {},
+    spentBySubcat: {},
+    directSpentByCat: {},
+  })
   const [defaultBudgets, setDefaultBudgets] = useState<DefaultBudget[]>([])
   const [monthOverrides, setMonthOverrides] = useState<Budget[]>([])
   const [recurringIncomes, setRecurringIncomes] = useState<RecurringIncome[]>([])
@@ -250,8 +262,9 @@ export function WalletPage() {
         console.warn('Erro ao processar recorrentes automáticas:', procErr)
       }
 
-      const [txs, defaults, overrides, recIncomes, recOverrides] = await Promise.all([
-        fetchTransactions({ familyId: family.id, month: monthKey }),
+      const [txs, aggs, defaults, overrides, recIncomes, recOverrides] = await Promise.all([
+        fetchTransactions({ familyId: family.id, month: monthKey, limit: 50, offset: 0 }),
+        fetchMonthAggregates(family.id, monthKey),
         fetchDefaultBudgets(family.id),
         fetchMonthBudgetOverrides(family.id, monthKey),
         fetchRecurringIncomes(family.id),
@@ -259,6 +272,8 @@ export function WalletPage() {
       ])
 
       setTransactions(txs)
+      setHasMoreTransactions(txs.length === 50)
+      setMonthAggregates(aggs)
       setDefaultBudgets(defaults)
       setMonthOverrides(overrides)
       setRecurringIncomes(recIncomes)
@@ -278,6 +293,32 @@ export function WalletPage() {
   useEffect(() => {
     loadMonthData()
   }, [loadMonthData])
+
+  const loadMoreTransactions = useCallback(async () => {
+    if (!family || loadingMore || !hasMoreTransactions) return
+    setLoadingMore(true)
+    try {
+      const nextBatch = await fetchTransactions({
+        familyId: family.id,
+        month: monthKey,
+        limit: 50,
+        offset: transactions.length,
+      })
+      if (nextBatch.length < 50) {
+        setHasMoreTransactions(false)
+      }
+      setTransactions((prev) => [...prev, ...nextBatch])
+    } catch (err: any) {
+      console.error('Erro ao carregar mais transações:', err)
+      toast({
+        title: 'Erro ao paginar extrato',
+        description: err?.message || 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [family, loadingMore, hasMoreTransactions, monthKey, transactions.length, toast])
 
   // Controles de Navegação de Mês
   const handlePrevMonth = () => {
@@ -375,20 +416,10 @@ export function WalletPage() {
     return map
   }, [pendingTransactionsList])
 
-  // Totais do Mês
-  const monthIncomeCents = useMemo(() => {
-    return transactions
-      .filter((t) => t.type === 'income')
-      .reduce((sum, t) => sum + (t.amount_cents || 0), 0)
-  }, [transactions])
-
-  const monthExpenseCents = useMemo(() => {
-    return transactions
-      .filter((t) => t.type === 'expense')
-      .reduce((sum, t) => sum + (t.amount_cents || 0), 0)
-  }, [transactions])
-
-  const monthNetCents = monthIncomeCents - monthExpenseCents
+  // Totais do Mês — preservados do mês inteiro via agregação leve
+  const monthIncomeCents = monthAggregates.incomeCents
+  const monthExpenseCents = monthAggregates.expenseCents
+  const monthNetCents = monthAggregates.netCents
 
   const activeFiltersCount =
     (filterOnlyPending ? 1 : 0) +
@@ -599,24 +630,10 @@ export function WalletPage() {
   const categoryBudgetData = useMemo<CategoryBudgetData>(() => {
     const expenseCategories = categories.filter((c) => c.type === 'expense')
 
-    const spentByCat: Record<string, number> = {}
-    const spentBySubcat: Record<string, number> = {}
-    const directSpentByCat: Record<string, number> = {}
-
-    transactions
-      .filter((t) => t.type === 'expense')
-      .forEach((t) => {
-        if (t.category_id) {
-          spentByCat[t.category_id] = (spentByCat[t.category_id] || 0) + (t.amount_cents || 0)
-          if (t.subcategory_id) {
-            spentBySubcat[t.subcategory_id] =
-              (spentBySubcat[t.subcategory_id] || 0) + (t.amount_cents || 0)
-          } else {
-            directSpentByCat[t.category_id] =
-              (directSpentByCat[t.category_id] || 0) + (t.amount_cents || 0)
-          }
-        }
-      })
+    // Usar agregações calculadas sobre o mês inteiro
+    const spentByCat = monthAggregates.spentByCat
+    const spentBySubcat = monthAggregates.spentBySubcat
+    const directSpentByCat = monthAggregates.directSpentByCat
 
     const defaultBudgetMap = new Map<string, DefaultBudget>()
     defaultBudgets.forEach((b) => {
@@ -779,7 +796,7 @@ export function WalletPage() {
       bucketsSummary,
       totalBudgetPercentOfIncome,
     }
-  }, [categories, defaultBudgets, monthOverrides, transactions, family])
+  }, [categories, defaultBudgets, monthOverrides, monthAggregates, family])
 
   // Abertura do editor de orçamento de categoria/subcategoria
   const openBudgetEditor = (
@@ -1040,6 +1057,9 @@ export function WalletPage() {
     pendingTransactionsCount,
     pendingTransactionsList,
     pendingByPatternMap,
+    hasMoreTransactions,
+    loadingMore,
+    loadMoreTransactions,
     monthIncomeCents,
     monthExpenseCents,
     monthNetCents,

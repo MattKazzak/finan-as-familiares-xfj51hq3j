@@ -136,6 +136,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
   const [subcategoryId, setSubcategoryId] = useState<string>(
     initialSubcategoryId || newTransactionPrefill?.initialSubcategoryId || 'none',
   )
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credit' | 'debit' | 'cash' | 'voucher' | 'other'>('other')
   const [transactionDate, setTransactionDate] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -204,6 +205,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
       setTransactionDate(editingTransaction.transaction_date)
       setInstallmentsCount(editingTransaction.installment_total || 1)
       setAmountMode('per_installment')
+      setPaymentMethod((editingTransaction.payment_method as any) || 'other')
       setIsRecurring(Boolean(editingTransaction.is_recurring))
       const txDay = parseInt(editingTransaction.transaction_date?.slice(8, 10) || '1', 10)
       setDayOfMonth(Number.isNaN(txDay) ? 1 : Math.max(1, Math.min(31, txDay)))
@@ -242,6 +244,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
       setMemberId(effectiveMember)
       setCategoryId(effectiveCategory)
       setSubcategoryId(effectiveSubcategory)
+      setPaymentMethod('other')
       setTransactionDate(todayStr)
       setInstallmentsCount(1)
       setAmountMode('per_installment')
@@ -425,6 +428,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           amount_cents: cents,
           description: description.trim(),
           transaction_date: transactionDate,
+          payment_method: paymentMethod,
         })
 
         // Aprendizado contínuo: memoriza padrão se usuário marcou checkbox
@@ -478,6 +482,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
             amount_cents: cents,
             description: description.trim(),
             transaction_date: transactionDate,
+            payment_method: paymentMethod,
             recurring_income_id: recurringRule?.id || null,
             is_recurring: true,
             recurring_month: monthDateStr,
@@ -526,7 +531,12 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           totalInstallments: installmentsCount,
         })
 
-        await createTransactionsBatch(installmentPayloads)
+        const payloadsWithMethod = installmentPayloads.map((p) => ({
+          ...p,
+          payment_method: paymentMethod,
+        }))
+
+        await createTransactionsBatch(payloadsWithMethod)
 
         toast({
           title: 'Compra parcelada registrada! 🎉',
@@ -543,6 +553,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           amount_cents: cents,
           description: description.trim(),
           transaction_date: transactionDate,
+          payment_method: paymentMethod,
           is_installment: false,
           status: 'confirmed',
         })
@@ -857,19 +868,43 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
       </div>
 
       {/* ========================================================
-          6. DATA DA TRANSAÇÃO
+          6. DATA DA TRANSAÇÃO & MEIO DE PAGAMENTO
           ======================================================== */}
-      <div className="space-y-1.5">
-        <Label htmlFor="tx-date" className="text-xs font-semibold text-slate-700 px-1">
-          Data
-        </Label>
-        <Input
-          id="tx-date"
-          type="date"
-          value={transactionDate}
-          onChange={(e) => handleDateChange(e.target.value)}
-          className="rounded-2xl bg-slate-50/70 border-slate-200/80 hover:border-slate-300 focus:bg-white h-10 text-xs sm:text-sm"
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="tx-date" className="text-xs font-semibold text-slate-700 px-1">
+            Data
+          </Label>
+          <Input
+            id="tx-date"
+            type="date"
+            value={transactionDate}
+            onChange={(e) => handleDateChange(e.target.value)}
+            className="rounded-2xl bg-slate-50/70 border-slate-200/80 hover:border-slate-300 focus:bg-white h-10 text-xs sm:text-sm"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold text-slate-700 px-1">
+            Forma de Pagamento
+          </Label>
+          <Select
+            value={paymentMethod}
+            onValueChange={(val: any) => setPaymentMethod(val)}
+          >
+            <SelectTrigger className="h-10 text-xs sm:text-sm rounded-2xl bg-slate-50/70 border-slate-200/80">
+              <SelectValue placeholder="Forma de pagamento" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pix">Pix</SelectItem>
+              <SelectItem value="credit">Crédito</SelectItem>
+              <SelectItem value="debit">Débito</SelectItem>
+              <SelectItem value="cash">Dinheiro</SelectItem>
+              <SelectItem value="voucher">Vale</SelectItem>
+              <SelectItem value="other">Outro</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* ========================================================

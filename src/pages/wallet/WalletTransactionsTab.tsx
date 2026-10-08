@@ -42,6 +42,9 @@ export function WalletTransactionsTab() {
     filteredTransactions,
     loading,
     groupedTransactions,
+    hasMoreTransactions,
+    loadingMore,
+    loadMoreTransactions,
     openImportStatement,
     openNewTransaction,
     pendingByPatternMap,
@@ -533,6 +536,29 @@ export function WalletTransactionsTab() {
               </div>
             </div>
           ))}
+
+          {/* Paginação / Scroll Infinito / Carregar Mais */}
+          {hasMoreTransactions && (
+            <div className="pt-2 pb-6 flex flex-col items-center justify-center">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={loadMoreTransactions}
+                disabled={loadingMore}
+                className="rounded-full text-xs font-medium border-border/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-[#14213D] dark:text-slate-200 px-5 py-2 shadow-sm"
+              >
+                {loadingMore ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#FCA311]" />
+                    <span>Carregando mais lançamentos...</span>
+                  </span>
+                ) : (
+                  <span>Carregar mais 50 lançamentos</span>
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

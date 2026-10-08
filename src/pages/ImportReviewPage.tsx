@@ -83,6 +83,17 @@ export default function ImportPage() {
 
   // Salvamento
   const [saving, setSaving] = useState(false)
+  const [conflictModalOpen, setConflictModalOpen] = useState(false)
+  const [conflictingRules, setConflictingRules] = useState<
+    Array<{
+      ruleId: string
+      pattern: string
+      oldCategoryName: string
+      newCategoryId: string
+      newSubcategoryId: string | null
+      newCategoryName: string
+    }>
+  >([])
 
   // Modal de Criação Rápida de Nova Categoria inline
   const [isQuickCatOpen, setIsQuickCatOpen] = useState(false)
@@ -436,6 +447,7 @@ export default function ImportPage() {
             amount_cents: item.amount_cents,
             description: singleDesc,
             transaction_date: item.date,
+            payment_method: 'other',
             is_installment: true,
             installment_number: curNum,
             installment_total: totNum,
@@ -454,6 +466,7 @@ export default function ImportPage() {
             amount_cents: item.amount_cents,
             description: item.description.trim() || 'Transação importada',
             transaction_date: item.date,
+            payment_method: 'other',
             is_installment: false,
             status: 'confirmed',
             bank_transaction_id: item.fitid || null,
@@ -496,13 +509,31 @@ export default function ImportPage() {
         return i.rememberRule || userChangedCategory
       })
 
+      const pendingConflicts: Array<{
+        ruleId: string
+        pattern: string
+        oldCategoryName: string
+        newCategoryId: string
+        newSubcategoryId: string | null
+        newCategoryName: string
+      }> = []
+
       for (const item of learningCandidates) {
         try {
           const patternToSave = extractLearningPattern(item.description)
 
           if (patternToSave && patternToSave.length >= 2) {
-            // Não sobrescrever regras existentes silenciosamente (5.3)
-            if (!existingPatternsSet.has(patternToSave.toLowerCase())) {
+            const patLower = patternToSave.toLowerCase()
+            const existingRule = existingDbRules.find(
+              (r) =>
+                (r.pattern || '')
+                  .normalize('NFD')
+                  .replace(/[\u0300-\u036f]/g, '')
+                  .toLowerCase()
+                  .trim() === patLower,
+            )
+
+            if (!existingRule) {
               await upsertCategorizationRule({
                 family_id: family.id,
                 user_id: null,
@@ -510,7 +541,21 @@ export default function ImportPage() {
                 category_id: item.category_id!,
                 subcategory_id: item.subcategory_id || null,
               })
-              existingPatternsSet.add(patternToSave.toLowerCase())
+              existingPatternsSet.add(patLower)
+            } else if (existingRule.category_id !== item.category_id) {
+              // Conflito de regra existente com categoria diferente
+              if (!pendingConflicts.some((c) => c.ruleId === existingRule.id)) {
+                const oldCat = categories.find((c) => c.id === existingRule.category_id)
+                const newCat = categories.find((c) => c.id === item.category_id)
+                pendingConflicts.push({
+                  ruleId: existingRule.id,
+                  pattern: existingRule.pattern,
+                  oldCategoryName: oldCat?.name || 'Antiga',
+                  newCategoryId: item.category_id!,
+                  newSubcategoryId: item.subcategory_id || null,
+                  newCategoryName: newCat?.name || 'Nova',
+                })
+              }
             }
           }
         } catch (ruleErr) {
@@ -518,7 +563,77 @@ export default function ImportPage() {
         }
       }
 
-      const pendingCount = selectedItems.filter((i) => !i.category_id).length
+      if (pendingConflicts.length > 0) {
+        setConflictingRules(pendingConflicts)
+        setConflictModalOpen(true)
+        return
+      }
+
+      finishImportSuccess(selectedItems.length)
+    } catch (err: any) {
+      console.error('Erro ao salvar lançamentos importados:', err)
+      toast({
+        title: 'Falha ao salvar lançamentos',
+        description: err?.message || 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const finishImportSuccess = (totalSaved: number) => {
+    const pendingCount = items.filter((i) => selectedIds.has(i.id) && !i.category_id).length
+    const categorizedCount = totalSaved - pendingCount
+
+    setLastImportSummary({
+      total: totalSaved,
+      categorized: categorizedCount,
+      pending: pendingCount,
+      importedAt: new Date(),
+    })
+
+    clearImportSession()
+    triggerRefresh()
+
+    toast({
+      title: 'Extrato importado com sucesso! 🎉',
+      description: `${totalSaved} lançamentos gravados no extrato sem duplicações.`,
+    })
+
+    const targetRoute = session?.sourceRoute || '/carteira'
+    navigate(targetRoute, { replace: true })
+  }
+
+  const handleApplyConflictUpdates = async () => {
+    try {
+      setSaving(true)
+      for (const conf of conflictingRules) {
+        await upsertCategorizationRule({
+          family_id: family!.id,
+          user_id: null,
+          pattern: conf.pattern,
+          category_id: conf.newCategoryId,
+          subcategory_id: conf.newSubcategoryId,
+        })
+      }
+      toast({
+        title: 'Regras atualizadas!',
+        description: `${conflictingRules.length} regra(s) de categorização atualizada(s).`,
+      })
+    } catch (err) {
+      console.error('Erro ao atualizar regras:', err)
+    } finally {
+      setConflictModalOpen(false)
+      setSaving(false)
+      finishImportSuccess(selectedCount)
+    }
+  }
+
+  const handleKeepOldRules = () => {
+    setConflictModalOpen(false)
+    finishImportSuccess(selectedCount)
+  }
       const categorizedCount = selectedItems.length - pendingCount
 
       setLastImportSummary({
@@ -846,6 +961,66 @@ export default function ImportPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL DE ATUALIZAÇÃO DE REGRAS DE APRENDIZADO (TAREFA 4) */}
+      <Dialog open={conflictModalOpen} onOpenChange={(open) => !open && handleKeepOldRules()}>
+        <DialogContent className="max-w-md w-[calc(100vw-2rem)] rounded-2xl p-5 mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900">
+              Atualizar regras existentes?
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3 pt-2 text-xs text-slate-600">
+            <p>
+              Encontramos regras existentes para estes estabelecimentos. Deseja atualizar para as novas
+              categorias escolhidas?
+            </p>
+
+            <div className="max-h-48 overflow-y-auto space-y-2 border border-slate-200/80 rounded-xl p-2.5 bg-slate-50/70">
+              {conflictingRules.map((c) => (
+                <div key={c.ruleId} className="flex items-center justify-between gap-2 text-[11px] bg-white p-2 rounded-lg border border-slate-100 shadow-2xs">
+                  <span className="font-semibold text-slate-800 truncate max-w-[140px]" title={c.pattern}>
+                    {c.pattern}
+                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-slate-400 line-through truncate max-w-[80px]" title={c.oldCategoryName}>
+                      {c.oldCategoryName}
+                    </span>
+                    <span className="text-slate-400">→</span>
+                    <span className="text-emerald-700 font-semibold truncate max-w-[90px]" title={c.newCategoryName}>
+                      {c.newCategoryName}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0 pt-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleKeepOldRules}
+              disabled={saving}
+              className="rounded-xl text-xs"
+            >
+              Manter antigas
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleApplyConflictUpdates}
+              disabled={saving}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl text-xs"
+            >
+              {saving ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : null}
+              <span>Atualizar</span>
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

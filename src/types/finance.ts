@@ -125,6 +125,9 @@ export interface EffectiveRecurringIncome {
 export type TransactionStatus = 'confirmed' | 'projected'
 export const TRANSACTION_STATUSES = ['confirmed', 'projected'] as const
 
+export type PaymentMethod = 'pix' | 'credit' | 'debit' | 'cash' | 'voucher' | 'other'
+export const PAYMENT_METHODS = ['pix', 'credit', 'debit', 'cash', 'voucher', 'other'] as const
+
 export interface Transaction {
   id: string
   family_id: string
@@ -145,6 +148,7 @@ export interface Transaction {
   installment_group_id?: string | null
   status?: TransactionStatus
   bank_transaction_id?: string | null
+  payment_method?: PaymentMethod | null
   // Relações resolvidas
   member?: FamilyMember
   category?: TransactionCategory

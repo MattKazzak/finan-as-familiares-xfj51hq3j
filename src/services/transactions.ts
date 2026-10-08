@@ -11,6 +11,7 @@ export interface TransactionFilter {
   month?: string // YYYY-MM
   status?: 'confirmed' | 'projected' | null
   limit?: number
+  offset?: number
 }
 
 export async function fetchTransactions(filter: TransactionFilter) {
@@ -54,13 +55,76 @@ export async function fetchTransactions(filter: TransactionFilter) {
     query = query.gte('transaction_date', start).lt('transaction_date', end)
   }
 
-  if (filter.limit) {
+  if (filter.offset !== undefined && filter.limit !== undefined) {
+    query = query.range(filter.offset, filter.offset + filter.limit - 1)
+  } else if (filter.limit) {
     query = query.limit(filter.limit)
   }
 
   const { data, error } = await query
   if (error) throw error
   return (data || []) as Transaction[]
+}
+
+export interface MonthAggregates {
+  incomeCents: number
+  expenseCents: number
+  netCents: number
+  spentByCat: Record<string, number>
+  spentBySubcat: Record<string, number>
+  directSpentByCat: Record<string, number>
+}
+
+export async function fetchMonthAggregates(
+  familyId: string,
+  monthStr: string,
+): Promise<MonthAggregates> {
+  const start = `${monthStr}-01`
+  const nextMonthDate = new Date(`${monthStr}-01T12:00:00Z`)
+  nextMonthDate.setUTCMonth(nextMonthDate.getUTCMonth() + 1)
+  const end = nextMonthDate.toISOString().slice(0, 10)
+
+  // Consulta leve sem joins pesados
+  const { data, error } = await (supabase as any)
+    .from('transactions')
+    .select('type, amount_cents, category_id, subcategory_id')
+    .eq('family_id', familyId)
+    .gte('transaction_date', start)
+    .lt('transaction_date', end)
+
+  if (error) throw error
+
+  let incomeCents = 0
+  let expenseCents = 0
+  const spentByCat: Record<string, number> = {}
+  const spentBySubcat: Record<string, number> = {}
+  const directSpentByCat: Record<string, number> = {}
+
+  for (const row of data || []) {
+    const amount = Number(row.amount_cents) || 0
+    if (row.type === 'income') {
+      incomeCents += amount
+    } else if (row.type === 'expense') {
+      expenseCents += amount
+      if (row.category_id) {
+        spentByCat[row.category_id] = (spentByCat[row.category_id] || 0) + amount
+        if (row.subcategory_id) {
+          spentBySubcat[row.subcategory_id] = (spentBySubcat[row.subcategory_id] || 0) + amount
+        } else {
+          directSpentByCat[row.category_id] = (directSpentByCat[row.category_id] || 0) + amount
+        }
+      }
+    }
+  }
+
+  return {
+    incomeCents,
+    expenseCents,
+    netCents: incomeCents - expenseCents,
+    spentByCat,
+    spentBySubcat,
+    directSpentByCat,
+  }
 }
 
 export async function createTransaction(payload: {
@@ -72,6 +136,7 @@ export async function createTransaction(payload: {
   amount_cents: number
   description: string
   transaction_date: string
+  payment_method?: string | null
   recurring_income_id?: string | null
   is_recurring?: boolean
   recurring_month?: string | null
@@ -108,6 +173,7 @@ export async function createTransactionsBatch(
     amount_cents: number
     description: string
     transaction_date: string
+    payment_method?: string | null
     recurring_income_id?: string | null
     is_recurring?: boolean
     recurring_month?: string | null
@@ -142,6 +208,7 @@ export async function updateTransaction(
     amount_cents: number
     description: string
     transaction_date: string
+    payment_method: string | null
     recurring_income_id: string | null
     is_recurring: boolean
     recurring_month: string | null

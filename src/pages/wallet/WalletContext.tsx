@@ -99,6 +99,9 @@ export interface WalletContextType {
   pendingTransactionsCount: number
   pendingTransactionsList: Transaction[]
   pendingByPatternMap: Map<string, string[]>
+  hasMoreTransactions: boolean
+  loadingMore: boolean
+  loadMoreTransactions: () => Promise<void>
   monthIncomeCents: number
   monthExpenseCents: number
   monthNetCents: number

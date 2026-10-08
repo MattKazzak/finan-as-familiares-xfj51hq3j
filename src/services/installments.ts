@@ -282,6 +282,7 @@ export function generateInstallmentTransactions(params: GenerateInstallmentsPara
       amount_cents: amountCents,
       description: formattedDesc,
       transaction_date: date,
+      payment_method: 'other',
       is_installment: true,
       installment_number: i,
       installment_total: totalInstallments,
