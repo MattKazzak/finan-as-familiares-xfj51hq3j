@@ -753,7 +753,7 @@ export default function Home() {
           <div className="mt-4 pt-3.5 border-t border-white/10">
             <button
               type="button"
-              onClick={openVoiceDialog}
+              onClick={() => navigate('/copilot')}
               aria-label="Falar com o Curiango"
               className="w-full group bg-white/95 hover:bg-white text-slate-800 rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 shadow-md hover:shadow-lg transition-all duration-200 border border-[#E5E5E5] flex items-center justify-between gap-2.5 cursor-pointer active:scale-[0.99] text-left touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
             >
@@ -766,7 +766,7 @@ export default function Home() {
                     Falar com o Curiangoo...
                   </span>
                   <span className="text-[10px] text-slate-400 block leading-tight break-words sm:hidden">
-                    Toque para lançar por voz ou chat
+                    Toque para abrir o chat do Copilot
                   </span>
                 </div>
               </div>

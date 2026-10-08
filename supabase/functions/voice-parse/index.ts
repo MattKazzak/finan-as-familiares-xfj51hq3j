@@ -266,52 +266,78 @@ Deno.serve(async (req: Request) => {
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
       const sevenDaysAgoStr = `${sevenDaysAgo.getFullYear()}-${String(sevenDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(sevenDaysAgo.getDate()).padStart(2, '0')}`
 
-      // Executa as consultas financeiras em paralelo para máxima velocidade
-      const [famRes, monthTxRes, recentTxRes, budgetsRes] = await Promise.all([
-        targetFamilyId
-          ? supabase
-              .from('families')
-              .select('id, name, monthly_net_income_cents, budget_model')
-              .eq('id', targetFamilyId)
-              .maybeSingle()
-          : Promise.resolve({ data: null }),
-        targetFamilyId
-          ? supabase
-              .from('transactions')
-              .select(
-                'id, amount_cents, type, description, transaction_date, category_id, transaction_categories(name, budget_bucket)',
-              )
-              .gte('transaction_date', currentMonthStr)
-              .lt('transaction_date', nextMonthStr)
-              .eq('status', 'confirmed')
-              .eq('family_id', targetFamilyId)
-          : Promise.resolve({ data: [] }),
-        targetFamilyId
-          ? supabase
-              .from('transactions')
-              .select(
-                'id, amount_cents, type, description, transaction_date, transaction_categories(name)',
-              )
-              .gte('transaction_date', sevenDaysAgoStr)
-              .eq('type', 'expense')
-              .eq('status', 'confirmed')
-              .eq('family_id', targetFamilyId)
-              .order('amount_cents', { ascending: false })
-              .limit(5)
-          : Promise.resolve({ data: [] }),
-        targetFamilyId
-          ? supabase
-              .from('budgets')
-              .select('amount_cents, category_id, transaction_categories(name, budget_bucket)')
-              .eq('month', currentMonthStr)
-              .eq('family_id', targetFamilyId)
-          : Promise.resolve({ data: [] }),
-      ])
+      // Executa as consultas financeiras em paralelo para máxima velocidade (incluindo metas, recorrentes e investimentos)
+      const [famRes, monthTxRes, recentTxRes, budgetsRes, goalsRes, recurringRes, investmentsRes] =
+        await Promise.all([
+          targetFamilyId
+            ? supabase
+                .from('families')
+                .select('id, name, monthly_net_income_cents, budget_model')
+                .eq('id', targetFamilyId)
+                .maybeSingle()
+            : Promise.resolve({ data: null }),
+          targetFamilyId
+            ? supabase
+                .from('transactions')
+                .select(
+                  'id, amount_cents, type, description, transaction_date, category_id, transaction_categories(name, budget_bucket)',
+                )
+                .gte('transaction_date', currentMonthStr)
+                .lt('transaction_date', nextMonthStr)
+                .eq('status', 'confirmed')
+                .eq('family_id', targetFamilyId)
+            : Promise.resolve({ data: [] }),
+          targetFamilyId
+            ? supabase
+                .from('transactions')
+                .select(
+                  'id, amount_cents, type, description, transaction_date, transaction_categories(name)',
+                )
+                .gte('transaction_date', sevenDaysAgoStr)
+                .eq('type', 'expense')
+                .eq('status', 'confirmed')
+                .eq('family_id', targetFamilyId)
+                .order('amount_cents', { ascending: false })
+                .limit(5)
+            : Promise.resolve({ data: [] }),
+          targetFamilyId
+            ? supabase
+                .from('budgets')
+                .select('amount_cents, category_id, transaction_categories(name, budget_bucket)')
+                .eq('month', currentMonthStr)
+                .eq('family_id', targetFamilyId)
+            : Promise.resolve({ data: [] }),
+          targetFamilyId
+            ? supabase
+                .from('goals')
+                .select('name, target_amount_cents, current_amount_cents, deadline')
+                .eq('family_id', targetFamilyId)
+                .order('created_at', { ascending: true })
+                .limit(8)
+            : Promise.resolve({ data: [] }),
+          targetFamilyId
+            ? supabase
+                .from('recurring_incomes')
+                .select('description, amount_cents, recurrence_day, is_active')
+                .eq('family_id', targetFamilyId)
+                .eq('is_active', true)
+                .limit(8)
+            : Promise.resolve({ data: [] }),
+          targetFamilyId
+            ? supabase
+                .from('investments')
+                .select('asset_type, current_price_cents, quantity')
+                .eq('family_id', targetFamilyId)
+            : Promise.resolve({ data: [] }),
+        ])
 
       const familyData: any = famRes.data
       const monthTransactions: any[] = monthTxRes.data || []
       const topWeekExpenses: any[] = recentTxRes.data || []
       const monthlyBudgets: any[] = budgetsRes.data || []
+      const goalsData: any[] = goalsRes.data || []
+      const recurringData: any[] = recurringRes.data || []
+      const investmentsData: any[] = investmentsRes.data || []
 
       let totalExpenseMonthCents = 0
       let totalIncomeMonthCents = 0
@@ -382,6 +408,53 @@ Deno.serve(async (req: Request) => {
       const maiorGastoSemana =
         topWeekExpenses && topWeekExpenses.length > 0 ? topWeekExpenses[0] : null
 
+      // Agregação compacta de Metas da família
+      const goalsSummary =
+        goalsData.length > 0
+          ? goalsData
+              .map((g: any) => {
+                const target = Number(g.target_amount_cents || 0)
+                const current = Number(g.current_amount_cents || 0)
+                const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0
+                const deadlineStr = g.deadline ? ` prazo: ${g.deadline}` : ''
+                return `* "${g.name}": ${pct}% (${formatCentsToBRL(current)} de ${formatCentsToBRL(target)})${deadlineStr}`
+              })
+              .join('\n  ')
+          : 'Nenhuma meta cadastrada.'
+
+      // Agregação compacta de Receitas Recorrentes ativas
+      const recurringSummary =
+        recurringData.length > 0
+          ? recurringData
+              .map((r: any) => {
+                const day = r.recurrence_day ? `todo dia ${r.recurrence_day}` : 'mensal'
+                return `* "${r.description}": ${formatCentsToBRL(Number(r.amount_cents || 0))} (${day})`
+              })
+              .join('\n  ')
+          : 'Nenhuma receita recorrente ativa.'
+
+      // Agregação de investimentos por asset_type (NUNCA posições individuais)
+      const investmentTotalsByType: Record<string, number> = {}
+      let totalInvestedAllCents = 0
+      investmentsData.forEach((inv: any) => {
+        const type = String(inv.asset_type || 'outros').toLowerCase()
+        const price = Number(inv.current_price_cents || 0)
+        const qty = Number(inv.quantity || 0)
+        const totalPosition = Math.round(price * qty)
+        investmentTotalsByType[type] = (investmentTotalsByType[type] || 0) + totalPosition
+        totalInvestedAllCents += totalPosition
+      })
+
+      const investmentTypesSummary =
+        Object.keys(investmentTotalsByType).length > 0
+          ? Object.entries(investmentTotalsByType)
+              .map(
+                ([type, totalCents]) => `* ${type.toUpperCase()}: ${formatCentsToBRL(totalCents)}`,
+              )
+              .join('\n  ') +
+            `\n  * Total Geral Investido: ${formatCentsToBRL(totalInvestedAllCents)}`
+          : 'Nenhum investimento cadastrado.'
+
       financialSummaryContext = `
 DADOS FINANCEIROS REAIS DA FAMÍLIA (MÊS ATUAL: ${currentMonthStr.slice(0, 7)}):
 MÉTRICAS FINANCEIRAS DO MÊS:
@@ -405,6 +478,12 @@ MÉTRICAS FINANCEIRAS DO MÊS:
           ? `"${maiorGastoSemana.description || 'Gasto'}" no valor de ${formatCentsToBRL(Number(maiorGastoSemana.amount_cents || 0))} em ${maiorGastoSemana.transaction_date}${maiorGastoSemana.transaction_categories?.name ? ` (${maiorGastoSemana.transaction_categories.name})` : ''}`
           : 'Nenhum gasto registrado nos últimos 7 dias.'
       }
+- Metas financeiras da família:
+  ${goalsSummary}
+- Receitas recorrentes ativas cadastradas:
+  ${recurringSummary}
+- Investimentos agregados por categoria de ativo:
+  ${investmentTypesSummary}
 `
     }
 

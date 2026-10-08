@@ -28,6 +28,12 @@ import { useToast } from '@/hooks/use-toast'
 import { createTransaction, updateTransaction, deleteTransaction } from '@/services/transactions'
 import { BUCKET_METADATA } from '@/types/budget-presets'
 import { BudgetBucket } from '@/types/finance'
+import { fetchCopilotMessages, saveCopilotMessage } from '@/services/copilot'
+import {
+  getLocalAiConsent,
+  fetchUserPreferencesWithFallback,
+  saveUserAiConsent,
+} from '@/services/user-preferences'
 
 export interface ChatMessage {
   id: string
@@ -48,34 +54,12 @@ export interface ChatMessage {
   editAction?: () => void
 }
 
-const AI_CONSENT_KEY = 'curiangoo_ai_consent'
-
-interface AiConsentData {
-  consented: boolean
-  consentedAt: string
-}
-
 function getAiConsent(): boolean {
-  try {
-    const raw = localStorage.getItem(AI_CONSENT_KEY)
-    if (!raw) return false
-    const parsed: AiConsentData = JSON.parse(raw)
-    return Boolean(parsed && parsed.consented === true)
-  } catch {
-    return false
-  }
+  return getLocalAiConsent()
 }
 
 function setAiConsent(consented: boolean) {
-  try {
-    const data: AiConsentData = {
-      consented,
-      consentedAt: new Date().toISOString(),
-    }
-    localStorage.setItem(AI_CONSENT_KEY, JSON.stringify(data))
-  } catch {
-    // ignorar indisponibilidade de localStorage
-  }
+  saveUserAiConsent(consented)
 }
 
 interface VoiceTransactionDialogProps {
@@ -320,6 +304,16 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       latestTranscriptRef.current = ''
       finalBufferRef.current = ''
 
+      // Persistência em background da mensagem do usuário (Parte 1)
+      if (family?.id) {
+        saveCopilotMessage({
+          familyId: family.id,
+          role: 'user',
+          content: textToProcess,
+          cardType: null,
+        }).catch(() => {})
+      }
+
       try {
         const previousContext =
           isAmountOnly ||
@@ -419,6 +413,15 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             parsed.friendlyMessage ||
             'Aqui estão as informações solicitadas.'
 
+          if (family?.id) {
+            saveCopilotMessage({
+              familyId: family.id,
+              role: 'assistant',
+              content: resposta,
+              cardType: 'consulta',
+            }).catch(() => {})
+          }
+
           setMessages((prev) => [
             ...prev,
             {
@@ -442,6 +445,15 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             : parsed.description
           const friendlyMsg =
             parsed.friendlyMessage || `Identifiquei ${localDesc}. Quanto custou? 🥐`
+
+          if (family?.id) {
+            saveCopilotMessage({
+              familyId: family.id,
+              role: 'assistant',
+              content: friendlyMsg,
+              cardType: 'falta_valor',
+            }).catch(() => {})
+          }
 
           setMessages((prev) => [
             ...prev,
@@ -496,6 +508,15 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                   ? `Lançado: ${confirmedData.amountFormatted} em ${catName} › ${subName}! 👍`
                   : `Lançado: ${confirmedData.amountFormatted} em ${catName}! 👍`
 
+            if (family?.id) {
+              saveCopilotMessage({
+                familyId: family.id,
+                role: 'assistant',
+                content: confirmationText,
+                cardType: 'transacao',
+              }).catch(() => {})
+            }
+
             setMessages((prev) => [
               ...prev,
               {
@@ -519,12 +540,22 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
               'Não conseguimos identificar o valor falado. Fale apenas o número ou digite abaixo.',
             variant: 'destructive',
           })
+          const repMsg =
+            'Não identifiquei o valor em reais. Fale apenas o número (ex: "12 reais") ou digite no campo abaixo.'
+          if (family?.id) {
+            saveCopilotMessage({
+              familyId: family.id,
+              role: 'assistant',
+              content: repMsg,
+              cardType: 'falta_valor',
+            }).catch(() => {})
+          }
           setMessages((prev) => [
             ...prev,
             {
               id: `assistant-${Date.now()}`,
               sender: 'assistant',
-              text: 'Não identifiquei o valor em reais. Fale apenas o número (ex: "12 reais") ou digite no campo abaixo.',
+              text: repMsg,
               timestamp: new Date(),
               cardData: existingPartial,
               cardType: 'falta_valor',
@@ -646,6 +677,15 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 ? `Lançado: ${finalParsed.amountFormatted} em ${catName} › ${subName}! 👍`
                 : `Lançado: ${finalParsed.amountFormatted} em ${catName}! 👍`
 
+          if (family?.id) {
+            saveCopilotMessage({
+              familyId: family.id,
+              role: 'assistant',
+              content: launchText,
+              cardType: 'transacao',
+            }).catch(() => {})
+          }
+
           setMessages((prev) => [
             ...prev,
             {
@@ -666,15 +706,26 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           setPendingTransaction(parsed)
           pendingTransactionRef.current = parsed
 
+          const clarText =
+            parsed.clarificationQuestion ||
+            parsed.friendlyMessage ||
+            `Entendi ${parsed.amountFormatted}! Mas qual a categoria deste gasto?`
+
+          if (family?.id) {
+            saveCopilotMessage({
+              familyId: family.id,
+              role: 'assistant',
+              content: clarText,
+              cardType: 'clarificacao',
+            }).catch(() => {})
+          }
+
           setMessages((prev) => [
             ...prev,
             {
               id: `assistant-${Date.now()}`,
               sender: 'assistant',
-              text:
-                parsed.clarificationQuestion ||
-                parsed.friendlyMessage ||
-                `Entendi ${parsed.amountFormatted}! Mas qual a categoria deste gasto?`,
+              text: clarText,
               timestamp: new Date(),
               cardData: parsed,
               cardType: 'clarificacao',
@@ -688,6 +739,15 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           parsed.friendlyMessage ||
           "Não consegui entender esse lançamento financeiro. Tente algo como: 'Almoço 45 reais no débito no restaurante' ou 'supermercado do zé 180 no pix'"
 
+        if (family?.id) {
+          saveCopilotMessage({
+            familyId: family.id,
+            role: 'assistant',
+            content: fallbackMsg,
+            cardType: 'erro',
+          }).catch(() => {})
+        }
+
         setMessages((prev) => [
           ...prev,
           {
@@ -699,12 +759,21 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         ])
       } catch (err: any) {
         console.error('Erro ao processar áudio com IA:', err)
+        const errMsg = 'Ocorreu uma falha ao interpretar seu comando. Pode repetir ou digitar aqui?'
+        if (family?.id) {
+          saveCopilotMessage({
+            familyId: family.id,
+            role: 'assistant',
+            content: errMsg,
+            cardType: 'erro',
+          }).catch(() => {})
+        }
         setMessages((prev) => [
           ...prev,
           {
             id: `assistant-${Date.now()}`,
             sender: 'assistant',
-            text: 'Ocorreu uma falha ao interpretar seu comando. Pode repetir ou digitar aqui?',
+            text: errMsg,
             timestamp: new Date(),
             aiError: err?.message || 'Falha de conexão',
           },
@@ -994,21 +1063,52 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     return `Boa noite, ${memberName}! Vamos fechar os lançamentos do dia?`
   }, [currentMember?.name, members])
 
-  // Iniciar sessão do modal: zera histórico ao abrir e dispara escuta com saudação dinâmica
+  // Iniciar sessão do modal: carrega histórico das últimas 20 mensagens do banco e dispara saudação
   useEffect(() => {
     if (open) {
-      const consented = getAiConsent()
-      setHasAiConsent(consented)
-
       const greeting = getContextualGreeting()
-      setMessages([
-        {
-          id: 'welcome-1',
-          sender: 'assistant',
-          text: greeting,
-          timestamp: new Date(),
-        },
-      ])
+      const initialWelcomeMsg: ChatMessage = {
+        id: 'welcome-1',
+        sender: 'assistant',
+        text: greeting,
+        timestamp: new Date(),
+      }
+
+      // Sincroniza consentimento inicial com banco/localStorage
+      const localConsented = getAiConsent()
+      setHasAiConsent(localConsented)
+
+      fetchUserPreferencesWithFallback().then((pref) => {
+        setHasAiConsent(pref.aiConsent)
+        if (!pref.aiConsent) {
+          setShowConsentPrompt(true)
+        }
+      })
+
+      // Carrega até 20 mensagens do histórico persistido da família (Parte 1.4)
+      if (family?.id) {
+        fetchCopilotMessages(family.id, 20)
+          .then((historyRecords) => {
+            if (historyRecords && historyRecords.length > 0) {
+              const mappedHistory: ChatMessage[] = historyRecords.map((rec) => ({
+                id: rec.id,
+                sender: rec.role,
+                text: rec.content,
+                timestamp: new Date(rec.created_at),
+                cardType: (rec.card_type as any) || undefined,
+              }))
+              setMessages(mappedHistory)
+            } else {
+              setMessages([initialWelcomeMsg])
+            }
+          })
+          .catch(() => {
+            setMessages([initialWelcomeMsg])
+          })
+      } else {
+        setMessages([initialWelcomeMsg])
+      }
+
       setInputVal('')
       setTextoFalado('')
       latestTranscriptRef.current = ''
@@ -1027,7 +1127,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       setSelectedMemberId(currentMember?.id || members[0]?.id || '')
       setPermissionStatus('idle')
 
-      if (!consented) {
+      if (!localConsented) {
         setShowConsentPrompt(true)
       } else {
         setShowConsentPrompt(false)

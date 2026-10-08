@@ -16,6 +16,7 @@ import Profile from '@/pages/Profile'
 import ImportReviewPage from '@/pages/ImportReviewPage'
 import NotFound from '@/pages/NotFound'
 import { InviteAcceptPage } from '@/pages/InviteAcceptPage'
+import { CopilotPage } from '@/pages/Copilot'
 import { Coins, Loader2 } from 'lucide-react'
 
 // Verifica síncronamente na URL se há indício de recuperação de senha (distinguindo estritamente de signup)
@@ -143,6 +144,7 @@ const App = () => (
             <Route path="/investimentos" element={<Investments />} />
             <Route path="/perfil" element={<Profile />} />
             <Route path="/importar" element={<ImportReviewPage />} />
+            <Route path="/copilot" element={<CopilotPage />} />
           </Route>
 
           {/* Rota de erro 404 */}

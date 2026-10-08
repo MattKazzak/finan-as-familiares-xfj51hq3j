@@ -12,6 +12,7 @@ import { WhoIsUsingDialog } from '@/components/common/WhoIsUsingDialog'
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
 import { OnboardingWizardDialog } from '@/components/wallet/OnboardingWizardDialog'
 import { InstallPwaBanner } from '@/components/common/InstallPwaBanner'
+import { CuriangoFloatingButton } from '@/components/layout/CuriangoFloatingButton'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { formatFamilyDisplayName } from '@/lib/formatters'
@@ -273,6 +274,9 @@ export default function Layout() {
         <main className="flex-1 w-full max-w-[1200px] mx-auto p-4 sm:p-6 pb-32 md:pb-8 overflow-x-hidden min-w-0">
           <Outlet />
         </main>
+
+        {/* BOTÃO FLUTUANTE DO COPILOT (ACESSO RÁPIDO PARA /copilot EM TODAS AS TELAS) */}
+        <CuriangoFloatingButton />
 
         {/* BANNER EDUCATIVO DE INSTALAÇÃO PWA (POSICIONADO ACIMA DO DOCK FLUTUANTE) */}
         <InstallPwaBanner variant="bottom-nav" />
