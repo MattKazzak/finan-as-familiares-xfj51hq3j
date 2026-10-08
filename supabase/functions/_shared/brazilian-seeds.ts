@@ -18,6 +18,9 @@ export type SemanticIntent =
   | 'assinaturas_streaming'
   | 'farmacia_saude'
   | 'educacao_cursos'
+  | 'dividas_emprestimos'
+  | 'sorvete_acai'
+  | 'conveniencia_posto'
 
 export interface SeedMerchantEntry {
   patterns: readonly string[]
@@ -26,7 +29,66 @@ export interface SeedMerchantEntry {
 }
 
 export const BRAZILIAN_MERCHANT_SEEDS: readonly SeedMerchantEntry[] = [
-  // 1. Alimentação / Mercado / Delivery
+  // 1. Sorvete & Açaí (via Restaurantes & Delivery)
+  {
+    intent: 'sorvete_acai',
+    patterns: [
+      'sorvete',
+      'sorveteria',
+      'acai',
+      'açaí',
+      'gelato',
+      'bacio di latte',
+      'oakberry',
+      'chiquinho sorvetes',
+      'oggi sorvetes',
+    ],
+    suggestedSubcategoryNames: ['Sorvete & Açaí', 'Sorvete', 'Açaí', 'Restaurantes & Delivery'],
+  },
+  // 2. Conveniência & Lanchonetes de Posto (via Restaurantes & Delivery)
+  {
+    intent: 'conveniencia_posto',
+    patterns: [
+      'conveniencia',
+      'loja de conveniencia',
+      'am/pm',
+      'ampm',
+      'shell select',
+      'br mania',
+      'posto conveniencia',
+    ],
+    suggestedSubcategoryNames: [
+      'Conveniência & Lanchonetes de Posto',
+      'Conveniência',
+      'Restaurantes & Delivery',
+    ],
+  },
+  // 3. Dívidas & Empréstimos
+  {
+    intent: 'dividas_emprestimos',
+    patterns: [
+      'fatura anterior',
+      'parcelamento de fatura',
+      'parcelamento fatura',
+      'rotativo',
+      'emprestimo',
+      'empréstimo',
+      'emprestimo pessoal',
+      'empréstimo pessoal',
+      'crediario',
+      'crediário',
+      'financiamento',
+      'cheque especial',
+      'overdraft',
+    ],
+    suggestedSubcategoryNames: [
+      'Fatura do Cartão (Rotativo & Parcelado)',
+      'Empréstimos Pessoais',
+      'Financiamentos (Casa/Auto)',
+      'Cheque Especial & Overdraft',
+    ],
+  },
+  // 4. Alimentação / Mercado / Delivery
   {
     intent: 'alimentacao_mercado',
     patterns: [
@@ -49,9 +111,17 @@ export const BRAZILIAN_MERCHANT_SEEDS: readonly SeedMerchantEntry[] = [
       'subway',
       'habibs',
     ],
-    suggestedSubcategoryNames: ['Mercado', 'Restaurantes', 'Delivery', 'Supermercado', 'Lanches'],
+    suggestedSubcategoryNames: [
+      'Mercado',
+      'Restaurantes',
+      'Delivery',
+      'Supermercado',
+      'Lanches',
+      'Fast Food & Lanches',
+      'Restaurantes & Bares',
+    ],
   },
-  // 2. Mobilidade / Transporte / Combustível / Pedágio
+  // 5. Mobilidade / Transporte / Combustível / Pedágio
   {
     intent: 'mobilidade_transporte',
     patterns: [
@@ -78,9 +148,10 @@ export const BRAZILIAN_MERCHANT_SEEDS: readonly SeedMerchantEntry[] = [
       'Transporte',
       'Pedágio',
       'Estacionamento',
+      'Aplicativos do Dia a Dia (Uber/99)',
     ],
   },
-  // 3. Assinaturas / Streaming / Software
+  // 6. Assinaturas / Streaming / Software
   {
     intent: 'assinaturas_streaming',
     patterns: [
@@ -106,9 +177,15 @@ export const BRAZILIAN_MERCHANT_SEEDS: readonly SeedMerchantEntry[] = [
       'microsoft',
       'icloud',
     ],
-    suggestedSubcategoryNames: ['Streaming', 'Softwares & Ferramentas', 'Assinaturas', 'Serviços'],
+    suggestedSubcategoryNames: [
+      'Streaming',
+      'Softwares & Ferramentas',
+      'Softwares & Apps',
+      'Assinaturas',
+      'Serviços',
+    ],
   },
-  // 4. Farmácia / Saúde / Consultas
+  // 7. Farmácia / Saúde / Consultas
   {
     intent: 'farmacia_saude',
     patterns: [
@@ -130,7 +207,7 @@ export const BRAZILIAN_MERCHANT_SEEDS: readonly SeedMerchantEntry[] = [
     ],
     suggestedSubcategoryNames: ['Farmácia', 'Remédios', 'Consultas & Exames', 'Saúde'],
   },
-  // 5. Educação / Cursos / Infoprodutos
+  // 8. Educação / Cursos / Infoprodutos
   {
     intent: 'educacao_cursos',
     patterns: [
@@ -183,26 +260,34 @@ export function matchMerchantSeed(description: string): {
       const normPat = normalizeMerchantString(pat)
       if (!normPat) continue
 
-      // Caso especial: 'posto' requer palavra isolada ou início/fim para evitar falsos positivos
-      // (ex.: "POSTO" não deve casar "imposto" ou "resposta")
-      if (normPat === 'posto') {
-        const regex = /(^|\s)posto(\s|$)/i
-        if (regex.test(norm) && !norm.includes('salario') && !norm.includes('imposto')) {
+      // 4.1 Guardas de Word-boundary para termos curtos/genéricos
+      // ('max', 'metro', 'google', 'apple', 'swift', 'posto', 'cpt')
+      if (
+        normPat === 'posto' ||
+        normPat === 'cpt' ||
+        normPat === 'max' ||
+        normPat === 'metro' ||
+        normPat === 'google' ||
+        normPat === 'apple' ||
+        normPat === 'swift'
+      ) {
+        if (normPat === 'posto') {
+          const regex = /(^|\s)posto(\s|$)/i
+          if (regex.test(norm) && !norm.includes('salario') && !norm.includes('imposto')) {
+            return { intent: entry.intent, matchedPattern: pat, entry }
+          }
+          continue
+        }
+
+        const escaped = normPat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const boundaryRegex = new RegExp(`(^|\\s)${escaped}(\\s|$)`, 'i')
+        if (boundaryRegex.test(norm)) {
           return { intent: entry.intent, matchedPattern: pat, entry }
         }
         continue
       }
 
-      // Caso especial: 'cpt' requer palavra isolada
-      if (normPat === 'cpt') {
-        const regex = /(^|\s)cpt(\s|$)/i
-        if (regex.test(norm)) {
-          return { intent: entry.intent, matchedPattern: pat, entry }
-        }
-        continue
-      }
-
-      // Match por inclusão direta (ex: "ifood", "uber", "drogasil", "hotmart")
+      // Match por inclusão direta (ex: "ifood", "uber", "drogasil", "sorvete", "acai")
       if (norm.includes(normPat)) {
         return { intent: entry.intent, matchedPattern: pat, entry }
       }
@@ -271,7 +356,31 @@ export function resolveCategoryForIntent(
 
   let matchedCat: GenericCategoryInput | null = null
 
-  if (intent === 'alimentacao_mercado') {
+  if (intent === 'sorvete_acai' || intent === 'conveniencia_posto') {
+    // Busca preferencialmente Restaurantes & Delivery / Gastronomia
+    matchedCat =
+      pool.find((c) => {
+        const n = normalize(c.name)
+        return n.includes('restaurante') || n.includes('delivery') || n.includes('gastronomia')
+      }) ||
+      pool.find((c) => {
+        const n = normalize(c.name)
+        return n.includes('alimentacao') || n.includes('mercado')
+      }) ||
+      pool.find((c) => c.budget_bucket === 'lifestyle') ||
+      pool[0] ||
+      null
+  } else if (intent === 'dividas_emprestimos') {
+    // Busca Dívidas & Empréstimos / Financiamentos
+    matchedCat =
+      pool.find((c) => {
+        const n = normalize(c.name)
+        return n.includes('divida') || n.includes('emprestimo') || n.includes('financiamento')
+      }) ||
+      pool.find((c) => c.budget_bucket === 'essentials') ||
+      pool[0] ||
+      null
+  } else if (intent === 'alimentacao_mercado') {
     // 1. Alimentação / Mercado / Restaurantes / Gastronomia / Delivery
     matchedCat =
       pool.find((c) => {
@@ -279,9 +388,9 @@ export function resolveCategoryForIntent(
         return (
           n.includes('alimentacao') ||
           n.includes('mercado') ||
-          n.includes('gastronomia') ||
           n.includes('restaurante') ||
-          n.includes('delivery')
+          n.includes('delivery') ||
+          n.includes('gastronomia')
         )
       }) || null
 

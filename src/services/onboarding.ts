@@ -115,7 +115,7 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
     ],
   },
   {
-    name: 'Alimentação Básica',
+    name: 'Alimentação',
     bucket: 'essentials',
     icon: 'ShoppingCart',
     color: '#10B981', // Esmeralda
@@ -155,7 +155,7 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
     ],
   },
   {
-    name: 'Transporte Obrigatório',
+    name: 'Transporte',
     bucket: 'essentials',
     icon: 'Car',
     color: '#3B82F6', // Azul
@@ -204,7 +204,7 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
     ],
   },
   {
-    name: 'Saúde & Cuidados Médicos',
+    name: 'Saúde',
     bucket: 'essentials',
     icon: 'HeartPulse',
     color: '#EF4444', // Vermelho/Rosa
@@ -242,7 +242,7 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
     ],
   },
   {
-    name: 'Educação Obrigatória',
+    name: 'Educação',
     bucket: 'essentials',
     icon: 'GraduationCap',
     color: '#8B5CF6', // Violeta
@@ -266,10 +266,45 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
       },
     ],
   },
+  {
+    name: 'Dívidas & Empréstimos',
+    bucket: 'essentials',
+    icon: 'CreditCard',
+    color: '#DC2626',
+    type: 'expense',
+    suggestedPercent: 0,
+    subcategories: [
+      {
+        name: 'Fatura do Cartão (Rotativo & Parcelado)',
+        icon: 'CreditCard',
+        keywords: ['fatura anterior', 'parcelamento fatura', 'rotativo cartao', 'juros cartao'],
+      },
+      {
+        name: 'Empréstimos Pessoais',
+        icon: 'Banknote',
+        keywords: ['emprestimo', 'emprestimo pessoal', 'consignado', 'crediario'],
+      },
+      {
+        name: 'Financiamentos (Casa/Auto)',
+        icon: 'Home',
+        keywords: [
+          'financiamento habitacional',
+          'financiamento veiculo',
+          'prestacao carro',
+          'caixa hab',
+        ],
+      },
+      {
+        name: 'Cheque Especial & Overdraft',
+        icon: 'AlertCircle',
+        keywords: ['cheque especial', 'juros cheque especial', 'overdraft', 'encargos conta'],
+      },
+    ],
+  },
 
   // Lifestyle (Estilo de Vida - 30%)
   {
-    name: 'Gastronomia & Delivery',
+    name: 'Restaurantes & Delivery',
     bucket: 'lifestyle',
     icon: 'Utensils',
     color: '#F59E0B', // Âmbar
@@ -295,22 +330,37 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
         keywords: ['ifood', 'rappi', 'aiqfome', 'uber eats'],
       },
       {
-        name: 'Cafeterias & Lanches Rápidos',
+        name: 'Fast Food & Lanches',
         icon: 'Coffee',
         keywords: [
           'mcdonalds',
           'burger king',
-          'cafeteria',
-          'starbucks',
           'subway',
-          'cacau show',
-          'kopenhagen',
+          'habibs',
+          'pastel',
+          'lanches rapido',
+          'bobs',
         ],
+      },
+      {
+        name: 'Cafeterias',
+        icon: 'Coffee',
+        keywords: ['cafeteria', 'starbucks', 'cacau show', 'kopenhagen', 'casa do pao de queijo'],
+      },
+      {
+        name: 'Sorvete & Açaí',
+        icon: 'IceCream',
+        keywords: ['sorvete', 'sorveteria', 'acai', 'açaí', 'gelato', 'bacio di latte', 'oakberry'],
+      },
+      {
+        name: 'Conveniência & Lanchonetes de Posto',
+        icon: 'Store',
+        keywords: ['conveniencia', 'am/pm', 'ampm', 'shell select', 'br mania'],
       },
     ],
   },
   {
-    name: 'Lazer & Passeios',
+    name: 'Lazer',
     bucket: 'lifestyle',
     icon: 'Ticket',
     color: '#F97316', // Laranja
@@ -380,7 +430,7 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
     ],
   },
   {
-    name: 'Assinaturas & Conectividade',
+    name: 'Assinaturas & Apps',
     bucket: 'lifestyle',
     icon: 'Tv',
     color: '#7C3AED', // Roxo
@@ -416,7 +466,7 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
     ],
   },
   {
-    name: 'Compras & Vestuário',
+    name: 'Compras',
     bucket: 'lifestyle',
     icon: 'ShoppingBag',
     color: '#D97706', // Amarelo escuro
@@ -510,7 +560,7 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
     ],
   },
   {
-    name: 'Metas & Grandes Sonhos',
+    name: 'Metas',
     bucket: 'future',
     icon: 'Target',
     color: '#06B6D4', // Ciano
@@ -540,7 +590,7 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
     ],
   },
   {
-    name: 'Investimentos de Longo Prazo',
+    name: 'Investimentos',
     bucket: 'future',
     icon: 'TrendingUp',
     color: '#059669', // Verde

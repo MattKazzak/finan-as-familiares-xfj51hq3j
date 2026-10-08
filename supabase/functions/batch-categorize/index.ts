@@ -336,9 +336,10 @@ REGRAS DE EXTRAÇÃO UNIVERSAL:
    - Quando houver regras de aprendizado da família no contexto, elas têm prioridade máxima.
    - Considere o tipo da transação (receita/despesa) e o valor como pistas contextuais.
 
-7. AVALIAÇÃO HONESTA DE CONFIANÇA ("confidence"):
-   - Avalie honestamente: se o estabelecimento for ambíguo, desconhecido ou o nome estiver incompleto, atribua confidence BAIXO (0.3-0.5). Prefira baixa confiança a confiança inflada. Match óbvio e inequívoco recebe 0.85-0.95.
-
+7. AVALIAÇÃO HONESTA DE CONFIANÇA E INSTRUÇÃO ANTI-CHUTE ("confidence"):
+   - SE o estabelecimento for desconhecido ou o nome estiver incompleto/fragmentado: atribua confidence entre 0.2 e 0.4 e NUNCA escolha uma categoria genérica por eliminação (Compras e Outros NÃO são defaults). Prefira deixar para revisão do usuário a chutar.
+   - Analise a palavra-chave mais ESPECÍFICA do nome, não a mais genérica: 'sorvete' nunca é pet; 'conveniência' de posto não é mercado; 'padaria' é alimentação, não lazer.
+   - Match óbvio e inequívoco recebe 0.85-0.95.
 FEW-SHOT CONCEITUAL:
 Entrada:
 """
@@ -692,10 +693,11 @@ REGRAS DE CLASSIFICAÇÃO:
 2. Use EXCLUSIVAMENTE as categorias fornecidas no catálogo da família acima (use APENAS IDs "categoryId" e "subcategoryId" que EXISTEM no catálogo).
 3. Quando houver regras de aprendizado da família no contexto, elas têm prioridade máxima.
 4. Considere o tipo da transação (receita/despesa) e o valor como pistas contextuais. Contexto brasileiro: termos como PG*, PAG*, MP*, IFOOD, UBER, DROGASIL, FARMÁCIA, POSTO, PADARIA, NETFLIX são estabelecimentos do dia a dia.
-5. AVALIAÇÃO HONESTA DE CONFIANÇA E REASONING:
-   - "confidence": avalie honestamente: se o estabelecimento for ambíguo, desconhecido ou o nome estiver incompleto, atribua confidence BAIXO (0.3-0.5). Prefira baixa confiança a confiança inflada. Match óbvio e inequívoco recebe 0.85-0.95.
+5. AVALIAÇÃO HONESTA DE CONFIANÇA, REASONING E INSTRUÇÃO ANTI-CHUTE:
+   - SE o estabelecimento for desconhecido ou o nome estiver incompleto/fragmentado: atribua confidence entre 0.2 e 0.4 e NUNCA escolha uma categoria genérica por eliminação (Compras e Outros NÃO são defaults). Prefira deixar para revisão do usuário a chutar.
+   - Analise a palavra-chave mais ESPECÍFICA do nome, não a mais genérica: 'sorvete' nunca é pet; 'conveniência' de posto não é mercado; 'padaria' é alimentação, não lazer.
+   - "confidence": Match óbvio e inequívoco recebe 0.85-0.95.
    - "reasoning": 1 frase concisa em português explicando o motivo.`
-
     const userPrompt = `Transações para classificar (${pendingForAi.length} itens):
 ${JSON.stringify(
   pendingForAi.map((t) => ({

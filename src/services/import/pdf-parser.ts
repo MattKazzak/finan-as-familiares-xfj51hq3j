@@ -545,16 +545,51 @@ export interface DedupableTransaction {
   description: string
   cleanMerchant?: string
   amountCents: number
+  isPossibleDuplicate?: boolean
+  duplicateReason?: string
   [key: string]: any
 }
 
 /**
- * Remove duplicatas entre blocos/páginas (mesma data + descrição normalizada + valor).
- * Preserva o primeiro item encontrado e descarta réplicas geradas por sobreposição
- * de páginas ou cabeçalhos repetidos.
+ * Normaliza descrição colapsando espaços, uppercase e sem acentos para comparação tolerante
+ */
+export function normalizeDescriptionTolerant(desc: string): string {
+  return (desc || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * Calcula similaridade de Jaccard e substring entre descrições normalizadas (0 a 1)
+ */
+export function calculateNormalizedSimilarity(a: string, b: string): number {
+  if (!a || !b) return 0
+  if (a === b) return 1
+  if (a.includes(b) || b.includes(a)) return 0.9
+
+  const tokensA = new Set(a.split(' ').filter((t) => t.length >= 2))
+  const tokensB = new Set(b.split(' ').filter((t) => t.length >= 2))
+  if (tokensA.size === 0 || tokensB.size === 0) return 0
+
+  let common = 0
+  tokensA.forEach((token) => {
+    if (tokensB.has(token)) common++
+  })
+
+  const union = new Set([...tokensA, ...tokensB]).size
+  return union > 0 ? common / union : 0
+}
+
+/**
+ * Remove duplicatas exatas entre blocos/páginas e marca pares prováveis (mesma data + valor,
+ * descrições variantes ou similaridade >= 0.85) com o campo isPossibleDuplicate = true.
  */
 export function deduplicateExtractedTransactions<T extends DedupableTransaction>(items: T[]): T[] {
-  const seen = new Set<string>()
+  const exactSeen = new Set<string>()
   const result: T[] = []
 
   for (const item of items) {
@@ -563,10 +598,48 @@ export function deduplicateExtractedTransactions<T extends DedupableTransaction>
       continue
     }
 
-    const normDesc = normalizeDescriptionForDedup(item.cleanMerchant || item.description)
-    const key = `${item.date}_${normDesc}_${item.amountCents}`
-    if (!seen.has(key)) {
-      seen.add(key)
+    const normCompact = normalizeDescriptionForDedup(item.cleanMerchant || item.description)
+    const exactKey = `${item.date}_${normCompact}_${item.amountCents}`
+
+    // 1. Chave exata absoluta: descarta réplica idêntica de paginação
+    if (exactSeen.has(exactKey)) {
+      continue
+    }
+    exactSeen.add(exactKey)
+
+    // 2. Dedup tolerante/fuzzy quando data + valor coincidem
+    const currentNormTolerant = normalizeDescriptionTolerant(item.cleanMerchant || item.description)
+
+    let isFuzzyDuplicate = false
+    let matchDesc = ''
+
+    for (const prev of result) {
+      if (prev.date === item.date && prev.amountCents === item.amountCents) {
+        const prevNormTolerant = normalizeDescriptionTolerant(
+          prev.cleanMerchant || prev.description,
+        )
+
+        // Se uma contém a outra ou similaridade >= 0.85
+        const sim = calculateNormalizedSimilarity(currentNormTolerant, prevNormTolerant)
+        if (
+          currentNormTolerant.includes(prevNormTolerant) ||
+          prevNormTolerant.includes(currentNormTolerant) ||
+          sim >= 0.85
+        ) {
+          isFuzzyDuplicate = true
+          matchDesc = prev.cleanMerchant || prev.description
+          break
+        }
+      }
+    }
+
+    if (isFuzzyDuplicate) {
+      result.push({
+        ...item,
+        isPossibleDuplicate: true,
+        duplicateReason: `Mesma data e valor de "${matchDesc}"`,
+      })
+    } else {
       result.push(item)
     }
   }

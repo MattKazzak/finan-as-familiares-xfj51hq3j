@@ -110,42 +110,49 @@ export const BUDGET_PRESET_ITEMS: BudgetPreset[] = [
         description: 'Aluguel, condomínio, luz, água, gás, internet, manutenção',
       },
       {
-        name: 'Alimentação Básica',
+        name: 'Alimentação',
         matchKey: 'alimentacao',
         bucket: 'essentials',
         percent: 14,
         description: 'Supermercado, feira, açougue, padaria do dia a dia',
       },
       {
-        name: 'Transporte Obrigatório',
+        name: 'Transporte',
         matchKey: 'transporte',
         bucket: 'essentials',
         percent: 8,
         description: 'Combustível, transporte público, Uber/99, pedágio, seguro',
       },
       {
-        name: 'Saúde & Cuidados Médicos',
+        name: 'Saúde',
         matchKey: 'saude',
         bucket: 'essentials',
         percent: 5,
         description: 'Plano de saúde, farmácia, exames, dentista',
       },
       {
-        name: 'Educação Obrigatória',
+        name: 'Educação',
         matchKey: 'educacao',
         bucket: 'essentials',
         percent: 3,
         description: 'Mensalidade escolar/faculdade, materiais, transporte escolar',
       },
       {
-        name: 'Gastronomia & Delivery',
+        name: 'Dívidas & Empréstimos',
+        matchKey: 'dividas',
+        bucket: 'essentials',
+        percent: 0,
+        description: 'Fatura do cartão, empréstimos, financiamentos e cheque especial',
+      },
+      {
+        name: 'Restaurantes & Delivery',
         matchKey: 'gastronomia',
         bucket: 'lifestyle',
         percent: 10,
-        description: 'Restaurantes, bares, delivery iFood/Rappi, cafeterias',
+        description: 'Restaurantes, bares, delivery iFood/Rappi, cafeterias, fast food',
       },
       {
-        name: 'Lazer & Passeios',
+        name: 'Lazer',
         matchKey: 'lazer',
         bucket: 'lifestyle',
         percent: 5,
@@ -159,14 +166,14 @@ export const BUDGET_PRESET_ITEMS: BudgetPreset[] = [
         description: 'Barbearia/salão, estética, cosméticos, academia',
       },
       {
-        name: 'Assinaturas & Conectividade',
+        name: 'Assinaturas & Apps',
         matchKey: 'servicos',
         bucket: 'lifestyle',
         percent: 3,
         description: 'Streaming, música, softwares e apps',
       },
       {
-        name: 'Compras & Vestuário',
+        name: 'Compras',
         matchKey: 'compras',
         bucket: 'lifestyle',
         percent: 4,
@@ -187,14 +194,14 @@ export const BUDGET_PRESET_ITEMS: BudgetPreset[] = [
         description: 'Aportes e manutenção da reserva de emergência',
       },
       {
-        name: 'Metas & Grandes Sonhos',
+        name: 'Metas',
         matchKey: 'metas',
         bucket: 'future',
         percent: 4,
         description: 'Troca de carro, casa própria, viagens internacionais',
       },
       {
-        name: 'Investimentos de Longo Prazo',
+        name: 'Investimentos',
         matchKey: 'investimentos',
         bucket: 'future',
         percent: 6,
@@ -228,42 +235,49 @@ export const BUDGET_PRESET_ITEMS: BudgetPreset[] = [
         description: 'Habitação e contas essenciais da casa',
       },
       {
-        name: 'Alimentação Básica',
+        name: 'Alimentação',
         matchKey: 'alimentacao',
         bucket: 'essentials',
         percent: 16,
         description: 'Supermercado e alimentação básica',
       },
       {
-        name: 'Transporte Obrigatório',
+        name: 'Transporte',
         matchKey: 'transporte',
         bucket: 'essentials',
         percent: 10,
         description: 'Custos de deslocamento e manutenção',
       },
       {
-        name: 'Saúde & Cuidados Médicos',
+        name: 'Saúde',
         matchKey: 'saude',
         bucket: 'essentials',
         percent: 6,
         description: 'Plano de saúde e medicamentos',
       },
       {
-        name: 'Educação Obrigatória',
+        name: 'Educação',
         matchKey: 'educacao',
         bucket: 'essentials',
         percent: 4,
         description: 'Mensalidades escolares e materiais',
       },
       {
-        name: 'Gastronomia & Delivery',
+        name: 'Dívidas & Empréstimos',
+        matchKey: 'dividas',
+        bucket: 'essentials',
+        percent: 0,
+        description: 'Fatura do cartão, empréstimos e financiamentos',
+      },
+      {
+        name: 'Restaurantes & Delivery',
         matchKey: 'gastronomia',
         bucket: 'lifestyle',
         percent: 7,
         description: 'Refeições fora e delivery moderado',
       },
       {
-        name: 'Lazer & Passeios',
+        name: 'Lazer',
         matchKey: 'lazer',
         bucket: 'lifestyle',
         percent: 4,
@@ -277,14 +291,14 @@ export const BUDGET_PRESET_ITEMS: BudgetPreset[] = [
         description: 'Cuidados pessoais e bem-estar',
       },
       {
-        name: 'Assinaturas & Conectividade',
+        name: 'Assinaturas & Apps',
         matchKey: 'servicos',
         bucket: 'lifestyle',
         percent: 2,
         description: 'Assinaturas essenciais de mídia e software',
       },
       {
-        name: 'Compras & Vestuário',
+        name: 'Compras',
         matchKey: 'compras',
         bucket: 'lifestyle',
         percent: 2,
@@ -305,14 +319,14 @@ export const BUDGET_PRESET_ITEMS: BudgetPreset[] = [
         description: 'Blindagem financeira prioritária',
       },
       {
-        name: 'Metas & Grandes Sonhos',
+        name: 'Metas',
         matchKey: 'metas',
         bucket: 'future',
         percent: 4,
         description: 'Metas familiares',
       },
       {
-        name: 'Investimentos de Longo Prazo',
+        name: 'Investimentos',
         matchKey: 'investimentos',
         bucket: 'future',
         percent: 6,
@@ -345,42 +359,49 @@ export const BUDGET_PRESET_ITEMS: BudgetPreset[] = [
         description: 'Custos de habitação e contas de consumo',
       },
       {
-        name: 'Alimentação Básica',
+        name: 'Alimentação',
         matchKey: 'alimentacao',
         bucket: 'essentials',
         percent: 20,
         description: 'Alimentação doméstica completa',
       },
       {
-        name: 'Transporte Obrigatório',
+        name: 'Transporte',
         matchKey: 'transporte',
         bucket: 'essentials',
         percent: 11,
         description: 'Mobilidade básica familiar',
       },
       {
-        name: 'Saúde & Cuidados Médicos',
+        name: 'Saúde',
         matchKey: 'saude',
         bucket: 'essentials',
         percent: 7,
         description: 'Remédios e cuidados de saúde',
       },
       {
-        name: 'Educação Obrigatória',
+        name: 'Educação',
         matchKey: 'educacao',
         bucket: 'essentials',
         percent: 4,
         description: 'Educação básica e uniformes',
       },
       {
-        name: 'Gastronomia & Delivery',
+        name: 'Dívidas & Empréstimos',
+        matchKey: 'dividas',
+        bucket: 'essentials',
+        percent: 0,
+        description: 'Fatura do cartão, empréstimos e financiamentos',
+      },
+      {
+        name: 'Restaurantes & Delivery',
         matchKey: 'gastronomia',
         bucket: 'lifestyle',
         percent: 7,
         description: 'Gastos com alimentação fora',
       },
       {
-        name: 'Lazer & Passeios',
+        name: 'Lazer',
         matchKey: 'lazer',
         bucket: 'lifestyle',
         percent: 4,
@@ -394,14 +415,14 @@ export const BUDGET_PRESET_ITEMS: BudgetPreset[] = [
         description: 'Cuidados básicos de higiene e beleza',
       },
       {
-        name: 'Assinaturas & Conectividade',
+        name: 'Assinaturas & Apps',
         matchKey: 'servicos',
         bucket: 'lifestyle',
         percent: 2,
         description: 'Streaming e aplicativos',
       },
       {
-        name: 'Compras & Vestuário',
+        name: 'Compras',
         matchKey: 'compras',
         bucket: 'lifestyle',
         percent: 2,
@@ -422,14 +443,14 @@ export const BUDGET_PRESET_ITEMS: BudgetPreset[] = [
         description: 'Primeiros passos da reserva financeira',
       },
       {
-        name: 'Metas & Grandes Sonhos',
+        name: 'Metas',
         matchKey: 'metas',
         bucket: 'future',
         percent: 2,
         description: 'Pequenas metas financeiras',
       },
       {
-        name: 'Investimentos de Longo Prazo',
+        name: 'Investimentos',
         matchKey: 'investimentos',
         bucket: 'future',
         percent: 3,
@@ -542,6 +563,15 @@ export function matchCategoryToPresetKey(categoryName: string): string | null {
     norm.includes('eletr')
   ) {
     return 'compras'
+  }
+  if (
+    norm.includes('divida') ||
+    norm.includes('emprest') ||
+    norm.includes('financi') ||
+    norm.includes('cheque especial') ||
+    norm.includes('overdraft')
+  ) {
+    return 'dividas'
   }
   if (norm.includes('pet') || norm.includes('racao') || norm.includes('veterinario')) {
     return 'pets'

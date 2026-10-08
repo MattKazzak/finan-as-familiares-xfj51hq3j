@@ -146,11 +146,14 @@ export default function ImportPage() {
 
   // Marcar / desmarcar item
   const handleToggleItem = (id: string) => {
-    persistItems(
-      items.map((item) => (item.id === id ? { ...item, selected: !item.selected } : item)),
+    setItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, selected: !item.selected } : item)),
     )
   }
 
+  const handleUpdateUserNote = (id: string, note: string) => {
+    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, userNote: note } : item)))
+  }
   // Marcar / desmarcar todos os visíveis ou todos
   const handleToggleSelectAll = (checked: boolean) => {
     persistItems(items.map((item) => ({ ...item, selected: checked })))
@@ -332,16 +335,23 @@ export default function ImportPage() {
   // Contagens do rodapé
   const selectedCount = useMemo(() => items.filter((i) => i.selected).length, [items])
 
-  const { incomeSumCents, expenseSumCents } = useMemo(() => {
+  const { incomeSumCents, expenseSumCents, grossExpenseCents } = useMemo(() => {
     let inc = 0
     let exp = 0
+    let gross = 0
     items
       .filter((i) => i.selected)
       .forEach((i) => {
-        if (i.type === 'income') inc += i.amount_cents
-        else exp += i.amount_cents
+        if (i.type === 'income') {
+          // Desconsidera pagamentos de fatura / limites do cálculo líquido de entradas
+          if (!i.isNonExpense) inc += i.amount_cents
+        } else {
+          gross += i.amount_cents
+          // Desconsidera itens isNonExpense do total líquido de despesas exibido
+          if (!i.isNonExpense) exp += i.amount_cents
+        }
       })
-    return { incomeSumCents: inc, expenseSumCents: exp }
+    return { incomeSumCents: inc, expenseSumCents: exp, grossExpenseCents: gross }
   }, [items])
 
   // O item ativo selecionado para edição
@@ -561,6 +571,23 @@ export default function ImportPage() {
         } catch (ruleErr) {
           console.warn('Não foi possível salvar regra de aprendizado ao importar:', ruleErr)
         }
+
+        // Salvar regras aprendidas via micro-respostas "Contar o que foi" (T6)
+        try {
+          for (const item of selectedItems) {
+            if (item.userNote && item.category_id) {
+              const rawPattern = extractPatternFromDescription(item.description) || item.description
+              await upsertCategorizationRule({
+                familyId: family.id,
+                pattern: rawPattern.toUpperCase().trim(),
+                categoryId: item.category_id,
+                subcategoryId: item.subcategory_id || undefined,
+              })
+            }
+          }
+        } catch (noteRuleErr) {
+          console.warn('Erro ao salvar regra originada de nota rápida:', noteRuleErr)
+        }
       }
 
       if (pendingConflicts.length > 0) {
@@ -761,15 +788,15 @@ export default function ImportPage() {
               Exibindo {filteredItems.length} de {items.length}
             </span>
           </div>
-
           <ImportItemList
             items={filteredItems}
             selectedItemId={selectedItemId}
             categories={categories}
             members={members}
-            onSelectItem={handleSelectItem}
+            onSelectItem={(id) => setSelectedItemId(id)}
             onToggleItem={handleToggleItem}
-          />
+            onUpdateUserNote={handleUpdateUserNote}
+          />{' '}
         </div>
 
         {/* COLUNA DIREITA DESKTOP: PAINEL DE EDIÇÃO FIXO / STICKY (MD:COL-SPAN-5) */}
@@ -831,6 +858,7 @@ export default function ImportPage() {
         saving={saving}
         onConfirm={handleConfirmImport}
         declaredTotalCents={session?.declaredTotalCents}
+        grossExpenseCents={grossExpenseCents}
       />
 
       {/* MODAL DE CRIAÇÃO RÁPIDA DE NOVA CATEGORIA */}

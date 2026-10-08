@@ -147,6 +147,8 @@ export interface ReviewItem {
   reconciliationReason?: string // Explicação para o usuário
   // Filtro determinístico pós-IA (quitação de fatura anterior, ajuste, encargos, IOF)
   isNonExpense?: boolean
+  isPossibleDuplicate?: boolean
+  userNote?: string
 }
 
 interface ImportStatementDialogProps {
@@ -757,10 +759,11 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 : 'Extraído e classificado pela IA financeira do Curiangoo',
               aiConfidence: tx.confidence,
               isUncertain: typeof tx.confidence === 'number' && tx.confidence < 0.6,
-              isDuplicate: !!dupMatch,
+              isDuplicate: !!dupMatch || !!(tx as any).isPossibleDuplicate,
+              isPossibleDuplicate: !!(tx as any).isPossibleDuplicate,
               duplicateReason: dupMatch
                 ? `Transação idêntica já cadastrada em ${dupMatch.transaction_date}`
-                : undefined,
+                : (tx as any).duplicateReason,
               isInstallment,
               installmentCurrent: currentInst,
               installmentTotal: totalInst,
@@ -1222,13 +1225,18 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
   const totalAmountSelected = useMemo(() => {
     let inc = 0
     let exp = 0
+    let gross = 0
     items
       .filter((i) => i.selected)
       .forEach((i) => {
-        if (i.type === 'income') inc += i.amount_cents
-        else exp += i.amount_cents
+        if (i.type === 'income') {
+          if (!i.isNonExpense) inc += i.amount_cents
+        } else {
+          gross += i.amount_cents
+          if (!i.isNonExpense) exp += i.amount_cents
+        }
       })
-    return { inc, exp }
+    return { inc, exp, gross }
   }, [items])
 
   // Validação de fechamento da fatura:
@@ -2317,11 +2325,20 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                             <span className="font-bold text-xs sm:text-sm text-slate-900 break-words line-clamp-2">
                               {item.description}
                             </span>
-                            {item.isDuplicate && (
+                            {item.isPossibleDuplicate && !item.isDuplicate ? (
+                              <span
+                                title={
+                                  item.duplicateReason || 'Possível duplicata por data e valor'
+                                }
+                                className="text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 px-1.5 py-0.2 rounded shrink-0"
+                              >
+                                possível duplicata
+                              </span>
+                            ) : item.isDuplicate ? (
                               <span className="text-[10px] font-semibold text-amber-700 bg-amber-100/90 border border-amber-300 px-1.5 py-0.2 rounded shrink-0">
                                 Duplicata
                               </span>
-                            )}
+                            ) : null}
                             {item.isReconciledManual && (
                               <span className="text-[10px] font-semibold text-finance-income bg-emerald-50 border border-emerald-200/70 px-1.5 py-0.2 rounded shrink-0 flex items-center gap-0.5">
                                 <Link2
@@ -2415,6 +2432,13 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                   {totalAmountSelected.inc > 0 ? (
                     <span className="text-emerald-700 font-semibold">
                       +{formatBRL(totalAmountSelected.inc)}
+                    </span>
+                  ) : null}
+                  {totalAmountSelected.gross > 0 &&
+                  totalAmountSelected.gross !== totalAmountSelected.exp ? (
+                    <span className="text-[11px] text-slate-400">
+                      (Bruto: {formatBRL(totalAmountSelected.gross)} • Líq:{' '}
+                      {formatBRL(totalAmountSelected.exp)})
                     </span>
                   ) : null}
                 </div>

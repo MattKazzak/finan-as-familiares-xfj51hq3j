@@ -11,6 +11,7 @@ interface ImportConfirmationFooterProps {
   saving: boolean
   onConfirm: () => void
   declaredTotalCents?: number | null
+  grossExpenseCents?: number
 }
 
 export const ImportConfirmationFooter: React.FC<ImportConfirmationFooterProps> = ({
@@ -21,7 +22,13 @@ export const ImportConfirmationFooter: React.FC<ImportConfirmationFooterProps> =
   saving,
   onConfirm,
   declaredTotalCents,
+  grossExpenseCents,
 }) => {
+  const showGrossVsNet =
+    typeof grossExpenseCents === 'number' &&
+    grossExpenseCents > 0 &&
+    grossExpenseCents !== expenseSumCents
+
   return (
     <footer className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] px-3 sm:px-6 py-2.5 sm:py-3 transition-all">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-4">
@@ -32,15 +39,21 @@ export const ImportConfirmationFooter: React.FC<ImportConfirmationFooterProps> =
               {selectedCount} de {totalCount}{' '}
               {totalCount === 1 ? 'lançamento selecionado' : 'lançamentos selecionados'}
             </span>
-            <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+            <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5 flex-wrap">
               {declaredTotalCents ? (
                 <span className="inline-flex items-center gap-1 font-semibold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/70">
                   <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                  Total da fatura: {formatBRL(declaredTotalCents)}
+                  Fatura: {formatBRL(declaredTotalCents)}
                 </span>
               ) : (
                 <span>Pronto para gravação no extrato</span>
               )}
+
+              {showGrossVsNet ? (
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded">
+                  Bruto: {formatBRL(grossExpenseCents)} • Líquido: {formatBRL(expenseSumCents)}
+                </span>
+              ) : null}
             </div>
           </div>
 

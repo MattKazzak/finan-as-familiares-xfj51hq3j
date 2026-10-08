@@ -57,6 +57,35 @@ describe('Higienizador Determinístico de Adquirentes Brasileiras (merchant-clea
     expect(cleanMerchantDescription('BRASIL PARALELO PAG 1/3')).toBe('Brasil Paralelo')
     expect(cleanMerchantDescription('PAGINA 2 AGORA TREINAMENTOS')).toBe('Agora Treinamentos')
     expect(cleanMerchantDescription('HUBLA FL. 01')).toBe('Hubla')
+  })
+
+  it('respeita guardas word-boundary para termos curtos (max, metro, google, apple, swift)', () => {
+    // Termo isolado casa
+    expect(matchMerchantSeed('HBO MAX')?.intent).toBe('assinaturas_streaming')
+    expect(matchMerchantSeed('APPLE STORE')?.intent).toBe('assinaturas_streaming')
+    expect(matchMerchantSeed('GOOGLE CLOUD')?.intent).toBe('assinaturas_streaming')
+    expect(matchMerchantSeed('METRO SP')?.intent).toBe('mobilidade_transporte')
+    expect(matchMerchantSeed('LOJA SWIFT')?.intent).toBe('alimentacao_mercado')
+
+    // Substring dentro de palavra não deve casar
+    expect(matchMerchantSeed('MAXIMO RENDIMENTO')).toBeNull()
+    expect(matchMerchantSeed('METRONOMO MUSICAL')).toBeNull()
+    expect(matchMerchantSeed('PINEAPPLE BAR')?.intent).not.toBe('assinaturas_streaming')
+  })
+
+  it('identifica intenções D1 e D4 (dívidas, sorvete & açaí, conveniência de posto)', () => {
+    expect(matchMerchantSeed('FATURA ANTERIOR CARTAO')?.intent).toBe('dividas_emprestimos')
+    expect(matchMerchantSeed('ROTATIVO CARTAO')?.intent).toBe('dividas_emprestimos')
+    expect(matchMerchantSeed('PARCELAMENTO DE FATURA')?.intent).toBe('dividas_emprestimos')
+    expect(matchMerchantSeed('EMPRESTIMO PESSOAL CAIXA')?.intent).toBe('dividas_emprestimos')
+    expect(matchMerchantSeed('CREDIARIO CASAS BAHIA')?.intent).toBe('dividas_emprestimos')
+
+    expect(matchMerchantSeed('BACIO DI LATTE GELATO')?.intent).toBe('sorvete_acai')
+    expect(matchMerchantSeed('OAKBERRY ACAI')?.intent).toBe('sorvete_acai')
+    expect(matchMerchantSeed('CHIQUINHO SORVETES')?.intent).toBe('sorvete_acai')
+
+    expect(matchMerchantSeed('POSTO CONVENIENCIA AM/PM')?.intent).toBe('conveniencia_posto')
+    expect(matchMerchantSeed('SHELL SELECT CONVENIENCIA')?.intent).toBe('conveniencia_posto')
     // Timestamps / horários soltos
     expect(cleanMerchantDescription('RESTAURANTE SABOR 14:32:05')).toBe('Restaurante Sabor')
     expect(cleanMerchantDescription('10:15 POSTO IPIRANGA')).toBe('Posto Ipiranga')

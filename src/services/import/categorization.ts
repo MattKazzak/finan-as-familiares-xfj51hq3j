@@ -102,10 +102,10 @@ export const AUTO_CATEGORIZATION_RULES: KeywordRule[] = [
     ],
   },
 
-  // 4. Alimentação Básica (essentials)
+  // 4. Alimentação (essentials)
   // Keywords: carrefour, assai, pao de acucar, atacadao, mercadinho, feira, acougue, swift, hortifruti
   {
-    categoryNames: ['Alimentação Básica', 'Alimentação', 'Mercado'],
+    categoryNames: ['Alimentação', 'Alimentação Básica', 'Mercado'],
     type: 'expense',
     keywords: [
       'CARREFOUR',
@@ -137,10 +137,10 @@ export const AUTO_CATEGORIZATION_RULES: KeywordRule[] = [
     ],
   },
 
-  // 5. Transporte Obrigatório (essentials)
+  // 5. Transporte (essentials)
   // Keywords: posto, shell, ipiranga, uber, 99, metro, sptrans, pedagio, sem parar, posto ipiranga
   {
-    categoryNames: ['Transporte Obrigatório', 'Transporte'],
+    categoryNames: ['Transporte', 'Transporte Obrigatório'],
     type: 'expense',
     keywords: [
       'POSTO IPIRANGA',
@@ -203,10 +203,10 @@ export const AUTO_CATEGORIZATION_RULES: KeywordRule[] = [
     ],
   },
 
-  // 7. Saúde & Cuidados Médicos (essentials)
+  // 7. Saúde (essentials)
   // Keywords: drogasil, droga raia, pague menos, unimed, bradesco saude, laboratorio, fleury, dentista, farmacia
   {
-    categoryNames: ['Saúde & Cuidados Médicos', 'Saúde'],
+    categoryNames: ['Saúde', 'Saúde & Cuidados Médicos'],
     type: 'expense',
     keywords: [
       'DROGASIL',
@@ -235,10 +235,10 @@ export const AUTO_CATEGORIZATION_RULES: KeywordRule[] = [
     ],
   },
 
-  // 7. Educação Obrigatória (essentials)
+  // 8. Educação (essentials)
   // Keywords: escola, colegio, faculdade, mensalidade, papelaria, van escolar
   {
-    categoryNames: ['Educação Obrigatória', 'Educação'],
+    categoryNames: ['Educação', 'Educação Obrigatória'],
     type: 'expense',
     keywords: [
       'ESCOLA',
@@ -255,10 +255,35 @@ export const AUTO_CATEGORIZATION_RULES: KeywordRule[] = [
     ],
   },
 
-  // 8. Gastronomia & Delivery (lifestyle)
+  // 9. Dívidas & Empréstimos (essentials)
+  {
+    categoryNames: ['Dívidas & Empréstimos', 'Dívidas', 'Empréstimos'],
+    type: 'expense',
+    keywords: [
+      'FATURA ANTERIOR',
+      'PARCELAMENTO FATURA',
+      'ROTATIVO',
+      'EMPRESTIMO',
+      'EMPRÉSTIMO',
+      'EMPRESTIMO PESSOAL',
+      'EMPRÉSTIMO PESSOAL',
+      'CREDIARIO',
+      'CREDIÁRIO',
+      'FINANCIAMENTO',
+      'CHEQUE ESPECIAL',
+      'OVERDRAFT',
+    ],
+  },
+
+  // 10. Restaurantes & Delivery (lifestyle)
   // Keywords: ifood, rappi, mcdonalds, outback, burger king, bar, choperia, cafeteria, starbucks, restaurante
   {
-    categoryNames: ['Gastronomia & Delivery', 'Lazer & Gastronomia', 'Restaurantes e Delivery'],
+    categoryNames: [
+      'Restaurantes & Delivery',
+      'Gastronomia & Delivery',
+      'Lazer & Gastronomia',
+      'Restaurantes e Delivery',
+    ],
     type: 'expense',
     keywords: [
       'IFOOD',
@@ -286,10 +311,10 @@ export const AUTO_CATEGORIZATION_RULES: KeywordRule[] = [
     ],
   },
 
-  // 9. Lazer & Passeios (lifestyle)
+  // 11. Lazer (lifestyle)
   // Keywords: cinemark, ingresso.com, sympla, airbnb, hotel, booking, passagem aerea, azul, gol, latam
   {
-    categoryNames: ['Lazer & Passeios', 'Lazer', 'Viagens'],
+    categoryNames: ['Lazer', 'Lazer & Passeios', 'Viagens'],
     type: 'expense',
     keywords: [
       'CINEMARK',
@@ -341,10 +366,11 @@ export const AUTO_CATEGORIZATION_RULES: KeywordRule[] = [
     ],
   },
 
-  // 11. Assinaturas & Conectividade (lifestyle)
+  // 13. Assinaturas & Apps (lifestyle)
   // Keywords: netflix, spotify, amazon prime, youtube premium, hbo, max, disney, apple, google one
   {
     categoryNames: [
+      'Assinaturas & Apps',
       'Assinaturas & Conectividade',
       'Assinaturas & Serviços',
       'Assinaturas e Serviços',
@@ -372,10 +398,10 @@ export const AUTO_CATEGORIZATION_RULES: KeywordRule[] = [
     ],
   },
 
-  // 12. Compras & Vestuário (lifestyle)
+  // 14. Compras (lifestyle)
   // Keywords: zara, renner, riachuelo, shein, shopee, mercado livre, amazon compras
   {
-    categoryNames: ['Compras & Vestuário', 'Compras & Desejos', 'Compras', 'Vestuário'],
+    categoryNames: ['Compras', 'Compras & Vestuário', 'Compras & Desejos', 'Vestuário'],
     type: 'expense',
     keywords: [
       'ZARA',
@@ -415,10 +441,10 @@ export const AUTO_CATEGORIZATION_RULES: KeywordRule[] = [
     ],
   },
 
-  // 15. Metas & Grandes Sonhos (future)
+  // 16. Metas (future)
   // Keywords: fundo viagem, entrada apto, consorcio, meta
   {
-    categoryNames: ['Metas & Grandes Sonhos', 'Grandes Projetos'],
+    categoryNames: ['Metas', 'Metas & Grandes Sonhos', 'Grandes Projetos'],
     type: 'expense',
     keywords: [
       'FUNDO VIAGEM',
@@ -433,10 +459,14 @@ export const AUTO_CATEGORIZATION_RULES: KeywordRule[] = [
     ],
   },
 
-  // 16. Investimentos de Longo Prazo (future)
+  // 17. Investimentos (future)
   // Keywords: xp investimentos, btg, inter invest, previdencia, tesouro ipca
   {
-    categoryNames: ['Investimentos de Longo Prazo', 'Investimentos & Aposentadoria'],
+    categoryNames: [
+      'Investimentos',
+      'Investimentos de Longo Prazo',
+      'Investimentos & Aposentadoria',
+    ],
     type: 'expense',
     keywords: [
       'XP INVESTIMENTOS',

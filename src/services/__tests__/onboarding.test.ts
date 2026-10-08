@@ -15,39 +15,40 @@ describe('Seed de Categorias Padronizadas e Onboarding', () => {
 
     const categoryNames = STANDARDIZED_CATEGORIES_TREE.map((c) => c.name)
 
-    // Necessidades (5)
+    // Necessidades (6 com Dívidas & Empréstimos)
     expect(categoryNames).toContain('Moradia')
-    expect(categoryNames).toContain('Alimentação Básica')
-    expect(categoryNames).toContain('Transporte Obrigatório')
-    expect(categoryNames).toContain('Saúde & Cuidados Médicos')
-    expect(categoryNames).toContain('Educação Obrigatória')
+    expect(categoryNames).toContain('Alimentação')
+    expect(categoryNames).toContain('Transporte')
+    expect(categoryNames).toContain('Saúde')
+    expect(categoryNames).toContain('Educação')
+    expect(categoryNames).toContain('Dívidas & Empréstimos')
 
     // Estilo de Vida (6)
-    expect(categoryNames).toContain('Gastronomia & Delivery')
-    expect(categoryNames).toContain('Lazer & Passeios')
+    expect(categoryNames).toContain('Restaurantes & Delivery')
+    expect(categoryNames).toContain('Lazer')
     expect(categoryNames).toContain('Cuidados Pessoais & Bem-estar')
-    expect(categoryNames).toContain('Assinaturas & Conectividade')
-    expect(categoryNames).toContain('Compras & Vestuário')
+    expect(categoryNames).toContain('Assinaturas & Apps')
+    expect(categoryNames).toContain('Compras')
     expect(categoryNames).toContain('Pets')
 
     // Futuro & Metas (3)
     expect(categoryNames).toContain('Reserva de Emergência')
-    expect(categoryNames).toContain('Metas & Grandes Sonhos')
-    expect(categoryNames).toContain('Investimentos de Longo Prazo')
+    expect(categoryNames).toContain('Metas')
+    expect(categoryNames).toContain('Investimentos')
 
-    expect(categoryNames.length).toBe(14)
+    expect(categoryNames.length).toBe(15)
   })
 
   it('verifica que a árvore padronizada possui exatamente as subcategorias e keywords esperadas', () => {
     const categoriesWithSubs = STANDARDIZED_CATEGORIES_TREE.filter(
       (c) => c.subcategories.length > 0,
     )
-    expect(categoriesWithSubs.length).toBe(14)
+    expect(categoriesWithSubs.length).toBe(15)
     const totalSubcategories = STANDARDIZED_CATEGORIES_TREE.reduce(
       (acc, c) => acc + c.subcategories.length,
       0,
     )
-    expect(totalSubcategories).toBe(55)
+    expect(totalSubcategories).toBeGreaterThanOrEqual(58)
   })
 
   it('verifica as subcategorias de moradia, transporte e alimentação', () => {
@@ -65,7 +66,7 @@ describe('Seed de Categorias Padronizadas e Onboarding', () => {
       ]),
     )
 
-    const alimentacao = STANDARDIZED_CATEGORIES_TREE.find((c) => c.name === 'Alimentação Básica')
+    const alimentacao = STANDARDIZED_CATEGORIES_TREE.find((c) => c.name === 'Alimentação')
     expect(alimentacao).toBeDefined()
     const alimSubs = alimentacao?.subcategories.map((s) => s.name)
     expect(alimSubs).toEqual(

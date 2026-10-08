@@ -20,6 +20,7 @@ interface ImportItemListProps {
   members: FamilyMember[]
   onSelectItem: (id: string) => void
   onToggleItem: (id: string) => void
+  onUpdateUserNote?: (id: string, note: string) => void
 }
 
 export const ImportItemList: React.FC<ImportItemListProps> = ({
@@ -28,6 +29,7 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
   categories,
   members,
   onSelectItem,
+  onUpdateUserNote,
   onToggleItem,
 }) => {
   const categoryMap = useMemo(() => {
@@ -116,7 +118,15 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
                     {item.installmentCurrent}/{item.installmentTotal}
                   </span>
                 )}
-                {item.isDuplicate && (
+                {item.isPossibleDuplicate && !item.isDuplicate ? (
+                  <span
+                    title={item.duplicateReason || 'Possível duplicata por data e valor'}
+                    className="text-[10px] font-semibold bg-amber-50 text-amber-900 border border-[#FCA311]/40 px-1.5 py-0.2 rounded-md shrink-0 flex items-center gap-0.5"
+                  >
+                    <AlertTriangle className="w-2.5 h-2.5 text-[#FCA311]" strokeWidth={1.5} />{' '}
+                    possível duplicata
+                  </span>
+                ) : item.isDuplicate ? (
                   <span
                     title={item.duplicateReason}
                     className="text-[10px] font-semibold bg-amber-50 text-amber-900 border border-[#FCA311]/30 px-1.5 py-0.2 rounded-md shrink-0 flex items-center gap-0.5"
@@ -124,7 +134,7 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
                     <AlertTriangle className="w-2.5 h-2.5 text-[#FCA311]" strokeWidth={1.5} />{' '}
                     Duplicada
                   </span>
-                )}
+                ) : null}
                 {item.isNonExpense && (
                   <span className="text-[10px] font-medium bg-muted/70 text-slate-600 border border-border/30 px-1.5 py-0.2 rounded-md shrink-0">
                     Não é despesa
@@ -175,6 +185,29 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
                       </span>
                     )}
                   </span>
+                )}
+
+                {/* Micro-pergunta 'Contar o que foi' para sugestões incertas ou sem categoria */}
+                {(item.isUncertain ||
+                  !item.category_id ||
+                  (typeof item.aiConfidence === 'number' && item.aiConfidence < 0.6)) && (
+                  <div
+                    className="w-full mt-1.5 flex items-center gap-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <input
+                      type="text"
+                      placeholder="Contar o que foi (ex: fralda do bebê)..."
+                      value={item.userNote || ''}
+                      onChange={(e) => onUpdateUserNote?.(item.id, e.target.value)}
+                      className="text-[11px] px-2 py-1 rounded-lg border border-amber-200 bg-amber-50/60 focus:bg-white text-slate-800 placeholder:text-slate-400 w-full max-w-[260px] outline-none focus:ring-1 focus:ring-amber-400 transition-all"
+                    />
+                    {item.userNote ? (
+                      <span className="text-[10px] text-emerald-700 font-semibold shrink-0">
+                        Salvo p/ regra
+                      </span>
+                    ) : null}
+                  </div>
                 )}
 
                 {member && (
