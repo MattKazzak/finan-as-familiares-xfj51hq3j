@@ -95,6 +95,25 @@ describe('Higienizador Determinístico de Adquirentes Brasileiras (merchant-clea
     expect(cleanMerchantDescription('MERCADO EXTRA 45,90 BRL')).toBe('Mercado Extra')
     expect(cleanMerchantDescription('NETFLIX US$ 15.99')).toBe('Netflix')
   })
+
+  it('identifica novas intenções da Rodada 15 (bebês, marmita, coparticipação, restituição, 13º, tesouro, cdb, dividendos, pensão)', () => {
+    expect(matchMerchantSeed('PACOTE DE FRALDA PAMPERS')?.intent).toBe('bebes_criancas')
+    expect(matchMerchantSeed('ENXOVAL DO BEBE')?.intent).toBe('bebes_criancas')
+    expect(matchMerchantSeed('MARMITARIA DA VONA')?.intent).toBe('marmitas_refeicoes')
+    expect(matchMerchantSeed('COPARTICIPACAO UNIMED')?.intent).toBe('coparticipacao')
+    expect(matchMerchantSeed('RESTITUICAO IRPF 2025')?.intent).toBe('restituicao_ir')
+    expect(matchMerchantSeed('ADIANTAMENTO 13O SALARIO')?.intent).toBe('salario_13_ferias')
+    expect(matchMerchantSeed('APLICACAO TESOURO DIRETO')?.intent).toBe('investimentos_tesouro')
+    expect(matchMerchantSeed('APLICACAO CDB LIQUIDEZ')?.intent).toBe('investimentos_renda_fixa')
+    expect(matchMerchantSeed('PAGAMENTO DIVIDENDOS')?.intent).toBe('rendimentos_dividendos')
+    expect(matchMerchantSeed('BENEFICIO INSS APOSENTADORIA')?.intent).toBe('aposentadoria_pensao')
+
+    // Guardas word-boundary para termos curtos (bebe, cdb, lci, lca, jcp, 13o)
+    expect(matchMerchantSeed('BEBE')?.intent).toBe('bebes_criancas')
+    expect(matchMerchantSeed('CDB BANCO')?.intent).toBe('investimentos_renda_fixa')
+    // Substring dentro de palavra não deve casar termo curto
+    expect(matchMerchantSeed('ESTABELECIMENTO')).toBeNull()
+  })
 })
 
 describe('Seed Brasileiro em Código (Camada Determinística Rápida)', () => {

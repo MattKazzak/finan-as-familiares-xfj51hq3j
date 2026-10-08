@@ -83,7 +83,7 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
     suggestedPercent: 20,
     subcategories: [
       {
-        name: 'Aluguel / Condomínio',
+        name: 'Aluguel & Condomínio',
         icon: 'Home',
         keywords: ['aluguel', 'condominio', 'imobiliaria', 'quintoandar', 'quinto andar'],
       },
@@ -108,9 +108,41 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
         keywords: ['vivo fibra', 'claro residencial', 'internet', 'fibra', 'banda larga'],
       },
       {
-        name: 'Manutenção da Casa',
+        name: 'Celular & Telefonia',
+        icon: 'Smartphone',
+        keywords: [
+          'celular',
+          'tim',
+          'claro celular',
+          'vivo celular',
+          'telefonia',
+          'recarga celular',
+        ],
+      },
+      {
+        name: 'IPTU & Taxas do Imóvel',
+        icon: 'Landmark',
+        keywords: ['iptu', 'taxa de lixo', 'foro', 'taxa condominial extraordinária'],
+      },
+      {
+        name: 'Seguro Residencial',
+        icon: 'Shield',
+        keywords: ['seguro residencial', 'porto seguro residencia', 'tokio marine residencial'],
+      },
+      {
+        name: 'Manutenção & Reparos',
         icon: 'Wrench',
         keywords: ['manutencao', 'reparo', 'encanador', 'eletricista', 'marcenaria', 'pintura'],
+      },
+      {
+        name: 'Serviços Domésticos',
+        icon: 'Sparkles',
+        keywords: ['diarista', 'faxineira', 'passadeira', 'limpeza domestica'],
+      },
+      {
+        name: 'Mudança',
+        icon: 'Truck',
+        keywords: ['mudanca', 'frete mudanca', 'carreto', 'embalagem mudanca'],
       },
     ],
   },
@@ -123,7 +155,7 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
     suggestedPercent: 14,
     subcategories: [
       {
-        name: 'Supermercado',
+        name: 'Supermercado & Atacado',
         icon: 'ShoppingCart',
         keywords: [
           'carrefour',
@@ -135,6 +167,8 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
           'supermercado',
           'sams club',
           'dia brasil',
+          'tenda atacado',
+          'roldao',
         ],
       },
       {
@@ -148,9 +182,25 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
         keywords: ['hortifruti', 'feira', 'sacolao', 'quitanda', 'frutas'],
       },
       {
-        name: 'Padaria do Dia a Dia',
+        name: 'Padaria & Mercearia',
         icon: 'Coffee',
-        keywords: ['padaria', 'panificadora', 'pao do dia'],
+        keywords: ['padaria', 'panificadora', 'pao do dia', 'mercearia'],
+      },
+      {
+        name: 'Água & Bebidas para Casa',
+        icon: 'Droplets',
+        keywords: ['galao de agua', 'agua mineral', 'distribuidora de bebidas', 'bebidas em casa'],
+      },
+      {
+        name: 'Limpeza & Higiene da Casa',
+        icon: 'Sparkles',
+        keywords: [
+          'produtos de limpeza',
+          'sabao em po',
+          'detergente',
+          'desinfetante',
+          'papel higienico',
+        ],
       },
     ],
   },
@@ -177,14 +227,14 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
         ],
       },
       {
-        name: 'Transporte Público & Bilhete',
+        name: 'Transporte Público',
         icon: 'Bus',
         keywords: ['metro', 'sptrans', 'bilhete unico', 'cptm', 'onibus'],
       },
       {
-        name: 'Aplicativos do Dia a Dia (Uber/99)',
+        name: 'Apps & Táxi (Uber/99)',
         icon: 'Car',
-        keywords: ['uber', '99', '99app', '99 pop', '99 taxi', 'cabify', 'indrive'],
+        keywords: ['uber', '99', '99app', '99 pop', '99 taxi', 'cabify', 'indrive', 'taxi'],
       },
       {
         name: 'Estacionamento & Pedágio',
@@ -192,14 +242,26 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
         keywords: ['pedagio', 'sem parar', 'conectcar', 'veloe', 'estapar', 'estacionamento'],
       },
       {
-        name: 'Seguro & IPVA',
-        icon: 'ShieldAlert',
-        keywords: ['ipva', 'seguro auto', 'dpvat', 'licenciamento'],
+        name: 'Oficina & Manutenção',
+        icon: 'Wrench',
+        keywords: [
+          'oficina mecanica',
+          'auto pecas',
+          'pneu',
+          'troca de oleo',
+          'alinhamento',
+          'balanceamento',
+        ],
       },
       {
-        name: 'Manutenção Básica',
-        icon: 'Wrench',
-        keywords: ['oficina mecanica', 'auto pecas', 'pneu', 'troca de oleo', 'alinhamento'],
+        name: 'IPVA & Licenciamento',
+        icon: 'ShieldAlert',
+        keywords: ['ipva', 'dpvat', 'licenciamento', 'detran taxas'],
+      },
+      {
+        name: 'Seguro do Veículo',
+        icon: 'ShieldCheck',
+        keywords: ['seguro auto', 'porto seguro auto', 'azul seguros', 'tokio marine auto'],
       },
     ],
   },
@@ -212,9 +274,27 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
     suggestedPercent: 5,
     subcategories: [
       {
-        name: 'Plano de Saúde',
+        name: 'Plano de Saúde & Convênio',
         icon: 'Shield',
-        keywords: ['unimed', 'bradesco saude', 'sulamerica saude', 'amil', 'notredame', 'hapvida'],
+        keywords: [
+          'unimed',
+          'bradesco saude',
+          'sulamerica saude',
+          'amil',
+          'notredame',
+          'hapvida',
+          'convenio medico',
+        ],
+      },
+      {
+        name: 'Coparticipação',
+        icon: 'CreditCard',
+        keywords: ['coparticipacao', 'coparticipacao unimed', 'coparticipacao plano'],
+      },
+      {
+        name: 'Consultas & Exames',
+        icon: 'Stethoscope',
+        keywords: ['laboratorio', 'fleury', 'dasa', 'lavoisier', 'consulta medica', 'clinica'],
       },
       {
         name: 'Farmácia & Medicamentos',
@@ -230,14 +310,32 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
         ],
       },
       {
-        name: 'Consultas & Exames',
-        icon: 'Stethoscope',
-        keywords: ['laboratorio', 'fleury', 'dasa', 'lavoisier', 'consulta medica', 'clinica'],
-      },
-      {
         name: 'Odontologia',
         icon: 'Smile',
         keywords: ['dentista', 'odonto', 'ortodontia'],
+      },
+      {
+        name: 'Terapias & Psicologia',
+        icon: 'HeartHandshake',
+        keywords: [
+          'psicologo',
+          'psicologa',
+          'terapia',
+          'sessao de terapia',
+          'psicanalise',
+          'fonoaudiologo',
+        ],
+      },
+      {
+        name: 'Óculos & Aparelhos',
+        icon: 'Eye',
+        keywords: [
+          'otica',
+          'lente de contato',
+          'oculos de grau',
+          'chilli beans grau',
+          'aparelho auditivo',
+        ],
       },
     ],
   },
@@ -250,14 +348,36 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
     suggestedPercent: 3,
     subcategories: [
       {
-        name: 'Mensalidade Escolar / Faculdade',
+        name: 'Escola & Creche',
         icon: 'GraduationCap',
-        keywords: ['escola', 'colegio', 'faculdade', 'mensalidade', 'universidade'],
+        keywords: ['escola', 'colegio', 'creche', 'bercario', 'mensalidade escolar'],
       },
       {
-        name: 'Material & Uniformes',
+        name: 'Faculdade',
         icon: 'BookOpen',
-        keywords: ['papelaria', 'kalunga', 'material escolar', 'uniforme', 'livros escolares'],
+        keywords: ['faculdade', 'universidade', 'pos graduacao', 'mba', 'mensalidade faculdade'],
+      },
+      {
+        name: 'Cursos & Idiomas',
+        icon: 'Languages',
+        keywords: [
+          'curso de ingles',
+          'wizard',
+          'cultura inglesa',
+          'curso online',
+          'alura',
+          'udemy',
+        ],
+      },
+      {
+        name: 'Material & Livros Didáticos',
+        icon: 'Book',
+        keywords: ['papelaria', 'kalunga', 'material escolar', 'livro didatico', 'apostila'],
+      },
+      {
+        name: 'Uniformes',
+        icon: 'Shirt',
+        keywords: ['uniforme escolar', 'uniformes'],
       },
       {
         name: 'Transporte Escolar',
@@ -285,19 +405,39 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
         keywords: ['emprestimo', 'emprestimo pessoal', 'consignado', 'crediario'],
       },
       {
-        name: 'Financiamentos (Casa/Auto)',
+        name: 'Financiamento Imobiliário',
         icon: 'Home',
         keywords: [
           'financiamento habitacional',
+          'prestacao casa',
+          'caixa hab',
+          'credito imobiliario',
+        ],
+      },
+      {
+        name: 'Financiamento de Veículo',
+        icon: 'Car',
+        keywords: [
           'financiamento veiculo',
           'prestacao carro',
-          'caixa hab',
+          'financiamento auto',
+          'parcela moto',
         ],
       },
       {
         name: 'Cheque Especial & Overdraft',
         icon: 'AlertCircle',
         keywords: ['cheque especial', 'juros cheque especial', 'overdraft', 'encargos conta'],
+      },
+      {
+        name: 'Renegociações & Parcelamentos',
+        icon: 'Scale',
+        keywords: ['renegociacao', 'acordo divida', 'serasa limpa nome', 'acordo banco'],
+      },
+      {
+        name: 'Juros & Multas',
+        icon: 'AlertTriangle',
+        keywords: ['juros de mora', 'multa por atraso', 'juros e encargos'],
       },
     ],
   },
@@ -357,6 +497,11 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
         icon: 'Store',
         keywords: ['conveniencia', 'am/pm', 'ampm', 'shell select', 'br mania'],
       },
+      {
+        name: 'Marmitas & Refeições no Trabalho',
+        icon: 'Salad',
+        keywords: ['marmita', 'marmitaria', 'quentinha', 'almoco executivo'],
+      },
     ],
   },
   {
@@ -378,7 +523,12 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
         keywords: ['sympla', 'eventim', 'show', 'teatro', 'evento'],
       },
       {
-        name: 'Viagens & Hospedagem',
+        name: 'Passeios & Parques',
+        icon: 'Sun',
+        keywords: ['passeio', 'parque', 'clube', 'resort', 'zoologico', 'aquario'],
+      },
+      {
+        name: 'Viagens: Passagens & Hospedagem',
         icon: 'Plane',
         keywords: [
           'airbnb',
@@ -388,14 +538,23 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
           'azul',
           'gol',
           'latam',
-          'decolar',
           'pousada',
         ],
       },
       {
-        name: 'Passeios de Fim de Semana',
-        icon: 'Sun',
-        keywords: ['passeio', 'parque', 'clube', 'resort'],
+        name: 'Viagens: Passeios & Pacotes',
+        icon: 'Compass',
+        keywords: ['decolar', 'cvc', 'pacote viagem', 'excursao', 'city tour'],
+      },
+      {
+        name: 'Hobbies & Jogos',
+        icon: 'Gamepad2',
+        keywords: ['boardgame', 'hobby', 'aeromodelismo', 'colecionaveis', 'steam games'],
+      },
+      {
+        name: 'Livros & Cultura',
+        icon: 'Book',
+        keywords: ['livraria', 'livro', 'saraiva', 'panini', 'museu', 'exposicao'],
       },
     ],
   },
@@ -408,14 +567,14 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
     suggestedPercent: 5,
     subcategories: [
       {
-        name: 'Barbearia / Salão de Beleza',
+        name: 'Barbearia/Salão',
         icon: 'Scissors',
-        keywords: ['salao', 'barbearia', 'cabelereiro'],
+        keywords: ['salao', 'barbearia', 'cabelereiro', 'corte cabelo'],
       },
       {
         name: 'Manicure & Estética',
         icon: 'Sparkles',
-        keywords: ['estetica', 'manicure', 'pedicure', 'depilacao', 'spa'],
+        keywords: ['estetica', 'manicure', 'pedicure', 'depilacao', 'sobrancelha'],
       },
       {
         name: 'Cosméticos & Perfumaria',
@@ -426,6 +585,11 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
         name: 'Academia & Esportes',
         icon: 'Activity',
         keywords: ['smart fit', 'academia', 'bluefit', 'gympass', 'totalpass', 'crossfit'],
+      },
+      {
+        name: 'Spa & Bem-estar',
+        icon: 'HeartPulse',
+        keywords: ['spa', 'massagem', 'drenagem', 'ofuro', 'relaxamento'],
       },
     ],
   },
@@ -438,30 +602,48 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
     suggestedPercent: 3,
     subcategories: [
       {
-        name: 'Streaming de Vídeo & Música',
+        name: 'Streaming de Vídeo',
         icon: 'Tv',
         keywords: [
           'netflix',
-          'spotify',
           'amazon prime',
           'youtube premium',
           'hbo',
           'max',
           'disney',
           'globoplay',
-          'deezer',
           'prime video',
         ],
       },
       {
+        name: 'Música & Podcasts',
+        icon: 'Music',
+        keywords: ['spotify', 'deezer', 'apple music', 'amazon music', 'podcast'],
+      },
+      {
         name: 'Softwares & Apps',
         icon: 'Terminal',
-        keywords: ['apple', 'google one', 'icloud', 'chatgpt', 'openai', 'canva', 'microsoft'],
+        keywords: ['apple', 'chatgpt', 'openai', 'canva', 'microsoft 365', 'adobe'],
+      },
+      {
+        name: 'Jogos & Gaming',
+        icon: 'Gamepad',
+        keywords: ['playstation plus', 'psn', 'xbox game pass', 'nintendo switch online'],
+      },
+      {
+        name: 'Jornais & Revistas Digitais',
+        icon: 'Newspaper',
+        keywords: ['folha', 'estadao', 'valor economico', 'globo digital', 'revista'],
+      },
+      {
+        name: 'Armazenamento & Nuvem',
+        icon: 'Cloud',
+        keywords: ['google one', 'icloud', 'dropbox', 'onedrive'],
       },
       {
         name: 'Clubes de Assinatura',
         icon: 'Sparkles',
-        keywords: ['clube de assinatura', 'wine', 'tag livros'],
+        keywords: ['clube de assinatura', 'wine', 'tag livros', 'clube do cafe'],
       },
     ],
   },
@@ -474,41 +656,52 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
     suggestedPercent: 4,
     subcategories: [
       {
-        name: 'Roupas & Calçados',
+        name: 'Roupas',
         icon: 'Shirt',
+        keywords: ['zara', 'renner', 'riachuelo', 'shein', 'c&a', 'hering', 'roupas', 'vestuario'],
+      },
+      {
+        name: 'Calçados',
+        icon: 'ShoppingBag',
         keywords: [
-          'zara',
-          'renner',
-          'riachuelo',
-          'shein',
-          'shopee',
-          'c&a',
-          'hering',
           'centauro',
           'calcados',
+          'tenis',
+          'shoes',
+          'arezzo',
+          'anacapri',
+          'authentic feet',
         ],
       },
       {
         name: 'Eletrônicos & Gadgets',
         icon: 'Laptop',
-        keywords: [
-          'mercado livre',
-          'amazon compras',
-          'magalu',
-          'magazine luiza',
-          'fast shop',
-          'kabum',
-        ],
+        keywords: ['mercado livre', 'amazon compras', 'fast shop', 'kabum', 'smartphone compra'],
       },
       {
-        name: 'Decoração & Utilidades',
+        name: 'Eletrodomésticos',
+        icon: 'Tv',
+        keywords: ['magalu', 'magazine luiza', 'casas bahia', 'geladeira', 'fogao', 'microondas'],
+      },
+      {
+        name: 'Móveis & Decoração',
         icon: 'Home',
-        keywords: ['camicado', 'tok&stok', 'leroy merlin', 'utilidades', 'decoracao'],
+        keywords: ['camicado', 'tok&stok', 'leroy merlin', 'moveis', 'sofa', 'decoracao'],
+      },
+      {
+        name: 'Utilidades & Casa',
+        icon: 'Package',
+        keywords: ['daiso', 'utilidades', 'panelas', 'pratos', 'copos', 'bazar'],
       },
       {
         name: 'Presentes',
         icon: 'Gift',
         keywords: ['presente', 'presentes', 'aniversario'],
+      },
+      {
+        name: 'Bebês & Crianças',
+        icon: 'Smile',
+        keywords: ['fralda', 'enxoval', 'bebe', 'ri happy', 'brinquedo', 'alo bebe'],
       },
     ],
   },
@@ -587,6 +780,16 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
         icon: 'Wrench',
         keywords: ['meta', 'reforma', 'obra da casa'],
       },
+      {
+        name: 'Educação Futura (dos Filhos)',
+        icon: 'GraduationCap',
+        keywords: ['faculdade filhos', 'educacao futura', 'poupanca filhos'],
+      },
+      {
+        name: 'Meta Livre',
+        icon: 'Target',
+        keywords: ['meta livre', 'sonho pessoal', 'poupanca meta'],
+      },
     ],
   },
   {
@@ -598,22 +801,34 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
     suggestedPercent: 6,
     subcategories: [
       {
+        name: 'Tesouro Direto',
+        icon: 'Landmark',
+        keywords: ['tesouro direto', 'tesouro selic', 'tesouro ipca', 'tesouro prefixado'],
+      },
+      {
+        name: 'Renda Fixa (CDB/LCI/LCA)',
+        icon: 'Banknote',
+        keywords: ['cdb', 'lci', 'lca', 'cri', 'cra', 'renda fixa', 'debêntures'],
+      },
+      {
+        name: 'Ações & ETFs',
+        icon: 'TrendingUp',
+        keywords: ['acoes', 'etf', 'bova11', 'ivvb11', 'bolsa de valores'],
+      },
+      {
+        name: 'Fundos Imobiliários (FIIs)',
+        icon: 'Building',
+        keywords: ['fiis', 'fundo imobiliario', 'proventos fiis', 'rendimentos fii'],
+      },
+      {
+        name: 'Criptomoedas',
+        icon: 'Coins',
+        keywords: ['bitcoin', 'btc', 'ethereum', 'crypto', 'criptomoeda', 'binance'],
+      },
+      {
         name: 'Previdência Privada',
         icon: 'Landmark',
         keywords: ['previdencia', 'previdencia privada', 'pgbl', 'vgbl'],
-      },
-      {
-        name: 'Ações & Fundos Imobiliários',
-        icon: 'TrendingUp',
-        keywords: [
-          'xp investimentos',
-          'btg',
-          'inter invest',
-          'tesouro ipca',
-          'acoes',
-          'fiis',
-          'dividendos',
-        ],
       },
       {
         name: 'Aposentadoria',

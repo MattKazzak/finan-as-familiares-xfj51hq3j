@@ -21,6 +21,15 @@ export type SemanticIntent =
   | 'dividas_emprestimos'
   | 'sorvete_acai'
   | 'conveniencia_posto'
+  | 'bebes_criancas'
+  | 'marmitas_refeicoes'
+  | 'coparticipacao'
+  | 'restituicao_ir'
+  | 'salario_13_ferias'
+  | 'investimentos_tesouro'
+  | 'investimentos_renda_fixa'
+  | 'rendimentos_dividendos'
+  | 'aposentadoria_pensao'
 
 export interface SeedMerchantEntry {
   patterns: readonly string[]
@@ -84,6 +93,8 @@ export const BRAZILIAN_MERCHANT_SEEDS: readonly SeedMerchantEntry[] = [
     suggestedSubcategoryNames: [
       'Fatura do Cartão (Rotativo & Parcelado)',
       'Empréstimos Pessoais',
+      'Financiamento Imobiliário',
+      'Financiamento de Veículo',
       'Financiamentos (Casa/Auto)',
       'Cheque Especial & Overdraft',
     ],
@@ -112,13 +123,15 @@ export const BRAZILIAN_MERCHANT_SEEDS: readonly SeedMerchantEntry[] = [
       'habibs',
     ],
     suggestedSubcategoryNames: [
-      'Mercado',
-      'Restaurantes',
-      'Delivery',
+      'Supermercado & Atacado',
       'Supermercado',
-      'Lanches',
-      'Fast Food & Lanches',
+      'Mercado',
+      'Açougue & Peixaria',
+      'Hortifruti & Feira',
+      'Padaria & Mercearia',
       'Restaurantes & Bares',
+      'Delivery (iFood/Rappi)',
+      'Fast Food & Lanches',
     ],
   },
   // 5. Mobilidade / Transporte / Combustível / Pedágio
@@ -144,11 +157,12 @@ export const BRAZILIAN_MERCHANT_SEEDS: readonly SeedMerchantEntry[] = [
     ],
     suggestedSubcategoryNames: [
       'Combustível',
-      'Aplicativos',
-      'Transporte',
-      'Pedágio',
-      'Estacionamento',
-      'Aplicativos do Dia a Dia (Uber/99)',
+      'Transporte Público',
+      'Apps & Táxi (Uber/99)',
+      'Estacionamento & Pedágio',
+      'Oficina & Manutenção',
+      'IPVA & Licenciamento',
+      'Seguro do Veículo',
     ],
   },
   // 6. Assinaturas / Streaming / Software
@@ -178,11 +192,12 @@ export const BRAZILIAN_MERCHANT_SEEDS: readonly SeedMerchantEntry[] = [
       'icloud',
     ],
     suggestedSubcategoryNames: [
-      'Streaming',
-      'Softwares & Ferramentas',
+      'Streaming de Vídeo',
+      'Música & Podcasts',
       'Softwares & Apps',
-      'Assinaturas',
-      'Serviços',
+      'Jogos & Gaming',
+      'Armazenamento & Nuvem',
+      'Clubes de Assinatura',
     ],
   },
   // 7. Farmácia / Saúde / Consultas
@@ -205,7 +220,14 @@ export const BRAZILIAN_MERCHANT_SEEDS: readonly SeedMerchantEntry[] = [
       'dentista',
       'hospital',
     ],
-    suggestedSubcategoryNames: ['Farmácia', 'Remédios', 'Consultas & Exames', 'Saúde'],
+    suggestedSubcategoryNames: [
+      'Farmácia & Medicamentos',
+      'Farmácia',
+      'Consultas & Exames',
+      'Plano de Saúde & Convênio',
+      'Odontologia',
+      'Saúde',
+    ],
   },
   // 8. Educação / Cursos / Infoprodutos
   {
@@ -226,7 +248,75 @@ export const BRAZILIAN_MERCHANT_SEEDS: readonly SeedMerchantEntry[] = [
       'escola',
       'faculdade',
     ],
-    suggestedSubcategoryNames: ['Cursos & Treinamentos', 'Educação', 'Livros', 'Desenvolvimento'],
+    suggestedSubcategoryNames: [
+      'Cursos & Idiomas',
+      'Faculdade',
+      'Escola & Creche',
+      'Material & Livros Didáticos',
+      'Educação',
+    ],
+  },
+  // 9. Bebês & Crianças (Compras)
+  {
+    intent: 'bebes_criancas',
+    patterns: ['fralda', 'enxoval', 'bebe', 'ri happy', 'alo bebe', 'pampers', 'huggies'],
+    suggestedSubcategoryNames: ['Bebês & Crianças', 'Compras'],
+  },
+  // 10. Marmitas & Refeições no Trabalho (Restaurantes & Delivery)
+  {
+    intent: 'marmitas_refeicoes',
+    patterns: ['marmita', 'marmitaria', 'quentinha', 'almoco executivo', 'refeicao trabalho'],
+    suggestedSubcategoryNames: ['Marmitas & Refeições no Trabalho', 'Restaurantes & Delivery'],
+  },
+  // 11. Coparticipação (Saúde)
+  {
+    intent: 'coparticipacao',
+    patterns: ['coparticipacao', 'coparticipação', 'coparticipacao unimed', 'copart unimed'],
+    suggestedSubcategoryNames: ['Coparticipação', 'Plano de Saúde & Convênio', 'Saúde'],
+  },
+  // 12. Restituição de Imposto de Renda (Outras Receitas)
+  {
+    intent: 'restituicao_ir',
+    patterns: ['restituicao', 'restituição', 'restituicao ir', 'restituicao irpf', 'rest irpf'],
+    suggestedSubcategoryNames: ['Restituição de Imposto de Renda', 'Outras Receitas'],
+  },
+  // 13. 13º & Férias (Salário)
+  {
+    intent: 'salario_13_ferias',
+    patterns: [
+      '13o',
+      '13º',
+      'decimo terceiro',
+      'décimo terceiro',
+      'adiantamento 13',
+      'ferias',
+      'férias',
+    ],
+    suggestedSubcategoryNames: ['13º & Férias', 'Salário'],
+  },
+  // 14. Tesouro Direto (Investimentos)
+  {
+    intent: 'investimentos_tesouro',
+    patterns: ['tesouro direto', 'tesouro selic', 'tesouro ipca', 'tesouro prefixado', 'tesouro'],
+    suggestedSubcategoryNames: ['Tesouro Direto', 'Investimentos'],
+  },
+  // 15. Renda Fixa (Investimentos)
+  {
+    intent: 'investimentos_renda_fixa',
+    patterns: ['cdb', 'lci', 'lca', 'cra', 'cri', 'debenture', 'renda fixa'],
+    suggestedSubcategoryNames: ['Renda Fixa (CDB/LCI/LCA)', 'Investimentos'],
+  },
+  // 16. Dividendos & JCP (Rendimentos)
+  {
+    intent: 'rendimentos_dividendos',
+    patterns: ['dividendo', 'dividendos', 'jcp', 'juros sobre capital', 'rendimento fii'],
+    suggestedSubcategoryNames: ['Dividendos & JCP', 'Rendimentos'],
+  },
+  // 17. Aposentadoria & Pensão (Rendimentos)
+  {
+    intent: 'aposentadoria_pensao',
+    patterns: ['pensao', 'pensão', 'pensao inss', 'aposentadoria', 'beneficio inss', 'inss pensao'],
+    suggestedSubcategoryNames: ['Aposentadoria & Pensão', 'Rendimentos'],
   },
 ] as const
 
@@ -260,17 +350,27 @@ export function matchMerchantSeed(description: string): {
       const normPat = normalizeMerchantString(pat)
       if (!normPat) continue
 
-      // 4.1 Guardas de Word-boundary para termos curtos/genéricos
-      // ('max', 'metro', 'google', 'apple', 'swift', 'posto', 'cpt')
-      if (
-        normPat === 'posto' ||
-        normPat === 'cpt' ||
-        normPat === 'max' ||
-        normPat === 'metro' ||
-        normPat === 'google' ||
-        normPat === 'apple' ||
-        normPat === 'swift'
-      ) {
+      // Guardas de Word-boundary para termos curtos/genéricos
+      // ('max', 'metro', 'google', 'apple', 'swift', 'posto', 'cpt', 'bebe', 'cdb', 'lci', 'lca', 'cra', 'cri', 'jcp', '13o')
+      const SHORT_BOUNDARY_TERMS = new Set([
+        'posto',
+        'cpt',
+        'max',
+        'metro',
+        'google',
+        'apple',
+        'swift',
+        'bebe',
+        'cdb',
+        'lci',
+        'lca',
+        'cra',
+        'cri',
+        'jcp',
+        '13o',
+      ])
+
+      if (SHORT_BOUNDARY_TERMS.has(normPat)) {
         if (normPat === 'posto') {
           const regex = /(^|\s)posto(\s|$)/i
           if (regex.test(norm) && !norm.includes('salario') && !norm.includes('imposto')) {
@@ -287,7 +387,7 @@ export function matchMerchantSeed(description: string): {
         continue
       }
 
-      // Match por inclusão direta (ex: "ifood", "uber", "drogasil", "sorvete", "acai")
+      // Match por inclusão direta (ex: "ifood", "uber", "drogasil", "sorvete", "fralda", "restituicao", "tesouro", "dividendo", "marmita")
       if (norm.includes(normPat)) {
         return { intent: entry.intent, matchedPattern: pat, entry }
       }
@@ -356,7 +456,11 @@ export function resolveCategoryForIntent(
 
   let matchedCat: GenericCategoryInput | null = null
 
-  if (intent === 'sorvete_acai' || intent === 'conveniencia_posto') {
+  if (
+    intent === 'sorvete_acai' ||
+    intent === 'conveniencia_posto' ||
+    intent === 'marmitas_refeicoes'
+  ) {
     // Busca preferencialmente Restaurantes & Delivery / Gastronomia
     matchedCat =
       pool.find((c) => {
@@ -368,6 +472,78 @@ export function resolveCategoryForIntent(
         return n.includes('alimentacao') || n.includes('mercado')
       }) ||
       pool.find((c) => c.budget_bucket === 'lifestyle') ||
+      pool[0] ||
+      null
+  } else if (intent === 'bebes_criancas') {
+    // Busca Compras / Vestuário / Bebês
+    matchedCat =
+      pool.find((c) => {
+        const n = normalize(c.name)
+        return n.includes('compras') || n.includes('vestuario') || n.includes('bebe')
+      }) ||
+      pool.find((c) => c.budget_bucket === 'lifestyle') ||
+      pool[0] ||
+      null
+  } else if (intent === 'coparticipacao') {
+    // Busca Saúde
+    matchedCat =
+      pool.find((c) => {
+        const n = normalize(c.name)
+        return n.includes('saude') || n.includes('medico') || n.includes('farmacia')
+      }) ||
+      pool.find((c) => c.budget_bucket === 'essentials') ||
+      pool[0] ||
+      null
+  } else if (intent === 'investimentos_tesouro' || intent === 'investimentos_renda_fixa') {
+    // Busca Investimentos
+    matchedCat =
+      pool.find((c) => {
+        const n = normalize(c.name)
+        return n.includes('investimento') || n.includes('aplicacao')
+      }) ||
+      pool.find((c) => c.budget_bucket === 'future') ||
+      pool[0] ||
+      null
+  } else if (intent === 'salario_13_ferias') {
+    // Busca Salário
+    matchedCat =
+      catalog.find((c) => {
+        const n = normalize(c.name)
+        return (
+          c.type === 'income' &&
+          (n.includes('salario') || n.includes('renda') || n.includes('remuneracao'))
+        )
+      }) ||
+      catalog.find((c) => c.type === 'income') ||
+      pool[0] ||
+      null
+  } else if (intent === 'restituicao_ir') {
+    // Busca Outras Receitas
+    matchedCat =
+      catalog.find((c) => {
+        const n = normalize(c.name)
+        return (
+          c.type === 'income' &&
+          (n.includes('outras receitas') || n.includes('receitas') || n.includes('extra'))
+        )
+      }) ||
+      catalog.find((c) => c.type === 'income') ||
+      pool[0] ||
+      null
+  } else if (intent === 'rendimentos_dividendos' || intent === 'aposentadoria_pensao') {
+    // Busca Rendimentos
+    matchedCat =
+      catalog.find((c) => {
+        const n = normalize(c.name)
+        return (
+          c.type === 'income' &&
+          (n.includes('rendimento') ||
+            n.includes('aposentadoria') ||
+            n.includes('pensao') ||
+            n.includes('dividendo'))
+        )
+      }) ||
+      catalog.find((c) => c.type === 'income') ||
       pool[0] ||
       null
   } else if (intent === 'dividas_emprestimos') {

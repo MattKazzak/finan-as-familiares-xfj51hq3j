@@ -48,7 +48,7 @@ describe('Seed de Categorias Padronizadas e Onboarding', () => {
       (acc, c) => acc + c.subcategories.length,
       0,
     )
-    expect(totalSubcategories).toBeGreaterThanOrEqual(58)
+    expect(totalSubcategories).toBe(96) // 96 subcategorias de despesas nos 15 grupos de gastos
   })
 
   it('verifica as subcategorias de moradia, transporte e alimentação', () => {
@@ -57,12 +57,17 @@ describe('Seed de Categorias Padronizadas e Onboarding', () => {
     const moradiaSubs = moradia?.subcategories.map((s) => s.name)
     expect(moradiaSubs).toEqual(
       expect.arrayContaining([
-        'Aluguel / Condomínio',
+        'Aluguel & Condomínio',
         'Energia Elétrica',
         'Água & Saneamento',
         'Gás',
         'Internet & Fixo',
-        'Manutenção da Casa',
+        'Celular & Telefonia',
+        'IPTU & Taxas do Imóvel',
+        'Seguro Residencial',
+        'Manutenção & Reparos',
+        'Serviços Domésticos',
+        'Mudança',
       ]),
     )
 
@@ -71,10 +76,12 @@ describe('Seed de Categorias Padronizadas e Onboarding', () => {
     const alimSubs = alimentacao?.subcategories.map((s) => s.name)
     expect(alimSubs).toEqual(
       expect.arrayContaining([
-        'Supermercado',
+        'Supermercado & Atacado',
         'Açougue & Peixaria',
         'Hortifruti & Feira',
-        'Padaria do Dia a Dia',
+        'Padaria & Mercearia',
+        'Água & Bebidas para Casa',
+        'Limpeza & Higiene da Casa',
       ]),
     )
 

@@ -77,7 +77,7 @@ export interface CanonicalCategoryDefinition {
  * Taxonomia Canônica Oficial Curiangoo (D0 a D4 - 19 categorias / ~62 subcategorias)
  */
 export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
-  // 1. Moradia (essentials)
+  // 1. Moradia (essentials, 11 subcategorias)
   {
     name: 'Moradia',
     bucket: 'essentials',
@@ -86,15 +86,20 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
     type: 'expense',
     sort_order: 1,
     subcategories: [
-      { name: 'Aluguel / Condomínio', icon: 'Home' },
+      { name: 'Aluguel & Condomínio', icon: 'Home' },
       { name: 'Energia Elétrica', icon: 'Zap' },
       { name: 'Água & Saneamento', icon: 'Droplets' },
       { name: 'Gás', icon: 'Flame' },
       { name: 'Internet & Fixo', icon: 'Wifi' },
-      { name: 'Manutenção da Casa', icon: 'Wrench' },
+      { name: 'Celular & Telefonia', icon: 'Smartphone' },
+      { name: 'IPTU & Taxas do Imóvel', icon: 'Landmark' },
+      { name: 'Seguro Residencial', icon: 'Shield' },
+      { name: 'Manutenção & Reparos', icon: 'Wrench' },
+      { name: 'Serviços Domésticos', icon: 'Sparkles' },
+      { name: 'Mudança', icon: 'Truck' },
     ],
   },
-  // 2. Alimentação (essentials, renomeada de Alimentação Básica)
+  // 2. Alimentação (essentials, 6 subcategorias)
   {
     name: 'Alimentação',
     bucket: 'essentials',
@@ -103,13 +108,15 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
     type: 'expense',
     sort_order: 2,
     subcategories: [
-      { name: 'Supermercado', icon: 'ShoppingCart' },
+      { name: 'Supermercado & Atacado', icon: 'ShoppingCart' },
       { name: 'Açougue & Peixaria', icon: 'Beef' },
       { name: 'Hortifruti & Feira', icon: 'Apple' },
-      { name: 'Padaria do Dia a Dia', icon: 'Coffee' },
+      { name: 'Padaria & Mercearia', icon: 'Coffee' },
+      { name: 'Água & Bebidas para Casa', icon: 'Droplets' },
+      { name: 'Limpeza & Higiene da Casa', icon: 'Sparkles' },
     ],
   },
-  // 3. Transporte (essentials, renomeada de Transporte Obrigatório)
+  // 3. Transporte (essentials, 7 subcategorias)
   {
     name: 'Transporte',
     bucket: 'essentials',
@@ -119,14 +126,15 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
     sort_order: 3,
     subcategories: [
       { name: 'Combustível', icon: 'Fuel' },
-      { name: 'Transporte Público & Bilhete', icon: 'Bus' },
-      { name: 'Aplicativos do Dia a Dia (Uber/99)', icon: 'Car' },
+      { name: 'Transporte Público', icon: 'Bus' },
+      { name: 'Apps & Táxi (Uber/99)', icon: 'Car' },
       { name: 'Estacionamento & Pedágio', icon: 'CircleParking' },
-      { name: 'Seguro & IPVA', icon: 'ShieldAlert' },
-      { name: 'Manutenção Básica', icon: 'Wrench' },
+      { name: 'Oficina & Manutenção', icon: 'Wrench' },
+      { name: 'IPVA & Licenciamento', icon: 'ShieldAlert' },
+      { name: 'Seguro do Veículo', icon: 'ShieldCheck' },
     ],
   },
-  // 4. Saúde (essentials, renomeada de Saúde & Cuidados Médicos)
+  // 4. Saúde (essentials, 7 subcategorias)
   {
     name: 'Saúde',
     bucket: 'essentials',
@@ -135,13 +143,16 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
     type: 'expense',
     sort_order: 4,
     subcategories: [
-      { name: 'Plano de Saúde', icon: 'Shield' },
-      { name: 'Farmácia & Medicamentos', icon: 'Pill' },
+      { name: 'Plano de Saúde & Convênio', icon: 'Shield' },
+      { name: 'Coparticipação', icon: 'CreditCard' },
       { name: 'Consultas & Exames', icon: 'Stethoscope' },
+      { name: 'Farmácia & Medicamentos', icon: 'Pill' },
       { name: 'Odontologia', icon: 'Smile' },
+      { name: 'Terapias & Psicologia', icon: 'HeartHandshake' },
+      { name: 'Óculos & Aparelhos', icon: 'Eye' },
     ],
   },
-  // 5. Educação (essentials, renomeada de Educação Obrigatória)
+  // 5. Educação (essentials, 6 subcategorias)
   {
     name: 'Educação',
     bucket: 'essentials',
@@ -150,12 +161,15 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
     type: 'expense',
     sort_order: 5,
     subcategories: [
-      { name: 'Mensalidade Escolar / Faculdade', icon: 'GraduationCap' },
-      { name: 'Material & Uniformes', icon: 'BookOpen' },
+      { name: 'Escola & Creche', icon: 'GraduationCap' },
+      { name: 'Faculdade', icon: 'BookOpen' },
+      { name: 'Cursos & Idiomas', icon: 'Languages' },
+      { name: 'Material & Livros Didáticos', icon: 'Book' },
+      { name: 'Uniformes', icon: 'Shirt' },
       { name: 'Transporte Escolar', icon: 'Bus' },
     ],
   },
-  // 6. Dívidas & Empréstimos (essentials - NOVA CATEGORIA D1)
+  // 6. Dívidas & Empréstimos (essentials, 7 subcategorias)
   {
     name: 'Dívidas & Empréstimos',
     bucket: 'essentials',
@@ -166,11 +180,14 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
     subcategories: [
       { name: 'Fatura do Cartão (Rotativo & Parcelado)', icon: 'CreditCard' },
       { name: 'Empréstimos Pessoais', icon: 'Banknote' },
-      { name: 'Financiamentos (Casa/Auto)', icon: 'Home' },
+      { name: 'Financiamento Imobiliário', icon: 'Home' },
+      { name: 'Financiamento de Veículo', icon: 'Car' },
       { name: 'Cheque Especial & Overdraft', icon: 'AlertCircle' },
+      { name: 'Renegociações & Parcelamentos', icon: 'Scale' },
+      { name: 'Juros & Multas', icon: 'AlertTriangle' },
     ],
   },
-  // 7. Restaurantes & Delivery (lifestyle, renomeada de Gastronomia & Delivery)
+  // 7. Restaurantes & Delivery (lifestyle, 7 subcategorias)
   {
     name: 'Restaurantes & Delivery',
     bucket: 'lifestyle',
@@ -185,9 +202,10 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
       { name: 'Cafeterias', icon: 'Coffee' },
       { name: 'Sorvete & Açaí', icon: 'IceCream' },
       { name: 'Conveniência & Lanchonetes de Posto', icon: 'Store' },
+      { name: 'Marmitas & Refeições no Trabalho', icon: 'Salad' },
     ],
   },
-  // 8. Lazer (lifestyle, renomeada de Lazer & Passeios)
+  // 8. Lazer (lifestyle, 7 subcategorias)
   {
     name: 'Lazer',
     bucket: 'lifestyle',
@@ -198,11 +216,14 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
     subcategories: [
       { name: 'Cinema', icon: 'Film' },
       { name: 'Shows & Eventos', icon: 'Ticket' },
-      { name: 'Viagens & Hospedagem', icon: 'Plane' },
-      { name: 'Passeios de Fim de Semana', icon: 'Sun' },
+      { name: 'Passeios & Parques', icon: 'Sun' },
+      { name: 'Viagens: Passagens & Hospedagem', icon: 'Plane' },
+      { name: 'Viagens: Passeios & Pacotes', icon: 'Compass' },
+      { name: 'Hobbies & Jogos', icon: 'Gamepad2' },
+      { name: 'Livros & Cultura', icon: 'Book' },
     ],
   },
-  // 9. Cuidados Pessoais & Bem-estar (lifestyle)
+  // 9. Cuidados Pessoais & Bem-estar (lifestyle, 5 subcategorias)
   {
     name: 'Cuidados Pessoais & Bem-estar',
     bucket: 'lifestyle',
@@ -211,13 +232,14 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
     type: 'expense',
     sort_order: 9,
     subcategories: [
-      { name: 'Barbearia / Salão de Beleza', icon: 'Scissors' },
+      { name: 'Barbearia/Salão', icon: 'Scissors' },
       { name: 'Manicure & Estética', icon: 'Sparkles' },
       { name: 'Cosméticos & Perfumaria', icon: 'Package' },
       { name: 'Academia & Esportes', icon: 'Activity' },
+      { name: 'Spa & Bem-estar', icon: 'HeartPulse' },
     ],
   },
-  // 10. Assinaturas & Apps (lifestyle, renomeada de Assinaturas & Conectividade)
+  // 10. Assinaturas & Apps (lifestyle, 7 subcategorias)
   {
     name: 'Assinaturas & Apps',
     bucket: 'lifestyle',
@@ -226,12 +248,16 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
     type: 'expense',
     sort_order: 10,
     subcategories: [
-      { name: 'Streaming de Vídeo & Música', icon: 'Tv' },
+      { name: 'Streaming de Vídeo', icon: 'Tv' },
+      { name: 'Música & Podcasts', icon: 'Music' },
       { name: 'Softwares & Apps', icon: 'Terminal' },
+      { name: 'Jogos & Gaming', icon: 'Gamepad' },
+      { name: 'Jornais & Revistas Digitais', icon: 'Newspaper' },
+      { name: 'Armazenamento & Nuvem', icon: 'Cloud' },
       { name: 'Clubes de Assinatura', icon: 'Sparkles' },
     ],
   },
-  // 11. Compras (lifestyle, renomeada de Compras & Vestuário)
+  // 11. Compras (lifestyle, 8 subcategorias)
   {
     name: 'Compras',
     bucket: 'lifestyle',
@@ -240,13 +266,17 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
     type: 'expense',
     sort_order: 11,
     subcategories: [
-      { name: 'Roupas & Calçados', icon: 'Shirt' },
+      { name: 'Roupas', icon: 'Shirt' },
+      { name: 'Calçados', icon: 'ShoppingBag' },
       { name: 'Eletrônicos & Gadgets', icon: 'Laptop' },
-      { name: 'Decoração & Utilidades', icon: 'Home' },
+      { name: 'Eletrodomésticos', icon: 'Tv' },
+      { name: 'Móveis & Decoração', icon: 'Home' },
+      { name: 'Utilidades & Casa', icon: 'Package' },
       { name: 'Presentes', icon: 'Gift' },
+      { name: 'Bebês & Crianças', icon: 'Smile' },
     ],
   },
-  // 12. Pets (lifestyle)
+  // 12. Pets (lifestyle, 3 subcategorias)
   {
     name: 'Pets',
     bucket: 'lifestyle',
@@ -260,7 +290,7 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
       { name: 'Banho, Tosa & Acessórios', icon: 'Sparkles' },
     ],
   },
-  // 13. Reserva de Emergência (future)
+  // 13. Reserva de Emergência (future, 2 subcategorias)
   {
     name: 'Reserva de Emergência',
     bucket: 'future',
@@ -273,7 +303,7 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
       { name: 'Resgates Emergenciais', icon: 'ArrowDownRight' },
     ],
   },
-  // 14. Metas (future, renomeada de Metas & Grandes Sonhos)
+  // 14. Metas (future, 6 subcategorias)
   {
     name: 'Metas',
     bucket: 'future',
@@ -286,9 +316,11 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
       { name: 'Casa Própria', icon: 'Home' },
       { name: 'Viagem Internacional', icon: 'Plane' },
       { name: 'Reforma', icon: 'Wrench' },
+      { name: 'Educação Futura (dos Filhos)', icon: 'GraduationCap' },
+      { name: 'Meta Livre', icon: 'Target' },
     ],
   },
-  // 15. Investimentos (future, renomeada de Investimentos de Longo Prazo)
+  // 15. Investimentos (future, 7 subcategorias)
   {
     name: 'Investimentos',
     bucket: 'future',
@@ -297,12 +329,16 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
     type: 'expense',
     sort_order: 15,
     subcategories: [
+      { name: 'Tesouro Direto', icon: 'Landmark' },
+      { name: 'Renda Fixa (CDB/LCI/LCA)', icon: 'Banknote' },
+      { name: 'Ações & ETFs', icon: 'TrendingUp' },
+      { name: 'Fundos Imobiliários (FIIs)', icon: 'Building' },
+      { name: 'Criptomoedas', icon: 'Coins' },
       { name: 'Previdência Privada', icon: 'Landmark' },
-      { name: 'Ações & Fundos Imobiliários', icon: 'TrendingUp' },
       { name: 'Aposentadoria', icon: 'PiggyBank' },
     ],
   },
-  // 16. Salário (income)
+  // 16. Salário (income, 5 subcategorias)
   {
     name: 'Salário',
     bucket: null,
@@ -312,23 +348,13 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
     sort_order: 16,
     subcategories: [
       { name: 'Salário Principal', icon: 'Briefcase' },
+      { name: '13º & Férias', icon: 'Gift' },
+      { name: 'Bônus & PLR', icon: 'Coins' },
+      { name: 'Horas Extras & Comissões', icon: 'Clock' },
       { name: 'Benefícios (VR/VA)', icon: 'CreditCard' },
     ],
   },
-  // 17. Rendimentos (income)
-  {
-    name: 'Rendimentos',
-    bucket: null,
-    icon: 'TrendingUp',
-    color: '#059669',
-    type: 'income',
-    sort_order: 17,
-    subcategories: [
-      { name: 'Dividendos & JCP', icon: 'TrendingUp' },
-      { name: 'Rendimentos de Aplicações', icon: 'Landmark' },
-    ],
-  },
-  // 18. Trabalhos Extras & Autônomo (income - NOVA CATEGORIA D2)
+  // 17. Trabalhos Extras & Autônomo (income, 6 subcategorias)
   {
     name: 'Trabalhos Extras & Autônomo',
     bucket: null,
@@ -341,9 +367,11 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
       { name: 'Venda de Produtos', icon: 'ShoppingBag' },
       { name: 'MEI & Autônomo', icon: 'Briefcase' },
       { name: 'Comissões & Gorjetas', icon: 'Coins' },
+      { name: 'Cursos & Aulas Particulares', icon: 'GraduationCap' },
+      { name: 'Infoprodutos & Conteúdo', icon: 'Laptop' },
     ],
   },
-  // 19. Outras Receitas (income - NOVA CATEGORIA D3)
+  // 18. Outras Receitas (income, 5 subcategorias)
   {
     name: 'Outras Receitas',
     bucket: null,
@@ -356,6 +384,22 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
       { name: 'Cashback & Milhas', icon: 'Coins' },
       { name: 'Presentes Recebidos', icon: 'Gift' },
       { name: 'Vendas de Itens Usados', icon: 'Tag' },
+      { name: 'Restituição de Imposto de Renda', icon: 'FileText' },
+    ],
+  },
+  // 19. Rendimentos (income, 4 subcategorias)
+  {
+    name: 'Rendimentos',
+    bucket: null,
+    icon: 'TrendingUp',
+    color: '#059669',
+    type: 'income',
+    sort_order: 17,
+    subcategories: [
+      { name: 'Juros & Rendimento de Aplicações', icon: 'Landmark' },
+      { name: 'Dividendos & JCP', icon: 'TrendingUp' },
+      { name: 'Aluguel Recebido', icon: 'Home' },
+      { name: 'Aposentadoria & Pensão', icon: 'PiggyBank' },
     ],
   },
 ] as const
