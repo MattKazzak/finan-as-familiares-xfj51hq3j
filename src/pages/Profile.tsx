@@ -41,6 +41,7 @@ import {
 } from '@/lib/formatters'
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
 import { InstallInstructionsModal } from '@/components/common/InstallInstructionsModal'
+import { CategoryManagementDialog } from '@/components/categories/CategoryManagementDialog'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import { Sparkles, Landmark } from 'lucide-react'
 import packageJson from '../../package.json'
@@ -88,6 +89,7 @@ export default function ProfilePage() {
   // Estado do modal de instruções PWA (iOS / Outros sem prompt nativo)
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false)
   const [isInstalling, setIsInstalling] = useState(false)
+  const [isCategoryManagementOpen, setIsCategoryManagementOpen] = useState(false)
 
   // Diálogo Editar Família (Nome e Avatar/Logo)
   const [isEditFamilyOpen, setIsEditFamilyOpen] = useState(false)
@@ -821,6 +823,24 @@ export default function ProfilePage() {
 
         <div className="flex items-center justify-between py-3 border-t border-b border-slate-100 gap-3">
           <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-slate-800">Catálogo de Categorias</p>
+            <p className="text-[11px] text-slate-500">
+              Gerencie gavetas ou restaure o catálogo padrão canônico
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIsCategoryManagementOpen(true)}
+            className="text-xs rounded-xl h-8 border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold"
+          >
+            Gerenciar / Restaurar
+          </Button>
+        </div>
+
+        <div className="flex items-center justify-between py-3 border-b border-slate-100 gap-3">
+          <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold text-slate-800">Formato de Moeda</p>
             <p className="text-[11px] text-slate-500">Padrão nacional do sistema</p>
           </div>
@@ -1038,6 +1058,12 @@ export default function ProfilePage() {
         open={isInstallModalOpen}
         onOpenChange={setIsInstallModalOpen}
         isIos={isIos}
+      />
+
+      {/* MODAL DE GERENCIAMENTO E RESTAURAÇÃO DE CATEGORIAS */}
+      <CategoryManagementDialog
+        open={isCategoryManagementOpen}
+        onOpenChange={setIsCategoryManagementOpen}
       />
 
       {/* Rodapé de Versão com versão dinâmica sincronizada */}

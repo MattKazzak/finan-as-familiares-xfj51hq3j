@@ -423,7 +423,11 @@ export default function ImportPage() {
         // Sugestão de IA = confidence retornado pelo modelo (0.01 - 0.99);
         // Lançamento manual ou usuário que alterou manualmente para categoria sem IA = NULL.
         let resolvedAiConfidence: number | null = null
-        if (item.source === 'database_rule' || item.source === 'fallback_rule' || item.source === 'name_match') {
+        if (
+          item.source === 'database_rule' ||
+          item.source === 'fallback_rule' ||
+          item.source === 'name_match'
+        ) {
           resolvedAiConfidence = 1.0
         } else if (item.source === 'ai_suggestion' && typeof item.aiConfidence === 'number') {
           resolvedAiConfidence = Number(item.aiConfidence.toFixed(2))

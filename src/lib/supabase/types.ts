@@ -620,6 +620,7 @@ export type Database = {
       }
       transactions: {
         Row: {
+          ai_confidence: number | null
           amount_cents: number
           bank_transaction_id: string | null
           category_id: string | null
@@ -642,6 +643,7 @@ export type Database = {
           type: Database['public']['Enums']['transaction_type']
         }
         Insert: {
+          ai_confidence?: number | null
           amount_cents: number
           bank_transaction_id?: string | null
           category_id?: string | null
@@ -664,6 +666,7 @@ export type Database = {
           type: Database['public']['Enums']['transaction_type']
         }
         Update: {
+          ai_confidence?: number | null
           amount_cents?: number
           bank_transaction_id?: string | null
           category_id?: string | null

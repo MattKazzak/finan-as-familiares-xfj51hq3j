@@ -41,6 +41,7 @@ import {
 } from '@/services/import/categorization'
 import { parseBRLToCents, formatNumberBRL, formatBRL } from '@/lib/formatters'
 import { useToast } from '@/hooks/use-toast'
+import { ContextualSubcategorySelector } from '@/components/categories/ContextualSubcategorySelector'
 import { CategoryIcon } from '@/components/common/CategoryIcon'
 import type { CategorizationRule, Transaction, RecurringIncome } from '@/types/finance'
 import {
@@ -778,8 +779,8 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
         </div>
       </div>
 
-      {/* Subcategorias (aparece quando categoria selecionada possui subcategorias) */}
-      {categoryId !== 'none' && availableSubcategories.length > 0 ? (
+      {/* Subcategorias: Seletor Contextual Progressivo com 3-4 sugestões, busca e Ver todas */}
+      {categoryId !== 'none' ? (
         <div className="space-y-1.5 pt-0.5 animate-in fade-in-50">
           <div className="flex items-center justify-between px-1">
             <Label className="text-[11px] font-semibold text-slate-600">
@@ -791,41 +792,27 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                 onClick={() => setSubcategoryId('none')}
                 className="text-[11px] text-slate-400 hover:text-slate-600 cursor-pointer"
               >
-                Geral
+                Limpar
               </button>
             )}
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            <button
-              type="button"
-              onClick={() => setSubcategoryId('none')}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all cursor-pointer ${
-                subcategoryId === 'none'
-                  ? 'bg-slate-700 text-white border-slate-700'
-                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              Geral
-            </button>
-            {availableSubcategories.map((sub) => {
-              const isSubSelected = subcategoryId === sub.id
-              return (
-                <button
-                  key={sub.id}
-                  type="button"
-                  onClick={() => setSubcategoryId(sub.id)}
-                  className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all flex items-center gap-1 cursor-pointer ${
-                    isSubSelected
-                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
-                      : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                  }`}
-                >
-                  <span className="truncate max-w-[120px]">{sub.name}</span>
-                  {isSubSelected && <Check className="w-2.5 h-2.5 shrink-0" />}
-                </button>
-              )
-            })}
-          </div>
+          <ContextualSubcategorySelector
+            subcategories={availableSubcategories.map((s) => ({
+              id: s.id,
+              name: s.name,
+              category_id: s.category_id,
+            }))}
+            selectedSubcategoryId={subcategoryId === 'none' ? null : subcategoryId}
+            onSelect={(newSubId, newCatId) => {
+              if (newCatId && newCatId !== categoryId) {
+                setCategoryId(newCatId)
+              }
+              setSubcategoryId(newSubId || 'none')
+            }}
+            allCategories={categories}
+            currentCategoryId={categoryId}
+            placeholder="Selecione ou busque uma subcategoria..."
+          />
         </div>
       ) : null}
 

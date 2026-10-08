@@ -32,9 +32,20 @@ import { CATEGORY_COLORS, BUCKET_OPTIONS } from './CategoryEditorPopover'
 import { useFamily } from '@/hooks/use-family'
 import { useToast } from '@/hooks/use-toast'
 import type { BudgetBucket, TransactionCategory, TransactionSubcategory } from '@/types/finance'
-import { Plus, Trash2, Loader2, AlertTriangle, Layers, Tag } from 'lucide-react'
+import {
+  Plus,
+  Trash2,
+  Loader2,
+  AlertTriangle,
+  Layers,
+  Tag,
+  RotateCcw,
+  RefreshCw,
+  CheckCircle2,
+} from 'lucide-react'
 import { parseBRLToCents, formatBRL } from '@/lib/formatters'
 import { upsertDefaultBudget } from '@/services/transactions'
+import { restoreMissingCatalog, resetCatalogToDefault } from '@/services/catalog-restore'
 
 interface CategoryManagementDialogProps {
   open: boolean
@@ -85,6 +96,19 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
   const [subToDelete, setSubToDelete] = useState<TransactionSubcategory | null>(null)
   const [subUsageCount, setSubUsageCount] = useState<number>(0)
   const [checkingSubUsage, setCheckingSubUsage] = useState(false)
+
+  // Estado dos diálogos de Restauração de Catálogo Padrão
+  const [showRestoreMenu, setShowRestoreMenu] = useState(false)
+  const [showAddMissingConfirm, setShowAddMissingConfirm] = useState(false)
+  const [showResetWarningStep1, setShowResetWarningStep1] = useState(false)
+  const [showResetConfirmStep2, setShowResetConfirmStep2] = useState(false)
+  const [isRestoring, setIsRestoring] = useState(false)
+  const [restoreSummary, setRestoreSummary] = useState<{
+    mode: 'missing' | 'reset'
+    categoriesAdded: number
+    subcategoriesAdded: number
+    reassignedCount?: number
+  } | null>(null)
 
   const filteredCategories = categories.filter((c) => {
     if (filterType === 'all') return true
@@ -241,7 +265,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
             </div>
           </DialogHeader>
 
-          {/* Filtros rápidos & Botão Nova Categoria */}
+          {/* Filtros rápidos, Ações & Botão Nova Categoria */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2 border-b border-slate-100 pb-3">
             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl self-start">
               <button
@@ -279,15 +303,29 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
               </button>
             </div>
 
-            <Button
-              type="button"
-              onClick={() => setIsAddingCategory((prev) => !prev)}
-              size="sm"
-              className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] text-xs rounded-xl gap-1.5 h-8 font-bold shadow-xs border-0"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{isAddingCategory ? 'Cancelar cadastro' : 'Nova Categoria'}</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* Botão Restaurar Catálogo Padrão */}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowRestoreMenu(true)}
+                className="text-xs rounded-xl gap-1.5 h-8 border-slate-200 text-slate-700 hover:bg-slate-50 font-medium"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+                <span>Restaurar padrão</span>
+              </Button>
+
+              <Button
+                type="button"
+                onClick={() => setIsAddingCategory((prev) => !prev)}
+                size="sm"
+                className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] text-xs rounded-xl gap-1.5 h-8 font-bold shadow-xs border-0"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>{isAddingCategory ? 'Cancelar cadastro' : 'Nova Categoria'}</span>
+              </Button>
+            </div>
           </div>
 
           {/* Formulário Retrátil para Nova Categoria */}
@@ -629,6 +667,291 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
               className="text-xs rounded-xl w-full sm:w-auto"
             >
               <span>Fechar</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIÁLOGO SELETOR DE MODO DE RESTAURAÇÃO */}
+      <Dialog open={showRestoreMenu} onOpenChange={setShowRestoreMenu}>
+        <DialogContent className="max-w-md rounded-3xl p-6 text-foreground">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <RotateCcw className="w-5 h-5 text-amber-500" />
+              <span>Restaurar Catálogo Padrão</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 pt-1">
+              Escolha como deseja sincronizar o catálogo com as 19 categorias e 116 subcategorias
+              oficiais do Curiangoo:
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 pt-2">
+            {/* Opção 1: Restaurar o que falta (Aditivo) */}
+            <div
+              onClick={() => {
+                setShowRestoreMenu(false)
+                setShowAddMissingConfirm(true)
+              }}
+              className="p-4 rounded-2xl border border-slate-200 hover:border-emerald-500/80 hover:bg-emerald-50/30 cursor-pointer transition-all space-y-1 shadow-2xs"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-sm text-slate-900">
+                  Modo 1: Restaurar o que falta
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                  Recomendado
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Adiciona apenas as categorias e subcategorias canônicas que a família não possui.
+                Suas personalizações e transações continuam 100% intactas.
+              </p>
+            </div>
+
+            {/* Opção 2: Redefinir tudo (Destrutivo / Confirmação Dupla) */}
+            <div
+              onClick={() => {
+                setShowRestoreMenu(false)
+                setShowResetWarningStep1(true)
+              }}
+              className="p-4 rounded-2xl border border-rose-200/80 bg-rose-50/20 hover:bg-rose-50/50 cursor-pointer transition-all space-y-1 shadow-2xs"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-sm text-rose-950">
+                  Modo 2: Redefinir tudo ao padrão
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800">
+                  Destrutivo
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Volta o catálogo 100% ao padrão canônico. Remove categorias customizadas remanejando
+                antes as transações para não deixar nenhuma transação órfã.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowRestoreMenu(false)}
+              className="text-xs rounded-xl w-full"
+            >
+              Cancelar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODO 1: DIÁLOGO DE CONFIRMAÇÃO ADITIVA (1 CLIQUE) */}
+      <AlertDialog open={showAddMissingConfirm} onOpenChange={setShowAddMissingConfirm}>
+        <AlertDialogContent className="rounded-3xl max-w-md p-6">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <RefreshCw className="w-5 h-5 text-emerald-600" />
+              <span>Restaurar categorias que faltam?</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-slate-600 leading-relaxed">
+              O sistema irá comparar seu catálogo com o padrão canônico (19 categorias e 116
+              subcategorias) e inserir apenas as gavetas que ainda não existem. Nada existente será
+              alterado ou excluído.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="pt-2">
+            <AlertDialogCancel disabled={isRestoring} className="text-xs rounded-xl">
+              Voltar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isRestoring || !family?.id}
+              onClick={async (e) => {
+                e.preventDefault()
+                if (!family?.id) return
+                try {
+                  setIsRestoring(true)
+                  const res = await restoreMissingCatalog(
+                    family.id,
+                    categories,
+                    categories.flatMap((c) => c.subcategories || []),
+                  )
+                  setShowAddMissingConfirm(false)
+                  setRestoreSummary({
+                    mode: 'missing',
+                    categoriesAdded: res.categoriesAdded,
+                    subcategoriesAdded: res.subcategoriesAdded,
+                  })
+                  triggerRefresh()
+                } catch (err: any) {
+                  toast({
+                    title: 'Erro na restauração',
+                    description: err?.message || 'Falha ao restaurar catálogo.',
+                    variant: 'destructive',
+                  })
+                } finally {
+                  setIsRestoring(false)
+                }
+              }}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl"
+            >
+              {isRestoring ? (
+                <span className="flex items-center gap-1.5">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Restaurando...</span>
+                </span>
+              ) : (
+                'Confirmar restauração'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* MODO 2 — PASSO 1: EXPLICAÇÃO DO QUE SERÁ PERDIDO */}
+      <AlertDialog open={showResetWarningStep1} onOpenChange={setShowResetWarningStep1}>
+        <AlertDialogContent className="rounded-3xl max-w-md p-6 border-rose-300">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-bold text-rose-900 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-rose-600" />
+              <span>Passo 1/2: Redefinição Completa</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-slate-600 leading-relaxed space-y-2">
+              <p>
+                Esta ação é <strong>destrutiva</strong> para categorias e subcategorias customizadas
+                criadas por você.
+              </p>
+              <p className="bg-amber-50 p-3 rounded-xl border border-amber-200 text-amber-900 text-[11px] leading-relaxed">
+                🛡️ <strong>Proteção Zero Órfãos:</strong> Suas transações <strong>NUNCA</strong>{' '}
+                serão apagadas. Antes de remover qualquer categoria customizada, as transações serão
+                remanejadas com segurança para a categoria padrão equivalente mais próxima.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="pt-2">
+            <AlertDialogCancel className="text-xs rounded-xl">Cancelar</AlertDialogCancel>
+            <Button
+              type="button"
+              onClick={() => {
+                setShowResetWarningStep1(false)
+                setShowResetConfirmStep2(true)
+              }}
+              className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl"
+            >
+              Prosseguir para confirmação final
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* MODO 2 — PASSO 2: CONFIRMAÇÃO EXPLÍCITA */}
+      <AlertDialog open={showResetConfirmStep2} onOpenChange={setShowResetConfirmStep2}>
+        <AlertDialogContent className="rounded-3xl max-w-md p-6 border-rose-500">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-bold text-rose-950 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-rose-600" />
+              <span>Passo 2/2: Confirmar redefinição total?</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-slate-700 leading-relaxed">
+              Você tem certeza absoluta de que deseja redefinir todo o catálogo para o padrão
+              canônico oficial (19 categorias / 116 subcategorias)?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="pt-2">
+            <AlertDialogCancel disabled={isRestoring} className="text-xs rounded-xl">
+              Não, cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isRestoring || !family?.id}
+              onClick={async (e) => {
+                e.preventDefault()
+                if (!family?.id) return
+                try {
+                  setIsRestoring(true)
+                  const res = await resetCatalogToDefault(
+                    family.id,
+                    categories,
+                    categories.flatMap((c) => c.subcategories || []),
+                  )
+                  setShowResetConfirmStep2(false)
+                  setRestoreSummary({
+                    mode: 'reset',
+                    categoriesAdded: res.categoriesAdded,
+                    subcategoriesAdded: res.subcategoriesAdded,
+                    reassignedCount: res.reassignedTransactionsCount || 0,
+                  })
+                  triggerRefresh()
+                } catch (err: any) {
+                  toast({
+                    title: 'Erro na redefinição',
+                    description: err?.message || 'Falha ao redefinir catálogo.',
+                    variant: 'destructive',
+                  })
+                } finally {
+                  setIsRestoring(false)
+                }
+              }}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl"
+            >
+              {isRestoring ? (
+                <span className="flex items-center gap-1.5">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Processando...</span>
+                </span>
+              ) : (
+                'Sim, redefinir catálogo agora'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* RESUMO PÓS-OPERAÇÃO */}
+      <Dialog open={Boolean(restoreSummary)} onOpenChange={() => setRestoreSummary(null)}>
+        <DialogContent className="max-w-sm rounded-3xl p-6 text-foreground">
+          <DialogHeader>
+            <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-2">
+              <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
+            </div>
+            <DialogTitle className="text-center text-lg font-bold text-slate-900">
+              {restoreSummary?.mode === 'missing'
+                ? 'Catálogo Sincronizado!'
+                : 'Catálogo Redefinido com Sucesso!'}
+            </DialogTitle>
+            <DialogDescription className="text-center text-xs text-slate-600 pt-1">
+              A estrutura canônica de categorias e subcategorias foi aplicada à sua família.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-600">Categorias adicionadas:</span>
+              <span className="font-bold text-slate-900">
+                {restoreSummary?.categoriesAdded || 0}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-600">Subcategorias adicionadas:</span>
+              <span className="font-bold text-slate-900">
+                {restoreSummary?.subcategoriesAdded || 0}
+              </span>
+            </div>
+            {restoreSummary?.mode === 'reset' && (
+              <div className="flex items-center justify-between pt-1 border-t border-slate-200">
+                <span className="text-slate-600">Transações remanejadas:</span>
+                <span className="font-bold text-emerald-800">
+                  {restoreSummary?.reassignedCount || 0} (zero órfãos)
+                </span>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="pt-2">
+            <Button
+              type="button"
+              onClick={() => setRestoreSummary(null)}
+              className="w-full text-xs font-bold rounded-xl bg-slate-900 hover:bg-slate-800 text-white"
+            >
+              Concluir
             </Button>
           </DialogFooter>
         </DialogContent>

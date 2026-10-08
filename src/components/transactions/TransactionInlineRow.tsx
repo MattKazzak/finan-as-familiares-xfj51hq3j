@@ -8,6 +8,7 @@ import type {
   TransactionType,
 } from '@/types/finance'
 import { CategoryIcon } from '@/components/common/CategoryIcon'
+import { ContextualSubcategorySelector } from '@/components/categories/ContextualSubcategorySelector'
 import { formatBRL } from '@/lib/formatters'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
@@ -550,37 +551,25 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
                 <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block mb-1">
                   Subcategoria
                 </label>
-                <Select
-                  value={selectedSubcatId}
-                  onValueChange={setSelectedSubcatId}
-                  disabled={
-                    disabled ||
-                    saving ||
-                    savingBatch ||
-                    !selectedCatId ||
-                    availableSubcategories.length === 0
-                  }
-                >
-                  <SelectTrigger className="h-9 text-xs bg-white rounded-xl border-slate-300 shadow-2xs font-medium">
-                    <SelectValue
-                      placeholder={
-                        availableSubcategories.length === 0
-                          ? 'Sem subcategorias nesta categoria'
-                          : 'Subcategoria opcional...'
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    <SelectItem value="none" className="text-xs text-slate-500 font-medium">
-                      Nenhuma subcategoria
-                    </SelectItem>
-                    {availableSubcategories.map((sub: TransactionSubcategory) => (
-                      <SelectItem key={sub.id} value={sub.id} className="text-xs">
-                        {sub.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ContextualSubcategorySelector
+                  subcategories={availableSubcategories.map((s) => ({
+                    id: s.id,
+                    name: s.name,
+                    category_id: s.category_id,
+                  }))}
+                  selectedSubcategoryId={selectedSubcatId === 'none' ? null : selectedSubcatId}
+                  onSelect={(newSubId, newCatId) => {
+                    if (newCatId && newCatId !== selectedCatId) {
+                      setSelectedCatId(newCatId)
+                    }
+                    setSelectedSubcatId(newSubId || 'none')
+                  }}
+                  allCategories={categories}
+                  currentCategoryId={selectedCatId}
+                  disabled={disabled || saving || savingBatch || !selectedCatId}
+                  placeholder="Subcategoria opcional..."
+                  className="h-9 text-xs"
+                />
               </div>
             </div>
 

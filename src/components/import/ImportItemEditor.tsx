@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { CategoryIcon } from '@/components/common/CategoryIcon'
+import { ContextualSubcategorySelector } from '@/components/categories/ContextualSubcategorySelector'
 import { formatBRL } from '@/lib/formatters'
 import type { ReviewItem } from '@/components/transactions/ImportStatementDialog'
 import type { TransactionCategory, FamilyMember } from '@/types/finance'
@@ -293,38 +294,39 @@ export const ImportItemEditor: React.FC<ImportItemEditorProps> = ({
           </Select>
         </div>
 
-        {/* Subcategoria */}
+        {/* Subcategoria com Seletor Contextual Progressivo */}
         <div className="space-y-1.5">
-          <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-            Subcategoria
-          </Label>
-          <Select
-            value={item.subcategory_id || 'none'}
-            onValueChange={(val) =>
-              onUpdateField(item.id, 'subcategory_id', val === 'none' ? null : val)
-            }
-            disabled={availableSubcategories.length === 0}
-          >
-            <SelectTrigger className="h-9 text-xs sm:text-sm w-full rounded-xl bg-white border-slate-300 font-medium">
-              <SelectValue
-                placeholder={
-                  availableSubcategories.length === 0
-                    ? 'Sem subcategorias nesta categoria'
-                    : 'Subcategoria opcional...'
-                }
-              />
-            </SelectTrigger>
-            <SelectContent className="max-h-48">
-              <SelectItem value="none" className="text-xs text-slate-500">
-                Sem subcategoria
-              </SelectItem>
-              {availableSubcategories.map((sub) => (
-                <SelectItem key={sub.id} value={sub.id} className="text-xs sm:text-sm">
-                  {sub.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center justify-between">
+            <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+              Subcategoria
+            </Label>
+            {item.subcategory_id && (
+              <button
+                type="button"
+                onClick={() => onUpdateField(item.id, 'subcategory_id', null)}
+                className="text-[11px] text-slate-400 hover:text-slate-600"
+              >
+                Limpar
+              </button>
+            )}
+          </div>
+          <ContextualSubcategorySelector
+            subcategories={availableSubcategories.map((s) => ({
+              id: s.id,
+              name: s.name,
+              category_id: s.category_id,
+            }))}
+            selectedSubcategoryId={item.subcategory_id || null}
+            onSelect={(newSubId, newCatId) => {
+              if (newCatId && newCatId !== item.category_id) {
+                onUpdateField(item.id, 'category_id', newCatId)
+              }
+              onUpdateField(item.id, 'subcategory_id', newSubId)
+            }}
+            allCategories={categories}
+            currentCategoryId={item.category_id}
+            placeholder="Subcategoria opcional ou buscar nas 116..."
+          />
         </div>
 
         {/* ITEM 3 DO PLANO: "APLICAR A SEMELHANTES" NA MESMA REVISÃO */}
