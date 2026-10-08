@@ -111,7 +111,6 @@ function LoginRoute() {
   return <Login />
 }
 
-const invalidVariable: number = "this should fail typecheck"
 const App = () => (
   <BrowserRouter>
     <AuthProvider>
