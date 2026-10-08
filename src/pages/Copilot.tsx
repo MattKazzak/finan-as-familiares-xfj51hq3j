@@ -150,9 +150,10 @@ export function CopilotPage() {
         }
 
         const todayStr = new Date().toISOString().split('T')[0]
+        const memberId = currentMember?.id || members[0]?.id || ''
         const created = await createTransaction({
           family_id: family.id,
-          member_id: currentMember?.id || members[0]?.id || null,
+          member_id: memberId,
           category_id: categoryId,
           subcategory_id: subcategoryId,
           type: txData.type,
@@ -160,7 +161,6 @@ export function CopilotPage() {
           description: txData.description,
           transaction_date: todayStr,
           status: 'confirmed',
-          payment_method: txData.paymentMethod || null,
         })
 
         triggerRefresh()
@@ -196,7 +196,7 @@ export function CopilotPage() {
     if (family?.id) {
       saveCopilotMessage({
         familyId: family.id,
-        role: 'user',
+        role: 'user' as const,
         content: text,
       }).catch(() => {})
     }
@@ -221,12 +221,12 @@ export function CopilotPage() {
           }
         : undefined
 
-      const parsed = await parseVoiceWithAi(text, {
-        categories,
-        members,
+      const parsed = await parseVoiceWithAi({
+        texto: text,
         familyId: family?.id,
-        contextoAnterior: previousCtx,
-        historicoMensagens: historicoSanitizado,
+        categories,
+        contexto_anterior: previousCtx as any,
+        historico_mensagens: historicoSanitizado as any,
       })
 
       let assistantText = parsed.friendlyMessage || 'Pronto!'
@@ -354,9 +354,9 @@ export function CopilotPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-5rem)] md:h-[calc(100vh-6rem)] max-w-2xl mx-auto bg-white/70 backdrop-blur-sm rounded-3xl border border-border/40 shadow-curiango overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-5rem)] md:h-[calc(100vh-6rem)] max-w-2xl mx-auto bg-white/70 backdrop-blur-sm rounded-3xl border border-border/40 shadow-curiango overflow-hidden relative">
       {/* Topo do Chat (CDS v1.0) */}
-      <div className="flex items-center justify-between px-4 py-3 bg-[#14213D] text-white">
+      <div className="flex items-center justify-between px-4 py-3 bg-brand text-white">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -369,14 +369,14 @@ export function CopilotPage() {
           <div>
             <div className="flex items-center gap-1.5">
               <h2 className="font-semibold text-sm leading-tight">Copilot Curiangoo</h2>
-              <span className="text-[10px] font-semibold bg-[#FCA311] text-[#14213D] px-1.5 py-0.2 rounded-full">
+              <span className="text-[10px] font-semibold bg-brand-amber text-brand px-1.5 py-0.2 rounded-full">
                 IA
               </span>
             </div>
             <p className="text-[11px] text-white/70">Consultor financeiro & lançamentos rápidos</p>
           </div>
         </div>
-        <div className="w-8 h-8 rounded-xl bg-[#FCA311]/20 border border-[#FCA311]/40 flex items-center justify-center text-[#FCA311]">
+        <div className="w-8 h-8 rounded-xl bg-brand-amber/20 border border-brand-amber/40 flex items-center justify-center text-brand-amber">
           <Sparkles className="w-4 h-4" strokeWidth={1.5} />
         </div>
       </div>
@@ -393,36 +393,60 @@ export function CopilotPage() {
               <div
                 className={`max-w-[85%] sm:max-w-[75%] rounded-2xl p-3 text-xs sm:text-sm leading-relaxed shadow-curiango ${
                   isUser
-                    ? 'bg-[#14213D] text-white rounded-br-xs'
-                    : 'bg-white text-slate-800 border border-slate-200/60 rounded-bl-xs'
+                    ? 'bg-brand text-white rounded-br-xs'
+                    : 'bg-white text-brand border border-border/60 rounded-bl-xs'
                 }`}
               >
                 <p className="whitespace-pre-wrap break-words">{m.text}</p>
 
                 {/* Renderização de Card de Lançamento se aplicável */}
                 {m.cardData && m.cardData.amountCents > 0 && (
-                  <div className="mt-2.5 pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2 text-xs">
+                  <div className="mt-2.5 pt-2 border-t border-border/60 flex items-center justify-between gap-2 text-xs">
                     <div className="flex items-center gap-1.5 min-w-0">
                       {m.cardData.type === 'income' ? (
                         <TrendingUp
-                          className="w-3.5 h-3.5 text-[#059669] shrink-0"
+                          className="w-3.5 h-3.5 text-finance-income shrink-0"
                           strokeWidth={1.5}
                         />
                       ) : (
                         <TrendingDown
-                          className="w-3.5 h-3.5 text-[#E11D48] shrink-0"
+                          className="w-3.5 h-3.5 text-finance-expense shrink-0"
                           strokeWidth={1.5}
                         />
                       )}
-                      <span className="font-medium text-slate-700 truncate">
+                      <span className="font-medium text-muted-foreground truncate">
                         {m.cardData.categoryNameSuggestion || 'Geral'}
                       </span>
                     </div>
-                    <span className="font-semibold text-slate-900 shrink-0">
+                    <span className="font-semibold text-brand shrink-0">
                       {formatBRL(m.cardData.amountCents)}
                     </span>
                   </div>
                 )}
+
+                {/* Card de Opções de Clarificação se aplicável */}
+                {!isUser &&
+                  (m.cardType === 'clarificacao' || m.cardType === 'clarificacao_categoria') &&
+                  m.cardData?.clarificationOptions &&
+                  m.cardData.clarificationOptions.length > 0 && (
+                    <div className="mt-2.5 pt-2 border-t border-border/60 flex flex-col gap-1.5">
+                      <span className="text-[11px] font-semibold text-brand">
+                        Opções sugeridas:
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {m.cardData.clarificationOptions.map((opt, oIdx) => (
+                          <button
+                            key={oIdx}
+                            type="button"
+                            onClick={() => processInput(opt)}
+                            className="text-xs px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-brand-amber/20 hover:text-brand border border-border/60 font-medium transition-colors cursor-pointer text-left break-words"
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
               </div>
               <span className="text-[10px] text-slate-400 mt-1 px-1">
                 {m.timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
@@ -432,8 +456,8 @@ export function CopilotPage() {
         })}
 
         {isProcessing && (
-          <div className="flex items-center gap-2 text-slate-500 text-xs py-2 px-3 bg-white rounded-2xl w-fit border border-slate-200/60">
-            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#FCA311]" />
+          <div className="flex items-center gap-2 text-muted-foreground text-xs py-2 px-3 bg-white rounded-2xl w-fit border border-border/60">
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-brand-amber" />
             <span>Copilot pensando...</span>
           </div>
         )}
@@ -454,8 +478,8 @@ export function CopilotPage() {
           aria-label={isListening ? 'Parar microfone' : 'Falar comando por voz'}
           className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer shrink-0 ${
             isListening
-              ? 'bg-[#E11D48] text-white animate-pulse'
-              : 'bg-slate-100 text-slate-700 hover:bg-[#FCA311]/20 hover:text-[#14213D]'
+              ? 'bg-finance-expense text-white animate-pulse'
+              : 'bg-slate-100 text-slate-700 hover:bg-brand-amber/20 hover:text-brand'
           }`}
         >
           <Mic className="w-4 h-4" strokeWidth={1.5} />
@@ -467,50 +491,55 @@ export function CopilotPage() {
           onChange={(e) => setInputText(e.target.value)}
           placeholder="Pergunte algo ou lance um gasto..."
           disabled={isProcessing}
-          className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#FCA311]"
+          className="flex-1 bg-slate-50 border border-border/60 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-slate-800 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-amber min-w-0"
         />
 
         <button
           type="submit"
           disabled={!inputText.trim() || isProcessing}
           aria-label="Enviar mensagem"
-          className="w-10 h-10 rounded-xl bg-[#14213D] text-white hover:bg-[#1f325c] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all cursor-pointer shrink-0"
+          className="w-10 h-10 rounded-xl bg-brand text-white hover:bg-brand-light disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all cursor-pointer shrink-0"
         >
           <Send className="w-4 h-4" strokeWidth={1.5} />
         </button>
       </form>
 
-      {/* Modal de Consentimento LGPD se necessário */}
+      {/* Modal / Overlay de Consentimento LGPD (IA) - mesmo padrão de diálogo da Rodada 7 */}
       {showConsentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-sm w-full shadow-curiango border border-border/40 space-y-4">
-            <div className="w-10 h-10 rounded-2xl bg-[#FCA311]/20 text-[#14213D] flex items-center justify-center">
-              <Shield className="w-5 h-5 text-[#FCA311]" strokeWidth={1.5} />
-            </div>
-            <div>
-              <h3 className="font-semibold text-sm text-[#14213D]">
-                Consentimento LGPD para o Copilot
+        <div
+          data-testid="ai-consent-modal"
+          className="absolute inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3.5 sm:p-4 rounded-3xl animate-in fade-in duration-150"
+        >
+          <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-2xl border border-slate-200/90 max-w-sm w-full space-y-3.5 text-left">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-brand-amber/20 text-brand flex items-center justify-center shrink-0">
+                <Sparkles className="w-4 h-4 text-brand-amber" strokeWidth={1.5} />
+              </div>
+              <h3 className="text-sm font-bold text-slate-900 leading-snug">
+                Permitir processamento por IA?
               </h3>
-              <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                O Curiangoo AI analisa seus dados para categorizar despesas e responder a consultas
-                sobre orçamentos e saldo. Seus dados nunca são vendidos nem utilizados para
-                treinamento público.
-              </p>
             </div>
-            <div className="flex items-center gap-2 pt-2">
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              O Curiangoo Copilot utiliza inteligência artificial para interpretar sua fala ou texto
+              e sugerir categorias e valores automaticamente. Nenhum dado é compartilhado para fins
+              externos. Deseja permitir o processamento por IA?
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
               <button
                 type="button"
                 onClick={handleConsentDismiss}
-                className="flex-1 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+                className="h-9 px-3 text-xs font-semibold rounded-xl text-slate-700 border border-slate-300 hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 Agora não
               </button>
               <button
                 type="button"
                 onClick={handleConsentAccept}
-                className="flex-1 py-2 text-xs font-semibold text-[#14213D] bg-[#FCA311] hover:bg-[#e08e08] rounded-xl transition-colors cursor-pointer shadow-sm"
+                className="h-9 px-4 text-xs font-bold rounded-xl bg-brand hover:bg-brand-light text-white shadow-xs transition-colors cursor-pointer"
               >
-                Concordar e continuar
+                Permitir
               </button>
             </div>
           </div>

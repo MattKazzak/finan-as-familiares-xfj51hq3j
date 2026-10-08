@@ -94,14 +94,14 @@ export async function fetchUserPreferencesWithFallback(
     // Não existe registro no banco ainda: se houver no localStorage, sincroniza em background
     if (localConsented) {
       const nowIso = new Date().toISOString()
-      supabase
-        .from('user_preferences')
-        .insert({
+      Promise.resolve(
+        supabase.from('user_preferences').insert({
           user_id: targetUserId,
           ai_consent: true,
           ai_consent_at: nowIso,
           updated_at: nowIso,
-        })
+        }),
+      )
         .then(({ error: insertErr }) => {
           if (insertErr) {
             console.warn(

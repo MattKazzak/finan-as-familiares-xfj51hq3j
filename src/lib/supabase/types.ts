@@ -113,6 +113,44 @@ export type Database = {
           },
         ]
       }
+      copilot_messages: {
+        Row: {
+          card_type: string | null
+          content: string
+          created_at: string
+          family_id: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          card_type?: string | null
+          content: string
+          created_at?: string
+          family_id: string
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          card_type?: string | null
+          content?: string
+          created_at?: string
+          family_id?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'copilot_messages_family_id_fkey'
+            columns: ['family_id']
+            isOneToOne: false
+            referencedRelation: 'families'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       default_budgets: {
         Row: {
           amount_cents: number
@@ -681,6 +719,27 @@ export type Database = {
             referencedColumns: ['id']
           },
         ]
+      }
+      user_preferences: {
+        Row: {
+          ai_consent: boolean
+          ai_consent_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_consent?: boolean
+          ai_consent_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_consent?: boolean
+          ai_consent_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
