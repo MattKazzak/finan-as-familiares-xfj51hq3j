@@ -51,6 +51,21 @@ describe('Higienizador Determinístico de Adquirentes Brasileiras (merchant-clea
     expect(cleanMerchantDescription('   ')).toBe('')
     expect(cleanMerchantDescription(null as any)).toBe('')
   })
+
+  it('remove ruídos de extração que colam no nome (páginas, timestamps e valores monetários)', () => {
+    // Marcadores de página
+    expect(cleanMerchantDescription('BRASIL PARALELO PAG 1/3')).toBe('Brasil Paralelo')
+    expect(cleanMerchantDescription('PAGINA 2 AGORA TREINAMENTOS')).toBe('Agora Treinamentos')
+    expect(cleanMerchantDescription('HUBLA FL. 01')).toBe('Hubla')
+    // Timestamps / horários soltos
+    expect(cleanMerchantDescription('RESTAURANTE SABOR 14:32:05')).toBe('Restaurante Sabor')
+    expect(cleanMerchantDescription('10:15 POSTO IPIRANGA')).toBe('Posto Ipiranga')
+    expect(cleanMerchantDescription('UBER TRIP 14h30')).toBe('Uber Trip')
+    // Valores monetários colados
+    expect(cleanMerchantDescription('FARMACIA DROGASIL R$ 123,45')).toBe('Farmacia Drogasil')
+    expect(cleanMerchantDescription('MERCADO EXTRA 45,90 BRL')).toBe('Mercado Extra')
+    expect(cleanMerchantDescription('NETFLIX US$ 15.99')).toBe('Netflix')
+  })
 })
 
 describe('Seed Brasileiro em Código (Camada Determinística Rápida)', () => {

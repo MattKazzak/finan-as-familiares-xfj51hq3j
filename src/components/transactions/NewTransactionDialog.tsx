@@ -136,7 +136,9 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
   const [subcategoryId, setSubcategoryId] = useState<string>(
     initialSubcategoryId || newTransactionPrefill?.initialSubcategoryId || 'none',
   )
-  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credit' | 'debit' | 'cash' | 'voucher' | 'other'>('other')
+  const [paymentMethod, setPaymentMethod] = useState<
+    'pix' | 'credit' | 'debit' | 'cash' | 'voucher' | 'other'
+  >('other')
   const [transactionDate, setTransactionDate] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -885,13 +887,8 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs font-semibold text-slate-700 px-1">
-            Forma de Pagamento
-          </Label>
-          <Select
-            value={paymentMethod}
-            onValueChange={(val: any) => setPaymentMethod(val)}
-          >
+          <Label className="text-xs font-semibold text-slate-700 px-1">Forma de Pagamento</Label>
+          <Select value={paymentMethod} onValueChange={(val: any) => setPaymentMethod(val)}>
             <SelectTrigger className="h-10 text-xs sm:text-sm rounded-2xl bg-slate-50/70 border-slate-200/80">
               <SelectValue placeholder="Forma de pagamento" />
             </SelectTrigger>

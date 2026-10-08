@@ -407,7 +407,7 @@ export async function categorizeBatchWithAI(
           tempId: t.tempId,
           categoryId: catId,
           subcategoryId: catId ? itemSug.subcategoryId || null : null,
-          confidence: typeof itemSug.confidence === 'number' ? itemSug.confidence : 0.8,
+          confidence: typeof itemSug.confidence === 'number' ? itemSug.confidence : 0.55,
           reasoning: itemSug.reasoning || '',
           needsReview: needsReview || !catId,
         })

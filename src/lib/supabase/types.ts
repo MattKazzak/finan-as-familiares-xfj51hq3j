@@ -633,6 +633,7 @@ export type Database = {
           is_installment: boolean
           is_recurring: boolean
           member_id: string
+          payment_method: string | null
           recurring_income_id: string | null
           recurring_month: string | null
           status: string
@@ -654,6 +655,7 @@ export type Database = {
           is_installment?: boolean
           is_recurring?: boolean
           member_id: string
+          payment_method?: string | null
           recurring_income_id?: string | null
           recurring_month?: string | null
           status?: string
@@ -675,6 +677,7 @@ export type Database = {
           is_installment?: boolean
           is_recurring?: boolean
           member_id?: string
+          payment_method?: string | null
           recurring_income_id?: string | null
           recurring_month?: string | null
           status?: string

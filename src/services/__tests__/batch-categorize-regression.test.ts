@@ -100,7 +100,7 @@ describe('Edge Function batch-categorize regression logic & PDF universal parser
         categoryId: catId,
         subcategoryId: subId,
         confidence:
-          typeof item.confidence === 'number' ? Math.min(1, Math.max(0, item.confidence)) : 0.85,
+          typeof item.confidence === 'number' ? Math.min(1, Math.max(0, item.confidence)) : 0.5,
         needsReview,
       })
     }

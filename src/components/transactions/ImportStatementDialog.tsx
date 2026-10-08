@@ -1510,7 +1510,11 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
         return
       }
 
-      finishDialogImportSuccess(selectedItems.length, toUpdateManualMerges.length, toUpdateProjections.length)
+      finishDialogImportSuccess(
+        selectedItems.length,
+        toUpdateManualMerges.length,
+        toUpdateProjections.length,
+      )
     } catch (err: any) {
       console.error('Erro ao salvar lote:', err)
       toast({
@@ -1528,7 +1532,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
     manualMergesCount: number = 0,
     projectionsCount: number = 0,
   ) => {
-    const pendingCount = items.filter((i) => selectedIds.has(i.id) && !i.category_id).length
+    const pendingCount = items.filter((i) => i.selected && !i.category_id).length
     const categorizedCount = totalCount - pendingCount
 
     setLastImportSummary({
@@ -1579,13 +1583,13 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
     } finally {
       setConflictModalOpen(false)
       setSaving(false)
-      finishDialogImportSuccess(items.filter((i) => selectedIds.has(i.id)).length)
+      finishDialogImportSuccess(items.filter((i) => i.selected).length)
     }
   }
 
   const handleKeepOldRules = () => {
     setConflictModalOpen(false)
-    finishDialogImportSuccess(items.filter((i) => selectedIds.has(i.id)).length)
+    finishDialogImportSuccess(items.filter((i) => i.selected).length)
   }
 
   const itemForDetailModal = useMemo(
@@ -3640,8 +3644,8 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
 
           <div className="space-y-3 pt-2 text-xs text-slate-600">
             <p>
-              Encontramos regras existentes para estes estabelecimentos. Deseja atualizar para as novas
-              categorias escolhidas?
+              Encontramos regras existentes para estes estabelecimentos. Deseja atualizar para as
+              novas categorias escolhidas?
             </p>
 
             <div className="max-h-48 overflow-y-auto space-y-2 border border-slate-200/80 rounded-xl p-2.5 bg-slate-50/70">
@@ -3650,15 +3654,24 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                   key={c.ruleId}
                   className="flex items-center justify-between gap-2 text-[11px] bg-white p-2 rounded-lg border border-slate-100 shadow-2xs"
                 >
-                  <span className="font-semibold text-slate-800 truncate max-w-[140px]" title={c.pattern}>
+                  <span
+                    className="font-semibold text-slate-800 truncate max-w-[140px]"
+                    title={c.pattern}
+                  >
                     {c.pattern}
                   </span>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-slate-400 line-through truncate max-w-[80px]" title={c.oldCategoryName}>
+                    <span
+                      className="text-slate-400 line-through truncate max-w-[80px]"
+                      title={c.oldCategoryName}
+                    >
                       {c.oldCategoryName}
                     </span>
                     <span className="text-slate-400">→</span>
-                    <span className="text-emerald-700 font-semibold truncate max-w-[90px]" title={c.newCategoryName}>
+                    <span
+                      className="text-emerald-700 font-semibold truncate max-w-[90px]"
+                      title={c.newCategoryName}
+                    >
                       {c.newCategoryName}
                     </span>
                   </div>

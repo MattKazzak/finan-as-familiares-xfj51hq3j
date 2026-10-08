@@ -1505,7 +1505,9 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           voucher: 'voucher',
           other: 'other',
         }
-        const mappedPaymentMethod = txData.paymentMethod ? methodMap[txData.paymentMethod] || 'other' : 'other'
+        const mappedPaymentMethod = txData.paymentMethod
+          ? methodMap[txData.paymentMethod] || 'other'
+          : 'other'
 
         const created = await createTransaction({
           family_id: family.id,

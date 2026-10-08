@@ -12,6 +12,15 @@ const PREFIX_REGEX =
   /^((PAG\*|MP\*|IFD\*|UBR\*|PAGARME\*|SUMUP\*|STONE\*|CIELO\*|GETNET\*|REDE\*|DEB |CRED |COMPRA )+)/i
 const SUFFIX_REGEX = /\s+(\d{1,2}\/\d{1,2}|PARC\s*\d+|BR|SP|RJ|SAO PAULO)\s*$/i
 
+// Ruídos comuns de extração de PDF que colam no início ou fim do nome:
+// - Marcadores de página (ex.: "PAG 1/3", "PAGINA 2", "FL. 01")
+// - Timestamps e horários soltos (ex.: "14:32:05", "10:15", "14h30")
+// - Valores monetários grudados no texto (ex.: "R$ 123,45", "123,45 BRL", "R$ 50.00")
+const PAGE_NOISE_REGEX =
+  /(^|\s+)(?:P[AÁ]G(?:\.|\b|\s*\d+)|P[AÁ]GINA\s*\d+|FLS?\.?\s*\d+)(?:\s*\/\s*\d+)?(\s+|$)/gi
+const TIMESTAMP_NOISE_REGEX = /(^|\s+)\d{1,2}[:h]\d{2}(?::\d{2})?(?:\s*(?:AM|PM|HRS?))?(\s+|$)/gi
+const CURRENCY_NOISE_REGEX = /(^|\s+)(?:R\$\s*[\d.,]+|[\d.,]+\s*BRL|US\$\s*[\d.,]+)(\s+|$)/gi
+
 /**
  * Converte string para formato Title Case amigável preservando siglas conhecidas
  */
@@ -56,6 +65,17 @@ export function cleanMerchantDescription(raw: string): string {
   while (text !== prev) {
     prev = text
     text = text.replace(SUFFIX_REGEX, '').trim()
+  }
+
+  // Remover ruído de extração de PDF (números de página, timestamps, valores grudados)
+  prev = ''
+  while (text !== prev) {
+    prev = text
+    text = text
+      .replace(PAGE_NOISE_REGEX, ' ')
+      .replace(TIMESTAMP_NOISE_REGEX, ' ')
+      .replace(CURRENCY_NOISE_REGEX, ' ')
+      .trim()
   }
 
   // Normalizar múltiplos espaços internos

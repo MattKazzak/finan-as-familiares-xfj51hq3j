@@ -326,8 +326,18 @@ REGRAS DE EXTRAÇÃO UNIVERSAL:
 4. TOTAL DECLARADO ("declaredTotalCents"):
    - Se o trecho contiver o cabeçalho com o total geral da fatura (ex.: "Total a pagar: R$ 518,93"), capture esse valor consolidado em centavos exclusivamente em "declaredTotalCents" (número inteiro positivo ou null). NUNCA insira esse valor no array "transactions".
 
-5. INFOPRODUTOS E CURSOS LIVRES:
-   - Hotmart, Kiwify, Eduzz, cursos livres, mentorias, Udemy e Alura NUNCA podem ser classificados como Moradia ou Alimentação. Use Educação/Desenvolvimento ou categoria de Estilo de Vida (lifestyle).
+5. PRESERVAÇÃO DE NOMES E RECONSTRUÇÃO COMPLETA:
+   - Transcreva o nome do estabelecimento COMPLETO como aparece no texto da página, sem cortar palavras.
+   - Se o nome aparecer fragmentado em linhas consecutivas (ex.: 'BRASIL' numa linha e 'PARALELO' na seguinte), junte os fragmentos num único nome legível.
+   - Nunca invente palavras que não estão no texto.
+
+6. CLASSIFICAÇÃO NEUTRA E RESPEITO AO CATÁLOGO:
+   - Use EXCLUSIVAMENTE as categorias fornecidas no catálogo da família acima (use os IDs exatos).
+   - Quando houver regras de aprendizado da família no contexto, elas têm prioridade máxima.
+   - Considere o tipo da transação (receita/despesa) e o valor como pistas contextuais.
+
+7. AVALIAÇÃO HONESTA DE CONFIANÇA ("confidence"):
+   - Avalie honestamente: se o estabelecimento for ambíguo, desconhecido ou o nome estiver incompleto, atribua confidence BAIXO (0.3-0.5). Prefira baixa confiança a confiança inflada. Match óbvio e inequívoco recebe 0.85-0.95.
 
 FEW-SHOT CONCEITUAL:
 Entrada:
@@ -414,7 +424,7 @@ Instruções:
           let catId: string | null = String(item.categoryId || '')
           let subId: string | null = item.subcategoryId ? String(item.subcategoryId) : null
           let confidence =
-            typeof item.confidence === 'number' ? Math.min(1, Math.max(0, item.confidence)) : 0.85
+            typeof item.confidence === 'number' ? Math.min(1, Math.max(0, item.confidence)) : 0.5
           let needsReview = false
 
           // Camada Determinística Rápida: verifica se o Seed Brasileiro resolve antes ou confirma a categoria
@@ -679,11 +689,11 @@ REGRAS DE CLASSIFICAÇÃO:
        }
      ]
    }
-2. Use APENAS IDs ("categoryId" e "subcategoryId") que EXISTEM no catálogo acima.
-3. Contexto brasileiro: termos como PG*, PAG*, MP*, IFOOD, UBER, DROGASIL, FARMÁCIA, POSTO, PADARIA, NETFLIX são estabelecimentos do dia a dia.
-4. INFOPRODUTOS E CURSOS: Hotmart, Kiwify, Eduzz, cursos, mentorias, Udemy e Alura JAMAIS podem ser Moradia ou Alimentação. Use categoria de Educação ou balde Estilo de Vida (lifestyle).
-5. CONFIANÇA E REASONING:
-   - "confidence": número entre 0.0 e 1.0 (ex.: 0.95 para match óbvio, 0.40 para descrição incerta).
+2. Use EXCLUSIVAMENTE as categorias fornecidas no catálogo da família acima (use APENAS IDs "categoryId" e "subcategoryId" que EXISTEM no catálogo).
+3. Quando houver regras de aprendizado da família no contexto, elas têm prioridade máxima.
+4. Considere o tipo da transação (receita/despesa) e o valor como pistas contextuais. Contexto brasileiro: termos como PG*, PAG*, MP*, IFOOD, UBER, DROGASIL, FARMÁCIA, POSTO, PADARIA, NETFLIX são estabelecimentos do dia a dia.
+5. AVALIAÇÃO HONESTA DE CONFIANÇA E REASONING:
+   - "confidence": avalie honestamente: se o estabelecimento for ambíguo, desconhecido ou o nome estiver incompleto, atribua confidence BAIXO (0.3-0.5). Prefira baixa confiança a confiança inflada. Match óbvio e inequívoco recebe 0.85-0.95.
    - "reasoning": 1 frase concisa em português explicando o motivo.`
 
     const userPrompt = `Transações para classificar (${pendingForAi.length} itens):
@@ -809,7 +819,7 @@ ${JSON.stringify(
 
       let catId: string | null = item.categoryId ? String(item.categoryId) : null
       let subId: string | null = item.subcategoryId ? String(item.subcategoryId) : null
-      const confidence = typeof item.confidence === 'number' ? item.confidence : 0.8
+      const confidence = typeof item.confidence === 'number' ? item.confidence : 0.55
       let needsReview = false
 
       // Fallback seguro se categoria sugerida for inválida ou confiança muito baixa (< 0.40)

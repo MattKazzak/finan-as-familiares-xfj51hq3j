@@ -583,7 +583,7 @@ export default function ImportPage() {
   }
 
   const finishImportSuccess = (totalSaved: number) => {
-    const pendingCount = items.filter((i) => selectedIds.has(i.id) && !i.category_id).length
+    const pendingCount = items.filter((i) => i.selected && !i.category_id).length
     const categorizedCount = totalSaved - pendingCount
 
     setLastImportSummary({
@@ -633,37 +633,6 @@ export default function ImportPage() {
   const handleKeepOldRules = () => {
     setConflictModalOpen(false)
     finishImportSuccess(selectedCount)
-  }
-      const categorizedCount = selectedItems.length - pendingCount
-
-      setLastImportSummary({
-        total: selectedItems.length,
-        categorized: categorizedCount,
-        pending: pendingCount,
-        importedAt: new Date(),
-      })
-
-      clearImportSession()
-      triggerRefresh()
-
-      toast({
-        title: 'Extrato importado com sucesso! 🎉',
-        description: `${selectedItems.length} lançamentos gravados no extrato sem duplicações.`,
-      })
-
-      // Redireciona de volta para a rota anterior (Carteira/Extrato ou Início)
-      const targetRoute = session?.sourceRoute || '/carteira'
-      navigate(targetRoute, { replace: true })
-    } catch (err: any) {
-      console.error('Erro ao salvar lançamentos importados:', err)
-      toast({
-        title: 'Falha ao salvar lançamentos',
-        description: err?.message || 'Tente novamente.',
-        variant: 'destructive',
-      })
-    } finally {
-      setSaving(false)
-    }
   }
 
   // Cancelar e voltar
@@ -975,22 +944,34 @@ export default function ImportPage() {
 
           <div className="space-y-3 pt-2 text-xs text-slate-600">
             <p>
-              Encontramos regras existentes para estes estabelecimentos. Deseja atualizar para as novas
-              categorias escolhidas?
+              Encontramos regras existentes para estes estabelecimentos. Deseja atualizar para as
+              novas categorias escolhidas?
             </p>
 
             <div className="max-h-48 overflow-y-auto space-y-2 border border-slate-200/80 rounded-xl p-2.5 bg-slate-50/70">
               {conflictingRules.map((c) => (
-                <div key={c.ruleId} className="flex items-center justify-between gap-2 text-[11px] bg-white p-2 rounded-lg border border-slate-100 shadow-2xs">
-                  <span className="font-semibold text-slate-800 truncate max-w-[140px]" title={c.pattern}>
+                <div
+                  key={c.ruleId}
+                  className="flex items-center justify-between gap-2 text-[11px] bg-white p-2 rounded-lg border border-slate-100 shadow-2xs"
+                >
+                  <span
+                    className="font-semibold text-slate-800 truncate max-w-[140px]"
+                    title={c.pattern}
+                  >
                     {c.pattern}
                   </span>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-slate-400 line-through truncate max-w-[80px]" title={c.oldCategoryName}>
+                    <span
+                      className="text-slate-400 line-through truncate max-w-[80px]"
+                      title={c.oldCategoryName}
+                    >
                       {c.oldCategoryName}
                     </span>
                     <span className="text-slate-400">→</span>
-                    <span className="text-emerald-700 font-semibold truncate max-w-[90px]" title={c.newCategoryName}>
+                    <span
+                      className="text-emerald-700 font-semibold truncate max-w-[90px]"
+                      title={c.newCategoryName}
+                    >
                       {c.newCategoryName}
                     </span>
                   </div>
