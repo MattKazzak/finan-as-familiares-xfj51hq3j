@@ -39,7 +39,6 @@ vi.mock('@/lib/supabase/client', () => {
 
 describe('catalog-restore service', () => {
   it('CANONICAL_CATEGORIES should have exactly 19 categories and 116 subcategories', () => {
-    console.log('--- TEST RUNNER CHECK: catalog-restore running ---')
     expect(CANONICAL_CATEGORIES.length).toBe(19)
     const totalSubs = CANONICAL_CATEGORIES.reduce((acc, c) => acc + c.subcategories.length, 0)
     expect(totalSubs).toBe(116)
