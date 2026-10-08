@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { normalizeName, restoreMissingCatalog, resetCatalogToDefault } from '../catalog-restore'
 import { CANONICAL_CATEGORIES, TransactionCategory, TransactionSubcategory } from '@/types/finance'
 
-// Mock supabase client
+// Mock supabase client for catalog tests
 vi.mock('@/lib/supabase/client', () => {
   return {
     supabase: {
@@ -39,6 +39,7 @@ vi.mock('@/lib/supabase/client', () => {
 
 describe('catalog-restore service', () => {
   it('CANONICAL_CATEGORIES should have exactly 19 categories and 116 subcategories', () => {
+    console.log('--- TEST RUNNER CHECK: catalog-restore running ---')
     expect(CANONICAL_CATEGORIES.length).toBe(19)
     const totalSubs = CANONICAL_CATEGORIES.reduce((acc, c) => acc + c.subcategories.length, 0)
     expect(totalSubs).toBe(116)
@@ -63,7 +64,6 @@ describe('catalog-restore service', () => {
         icon: 'Home',
         sort_order: 1,
         created_at: '',
-        updated_at: '',
       },
     ]
 
@@ -87,7 +87,6 @@ describe('catalog-restore service', () => {
         icon: 'Tag',
         sort_order: 99,
         created_at: '',
-        updated_at: '',
       },
     ]
 

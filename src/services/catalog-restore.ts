@@ -143,8 +143,10 @@ export async function resetCatalogToDefault(
     .select('*')
     .eq('family_id', familyId)
 
-  const currentCats: TransactionCategory[] = refreshedCats || []
-  const currentSubs: TransactionSubcategory[] = refreshedSubs || []
+  const currentCats: TransactionCategory[] =
+    (refreshedCats as unknown as TransactionCategory[]) || []
+  const currentSubs: TransactionSubcategory[] =
+    (refreshedSubs as unknown as TransactionSubcategory[]) || []
 
   // Mapeamento canônico
   const canonicalCatNames = new Set(CANONICAL_CATEGORIES.map((c) => normalizeName(c.name)))
