@@ -291,45 +291,142 @@ export async function parsePdfWithAI(
  * Se a função falhar, der timeout ou a OpenAI estiver temporariamente instável,
  * retorna um array vazio sem travar a interface do usuário.
  */
+export const BATCH_SIZE = 15
+export const BATCH_DELAY_MS = 300
+export const CONFIDENCE_THRESHOLD = 0.6
+
+export interface CategorizeBatchOptions {
+  validCategoryIds?: Set<string> | string[]
+}
+
+/**
+ * Invoca a Edge Function 'batch-categorize' dividindo itens em lotes (chunking de 15),
+ * chamando em sequência com delay para evitar rate limits, agregando na ordem original,
+ * com fallback tolerante por lote e validação de categoryId real.
+ */
 export async function categorizeBatchWithAI(
   transactions: AiBatchTransactionInput[],
   familyId?: string,
+  options?: CategorizeBatchOptions,
 ): Promise<AiCategorizationSuggestion[]> {
   if (!transactions || transactions.length === 0) {
     return []
   }
 
-  // Sanitiza descrições das transações no cliente também
+  const validSet = options?.validCategoryIds
+    ? options.validCategoryIds instanceof Set
+      ? options.validCategoryIds
+      : new Set(options.validCategoryIds)
+    : null
+
+  // Sanitiza descrições das transações no cliente
   const sanitizedTransactions = transactions.map((t) => ({
     ...t,
     description: sanitizeRawText(t.description),
   }))
 
-  try {
-    const { data, error } = await supabase.functions.invoke<BatchCategorizeResponse>(
-      'batch-categorize',
-      {
-        body: {
-          transactions: sanitizedTransactions,
-          familyId,
-        },
-      },
-    )
-
-    if (error) {
-      console.warn('Falha na chamada da Edge Function batch-categorize:', error)
-      return []
-    }
-
-    if (!data || !Array.isArray(data.suggestions)) {
-      console.warn('Resposta inesperada da Edge Function batch-categorize:', data)
-      return []
-    }
-
-    return data.suggestions
-  } catch (err) {
-    // Fallback gracioso: loga e retorna array vazio sem interromper o fluxo da UI
-    console.warn('Exceção ao categorizar lote com IA:', err)
-    return []
+  // Dividir em lotes de BATCH_SIZE (15)
+  const chunks: AiBatchTransactionInput[][] = []
+  for (let i = 0; i < sanitizedTransactions.length; i += BATCH_SIZE) {
+    chunks.push(sanitizedTransactions.slice(i, i + BATCH_SIZE))
   }
+
+  const aggregatedSuggestions: AiCategorizationSuggestion[] = []
+
+  for (let idx = 0; idx < chunks.length; idx++) {
+    const chunk = chunks[idx]
+
+    // Delay entre lotes subsequentes (não no primeiro)
+    if (idx > 0 && BATCH_DELAY_MS > 0) {
+      await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS))
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke<BatchCategorizeResponse>(
+        'batch-categorize',
+        {
+          body: {
+            transactions: chunk,
+            familyId,
+          },
+        },
+      )
+
+      if (error || !data || !Array.isArray(data.suggestions)) {
+        console.warn(
+          `[ai-categorizer] Lote ${idx + 1}/${chunks.length} falhou ou retornou formato inválido:`,
+          error || data,
+        )
+        // Se o lote falhar, não abandona tudo: registra itens como não-categorizados
+        for (const t of chunk) {
+          aggregatedSuggestions.push({
+            tempId: t.tempId,
+            categoryId: null,
+            subcategoryId: null,
+            confidence: 0,
+            reasoning: 'Lote não processado por instabilidade de rede ou da IA.',
+            needsReview: true,
+          })
+        }
+        continue
+      }
+
+      // Mapear sugestões retornadas para garantir a ordem original dos itens do lote
+      const chunkSugMap = new Map<string, AiCategorizationSuggestion>()
+      for (const s of data.suggestions) {
+        if (s && s.tempId) {
+          chunkSugMap.set(s.tempId, s)
+        }
+      }
+
+      for (const t of chunk) {
+        const itemSug = chunkSugMap.get(t.tempId)
+        if (!itemSug) {
+          // Item faltante no retorno do lote
+          aggregatedSuggestions.push({
+            tempId: t.tempId,
+            categoryId: null,
+            subcategoryId: null,
+            confidence: 0,
+            reasoning: 'Item não retornado pela IA no lote.',
+            needsReview: true,
+          })
+          continue
+        }
+
+        let catId = itemSug.categoryId || null
+        let needsReview = Boolean(itemSug.needsReview)
+
+        // Validação de IDs reais se lista de categorias válidas foi informada (Parte 3)
+        if (validSet && catId && !validSet.has(catId)) {
+          catId = null
+          needsReview = true
+        }
+
+        aggregatedSuggestions.push({
+          tempId: t.tempId,
+          categoryId: catId,
+          subcategoryId: catId ? itemSug.subcategoryId || null : null,
+          confidence: typeof itemSug.confidence === 'number' ? itemSug.confidence : 0.8,
+          reasoning: itemSug.reasoning || '',
+          needsReview: needsReview || !catId,
+        })
+      }
+    } catch (chunkErr) {
+      console.warn(`[ai-categorizer] Exceção no lote ${idx + 1}/${chunks.length}:`, chunkErr)
+      // Fallback seguro: registra itens do lote como pendentes
+      for (const t of chunk) {
+        aggregatedSuggestions.push({
+          tempId: t.tempId,
+          categoryId: null,
+          subcategoryId: null,
+          confidence: 0,
+          reasoning: 'Falha na comunicação com o serviço de IA.',
+          needsReview: true,
+        })
+      }
+    }
+  }
+
+  return aggregatedSuggestions
 }

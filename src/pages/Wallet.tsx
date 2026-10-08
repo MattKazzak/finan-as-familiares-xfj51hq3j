@@ -416,7 +416,10 @@ export function WalletPage() {
         date: tx.transaction_date,
       }))
 
-      const aiSuggestions = await categorizeBatchWithAI(inputs, family?.id)
+      const validCategoryIds = new Set(categories.map((c) => c.id))
+      const aiSuggestions = await categorizeBatchWithAI(inputs, family?.id, {
+        validCategoryIds,
+      })
       const suggestionsMap: Record<string, AiCategorizationSuggestion> = {}
       aiSuggestions.forEach((s) => {
         suggestionsMap[s.tempId] = s
@@ -424,10 +427,7 @@ export function WalletPage() {
       setAiPendingSuggestions(suggestionsMap)
 
       const highConfidence = aiSuggestions.filter(
-        (s) =>
-          s.categoryId &&
-          categories.some((c) => c.id === s.categoryId) &&
-          (s.confidence ?? 0) >= 0.7,
+        (s) => s.categoryId && validCategoryIds.has(s.categoryId) && (s.confidence ?? 0) >= 0.7,
       )
 
       if (highConfidence.length > 0) {

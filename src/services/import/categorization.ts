@@ -473,6 +473,83 @@ export function normalizeText(text: string): string {
  * Extrai um padrão limpo (keyword) da descrição para salvar em regras contínuas
  * Remove números isolados, datas, códigos bancários comuns e pontuações
  */
+/**
+ * Extrai termo normalizado da descrição para regras contínuas de aprendizado.
+ * Retorna até 3 palavras significativas da descrição limpa, lowercase, sem acentos,
+ * sem stop words e números de transação.
+ */
+export function extractLearningPattern(desc: string): string {
+  if (!desc) return ''
+
+  // Remove acentos e converte para minúsculas
+  const noAccents = desc
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+
+  // Remove caracteres especiais, mantendo letras e números
+  const sanitized = noAccents.replace(/[^a-z0-9\s]/g, ' ')
+
+  // Stop words e ruídos típicos de extrato e pagamento
+  const stopWords = new Set([
+    'compra',
+    'pagamento',
+    'pagto',
+    'pix',
+    'transf',
+    'transferencia',
+    'ted',
+    'doc',
+    'cartao',
+    'debito',
+    'credito',
+    'auto',
+    'posto',
+    'de',
+    'do',
+    'da',
+    'dos',
+    'das',
+    'em',
+    'no',
+    'na',
+    'nos',
+    'nas',
+    'para',
+    'por',
+    'com',
+    'ltda',
+    'sa',
+    'me',
+    'epp',
+    'eireli',
+  ])
+
+  const tokens = sanitized
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter((w) => {
+      if (!w || w.length < 2) return false
+      if (/^\d+$/.test(w)) return false // remove números isolados
+      if (stopWords.has(w)) return false
+      return true
+    })
+
+  // Até 3 palavras significativas
+  const selected = tokens.slice(0, 3)
+  if (selected.length > 0) {
+    return selected.join(' ')
+  }
+
+  // Fallback caso todos tenham sido filtrados
+  const fallbackTokens = sanitized
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length >= 2 && !/^\d+$/.test(w))
+
+  return fallbackTokens.slice(0, 3).join(' ') || noAccents.trim().slice(0, 30)
+}
+
 export function extractPatternFromDescription(desc: string): string {
   const norm = normalizeText(desc)
   if (!norm) return ''

@@ -43,6 +43,7 @@ import {
 import {
   matchCategorization,
   extractPatternFromDescription,
+  extractLearningPattern,
   normalizeText,
 } from '@/services/import/categorization'
 import { cleanMerchantDescription } from '@/services/import/merchant-cleaner'
@@ -130,6 +131,7 @@ export interface ReviewItem {
   source?: 'database_rule' | 'fallback_rule' | 'name_match' | 'ai_suggestion' | 'manual'
   aiReasoning?: string
   aiConfidence?: number
+  isUncertain?: boolean // Confiança abaixo de CONFIDENCE_THRESHOLD (0.6)
   // Dados de parcelamento
   isInstallment?: boolean
   installmentCurrent?: number
@@ -743,6 +745,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 ? 'Identificado como quitação, ajuste ou encargo (não é despesa nova)'
                 : 'Extraído e classificado pela IA financeira do Curiangoo',
               aiConfidence: tx.confidence,
+              isUncertain: typeof tx.confidence === 'number' && tx.confidence < 0.6,
               isDuplicate: !!dupMatch,
               duplicateReason: dupMatch
                 ? `Transação idêntica já cadastrada em ${dupMatch.transaction_date}`
@@ -971,7 +974,10 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
             date: item.date,
           }))
 
-          const aiSuggestions = await categorizeBatchWithAI(aiPayload, family.id)
+          const validCategoryIds = new Set(categories.map((c) => c.id))
+          const aiSuggestions = await categorizeBatchWithAI(aiPayload, family.id, {
+            validCategoryIds,
+          })
           if (aiSuggestions && aiSuggestions.length > 0) {
             const suggestionMap = new Map<string, (typeof aiSuggestions)[0]>()
             aiSuggestions.forEach((s) => suggestionMap.set(s.tempId, s))
@@ -979,23 +985,24 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
             reviewList.forEach((item) => {
               const sug = suggestionMap.get(item.id)
               if (sug) {
-                if (sug.categoryId) {
-                  const catExists = categories.some((c) => c.id === sug.categoryId)
-                  if (catExists) {
-                    item.category_id = sug.categoryId
-                    item.subcategory_id = sug.subcategoryId || null
-                    item.source = 'ai_suggestion'
-                    item.aiConfidence = sug.confidence
-                    item.aiReasoning = sug.reasoning
-                    item.rememberRule = true
-                  }
-                } else if (sug.needsReview) {
-                  // Categoria não encontrada ou sem Outros/Estilo de Vida -> permanece null para revisão
+                const catExists = sug.categoryId ? validCategoryIds.has(sug.categoryId) : false
+                const isLowConfidence = typeof sug.confidence === 'number' && sug.confidence < 0.6
+                if (sug.categoryId && catExists) {
+                  item.category_id = sug.categoryId
+                  item.subcategory_id = sug.subcategoryId || null
+                  item.source = 'ai_suggestion'
+                  item.aiConfidence = sug.confidence
+                  item.aiReasoning = sug.reasoning
+                  item.rememberRule = true
+                  item.isUncertain = isLowConfidence
+                } else {
+                  // ID inválido ou needsReview -> null + needsReview. Nunca aplica categoria inexistente.
                   item.category_id = null
                   item.subcategory_id = null
                   item.source = 'ai_suggestion'
                   item.aiConfidence = sug.confidence
                   item.aiReasoning = sug.reasoning || 'Pendente de categorização pelo usuário'
+                  item.isUncertain = true
                 }
               }
             })
@@ -1402,28 +1409,53 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
         createTransactionsBatch(toCreatePayloads),
       ])
 
-      // Upsert das regras de categorização para itens com "Lembrar para compras futuras"
-      const rulesToUpsert = selectedItems.filter(
-        (i) => i.rememberRule && i.category_id && i.description && i.description.trim(),
+      // Loop de Aprendizado (Parte 5):
+      // Salva regra na tabela categorization_rules quando a categoria difere da sugestão da IA,
+      // ou item estava sem categoria/needsReview, ou rememberRule está ativo.
+      // Usa até 3 palavras significativas limpas, lowercase, sem acentos.
+      // Não sobrescreve regras existentes do usuário silenciosamente.
+      let existingDbRules: CategorizationRule[] = []
+      try {
+        existingDbRules = await fetchCategorizationRules(family.id)
+      } catch {
+        existingDbRules = []
+      }
+
+      const existingPatternsSet = new Set(
+        existingDbRules.map((r) =>
+          (r.pattern || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim(),
+        ),
       )
 
-      for (const item of rulesToUpsert) {
+      const learningCandidates = selectedItems.filter((i) => {
+        if (!i.category_id || !i.description || !i.description.trim()) return false
+        const userChangedCategory =
+          i.source === 'ai_suggestion' && (i.isUncertain || !i.aiConfidence || i.rememberRule)
+        return i.rememberRule || userChangedCategory
+      })
+
+      for (const item of learningCandidates) {
         try {
-          const rawPattern =
-            extractPatternFromDescription(item.description) || normalizeText(item.description)
-          const patternToSave = (rawPattern || item.description.trim()).toUpperCase()
+          const patternToSave = extractLearningPattern(item.description)
 
           if (patternToSave && patternToSave.length >= 2) {
-            await upsertCategorizationRule({
-              family_id: family.id,
-              user_id: null,
-              pattern: patternToSave,
-              category_id: item.category_id!,
-              subcategory_id: item.subcategory_id || null,
-            })
+            if (!existingPatternsSet.has(patternToSave.toLowerCase())) {
+              await upsertCategorizationRule({
+                family_id: family.id,
+                user_id: null,
+                pattern: patternToSave,
+                category_id: item.category_id!,
+                subcategory_id: item.subcategory_id || null,
+              })
+              existingPatternsSet.add(patternToSave.toLowerCase())
+            }
           }
         } catch (ruleErr) {
-          console.warn('Não foi possível salvar regra de categorização ao importar:', ruleErr)
+          console.warn('Não foi possível salvar regra de aprendizado ao importar:', ruleErr)
         }
       }
 

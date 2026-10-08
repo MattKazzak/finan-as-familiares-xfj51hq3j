@@ -156,10 +156,19 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
 
                 {item.source === 'ai_suggestion' && (
                   <span
-                    className="inline-flex items-center gap-0.5 text-[10px] font-medium text-slate-700 bg-muted/60 border border-border/40 px-1.5 py-0.2 rounded-full"
+                    className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.2 rounded-full ${
+                      item.isUncertain ||
+                      (typeof item.aiConfidence === 'number' && item.aiConfidence < 0.6)
+                        ? 'text-amber-900 bg-amber-50 border border-amber-300'
+                        : 'text-slate-700 bg-muted/60 border border-border/40'
+                    }`}
                     title={item.aiReasoning || 'Sugerido pela IA'}
                   >
-                    <Sparkles className="w-2.5 h-2.5 text-[#FCA311]" strokeWidth={1.5} /> IA
+                    <Sparkles className="w-2.5 h-2.5 text-[#FCA311]" strokeWidth={1.5} />
+                    {item.isUncertain ||
+                    (typeof item.aiConfidence === 'number' && item.aiConfidence < 0.6)
+                      ? 'sugestão incerta'
+                      : 'IA'}
                     {typeof item.aiConfidence === 'number' && (
                       <span className="ml-0.5 font-normal">
                         {Math.round(item.aiConfidence * 100)}%

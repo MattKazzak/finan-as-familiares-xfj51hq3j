@@ -39,7 +39,11 @@ import {
 import { CategoryIcon, AVAILABLE_ICONS } from '@/components/common/CategoryIcon'
 import { CATEGORY_COLORS } from '@/components/categories/CategoryEditorPopover'
 import { formatBRL } from '@/lib/formatters'
-import { normalizeText, extractPatternFromDescription } from '@/services/import/categorization'
+import {
+  normalizeText,
+  extractPatternFromDescription,
+  extractLearningPattern,
+} from '@/services/import/categorization'
 import { findSimilarReviewItems } from '@/services/import/similar-matcher'
 import { isNonTransactionLine } from '@/services/import/pdf-parser'
 import {
@@ -47,7 +51,8 @@ import {
   cleanInstallmentBaseDescription,
 } from '@/services/installments'
 import { createTransactionsBatch, updateTransaction } from '@/services/transactions'
-import { upsertCategorizationRule } from '@/services/categorization-rules'
+import { fetchCategorizationRules, upsertCategorizationRule } from '@/services/categorization-rules'
+import type { CategorizationRule } from '@/types/finance'
 import type { ReviewItem } from '@/components/transactions/ImportStatementDialog'
 import type { TransactionType } from '@/types/finance'
 import { ImportItemList } from '@/components/import/ImportItemList'
@@ -260,10 +265,11 @@ export default function ImportPage() {
 
     items.forEach((item) => {
       if (!item.category_id) pendingCategory++
-      if (
-        item.source === 'ai_suggestion' &&
-        (!item.category_id || (item.aiConfidence ?? 1) < 0.85)
-      ) {
+      const isUncertainItem =
+        item.isUncertain ||
+        !item.category_id ||
+        (item.source === 'ai_suggestion' && (item.aiConfidence ?? 1) < 0.6)
+      if (item.source === 'ai_suggestion' && isUncertainItem) {
         lowConfidence++
       }
       if (item.type === 'expense') expenses++
@@ -286,7 +292,9 @@ export default function ImportPage() {
       if (currentFilter === 'pending_category') return !item.category_id
       if (currentFilter === 'low_confidence') {
         return (
-          !item.category_id || (item.source === 'ai_suggestion' && (item.aiConfidence ?? 1) < 0.85)
+          item.isUncertain ||
+          !item.category_id ||
+          (item.source === 'ai_suggestion' && (item.aiConfidence ?? 1) < 0.6)
         )
       }
       if (currentFilter === 'expenses') return item.type === 'expense'
@@ -459,28 +467,54 @@ export default function ImportPage() {
         createTransactionsBatch(toCreatePayloads),
       ])
 
-      // Upsert de regras para "Lembrar para compras futuras"
-      const rulesToUpsert = selectedItems.filter(
-        (i) => i.rememberRule && i.category_id && i.description && i.description.trim(),
+      // Loop de Aprendizado (Parte 5):
+      // Salva regra na tabela categorization_rules quando a categoria escolhida pelo usuário
+      // diferir da sugestão da IA, ou o item estava needsReview/sem categoria, ou marcado rememberRule.
+      // Termo normalizado: até 3 palavras significativas limpas, lowercase, sem acentos.
+      // Não sobrescreve regras existentes do usuário silenciosamente se já existir regra para aquele pattern.
+      let existingDbRules: CategorizationRule[] = []
+      try {
+        existingDbRules = await fetchCategorizationRules(family.id)
+      } catch {
+        existingDbRules = []
+      }
+
+      const existingPatternsSet = new Set(
+        existingDbRules.map((r) =>
+          (r.pattern || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim(),
+        ),
       )
 
-      for (const item of rulesToUpsert) {
+      const learningCandidates = selectedItems.filter((i) => {
+        if (!i.category_id || !i.description || !i.description.trim()) return false
+        const userChangedCategory =
+          i.source === 'ai_suggestion' && (i.isUncertain || !i.aiConfidence || i.rememberRule)
+        return i.rememberRule || userChangedCategory
+      })
+
+      for (const item of learningCandidates) {
         try {
-          const rawPattern =
-            extractPatternFromDescription(item.description) || normalizeText(item.description)
-          const patternToSave = (rawPattern || item.description.trim()).toUpperCase()
+          const patternToSave = extractLearningPattern(item.description)
 
           if (patternToSave && patternToSave.length >= 2) {
-            await upsertCategorizationRule({
-              family_id: family.id,
-              user_id: null,
-              pattern: patternToSave,
-              category_id: item.category_id!,
-              subcategory_id: item.subcategory_id || null,
-            })
+            // Não sobrescrever regras existentes silenciosamente (5.3)
+            if (!existingPatternsSet.has(patternToSave.toLowerCase())) {
+              await upsertCategorizationRule({
+                family_id: family.id,
+                user_id: null,
+                pattern: patternToSave,
+                category_id: item.category_id!,
+                subcategory_id: item.subcategory_id || null,
+              })
+              existingPatternsSet.add(patternToSave.toLowerCase())
+            }
           }
         } catch (ruleErr) {
-          console.warn('Não foi possível salvar regra de categorização ao importar:', ruleErr)
+          console.warn('Não foi possível salvar regra de aprendizado ao importar:', ruleErr)
         }
       }
 

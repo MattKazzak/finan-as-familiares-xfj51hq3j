@@ -60,10 +60,12 @@ describe('ai-categorizer service (categorizeBatchWithAI)', () => {
         familyId: 'fam-123',
       },
     })
-    expect(result).toEqual(mockSuggestions)
+    expect(result).toHaveLength(2)
+    expect(result[0].categoryId).toBe('cat-alimentacao')
+    expect(result[1].categoryId).toBe('cat-transporte')
   })
 
-  it('fallback elegante: retorna array vazio em caso de erro da edge function sem lançar exceção', async () => {
+  it('fallback elegante: se lote falhar, registra itens como needsReview sem quebrar fluxo', async () => {
     vi.mocked(supabase.functions.invoke).mockResolvedValueOnce({
       data: null,
       error: { message: 'Timeout' } as any,
@@ -72,16 +74,45 @@ describe('ai-categorizer service (categorizeBatchWithAI)', () => {
     const transactions = [{ tempId: 'tx-1', description: 'DROGARIA SAO PAULO', amountCents: 8900 }]
 
     const result = await categorizeBatchWithAI(transactions, 'fam-123')
-    expect(result).toEqual([])
+    expect(result).toHaveLength(1)
+    expect(result[0].categoryId).toBeNull()
+    expect(result[0].needsReview).toBe(true)
   })
 
-  it('fallback elegante: retorna array vazio em caso de rejeição da Promise', async () => {
+  it('fallback elegante: registra itens como needsReview em caso de rejeição da Promise', async () => {
     vi.mocked(supabase.functions.invoke).mockRejectedValueOnce(new Error('Network error'))
 
     const transactions = [{ tempId: 'tx-1', description: 'DROGARIA SAO PAULO', amountCents: 8900 }]
 
     const result = await categorizeBatchWithAI(transactions, 'fam-123')
-    expect(result).toEqual([])
+    expect(result).toHaveLength(1)
+    expect(result[0].categoryId).toBeNull()
+    expect(result[0].needsReview).toBe(true)
+  })
+
+  it('valida categoryId contra lista real de categorias e invalida se inexistente', async () => {
+    vi.mocked(supabase.functions.invoke).mockResolvedValueOnce({
+      data: {
+        suggestions: [
+          {
+            tempId: 'tx-1',
+            categoryId: 'cat-inexistente',
+            confidence: 0.95,
+            reasoning: 'Invalida',
+          },
+        ],
+      },
+      error: null,
+    })
+
+    const transactions = [{ tempId: 'tx-1', description: 'TESTE', amountCents: 5000 }]
+    const result = await categorizeBatchWithAI(transactions, 'fam-123', {
+      validCategoryIds: new Set(['cat-valida']),
+    })
+
+    expect(result).toHaveLength(1)
+    expect(result[0].categoryId).toBeNull()
+    expect(result[0].needsReview).toBe(true)
   })
 })
 

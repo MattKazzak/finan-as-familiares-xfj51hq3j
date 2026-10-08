@@ -698,7 +698,10 @@ ${JSON.stringify(
   2,
 )}`
 
-    // Chamada à API da OpenAI (GPT-4o mini)
+    // Cálculo seguro de max_tokens: ~80-100 tokens por item de resposta JSON + margem de 500 tokens (teto 4000)
+    const calculatedTokens = Math.min(4000, Math.max(1200, pendingForAi.length * 100 + 500))
+
+    // Chamada à API da OpenAI (GPT-4o mini) com max_tokens
     const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -713,6 +716,7 @@ ${JSON.stringify(
         ],
         response_format: { type: 'json_object' },
         temperature: 0.2,
+        max_tokens: calculatedTokens,
       }),
     })
 
@@ -745,35 +749,70 @@ ${JSON.stringify(
     let parsed: any = null
     try {
       parsed = JSON.parse(content || '{}')
-    } catch (parseErr) {
-      console.error(
-        'Falha ao parsear JSON da OpenAI em batch-categorize (batch mode):',
-        parseErr,
-        content,
-      )
-      return new Response(
-        JSON.stringify({
-          error: 'PARSE_ERROR',
-          message: 'Falha ao processar a resposta estruturada da IA.',
-          suggestions: finalSuggestions,
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      )
+    } catch (_parseErr) {
+      // Parse tolerante: tenta extrair o bloco de sugestões caso o JSON esteja cortado no final
+      try {
+        const match = (content || '').match(/"suggestions"\s*:\s*\[([\s\S]*)/)
+        if (match) {
+          let partial = match[1].trim()
+          const lastBrace = partial.lastIndexOf('}')
+          if (lastBrace !== -1) {
+            partial = partial.slice(0, lastBrace + 1)
+            parsed = JSON.parse(`{"suggestions": [${partial}]}`)
+          }
+        }
+      } catch {
+        parsed = null
+      }
+
+      if (!parsed) {
+        console.error('Falha ao parsear JSON da OpenAI em batch-categorize (batch mode):', content)
+        return new Response(
+          JSON.stringify({
+            error: 'PARSE_ERROR',
+            message: 'Falha ao processar a resposta estruturada da IA. Tente novamente o lote.',
+            suggestions: finalSuggestions,
+          }),
+          {
+            status: 502,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        )
+      }
     }
 
     const rawSuggestions = Array.isArray(parsed?.suggestions) ? parsed.suggestions : []
+    const aiResponseByTempId = new Map<string, any>()
 
     for (const item of rawSuggestions) {
-      if (!item || !item.tempId) continue
+      if (item && item.tempId) {
+        aiResponseByTempId.set(String(item.tempId), item)
+      }
+    }
+
+    // Validação de completude: comparar itens solicitados (pendingForAi) com itens respondidos
+    for (const pendingItem of pendingForAi) {
+      const item = aiResponseByTempId.get(pendingItem.tempId)
+
+      if (!item) {
+        // Item faltante na resposta da OpenAI: NUNCA perde o item silenciosamente
+        finalSuggestions.push({
+          tempId: pendingItem.tempId,
+          categoryId: null,
+          subcategoryId: null,
+          confidence: 0,
+          reasoning: 'incomplete_response',
+          needsReview: true,
+        })
+        continue
+      }
 
       let catId: string | null = item.categoryId ? String(item.categoryId) : null
       let subId: string | null = item.subcategoryId ? String(item.subcategoryId) : null
       const confidence = typeof item.confidence === 'number' ? item.confidence : 0.8
       let needsReview = false
 
-      // Nova regra de fallback: categoria inexistente ou confiança baixa (< 0.40)
+      // Fallback seguro se categoria sugerida for inválida ou confiança muito baixa (< 0.40)
       if (!catId || !validCategoryIds.has(catId) || confidence < 0.4) {
         const safeFallback = resolveSafeFallbackCategory(categoriesList)
         catId = safeFallback.categoryId
@@ -787,7 +826,7 @@ ${JSON.stringify(
       }
 
       finalSuggestions.push({
-        tempId: String(item.tempId),
+        tempId: pendingItem.tempId,
         categoryId: catId,
         subcategoryId: subId,
         confidence,
