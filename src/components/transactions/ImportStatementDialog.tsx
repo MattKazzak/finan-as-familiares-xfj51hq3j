@@ -1355,6 +1355,17 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           continue
         }
 
+        // Instrumentação ai_confidence para auditoria silente (T3):
+        // Convenção: regra determinística do banco ou dicionário / fallback_rule / name_match = 1.0;
+        // Sugestão de IA = confidence retornado pelo modelo (0.01 - 0.99);
+        // Lançamento manual ou usuário que alterou manualmente para categoria sem IA = NULL.
+        let resolvedAiConfidence: number | null = null
+        if (item.source === 'database_rule' || item.source === 'fallback_rule' || item.source === 'name_match') {
+          resolvedAiConfidence = 1.0
+        } else if (item.source === 'ai_suggestion' && typeof item.aiConfidence === 'number') {
+          resolvedAiConfidence = Number(item.aiConfidence.toFixed(2))
+        }
+
         // Se for parcela e foi marcado para gerar projeções futuras (ex: 1/YY)
         if (
           item.isInstallment &&
@@ -1377,6 +1388,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
             startInstallmentNumber: startNum,
             totalInstallments: totalInst,
             groupId: instGroup,
+            aiConfidence: resolvedAiConfidence,
           })
 
           toCreatePayloads.push(...gen.transactions)
@@ -1397,6 +1409,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
             description: singleDesc,
             transaction_date: item.date,
             payment_method: 'other',
+            ai_confidence: resolvedAiConfidence,
             is_installment: true,
             installment_number: curNum,
             installment_total: totNum,
@@ -1416,6 +1429,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
             description: item.description.trim() || 'Transação importada',
             transaction_date: item.date,
             payment_method: 'other',
+            ai_confidence: resolvedAiConfidence,
             is_installment: false,
             status: 'confirmed',
             bank_transaction_id: item.fitid || null,

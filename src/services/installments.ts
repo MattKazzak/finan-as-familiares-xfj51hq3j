@@ -243,6 +243,7 @@ export interface GenerateInstallmentsParams {
   startInstallmentNumber?: number // default 1
   totalInstallments: number
   groupId?: string
+  aiConfidence?: number | null
 }
 
 export function generateInstallmentTransactions(params: GenerateInstallmentsParams) {
@@ -259,6 +260,7 @@ export function generateInstallmentTransactions(params: GenerateInstallmentsPara
     groupId = crypto.randomUUID
       ? crypto.randomUUID()
       : `grp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+    aiConfidence = null,
   } = params
 
   const transactions = []
@@ -288,6 +290,7 @@ export function generateInstallmentTransactions(params: GenerateInstallmentsPara
       installment_total: totalInstallments,
       installment_group_id: groupId,
       status,
+      ai_confidence: aiConfidence,
     })
   }
 

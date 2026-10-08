@@ -137,6 +137,7 @@ export async function createTransaction(payload: {
   description: string
   transaction_date: string
   payment_method?: string | null
+  ai_confidence?: number | null
   recurring_income_id?: string | null
   is_recurring?: boolean
   recurring_month?: string | null
@@ -174,6 +175,7 @@ export async function createTransactionsBatch(
     description: string
     transaction_date: string
     payment_method?: string | null
+    ai_confidence?: number | null
     recurring_income_id?: string | null
     is_recurring?: boolean
     recurring_month?: string | null
@@ -209,6 +211,7 @@ export async function updateTransaction(
     description: string
     transaction_date: string
     payment_method: string | null
+    ai_confidence?: number | null
     recurring_income_id: string | null
     is_recurring: boolean
     recurring_month: string | null

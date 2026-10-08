@@ -495,6 +495,7 @@ export interface Transaction {
   status?: TransactionStatus
   bank_transaction_id?: string | null
   payment_method?: PaymentMethod | null
+  ai_confidence?: number | null
   // Relações resolvidas
   member?: FamilyMember
   category?: TransactionCategory
