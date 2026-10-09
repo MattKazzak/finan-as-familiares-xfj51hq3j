@@ -216,7 +216,16 @@ Deno.serve(async (req: Request) => {
         normalizedText.includes('onde você colocou') ||
         normalizedText.includes('qual foi o valor') ||
         normalizedText.includes('o que você anotou') ||
-        normalizedText.includes('o que você lançou'))
+        normalizedText.includes('o que você lançou') ||
+        normalizedText.includes('teto') ||
+        normalizedText.includes('de onde você tirou') ||
+        normalizedText.includes('da onde você tirou') ||
+        normalizedText.includes('da onde voce tirou') ||
+        normalizedText.includes('de onde voce tirou') ||
+        normalizedText.includes('desenhos para gastar') ||
+        normalizedText.includes('dinheiro para gastar') ||
+        normalizedText.includes('para gastar esse mês') ||
+        normalizedText.includes('pra gastar esse mes'))
 
     // 1. Categorias: utilize body.categorias enviado pelo front-end sempre que disponível (sem query no banco)
     let categoriesList: any[] = []
@@ -433,7 +442,7 @@ Deno.serve(async (req: Request) => {
               .join('\n  ')
           : 'Nenhuma receita recorrente ativa.'
 
-      // Agregação de investimentos por asset_type (NUNCA posições individuais)
+      // Agregação de dados financeiros reais do mês
       const investmentTotalsByType: Record<string, number> = {}
       let totalInvestedAllCents = 0
       investmentsData.forEach((inv: any) => {
@@ -585,9 +594,12 @@ REGRAS OBRIGATÓRIAS DE CONFIRMAÇÃO E SEMÂNTICA (CRÍTICAS)
   Exemplo: "Lançado: R$ 35,00 em Restaurantes & Delivery › Restaurantes & Bares 👍!"
 - Se NÃO houver subcategoria válida do catálogo da família, salve só com a categoria principal (subcategoria nula) e confirme exatamente:
   "Lançado: R$ [valor] em [Nome da Categoria] [emoji]!"
-- NUNCA invente ou force uma subcategoria inexistente.
+- NUNCA invente ou force uma subcategoria inexistente. JAMAIS use pares cruzados como "Alimentação › Utilidades & Casa" (Utilidades & Casa é subcategoria de Compras).
 
-2. REGRAS SEMÂNTICAS DE ALIMENTAÇÃO E LANCHES (CONTEXTO BRASIL):
+2. REGRA ANTI-CHUTE NA VOZ (CRÍTICA):
+Item ou gasto sem intenção ou categoria clara no catálogo da família: JAMAIS chutar uma categoria aleatória (ex: 'carteira de cigarro' NUNCA pode ser classificado como 'Alimentação › Fast Food & Lanches'!). Se o item for desconhecido ou não couber com alta certeza no catálogo cadastrado: retorne status 'clarificacao' com pergunta educada ('Não sei onde encaixo isso — me diz?') e opções sugeridas se fizer sentido, OU marque como sugestão incerta de menor confiança — NUNCA categorize arbitrariamente. Em itens de bebês/crianças (ex: 'fraldas', 'enxoval'), classifique em 'Compras › Bebês & Crianças' se existir no catálogo. NUNCA invente ou force uma subcategoria inexistente. JAMAIS use pares cruzados como 'Alimentação › Utilidades & Casa' (Utilidades & Casa é subcategoria de Compras).
+
+3. REGRAS SEMÂNTICAS DE ALIMENTAÇÃO E LANCHES (CONTEXTO BRASIL):
 - NUNCA classificar como "Delivery" despesas de comida de rua, feira, pastel, praia, quiosque, salgado ou padaria.
 - A subcategoria "Delivery (iFood/Rappi)" (ou equivalente de Delivery) é EXCLUSIVA para pedidos de entrega em domicílio/casa ou quando o usuário citar expressamente aplicativos de delivery ("no ifood", "pelo rappi", "pedi delivery", "entrega em casa").
 - Para comidas rápidas consumidas no local ou na rua (ex: pastel de feira, lanche, salgado, coxinha, esfiha, food truck, quiosque, água de coco na praia), classificar em Fast Food & Lanches ou Restaurantes & Bares.
@@ -634,7 +646,8 @@ DIRETRIZES DE INTELIGÊNCIA REAL (PADRÃO OURO):
     * Se o usuário perguntar "quanto ganhei esse mês?", "qual minha receita?", "quanto recebi?": responda EXCLUSIVAMENTE com o valor de 'receitas_mes'. Se 'receitas_mes' for zero ou não houver lançamentos de entrada, informe com clareza que nenhuma receita foi registrada no mês ainda (ou o valor de receitas_mes), podendo mencionar de forma totalmente separada a meta planejada apenas se for relevante para contexto.
     * Se o usuário perguntar "qual meu saldo?" ou "quanto tenho?": o saldo do mês é obtido unicamente pelas transações reais ('saldo_real_mes' = receitas_mes - despesas_mes). NUNCA some a renda cadastrada do onboarding ao saldo em conta!
     * Se o usuário perguntar "quanto ainda posso gastar?" ou sobre orçamentos/baldes: use a margem orçamentária dos baldes ou do teto planejado, explicando com clareza que se trata do teto orçamentário planejado.
-  - Quando o usuário fizer perguntas contextuais sobre lançamentos que acabou de fazer (ex: "onde você lançou o almoço?", "qual foi o valor que você anotou?", "em qual categoria ficou?"), você DEVE responder conversacionalmente lendo o histórico recente de mensagens enviado.
+    * Se o usuário perguntar sobre o teto ou de onde ele veio (ex: "Da onde você tirou esse teto?", "Por que teto de 3.600?"): responda diretamente com base no histórico da conversa e no teto de planejamento cadastrado no perfil/onboarding da família, explicando com transparência pedagógica e cordial que é o valor definido para o planejamento orçamentário.
+  - Quando o usuário fizer perguntas contextuais ou follow-ups sobre respostas e lançamentos recentes (ex: "Da onde você tirou esse teto?", "onde você lançou o almoço?", "qual foi o valor que você anotou?", "em qual categoria ficou?"), você DEVE responder conversacionalmente lendo o histórico recente de mensagens enviado.
   - NUNCA marque essas perguntas contextuais como "invalido" e NUNCA peça para "falar novamente".
   - Retorne:
     * "status": "consulta"
@@ -717,8 +730,8 @@ Comportamentos esperados:
    - "status": "invalido"`
 
     // Sanitização e validação das últimas 6 mensagens de histórico
-    const sanitizedHistory: Array<{ role: 'user' | 'assistant'; content: string }> = []
-    if (Array.isArray(body.historico_mensagens)) {
+    let sanitizedHistory: Array<{ role: 'user' | 'assistant'; content: string }> = []
+    if (Array.isArray(body.historico_mensagens) && body.historico_mensagens.length > 0) {
       const rawHistory = body.historico_mensagens.slice(-6)
       for (const msg of rawHistory) {
         const role = msg?.role === 'assistant' ? 'assistant' : msg?.role === 'user' ? 'user' : null
@@ -726,6 +739,30 @@ Comportamentos esperados:
         if (role && content) {
           sanitizedHistory.push({ role, content })
         }
+      }
+    } else if (targetFamilyId) {
+      // Se o cliente não enviou historico_mensagens, busca as últimas 6 mensagens em copilot_messages
+      try {
+        const { data: dbMessages } = await supabase
+          .from('copilot_messages')
+          .select('role, content, created_at')
+          .eq('family_id', targetFamilyId)
+          .order('created_at', { ascending: false })
+          .limit(6)
+
+        if (dbMessages && dbMessages.length > 0) {
+          const chronological = [...dbMessages].reverse()
+          for (const msg of chronological) {
+            const role =
+              msg.role === 'assistant' ? 'assistant' : msg.role === 'user' ? 'user' : null
+            const content = typeof msg.content === 'string' ? msg.content.trim() : ''
+            if (role && content) {
+              sanitizedHistory.push({ role, content })
+            }
+          }
+        }
+      } catch (histErr) {
+        console.warn('Erro ao carregar histórico copilot_messages na edge:', histErr)
       }
     }
 
@@ -740,7 +777,7 @@ Comportamentos esperados:
     // O modelo gpt-4o-mini gera apenas os tokens necessários. Um teto de 1000 tokens garante
     // que o JSON estruturado nunca seja cortado pela metade em nenhum caminho (lançamentos,
     // slot-filling 'falta_valor', reclassificações ou consultas explicativas), mantendo a resposta
-    // ultrarrápida sem causar quebra de serialização.
+    // ultrarrápida sem causar quebra de serialização (Rodada 25).
     const maxTokens = 1000
 
     // Chamada à API da OpenAI

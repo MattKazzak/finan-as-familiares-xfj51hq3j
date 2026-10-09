@@ -210,7 +210,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     }
   }, [])
 
-  // Mesclar novo valor com transação parcial pendente (delega merge inteligente à IA sem trava de regex local)
+  // Mesclar novo valor com transação parcial pendente (preserva estritamente o item e sua categoria/subcategoria)
   const handleMergeAmountIntoTransaction = useCallback(
     (
       newAmountCents: number,
@@ -228,8 +228,23 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         currency: 'BRL',
       })
 
+      // Regra Caso 1: Quando o usuário responde só com número no 2º turno,
+      // a descrição e as categorias pré-identificadas no 1º turno NÃO DEVEM ser sobrescritas por "60" ou fallbacks vazios
+      const candidateDescIsPureNumber =
+        mergedCandidate?.description &&
+        /^\d+([,.]\d{1,2})?$/.test(mergedCandidate.description.trim())
+
       const finalDescription =
-        mergedCandidate?.description?.trim() || activeBase.description || 'Lançamento'
+        activeBase.description && candidateDescIsPureNumber
+          ? activeBase.description
+          : mergedCandidate?.description?.trim() || activeBase.description || 'Lançamento'
+
+      const finalCategory =
+        activeBase.categoryNameSuggestion || mergedCandidate?.categoryNameSuggestion
+      const finalSubcategory =
+        activeBase.subcategoryNameSuggestion || mergedCandidate?.subcategoryNameSuggestion
+      const finalBucket =
+        activeBase.bucketSuggestion || mergedCandidate?.bucketSuggestion || 'lifestyle'
 
       const merged: ParsedVoiceTransaction = {
         ...activeBase,
@@ -237,16 +252,14 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         amountCents: cents,
         amountFormatted: formatted,
         description: finalDescription,
-        establishment: mergedCandidate?.establishment || activeBase.establishment,
-        categoryNameSuggestion:
-          mergedCandidate?.categoryNameSuggestion || activeBase.categoryNameSuggestion,
-        subcategoryNameSuggestion:
-          mergedCandidate?.subcategoryNameSuggestion || activeBase.subcategoryNameSuggestion,
-        bucketSuggestion: mergedCandidate?.bucketSuggestion || activeBase.bucketSuggestion,
+        establishment: activeBase.establishment || mergedCandidate?.establishment,
+        categoryNameSuggestion: finalCategory,
+        subcategoryNameSuggestion: finalSubcategory,
+        bucketSuggestion: finalBucket,
         paymentMethod:
           paymentMethodOverride || mergedCandidate?.paymentMethod || activeBase.paymentMethod,
         aiStatus: 'sucesso',
-        confidence: mergedCandidate?.confidence || 0.95,
+        confidence: Math.max(activeBase.confidence || 0.8, mergedCandidate?.confidence || 0.8),
         clarificationQuestion: null,
         clarificationOptions: null,
         friendlyMessage: mergedCandidate?.friendlyMessage || null,
@@ -470,10 +483,22 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         // Caso 3: Segundo turno — usuário informou o valor após uma transação parcial pendente
         if (existingPartial && (isAmountOnly || existingPartial.aiStatus === 'falta_valor')) {
           if (parsed.amountCents > 0) {
+            // CASO 1: Preserva a categoria, subcategoria e descrição identificadas no 1º turno!
+            // Se parsed trouxer nova categoria ou fallback, mantém o item e categoria do existingPartial se existirem
+            const candidateWithPreservedCategory: Partial<ParsedVoiceTransaction> = {
+              ...parsed,
+              description: existingPartial.description || parsed.description,
+              categoryNameSuggestion:
+                existingPartial.categoryNameSuggestion || parsed.categoryNameSuggestion,
+              subcategoryNameSuggestion:
+                existingPartial.subcategoryNameSuggestion || parsed.subcategoryNameSuggestion,
+              bucketSuggestion: existingPartial.bucketSuggestion || parsed.bucketSuggestion,
+            }
+
             const merged = handleMergeAmountIntoTransaction(
               parsed.amountCents,
               parsed.paymentMethod,
-              parsed,
+              candidateWithPreservedCategory,
             )
 
             const confirmedData = merged || {
@@ -481,8 +506,17 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
               ...parsed,
               amountCents: parsed.amountCents,
               amountFormatted: parsed.amountFormatted,
+              categoryNameSuggestion:
+                existingPartial.categoryNameSuggestion || parsed.categoryNameSuggestion,
+              subcategoryNameSuggestion:
+                existingPartial.subcategoryNameSuggestion || parsed.subcategoryNameSuggestion,
+              bucketSuggestion: existingPartial.bucketSuggestion || parsed.bucketSuggestion,
               aiStatus: 'sucesso' as const,
             }
+
+            // Limpa o item pendente após ser completado
+            setPendingTransaction(null)
+            pendingTransactionRef.current = null
 
             // Executa lançamento autônomo imediato no Supabase
             const result = await executeAutonomousTransaction(confirmedData)
@@ -1382,6 +1416,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       try {
         setIsSaving(true)
 
+        // CASO 1: Validação de integridade contra o catálogo real da família.
+        // JAMAIS permitir salvar par inválido/órfão como "Alimentação › Utilidades & Casa" (Utilidades é de Compras).
         let targetCategory = categories.find((c) => {
           if (c.type !== txData.type) return false
           if (txData.categoryNameSuggestion) {
@@ -1399,7 +1435,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           )
         }
 
-        // Se a categoria sugerida não existir, criar ou associar
+        // Se a categoria sugerida não existir no catálogo da família
         if (!targetCategory && txData.categoryNameSuggestion) {
           try {
             const bucketKey: BudgetBucket = txData.bucketSuggestion || 'lifestyle'
@@ -1424,20 +1460,37 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
         if (targetCategory && txData.subcategoryNameSuggestion) {
           const subName = txData.subcategoryNameSuggestion.trim()
+          // 1. Procura na categoria target
           const existingSub = targetCategory.subcategories?.find(
             (s) => s.name.toLowerCase() === subName.toLowerCase(),
           )
 
           if (existingSub) {
             subcategoryId = existingSub.id
-          } else if (subName) {
-            try {
-              const createdSub = await addNewSubcategory(targetCategory.id, subName)
-              if (createdSub?.id) {
-                subcategoryId = createdSub.id
+          } else {
+            // Se a subcategoria NÃO pertence à targetCategory, verifica se ela pertence a OUTRA categoria
+            // do catálogo (ex: Utilidades & Casa pertence a Compras, NÃO a Alimentação)
+            const trueOwnerCategory = categories.find((c) =>
+              c.subcategories?.some((s) => s.name.toLowerCase() === subName.toLowerCase()),
+            )
+
+            if (trueOwnerCategory) {
+              // Realinha para a categoria dona legítima do par do catálogo
+              targetCategory = trueOwnerCategory
+              const realSub = trueOwnerCategory.subcategories?.find(
+                (s) => s.name.toLowerCase() === subName.toLowerCase(),
+              )
+              subcategoryId = realSub?.id || null
+            } else if (subName) {
+              // Nova subcategoria legítima sob a categoria
+              try {
+                const createdSub = await addNewSubcategory(targetCategory.id, subName)
+                if (createdSub?.id) {
+                  subcategoryId = createdSub.id
+                }
+              } catch (subErr) {
+                console.warn('Não foi possível auto-criar subcategoria:', subErr)
               }
-            } catch (subErr) {
-              console.warn('Não foi possível auto-criar subcategoria:', subErr)
             }
           }
         }
@@ -2035,14 +2088,23 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
         {/* ================= RODAPÉ FIXO: CONTROLES SEMPRE VISÍVEIS (CDS v1.0) ================= */}
         <div className="pt-2 border-t border-slate-100 shrink-0 space-y-2 max-w-full">
-          {/* Status e Feedback Visual da Gravação (tempo decorrido + barras pulsantes waveform) */}
-          <div className="flex items-center justify-between text-[11px] px-1 text-slate-500">
-            <span className="flex items-center gap-1.5 font-medium min-w-0">
+          {/* Status e Feedback Visual da Gravação (tempo decorrido + barras pulsantes waveform com alto contraste) */}
+          <div
+            className={`flex items-center justify-between text-xs px-2 py-1 rounded-xl transition-all ${
+              isListening
+                ? 'bg-amber-500/15 border border-[#FCA311]/50 shadow-xs'
+                : 'text-slate-500'
+            }`}
+          >
+            <span className="flex items-center gap-2 font-medium min-w-0">
               {isListening ? (
                 <>
-                  <span className="w-2 h-2 rounded-full bg-[#FCA311] animate-ping shrink-0" />
-                  <span className="text-[#14213D] font-semibold truncate">
-                    Gravando... Toque em Parar quando terminar
+                  <span className="relative flex h-2.5 w-2.5 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FCA311] opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#E08E08]" />
+                  </span>
+                  <span className="text-[#14213D] font-bold text-xs truncate">
+                    Ouvindo... Toque em Parar quando terminar
                   </span>
                 </>
               ) : isProcessingAi ? (
@@ -2057,31 +2119,38 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
             {isListening && (
               <div className="flex items-center gap-2 shrink-0">
-                {/* Waveform animada com 4 barras pulsantes */}
+                {/* Waveform animada com 5 barras pulsantes mais altas e visíveis */}
                 <div
                   data-testid="recording-waveform"
-                  className="flex items-center gap-0.5 h-3.5 px-1.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-300/40"
+                  className="flex items-center gap-1 h-5 px-2 py-0.5 rounded-full bg-[#14213D] border border-[#FCA311]/60 shadow-xs"
                   aria-label="Gravando áudio"
                 >
-                  <span className="w-0.5 h-2 bg-[#FCA311] rounded-full animate-pulse" />
                   <span
-                    className="w-0.5 h-3.5 bg-[#FCA311] rounded-full animate-pulse"
-                    style={{ animationDelay: '150ms' }}
+                    className="w-1 h-2.5 bg-[#FCA311] rounded-full animate-bounce"
+                    style={{ animationDelay: '0ms', animationDuration: '600ms' }}
                   />
                   <span
-                    className="w-0.5 h-2.5 bg-[#FCA311] rounded-full animate-pulse"
-                    style={{ animationDelay: '300ms' }}
+                    className="w-1 h-4 bg-[#FCA311] rounded-full animate-bounce"
+                    style={{ animationDelay: '150ms', animationDuration: '600ms' }}
                   />
                   <span
-                    className="w-0.5 h-3 bg-[#FCA311] rounded-full animate-pulse"
-                    style={{ animationDelay: '75ms' }}
+                    className="w-1 h-3 bg-[#FCA311] rounded-full animate-bounce"
+                    style={{ animationDelay: '300ms', animationDuration: '600ms' }}
+                  />
+                  <span
+                    className="w-1 h-4.5 bg-[#FCA311] rounded-full animate-bounce"
+                    style={{ animationDelay: '100ms', animationDuration: '600ms' }}
+                  />
+                  <span
+                    className="w-1 h-2 bg-[#FCA311] rounded-full animate-bounce"
+                    style={{ animationDelay: '200ms', animationDuration: '600ms' }}
                   />
                 </div>
 
-                {/* Tempo decorrido em mm:ss */}
+                {/* Tempo decorrido em mm:ss com badge de destaque */}
                 <span
                   data-testid="recording-elapsed-time"
-                  className="font-mono text-[11px] font-semibold text-[#14213D] px-1.5 py-0.5 rounded-md bg-slate-100"
+                  className="font-mono text-xs font-bold text-white px-2 py-0.5 rounded-md bg-[#14213D] border border-[#FCA311]/40"
                 >
                   {Math.floor(recordingElapsedSeconds / 60)
                     .toString()

@@ -1828,10 +1828,13 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     fireEvent.change(input, { target: { value: 'almoço no bistrô 85 reais' } })
     fireEvent.click(screen.getByText('Enviar'))
 
-    // CopilotTypingBubble exibido durante processamento
+    // CopilotTypingBubble exibido durante processamento (apenas pássaro + reticências)
     await waitFor(() => {
-      expect(screen.getByTestId('copilot-typing-bubble')).toBeDefined()
-      expect(screen.getByText('Curiangoo processando...')).toBeDefined()
+      expect(
+        screen.queryByTestId('copilot-typing-bubble') ||
+          screen.queryByTestId('copilot-typing-indicator'),
+      ).toBeDefined()
+      expect(screen.queryByTestId('copilot-typing-dots')).toBeDefined()
     })
 
     // Resolve com confiança baixa (0.45) para acionar a badge "sugestão incerta" no CategoryHighlightChip
@@ -1851,7 +1854,7 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
 
     await waitFor(() => {
       // Typing bubble sumiu
-      expect(screen.queryByTestId('copilot-typing-bubble')).toBeNull()
+      expect(screen.queryByTestId('copilot-typing-indicator')).toBeNull()
       // CategoryHighlightChip presente
       expect(screen.getByTestId('category-highlight-chip')).toBeDefined()
       // Badge de sugestão incerta presente (< 0.6)

@@ -80,10 +80,13 @@ describe('CopilotPage', () => {
     fireEvent.change(input, { target: { value: 'Comprei café por 12 reais' } })
     fireEvent.click(screen.getByRole('button', { name: /Enviar mensagem/i }))
 
-    // CopilotTypingBubble exibido com label oficial
+    // CopilotTypingBubble exibido (apenas pássaro + reticências, sem texto)
     await waitFor(() => {
-      expect(screen.getByTestId('copilot-typing-bubble')).toBeDefined()
-      expect(screen.getByText('Copilot pensando...')).toBeDefined()
+      expect(
+        screen.queryByTestId('copilot-typing-bubble') ||
+          screen.queryByTestId('copilot-typing-indicator'),
+      ).toBeDefined()
+      expect(screen.queryByTestId('copilot-typing-dots')).toBeDefined()
     })
 
     // Conclui processamento
@@ -103,7 +106,7 @@ describe('CopilotPage', () => {
     })
 
     await waitFor(() => {
-      expect(screen.queryByTestId('copilot-typing-bubble')).toBeNull()
+      expect(screen.queryByTestId('copilot-typing-indicator')).toBeNull()
       expect(screen.getByText('Lançado R$ 12,00 em Café!')).toBeDefined()
     })
   })

@@ -6,6 +6,7 @@ import {
   extractTransactionType,
   parseVoiceInput,
   mapAiResponseToParsedTransaction,
+  isCategorySubcategoryPairValid,
 } from '../voice-parser'
 
 describe('voice-parser', () => {
@@ -342,6 +343,86 @@ describe('voice-parser', () => {
 
         expect(parsed.friendlyMessage).toContain('já temos a categoria')
         expect(parsed.amountCents).toBe(29750)
+      })
+    })
+
+    describe('Rodada 25: Itens pendentes, validação de pares e anti-chute', () => {
+      const mockFullCategories = [
+        {
+          id: 'cat-alimentacao',
+          name: 'Alimentação',
+          type: 'expense',
+          subcategories: [
+            { id: 'sub-fastfood', name: 'Fast Food & Lanches' },
+            { id: 'sub-rest', name: 'Restaurantes & Bares' },
+          ],
+        },
+        {
+          id: 'cat-compras',
+          name: 'Compras',
+          type: 'expense',
+          subcategories: [
+            { id: 'sub-bebes', name: 'Bebês & Crianças' },
+            { id: 'sub-utilidades', name: 'Utilidades & Casa' },
+          ],
+        },
+      ]
+
+      it('item pendente multi-turno: "fraldas" (sem valor) seguido de "60" completa a transação preservando categoria e subcategoria', () => {
+        const pendingFraldas = {
+          descricao: 'Fraldas',
+          categoria: 'Compras',
+          subcategoria: 'Bebês & Crianças',
+          balde: 'Necessidades Essenciais',
+          tipo: 'despesa' as const,
+          valor: null,
+          status: 'falta_valor',
+        }
+
+        const completed = parseVoiceInput('60', mockFullCategories as any, pendingFraldas as any)
+
+        expect(completed.aiStatus).toBe('sucesso')
+        expect(completed.amountCents).toBe(6000)
+        expect(completed.amountFormatted).toBe('R$\u00a060,00')
+        expect(completed.description).toBe('Fraldas')
+        expect(completed.categoryNameSuggestion).toBe('Compras')
+        expect(completed.subcategoryNameSuggestion).toBe('Bebês & Crianças')
+        expect(completed.friendlyMessage).toContain(
+          'Lançado: R$\u00a060,00 em Compras › Bebês & Crianças! 👍',
+        )
+      })
+
+      it('validação de pares isCategorySubcategoryPairValid: recusa cruzamentos inválidos e aceita pares legítimos', () => {
+        // Par válido
+        expect(
+          isCategorySubcategoryPairValid('Compras', 'Bebês & Crianças', mockFullCategories as any),
+        ).toBe(true)
+        expect(
+          isCategorySubcategoryPairValid('Compras', 'Utilidades & Casa', mockFullCategories as any),
+        ).toBe(true)
+
+        // Par cruzado inválido ("Alimentação › Utilidades & Casa")
+        expect(
+          isCategorySubcategoryPairValid(
+            'Alimentação',
+            'Utilidades & Casa',
+            mockFullCategories as any,
+          ),
+        ).toBe(false)
+
+        // Categoria sem subcategoria informada é válida
+        expect(isCategorySubcategoryPairValid('Compras', null, mockFullCategories as any)).toBe(
+          true,
+        )
+
+        // Categoria inexistente
+        expect(
+          isCategorySubcategoryPairValid(
+            'Categoria Fantasma',
+            'Qualquer',
+            mockFullCategories as any,
+          ),
+        ).toBe(false)
       })
     })
 

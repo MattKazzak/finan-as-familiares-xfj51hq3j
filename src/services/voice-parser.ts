@@ -644,7 +644,6 @@ export function suggestCategoryAndBucket(
       keywords: [
         'supermercado',
         'mercado',
-        'compras',
         'padaria',
         'acougue',
         'feira',
@@ -654,6 +653,22 @@ export function suggestCategoryAndBucket(
       ],
       defaultCategory: 'Alimentação',
       bucket: 'essentials',
+    },
+    // Bebês & Crianças (Compras)
+    {
+      keywords: [
+        'fralda',
+        'fraldas',
+        'enxoval',
+        'bebe',
+        'bebes',
+        'crianca',
+        'criancas',
+        'ri happy',
+      ],
+      defaultCategory: 'Compras',
+      bucket: 'lifestyle',
+      candidateExistingCategories: ['Compras', 'Bebês & Crianças'],
     },
     {
       keywords: [
@@ -934,6 +949,40 @@ export function categoryExistsInFamilyList(
       })
     }
     return false
+  })
+}
+
+/**
+ * Valida se um par (categoria, subcategoria) existe legitimamente no catálogo da família.
+ * Se subcategoria for informada, ela DEVE pertencer à categoria indicada.
+ * NUNCA permite pares órfãos ou cruzados como "Alimentação › Utilidades & Casa".
+ */
+export function isCategorySubcategoryPairValid(
+  categoryName: string,
+  subcategoryName: string | null | undefined,
+  categories: Array<
+    CategoryWithSubcategoriesInput | { id?: string; name: string; subcategories?: any[] }
+  >,
+): boolean {
+  if (!categoryName) return false
+  const catNorm = normalizeWord(categoryName)
+  const matchedCat = categories.find((c) => {
+    const cNorm = normalizeWord(c.name)
+    return cNorm === catNorm || cNorm.includes(catNorm) || catNorm.includes(cNorm)
+  })
+
+  if (!matchedCat) return false
+  if (!subcategoryName) return true
+
+  const subNorm = normalizeWord(subcategoryName)
+  if (!matchedCat.subcategories || !Array.isArray(matchedCat.subcategories)) {
+    return false
+  }
+
+  return matchedCat.subcategories.some((s: any) => {
+    const sName = typeof s === 'string' ? s : s?.name || ''
+    const sNorm = normalizeWord(sName)
+    return sNorm === subNorm || sNorm.includes(subNorm) || subNorm.includes(sNorm)
   })
 }
 
@@ -1244,27 +1293,35 @@ export function parseVoiceInput(
     }
   }
 
-  // 5. Categoria & Balde
-  const { categoryName, bucket, subcategoryName } = suggestCategoryAndBucket(
-    `${description} ${rawText}`,
-    categories.filter((c) => c.type === effectiveType),
-  )
-
-  // Formatação em BRL
+  // Se houver contexto anterior de slot-filling (falta_valor) ou valor identificado na nova fala isolada (ex: "60", "foi 80 reais", "80 no pix"):
+  // O item pendente no turno anterior PRESERVA descrição, estabelecimento, tipo e categoria/subcategoria já identificadas!
   const amountFormatted = (amountCents / 100).toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL',
   })
 
-  // Se houver contexto anterior com valor identificado na nova fala (ex: "foi 80 reais", "80 no pix")
   if (contextoAnterior && amountCents > 0) {
     const finalDesc = contextoAnterior.descricao || description
     const finalEstablishment = contextoAnterior.estabelecimento || establishment
-    const finalCategory = contextoAnterior.categoria || categoryName
-    const finalSubcategory = contextoAnterior.subcategoria
+    const finalCategory = contextoAnterior.categoria || undefined
+    const finalSubcategory = contextoAnterior.subcategoria || undefined
     const finalBucket = contextoAnterior.balde
       ? normalizeBucketName(contextoAnterior.balde)
-      : bucket || 'lifestyle'
+      : 'lifestyle'
+
+    // Valida par categoria/subcategoria contra catálogo real
+    const catExists = finalCategory ? categoryExistsInFamilyList(finalCategory, categories) : false
+    const subExists =
+      finalCategory && finalSubcategory
+        ? isCategorySubcategoryPairValid(finalCategory, finalSubcategory, categories)
+        : true
+
+    const friendlyConfirmation =
+      finalCategory && finalSubcategory && subExists
+        ? `Lançado: ${amountFormatted} em ${finalCategory} › ${finalSubcategory}! 👍`
+        : finalCategory
+          ? `Lançado: ${amountFormatted} em ${finalCategory}! 👍`
+          : `Lançado: ${amountFormatted}! 👍`
 
     return {
       rawText,
@@ -1274,17 +1331,23 @@ export function parseVoiceInput(
       description: finalDesc,
       establishment: finalEstablishment || undefined,
       paymentMethod: method,
-      categoryNameSuggestion: finalCategory,
-      subcategoryNameSuggestion: finalSubcategory || subcategoryName,
+      categoryNameSuggestion: catExists || !finalCategory ? finalCategory : undefined,
+      subcategoryNameSuggestion: subExists ? finalSubcategory : undefined,
       bucketSuggestion: finalBucket,
       confidence: 0.95,
       processingSource: 'local',
       aiStatus: 'sucesso',
       clarificationQuestion: null,
       clarificationOptions: null,
-      friendlyMessage: null,
+      friendlyMessage: friendlyConfirmation,
     }
   }
+
+  // 5. Categoria & Balde
+  const { categoryName, bucket, subcategoryName } = suggestCategoryAndBucket(
+    `${description} ${rawText}`,
+    categories.filter((c) => c.type === effectiveType),
+  )
 
   // Determinar status do fallback local:
   let aiStatus: VoiceAiStatus = 'invalido'
