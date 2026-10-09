@@ -22,6 +22,7 @@ export type SemanticIntent =
   | 'sorvete_acai'
   | 'conveniencia_posto'
   | 'bebes_criancas'
+  | 'tabaco_cigarros'
   | 'marmitas_refeicoes'
   | 'coparticipacao'
   | 'restituicao_ir'
@@ -262,7 +263,26 @@ export const BRAZILIAN_MERCHANT_SEEDS: readonly SeedMerchantEntry[] = [
     patterns: ['fralda', 'enxoval', 'bebe', 'ri happy', 'alo bebe', 'pampers', 'huggies'],
     suggestedSubcategoryNames: ['Bebês & Crianças', 'Compras'],
   },
-  // 10. Marmitas & Refeições no Trabalho (Restaurantes & Delivery)
+  // 10. Tabaco & Cigarros (Compras)
+  {
+    intent: 'tabaco_cigarros',
+    patterns: [
+      'cigarro',
+      'cigarros',
+      'maco de cigarro',
+      'maço de cigarro',
+      'carteira de cigarro',
+      'tabaco',
+      'tabacaria',
+      'vape',
+      'cigarro eletronico',
+      'cigarro eletrônico',
+      'charuto',
+      'pod',
+    ],
+    suggestedSubcategoryNames: ['Tabaco & Cigarros', 'Compras'],
+  },
+  // 11. Marmitas & Refeições no Trabalho (Restaurantes & Delivery)
   {
     intent: 'marmitas_refeicoes',
     patterns: ['marmita', 'marmitaria', 'quentinha', 'almoco executivo', 'refeicao trabalho'],
@@ -368,6 +388,8 @@ export function matchMerchantSeed(description: string): {
         'cri',
         'jcp',
         '13o',
+        'pod',
+        'vape',
       ])
 
       if (SHORT_BOUNDARY_TERMS.has(normPat)) {
@@ -480,6 +502,16 @@ export function resolveCategoryForIntent(
       pool.find((c) => {
         const n = normalize(c.name)
         return n.includes('compras') || n.includes('vestuario') || n.includes('bebe')
+      }) ||
+      pool.find((c) => c.budget_bucket === 'lifestyle') ||
+      pool[0] ||
+      null
+  } else if (intent === 'tabaco_cigarros') {
+    // Busca Compras / Tabaco & Cigarros
+    matchedCat =
+      pool.find((c) => {
+        const n = normalize(c.name)
+        return n.includes('compras') || n.includes('tabaco')
       }) ||
       pool.find((c) => c.budget_bucket === 'lifestyle') ||
       pool[0] ||

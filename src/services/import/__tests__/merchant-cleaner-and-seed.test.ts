@@ -114,6 +114,80 @@ describe('Higienizador Determinístico de Adquirentes Brasileiras (merchant-clea
     // Substring dentro de palavra não deve casar termo curto
     expect(matchMerchantSeed('ESTABELECIMENTO')).toBeNull()
   })
+
+  it('identifica a intenção da Rodada 27B (tabaco/cigarros em Compras) e resolve no catálogo da família', () => {
+    const familyCatalog: GenericCategoryInput[] = [
+      {
+        id: 'cat-moradia',
+        name: 'Moradia',
+        type: 'expense',
+        budget_bucket: 'essentials',
+        subcategories: [{ id: 'sub-aluguel', name: 'Aluguel' }],
+      },
+      {
+        id: 'cat-alimentacao',
+        name: 'Alimentação',
+        type: 'expense',
+        budget_bucket: 'essentials',
+        subcategories: [{ id: 'sub-mercado', name: 'Mercado' }],
+      },
+      {
+        id: 'cat-compras',
+        name: 'Compras',
+        type: 'expense',
+        budget_bucket: 'lifestyle',
+        subcategories: [
+          { id: 'sub-roupas', name: 'Roupas' },
+          { id: 'sub-tabaco', name: 'Tabaco & Cigarros' },
+        ],
+      },
+    ]
+
+    const termosTabaco = [
+      'maço de cigarro',
+      'cigarros',
+      'carteira de cigarro',
+      'tabaco',
+      'tabacaria',
+      'cigarro eletrônico',
+      'vape',
+    ]
+
+    for (const termo of termosTabaco) {
+      const match = matchMerchantSeed(termo)
+      expect(match, `termo "${termo}" deve casar a intenção tabaco_cigarros`).not.toBeNull()
+      expect(match?.intent).toBe('tabaco_cigarros')
+    }
+
+    // Resolução no catálogo da família: deve cair na categoria Compras com a subcategoria certa
+    const res = resolveBrazilianMerchantSeed('maço de cigarro', familyCatalog)
+    expect(res).not.toBeNull()
+    expect(res?.categoryId).toBe('cat-compras')
+    expect(res?.subcategoryId).toBe('sub-tabaco')
+    expect(res?.intent).toBe('tabaco_cigarros')
+
+    // Catálogo SEM a subcategoria nova: ainda assim cai em Compras (categoria), sem sub
+    const catalogSemSub: GenericCategoryInput[] = [
+      {
+        id: 'cat-moradia',
+        name: 'Moradia',
+        type: 'expense',
+        budget_bucket: 'essentials',
+        subcategories: [],
+      },
+      {
+        id: 'cat-compras',
+        name: 'Compras',
+        type: 'expense',
+        budget_bucket: 'lifestyle',
+        subcategories: [{ id: 'sub-roupas', name: 'Roupas' }],
+      },
+    ]
+    const resSemSub = resolveBrazilianMerchantSeed('tabaco', catalogSemSub)
+    expect(resSemSub).not.toBeNull()
+    expect(resSemSub?.categoryId).toBe('cat-compras')
+    expect(resSemSub?.subcategoryId).toBeNull()
+  })
 })
 
 describe('Seed Brasileiro em Código (Camada Determinística Rápida)', () => {

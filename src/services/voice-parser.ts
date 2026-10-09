@@ -670,6 +670,21 @@ export function suggestCategoryAndBucket(
       bucket: 'lifestyle',
       candidateExistingCategories: ['Compras', 'Bebês & Crianças'],
     },
+    // Tabaco & Cigarros (Compras) — rodada 27B
+    {
+      keywords: [
+        'cigarro',
+        'cigarros',
+        'cigarro eletronico',
+        'vape',
+        'tabaco',
+        'tabacaria',
+        'charuto',
+      ],
+      defaultCategory: 'Compras',
+      bucket: 'lifestyle',
+      candidateExistingCategories: ['Compras'],
+    },
     {
       keywords: [
         'farmacia',

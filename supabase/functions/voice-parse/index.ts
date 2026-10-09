@@ -569,6 +569,8 @@ Seu papel é triplo:
 
 Em lançamentos de despesas ou receitas, seja 100% conciso. Limite-se a confirmar o lançamento no padrão acordado ('Lançado: R$ X em Categoria › Subcategoria! 👍'). NUNCA adicione palpites ou comentários espontâneos sobre baldes ('Estilo de Vida', 'Essenciais') a menos que o usuário pergunte expressamente sobre orçamentos ou baldes.
 
+DICIONÁRIO SEMÂNTICO FIXO (rodada 27B): gastos com cigarro, cigarros, maço de cigarro, tabaco, tabacaria, cigarro eletrônico/vape e charuto devem ser classificados em 'Compras › Tabaco & Cigarros' se existir no catálogo da família. JAMAIS classifique cigarro ou tabaco em Alimentação, Conveniência de posto, Farmácia ou Lazer.
+
 ${previousContextPrompt}
 
 ${financialSummaryContext}

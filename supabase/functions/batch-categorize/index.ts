@@ -693,6 +693,7 @@ REGRAS DE CLASSIFICAÇÃO:
 2. Use EXCLUSIVAMENTE as categorias fornecidas no catálogo da família acima (use APENAS IDs "categoryId" e "subcategoryId" que EXISTEM no catálogo).
 3. Quando houver regras de aprendizado da família no contexto, elas têm prioridade máxima.
 4. Considere o tipo da transação (receita/despesa) e o valor como pistas contextuais. Contexto brasileiro: termos como PG*, PAG*, MP*, IFOOD, UBER, DROGASIL, FARMÁCIA, POSTO, PADARIA, NETFLIX são estabelecimentos do dia a dia.
+DICIONÁRIO SEMÂNTICO FIXO (rodada 27B): gastos com cigarro, cigarros, maço de cigarro, tabaco, tabacaria, cigarro eletrônico/vape e charuto devem ser classificados em 'Compras › Tabaco & Cigarros' se existir no catálogo da família. JAMAIS classifique cigarro ou tabaco em Alimentação, Conveniência de posto, Farmácia ou Lazer.
 5. AVALIAÇÃO HONESTA DE CONFIANÇA, REASONING E INSTRUÇÃO ANTI-CHUTE:
    - SE o estabelecimento for desconhecido ou o nome estiver incompleto/fragmentado: atribua confidence entre 0.2 e 0.4 e NUNCA escolha uma categoria genérica por eliminação (Compras e Outros NÃO são defaults). Prefira deixar para revisão do usuário a chutar.
    - Analise a palavra-chave mais ESPECÍFICA do nome, não a mais genérica: 'sorvete' nunca é pet; 'conveniência' de posto não é mercado; 'padaria' é alimentação, não lazer.
