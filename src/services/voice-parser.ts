@@ -4,6 +4,11 @@
  */
 
 import type { BudgetBucket } from '@/types/finance'
+import {
+  isBasketInput,
+  analyzeBasketMission,
+  interpretFreeTextBasketResponse,
+} from './basket-missions'
 
 export type VoiceAiStatus =
   | 'sucesso'
@@ -13,6 +18,7 @@ export type VoiceAiStatus =
   | 'invalido'
   | 'consulta'
   | 'acao_executada'
+  | 'modo_cesta'
 
 export interface VoiceAiTransaction {
   descricao: string
@@ -109,6 +115,12 @@ export interface ParsedVoiceTransaction {
   structuredOptions?: StructuredSuggestionOption[] | null
   friendlyMessage?: string | null
   aiError?: string | null
+  // Rodada 28: Modo Cesta
+  isBasket?: boolean
+  basketItemsDescription?: string
+  basketEventTag?: string
+  basketMissionType?: string
+  isUncertainSuggestion?: boolean
 }
 
 // Mapeamento de números por extenso em português
@@ -1358,6 +1370,232 @@ export function parseVoiceInput(
     }
   }
 
+  // 4.5. Detecção de Modo Cesta (Rodada 28)
+  // Se for uma enumeração multi-item com valor total único na voz/texto
+
+  // Turno 2 do Modo Cesta: o usuário respondeu à pergunta da cesta livremente
+  if (
+    contextoAnterior &&
+    (contextoAnterior.status === 'modo_cesta' || (contextoAnterior as any)?.isBasket)
+  ) {
+    const basketPendingTotal =
+      contextoAnterior.valor !== undefined && contextoAnterior.valor !== null
+        ? Math.round(Number(contextoAnterior.valor) * 100)
+        : amountCents
+
+    const fakeAnalysis = analyzeBasketMission(
+      contextoAnterior.descricao || description,
+      basketPendingTotal,
+    )
+
+    const freeInterpretation = interpretFreeTextBasketResponse(trimmed, fakeAnalysis)
+
+    if (freeInterpretation.intent === 'confirm_event') {
+      const finalCat = freeInterpretation.category
+      const finalSub = freeInterpretation.subcategory
+      const finalBucket = freeInterpretation.bucket
+      const itemsDesc = fakeAnalysis.itemsDescription || contextoAnterior.descricao || description
+
+      const formattedTotal = (basketPendingTotal / 100).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      })
+      const friendlyMsg = finalSub
+        ? `Lançado: ${formattedTotal} em ${finalCat} › ${finalSub} 👍!`
+        : `Lançado: ${formattedTotal} em ${finalCat} 👍!`
+
+      return {
+        rawText,
+        amountCents: basketPendingTotal,
+        amountFormatted: formattedTotal,
+        type: effectiveType,
+        description: itemsDesc,
+        establishment: contextoAnterior.estabelecimento || establishment,
+        paymentMethod: method,
+        categoryNameSuggestion: finalCat,
+        subcategoryNameSuggestion: finalSub || undefined,
+        bucketSuggestion: finalBucket,
+        confidence: 0.95,
+        processingSource: 'local',
+        aiStatus: 'sucesso',
+        tipoResposta: 'transacao',
+        intencao: 'transacao',
+        clarificationQuestion: null,
+        clarificationOptions: null,
+        friendlyMessage: friendlyMsg,
+        isBasket: true,
+        basketItemsDescription: itemsDesc,
+        basketEventTag: fakeAnalysis.eventTag,
+      }
+    }
+
+    if (freeInterpretation.intent === 'reject_event') {
+      const finalCat = 'Alimentação'
+      const finalSub = 'Supermercado & Atacado'
+      const finalBucket = 'essentials' as BudgetBucket
+      const itemsList = fakeAnalysis.items.map((i) => i.name).join(', ')
+      const itemsDesc = itemsList
+        ? `${itemsList} — casa`
+        : contextoAnterior.descricao || description
+
+      const formattedTotal = (basketPendingTotal / 100).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      })
+      const friendlyMsg = `Lançado: ${formattedTotal} em Alimentação › Supermercado & Atacado 👍!`
+
+      return {
+        rawText,
+        amountCents: basketPendingTotal,
+        amountFormatted: formattedTotal,
+        type: effectiveType,
+        description: itemsDesc,
+        establishment: contextoAnterior.estabelecimento || establishment,
+        paymentMethod: method,
+        categoryNameSuggestion: finalCat,
+        subcategoryNameSuggestion: finalSub,
+        bucketSuggestion: finalBucket,
+        confidence: 0.95,
+        processingSource: 'local',
+        aiStatus: 'sucesso',
+        tipoResposta: 'transacao',
+        intencao: 'transacao',
+        clarificationQuestion: null,
+        clarificationOptions: null,
+        friendlyMessage: friendlyMsg,
+        isBasket: true,
+        basketItemsDescription: itemsDesc,
+      }
+    }
+
+    if (freeInterpretation.intent === 'split_basket') {
+      return {
+        rawText,
+        amountCents: basketPendingTotal,
+        amountFormatted: (basketPendingTotal / 100).toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+        }),
+        type: effectiveType,
+        description: contextoAnterior.descricao || description,
+        establishment: contextoAnterior.estabelecimento || establishment,
+        paymentMethod: method,
+        categoryNameSuggestion: 'Lazer',
+        subcategoryNameSuggestion: 'Shows & Eventos',
+        bucketSuggestion: 'lifestyle',
+        confidence: 0.9,
+        processingSource: 'local',
+        aiStatus: 'modo_cesta',
+        tipoResposta: 'transacao',
+        intencao: 'transacao',
+        clarificationQuestion: freeInterpretation.confirmationQuestion || null,
+        clarificationOptions: null,
+        friendlyMessage: freeInterpretation.confirmationQuestion || null,
+        isBasket: true,
+      }
+    }
+
+    // Ambíguo
+    return {
+      rawText,
+      amountCents: basketPendingTotal,
+      amountFormatted: (basketPendingTotal / 100).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      }),
+      type: effectiveType,
+      description: fakeAnalysis.itemsDescription || contextoAnterior.descricao || description,
+      establishment: contextoAnterior.estabelecimento || establishment,
+      paymentMethod: method,
+      categoryNameSuggestion: freeInterpretation.category,
+      subcategoryNameSuggestion: freeInterpretation.subcategory || undefined,
+      bucketSuggestion: freeInterpretation.bucket,
+      confidence: 0.7,
+      processingSource: 'local',
+      aiStatus: 'clarificacao',
+      tipoResposta: 'transacao',
+      intencao: 'transacao',
+      clarificationQuestion: freeInterpretation.confirmationQuestion || null,
+      clarificationOptions: null,
+      friendlyMessage: freeInterpretation.confirmationQuestion || null,
+      isBasket: true,
+      isUncertainSuggestion: true,
+    }
+  }
+
+  // Turno 1 do Modo Cesta: Detecção inicial de enumeração multi-item com valor total único
+  if (amountCents > 0 && isBasketInput(rawText)) {
+    const basketAnalysis = analyzeBasketMission(rawText, amountCents)
+    if (basketAnalysis.isBasket) {
+      // (b) Cesta óbvia do dia a dia (arroz/feijão/leite/sabão) -> Alimentação/Compras direto, SEM pergunta
+      if (!basketAnalysis.requiresConfirmation) {
+        const cat = basketAnalysis.suggestedCategory
+        const sub = basketAnalysis.suggestedSubcategory
+        const bucket = basketAnalysis.suggestedBucket
+        const desc = basketAnalysis.itemsDescription || description
+
+        const friendlyMsg = sub
+          ? `Lançado: ${amountFormatted} em ${cat} › ${sub} 👍!`
+          : `Lançado: ${amountFormatted} em ${cat} 👍!`
+
+        return {
+          rawText,
+          amountCents,
+          amountFormatted,
+          type: effectiveType,
+          description: desc,
+          establishment,
+          paymentMethod: method,
+          categoryNameSuggestion: cat,
+          subcategoryNameSuggestion: sub || undefined,
+          bucketSuggestion: bucket,
+          confidence: 0.95,
+          processingSource: 'local',
+          aiStatus: 'sucesso',
+          tipoResposta: 'transacao',
+          intencao: 'transacao',
+          clarificationQuestion: null,
+          clarificationOptions: null,
+          friendlyMessage: friendlyMsg,
+          isBasket: true,
+          basketItemsDescription: desc,
+          basketEventTag: basketAnalysis.eventTag,
+          basketMissionType: basketAnalysis.missionType,
+        }
+      }
+
+      // (c) Padrão que sugere ocasião (cerveja+salame/carne/gelo etc.) -> UMA pergunta em linguagem natural
+      const question =
+        basketAnalysis.naturalQuestion ||
+        `Percebi ${basketAnalysis.items.map((i) => i.name).join(', ')} — parece um encontro ou churrasco?`
+
+      return {
+        rawText,
+        amountCents,
+        amountFormatted,
+        type: effectiveType,
+        description: basketAnalysis.itemsDescription || description,
+        establishment,
+        paymentMethod: method,
+        categoryNameSuggestion: basketAnalysis.suggestedCategory,
+        subcategoryNameSuggestion: basketAnalysis.suggestedSubcategory || undefined,
+        bucketSuggestion: basketAnalysis.suggestedBucket,
+        confidence: 0.95,
+        processingSource: 'local',
+        aiStatus: 'modo_cesta',
+        tipoResposta: 'transacao',
+        intencao: 'transacao',
+        clarificationQuestion: question,
+        clarificationOptions: null, // SEM CHIPS/CARDS DE RESPOSTA RÁPIDA (UX FIXA)
+        friendlyMessage: question,
+        isBasket: true,
+        basketItemsDescription: basketAnalysis.itemsDescription,
+        basketEventTag: basketAnalysis.eventTag,
+        basketMissionType: basketAnalysis.missionType,
+      }
+    }
+  }
+
   // 5. Categoria & Balde
   const { categoryName, bucket, subcategoryName } = suggestCategoryAndBucket(
     `${description} ${rawText}`,
@@ -1507,6 +1745,7 @@ export function mapAiResponseToParsedTransaction(
     invalido: 0.2,
     consulta: 0.95,
     acao_executada: 0.95,
+    modo_cesta: 0.95,
   }
 
   const isConsulta = aiData.status === 'consulta' || aiData.tipo_resposta === 'consulta'

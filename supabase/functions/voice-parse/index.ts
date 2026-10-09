@@ -541,6 +541,25 @@ CONTEXTO ANTERIOR DE UMA TRANSAÇÃO EM ANDAMENTO NA SESSÃO:
 - Opções de sugestão oferecidas anteriormente: [${opcoesStr}]
 
 INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTENÇÃO:
+0. SE O STATUS ANTERIOR FOR 'modo_cesta' OU HOUVE PERGUNTA DE MISSÃO DE COMPRA/OCASIÃO:
+  O usuário respondeu livremente à pergunta sobre a cesta de compras multi-item (ex: "Percebi cerveja, salame e suco — parece um encontro ou churrasco?").
+  - DECISÃO DE UX: NÃO usamos chips/cards; a resposta é LIVRE por voz ou texto e você deve interpretá-la:
+    a) Se o usuário CONFIRMAR o evento ("sim", "foi churrasco", "churrasco com os amigos", "resenha", "festa"):
+       * Registre a cesta INTEIRA em UMA transação (status: "sucesso").
+       * Categoria: 'Lazer' › 'Shows & Eventos' (ou 'Restaurantes & Bares' se não houver 'Shows & Eventos'), Balde: 'Estilo de Vida'.
+       * Descrição OBRIGATÓRIA: a lista dos itens preservada com o evento (ex: "${previousContext.descricao || 'Itens'} — churrasco").
+       * Valor: preserve o valor total da cesta (${valorStr}).
+       * Mensagem amigável: "Lançado: ${valorStr} em Lazer › Shows & Eventos 👍!"
+    b) Se o usuário NEGAR o evento ("não, compra de casa", "nada disso, comprei pra deixar aqui em casa", "alimentação", "mercado comum"):
+       * Registre a cesta INTEIRA em 'Alimentação' › 'Supermercado & Atacado' (ou 'Alimentação'), Balde: 'Necessidades Essenciais'.
+       * Descrição: mantenha os itens da cesta (ex: "${previousContext.descricao || 'Itens'} — casa").
+       * Valor: preserve o valor total da cesta (${valorStr}).
+       * Mensagem amigável: "Lançado: ${valorStr} em Alimentação › Supermercado & Atacado 👍!"
+    c) Se a resposta for PARCIAL ou pedir DIVISÃO ("cerveja pro churrasco, resto é da casa", "só a cerveja foi pro churrasco"):
+       * Se o usuário não deu os valores exatos de cada parte, responda educadamente com uma proposta de divisão proporcional (ex: ~40% cerveja e 60% casa) pedindo confirmação rápida, NUNCA chute valores em silêncio!
+       * Ou se ele informou ("cerveja foi 40, resto casa"), divida e confirme.
+    d) Se a resposta for AMBÍGUA: faça UMA pergunta de follow-up (máximo 2 perguntas por cesta). Se persistir, classifique na mais específica do contexto.
+
 1. SE O STATUS ANTERIOR FOR 'falta_valor' (SLOT-FILLING DE VALOR):
   O usuário já disse o item anteriormente (ex: "${previousContext.descricao || 'item'}" em "${previousContext.estabelecimento || ''}").
   Agora ele está informando o valor — inclusive número isolado ou frase curta como "12", "12 reais", "doze", "doze reais", "52", "10", "trinta", "cinquenta e dois reais", "80 no débito", "paguei no pix 50", etc.
@@ -569,7 +588,15 @@ Seu papel é triplo:
 
 Em lançamentos de despesas ou receitas, seja 100% conciso. Limite-se a confirmar o lançamento no padrão acordado ('Lançado: R$ X em Categoria › Subcategoria! 👍'). NUNCA adicione palpites ou comentários espontâneos sobre baldes ('Estilo de Vida', 'Essenciais') a menos que o usuário pergunte expressamente sobre orçamentos ou baldes.
 
-DICIONÁRIO SEMÂNTICO FIXO (rodada 27B): gastos com cigarro, cigarros, maço de cigarro, tabaco, tabacaria, cigarro eletrônico/vape e charuto devem ser classificados em 'Compras › Tabaco & Cigarros' se existir no catálogo da família. JAMAIS classifique cigarro ou tabaco em Alimentação, Conveniência de posto, Farmácia ou Lazer.
+DICIONÁRIO SEMÂNTICO FIXO (rodada 27B/28):
+- Gastos com cigarro, cigarros, maço de cigarro, tabaco, tabacaria, cigarro eletrônico/vape e charuto devem ser classificados em 'Compras › Tabaco & Cigarros' se existir no catálogo da família. JAMAIS classifique cigarro ou tabaco em Alimentação, Conveniência de posto, Farmácia ou Lazer.
+- MODO CESTA — MISSÃO DE COMPRA (Rodada 28):
+  * Cesta = enumeração multi-item com valor total único na voz/texto (ex: "1 salame, 1 suco de maracujá e 1 caixa de cerveja, tudo 100 reais").
+  * Cesta óbvia do dia a dia (arroz, feijão, leite, sabão, macarrão, etc.) -> Alimentação › Supermercado & Atacado direto, SEM pergunta.
+  * Cesta com padrão que sugere ocasião (cerveja/cachaça + salame/carne/carvão/gelo; pipoca + doces/refri; flores + perfume):
+    - JAMAIS grave evento social em silêncio! Faça UMA pergunta natural: "Percebi [itens] — parece um encontro ou churrasco?"
+    - Retorne status "clarificacao" com a pergunta em "pergunta_clarificacao" e "mensagem_amigavel", com a transação pendente contendo valor total e descrição com a lista dos itens.
+    - Quando o usuário responde livremente ("foi um churrasco sim", "não, compra de casa"), interprete a resposta conforme as regras de contexto anterior!
 
 ${previousContextPrompt}
 
@@ -878,6 +905,7 @@ Comportamentos esperados:
       'invalido',
       'consulta',
       'acao_executada',
+      'modo_cesta',
     ]
     const status = validStatuses.includes(parsedAiJson?.status) ? parsedAiJson.status : 'invalido'
 

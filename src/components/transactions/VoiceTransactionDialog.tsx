@@ -53,12 +53,12 @@ export interface ChatMessage {
     | 'clarificacao_categoria'
     | 'consulta'
     | 'acao'
+    | 'modo_cesta'
   aiError?: string | null
   confirmedTxId?: string | null
   undoAction?: () => void
   editAction?: () => void
 }
-
 function getAiConsent(): boolean {
   return getLocalAiConsent()
 }
@@ -325,7 +325,9 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           isAmountOnly ||
           existingPartial?.aiStatus === 'falta_valor' ||
           existingPartial?.aiStatus === 'clarificacao_categoria' ||
-          existingPartial?.aiStatus === 'clarificacao'
+          existingPartial?.aiStatus === 'clarificacao' ||
+          existingPartial?.aiStatus === 'modo_cesta' ||
+          existingPartial?.isBasket
             ? buildPreviousContext(existingPartial)
             : null
 
@@ -588,6 +590,41 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
               timestamp: new Date(),
               cardData: existingPartial,
               cardType: 'falta_valor',
+            },
+          ])
+          return
+        }
+
+        // Caso 3.5: Modo Cesta (Rodada 28) — Detecção ou Pergunta Natural de Missão de Compra
+        // Se a IA ou o parser local identificar a cesta com pergunta sobre evento:
+        // NÃO usa chips/cards: exibe a pergunta única em linguagem natural e aguarda resposta livre
+        if (parsed.aiStatus === 'modo_cesta') {
+          setPendingTransaction(parsed)
+          pendingTransactionRef.current = parsed
+
+          const questionText =
+            parsed.clarificationQuestion ||
+            parsed.friendlyMessage ||
+            `Percebi múltiplos itens (${parsed.description}) — parece um encontro ou churrasco?`
+
+          if (family?.id) {
+            saveCopilotMessage({
+              familyId: family.id,
+              role: 'assistant',
+              content: questionText,
+              cardType: 'modo_cesta',
+            }).catch(() => {})
+          }
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `assistant-${Date.now()}`,
+              sender: 'assistant',
+              text: questionText,
+              timestamp: new Date(),
+              cardData: parsed,
+              cardType: 'modo_cesta',
             },
           ])
           return
