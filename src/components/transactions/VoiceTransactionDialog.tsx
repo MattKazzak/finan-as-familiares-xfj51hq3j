@@ -19,8 +19,13 @@ import {
   Send,
   Tag,
   Folder,
+  Square,
+  X,
+  RotateCcw,
 } from 'lucide-react'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
+import { CopilotTypingBubble } from '@/components/brand/CopilotTypingBubble'
+import { CategoryHighlightChip } from '@/components/categories/CategoryHighlightChip'
 import { ParsedVoiceTransaction, StructuredSuggestionOption } from '@/services/voice-parser'
 import { parseVoiceWithAi } from '@/services/voice-ai'
 import { useFamily } from '@/hooks/use-family'
@@ -128,10 +133,9 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
   const [isListeningForAmountOnly, setIsListeningForAmountOnly] = useState(false)
 
-  // Contagem regressiva visual do temporizador de silêncio (3s -> 2s -> 1s)
-  const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null)
-  const silenceEndTimestampRef = useRef<number | null>(null)
-  const countdownIntervalRef = useRef<any>(null)
+  // Tempo decorrido de gravação em segundos (mm:ss)
+  const [recordingElapsedSeconds, setRecordingElapsedSeconds] = useState<number>(0)
+  const recordingTimerRef = useRef<any>(null)
 
   // Refs de controle
   const chatScrollRef = useRef<HTMLDivElement | null>(null)
@@ -140,8 +144,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   // Buffers dedicados para evitar duplicações cumulativas de interimResults e reinícios
   const finalBufferRef = useRef<string>('')
   const hadErrorRef = useRef<boolean>(false)
-  const silenceTimerRef = useRef<any>(null)
-  const userStoppedManuallyRef = useRef<boolean>(false)
   const isListeningForAmountOnlyRef = useRef<boolean>(false)
   const pendingTransactionRef = useRef<ParsedVoiceTransaction | null>(null)
   // Manter refs sincronizadas
@@ -166,23 +168,14 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     scrollToBottom()
   }, [messages, isProcessingAi, isListening, textoFalado, scrollToBottom])
 
-  // Limpar timer de silêncio e contagem regressiva
-  const clearSilenceTimer = useCallback(() => {
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current)
-      silenceTimerRef.current = null
-    }
-    if (countdownIntervalRef.current) {
-      clearInterval(countdownIntervalRef.current)
-      countdownIntervalRef.current = null
-    }
-    silenceEndTimestampRef.current = null
-    setSecondsRemaining(null)
-  }, [])
-
   // Parar gravação ativa de forma segura
   const stopListening = useCallback(() => {
-    clearSilenceTimer()
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current)
+      recordingTimerRef.current = null
+    }
+    setRecordingElapsedSeconds(0)
+
     const activeRecognition = recognitionRef.current
     recognitionRef.current = null
 
@@ -197,7 +190,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     setAudioDetected(false)
     setIsListeningForAmountOnly(false)
     isListeningForAmountOnlyRef.current = false
-  }, [clearSilenceTimer])
+  }, [])
 
   // Helper para construir contexto_anterior a partir de transação parcial pendente ou última criada
   const buildPreviousContext = useCallback((base: ParsedVoiceTransaction | null) => {
@@ -792,241 +785,203 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     ],
   )
 
-  // Iniciar SpeechRecognition nativo com controle estrito de silêncio (3000ms)
-  const startRecording = useCallback(
-    (options?: { forAmountOnly?: boolean }) => {
-      const isForAmount = Boolean(options?.forAmountOnly)
-      setIsListeningForAmountOnly(isForAmount)
-      isListeningForAmountOnlyRef.current = isForAmount
+  // Iniciar SpeechRecognition nativo com continuous: true e SEM temporizador de silêncio
+  // A gravação termina SOMENTE quando o usuário toca o botão Parar ou Cancelar
+  const startRecording = useCallback((options?: { forAmountOnly?: boolean }) => {
+    const isForAmount = Boolean(options?.forAmountOnly)
+    setIsListeningForAmountOnly(isForAmount)
+    isListeningForAmountOnlyRef.current = isForAmount
 
-      setErrorMessage(null)
-      hadErrorRef.current = false
-      userStoppedManuallyRef.current = false
-      setAudioDetected(false)
-      clearSilenceTimer()
+    setErrorMessage(null)
+    hadErrorRef.current = false
+    setAudioDetected(false)
 
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort()
-        } catch {
-          // silenciar
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current)
+      recordingTimerRef.current = null
+    }
+    setRecordingElapsedSeconds(0)
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort()
+      } catch {
+        // silenciar
+      }
+      recognitionRef.current = null
+    }
+
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+
+    if (!SpeechRecognition) {
+      setPermissionStatus('unsupported')
+      setErrorMessage(
+        'Seu navegador não suporta reconhecimento de voz nativo. Digite abaixo e envie para o Copilot.',
+      )
+      setIsListening(false)
+      return
+    }
+
+    try {
+      const recognition = new SpeechRecognition()
+      recognition.lang = 'pt-BR'
+      // continuous = true: escuta acumula resultados até o usuário parar manualmente
+      recognition.continuous = true
+      recognition.interimResults = true
+      recognition.maxAlternatives = 1
+
+      recognition.onstart = () => {
+        setIsListening(true)
+        setPermissionStatus('granted')
+        setErrorMessage(null)
+        setRecordingElapsedSeconds(0)
+        if (recordingTimerRef.current) {
+          clearInterval(recordingTimerRef.current)
+        }
+        recordingTimerRef.current = setInterval(() => {
+          setRecordingElapsedSeconds((prev) => prev + 1)
+        }, 1000)
+      }
+      recognition.onaudiostart = () => {
+        setAudioDetected(true)
+      }
+      recognition.onspeechstart = () => {
+        setAudioDetected(true)
+      }
+
+      recognition.onresult = (event: any) => {
+        // Separa os resultados da sessão atual entre finalizados (isFinal === true)
+        // e segmento provisório (interim/não-final) corrente.
+        let sessionFinal = ''
+        let sessionInterim = ''
+
+        if (event.results) {
+          for (let i = 0; i < event.results.length; i++) {
+            const res = event.results[i]
+            const transcriptPiece = res[0]?.transcript || ''
+            if (res.isFinal) {
+              sessionFinal = sessionFinal
+                ? `${sessionFinal} ${transcriptPiece.trim()}`
+                : transcriptPiece.trim()
+            } else {
+              sessionInterim = sessionInterim
+                ? `${sessionInterim} ${transcriptPiece.trim()}`
+                : transcriptPiece.trim()
+            }
+          }
+        }
+
+        // Combina o buffer de sessões anteriores com os finais desta sessão
+        let combinedFinal = finalBufferRef.current.trim()
+        if (sessionFinal) {
+          combinedFinal = combinedFinal ? `${combinedFinal} ${sessionFinal}` : sessionFinal
+        }
+
+        // O texto completo atual é o buffer final acumulado + o segmento provisório corrente (sempre substituído)
+        let fullTranscript = combinedFinal
+        if (sessionInterim) {
+          fullTranscript = fullTranscript ? `${fullTranscript} ${sessionInterim}` : sessionInterim
+        }
+
+        // Remove espaços múltiplos
+        fullTranscript = fullTranscript.replace(/\s+/g, ' ').trim()
+
+        latestTranscriptRef.current = fullTranscript
+        setTextoFalado(fullTranscript)
+      }
+
+      recognition.onerror = (event: any) => {
+        console.warn('SpeechRecognition onerror:', event.error)
+        hadErrorRef.current = true
+        if (recordingTimerRef.current) {
+          clearInterval(recordingTimerRef.current)
+          recordingTimerRef.current = null
         }
         recognitionRef.current = null
-      }
-
-      const SpeechRecognition =
-        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-
-      if (!SpeechRecognition) {
-        setPermissionStatus('unsupported')
-        setErrorMessage(
-          'Seu navegador não suporta reconhecimento de voz nativo. Digite abaixo e envie para o Copilot.',
-        )
-        setIsListening(false)
-        return
-      }
-
-      try {
-        const recognition = new SpeechRecognition()
-        recognition.lang = 'pt-BR'
-        // continuous = false: evita ciclo contínuo de restart/reciclagem de áudio no Chrome Android e Safari iOS
-        // interimResults = true: mantém a transcrição em tempo real na tela enquanto o usuário fala
-        recognition.continuous = false
-        recognition.interimResults = true
-        recognition.maxAlternatives = 1
-
-        recognition.onstart = () => {
-          setIsListening(true)
-          setPermissionStatus('granted')
-          setErrorMessage(null)
-          // Inicia contagem regressiva de silêncio inicial de 1s logo que o microfone começa a ouvir
-          scheduleSilenceProcessing()
-        }
-        recognition.onaudiostart = () => {
-          setAudioDetected(true)
-        }
-        recognition.onspeechstart = () => {
-          setAudioDetected(true)
-        }
-
-        // Função chamada estritamente quando o timer de 3000ms de silêncio expira
-        const triggerFinalProcessing = () => {
-          clearSilenceTimer()
-
-          // Só solicita parada se houver sessão ativa
-          const active = recognitionRef.current
-          recognitionRef.current = null
-          if (active) {
-            try {
-              active.stop()
-            } catch {
-              // silenciar
-            }
-          }
-
-          setIsListening(false)
-          setAudioDetected(false)
-
-          const captured = latestTranscriptRef.current.trim()
-          if (!captured) {
-            setIsListeningForAmountOnly(false)
-            isListeningForAmountOnlyRef.current = false
-            return
-          }
-
-          handleStopAndProcess(captured)
-        }
-
-        // Temporizador calibrado para 1000ms (1 segundo) de silêncio real
-        const scheduleSilenceProcessing = () => {
-          clearSilenceTimer()
-
-          const durationMs = 1000
-          const endTime = Date.now() + durationMs
-          silenceEndTimestampRef.current = endTime
-          setSecondsRemaining(1)
-
-          countdownIntervalRef.current = setInterval(() => {
-            const now = Date.now()
-            const diffMs = endTime - now
-            if (diffMs <= 0) {
-              setSecondsRemaining(1)
-              if (countdownIntervalRef.current) {
-                clearInterval(countdownIntervalRef.current)
-                countdownIntervalRef.current = null
-              }
-            } else {
-              const secs = Math.ceil(diffMs / 1000)
-              setSecondsRemaining(Math.min(1, Math.max(1, secs)))
-            }
-          }, 100)
-
-          silenceTimerRef.current = setTimeout(() => {
-            triggerFinalProcessing()
-          }, durationMs)
-        }
-
-        recognition.onresult = (event: any) => {
-          // Separa os resultados da sessão atual entre finalizados (isFinal === true)
-          // e segmento provisório (interim/não-final) corrente.
-          let sessionFinal = ''
-          let sessionInterim = ''
-
-          if (event.results) {
-            for (let i = 0; i < event.results.length; i++) {
-              const res = event.results[i]
-              const transcriptPiece = res[0]?.transcript || ''
-              if (res.isFinal) {
-                sessionFinal = sessionFinal
-                  ? `${sessionFinal} ${transcriptPiece.trim()}`
-                  : transcriptPiece.trim()
-              } else {
-                sessionInterim = sessionInterim
-                  ? `${sessionInterim} ${transcriptPiece.trim()}`
-                  : transcriptPiece.trim()
-              }
-            }
-          }
-
-          // Combina o buffer de sessões anteriores com os finais desta sessão
-          let combinedFinal = finalBufferRef.current.trim()
-          if (sessionFinal) {
-            combinedFinal = combinedFinal ? `${combinedFinal} ${sessionFinal}` : sessionFinal
-          }
-
-          // O texto completo atual é o buffer final acumulado + o segmento provisório corrente (sempre substituído)
-          let fullTranscript = combinedFinal
-          if (sessionInterim) {
-            fullTranscript = fullTranscript ? `${fullTranscript} ${sessionInterim}` : sessionInterim
-          }
-
-          // Remove espaços múltiplos
-          fullTranscript = fullTranscript.replace(/\s+/g, ' ').trim()
-
-          latestTranscriptRef.current = fullTranscript
-          setTextoFalado(fullTranscript)
-
-          // Reiniciar timer de 1s a cada fala detectada
-          scheduleSilenceProcessing()
-        }
-
-        recognition.onerror = (event: any) => {
-          console.warn('SpeechRecognition onerror:', event.error)
-          hadErrorRef.current = true
-          clearSilenceTimer()
-          recognitionRef.current = null
-          setIsListening(false)
-          setAudioDetected(false)
-          setIsListeningForAmountOnly(false)
-          isListeningForAmountOnlyRef.current = false
-
-          if (
-            event.error === 'not-allowed' ||
-            event.error === 'service-not-allowed' ||
-            event.error === 'permission-denied'
-          ) {
-            setPermissionStatus('denied')
-            setErrorMessage(
-              'Permissão de microfone negada. Toque no ícone de cadeado/configurações ao lado do link no navegador e libere o Microfone para este site.',
-            )
-          } else if (event.error === 'no-speech') {
-            setErrorMessage(
-              'Não consegui te ouvir. Toque no microfone novamente e fale um pouco mais perto.',
-            )
-          } else if (event.error === 'network') {
-            setErrorMessage('Problema de conexão. Verifique sua internet e tente novamente.')
-          } else if (event.error === 'audio-capture') {
-            setErrorMessage('Nenhum microfone encontrado ou o áudio do aparelho está bloqueado.')
-          } else {
-            setErrorMessage(
-              'Não consegui entender com clareza. Toque no microfone e tente falar novamente.',
-            )
-          }
-        }
-
-        // Ao encerrar a escuta: NUNCA reinicia automaticamente.
-        // O microfone permanece desligado em repouso definitivo.
-        recognition.onend = () => {
-          clearSilenceTimer()
-          recognitionRef.current = null
-          setIsListening(false)
-          setAudioDetected(false)
-
-          // Ao encerrar a sessão de reconhecimento atual, congela o que já foi capturado no finalBufferRef
-          // Isso garante que se o recognition reabrir/reiniciar sem o usuário ter cancelado,
-          // o texto já falado é preservado e não se perde nem se duplica
-          if (latestTranscriptRef.current.trim()) {
-            finalBufferRef.current = latestTranscriptRef.current.trim()
-          }
-
-          const finalCapturado = latestTranscriptRef.current.trim()
-
-          if (finalCapturado && !hadErrorRef.current) {
-            userStoppedManuallyRef.current = false
-            handleStopAndProcess(finalCapturado)
-          } else {
-            setIsListeningForAmountOnly(false)
-            isListeningForAmountOnlyRef.current = false
-          }
-        }
-
-        recognitionRef.current = recognition
-        recognition.start()
-        setIsListening(true)
-      } catch (err: any) {
-        console.warn('Erro síncrono ao iniciar SpeechRecognition:', err)
-        clearSilenceTimer()
         setIsListening(false)
         setAudioDetected(false)
         setIsListeningForAmountOnly(false)
         isListeningForAmountOnlyRef.current = false
-        setErrorMessage(
-          'Não foi possível ativar o microfone. Você pode digitar abaixo e enviar com o Copilot.',
-        )
+
+        if (
+          event.error === 'not-allowed' ||
+          event.error === 'service-not-allowed' ||
+          event.error === 'permission-denied'
+        ) {
+          setPermissionStatus('denied')
+          setErrorMessage(
+            'Permissão de microfone negada. Toque no ícone de cadeado/configurações ao lado do link no navegador e libere o Microfone para este site.',
+          )
+        } else if (event.error === 'no-speech') {
+          setErrorMessage(
+            'Não consegui te ouvir. Toque no microfone novamente e fale um pouco mais perto.',
+          )
+        } else if (event.error === 'network') {
+          setErrorMessage(
+            'Problema de conexão com o serviço de voz. Verifique sua internet e tente novamente.',
+          )
+        } else if (event.error === 'audio-capture') {
+          setErrorMessage('Nenhum microfone encontrado ou o áudio do aparelho está bloqueado.')
+        } else {
+          setErrorMessage(
+            'Não consegui entender com clareza. Toque no microfone e tente falar novamente.',
+          )
+        }
       }
-    },
-    [clearSilenceTimer, handleStopAndProcess],
-  )
+
+      // Ao encerrar a escuta: mantém o que foi gravado se houver parada
+      recognition.onend = () => {
+        if (recordingTimerRef.current) {
+          clearInterval(recordingTimerRef.current)
+          recordingTimerRef.current = null
+        }
+        recognitionRef.current = null
+        setIsListening(false)
+        setAudioDetected(false)
+
+        if (latestTranscriptRef.current.trim()) {
+          finalBufferRef.current = latestTranscriptRef.current.trim()
+        }
+      }
+
+      recognitionRef.current = recognition
+      recognition.start()
+      setIsListening(true)
+    } catch (err: any) {
+      console.warn('Erro síncrono ao iniciar SpeechRecognition:', err)
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current)
+        recordingTimerRef.current = null
+      }
+      setIsListening(false)
+      setAudioDetected(false)
+      setIsListeningForAmountOnly(false)
+      isListeningForAmountOnlyRef.current = false
+      setErrorMessage(
+        'Não foi possível ativar o microfone. Você pode digitar abaixo e enviar com o Copilot.',
+      )
+    }
+  }, [])
+
+  // Cancelar gravação sem enviar nada para processamento
+  const handleCancelRecording = useCallback(() => {
+    stopListening()
+    latestTranscriptRef.current = ''
+    finalBufferRef.current = ''
+    setTextoFalado('')
+  }, [stopListening])
+
+  // Parar gravação e enviar o áudio acumulado para processamento
+  const handleStopRecordingAndProcess = useCallback(() => {
+    const captured = latestTranscriptRef.current.trim() || textoFalado.trim()
+    stopListening()
+    if (captured) {
+      handleStopAndProcess(captured)
+    } else {
+      setErrorMessage('Nenhuma fala foi capturada. Fale algo ou digite abaixo.')
+    }
+  }, [handleStopAndProcess, stopListening, textoFalado])
 
   const handleAllowAiConsent = useCallback(() => {
     setAiConsent(true)
@@ -1121,7 +1076,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       setIsListeningForAmountOnly(false)
       isListeningForAmountOnlyRef.current = false
       hadErrorRef.current = false
-      userStoppedManuallyRef.current = false
       setAudioDetected(false)
       setIsProcessingAi(false)
       setSelectedMemberId(currentMember?.id || members[0]?.id || '')
@@ -1152,7 +1106,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   // Submeter modo texto do rodapé do mini-chat
   const handleChatTextSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    clearSilenceTimer()
     const textToSend = inputVal.trim()
     if (!textToSend) return
 
@@ -1914,15 +1867,30 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             </div>
           </div>
 
-          {/* Alerta de erro da Edge Function se houver */}
+          {/* Alerta de erro com botão Tentar de novo */}
           {errorMessage && (
             <div
               role="alert"
               data-testid="alert-ai-error"
-              className="mt-2 text-xs px-3 py-1.5 rounded-xl border border-rose-300 bg-rose-50 text-rose-900 flex items-start gap-1.5 text-left"
+              className="mt-2 text-xs px-3 py-2 rounded-2xl border border-rose-200 bg-rose-50/90 text-rose-900 flex items-center justify-between gap-2 text-left animate-in fade-in"
             >
-              <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
-              <p className="text-[11px] leading-tight font-medium">{errorMessage}</p>
+              <div className="flex items-start gap-1.5 min-w-0">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <p className="text-[11px] leading-tight font-medium break-words text-rose-800">
+                  {errorMessage}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setErrorMessage(null)
+                  startRecording()
+                }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white border border-rose-300 hover:bg-rose-100/70 text-rose-900 text-[11px] font-semibold shrink-0 cursor-pointer transition-colors shadow-2xs"
+              >
+                <RotateCcw className="w-3 h-3 text-rose-600" />
+                <span>Tentar de novo</span>
+              </button>
             </div>
           )}
         </DialogHeader>
@@ -1951,6 +1919,31 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                   <p className="text-xs sm:text-[13px] leading-relaxed whitespace-pre-wrap">
                     {msg.text}
                   </p>
+
+                  {/* Chip de categoria CDS com seletor contextual integrado no balão de sucesso */}
+                  {!isUser && (msg.confirmedTxId || msg.cardType === 'sucesso') && msg.cardData && (
+                    <div className="mt-2 pt-2 border-t border-slate-200/70">
+                      <CategoryHighlightChip
+                        categoryName={
+                          msg.cardData.categoryNameSuggestion ||
+                          categories.find((c) => c.id === (msg.cardData as any)?.categoryId)
+                            ?.name ||
+                          'Geral'
+                        }
+                        subcategoryName={msg.cardData.subcategoryNameSuggestion}
+                        confidence={msg.cardData.confidence}
+                        allCategories={categories}
+                        onSelectSubcategory={(subId, catId) => {
+                          const chosenCat = categories.find((c) => c.id === catId)
+                          const chosenSub = chosenCat?.subcategories?.find((s) => s.id === subId)
+                          handleUpdateLastTransaction({
+                            categoryName: chosenCat?.name || null,
+                            subcategoryName: chosenSub?.name || null,
+                          })
+                        }}
+                      />
+                    </div>
+                  )}
 
                   {/* Micro-link discreto [Desfazer] para reverter lançamento estilo WhatsApp */}
                   {!isUser &&
@@ -1984,31 +1977,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             )
           })}
 
-          {/* Indicador de carregamento / IA digitando com bolinhas animadas (mobile-friendly, sem overflow) */}
-          {isProcessingAi && (
-            <div
-              data-testid="copilot-typing-indicator"
-              className="flex items-start gap-2 animate-in fade-in duration-150 max-w-full"
-            >
-              <div className="bg-slate-100 border border-slate-200/80 text-slate-700 rounded-2xl rounded-bl-xs px-3.5 py-2 flex items-center gap-2 shadow-xs">
-                <div className="flex items-center gap-1 py-0.5" aria-label="digitando...">
-                  <span
-                    className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-bounce"
-                    style={{ animationDelay: '0ms' }}
-                  />
-                  <span
-                    className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-bounce"
-                    style={{ animationDelay: '150ms' }}
-                  />
-                  <span
-                    className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-bounce"
-                    style={{ animationDelay: '300ms' }}
-                  />
-                </div>
-                <span className="text-xs font-medium text-slate-600">digitando...</span>
-              </div>
-            </div>
-          )}
+          {/* Indicador de carregamento / IA digitando via componente oficial CopilotTypingBubble */}
+          {isProcessingAi && <CopilotTypingBubble label="Curiangoo processando..." />}
 
           {/* Transcrição em tempo real do microfone dentro do chat com animação suave de onda */}
           {isListening && textoFalado.trim() && (
@@ -2063,126 +2033,142 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           </div>
         )}
 
-        {/* ================= RODAPÉ FIXO: CONTROLES SEMPRE VISÍVEIS ================= */}
-        <div className="pt-2 border-t border-slate-100 shrink-0 space-y-2">
-          {/* Status do microfone */}
+        {/* ================= RODAPÉ FIXO: CONTROLES SEMPRE VISÍVEIS (CDS v1.0) ================= */}
+        <div className="pt-2 border-t border-slate-100 shrink-0 space-y-2 max-w-full">
+          {/* Status e Feedback Visual da Gravação (tempo decorrido + barras pulsantes waveform) */}
           <div className="flex items-center justify-between text-[11px] px-1 text-slate-500">
-            <span className="flex items-center gap-1.5 font-medium">
+            <span className="flex items-center gap-1.5 font-medium min-w-0">
               {isListening ? (
                 <>
-                  <span
-                    className={`w-2 h-2 rounded-full transition-colors duration-300 ${
-                      secondsRemaining === 1
-                        ? 'bg-emerald-500 animate-pulse'
-                        : 'bg-emerald-500 animate-pulse'
-                    }`}
-                  />
-                  <span className="text-emerald-800 font-bold">
-                    Ouvindo... pode falar no seu ritmo
+                  <span className="w-2 h-2 rounded-full bg-[#FCA311] animate-ping shrink-0" />
+                  <span className="text-[#14213D] font-semibold truncate">
+                    Gravando... Toque em Parar quando terminar
                   </span>
                 </>
+              ) : isProcessingAi ? (
+                <span className="text-[#14213D] font-medium flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#FCA311] animate-pulse" />
+                  Processando com IA...
+                </span>
               ) : (
-                <span className="text-slate-400">Microfone pronto</span>
+                <span className="text-[#64748B]">Microfone pronto</span>
               )}
             </span>
 
             {isListening && (
-              <div className="flex items-center gap-1.5">
-                {secondsRemaining !== null && (
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Waveform animada com 4 barras pulsantes */}
+                <div
+                  data-testid="recording-waveform"
+                  className="flex items-center gap-0.5 h-3.5 px-1.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-300/40"
+                  aria-label="Gravando áudio"
+                >
+                  <span className="w-0.5 h-2 bg-[#FCA311] rounded-full animate-pulse" />
                   <span
-                    data-testid="silence-countdown-badge"
-                    className="inline-flex items-center gap-1 font-mono text-[11px] font-bold px-1.5 py-0.5 rounded-full transition-all duration-300 bg-emerald-100 text-emerald-800 border border-emerald-300 scale-100"
-                    title={`Enviando em ${secondsRemaining}s`}
-                  >
-                    <span>{secondsRemaining}s</span>
-                  </span>
-                )}
-                <span className="text-[10px] text-slate-400">Pausa envia automaticamente</span>
+                    className="w-0.5 h-3.5 bg-[#FCA311] rounded-full animate-pulse"
+                    style={{ animationDelay: '150ms' }}
+                  />
+                  <span
+                    className="w-0.5 h-2.5 bg-[#FCA311] rounded-full animate-pulse"
+                    style={{ animationDelay: '300ms' }}
+                  />
+                  <span
+                    className="w-0.5 h-3 bg-[#FCA311] rounded-full animate-pulse"
+                    style={{ animationDelay: '75ms' }}
+                  />
+                </div>
+
+                {/* Tempo decorrido em mm:ss */}
+                <span
+                  data-testid="recording-elapsed-time"
+                  className="font-mono text-[11px] font-semibold text-[#14213D] px-1.5 py-0.5 rounded-md bg-slate-100"
+                >
+                  {Math.floor(recordingElapsedSeconds / 60)
+                    .toString()
+                    .padStart(2, '0')}
+                  :{(recordingElapsedSeconds % 60).toString().padStart(2, '0')}
+                </span>
               </div>
             )}
           </div>
 
-          {/* Linha de Ação: Microfone Central + Campo de Digitação */}
-          <div className="flex items-center gap-2">
-            {/* Botão Central de Microfone com Badge/Anel de Contagem Regressiva */}
-            <div className="relative shrink-0">
-              {isListening ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    userStoppedManuallyRef.current = true
-                    clearSilenceTimer()
-                    const captured = latestTranscriptRef.current.trim()
-                    const active = recognitionRef.current
-                    recognitionRef.current = null
-                    if (active) {
-                      try {
-                        active.stop()
-                      } catch {
-                        // silenciar
-                      }
-                    }
-                    setIsListening(false)
-                    setAudioDetected(false)
-                    if (captured) {
-                      handleStopAndProcess(captured)
-                    } else {
-                      stopListening()
-                    }
-                  }}
-                  className="relative w-11 h-11 rounded-2xl flex items-center justify-center shadow-md transition-all duration-300 active:scale-95 bg-[#064E3B] text-white shadow-emerald-900/30 ring-4 ring-emerald-400/40 animate-pulse"
-                  title="Toque para concluir"
-                >
-                  {/* Efeito de onda sutil ao redor do botão */}
-                  <span className="absolute inset-0 rounded-2xl bg-emerald-400/20 animate-ping pointer-events-none" />
-
-                  <Mic className="w-5 h-5 relative z-10 transition-colors duration-300 text-emerald-300" />
-                  {secondsRemaining !== null && (
-                    <span
-                      key={secondsRemaining}
-                      data-testid="mic-countdown-pill"
-                      className="absolute -top-1.5 -right-1.5 z-20 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold font-mono flex items-center justify-center shadow-xs transition-all duration-300 animate-in zoom-in-75 bg-emerald-500 text-white ring-2 ring-white scale-100"
-                    >
-                      {secondsRemaining}
-                    </span>
-                  )}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!hasAiConsent && !getAiConsent()) {
-                      setShowConsentPrompt(true)
-                    } else {
-                      startRecording()
-                    }
-                  }}
-                  className="w-11 h-11 rounded-2xl bg-slate-100 border border-slate-300 text-slate-700 hover:bg-emerald-600 hover:text-white flex items-center justify-center shadow-xs transition-all active:scale-95"
-                  title="Toque para começar a falar"
-                >
-                  <MicOff className="w-5 h-5" />
-                </button>
-              )}{' '}
-            </div>
-
-            {/* Input de Texto + Botão Enviar */}
-            <form onSubmit={handleChatTextSubmit} className="flex-1 flex items-center gap-1.5">
-              <Input
-                value={inputVal}
-                onChange={(e) => setInputVal(e.target.value)}
-                placeholder="Fale no microfone ou digite aqui..."
-                className="rounded-2xl h-11 text-xs bg-slate-50 border-slate-200 focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
-              />
-              <Button
-                type="submit"
-                disabled={!inputVal.trim() || isProcessingAi}
-                className="bg-[#064E3B] hover:bg-emerald-900 text-white rounded-2xl font-bold text-xs h-11 px-3.5 gap-1 shrink-0 shadow-xs"
+          {/* Estado GRAVANDO: Controles dedicados PARAR e CANCELAR com anel pulsante */}
+          {isListening ? (
+            <div className="flex items-center justify-between gap-2 py-0.5">
+              {/* Botão Cancelar: descarta sem enviar (>= 44px) */}
+              <button
+                type="button"
+                onClick={handleCancelRecording}
+                className="min-h-[44px] min-w-[44px] px-3.5 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-300/80 text-[#64748B] hover:text-[#14213D] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-curiango active:scale-95"
+                aria-label="Cancelar gravação"
               >
-                <Send className="w-3.5 h-3.5" />
-                <span>Enviar</span>
-              </Button>
-            </form>
-          </div>
+                <X className="w-4 h-4 text-[#64748B]" />
+                <span>Cancelar</span>
+              </button>
+
+              {/* Centro: Botão de microfone com anel pulsante visual */}
+              <div className="relative flex items-center justify-center">
+                <span className="absolute -inset-1.5 rounded-full bg-[#FCA311]/30 animate-ping pointer-events-none" />
+                <span className="absolute -inset-3 rounded-full bg-[#FCA311]/15 animate-pulse pointer-events-none" />
+                <div className="relative w-12 h-12 rounded-full bg-[#14213D] text-white border-2 border-[#FCA311] flex items-center justify-center shadow-curiango">
+                  <Mic className="w-5 h-5 text-[#FCA311]" />
+                </div>
+              </div>
+
+              {/* Botão Parar: conclui e envia para processamento (>= 44px) */}
+              <button
+                type="button"
+                onClick={handleStopRecordingAndProcess}
+                className="min-h-[44px] min-w-[44px] px-4 py-2 rounded-2xl bg-[#14213D] hover:bg-[#14213D]/90 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-curiango active:scale-95 border border-[#FCA311]/40"
+                aria-label="Parar gravação e processar"
+              >
+                <Square className="w-3.5 h-3.5 fill-[#FCA311] text-[#FCA311]" />
+                <span>Parar</span>
+              </button>
+            </div>
+          ) : (
+            /* Estado REPOUSO: Microfone + Campo de digitação */
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!hasAiConsent && !getAiConsent()) {
+                    setShowConsentPrompt(true)
+                  } else {
+                    startRecording()
+                  }
+                }}
+                disabled={isProcessingAi}
+                className="min-h-[44px] min-w-[44px] w-11 h-11 rounded-2xl bg-white border border-[rgba(20,33,61,0.12)] text-[#14213D] hover:bg-amber-50 hover:border-[#FCA311] hover:text-[#14213D] flex items-center justify-center shadow-curiango transition-all active:scale-95 disabled:opacity-40 cursor-pointer"
+                title="Toque para começar a falar"
+                aria-label="Começar a falar"
+              >
+                <Mic className="w-5 h-5 text-[#14213D]" />
+              </button>
+
+              {/* Input de Texto + Botão Enviar */}
+              <form
+                onSubmit={handleChatTextSubmit}
+                className="flex-1 flex items-center gap-1.5 min-w-0"
+              >
+                <Input
+                  value={inputVal}
+                  onChange={(e) => setInputVal(e.target.value)}
+                  placeholder="Fale no microfone ou digite aqui..."
+                  disabled={isProcessingAi}
+                  className="rounded-2xl h-11 text-xs bg-slate-50 border-[rgba(20,33,61,0.12)] text-[#14213D] focus:bg-white focus:border-[#FCA311] focus:ring-1 focus:ring-[#FCA311] transition-colors min-w-0"
+                />
+                <Button
+                  type="submit"
+                  disabled={!inputVal.trim() || isProcessingAi}
+                  className="min-h-[44px] min-w-[44px] bg-[#14213D] hover:bg-[#14213D]/90 text-white rounded-2xl font-semibold text-xs h-11 px-3.5 gap-1 shrink-0 shadow-curiango disabled:opacity-40"
+                >
+                  <Send className="w-3.5 h-3.5 text-[#FCA311]" />
+                  <span>Enviar</span>
+                </Button>
+              </form>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

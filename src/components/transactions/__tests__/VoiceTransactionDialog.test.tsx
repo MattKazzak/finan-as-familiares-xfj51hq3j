@@ -215,21 +215,20 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     capturedRecognitionInstance.onaudiostart()
 
     await waitFor(() => {
-      expect(screen.getByText('Ouvindo... pode falar no seu ritmo')).toBeDefined()
-      // Botão central do microfone e campo de texto com botão Enviar presentes no rodapé
-      expect(screen.getByTitle('Toque para concluir')).toBeDefined()
-      expect(screen.getByPlaceholderText('Fale no microfone ou digite aqui...')).toBeDefined()
-      expect(screen.getByText('Enviar')).toBeDefined()
+      expect(screen.getByText(/Gravando... Toque em Parar quando terminar/i)).toBeDefined()
+      expect(screen.getByRole('button', { name: /Parar gravação e processar/i })).toBeDefined()
+      expect(screen.getByRole('button', { name: /Cancelar gravação/i })).toBeDefined()
+      expect(screen.getByTestId('recording-waveform')).toBeDefined()
     })
   })
 
-  it('trata erro no-speech de forma amigável sem fechar o diálogo e mantendo o microfone re-clicável', async () => {
+  it('trata erro no-speech de forma amigável sem fechar o diálogo e exibindo botão Tentar de novo', async () => {
     let capturedRecognitionInstance: any = null
 
     function MockSpeechRecognition() {
       const self = {
         lang: '',
-        continuous: false,
+        continuous: true,
         interimResults: false,
         maxAlternatives: 1,
         onstart: null as any,
@@ -272,6 +271,7 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
           'Não consegui te ouvir. Toque no microfone novamente e fale um pouco mais perto.',
         ),
       ).toBeDefined()
+      expect(screen.getByText('Tentar de novo')).toBeDefined()
     })
 
     expect(screen.getByTitle('Toque para começar a falar')).toBeDefined()
@@ -323,9 +323,9 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
       results: [[{ transcript: 'Almoço 45 reais no débito' }]],
     })
 
-    // Usuário clica no microfone para concluir
-    const micButton = screen.getByTitle('Toque para concluir')
-    fireEvent.click(micButton)
+    // Usuário clica no botão Parar para concluir
+    const stopButton = screen.getByRole('button', { name: /Parar gravação e processar/i })
+    fireEvent.click(stopButton)
 
     await waitFor(() => {
       expect(mockParseVoiceWithAi).toHaveBeenCalledWith(
@@ -439,7 +439,7 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     function MockSpeechRecognition() {
       const self = {
         lang: '',
-        continuous: false,
+        continuous: true,
         interimResults: false,
         maxAlternatives: 1,
         onstart: null as any,
@@ -482,22 +482,10 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
       results: [[{ transcript: 'Almoço 35 reais' }]],
     })
 
-    // Navegador dispara onend (ex: fim de fala natural)
+    // Navegador dispara onend
     capturedRecognitionInstance.onend()
 
     // O recognition NUNCA deve ser reiniciado automaticamente (startCallCount permanece 1)
-    expect(startCallCount).toBe(1)
-
-    // O texto foi enviado para a IA
-    await waitFor(() => {
-      expect(mockParseVoiceWithAi).toHaveBeenCalledWith(
-        expect.objectContaining({
-          texto: 'Almoço 35 reais',
-        }),
-      )
-    })
-
-    // Após resposta da IA, o microfone permanece em repouso
     expect(startCallCount).toBe(1)
     expect(screen.getByText('Microfone pronto')).toBeDefined()
     expect(screen.getByTitle('Toque para começar a falar')).toBeDefined()
@@ -520,35 +508,8 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
       friendlyMessage: 'Identifiquei Almoço no centro. Quanto custou? 🥐',
     })
 
-    let capturedRecognitionInstance: any = null
-    let startCallCount = 0
-
-    function MockSpeechRecognition() {
-      const self = {
-        lang: '',
-        continuous: false,
-        interimResults: false,
-        maxAlternatives: 1,
-        onstart: null as any,
-        onaudiostart: null as any,
-        onspeechstart: null as any,
-        onresult: null as any,
-        onerror: null as any,
-        onend: null as any,
-        start() {
-          startCallCount++
-          if (self.onstart) self.onstart()
-        },
-        stop() {
-          if (self.onend) self.onend()
-        },
-        abort() {},
-      }
-      capturedRecognitionInstance = self
-      return self
-    }
-
-    ;(window as any).SpeechRecognition = MockSpeechRecognition
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
 
     render(
       <VoiceTransactionDialog
@@ -558,16 +519,9 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
       />,
     )
 
-    await waitFor(() => {
-      expect(capturedRecognitionInstance).toBeTruthy()
-      expect(startCallCount).toBe(1)
-    })
-
-    // Usuário fala primeiro comando sem valor
-    capturedRecognitionInstance.onresult({
-      results: [[{ transcript: 'almoço no centro' }]],
-    })
-    capturedRecognitionInstance.onend()
+    const input = screen.getByPlaceholderText('Fale no microfone ou digite aqui...')
+    fireEvent.change(input, { target: { value: 'almoço no centro' } })
+    fireEvent.click(screen.getByText('Enviar'))
 
     await waitFor(() => {
       expect(screen.getByText(/Identifiquei Almoço no centro\. Quanto custou\?/i)).toBeDefined()
@@ -587,13 +541,8 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
       bucketSuggestion: 'essential',
     })
 
-    // Usuário fala "45 reais"
-    capturedRecognitionInstance.onresult({
-      results: [[{ transcript: '45 reais' }]],
-    })
-
-    // Dispara onend (silêncio/fim de fala)
-    capturedRecognitionInstance.onend()
+    fireEvent.change(input, { target: { value: '45 reais' } })
+    fireEvent.click(screen.getByText('Enviar'))
 
     await waitFor(() => {
       // Mensagem conversacional de confirmação
@@ -664,15 +613,15 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     expect(screen.getByText('Microfone pronto')).toBeDefined()
   })
 
-  it('processa somente após 1s de silêncio real (silenceTimerRef 1000ms)', async () => {
+  it('não possui silence timer automático: gravação é contínua e só finaliza ao tocar em Parar', async () => {
     vi.useFakeTimers()
     let capturedRecognitionInstance: any = null
 
     function MockSpeechRecognition() {
       const self = {
         lang: '',
-        continuous: false,
-        interimResults: false,
+        continuous: true,
+        interimResults: true,
         maxAlternatives: 1,
         onstart: null as any,
         onaudiostart: null as any,
@@ -703,21 +652,22 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     )
 
     expect(capturedRecognitionInstance).toBeTruthy()
+    expect(capturedRecognitionInstance.continuous).toBe(true)
 
     capturedRecognitionInstance.onresult({
       results: [[{ transcript: 'Gasolina 100 reais' }]],
     })
 
-    // Logo após falar, o indicador de silêncio de 1s é ativado
-    expect(screen.getByTestId('silence-countdown-badge')).toBeDefined()
-    expect(screen.getByTestId('mic-countdown-pill').textContent).toBe('1')
+    // Não existe silence-countdown-badge nem timeout automático de silêncio
+    expect(screen.queryByTestId('silence-countdown-badge')).toBeNull()
 
-    // Avança 500ms: ainda não deve processar
-    vi.advanceTimersByTime(500)
+    // Avança 5 segundos: a IA NÃO é chamada sem clique do usuário
+    vi.advanceTimersByTime(5000)
     expect(mockParseVoiceWithAi).not.toHaveBeenCalled()
 
-    // Avança mais 500ms (total 1000ms de silêncio real): dispara o processamento
-    vi.advanceTimersByTime(500)
+    // Ao clicar em Parar, envia para a IA
+    const stopBtn = screen.getByRole('button', { name: /Parar gravação e processar/i })
+    fireEvent.click(stopBtn)
 
     expect(mockParseVoiceWithAi).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -941,7 +891,7 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     })
 
     // Conclusão manual do usuário
-    const micButton = screen.getByTitle('Toque para concluir')
+    const micButton = screen.getByRole('button', { name: /Parar gravação e processar/i })
     fireEvent.click(micButton)
 
     await waitFor(() => {
@@ -1023,7 +973,7 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
     })
 
     // Conclusão
-    const micButton = screen.getByTitle('Toque para concluir')
+    const micButton = screen.getByRole('button', { name: /Parar gravação e processar/i })
     fireEvent.click(micButton)
 
     await waitFor(() => {
@@ -1851,6 +1801,62 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
       ).toBeDefined()
       expect(screen.queryByText(/Falar Novamente/i)).toBeNull()
       expect(screen.queryByTestId('invalid-error-card')).toBeNull()
+    })
+  })
+
+  it('exibe CopilotTypingBubble durante processamento da IA e CategoryHighlightChip no balão de sucesso', async () => {
+    let resolvePromise: any
+    mockParseVoiceWithAi.mockImplementationOnce(
+      () =>
+        new Promise((res) => {
+          resolvePromise = res
+        }),
+    )
+
+    ;(window as any).SpeechRecognition = undefined
+    ;(window as any).webkitSpeechRecognition = undefined
+
+    render(
+      <VoiceTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        onOpenManualTransaction={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText('Fale no microfone ou digite aqui...')
+    fireEvent.change(input, { target: { value: 'almoço no bistrô 85 reais' } })
+    fireEvent.click(screen.getByText('Enviar'))
+
+    // CopilotTypingBubble exibido durante processamento
+    await waitFor(() => {
+      expect(screen.getByTestId('copilot-typing-bubble')).toBeDefined()
+      expect(screen.getByText('Curiangoo processando...')).toBeDefined()
+    })
+
+    // Resolve com confiança baixa (0.45) para acionar a badge "sugestão incerta" no CategoryHighlightChip
+    resolvePromise({
+      rawText: 'almoço no bistrô 85 reais',
+      amountCents: 8500,
+      amountFormatted: 'R$ 85,00',
+      type: 'expense',
+      description: 'Almoço no bistrô',
+      confidence: 0.45,
+      processingSource: 'openai',
+      aiStatus: 'sucesso',
+      categoryNameSuggestion: 'Alimentação',
+      subcategoryNameSuggestion: 'Restaurante',
+      bucketSuggestion: 'lifestyle',
+    })
+
+    await waitFor(() => {
+      // Typing bubble sumiu
+      expect(screen.queryByTestId('copilot-typing-bubble')).toBeNull()
+      // CategoryHighlightChip presente
+      expect(screen.getByTestId('category-highlight-chip')).toBeDefined()
+      // Badge de sugestão incerta presente (< 0.6)
+      expect(screen.getByTestId('uncertain-suggestion-badge')).toBeDefined()
+      expect(screen.getByText('sugestão incerta')).toBeDefined()
     })
   })
 })

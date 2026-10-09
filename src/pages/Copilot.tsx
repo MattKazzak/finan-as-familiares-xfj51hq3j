@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import {
   Mic,
   Send,
-  Loader2,
   Sparkles,
   ArrowLeft,
   Volume2,
@@ -17,6 +16,8 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { useFamily } from '@/hooks/use-family'
+import { CopilotTypingBubble } from '@/components/brand/CopilotTypingBubble'
+import { CategoryHighlightChip } from '@/components/categories/CategoryHighlightChip'
 import { useToast } from '@/hooks/use-toast'
 import { parseVoiceWithAi } from '@/services/voice-ai'
 import { fetchCopilotMessages, saveCopilotMessage } from '@/services/copilot'
@@ -401,26 +402,46 @@ export function CopilotPage() {
 
                 {/* Renderização de Card de Lançamento se aplicável */}
                 {m.cardData && m.cardData.amountCents > 0 && (
-                  <div className="mt-2.5 pt-2 border-t border-border/60 flex items-center justify-between gap-2 text-xs">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      {m.cardData.type === 'income' ? (
-                        <TrendingUp
-                          className="w-3.5 h-3.5 text-finance-income shrink-0"
-                          strokeWidth={1.5}
-                        />
-                      ) : (
-                        <TrendingDown
-                          className="w-3.5 h-3.5 text-finance-expense shrink-0"
-                          strokeWidth={1.5}
-                        />
-                      )}
-                      <span className="font-medium text-muted-foreground truncate">
-                        {m.cardData.categoryNameSuggestion || 'Geral'}
+                  <div className="mt-2.5 pt-2 border-t border-border/60 space-y-2 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        {m.cardData.type === 'income' ? (
+                          <TrendingUp
+                            className="w-3.5 h-3.5 text-finance-income shrink-0"
+                            strokeWidth={1.5}
+                          />
+                        ) : (
+                          <TrendingDown
+                            className="w-3.5 h-3.5 text-finance-expense shrink-0"
+                            strokeWidth={1.5}
+                          />
+                        )}
+                        <span className="font-semibold text-slate-700">Lançamento registrado</span>
+                      </div>
+                      <span className="font-semibold text-brand shrink-0">
+                        {formatBRL(m.cardData.amountCents)}
                       </span>
                     </div>
-                    <span className="font-semibold text-brand shrink-0">
-                      {formatBRL(m.cardData.amountCents)}
-                    </span>
+
+                    {/* Chip de categoria CDS com seletor contextual integrado e badge incerta */}
+                    <div className="pt-0.5">
+                      <CategoryHighlightChip
+                        categoryName={m.cardData.categoryNameSuggestion || 'Geral'}
+                        subcategoryName={m.cardData.subcategoryNameSuggestion}
+                        confidence={m.cardData.confidence}
+                        allCategories={categories}
+                        onSelectSubcategory={(subId, catId) => {
+                          const chosenCat = categories.find((c) => c.id === catId)
+                          const chosenSub = chosenCat?.subcategories?.find((s) => s.id === subId)
+                          if (m.cardData) {
+                            m.cardData.categoryNameSuggestion =
+                              chosenCat?.name || m.cardData.categoryNameSuggestion
+                            m.cardData.subcategoryNameSuggestion = chosenSub?.name || null
+                            setMessages((prev) => [...prev])
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -455,12 +476,7 @@ export function CopilotPage() {
           )
         })}
 
-        {isProcessing && (
-          <div className="flex items-center gap-2 text-muted-foreground text-xs py-2 px-3 bg-white rounded-2xl w-fit border border-border/60">
-            <Loader2 className="w-3.5 h-3.5 animate-spin text-brand-amber" />
-            <span>Copilot pensando...</span>
-          </div>
-        )}
+        {isProcessing && <CopilotTypingBubble label="Copilot pensando..." />}
         <div ref={messagesEndRef} />
       </div>
 
