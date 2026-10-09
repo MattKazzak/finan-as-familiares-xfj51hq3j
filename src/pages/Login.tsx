@@ -211,6 +211,14 @@ export default function Login() {
         setErrorMessage('E-mail ou senha incorretos.')
         return
       }
+      // Cleanup lazy de famílias abandonadas (> 14 dias) em background (fire-and-forget)
+      try {
+        const { triggerLazyAbandonedFamiliesCleanup } = await import('@/services/family')
+        triggerLazyAbandonedFamiliesCleanup().catch(() => {})
+      } catch (lazyErr) {
+        console.warn('[login] Falha não impeditiva ao disparar cleanup lazy:', lazyErr)
+      }
+
       navigate('/inicio')
     } catch {
       setErrorMessage('Erro de conexão. Tente novamente.')

@@ -5,7 +5,12 @@ import { useFamily } from '@/hooks/use-family'
 import { useToast } from '@/hooks/use-toast'
 import { usePwaInstall } from '@/hooks/use-pwa-install'
 import type { FamilyMember, FamilyInvite } from '@/types/finance'
-import { generateFamilyInvite, fetchFamilyInvites } from '@/services/family'
+import {
+  generateFamilyInvite,
+  fetchFamilyInvites,
+  fetchUserIncompleteFamilies,
+  deleteFamilyWorkspaceManually,
+} from '@/services/family'
 import {
   Users,
   Plus,
@@ -141,6 +146,44 @@ export default function ProfilePage() {
   // Ação: Sair da Família (Convidado)
   const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false)
   const [leavingFamilyState, setLeavingFamilyState] = useState(false)
+
+  // Gestão de outras famílias incompletas (Tarefa 2.3)
+  const [incompleteFamilies, setIncompleteFamilies] = useState<Array<any>>([])
+  const [deletingIncompleteFamId, setDeletingIncompleteFamId] = useState<string | null>(null)
+
+  const loadIncompleteFamilies = useCallback(async () => {
+    try {
+      const list = await fetchUserIncompleteFamilies(family?.id)
+      setIncompleteFamilies(list)
+    } catch (err) {
+      console.warn('Erro ao carregar famílias incompletas no Perfil:', err)
+    }
+  }, [family?.id])
+
+  useEffect(() => {
+    loadIncompleteFamilies()
+  }, [loadIncompleteFamilies])
+
+  const handleDeleteIncompleteFamily = async (famId: string) => {
+    try {
+      setDeletingIncompleteFamId(famId)
+      await deleteFamilyWorkspaceManually(famId)
+      toast({
+        title: 'Família removida',
+        description: 'O workspace incompleto foi excluído com sucesso.',
+      })
+      await loadIncompleteFamilies()
+      triggerRefresh()
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao excluir família',
+        description: err?.message || 'Não foi possível excluir a família incompleta.',
+        variant: 'destructive',
+      })
+    } finally {
+      setDeletingIncompleteFamId(null)
+    }
+  }
 
   const openEditFamilyDialog = () => {
     // Se o nome atual começar com 'Família ', preenche apenas o sufixo no input
@@ -656,6 +699,54 @@ export default function ProfilePage() {
                 </button>
               )
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Gestão de Famílias Incompletas (Tarefa 2.3) */}
+      {incompleteFamilies.length > 0 && (
+        <div className="bg-amber-50/70 rounded-3xl p-5 sm:p-6 border border-amber-200/80 shadow-sm space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold shrink-0">
+              <AlertCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-800 text-base leading-tight">
+                Outras Famílias Incompletas
+              </h3>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Workspaces antigos com configuração pendente vinculados à sua conta.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-1">
+            {incompleteFamilies.map((incFam) => (
+              <div
+                key={incFam.id}
+                className="bg-white rounded-2xl p-3.5 sm:p-4 border border-amber-200/60 flex items-center justify-between gap-3 shadow-xs"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-slate-800 text-sm truncate">
+                    {incFam.name || 'Família sem nome'}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-0.5">
+                    {incFam.catCount}/19 categorias • {incFam.subcatCount}/116 subcategorias •{' '}
+                    {incFam.ruleCount} regras
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={deletingIncompleteFamId === incFam.id}
+                  onClick={() => handleDeleteIncompleteFamily(incFam.id)}
+                  className="border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 h-8 sm:h-9 rounded-xl text-xs font-semibold shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-1" />
+                  {deletingIncompleteFamId === incFam.id ? 'Excluindo...' : 'Apagar'}
+                </Button>
+              </div>
+            ))}
           </div>
         </div>
       )}

@@ -58,12 +58,14 @@ export default function Home() {
     family,
     members,
     categories,
+    completeness,
     currentMember,
     openWhoIsUsing,
     selectedMemberId,
     setSelectedMemberId,
     openNewTransaction,
     openVoiceDialog,
+    openOnboarding,
     refreshTrigger,
     triggerRefresh,
   } = useFamily()
@@ -73,6 +75,23 @@ export default function Home() {
 
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  // Decisão de Produto (Tarefa 2.2):
+  // A Home NUNCA deve ser exibida sobre uma família incompleta — nem em skeleton infinito.
+  // Estado parcial = wizard, sempre.
+  const isFamilyIncomplete = useMemo(() => {
+    if (!family) return false
+    if (completeness?.isIncomplete) return true
+    const hasZeroIncome = !family.monthly_net_income_cents || family.monthly_net_income_cents <= 0
+    const hasIncompleteCats = !categories || categories.length === 0 || categories.length !== 19
+    return hasZeroIncome || hasIncompleteCats
+  }, [family, completeness, categories])
+
+  useEffect(() => {
+    if (isFamilyIncomplete) {
+      openOnboarding()
+    }
+  }, [isFamilyIncomplete, openOnboarding])
+
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [defaultBudgets, setDefaultBudgets] = useState<DefaultBudget[]>([])
   const [monthOverrides, setMonthOverrides] = useState<Budget[]>([])
@@ -477,6 +496,33 @@ export default function Home() {
   }
 
   const memberInitial = currentMember?.name?.charAt(0).toUpperCase() || 'F'
+
+  // Decisão de Produto (Tarefa 2.2):
+  // Se a família estiver incompleta, bloqueia a renderização da Home completa
+  // e exibe tela de transição acolhedora convidando a retomar o wizard imediatamente.
+  if (isFamilyIncomplete) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center max-w-md mx-auto">
+        <div className="w-16 h-16 rounded-3xl bg-[#14213D] text-[#FCA311] flex items-center justify-center shadow-lg shadow-[#14213D]/20 mb-4 animate-pulse">
+          <Sparkles className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold text-[#14213D] tracking-tight">
+          Configuração da Família Pendente
+        </h2>
+        <p className="text-xs sm:text-sm text-slate-500 mt-2 leading-relaxed">
+          O espaço da sua família precisa de alguns passos rápidos para ativar o orçamento
+          inteligente e o catálogo de categorias.
+        </p>
+        <Button
+          onClick={openOnboarding}
+          className="mt-6 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold text-sm rounded-2xl px-6 h-12 shadow-md shadow-[#FCA311]/25 border-0"
+        >
+          <Sparkles className="w-4 h-4 mr-2" />
+          Retomar Configuração da Família
+        </Button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto w-full min-w-0 overflow-x-hidden">

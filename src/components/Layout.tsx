@@ -481,16 +481,12 @@ export default function Layout() {
       <OnboardingWizardDialog
         open={isOnboardingOpen}
         onOpenChange={(open) => {
+          // Bloqueio de estado parcial: enquanto o onboarding estiver incompleto,
+          // o wizard não pode ser simplesmente fechado para expor a Home em estado inconsistente
           setIsOnboardingOpen(open)
-          if (!open && family?.id) {
-            sessionStorage.setItem(`onboarding_dismissed_${family.id}`, 'true')
-          }
         }}
         family={family}
         onSuccess={async () => {
-          if (family?.id) {
-            sessionStorage.setItem(`onboarding_dismissed_${family.id}`, 'true')
-          }
           // Se a família possui apenas 1 membro, garante que ele esteja imediatamente
           // definido como membro ativo no localStorage e fecha qualquer diálogo "Quem está usando?"
           if (members.length === 1) {

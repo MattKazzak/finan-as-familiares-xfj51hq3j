@@ -23,6 +23,7 @@ import {
   uploadFamilyAvatarFile,
   reorderCategories,
   reorderSubcategories,
+  FamilyCompletenessStatus,
 } from '@/services/family'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
@@ -158,6 +159,7 @@ interface FamilyContextType {
       importedAt: Date
     } | null,
   ) => void
+  completeness: FamilyCompletenessStatus | null
   refreshTrigger: number
   triggerRefresh: () => void
 }
@@ -204,6 +206,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     pending: number
     importedAt: Date
   } | null>(null)
+  const [completeness, setCompleteness] = useState<FamilyCompletenessStatus | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   // Membro ativo salvo localmente por dispositivo
@@ -253,6 +256,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
       setFamily(data.family)
       setMembers(data.members)
       setCategories(data.categories)
+      setCompleteness(data.completeness || null)
     } catch (err: any) {
       console.error('Erro ao carregar dados da família:', err)
       toast({
@@ -296,20 +300,20 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   }, [loading, members, family?.monthly_net_income_cents, setActiveMemberId])
 
   // Iniciar automaticamente o fluxo de Onboarding (OnboardingWizardDialog)
-  // Gatilho: Se family.monthly_net_income_cents for nulo/zero OU a família não possuir categorias cadastradas
+  // Decisão de Produto (Tarefa 2.1 & 2.2):
+  // Se a família ativa está incompleta (0 categorias OU contagem != 19/116 OU 0 regras de IA)
+  // OU renda zero/nula, redireciona/abre imediatamente o wizard desde o início.
+  // Estado parcial = wizard sempre (sem permitir dismiss temporário em sessionStorage).
   useEffect(() => {
     if (!loading && family) {
       const hasNoIncome = !family.monthly_net_income_cents || family.monthly_net_income_cents <= 0
-      const hasNoCategories = !categories || categories.length === 0
+      const isIncomplete = completeness?.isIncomplete ?? (!categories || categories.length === 0)
 
-      if (hasNoIncome || hasNoCategories) {
-        const onboardingDismissed = sessionStorage.getItem(`onboarding_dismissed_${family.id}`)
-        if (!onboardingDismissed) {
-          setIsOnboardingOpen(true)
-        }
+      if (hasNoIncome || isIncomplete) {
+        setIsOnboardingOpen(true)
       }
     }
-  }, [loading, family, categories])
+  }, [loading, family, categories, completeness])
 
   const updateFamily = async (updates: {
     name?: string
@@ -678,6 +682,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         openVoiceDialog,
         lastImportSummary,
         setLastImportSummary,
+        completeness,
         refreshTrigger,
         triggerRefresh,
       }}
