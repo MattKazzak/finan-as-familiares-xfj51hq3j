@@ -12,7 +12,8 @@ import { useToast } from '@/hooks/use-toast'
 import { Family } from '@/types/finance'
 import { formatBRL, parseBRLToCents, normalizeFamilyName } from '@/lib/formatters'
 import { seedStandardizedCategoriesAndApplyPlan } from '@/services/onboarding'
-import { updateFamilyDetails } from '@/services/family'
+import { updateFamilyDetails, activateFamilyOnboardingPlanRpc } from '@/services/family'
+import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { useFamily } from '@/hooks/use-family'
 import {
@@ -283,6 +284,43 @@ export function OnboardingWizardDialog({
         monthlyNetIncomeCents: parsedNetIncomeCents,
         modelPresetId: confirmedModelId,
       })
+
+      // Guarda de completude: verifica se a família possui o catálogo 19/116 e regras completas
+      try {
+        const [{ count: catCount }, { count: subCount }, { count: rulesCount }] = await Promise.all(
+          [
+            (supabase as any)
+              .from('transaction_categories')
+              .select('id', { count: 'exact', head: true })
+              .eq('family_id', family.id),
+            (supabase as any)
+              .from('transaction_subcategories')
+              .select('id', { count: 'exact', head: true })
+              .eq('family_id', family.id),
+            (supabase as any)
+              .from('categorization_rules')
+              .select('id', { count: 'exact', head: true })
+              .eq('family_id', family.id),
+          ],
+        )
+
+        const totalCats = catCount ?? 0
+        const totalSubs = subCount ?? 0
+        const totalRules = rulesCount ?? 0
+
+        if (totalCats !== 19 || totalSubs !== 116 || totalRules < 40) {
+          console.warn(
+            `[onboarding] Guarda de completude acionada: catálogo parcial detectado (${totalCats}/19 categorias, ${totalSubs}/116 subs, ${totalRules} regras). Re-executando activate_family_onboarding_plan...`,
+          )
+          await activateFamilyOnboardingPlanRpc({
+            familyId: family.id,
+            monthlyNetIncomeCents: parsedNetIncomeCents,
+            modelPresetId: confirmedModelId,
+          })
+        }
+      } catch (guardErr) {
+        console.warn('[onboarding] Falha não impeditiva na guarda de completude:', guardErr)
+      }
 
       triggerRefresh?.()
 
