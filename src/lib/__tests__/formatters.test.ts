@@ -110,11 +110,11 @@ describe('formatFamilyDisplayName', () => {
     expect(formatFamilyDisplayName('Família Familia Matheus')).toBe('Família Matheus')
   })
 
-  it('uses fallback "Silva" when rawName is empty, null or undefined', () => {
-    expect(formatFamilyDisplayName('')).toBe('Família Silva')
-    expect(formatFamilyDisplayName('   ')).toBe('Família Silva')
-    expect(formatFamilyDisplayName(null)).toBe('Família Silva')
-    expect(formatFamilyDisplayName(undefined)).toBe('Família Silva')
+  it('returns empty string when rawName is empty, null or undefined without fallback', () => {
+    expect(formatFamilyDisplayName('')).toBe('')
+    expect(formatFamilyDisplayName('   ')).toBe('')
+    expect(formatFamilyDisplayName(null)).toBe('')
+    expect(formatFamilyDisplayName(undefined)).toBe('')
   })
 
   it('uses custom fallback if provided', () => {

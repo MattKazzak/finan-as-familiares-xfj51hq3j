@@ -83,15 +83,32 @@ export default function Home() {
   const [editingTx, setEditingTx] = useState<Transaction | null>(null)
   const [isEditOpen, setIsEditOpen] = useState(false)
 
+  // Carregamento prolongado (> ~2s): substitui o skeleton de carga por mensagem honesta
+  const [isLongLoading, setIsLongLoading] = useState(false)
+  const isFamilyResolved = Boolean(family?.id)
+  const isMemberResolved = Boolean(currentMember?.id || currentMember?.name)
+  const isInitialDataLoading = loading || !isFamilyResolved
+
+  useEffect(() => {
+    if (!isInitialDataLoading) {
+      setIsLongLoading(false)
+      return
+    }
+    const timer = setTimeout(() => {
+      setIsLongLoading(true)
+    }, 2000)
+    return () => clearTimeout(timer)
+  }, [isInitialDataLoading])
+
   // Saudação personalizada dinâmica baseada no horário LOCAL do usuário
   const timeGreeting = useMemo(() => {
     const greetingData = getTimeGreeting(new Date())
-    const memberFirstName = currentMember?.name ? currentMember.name.split(' ')[0] : null
+    const memberFirstName = currentMember?.name ? currentMember.name.trim().split(/\s+/)[0] : null
     return {
-      text: greetingData.fullGreeting(memberFirstName || 'Família'),
+      fullGreetingWithName: memberFirstName ? greetingData.fullGreeting(memberFirstName) : null,
       rawGreeting: greetingData.greeting,
       period: greetingData.period,
-      memberName: memberFirstName || 'Família',
+      memberName: memberFirstName,
     }
   }, [currentMember?.name])
 
@@ -493,10 +510,21 @@ export default function Home() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 <h1
-                  className="text-base sm:text-lg md:text-xl font-bold text-[#14213D] tracking-tight leading-snug break-words flex items-center gap-1.5"
-                  title={timeGreeting.text}
+                  className="text-base sm:text-lg md:text-xl font-bold text-[#14213D] tracking-tight leading-snug break-words flex items-center gap-1.5 min-h-[1.75rem]"
+                  title={timeGreeting.fullGreetingWithName || `${timeGreeting.rawGreeting}!`}
                 >
-                  <span>{timeGreeting.text}</span>
+                  {timeGreeting.fullGreetingWithName ? (
+                    <span>{timeGreeting.fullGreetingWithName}</span>
+                  ) : isLongLoading ? (
+                    <span className="text-sm sm:text-base font-medium text-slate-500 animate-pulse">
+                      Carregando seus dados...
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-2">
+                      <span>{timeGreeting.rawGreeting}!</span>
+                      <span className="inline-block h-5 w-24 bg-slate-200/90 rounded-md animate-pulse align-middle" />
+                    </span>
+                  )}
                   {timeGreeting.period === 'morning' ? (
                     <Coffee className="w-4 h-4 text-muted-foreground shrink-0" strokeWidth={1.5} />
                   ) : timeGreeting.period === 'afternoon' ? (
@@ -509,14 +537,22 @@ export default function Home() {
                   )}
                 </h1>
               </div>
-              <div className="flex items-center gap-1.5 flex-wrap">
+              <div className="flex items-center gap-1.5 flex-wrap min-h-[1rem]">
                 <p className="text-[11px] sm:text-xs text-slate-500 font-medium leading-none">
                   Curiangoo Família
                 </p>
                 <span className="text-[10px] text-slate-300 select-none">·</span>
-                <span className="text-[11px] sm:text-xs font-semibold text-[#14213D] leading-none break-words">
-                  {formatFamilyDisplayName(family?.name, 'Silva')}
-                </span>
+                {family?.name ? (
+                  <span className="text-[11px] sm:text-xs font-semibold text-[#14213D] leading-none break-words">
+                    {formatFamilyDisplayName(family.name)}
+                  </span>
+                ) : isLongLoading ? (
+                  <span className="text-[10px] text-slate-400 italic">
+                    Carregando seus dados...
+                  </span>
+                ) : (
+                  <span className="inline-block h-3 w-20 bg-slate-200/90 rounded-md animate-pulse" />
+                )}
               </div>
             </div>
           </div>

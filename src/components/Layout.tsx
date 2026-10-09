@@ -49,6 +49,7 @@ export default function Layout() {
     reloadFamily,
     isVoiceDialogOpen,
     setIsVoiceDialogOpen,
+    loading,
   } = useFamily()
 
   // Dados globais de receitas fixas para o modal compartilhado
@@ -133,9 +134,9 @@ export default function Layout() {
             <h1 className="font-semibold text-sm text-white tracking-tight truncate">Curiangoo</h1>
             <p
               className="text-xs text-white/70 break-words line-clamp-2 leading-tight"
-              title={family ? formatFamilyDisplayName(family.name) : 'Finanças da Família'}
+              title={family?.name ? formatFamilyDisplayName(family.name) : 'Finanças da Família'}
             >
-              {family ? formatFamilyDisplayName(family.name) : 'Finanças da Família'}
+              {family?.name ? formatFamilyDisplayName(family.name) : 'Finanças da Família'}
             </p>
           </div>
         </div>
@@ -194,7 +195,13 @@ export default function Layout() {
               </Avatar>
               <div className="overflow-hidden">
                 <p className="text-xs font-semibold text-white truncate">
-                  {currentMember?.name || 'Família'}
+                  {currentMember?.name ? (
+                    currentMember.name
+                  ) : loading ? (
+                    <span className="inline-block h-3 w-16 bg-white/20 rounded animate-pulse align-middle" />
+                  ) : (
+                    ''
+                  )}
                 </p>
                 <p className="text-[10px] text-brand-amber truncate font-medium">
                   Trocar usuário ▾
@@ -210,7 +217,13 @@ export default function Layout() {
               </Avatar>
               <div className="overflow-hidden">
                 <p className="text-xs font-semibold text-white truncate">
-                  {currentMember?.name || 'Família'}
+                  {currentMember?.name ? (
+                    currentMember.name
+                  ) : loading ? (
+                    <span className="inline-block h-3 w-16 bg-white/20 rounded animate-pulse align-middle" />
+                  ) : (
+                    ''
+                  )}
                 </p>
                 <p className="text-[10px] text-white/60 truncate font-medium">Administrador</p>
               </div>
@@ -250,7 +263,11 @@ export default function Layout() {
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-xs font-medium text-brand group-hover:text-brand transition-colors flex items-center gap-1">
-                    <span>{currentMember?.name || 'Família'}</span>
+                    {currentMember?.name ? (
+                      <span>{currentMember.name}</span>
+                    ) : loading ? (
+                      <span className="inline-block h-3 w-14 bg-slate-200 rounded animate-pulse align-middle" />
+                    ) : null}
                     <span className="text-[10px] text-slate-400">▾</span>
                   </span>
                 </div>
@@ -262,7 +279,11 @@ export default function Layout() {
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-xs font-medium text-brand">
-                    <span>{currentMember?.name || 'Família'}</span>
+                    {currentMember?.name ? (
+                      <span>{currentMember.name}</span>
+                    ) : loading ? (
+                      <span className="inline-block h-3 w-14 bg-slate-200 rounded animate-pulse align-middle" />
+                    ) : null}
                   </span>
                 </div>
               )}

@@ -137,7 +137,8 @@ export function OnboardingWizardDialog({
       }
     }
 
-    return 'Família Silva'
+    // Se nenhum metadado ou identificador estiver disponível, mantém input vazio
+    return ''
   }
 
   // Pré-preenche o nome da família e renda ao abrir o diálogo
@@ -150,7 +151,7 @@ export function OnboardingWizardDialog({
       // Caso contrário, calcula a sugestão automática "Família {primeiro nome}"
       const currentName = family?.name?.trim()
       if (currentName && currentName !== 'Minha Família' && currentName !== '') {
-        // Se já não começar com "Família", ou se for exatamente "Família Silva", mantém ou formata
+        // Se já não começar com "Família", mantém ou formata
         setFamilyNameInput(currentName)
       } else {
         setFamilyNameInput(computeSuggestedFamilyName())
@@ -381,7 +382,7 @@ export function OnboardingWizardDialog({
                 <Input
                   id="onboarding-family-name-input"
                   type="text"
-                  placeholder="Ex.: Família Silva ou Família Matheus"
+                  placeholder="Ex.: Família Santos ou Família Matheus"
                   value={familyNameInput}
                   onChange={(e) => setFamilyNameInput(e.target.value)}
                   onKeyDown={(e) => {

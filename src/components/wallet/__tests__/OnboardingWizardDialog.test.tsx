@@ -5,7 +5,7 @@ import type { Family } from '@/types/finance'
 
 const mockFamily: Family = {
   id: 'fam-test-1',
-  name: 'Silva',
+  name: 'Matheus',
   created_by: 'user-1',
   created_at: '2026-01-01',
   monthly_net_income_cents: 0,
@@ -19,12 +19,25 @@ describe('OnboardingWizardDialog', () => {
     expect(screen.getByText('Vamos criar o espaço da sua família')).toBeDefined()
     expect(screen.getByText('Nome da família')).toBeDefined()
 
-    const familyNameInput = screen.getByDisplayValue('Família Silva')
+    const familyNameInput = screen.getByDisplayValue('Matheus')
     expect(familyNameInput).toBeDefined()
 
     // Permite editar o nome
     fireEvent.change(familyNameInput, { target: { value: 'Família Ferreira' } })
     expect(screen.getByDisplayValue('Família Ferreira')).toBeDefined()
+  })
+
+  it('mantém o input de nome vazio quando não há metadados de usuário nem nome gravado', () => {
+    const emptyFamily: Family = {
+      id: 'fam-test-empty',
+      name: '',
+      created_by: 'user-1',
+      created_at: '2026-01-01',
+      monthly_net_income_cents: 0,
+    }
+    render(<OnboardingWizardDialog open={true} onOpenChange={vi.fn()} family={emptyFamily} />)
+    const input = screen.getByPlaceholderText(/Ex.: Família/i) as HTMLInputElement
+    expect(input.value).toBe('')
   })
 
   it('permite definir nome da família e avançar pela renda até etapa 3 (Seu Orçamento em 3 Caixas)', async () => {
@@ -180,7 +193,7 @@ describe('OnboardingWizardDialog', () => {
     const useFamilyModule = await import('@/hooks/use-family')
     const mockUpdateFamily = vi.fn().mockResolvedValue({
       ...mockFamily,
-      name: 'Família Silva',
+      name: 'Família Matheus',
     })
     const mockTriggerRefresh = vi.fn()
 
@@ -280,7 +293,7 @@ describe('OnboardingWizardDialog', () => {
     expect(mockUpdateFamily).toHaveBeenCalledTimes(1)
     const updateFamilyCallArg = mockUpdateFamily.mock.calls[0][0]
     expect(updateFamilyCallArg).toEqual({
-      name: 'Família Silva',
+      name: 'Matheus',
     })
     expect(updateFamilyCallArg.budget_model).toBeUndefined()
     expect(updateFamilyCallArg.monthly_net_income_cents).toBeUndefined()

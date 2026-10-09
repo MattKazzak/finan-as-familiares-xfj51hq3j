@@ -167,7 +167,7 @@ export function normalizeFamilyName(rawName?: string | null): string {
 /**
  * Formata o nome de exibição da família garantindo que a palavra "Família"
  * nunca apareça duplicada.
- * Se o nome for omitido ou vazio, usa fallback padrão ("Família Silva").
+ * Se o nome for omitido ou vazio e não houver fallback neutro, retorna string vazia.
  * Se o nome já começa com "Família" (case-insensitive), mantém com capitalização correta.
  * Caso contrário, adiciona o prefixo "Família {nome}".
  *
@@ -177,20 +177,20 @@ export function normalizeFamilyName(rawName?: string | null): string {
  *   formatFamilyDisplayName("Matheus")         => "Família Matheus"
  *   formatFamilyDisplayName("Silva")           => "Família Silva"
  *   formatFamilyDisplayName("Família Silva")   => "Família Silva"
- *   formatFamilyDisplayName(undefined)         => "Família Silva"
+ *   formatFamilyDisplayName(undefined)         => ""
+ *   formatFamilyDisplayName("", "Oliveira")    => "Família Oliveira"
  */
-export function formatFamilyDisplayName(
-  rawName?: string | null,
-  fallback: string = 'Silva',
-): string {
+export function formatFamilyDisplayName(rawName?: string | null, fallback: string = ''): string {
   const trimmed = (rawName || '').trim()
   if (!trimmed) {
+    const trimmedFallback = (fallback || '').trim()
+    if (!trimmedFallback) return ''
     // Se o fallback já vier com "Família", respeita; senão prefixa
-    if (/^fam[íi]lia\b/i.test(fallback.trim())) {
-      const cleanFallback = fallback.trim().replace(/^fam[íi]lia\s*/i, '')
+    if (/^fam[íi]lia\b/i.test(trimmedFallback)) {
+      const cleanFallback = trimmedFallback.replace(/^fam[íi]lia\s*/i, '')
       return cleanFallback ? `Família ${cleanFallback}` : 'Família'
     }
-    return `Família ${fallback.trim()}`
+    return `Família ${trimmedFallback}`
   }
 
   // Verifica se o nome já começa com "Família" ou "Familia" (case-insensitive)

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { useFamily } from '@/hooks/use-family'
@@ -103,6 +103,21 @@ export default function ProfilePage() {
   const [incomeInputStr, setIncomeInputStr] = useState('')
   const [savingIncome, setSavingIncome] = useState(false)
   const [isApplyModelOpen, setIsApplyModelOpen] = useState(false)
+
+  // Carregamento prolongado (> ~2s): substitui skeleton por estado textual honesto
+  const [isLongLoading, setIsLongLoading] = useState(false)
+  const isFamilyResolved = Boolean(family?.id)
+
+  useEffect(() => {
+    if (isFamilyResolved) {
+      setIsLongLoading(false)
+      return
+    }
+    const timer = setTimeout(() => {
+      setIsLongLoading(true)
+    }, 2000)
+    return () => clearTimeout(timer)
+  }, [isFamilyResolved])
 
   // Diálogo Adicionar/Editar Membro
   const [isMemberDialogOpen, setIsMemberDialogOpen] = useState(false)
@@ -430,8 +445,16 @@ export default function ProfilePage() {
             <span className="text-[10px] uppercase font-semibold tracking-widest text-[#FCA311] block mb-0.5">
               Família Registrada
             </span>
-            <h2 className="text-lg sm:text-2xl font-semibold tracking-tight text-white leading-tight break-words [text-wrap:balance]">
-              {formatFamilyDisplayName(family?.name, 'Silva')}
+            <h2 className="text-lg sm:text-2xl font-semibold tracking-tight text-white leading-tight break-words [text-wrap:balance] min-h-[1.75rem] flex items-center">
+              {family?.name ? (
+                formatFamilyDisplayName(family.name)
+              ) : isLongLoading ? (
+                <span className="text-sm font-medium text-white/70 animate-pulse">
+                  Carregando seus dados...
+                </span>
+              ) : (
+                <span className="inline-block h-6 w-36 bg-white/20 rounded-lg animate-pulse" />
+              )}
             </h2>
             <p className="text-xs text-white/70 mt-1 truncate">Conta: {user?.email || 'Usuário'}</p>
           </div>
