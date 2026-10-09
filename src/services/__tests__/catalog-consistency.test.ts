@@ -84,4 +84,64 @@ describe('Consistência do Catálogo Canônico Curiangoo (19 categorias / 116 su
     expect(allNames).toContain('Bebês & Crianças')
     expect(allNames).toContain('Tesouro Direto')
   })
+
+  it('garante que as migrações SQL mais recentes ativas no banco (create_new_family_workspace e activate_family_onboarding_plan) não contêm termos legados nem inserções incorretas', () => {
+    // Carrega todas as migrações SQL via Vite glob com query ?raw (100% tipado no frontend sem depender de types de node)
+    const migrationModules = import.meta.glob('../../../supabase/migrations/*.sql', {
+      query: '?raw',
+      import: 'default',
+      eager: true,
+    }) as Record<string, string>
+
+    const filePaths = Object.keys(migrationModules).sort()
+    expect(filePaths.length).toBeGreaterThan(0)
+
+    // 1. Encontra a migração mais recente que redefine create_new_family_workspace
+    const createWorkspacePaths = filePaths.filter((p) => {
+      const content = migrationModules[p]
+      return content.includes('CREATE OR REPLACE FUNCTION public.create_new_family_workspace')
+    })
+    const latestCreateWorkspacePath = createWorkspacePaths[createWorkspacePaths.length - 1]
+    expect(latestCreateWorkspacePath).toBeDefined()
+    const latestCreateWorkspaceContent = migrationModules[latestCreateWorkspacePath]
+
+    // A definição ativa mais recente de create_new_family_workspace NÃO pode inserir nenhuma categoria ou subcategoria
+    expect(latestCreateWorkspaceContent).not.toMatch(/INSERT INTO public\.transaction_categories/i)
+    expect(latestCreateWorkspaceContent).not.toMatch(
+      /INSERT INTO public\.transaction_subcategories/i,
+    )
+    expect(latestCreateWorkspaceContent).not.toMatch(/INSERT INTO public\.categorization_rules/i)
+
+    // 2. Encontra a migração mais recente que redefine activate_family_onboarding_plan
+    const activatePlanPaths = filePaths.filter((p) => {
+      const content = migrationModules[p]
+      return content.includes('CREATE OR REPLACE FUNCTION public.activate_family_onboarding_plan')
+    })
+    const latestActivatePlanPath = activatePlanPaths[activatePlanPaths.length - 1]
+    expect(latestActivatePlanPath).toBeDefined()
+    const latestActivatePlanContent = migrationModules[latestActivatePlanPath]
+
+    // Lista de termos legados estritamente proibidos
+    const legacyTerms = [
+      'Alimentação Básica',
+      'Transporte Obrigatório',
+      'Gastronomia & Delivery',
+      'Compras & Vestuário',
+      'Lazer & Passeios',
+      'Metas & Grandes Sonhos',
+      'Investimentos de Longo Prazo',
+    ]
+
+    for (const legacyTerm of legacyTerms) {
+      expect(
+        latestCreateWorkspaceContent,
+        `create_new_family_workspace (${latestCreateWorkspacePath}) não deve conter termo legado: ${legacyTerm}`,
+      ).not.toContain(legacyTerm)
+
+      expect(
+        latestActivatePlanContent,
+        `activate_family_onboarding_plan (${latestActivatePlanPath}) não deve conter termo legado: ${legacyTerm}`,
+      ).not.toContain(legacyTerm)
+    }
+  })
 })
