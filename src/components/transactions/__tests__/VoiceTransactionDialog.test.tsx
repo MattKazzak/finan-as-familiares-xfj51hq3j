@@ -1863,4 +1863,232 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
       expect(screen.getByText('sugestão incerta')).toBeDefined()
     })
   })
+
+  describe('Rodada 29: Testes Automatizados T2, T3, T4 e Regressão R25', () => {
+    it('[T2 Caso A] repetição de mensagem durante clarificação pendente reforça a pergunta sem sobrescrever pendingTransaction', async () => {
+      // 1º turno: clarificação de categoria para carteiras de cigarro
+      mockParseVoiceWithAi.mockResolvedValueOnce({
+        rawText: 'carteiras de cigarro 30 reais',
+        amountCents: 3000,
+        amountFormatted: 'R$ 30,00',
+        type: 'expense',
+        description: 'Carteiras de cigarro',
+        confidence: 0.5,
+        processingSource: 'openai',
+        aiStatus: 'clarificacao_categoria',
+        categoryNameSuggestion: null,
+        subcategoryNameSuggestion: null,
+        clarificationQuestion: 'Não sei onde encaixo carteiras de cigarro — qual gaveta uso?',
+      })
+
+      render(
+        <VoiceTransactionDialog
+          open={true}
+          onOpenChange={vi.fn()}
+          onOpenManualTransaction={vi.fn()}
+        />,
+      )
+
+      const input = screen.getByPlaceholderText('Fale no microfone ou digite aqui...')
+      fireEvent.change(input, { target: { value: 'carteiras de cigarro 30 reais' } })
+      fireEvent.click(screen.getByText('Enviar'))
+
+      await waitFor(() => {
+        expect(screen.getByText(/Não sei onde encaixo carteiras de cigarro/i)).toBeDefined()
+      })
+
+      // 2º turno: usuário repete a mesma frase durante a pendência
+      mockParseVoiceWithAi.mockResolvedValueOnce({
+        rawText: 'carteiras de cigarro',
+        amountCents: 0,
+        amountFormatted: 'R$ 0,00',
+        type: 'expense',
+        description: 'Carteiras de cigarro',
+        confidence: 0.5,
+        processingSource: 'openai',
+        aiStatus: 'clarificacao_categoria',
+        categoryNameSuggestion: null,
+        subcategoryNameSuggestion: null,
+      })
+
+      fireEvent.change(input, { target: { value: 'carteiras de cigarro' } })
+      fireEvent.click(screen.getByText('Enviar'))
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/Ainda aguardando a gaveta para Carteiras de cigarro — qual uso\?/i),
+        ).toBeDefined()
+      })
+    })
+
+    it('[T2 Caso B] escolha isolada de categoria sem subcategoria válida dispara follow-up de gavetas com sugestão plausível', async () => {
+      // 1º turno: gasto identificado sem subcategoria definida
+      mockParseVoiceWithAi.mockResolvedValueOnce({
+        rawText: 'comprei cigarro 25 reais',
+        amountCents: 2500,
+        amountFormatted: 'R$ 25,00',
+        type: 'expense',
+        description: 'Cigarro',
+        confidence: 0.6,
+        processingSource: 'openai',
+        aiStatus: 'clarificacao_categoria',
+        categoryNameSuggestion: 'Compras',
+        subcategoryNameSuggestion: null,
+      })
+
+      render(
+        <VoiceTransactionDialog
+          open={true}
+          onOpenChange={vi.fn()}
+          onOpenManualTransaction={vi.fn()}
+        />,
+      )
+
+      const input = screen.getByPlaceholderText('Fale no microfone ou digite aqui...')
+      fireEvent.change(input, { target: { value: 'comprei cigarro 25 reais' } })
+      fireEvent.click(screen.getByText('Enviar'))
+
+      // 2º turno: usuário escolhe apenas a categoria "Compras"
+      mockParseVoiceWithAi.mockResolvedValueOnce({
+        rawText: 'coloque em compras',
+        amountCents: 0,
+        amountFormatted: 'R$ 0,00',
+        type: 'expense',
+        description: 'Compras',
+        intencao: 'escolha_categoria',
+        categoryNameSuggestion: 'Compras',
+        subcategoryNameSuggestion: null,
+      })
+
+      fireEvent.change(input, { target: { value: 'coloque em compras' } })
+      fireEvent.click(screen.getByText('Enviar'))
+
+      await waitFor(() => {
+        // NÃO grava diretamente no banco, pergunta gaveta com sugestão plausível
+        expect(screen.getByText(/Compras tem/i)).toBeDefined()
+        expect(screen.getByText(/qual encaixa melhor\?/i)).toBeDefined()
+      })
+    })
+
+    it('[T2 Caso C] comando "cancela" ou "esquece" durante pendência descarta com confirmação leve', async () => {
+      mockParseVoiceWithAi.mockResolvedValueOnce({
+        rawText: 'almoço no centro',
+        amountCents: 0,
+        amountFormatted: 'R$ 0,00',
+        type: 'expense',
+        description: 'Almoço no centro',
+        confidence: 0.8,
+        processingSource: 'openai',
+        aiStatus: 'falta_valor',
+        friendlyMessage: 'Identifiquei Almoço no centro. Quanto custou? 🥐',
+      })
+
+      render(
+        <VoiceTransactionDialog
+          open={true}
+          onOpenChange={vi.fn()}
+          onOpenManualTransaction={vi.fn()}
+        />,
+      )
+
+      const input = screen.getByPlaceholderText('Fale no microfone ou digite aqui...')
+      fireEvent.change(input, { target: { value: 'almoço no centro' } })
+      fireEvent.click(screen.getByText('Enviar'))
+
+      await waitFor(() => {
+        expect(screen.getByText(/Quanto custou\?/i)).toBeDefined()
+      })
+
+      // Usuário diz "cancela"
+      fireEvent.change(input, { target: { value: 'cancela' } })
+      fireEvent.click(screen.getByText('Enviar'))
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/Tudo bem, cancelei Almoço no centro\. Nada foi lançado! 👍/i),
+        ).toBeDefined()
+      })
+    })
+
+    it('[T2 Caso D] pergunta não-relacionada durante pendência responde e lembra da pendência', async () => {
+      mockParseVoiceWithAi.mockResolvedValueOnce({
+        rawText: 'carteiras de cigarro 30 reais',
+        amountCents: 3000,
+        amountFormatted: 'R$ 30,00',
+        type: 'expense',
+        description: 'Carteiras de cigarro',
+        confidence: 0.5,
+        processingSource: 'openai',
+        aiStatus: 'clarificacao_categoria',
+      })
+
+      render(
+        <VoiceTransactionDialog
+          open={true}
+          onOpenChange={vi.fn()}
+          onOpenManualTransaction={vi.fn()}
+        />,
+      )
+
+      const input = screen.getByPlaceholderText('Fale no microfone ou digite aqui...')
+      fireEvent.change(input, { target: { value: 'carteiras de cigarro 30 reais' } })
+      fireEvent.click(screen.getByText('Enviar'))
+
+      // Pergunta de consulta não relacionada
+      mockParseVoiceWithAi.mockResolvedValueOnce({
+        rawText: 'quanto gastei esse mês?',
+        amountCents: 0,
+        amountFormatted: 'R$ 0,00',
+        type: 'expense',
+        description: '',
+        aiStatus: 'consulta',
+        tipoResposta: 'consulta',
+        respostaConsulta: 'Você já teve R$ 1.500,00 em despesas este mês.',
+      })
+
+      fireEvent.change(input, { target: { value: 'quanto gastei esse mês?' } })
+      fireEvent.click(screen.getByText('Enviar'))
+
+      await waitFor(() => {
+        expect(screen.getByText(/Você já teve R\$ 1\.500,00 em despesas este mês\./i)).toBeDefined()
+        expect(
+          screen.getByText(/A propósito, ainda aguardo a gaveta para Carteiras de cigarro\./i),
+        ).toBeDefined()
+      })
+    })
+
+    it('[T3 Caso C & R25 Regressão] fraldas 60 reais classifica em Compras › Bebês & Crianças', async () => {
+      mockParseVoiceWithAi.mockResolvedValueOnce({
+        rawText: 'fraldas 60 reais',
+        amountCents: 6000,
+        amountFormatted: 'R$ 60,00',
+        type: 'expense',
+        description: 'Fraldas',
+        confidence: 0.95,
+        processingSource: 'openai',
+        aiStatus: 'sucesso',
+        categoryNameSuggestion: 'Compras',
+        subcategoryNameSuggestion: 'Bebês & Crianças',
+        bucketSuggestion: 'essentials',
+      })
+
+      render(
+        <VoiceTransactionDialog
+          open={true}
+          onOpenChange={vi.fn()}
+          onOpenManualTransaction={vi.fn()}
+        />,
+      )
+
+      const input = screen.getByPlaceholderText('Fale no microfone ou digite aqui...')
+      fireEvent.change(input, { target: { value: 'fraldas 60 reais' } })
+      fireEvent.click(screen.getByText('Enviar'))
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/Lançado: R\$ 60,00 em Compras › Bebês & Crianças! 👍/i),
+        ).toBeDefined()
+      })
+    })
+  })
 })

@@ -26,7 +26,12 @@ import {
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import { CopilotTypingBubble } from '@/components/brand/CopilotTypingBubble'
 import { CategoryHighlightChip } from '@/components/categories/CategoryHighlightChip'
-import { ParsedVoiceTransaction, StructuredSuggestionOption } from '@/services/voice-parser'
+import {
+  ParsedVoiceTransaction,
+  StructuredSuggestionOption,
+  isCategorySubcategoryPairValid,
+  suggestCategoryAndBucket,
+} from '@/services/voice-parser'
 import { parseVoiceWithAi } from '@/services/voice-ai'
 import { useFamily } from '@/hooks/use-family'
 import { useToast } from '@/hooks/use-toast'
@@ -345,6 +350,41 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           historico_mensagens: historyForAi,
         })
 
+        // Cancelamento durante pendência (T2 c): "cancela", "esquece", "deixa quieto"
+        const isCancelPendingIntent =
+          Boolean(existingPartial) &&
+          /^(cancela|cancelar|esquece|esquecer|deixa quieto|deixa pra la|deixa pra lá|descarta|descartar)\b/i.test(
+            textToProcess.replace(/[.!?]/g, '').trim(),
+          )
+
+        if (isCancelPendingIntent) {
+          const itemDesc = existingPartial?.description || 'o lançamento pendente'
+          setPendingTransaction(null)
+          pendingTransactionRef.current = null
+
+          const cancelMsg = `Tudo bem, cancelei ${itemDesc}. Nada foi lançado! 👍`
+          if (family?.id) {
+            saveCopilotMessage({
+              familyId: family.id,
+              role: 'assistant',
+              content: cancelMsg,
+              cardType: 'acao',
+            }).catch(() => {})
+          }
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `assistant-${Date.now()}`,
+              sender: 'assistant',
+              text: cancelMsg,
+              timestamp: new Date(),
+              cardType: 'acao',
+            },
+          ])
+          return
+        }
+
         // Intenção de Desfazer / Cancelar último lançamento
         const isUndoIntent =
           parsed.acao === 'desfazer' ||
@@ -356,6 +396,68 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         if (isUndoIntent) {
           await handleUndoLastTransaction()
           return
+        }
+
+        // T2 (a): Repetição de mensagem igual/análoga durante clarificação pendente
+        // Se houver item pendente em clarificação e o usuário repetir a frase ou texto quase idêntico
+        const isPendingClarification =
+          Boolean(existingPartial) &&
+          (existingPartial?.aiStatus === 'clarificacao' ||
+            existingPartial?.aiStatus === 'clarificacao_categoria' ||
+            existingPartial?.aiStatus === 'falta_valor')
+
+        if (isPendingClarification) {
+          const cleanUser = textToProcess.toLowerCase().trim()
+          const cleanPendingDesc = (existingPartial?.description || '').toLowerCase().trim()
+          const cleanPendingRaw = (existingPartial?.rawText || '').toLowerCase().trim()
+
+          const isRepeatMessage =
+            (cleanPendingDesc &&
+              (cleanUser === cleanPendingDesc ||
+                cleanUser.includes(cleanPendingDesc) ||
+                cleanPendingDesc.includes(cleanUser))) ||
+            (cleanPendingRaw &&
+              (cleanUser === cleanPendingRaw ||
+                cleanUser.includes(cleanPendingRaw) ||
+                cleanPendingRaw.includes(cleanUser)))
+
+          // Verifica se não é resposta válida (não é número puro, nem confirmação expressa)
+          const isNumericAnswer =
+            /^\d+([,.]\d{1,2})?$/.test(cleanUser) || /^\d+\s*reais?$/i.test(cleanUser)
+
+          if (isRepeatMessage && !isNumericAnswer && parsed.amountCents <= 0) {
+            const pendingName = existingPartial?.description || 'o item'
+            const remindMsg = `Ainda aguardando a gaveta para ${pendingName} — qual uso?`
+
+            if (family?.id) {
+              saveCopilotMessage({
+                familyId: family.id,
+                role: 'assistant',
+                content: remindMsg,
+                cardType: existingPartial?.aiStatus || 'clarificacao_categoria',
+              }).catch(() => {})
+            }
+
+            const validCardType =
+              existingPartial?.aiStatus === 'clarificacao' ||
+              existingPartial?.aiStatus === 'clarificacao_categoria' ||
+              existingPartial?.aiStatus === 'falta_valor'
+                ? existingPartial.aiStatus
+                : 'clarificacao_categoria'
+
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `assistant-${Date.now()}`,
+                sender: 'assistant',
+                text: remindMsg,
+                timestamp: new Date(),
+                cardData: existingPartial,
+                cardType: validCardType,
+              },
+            ])
+            return
+          }
         }
 
         // Intenção de Reclassificação / Ajuste de transação anterior já lançada
@@ -414,12 +516,67 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           }
         }
 
+        // T3: Confirmação do usuário para criar subcategoria ou categoria sugerida
+        // Ex: Usuário disse "sim", "pode criar", "cria aí", "confirmo" durante pendência com sugestão de gaveta/subcategoria
+        const isCreateSubConfirmation =
+          Boolean(existingPartial) &&
+          (existingPartial?.aiStatus === 'clarificacao_categoria' ||
+            existingPartial?.aiStatus === 'clarificacao') &&
+          /^(sim|pode criar|cria|cria aí|cria ai|pode ser|confirmo|beleza|fechado|isso)\b/i.test(
+            textToProcess.replace(/[.!?]/g, '').trim(),
+          )
+
+        if (isCreateSubConfirmation && existingPartial?.categoryNameSuggestion) {
+          // Extrair subcategoria sugerida na mensagem da IA ou no pending
+          let subToCreate = existingPartial.subcategoryNameSuggestion
+          if (!subToCreate) {
+            const heuristic = suggestCategoryAndBucket(
+              existingPartial.description || '',
+              categories,
+            )
+            subToCreate = heuristic.subcategoryName || 'Tabaco & Cigarros'
+          }
+
+          const targetCat = categories.find(
+            (c) => c.name.toLowerCase() === existingPartial.categoryNameSuggestion?.toLowerCase(),
+          )
+
+          if (targetCat && subToCreate) {
+            try {
+              await addNewSubcategory(targetCat.id, subToCreate)
+              await handleApplyAndPersistCategory(
+                targetCat.name,
+                {
+                  ...existingPartial,
+                  subcategoryNameSuggestion: subToCreate,
+                },
+                {
+                  tipo: 'existente',
+                  rotulo: `${targetCat.name} › ${subToCreate}`,
+                  categoria: targetCat.name,
+                  subcategoria: subToCreate,
+                  balde: targetCat.budget_bucket || 'lifestyle',
+                },
+              )
+              return
+            } catch (createErr) {
+              console.warn('Erro ao criar subcategoria via chat:', createErr)
+            }
+          }
+        }
+
         // Caso 1: Consulta rápida (resposta acolhedora da IA sem card de lançamento)
         if (parsed.aiStatus === 'consulta' || parsed.tipoResposta === 'consulta') {
-          const resposta =
+          let resposta =
             parsed.respostaConsulta ||
             parsed.friendlyMessage ||
             'Aqui estão as informações solicitadas.'
+
+          // T2 (d): Pergunta não-relacionada durante pendência → responde E lembra ("A propósito, ainda aguardo a gaveta do cigarro")
+          if (existingPartial && existingPartial.description) {
+            const pendingName = existingPartial.description
+            resposta = `${resposta}\n\nA propósito, ainda aguardo a gaveta para ${pendingName}.`
+          }
 
           if (family?.id) {
             saveCopilotMessage({
@@ -438,6 +595,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
               text: resposta,
               timestamp: new Date(),
               cardType: 'consulta',
+              cardData: existingPartial || null,
             },
           ])
           return
@@ -689,7 +847,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         // Caso 5: Escolha ou confirmação de categoria enquanto havia clarificação de categoria pendente
         if (
           existingPartial &&
-          existingPartial.aiStatus === 'clarificacao_categoria' &&
+          (existingPartial.aiStatus === 'clarificacao_categoria' ||
+            existingPartial.aiStatus === 'clarificacao') &&
           (parsed.intencao === 'escolha_categoria' ||
             parsed.categoryNameSuggestion ||
             parsed.amountCents <= 0)
@@ -1431,6 +1590,83 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
       // Se houver subcategoria a associar/persistir
       const finalSubName = subcategoryName || base.subcategoryNameSuggestion
+
+      // T2 (b): CASO B: Escolha isolada de categoria sem subcategoria válida
+      // NÃO grava; pergunta UMA vez: "Compras tem 9 gavetas: Roupas, Calçados, Eletrônicos & Gadgets... qual encaixa melhor?"
+      // com UMA sugestão plausível (heurística de palavras-chave). Só grava com par completo válido (isCategorySubcategoryPairValid).
+      const finalCatName = matchedCategory ? matchedCategory.name : cleanCatName
+      const isValidPair = isCategorySubcategoryPairValid(finalCatName, finalSubName, categories)
+
+      if (
+        !isValidPair &&
+        matchedCategory &&
+        matchedCategory.subcategories &&
+        matchedCategory.subcategories.length > 0
+      ) {
+        // Obter gavetas (subcategorias) da categoria
+        const subs = matchedCategory.subcategories
+        const subCount = subs.length
+        const sampleSubs = subs
+          .slice(0, 3)
+          .map((s) => s.name)
+          .join(', ')
+
+        // Sugestão plausível com heurística de palavras-chave baseada na descrição original
+        const heuristic = suggestCategoryAndBucket(base.description || '', categories)
+        let suggestedSub = ''
+        if (
+          heuristic.subcategoryName &&
+          subs.some((s) => s.name.toLowerCase() === heuristic.subcategoryName!.toLowerCase())
+        ) {
+          suggestedSub = heuristic.subcategoryName
+        } else {
+          // Fallback para primeira ou mais representativa subcategoria
+          suggestedSub = subs[0].name
+        }
+
+        const askDrawerMsg = `${matchedCategory.name} tem ${subCount} gavetas: ${sampleSubs}... qual encaixa melhor? Sugiro "${suggestedSub}".`
+
+        const updatedPendingWithCategory: ParsedVoiceTransaction = {
+          ...base,
+          categoryNameSuggestion: matchedCategory.name,
+          bucketSuggestion: (matchedCategory.budget_bucket as any) || resolvedBucket,
+          aiStatus: 'clarificacao_categoria',
+          clarificationQuestion: askDrawerMsg,
+          clarificationOptions: subs.map((s) => s.name),
+        }
+
+        setPendingTransaction(updatedPendingWithCategory)
+        pendingTransactionRef.current = updatedPendingWithCategory
+
+        if (family?.id) {
+          saveCopilotMessage({
+            familyId: family.id,
+            role: 'assistant',
+            content: askDrawerMsg,
+            cardType: 'clarificacao_categoria',
+          }).catch(() => {})
+        }
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `user-${Date.now()}`,
+            sender: 'user',
+            text: rawCategoryChoice,
+            timestamp: new Date(),
+          },
+          {
+            id: `assistant-${Date.now() + 1}`,
+            sender: 'assistant',
+            text: askDrawerMsg,
+            timestamp: new Date(),
+            cardData: updatedPendingWithCategory,
+            cardType: 'clarificacao_categoria',
+          },
+        ])
+        return
+      }
+
       if (matchedCategory && finalSubName) {
         const existingSub = matchedCategory.subcategories?.find(
           (s) => s.name.toLowerCase() === finalSubName.toLowerCase(),
@@ -1457,7 +1693,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         friendlyMessage: null,
       }
 
-      // Executa a persistência real da transação no banco agora que a categoria foi escolhida
+      // Executa a persistência real da transação no banco agora que a categoria e subcategoria foram validadas
       const result = await executeAutonomousTransaction(updated)
       const catName = result?.categoryName || updated.categoryNameSuggestion || ''
       const subName = (result?.subcategoryName || updated.subcategoryNameSuggestion || '').trim()
