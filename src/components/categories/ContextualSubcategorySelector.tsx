@@ -77,7 +77,7 @@ export function ContextualSubcategorySelector({
     return null
   }, [subcategories, allCategories, selectedSubcategoryId])
 
-  // Todas as 116 subcategorias da família agrupadas por categoria
+  // Todas as 117 subcategorias da família agrupadas por categoria
   const fullCatalogByCat = useMemo(() => {
     return allCategories
       .filter((cat) => (cat.subcategories || []).length > 0)
@@ -155,7 +155,7 @@ export function ContextualSubcategorySelector({
     const term = search.trim().toLowerCase()
     if (!term) return []
 
-    // Se temos allCategories preenchidas, busca em todas as 116 subcategorias do catálogo
+    // Se temos allCategories preenchidas, busca em todas as 117 subcategorias do catálogo
     const pool = allSubcategoriesFlat.length > 0 ? allSubcategoriesFlat : subcategories
     return pool.filter((s) => {
       const matchSub = s.name.toLowerCase().includes(term)
@@ -180,7 +180,7 @@ export function ContextualSubcategorySelector({
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar entre as 116 subcategorias..."
+            placeholder="Buscar entre as 117 subcategorias..."
             className="pl-9 pr-8 h-10 text-xs sm:text-sm rounded-xl bg-white border-border/80 focus:bg-white"
             autoFocus={!isMobile}
           />
@@ -246,7 +246,7 @@ export function ContextualSubcategorySelector({
             <div className="flex items-center justify-between px-3 py-1 text-[11px] font-bold text-slate-700 border-b border-border/40 pb-2">
               <div className="flex items-center gap-1.5">
                 <FolderTree className="w-3.5 h-3.5 text-amber-600" />
-                <span>Todas as 116 subcategorias agrupadas</span>
+                <span>Todas as 117 subcategorias agrupadas</span>
               </div>
               <button
                 type="button"

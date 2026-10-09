@@ -115,7 +115,7 @@ describe('Seed de Categorias Padronizadas e Onboarding', () => {
         monthly_net_income_cents: 500000,
         model_preset_id: '50_30_20',
         categories_count: 19,
-        subcategories_count: 116,
+        subcategories_count: 117,
         total_budget_cents: 500000,
       })
 
@@ -133,7 +133,7 @@ describe('Seed de Categorias Padronizadas e Onboarding', () => {
 
     expect(result).toEqual({
       createdCategoriesCount: 19,
-      createdSubcategoriesCount: 116,
+      createdSubcategoriesCount: 117,
       totalBudgetCents: 500000,
     })
 
@@ -149,7 +149,7 @@ describe('Seed de Categorias Padronizadas e Onboarding', () => {
         monthly_net_income_cents: 600000,
         model_preset_id: '60_25_15',
         categories_count: 19,
-        subcategories_count: 116,
+        subcategories_count: 117,
         total_budget_cents: 600000,
       })
 
@@ -167,7 +167,7 @@ describe('Seed de Categorias Padronizadas e Onboarding', () => {
 
     expect(result).toEqual({
       createdCategoriesCount: 19,
-      createdSubcategoriesCount: 116,
+      createdSubcategoriesCount: 117,
       totalBudgetCents: 600000,
     })
 

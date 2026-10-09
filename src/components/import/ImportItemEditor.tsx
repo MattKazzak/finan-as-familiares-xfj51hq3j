@@ -325,7 +325,7 @@ export const ImportItemEditor: React.FC<ImportItemEditorProps> = ({
             }}
             allCategories={categories}
             currentCategoryId={item.category_id}
-            placeholder="Subcategoria opcional ou buscar nas 116..."
+            placeholder="Subcategoria opcional ou buscar nas 117..."
           />
         </div>
 

@@ -165,7 +165,7 @@ export interface CategorySeedDefinition {
 
 /**
  * Taxonomia Canônica Oficial do Curiangoo:
- * 19 categorias mestras (15 despesas nos 3 baldes + 4 receitas) e 116 subcategorias.
+ * 19 categorias mestras (15 despesas nos 3 baldes + 4 receitas) e 117 subcategorias.
  */
 export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
   // Essentials (Necessidades - 50%)
@@ -798,6 +798,11 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
         icon: 'Smile',
         keywords: ['fralda', 'enxoval', 'bebe', 'ri happy', 'brinquedo', 'alo bebe'],
       },
+      {
+        name: 'Tabaco & Cigarros',
+        icon: 'Flame',
+        keywords: ['cigarro', 'tabaco', 'tabacaria', 'vape', 'charuto', 'pod'],
+      },
     ],
   },
   {
@@ -1019,7 +1024,7 @@ export async function seedStandardizedCategoriesAndApplyPlan({
 
   // 2. Fallback somente após esgotar todas as tentativas de retry
   console.error(
-    '[onboarding] RPC activate_family_onboarding_plan falhou após retries. Acionando fallback canônico completo (19/116 + regras):',
+    '[onboarding] RPC activate_family_onboarding_plan falhou após retries. Acionando fallback canônico completo (19/117 + regras):',
     {
       familyId,
       monthlyNetIncomeCents,
@@ -1039,7 +1044,7 @@ export async function seedStandardizedCategoriesAndApplyPlan({
     console.warn('[onboarding] Não foi possível exibir toast de fallback:', toastErr)
   }
 
-  // Fallback canônico completo (19 categorias / 116 subcategorias + regras de IA):
+  // Fallback canônico completo (19 categorias / 117 subcategorias + regras de IA):
   // NUNCA mais semear árvores parciais ou degradadas (ex: 15/96).
   await updateFamilyDetails(familyId, {
     monthly_net_income_cents: monthlyNetIncomeCents,
@@ -1088,7 +1093,7 @@ export async function seedStandardizedCategoriesAndApplyPlan({
   let createdSubcategoriesCount = 0
   let totalBudgetCents = 0
 
-  // 1. Semeia as 19 categorias e 116 subcategorias de CANONICAL_CATEGORIES
+  // 1. Semeia as 19 categorias e 117 subcategorias de CANONICAL_CATEGORIES
   for (let i = 0; i < CANONICAL_CATEGORIES.length; i++) {
     const catDef = CANONICAL_CATEGORIES[i]
     const catKey = catDef.name.trim().toLowerCase()

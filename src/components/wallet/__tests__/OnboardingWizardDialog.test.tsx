@@ -204,7 +204,7 @@ describe('OnboardingWizardDialog', () => {
       completeness: {
         isIncomplete: false,
         categoryCount: 19,
-        subcategoryCount: 116,
+        subcategoryCount: 117,
         ruleCount: 41,
       },
       selectedMemberId: null,

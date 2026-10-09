@@ -257,7 +257,7 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
       { name: 'Clubes de Assinatura', icon: 'Sparkles' },
     ],
   },
-  // 11. Compras (lifestyle, 8 subcategorias)
+  // 11. Compras (lifestyle, 9 subcategorias)
   {
     name: 'Compras',
     bucket: 'lifestyle',
@@ -274,6 +274,7 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
       { name: 'Utilidades & Casa', icon: 'Package' },
       { name: 'Presentes', icon: 'Gift' },
       { name: 'Bebês & Crianças', icon: 'Smile' },
+      { name: 'Tabaco & Cigarros', icon: 'Flame' },
     ],
   },
   // 12. Pets (lifestyle, 3 subcategorias)

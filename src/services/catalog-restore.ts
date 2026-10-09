@@ -20,7 +20,7 @@ export function normalizeName(str: string): string {
 
 /**
  * MODO 1: Restaurar o que falta (Aditivo, 1 clique de confirmação)
- * Insere categorias e subcategorias do padrão canônico (19 cats / 116 subs) que a família não tem.
+ * Insere categorias e subcategorias do padrão canônico (19 cats / 117 subs) que a família não tem.
  * Não renomeia, não reposiciona, não toca em nada criado pelo usuário.
  */
 export async function restoreMissingCatalog(

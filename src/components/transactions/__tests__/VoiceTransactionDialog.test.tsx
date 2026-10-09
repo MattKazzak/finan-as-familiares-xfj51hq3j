@@ -336,7 +336,8 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
       // Balão do usuário à direita com o texto falado
       expect(screen.getByText('Almoço 45 reais no débito')).toBeDefined()
       // Mensagem conversacional com micro-link discreto [Desfazer]
-      expect(screen.getByText(/Lançado: R\$ 45,00 em Geral/i)).toBeDefined()
+      expect(screen.getByText(/Lançado: R\$ 45,00 em/i)).toBeDefined()
+      expect(screen.queryByText(/em Geral/i)).toBeNull()
       expect(screen.getByText('[Desfazer]')).toBeDefined()
     })
   })

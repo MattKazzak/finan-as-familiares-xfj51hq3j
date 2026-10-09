@@ -681,7 +681,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
               <span>Restaurar Catálogo Padrão</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500 pt-1">
-              Escolha como deseja sincronizar o catálogo com as 19 categorias e 116 subcategorias
+              Escolha como deseja sincronizar o catálogo com as 19 categorias e 117 subcategorias
               oficiais do Curiangoo:
             </DialogDescription>
           </DialogHeader>
@@ -754,7 +754,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
               <span>Restaurar categorias que faltam?</span>
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs text-slate-600 leading-relaxed">
-              O sistema irá comparar seu catálogo com o padrão canônico (19 categorias e 116
+              O sistema irá comparar seu catálogo com o padrão canônico (19 categorias e 117
               subcategorias) e inserir apenas as gavetas que ainda não existem. Nada existente será
               alterado ou excluído.
             </AlertDialogDescription>
@@ -853,7 +853,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs text-slate-700 leading-relaxed">
               Você tem certeza absoluta de que deseja redefinir todo o catálogo para o padrão
-              canônico oficial (19 categorias / 116 subcategorias)?
+              canônico oficial (19 categorias / 117 subcategorias)?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="pt-2">

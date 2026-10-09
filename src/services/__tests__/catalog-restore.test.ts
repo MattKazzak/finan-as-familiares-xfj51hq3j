@@ -38,10 +38,10 @@ vi.mock('@/lib/supabase/client', () => {
 })
 
 describe('catalog-restore service', () => {
-  it('CANONICAL_CATEGORIES should have exactly 19 categories and 116 subcategories', () => {
+  it('CANONICAL_CATEGORIES should have exactly 19 categories and 117 subcategories', () => {
     expect(CANONICAL_CATEGORIES.length).toBe(19)
     const totalSubs = CANONICAL_CATEGORIES.reduce((acc, c) => acc + c.subcategories.length, 0)
-    expect(totalSubs).toBe(116)
+    expect(totalSubs).toBe(117)
   })
 
   it('normalizes category names reliably ignoring case and accents', () => {
