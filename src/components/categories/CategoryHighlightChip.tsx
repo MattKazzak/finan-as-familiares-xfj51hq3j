@@ -98,32 +98,35 @@ export const CategoryHighlightChip: React.FC<CategoryHighlightChipProps> = ({
         <span className="truncate max-w-[130px] sm:max-w-[170px]">{categoryName}</span>
       </span>
 
-      {/* Divisor de hierarquia */}
-      <span className="text-slate-400 text-[10px] select-none shrink-0">›</span>
-
-      {/* Subcategoria clicável para correção rápida via ContextualSubcategorySelector */}
+      {/* Subcategoria (se existir ou se o seletor estiver habilitado) */}
       {onSelectSubcategory && !disabled ? (
-        <div className="inline-flex items-center shrink-0 max-w-[180px]">
-          <ContextualSubcategorySelector
-            subcategories={subcategoryList}
-            selectedSubcategoryId={activeSubId}
-            allCategories={allCategories}
-            currentCategoryId={matchedCategory?.id}
-            placeholder={subcategoryName || 'Definir subcategoria'}
-            onSelect={(subId, catId) => {
-              onSelectSubcategory(subId, catId)
-            }}
-            className="h-7 text-[11px] sm:text-xs font-semibold px-2 rounded-xl bg-slate-50 border-slate-200 hover:bg-slate-100 hover:border-slate-300 text-slate-800"
-          />
-        </div>
-      ) : (
-        <span
-          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-medium text-[11px] truncate max-w-[140px]"
-          title={subcategoryName || 'Geral'}
-        >
-          {subcategoryName || 'Geral'}
-        </span>
-      )}
+        <>
+          <span className="text-slate-400 text-[10px] select-none shrink-0">›</span>
+          <div className="inline-flex items-center shrink-0 max-w-[180px]">
+            <ContextualSubcategorySelector
+              subcategories={subcategoryList}
+              selectedSubcategoryId={activeSubId}
+              allCategories={allCategories}
+              currentCategoryId={matchedCategory?.id}
+              placeholder={subcategoryName || 'Definir subcategoria'}
+              onSelect={(subId, catId) => {
+                onSelectSubcategory(subId, catId)
+              }}
+              className="h-7 text-[11px] sm:text-xs font-semibold px-2 rounded-xl bg-slate-50 border-slate-200 hover:bg-slate-100 hover:border-slate-300 text-slate-800"
+            />
+          </div>
+        </>
+      ) : subcategoryName ? (
+        <>
+          <span className="text-slate-400 text-[10px] select-none shrink-0">›</span>
+          <span
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-medium text-[11px] truncate max-w-[140px]"
+            title={subcategoryName}
+          >
+            {subcategoryName}
+          </span>
+        </>
+      ) : null}
 
       {/* Badge de Sugestão Incerta Integrada */}
       {isUncertain && (

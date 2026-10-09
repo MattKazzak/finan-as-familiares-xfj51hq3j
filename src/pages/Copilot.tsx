@@ -426,7 +426,11 @@ export function CopilotPage() {
                     {/* Chip de categoria CDS com seletor contextual integrado e badge incerta */}
                     <div className="pt-0.5">
                       <CategoryHighlightChip
-                        categoryName={m.cardData.categoryNameSuggestion || 'Geral'}
+                        categoryName={
+                          m.cardData.categoryNameSuggestion ||
+                          categories.find((c) => c.type === m.cardData?.type)?.name ||
+                          'Outro'
+                        }
                         subcategoryName={m.cardData.subcategoryNameSuggestion}
                         confidence={m.cardData.confidence}
                         allCategories={categories}

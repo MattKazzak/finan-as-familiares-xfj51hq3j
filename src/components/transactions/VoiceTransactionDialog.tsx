@@ -520,7 +520,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
             // Executa lançamento autônomo imediato no Supabase
             const result = await executeAutonomousTransaction(confirmedData)
-            const catName = result?.categoryName || confirmedData.categoryNameSuggestion || 'Geral'
+            const catName = result?.categoryName || confirmedData.categoryNameSuggestion || ''
             const subName = (
               result?.subcategoryName ||
               confirmedData.subcategoryNameSuggestion ||
@@ -531,9 +531,11 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             const confirmationText =
               parsed.friendlyMessage && !parsed.friendlyMessage.includes('?')
                 ? parsed.friendlyMessage
-                : subName
+                : catName && subName
                   ? `Lançado: ${confirmedData.amountFormatted} em ${catName} › ${subName}! 👍`
-                  : `Lançado: ${confirmedData.amountFormatted} em ${catName}! 👍`
+                  : catName
+                    ? `Lançado: ${confirmedData.amountFormatted} em ${catName}! 👍`
+                    : `Lançado: ${confirmedData.amountFormatted}! 👍`
 
             if (family?.id) {
               saveCopilotMessage({
@@ -663,12 +665,58 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           return
         }
 
-        // Caso 5: Lançamento com valor e descrição presentes (execução autônoma padrão ouro)
-        // Se a descrição e o valor existirem, lança diretamente no Supabase em vez de travar em card de formulário
-        if (
-          (parsed.aiStatus === 'sucesso' || parsed.aiStatus === 'clarificacao_categoria') &&
-          parsed.amountCents > 0
-        ) {
+        // Caso 5: clarificacao_categoria — NÃO gravar no banco prematuramente!
+        // Mantém pendente em pendingTransactionRef e exibe pergunta com pílulas para escolha do usuário
+        if (parsed.aiStatus === 'clarificacao_categoria' && parsed.amountCents > 0) {
+          let pendingData = parsed
+
+          if (existingPartial && existingPartial.amountCents > 0) {
+            pendingData = {
+              ...existingPartial,
+              ...parsed,
+              description: parsed.description || existingPartial.description,
+              categoryNameSuggestion:
+                parsed.categoryNameSuggestion || existingPartial.categoryNameSuggestion,
+              subcategoryNameSuggestion:
+                parsed.subcategoryNameSuggestion || existingPartial.subcategoryNameSuggestion,
+              bucketSuggestion: parsed.bucketSuggestion || existingPartial.bucketSuggestion,
+            }
+          }
+
+          setPendingTransaction(pendingData)
+          pendingTransactionRef.current = pendingData
+
+          const clarText =
+            parsed.friendlyMessage ||
+            parsed.clarificationQuestion ||
+            `Identifiquei ${pendingData.description || 'o item'} ${pendingData.amountFormatted}! Onde prefere organizar esse gasto?`
+
+          if (family?.id) {
+            saveCopilotMessage({
+              familyId: family.id,
+              role: 'assistant',
+              content: clarText,
+              cardType: 'clarificacao_categoria',
+            }).catch(() => {})
+          }
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `assistant-${Date.now()}`,
+              sender: 'assistant',
+              text: clarText,
+              timestamp: new Date(),
+              cardData: pendingData,
+              cardType: 'clarificacao_categoria',
+            },
+          ])
+          return
+        }
+
+        // Caso 6: Lançamento com valor e descrição presentes (execução autônoma padrão ouro em sucesso)
+        // Se a descrição e o valor existirem e o status for sucesso, lança diretamente no Supabase
+        if (parsed.aiStatus === 'sucesso' && parsed.amountCents > 0) {
           let finalParsed = parsed
 
           if (existingPartial && existingPartial.amountCents > 0) {
@@ -689,7 +737,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
           // Executa lançamento autônomo no banco de dados
           const result = await executeAutonomousTransaction(finalParsed)
-          const catName = result?.categoryName || finalParsed.categoryNameSuggestion || 'Geral'
+          const catName = result?.categoryName || finalParsed.categoryNameSuggestion || ''
           const subName = (
             result?.subcategoryName ||
             finalParsed.subcategoryNameSuggestion ||
@@ -700,9 +748,11 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           const launchText =
             parsed.friendlyMessage && !parsed.friendlyMessage.includes('?')
               ? parsed.friendlyMessage
-              : subName
+              : catName && subName
                 ? `Lançado: ${finalParsed.amountFormatted} em ${catName} › ${subName}! 👍`
-                : `Lançado: ${finalParsed.amountFormatted} em ${catName}! 👍`
+                : catName
+                  ? `Lançado: ${finalParsed.amountFormatted} em ${catName}! 👍`
+                  : `Lançado: ${finalParsed.amountFormatted}! 👍`
 
           if (family?.id) {
             saveCopilotMessage({
@@ -1370,13 +1420,34 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         friendlyMessage: null,
       }
 
-      setPendingTransaction(updated)
-      pendingTransactionRef.current = updated
+      // Executa a persistência real da transação no banco agora que a categoria foi escolhida
+      const result = await executeAutonomousTransaction(updated)
+      const catName = result?.categoryName || updated.categoryNameSuggestion || ''
+      const subName = (result?.subcategoryName || updated.subcategoryNameSuggestion || '').trim()
+      const txId = (result?.createdTx as any)?.id || null
+
+      setPendingTransaction(null)
+      pendingTransactionRef.current = null
+
+      const launchConfirmation = subName
+        ? `Lançado: ${updated.amountFormatted} em ${catName} › ${subName}! 👍`
+        : catName
+          ? `Lançado: ${updated.amountFormatted} em ${catName}! 👍`
+          : `Lançado: ${updated.amountFormatted}! 👍`
 
       const feedbackMsg =
         optionType === 'existente' || (!wasCreated && matchedCategory)
-          ? `Perfeito! Usando categoria existente "${updated.categoryNameSuggestion}"${finalSubName ? ` (subcategoria: ${finalSubName})` : ''}. Pronto para confirmar o lançamento:`
-          : `Ótimo! Categoria "${updated.categoryNameSuggestion}" criada e vinculada. Pronto para confirmar o lançamento:`
+          ? `Usando categoria existente "${updated.categoryNameSuggestion}"${finalSubName ? ` (subcategoria: ${finalSubName})` : ''}. ${launchConfirmation}`
+          : `Categoria "${updated.categoryNameSuggestion}" criada e vinculada. ${launchConfirmation}`
+
+      if (family?.id) {
+        saveCopilotMessage({
+          familyId: family.id,
+          role: 'assistant',
+          content: feedbackMsg,
+          cardType: 'transacao',
+        }).catch(() => {})
+      }
 
       setMessages((prev) => [
         ...prev,
@@ -1393,6 +1464,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           timestamp: new Date(),
           cardData: updated,
           cardType: 'sucesso',
+          confirmedTxId: txId,
         },
       ])
     },
@@ -1981,7 +2053,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                           msg.cardData.categoryNameSuggestion ||
                           categories.find((c) => c.id === (msg.cardData as any)?.categoryId)
                             ?.name ||
-                          'Geral'
+                          categories.find((c) => c.type === msg.cardData?.type)?.name ||
+                          'Outro'
                         }
                         subcategoryName={msg.cardData.subcategoryNameSuggestion}
                         confidence={msg.cardData.confidence}

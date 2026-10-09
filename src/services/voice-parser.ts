@@ -1534,9 +1534,9 @@ export function mapAiResponseToParsedTransaction(
       let rotulo = opt?.rotulo || ''
       if (!rotulo) {
         if (tipo === 'existente') {
-          rotulo = `📁 Usar existente: ${opt.categoria || 'Geral'}${opt.subcategoria ? ` › subcategoria ${opt.subcategoria}` : ''}`
+          rotulo = `📁 Usar existente: ${opt.categoria || opt.subcategoria || 'Outro'}${opt.subcategoria && opt.categoria ? ` › subcategoria ${opt.subcategoria}` : ''}`
         } else {
-          rotulo = `✨ Criar nova: ${opt.categoria || 'Geral'}${opt.balde ? ` (${opt.balde})` : ''}`
+          rotulo = `✨ Criar nova: ${opt.categoria || 'Nova Categoria'}${opt.balde ? ` (${opt.balde})` : ''}`
         }
       }
       return {
