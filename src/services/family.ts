@@ -9,6 +9,86 @@ import type {
   FamilyInvitePreview,
 } from '@/types/finance'
 
+// Lock reentrante em memória para evitar que duas invocações simultâneas de auto-criação
+// (ex: montagem paralela de componentes no signup) criem mais de uma família para o mesmo user_id.
+const pendingWorkspaceCreations = new Map<string, Promise<Family | null>>()
+
+/**
+ * Garante que apenas 1 família seja criada por usuário, com verificação prévia no banco
+ * e lock simples por Promise em andamento.
+ */
+export async function ensureSingleFamilyWorkspace(user: {
+  id: string
+  email?: string
+  user_metadata?: Record<string, any>
+}): Promise<Family | null> {
+  const userId = user.id
+
+  // Se já há uma criação em andamento para este user_id, reutiliza a mesma Promise
+  const ongoing = pendingWorkspaceCreations.get(userId)
+  if (ongoing) {
+    return ongoing
+  }
+
+  const creationPromise = (async () => {
+    try {
+      // 1. Consulta preventiva: verifica se já existe família criada pelo usuário ou vinculada a ele
+      const { data: existingFamilies } = await (supabase as any)
+        .from('families')
+        .select('*')
+        .eq('created_by', userId)
+        .order('created_at', { ascending: true })
+        .limit(1)
+
+      if (existingFamilies && existingFamilies.length > 0) {
+        return existingFamilies[0] as Family
+      }
+
+      // Consulta se o usuário já é membro de alguma família via family_members
+      const { data: memberRecords } = await (supabase as any)
+        .from('family_members')
+        .select('family_id')
+        .eq('user_id', userId)
+        .limit(1)
+
+      if (memberRecords && memberRecords.length > 0 && memberRecords[0].family_id) {
+        const { data: linkedFam } = await (supabase as any)
+          .from('families')
+          .select('*')
+          .eq('id', memberRecords[0].family_id)
+          .single()
+        if (linkedFam) {
+          return linkedFam as Family
+        }
+      }
+
+      // 2. Se realmente não existe família, cria com segurança
+      const rawName = (user.user_metadata?.name as string) || ''
+      const fallbackMemberName = rawName || user.email?.split('@')[0] || 'Principal'
+      const fallbackFamilyName = 'Minha Família'
+
+      await createNewFamilyWorkspace(fallbackFamilyName, fallbackMemberName)
+
+      const { data: refetched } = await (supabase as any)
+        .from('families')
+        .select('*')
+        .order('created_at', { ascending: true })
+        .limit(1)
+
+      return refetched && refetched.length > 0 ? (refetched[0] as Family) : null
+    } catch (createErr) {
+      console.error('Erro ao auto-criar família para o usuário:', createErr)
+      return null
+    } finally {
+      // Libera o lock após a conclusão
+      pendingWorkspaceCreations.delete(userId)
+    }
+  })()
+
+  pendingWorkspaceCreations.set(userId, creationPromise)
+  return creationPromise
+}
+
 export async function createNewFamilyWorkspace(
   familyName?: string,
   memberName?: string,
@@ -103,26 +183,8 @@ export async function fetchFamilyData() {
     }
 
     if (!family && !pendingInviteApplied) {
-      const rawName = (user.user_metadata?.name as string) || ''
-      const fallbackMemberName = rawName || user.email?.split('@')[0] || 'Principal'
-      // O nome da pessoa nunca deve alimentar o nome da família
-      const fallbackFamilyName = 'Minha Família'
-
-      try {
-        await createNewFamilyWorkspace(fallbackFamilyName, fallbackMemberName)
-        const { data: refetched } = await (supabase as any)
-          .from('families')
-          .select('*')
-          .order('created_at', { ascending: true })
-          .limit(1)
-
-        if (refetched && refetched.length > 0) {
-          family = refetched[0] as Family
-        }
-      } catch (createErr) {
-        console.error('Erro ao auto-criar família para o usuário:', createErr)
-        return { family: null, members: [], categories: [] }
-      }
+      // Guard reentrante com lock por user_id: impede criação duplicada simultânea no mesmo ciclo
+      family = await ensureSingleFamilyWorkspace(user)
     }
   }
   if (!family) {

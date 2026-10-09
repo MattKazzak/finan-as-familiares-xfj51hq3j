@@ -4,6 +4,7 @@ import {
   updateFamilyMember,
   deleteFamilyMember,
   fetchFamilyInvites,
+  fetchFamilyData,
 } from '../family'
 import { supabase } from '@/lib/supabase/client'
 
@@ -107,6 +108,78 @@ describe('Family Service - Camada de Serviço e Hardening RLS/RPC', () => {
         p_member_id: 'member-uuid-1',
       })
       expect(result).toEqual({ success: true })
+    })
+  })
+
+  describe('fetchFamilyData - Guard Reentrante', () => {
+    it('quando duas chamadas simultâneas ocorrem para usuário sem família, não duplica a criação da workspace', async () => {
+      // Mock auth.getUser
+      vi.mocked(supabase as any).auth = {
+        getUser: vi.fn().mockResolvedValue({
+          data: {
+            user: {
+              id: 'user-unique-race-1',
+              email: 'usuario@teste.com',
+              user_metadata: { name: 'Pessoa Teste' },
+            },
+          },
+        }),
+      }
+
+      let createdCount = 0
+      const mockCreatedFamily = {
+        id: 'fam-created-1',
+        name: 'Minha Família',
+        owner_id: 'user-unique-race-1',
+        created_at: '2026-10-20T12:00:00Z',
+      }
+
+      vi.mocked(supabase.rpc).mockImplementation(async (method: string) => {
+        if (method === 'create_new_family_workspace') {
+          createdCount++
+          // Simula pequena latência da RPC
+          await new Promise((r) => setTimeout(r, 20))
+          return { data: 'fam-created-1', error: null } as any
+        }
+        return { data: null, error: null } as any
+      })
+
+      // Simula banco: inicialmente vazio; após criação, passa a ter mockCreatedFamily
+      vi.mocked(supabase.from).mockImplementation((table: string) => {
+        if (table === 'families') {
+          return {
+            select: vi.fn().mockReturnValue({
+              order: vi.fn().mockReturnValue({
+                limit: vi.fn().mockImplementation(async () => {
+                  if (createdCount > 0) {
+                    return { data: [mockCreatedFamily], error: null }
+                  }
+                  return { data: [], error: null }
+                }),
+              }),
+            }),
+          } as any
+        }
+
+        // family_members, transaction_categories, transaction_subcategories
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          }),
+        } as any
+      })
+
+      // Dispara 2 chamadas concorrentes idênticas a fetchFamilyData()
+      const [res1, res2] = await Promise.all([fetchFamilyData(), fetchFamilyData()])
+
+      // Apenas UMA família deve ter sido criada via RPC
+      expect(createdCount).toBe(1)
+      expect(res1.family?.id).toBe('fam-created-1')
+      expect(res2.family?.id).toBe('fam-created-1')
     })
   })
 

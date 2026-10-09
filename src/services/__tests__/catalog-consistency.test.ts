@@ -85,6 +85,47 @@ describe('Consistência do Catálogo Canônico Curiangoo (19 categorias / 116 su
     expect(allNames).toContain('Tesouro Direto')
   })
 
+  it('proíbe expressamente que STANDARDIZED_CATEGORIES_TREE seja usada como fonte de semeadura do fallback de onboarding', async () => {
+    // Carrega o arquivo de serviço de onboarding como texto
+    const onboardingSource = await import('../onboarding?raw')
+    const sourceContent = onboardingSource.default || ''
+
+    expect(sourceContent.length).toBeGreaterThan(0)
+
+    // O fallback de onboarding DEVE usar CANONICAL_CATEGORIES e NÃO pode iterar sobre STANDARDIZED_CATEGORIES_TREE para INSERT
+    // Verifica que o bloco do fallback referencia CANONICAL_CATEGORIES
+    expect(sourceContent).toContain('for (let i = 0; i < CANONICAL_CATEGORIES.length; i++)')
+
+    // Verifica que STANDARDIZED_CATEGORIES_TREE NÃO é iterada no fluxo de inserção/fallback
+    expect(sourceContent).not.toMatch(
+      /for\s*\(.*STANDARDIZED_CATEGORIES_TREE.*\)\s*\{[\s\S]*?insert\(/i,
+    )
+    expect(sourceContent).not.toMatch(/STANDARDIZED_CATEGORIES_TREE\.forEach\([\s\S]*?insert\(/i)
+    expect(sourceContent).not.toMatch(/STANDARDIZED_CATEGORIES_TREE\.map\([\s\S]*?insert\(/i)
+  })
+
+  it('verifica que CANONICAL_CATEGORIES contém exatamente as 4 categorias de renda oficiais', () => {
+    const incomeCategories = CANONICAL_CATEGORIES.filter((c) => c.type === 'income')
+    expect(incomeCategories.length).toBe(4)
+
+    const incomeCategoryNames = incomeCategories.map((c) => c.name)
+    const expectedIncomeNames = [
+      'Salário',
+      'Rendimentos',
+      'Trabalhos Extras & Autônomo',
+      'Outras Receitas',
+    ]
+
+    expect(incomeCategoryNames).toEqual(expect.arrayContaining(expectedIncomeNames))
+    expect(expectedIncomeNames).toEqual(expect.arrayContaining(incomeCategoryNames))
+
+    // Baldes de renda devem ser estritamente null
+    for (const incCat of incomeCategories) {
+      expect(incCat.bucket).toBeNull()
+      expect(incCat.subcategories.length).toBeGreaterThan(0)
+    }
+  })
+
   it('garante que as migrações SQL mais recentes ativas no banco (create_new_family_workspace e activate_family_onboarding_plan) não contêm termos legados nem inserções incorretas', () => {
     // Carrega todas as migrações SQL via Vite glob com query ?raw (100% tipado no frontend sem depender de types de node)
     const migrationModules = import.meta.glob('../../../supabase/migrations/*.sql', {
