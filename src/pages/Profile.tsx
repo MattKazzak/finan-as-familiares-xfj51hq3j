@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { useFamily } from '@/hooks/use-family'
@@ -48,7 +48,7 @@ import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDial
 import { InstallInstructionsModal } from '@/components/common/InstallInstructionsModal'
 import { CategoryManagementDialog } from '@/components/categories/CategoryManagementDialog'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
-import { Sparkles, Landmark } from 'lucide-react'
+import { Sparkles, Landmark, AlertCircle } from 'lucide-react'
 import packageJson from '../../package.json'
 import {
   Dialog,

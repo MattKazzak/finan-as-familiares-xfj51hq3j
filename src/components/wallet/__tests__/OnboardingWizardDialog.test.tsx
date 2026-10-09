@@ -201,6 +201,12 @@ describe('OnboardingWizardDialog', () => {
       family: mockFamily,
       members: [],
       categories: [],
+      completeness: {
+        isIncomplete: false,
+        categoryCount: 19,
+        subcategoryCount: 116,
+        ruleCount: 41,
+      },
       selectedMemberId: null,
       setSelectedMemberId: vi.fn(),
       activeMemberId: null,

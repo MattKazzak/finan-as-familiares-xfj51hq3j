@@ -713,7 +713,7 @@ export function SortableList<T>({
                 ? 'shadow-2xl ring-2 ring-emerald-500 rounded-2xl opacity-95 pointer-events-none transition-none cursor-grabbing touch-none select-none'
                 : isCurrentlyPressing
                   ? 'scale-[0.99] transition-transform duration-200 sortable-card-pressing'
-                  : 'transition-transform duration-250 ease-[cubic-bezier(0.2,0,0,1)] will-change-transform touch-pan-y'
+                  : 'transition-transform duration-250 ease-out will-change-transform touch-pan-y'
             }`}
           >
             {renderItem(item, index, dragHandleProps, isDragging)}

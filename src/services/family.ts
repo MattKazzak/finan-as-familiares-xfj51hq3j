@@ -150,7 +150,9 @@ export async function triggerLazyAbandonedFamiliesCleanup(userId?: string): Prom
   try {
     let targetUserId = userId
     if (!targetUserId) {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       targetUserId = user?.id
     }
     if (!targetUserId) return
@@ -160,7 +162,10 @@ export async function triggerLazyAbandonedFamiliesCleanup(userId?: string): Prom
     })
   } catch (cleanupErr) {
     // Fire-and-forget seguro: nunca interrompe o login ou fluxo do usuário
-    console.warn('[cleanup] Falha não impeditiva no cleanup lazy de famílias abandonadas:', cleanupErr)
+    console.warn(
+      '[cleanup] Falha não impeditiva no cleanup lazy de famílias abandonadas:',
+      cleanupErr,
+    )
   }
 }
 
@@ -169,7 +174,9 @@ export async function triggerLazyAbandonedFamiliesCleanup(userId?: string): Prom
  * Ordem segura de deleção em cascata via client.
  */
 export async function deleteFamilyWorkspaceManually(familyId: string): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) throw new Error('Usuário não autenticado.')
 
   // Ordem segura de FKs
@@ -194,8 +201,12 @@ export async function deleteFamilyWorkspaceManually(familyId: string): Promise<v
 /**
  * Lista famílias incompletas extras do usuário (excluindo a ativa) para gestão no Perfil.
  */
-export async function fetchUserIncompleteFamilies(activeFamilyId?: string | null): Promise<Array<Family & { catCount: number; subcatCount: number; ruleCount: number }>> {
-  const { data: { user } } = await supabase.auth.getUser()
+export async function fetchUserIncompleteFamilies(
+  activeFamilyId?: string | null,
+): Promise<Array<Family & { catCount: number; subcatCount: number; ruleCount: number }>> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) return []
 
   const { data: allFamilies, error } = await (supabase as any)
@@ -211,21 +222,27 @@ export async function fetchUserIncompleteFamilies(activeFamilyId?: string | null
   for (const fam of allFamilies) {
     if (activeFamilyId && fam.id === activeFamilyId) continue
 
-    const [
-      { count: catCount },
-      { count: subCount },
-      { count: ruleCount },
-    ] = await Promise.all([
-      (supabase as any).from('transaction_categories').select('id', { count: 'exact', head: true }).eq('family_id', fam.id),
-      (supabase as any).from('transaction_subcategories').select('id', { count: 'exact', head: true }).eq('family_id', fam.id),
-      (supabase as any).from('categorization_rules').select('id', { count: 'exact', head: true }).eq('family_id', fam.id),
+    const [{ count: catCount }, { count: subCount }, { count: ruleCount }] = await Promise.all([
+      (supabase as any)
+        .from('transaction_categories')
+        .select('id', { count: 'exact', head: true })
+        .eq('family_id', fam.id),
+      (supabase as any)
+        .from('transaction_subcategories')
+        .select('id', { count: 'exact', head: true })
+        .eq('family_id', fam.id),
+      (supabase as any)
+        .from('categorization_rules')
+        .select('id', { count: 'exact', head: true })
+        .eq('family_id', fam.id),
     ])
 
     const totalCats = catCount ?? 0
     const totalSubs = subCount ?? 0
     const totalRules = ruleCount ?? 0
 
-    const isIncomplete = totalCats === 0 || totalCats !== 19 || totalSubs !== 116 || totalRules === 0
+    const isIncomplete =
+      totalCats === 0 || totalCats !== 19 || totalSubs !== 116 || totalRules === 0
 
     if (isIncomplete) {
       result.push({
@@ -368,7 +385,8 @@ export async function fetchFamilyData() {
   if (memErr) throw memErr
   if (catErr) throw catErr
   if (subErr) throw subErr
-  if (rulesErr) console.warn('[family] Erro não impeditivo ao checar regras de categorização:', rulesErr)
+  if (rulesErr)
+    console.warn('[family] Erro não impeditivo ao checar regras de categorização:', rulesErr)
 
   // Critério Canônico de Família Incompleta (c):
   // Catálogo vazio (0 categorias) OU contagem != 19 categorias / 116 subcategorias OU 0 regras de IA
@@ -387,29 +405,6 @@ export async function fetchFamilyData() {
       ? `Incompleto: ${catLen}/19 categorias, ${subLen}/116 subcategorias, ${ruleLen} regras de IA`
       : undefined,
   }
-    (supabase as any)
-      .from('family_members')
-      .select('*')
-      .eq('family_id', family.id)
-      .order('is_admin', { ascending: false })
-      .order('name', { ascending: true }),
-    (supabase as any)
-      .from('transaction_categories')
-      .select('*')
-      .eq('family_id', family.id)
-      .order('sort_order', { ascending: true })
-      .order('name', { ascending: true }),
-    (supabase as any)
-      .from('transaction_subcategories')
-      .select('*')
-      .eq('family_id', family.id)
-      .order('sort_order', { ascending: true })
-      .order('name', { ascending: true }),
-  ])
-
-  if (memErr) throw memErr
-  if (catErr) throw catErr
-  if (subErr) throw subErr
 
   // Associar subcategorias às categorias correspondentes
   const subMap: Record<string, any[]> = {}

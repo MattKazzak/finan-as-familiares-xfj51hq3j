@@ -48,6 +48,12 @@ describe('useFamily - Comportamento de Membro Ativo e "Quem está usando?"', () 
         { id: 'cat-1', name: 'Alimentação', type: 'expense', budget_bucket: 'essentials' },
       ] as any,
       subcategories: [],
+      completeness: {
+        isIncomplete: false,
+        categoryCount: 19,
+        subcategoryCount: 116,
+        ruleCount: 41,
+      },
     })
 
     const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -93,6 +99,12 @@ describe('useFamily - Comportamento de Membro Ativo e "Quem está usando?"', () 
         { id: 'cat-1', name: 'Alimentação', type: 'expense', budget_bucket: 'essentials' },
       ] as any,
       subcategories: [],
+      completeness: {
+        isIncomplete: false,
+        categoryCount: 19,
+        subcategoryCount: 116,
+        ruleCount: 41,
+      },
     })
 
     const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -136,6 +148,12 @@ describe('useFamily - Comportamento de Membro Ativo e "Quem está usando?"', () 
       members: [{ id: 'm-1', name: 'Matheus', is_admin: true, family_id: 'fam-1' }] as any,
       categories: [],
       subcategories: [],
+      completeness: {
+        isIncomplete: false,
+        categoryCount: 19,
+        subcategoryCount: 116,
+        ruleCount: 41,
+      },
     })
 
     const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -180,6 +198,12 @@ describe('useFamily - Comportamento de Membro Ativo e "Quem está usando?"', () 
         { id: 'cat-1', name: 'Alimentação', type: 'expense', budget_bucket: 'essentials' },
       ] as any,
       subcategories: [],
+      completeness: {
+        isIncomplete: false,
+        categoryCount: 19,
+        subcategoryCount: 116,
+        ruleCount: 41,
+      },
     })
 
     const wrapper = ({ children }: { children: React.ReactNode }) => (

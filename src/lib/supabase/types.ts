@@ -765,6 +765,7 @@ export type Database = {
         Args: { p_family_id: string; p_name: string }
         Returns: Json
       }
+      cleanup_abandoned_families: { Args: { p_user_id: string }; Returns: Json }
       create_new_family_workspace: {
         Args: { p_family_name: string; p_member_name: string }
         Returns: string
