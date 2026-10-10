@@ -22,6 +22,7 @@ import {
   Square,
   X,
   RotateCcw,
+  Volume2,
 } from 'lucide-react'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import { CopilotTypingBubble } from '@/components/brand/CopilotTypingBubble'
@@ -33,8 +34,8 @@ import {
   suggestCategoryAndBucket,
 } from '@/services/voice-parser'
 import { parseVoiceWithAi } from '@/services/voice-ai'
-import { transcribeVoiceAudio, getSupportedAudioMimeType } from '@/services/voice-transcribe'
 import { useFamily } from '@/hooks/use-family'
+import { useVoiceCapture } from '@/hooks/use-voice-capture'
 import { useToast } from '@/hooks/use-toast'
 import { createTransaction, updateTransaction, deleteTransaction } from '@/services/transactions'
 import { BUCKET_METADATA } from '@/types/budget-presets'
@@ -125,53 +126,58 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     lastCreatedTransactionIdRef.current = lastCreatedTransactionId
   }, [lastCreatedTransactionId])
 
-  // Estados de voz e transcrição
-  const [isListening, setIsListening] = useState(false)
-  const [audioDetected, setAudioDetected] = useState(false)
+  // Hook compartilhado de captura de voz (unificado: MediaRecorder + Whisper + Web Speech fallback)
   const [textoFalado, setTextoFalado] = useState('')
   const [isProcessingAi, setIsProcessingAi] = useState(false)
   const [selectedMemberId, setSelectedMemberId] = useState<string>('')
   const [isSaving, setIsSaving] = useState(false)
-
-  // Permissão nativa e status de erro amigável
-  const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('idle')
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-
   const [isListeningForAmountOnly, setIsListeningForAmountOnly] = useState(false)
 
-  // Tempo decorrido de gravação em segundos (mm:ss)
-  const [recordingElapsedSeconds, setRecordingElapsedSeconds] = useState<number>(0)
-  const recordingTimerRef = useRef<any>(null)
-  const recordingDurationRef = useRef<number>(0)
+  const voiceCapture = useVoiceCapture({
+    onTranscriptReady: (transcript) => {
+      setTextoFalado(transcript)
+      setInputVal(transcript)
+      toast({
+        title: 'Áudio transcrito!',
+        description: 'Confira sua mensagem abaixo e toque em Enviar.',
+      })
+    },
+    onError: (err) => {
+      console.warn('[VoiceTransactionDialog] voiceCapture error:', err)
+    },
+  })
 
-  // Modo ativo de captura de áudio ('media_recorder' padrão vs 'web_speech' fallback)
-  const [activeAudioCaptureMode, setActiveAudioCaptureMode] = useState<
-    'media_recorder' | 'web_speech' | null
-  >(null)
-  const activeAudioCaptureModeRef = useRef<'media_recorder' | 'web_speech' | null>(null)
-  const userRequestedStopRef = useRef<boolean>(false)
+  const {
+    isListening,
+    isTranscribing: isTranscribingAudio,
+    audioCaptureMode: activeAudioCaptureMode,
+    errorMessage,
+    infoMessage,
+    needsAudioResume,
+    realAudioLevels,
+    elapsedSeconds: recordingElapsedSeconds,
+    interimTranscript,
+    startListening,
+    stopListeningAndProcess,
+    cancelListening: cancelVoiceCapture,
+    retryListening,
+    clearError,
+    resumeAudioContextOnTouch,
+  } = voiceCapture
 
-  // Waveform real via AnalyserNode (5 frequências reais para alimentar as barras)
-  const [realAudioLevels, setRealAudioLevels] = useState<number[]>([0.15, 0.25, 0.2, 0.3, 0.15])
-  const audioContextRef = useRef<AudioContext | null>(null)
-  const analyserRef = useRef<AnalyserNode | null>(null)
-  const mediaStreamRef = useRef<MediaStream | null>(null)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const audioChunksRef = useRef<Blob[]>([])
-  const animationFrameRef = useRef<number | null>(null)
-  const isTranscribingAudioRef = useRef<boolean>(false)
-  const [isTranscribingAudio, setIsTranscribingAudio] = useState(false)
+  // Sincroniza transcrição intermediária do hook com textoFalado
+  useEffect(() => {
+    if (interimTranscript) {
+      setTextoFalado(interimTranscript)
+    }
+  }, [interimTranscript])
 
   // Refs de controle
   const chatScrollRef = useRef<HTMLDivElement | null>(null)
-  const recognitionRef = useRef<any>(null)
   const latestTranscriptRef = useRef<string>('')
-  // Buffers dedicados para evitar duplicações cumulativas de interimResults e reinícios
-  const finalBufferRef = useRef<string>('')
-  const hadErrorRef = useRef<boolean>(false)
   const isListeningForAmountOnlyRef = useRef<boolean>(false)
   const pendingTransactionRef = useRef<ParsedVoiceTransaction | null>(null)
-  // Manter refs sincronizadas
+
   useEffect(() => {
     pendingTransactionRef.current = pendingTransaction
   }, [pendingTransaction])
@@ -193,68 +199,12 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     scrollToBottom()
   }, [messages, isProcessingAi, isListening, textoFalado, scrollToBottom])
 
-  // Limpeza de recursos de áudio (AnalyserNode, Microfone, AnimationFrame)
-  const cleanupAudioAnalyser = useCallback(() => {
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current)
-      animationFrameRef.current = null
-    }
-    if (mediaStreamRef.current) {
-      try {
-        mediaStreamRef.current.getTracks().forEach((track) => track.stop())
-      } catch {
-        // silenciar
-      }
-      mediaStreamRef.current = null
-    }
-    if (audioContextRef.current) {
-      try {
-        audioContextRef.current.close().catch(() => {})
-      } catch {
-        // silenciar
-      }
-      audioContextRef.current = null
-    }
-    analyserRef.current = null
-    setRealAudioLevels([0.15, 0.25, 0.2, 0.3, 0.15])
-  }, [])
-
-  // Parar gravação ativa de forma segura
+  // Parar gravação ativa de forma segura (compatibilidade)
   const stopListening = useCallback(() => {
-    userRequestedStopRef.current = true
-    if (recordingTimerRef.current) {
-      clearInterval(recordingTimerRef.current)
-      recordingTimerRef.current = null
-    }
-    setRecordingElapsedSeconds(0)
-
-    // Interrompe MediaRecorder se estiver gravando
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      try {
-        mediaRecorderRef.current.stop()
-      } catch {
-        // silenciar
-      }
-    }
-
-    // Interrompe Web Speech Recognition se ativo (caminho fallback)
-    const activeRecognition = recognitionRef.current
-    recognitionRef.current = null
-
-    if (activeRecognition) {
-      try {
-        activeRecognition.stop()
-      } catch {
-        // silenciar caso já tenha sido finalizado
-      }
-    }
-
-    cleanupAudioAnalyser()
-    setIsListening(false)
-    setAudioDetected(false)
+    cancelVoiceCapture()
     setIsListeningForAmountOnly(false)
     isListeningForAmountOnlyRef.current = false
-  }, [cleanupAudioAnalyser])
+  }, [cancelVoiceCapture])
 
   // Helper para construir contexto_anterior a partir de transação parcial pendente ou última criada
   const buildPreviousContext = useCallback((base: ParsedVoiceTransaction | null) => {
@@ -372,7 +322,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       ])
       setTextoFalado('')
       latestTranscriptRef.current = ''
-      finalBufferRef.current = ''
 
       // Persistência em background da mensagem do usuário (Parte 1)
       if (family?.id) {
@@ -1124,511 +1073,34 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     ],
   )
 
-  // Iniciar gravação de voz: MediaRecorder prioritário + AnalyserNode para waveform real
-  // Fallback transparente: Web Speech API em navegadores sem MediaRecorder/getUserMedia
+  // Iniciar gravação de voz via useVoiceCapture unificado
   const startRecording = useCallback(
     (options?: { forAmountOnly?: boolean }) => {
       const isForAmount = Boolean(options?.forAmountOnly)
       setIsListeningForAmountOnly(isForAmount)
       isListeningForAmountOnlyRef.current = isForAmount
-
-      setErrorMessage(null)
-      hadErrorRef.current = false
-      setAudioDetected(false)
-      cleanupAudioAnalyser()
-
-      if (recordingTimerRef.current) {
-        clearInterval(recordingTimerRef.current)
-        recordingTimerRef.current = null
-      }
-      setRecordingElapsedSeconds(0)
-      recordingDurationRef.current = 0
-
-      userRequestedStopRef.current = false
-
-      const hasMediaRecorder =
-        typeof window !== 'undefined' &&
-        typeof navigator !== 'undefined' &&
-        !!navigator.mediaDevices &&
-        typeof navigator.mediaDevices.getUserMedia === 'function' &&
-        typeof window.MediaRecorder !== 'undefined'
-
-      // CAMINHO 1: MediaRecorder com AnalyserNode (PADRÃO sempre que a API existir)
-      if (hasMediaRecorder) {
-        setActiveAudioCaptureMode('media_recorder')
-        activeAudioCaptureModeRef.current = 'media_recorder'
-        console.log('[AudioCapture] modo=media_recorder (padrão Whisper + AnalyserNode)')
-
-        navigator.mediaDevices
-          .getUserMedia({ audio: true })
-          .then((stream) => {
-            mediaStreamRef.current = stream
-
-            // iOS interrupção de sistema (troca de app ou bloqueio de tela)
-            const audioTrack = stream.getAudioTracks()[0]
-            if (audioTrack) {
-              audioTrack.onended = () => {
-                console.warn('Faixa de áudio encerrada pelo sistema (ex: troca de tela/app).')
-                setErrorMessage(
-                  'Gravação interrompida pelo sistema ou troca de aplicativo. Tente de novo.',
-                )
-                stopListening()
-              }
-            }
-
-            // Monta AnalyserNode da Web Audio API para Waveform REAL com 5 frequências
-            try {
-              const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
-              if (AudioContextClass) {
-                const audioCtx = new AudioContextClass()
-                // No mobile/Chrome/PWA, AudioContext pode inicializar em estado 'suspended'
-                if (audioCtx.state === 'suspended') {
-                  audioCtx.resume().catch((resErr) => {
-                    console.warn('[AudioCapture] Falha ao resumir AudioContext suspenso:', resErr)
-                  })
-                }
-
-                const source = audioCtx.createMediaStreamSource(stream)
-                const analyser = audioCtx.createAnalyser()
-                analyser.fftSize = 64
-                source.connect(analyser)
-
-                audioContextRef.current = audioCtx
-                analyserRef.current = analyser
-
-                const dataArray = new Uint8Array(analyser.frequencyBinCount)
-
-                const updateWaveform = () => {
-                  if (!analyserRef.current) return
-                  analyserRef.current.getByteFrequencyData(dataArray)
-
-                  // 5 bandas de frequência divididas proporcionalmente
-                  const bandSize = Math.max(1, Math.floor(dataArray.length / 5))
-                  const bands: number[] = []
-
-                  let totalEnergy = 0
-                  for (let i = 0; i < 5; i++) {
-                    let sum = 0
-                    const startIdx = i * bandSize
-                    const endIdx = Math.min(dataArray.length, startIdx + bandSize)
-                    for (let j = startIdx; j < endIdx; j++) {
-                      sum += dataArray[j]
-                    }
-                    const avg = sum / (endIdx - startIdx || 1)
-                    totalEnergy += avg
-                    // Mapeia de 0..255 para escala de 0.15 a 1.0 (altura das 5 barras)
-                    const normalized = Math.max(0.15, Math.min(1.0, avg / 128))
-                    bands.push(normalized)
-                  }
-
-                  if (totalEnergy > 10) {
-                    setAudioDetected(true)
-                  }
-                  setRealAudioLevels(bands)
-                  animationFrameRef.current = requestAnimationFrame(updateWaveform)
-                }
-
-                animationFrameRef.current = requestAnimationFrame(updateWaveform)
-              }
-            } catch (audioCtxErr) {
-              console.warn('Erro ao inicializar AudioContext para waveform real:', audioCtxErr)
-            }
-
-            // Criação do MediaRecorder com melhor MIME type suportado
-            const preferredMime = getSupportedAudioMimeType()
-            let recorder: MediaRecorder
-            try {
-              recorder = preferredMime
-                ? new MediaRecorder(stream, { mimeType: preferredMime })
-                : new MediaRecorder(stream)
-            } catch {
-              recorder = new MediaRecorder(stream)
-            }
-
-            audioChunksRef.current = []
-
-            recorder.ondataavailable = (evt) => {
-              if (evt.data && evt.data.size > 0) {
-                audioChunksRef.current.push(evt.data)
-              }
-            }
-
-            recorder.onerror = (recErr: any) => {
-              console.warn('Erro no MediaRecorder:', recErr)
-              setErrorMessage('Falha na gravação de áudio. Tente novamente.')
-              stopListening()
-            }
-
-            recorder.onstop = () => {
-              // Se foi parado intencionalmente para envio
-              cleanupAudioAnalyser()
-            }
-
-            mediaRecorderRef.current = recorder
-            recorder.start(250) // coleta fatias a cada 250ms
-
-            setIsListening(true)
-            setPermissionStatus('granted')
-            setErrorMessage(null)
-            setRecordingElapsedSeconds(0)
-            recordingDurationRef.current = 0
-
-            // Cronômetro com limite de 60 segundos
-            recordingTimerRef.current = setInterval(() => {
-              recordingDurationRef.current += 1
-              setRecordingElapsedSeconds((prev) => {
-                const nextSec = prev + 1
-                if (nextSec >= 60) {
-                  // Limite atingido: para e processa com aviso amigável
-                  toast({
-                    title: 'Limite de gravação',
-                    description: 'Limite de 60 segundos atingido. Processando fala...',
-                  })
-                  handleStopRecordingAndProcess()
-                }
-                return nextSec
-              })
-            }, 1000)
-          })
-          .catch((mediaErr: any) => {
-            console.error('[AudioCapture] Falha explícita no MediaRecorder/getUserMedia:', mediaErr)
-            // REGRA: QUALQUER falha do MediaRecorder deve ser LOGADA e VISÍVEL — NUNCA fallback silencioso.
-            setActiveAudioCaptureMode('media_recorder')
-            activeAudioCaptureModeRef.current = 'media_recorder'
-
-            if (
-              mediaErr?.name === 'NotAllowedError' ||
-              mediaErr?.name === 'PermissionDeniedError' ||
-              mediaErr?.name === 'SecurityError'
-            ) {
-              setPermissionStatus('denied')
-              setErrorMessage(
-                'Permissão de microfone negada. Toque no cadeado ou configurações do navegador/PWA e libere o Microfone para o Curiangoo.',
-              )
-            } else if (
-              mediaErr?.name === 'NotFoundError' ||
-              mediaErr?.name === 'DevicesNotFoundError'
-            ) {
-              setErrorMessage(
-                'Nenhum microfone detectado no aparelho ou áudio bloqueado pelo sistema operacional.',
-              )
-            } else {
-              setErrorMessage(
-                `Não foi possível iniciar a captação estável (${mediaErr?.message || mediaErr?.name || 'erro no dispositivo'}). Toque em Tentar de novo ou digite abaixo.`,
-              )
-            }
-            setIsListening(false)
-          })
-
-        return
-      }
-
-      // CAMINHO 2: Fallback Web Speech API (exclusivo para navegadores sem MediaRecorder/getUserMedia)
-      const SpeechRecognition =
-        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-
-      if (!SpeechRecognition) {
-        setActiveAudioCaptureMode(null)
-        activeAudioCaptureModeRef.current = null
-        setPermissionStatus('unsupported')
-        setErrorMessage(
-          'Seu navegador não suporta reconhecimento de voz nativo nem MediaRecorder. Digite abaixo e envie para o Copilot.',
-        )
-        setIsListening(false)
-        return
-      }
-
-      setActiveAudioCaptureMode('web_speech')
-      activeAudioCaptureModeRef.current = 'web_speech'
-      console.log('[AudioCapture] modo=web_speech (fallback sem corte automático)')
-
-      try {
-        const recognition = new SpeechRecognition()
-        recognition.lang = 'pt-BR'
-        recognition.continuous = true
-        recognition.interimResults = true
-        recognition.maxAlternatives = 1
-
-        recognition.onstart = () => {
-          setIsListening(true)
-          setPermissionStatus('granted')
-          setErrorMessage(null)
-          setRecordingElapsedSeconds(0)
-          if (recordingTimerRef.current) {
-            clearInterval(recordingTimerRef.current)
-          }
-          recordingTimerRef.current = setInterval(() => {
-            setRecordingElapsedSeconds((prev) => {
-              const next = prev + 1
-              if (next >= 60) {
-                toast({
-                  title: 'Limite de gravação',
-                  description: 'Limite de 60 segundos atingido. Processando...',
-                })
-                handleStopRecordingAndProcess()
-              }
-              return next
-            })
-          }, 1000)
-        }
-        recognition.onaudiostart = () => {
-          setAudioDetected(true)
-        }
-        recognition.onspeechstart = () => {
-          setAudioDetected(true)
-        }
-
-        recognition.onresult = (event: any) => {
-          let sessionFinal = ''
-          let sessionInterim = ''
-
-          if (event.results) {
-            for (let i = 0; i < event.results.length; i++) {
-              const res = event.results[i]
-              const transcriptPiece = res[0]?.transcript || ''
-              if (res.isFinal) {
-                sessionFinal = sessionFinal
-                  ? `${sessionFinal} ${transcriptPiece.trim()}`
-                  : transcriptPiece.trim()
-              } else {
-                sessionInterim = sessionInterim
-                  ? `${sessionInterim} ${transcriptPiece.trim()}`
-                  : transcriptPiece.trim()
-              }
-            }
-          }
-
-          let combinedFinal = finalBufferRef.current.trim()
-          if (sessionFinal) {
-            combinedFinal = combinedFinal ? `${combinedFinal} ${sessionFinal}` : sessionFinal
-          }
-
-          let fullTranscript = combinedFinal
-          if (sessionInterim) {
-            fullTranscript = fullTranscript ? `${fullTranscript} ${sessionInterim}` : sessionInterim
-          }
-
-          fullTranscript = fullTranscript.replace(/\s+/g, ' ').trim()
-          latestTranscriptRef.current = fullTranscript
-          setTextoFalado(fullTranscript)
-        }
-
-        recognition.onerror = (event: any) => {
-          console.warn('SpeechRecognition onerror:', event.error)
-          hadErrorRef.current = true
-          if (recordingTimerRef.current) {
-            clearInterval(recordingTimerRef.current)
-            recordingTimerRef.current = null
-          }
-          recognitionRef.current = null
-          setIsListening(false)
-          setAudioDetected(false)
-          setIsListeningForAmountOnly(false)
-          isListeningForAmountOnlyRef.current = false
-
-          if (
-            event.error === 'not-allowed' ||
-            event.error === 'service-not-allowed' ||
-            event.error === 'permission-denied'
-          ) {
-            setPermissionStatus('denied')
-            setErrorMessage(
-              'Permissão de microfone negada. Toque no ícone de cadeado/configurações ao lado do link no navegador e libere o Microfone para este site.',
-            )
-          } else if (event.error === 'no-speech') {
-            setErrorMessage(
-              'Não consegui te ouvir. Toque no microfone novamente e fale um pouco mais perto.',
-            )
-          } else if (event.error === 'network') {
-            setErrorMessage(
-              'Problema de conexão com o serviço de voz. Verifique sua internet e tente novamente.',
-            )
-          } else if (event.error === 'audio-capture') {
-            setErrorMessage('Nenhum microfone encontrado ou o áudio do aparelho está bloqueado.')
-          } else {
-            setErrorMessage(
-              'Não consegui entender com clareza. Toque no microfone e tente falar novamente.',
-            )
-          }
-        }
-
-        recognition.onend = () => {
-          // Preserva todo o texto acumulado até o momento sem perder nada
-          if (latestTranscriptRef.current.trim()) {
-            finalBufferRef.current = latestTranscriptRef.current.trim()
-          }
-
-          // Invariante absoluto: em NENHUM dos caminhos a gravação encerra sem ação do usuário.
-          // Neutraliza o corte automático de ~3s do SpeechRecognition reiniciando a sessão
-          // e mantendo o buffer acumulado intacto.
-          if (!userRequestedStopRef.current && !hadErrorRef.current) {
-            console.log(
-              '[AudioCapture] Web Speech onend disparado antes do toque em Parar: reconectando gravação com texto preservado...',
-            )
-            try {
-              recognition.start()
-              return
-            } catch (reconnectErr) {
-              console.warn(
-                '[AudioCapture] Falha ao reconectar Web Speech com mesma instância, tentando recriar:',
-                reconnectErr,
-              )
-              try {
-                const freshRecognition = new SpeechRecognition()
-                freshRecognition.lang = 'pt-BR'
-                freshRecognition.continuous = true
-                freshRecognition.interimResults = true
-                freshRecognition.maxAlternatives = 1
-                freshRecognition.onstart = recognition.onstart
-                freshRecognition.onaudiostart = recognition.onaudiostart
-                freshRecognition.onspeechstart = recognition.onspeechstart
-                freshRecognition.onresult = recognition.onresult
-                freshRecognition.onerror = recognition.onerror
-                freshRecognition.onend = recognition.onend
-                recognitionRef.current = freshRecognition
-                freshRecognition.start()
-                return
-              } catch (freshErr) {
-                console.warn('[AudioCapture] Falha ao criar fresh recognition:', freshErr)
-              }
-            }
-          }
-
-          if (recordingTimerRef.current) {
-            clearInterval(recordingTimerRef.current)
-            recordingTimerRef.current = null
-          }
-          recognitionRef.current = null
-          setIsListening(false)
-          setAudioDetected(false)
-        }
-
-        recognitionRef.current = recognition
-        recognition.start()
-        setIsListening(true)
-      } catch (err: any) {
-        console.warn('Erro síncrono ao iniciar SpeechRecognition fallback:', err)
-        if (recordingTimerRef.current) {
-          clearInterval(recordingTimerRef.current)
-          recordingTimerRef.current = null
-        }
-        setIsListening(false)
-        setAudioDetected(false)
-        setIsListeningForAmountOnly(false)
-        isListeningForAmountOnlyRef.current = false
-        setErrorMessage(
-          'Não foi possível ativar o microfone. Você pode digitar abaixo e enviar com o Copilot.',
-        )
-      }
+      setTextoFalado('')
+      startListening()
     },
-    [cleanupAudioAnalyser, toast],
+    [startListening],
   )
 
   // Cancelar gravação sem enviar nada para processamento
   const handleCancelRecording = useCallback(() => {
-    userRequestedStopRef.current = true
-    stopListening()
-    audioChunksRef.current = []
-    latestTranscriptRef.current = ''
-    finalBufferRef.current = ''
+    cancelVoiceCapture()
     setTextoFalado('')
-    setIsTranscribingAudio(false)
-    isTranscribingAudioRef.current = false
-  }, [stopListening])
+    setIsListeningForAmountOnly(false)
+    isListeningForAmountOnlyRef.current = false
+  }, [cancelVoiceCapture])
 
   // Parar gravação e transcrever áudio gravado (ou usar texto capturado via Web Speech)
-  // Coloca o texto transcrito NO CAMPO DE TEXTO para o usuário conferir/editar antes de enviar
   const handleStopRecordingAndProcess = useCallback(async () => {
-    userRequestedStopRef.current = true
-    const recorder = mediaRecorderRef.current
-    const isUsingMediaRecorder = recorder && recorder.state !== 'inactive'
-
-    // Se estiver usando MediaRecorder, interrompe e aguarda blob consolidado
-    if (isUsingMediaRecorder) {
-      setIsTranscribingAudio(true)
-      isTranscribingAudioRef.current = true
-
-      try {
-        await new Promise<void>((resolve) => {
-          if (!recorder) {
-            resolve()
-            return
-          }
-          recorder.onstop = () => {
-            resolve()
-          }
-          recorder.stop()
-        })
-      } catch {
-        // silenciar
-      }
-
-      stopListening()
-
-      const chunks = audioChunksRef.current
-      const mime = recorder?.mimeType || 'audio/webm'
-      const audioBlob = new Blob(chunks, { type: mime })
-      audioChunksRef.current = []
-
-      if (!audioBlob || audioBlob.size === 0) {
-        setIsTranscribingAudio(false)
-        isTranscribingAudioRef.current = false
-        setErrorMessage('Nenhum áudio foi capturado. Fale algo ou digite abaixo.')
-        return
-      }
-
-      // Transcreve via Edge Function voice-transcribe (OpenAI Whisper)
-      try {
-        const transcribeRes = await transcribeVoiceAudio(audioBlob)
-
-        setIsTranscribingAudio(false)
-        isTranscribingAudioRef.current = false
-
-        if (transcribeRes.error || !transcribeRes.text) {
-          const errDetail =
-            transcribeRes.error ||
-            'Não foi possível transcrever sua fala. Digite ou tente novamente.'
-          setErrorMessage(errDetail)
-          toast({
-            variant: 'destructive',
-            title: 'Erro na transcrição',
-            description: errDetail,
-          })
-          return
-        }
-
-        const recognizedText = transcribeRes.text.trim()
-        // Transcrição pronta: preenche o campo de texto para confirmação/edição do usuário
-        setInputVal(recognizedText)
-        setTextoFalado(recognizedText)
-        toast({
-          title: 'Áudio transcrito!',
-          description: 'Confira sua mensagem abaixo e toque em Enviar para o Copilot.',
-        })
-      } catch (err: any) {
-        setIsTranscribingAudio(false)
-        isTranscribingAudioRef.current = false
-        console.warn('Erro ao chamar transcribeVoiceAudio:', err)
-        setErrorMessage('Falha ao se comunicar com o serviço de transcrição. Digite abaixo.')
-      }
-
-      return
+    const text = await stopListeningAndProcess()
+    if (text) {
+      setInputVal(text)
+      setTextoFalado(text)
     }
-
-    // Fallback Web Speech
-    const captured = latestTranscriptRef.current.trim() || textoFalado.trim()
-    stopListening()
-    if (captured) {
-      setInputVal(captured)
-      setTextoFalado(captured)
-      toast({
-        title: 'Fala reconhecida!',
-        description: 'Confira sua mensagem abaixo e toque em Enviar.',
-      })
-    } else {
-      setErrorMessage('Nenhuma fala foi capturada. Fale algo ou digite abaixo.')
-    }
-  }, [stopListening, textoFalado, toast])
+  }, [stopListeningAndProcess])
 
   const handleAllowAiConsent = useCallback(() => {
     setAiConsent(true)
@@ -1714,19 +1186,15 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       setInputVal('')
       setTextoFalado('')
       latestTranscriptRef.current = ''
-      finalBufferRef.current = ''
       setPendingTransaction(null)
       pendingTransactionRef.current = null
       setLastCreatedTransactionId(null)
       lastCreatedTransactionIdRef.current = null
-      setErrorMessage(null)
+      clearError()
       setIsListeningForAmountOnly(false)
       isListeningForAmountOnlyRef.current = false
-      hadErrorRef.current = false
-      setAudioDetected(false)
       setIsProcessingAi(false)
       setSelectedMemberId(currentMember?.id || members[0]?.id || '')
-      setPermissionStatus('idle')
 
       if (!localConsented) {
         setShowConsentPrompt(true)
@@ -1737,7 +1205,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
     } else {
       stopListening()
       setShowConsentPrompt(false)
-      setPermissionStatus('idle')
       setIsProcessingAi(false)
       setIsListeningForAmountOnly(false)
       setPendingTransaction(null)
@@ -2632,12 +2099,44 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             </div>
           </div>
 
+          {/* Banner transitório de escuta contínua (ex: no-speech) */}
+          {infoMessage && (
+            <div
+              data-testid="alert-audio-info"
+              className="mt-2 text-xs px-3 py-2 rounded-2xl border border-amber-200 bg-amber-50/95 text-amber-900 flex items-center gap-2 text-left animate-in fade-in max-w-full"
+            >
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+              </span>
+              <p className="text-[11px] leading-tight font-medium text-amber-800">{infoMessage}</p>
+            </div>
+          )}
+
+          {/* FIX 3: Banner de ativação de áudio caso o AudioContext esteja suspenso */}
+          {needsAudioResume && (
+            <button
+              type="button"
+              data-testid="banner-audio-resume"
+              onClick={resumeAudioContextOnTouch}
+              className="mt-2 w-full text-xs px-3 py-2 rounded-2xl border border-sky-300 bg-sky-50 text-sky-950 flex items-center justify-between gap-2 text-left cursor-pointer hover:bg-sky-100/80 transition-colors animate-in fade-in"
+            >
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Volume2 className="w-4 h-4 text-sky-600 shrink-0" />
+                <span className="text-[11px] font-semibold truncate">
+                  Toque na tela para ativar o áudio
+                </span>
+              </div>
+              <span className="text-[10px] uppercase font-bold text-sky-700 shrink-0">Ativar</span>
+            </button>
+          )}
+
           {/* Alerta de erro com botão Tentar de novo */}
           {errorMessage && (
             <div
               role="alert"
               data-testid="alert-ai-error"
-              className="mt-2 text-xs px-3 py-2 rounded-2xl border border-rose-200 bg-rose-50/90 text-rose-900 flex items-center justify-between gap-2 text-left animate-in fade-in"
+              className="mt-2 text-xs px-3 py-2 rounded-2xl border border-rose-200 bg-rose-50/90 text-rose-900 flex items-center justify-between gap-2 text-left animate-in fade-in max-w-full"
             >
               <div className="flex items-start gap-1.5 min-w-0">
                 <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
@@ -2648,8 +2147,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  setErrorMessage(null)
-                  startRecording()
+                  clearError()
+                  retryListening()
                 }}
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white border border-rose-300 hover:bg-rose-100/70 text-rose-900 text-[11px] font-semibold shrink-0 cursor-pointer transition-colors shadow-2xs"
               >

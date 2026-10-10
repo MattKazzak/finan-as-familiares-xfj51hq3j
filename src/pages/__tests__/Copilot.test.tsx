@@ -76,7 +76,7 @@ describe('CopilotPage', () => {
 
     render(<CopilotPage />)
 
-    const input = screen.getByPlaceholderText(/Converse com o Curiangoo ou lance por voz.../i)
+    const input = screen.getByPlaceholderText(/Pergunte algo ou lance um gasto.../i)
     fireEvent.change(input, { target: { value: 'Comprei café por 12 reais' } })
     fireEvent.click(screen.getByRole('button', { name: /Enviar mensagem/i }))
 
@@ -129,7 +129,7 @@ describe('CopilotPage', () => {
 
     render(<CopilotPage />)
 
-    const input = screen.getByPlaceholderText(/Converse com o Curiangoo ou lance por voz.../i)
+    const input = screen.getByPlaceholderText(/Pergunte algo ou lance um gasto.../i)
     fireEvent.change(input, { target: { value: 'uber mercado 32 reais' } })
     fireEvent.click(screen.getByRole('button', { name: /Enviar mensagem/i }))
 

@@ -14,6 +14,8 @@ import {
   HelpCircle,
   TrendingDown,
   TrendingUp,
+  Square,
+  X,
 } from 'lucide-react'
 import { useFamily } from '@/hooks/use-family'
 import { CopilotTypingBubble } from '@/components/brand/CopilotTypingBubble'
@@ -31,6 +33,7 @@ import { BUCKET_METADATA } from '@/types/budget-presets'
 import { formatBRL } from '@/lib/formatters'
 import type { BudgetBucket } from '@/types/finance'
 import type { ParsedVoiceTransaction, StructuredSuggestionOption } from '@/services/voice-parser'
+import { useVoiceCapture } from '@/hooks/use-voice-capture'
 
 export interface CopilotChatMessage {
   id: string
@@ -49,13 +52,51 @@ export function CopilotPage() {
   const [messages, setMessages] = useState<CopilotChatMessage[]>([])
   const [inputText, setInputText] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
-  const [isListening, setIsListening] = useState(false)
   const [hasConsent, setHasConsent] = useState<boolean>(getLocalAiConsent())
   const [showConsentModal, setShowConsentModal] = useState(false)
   const [pendingTx, setPendingTx] = useState<ParsedVoiceTransaction | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
-  const recognitionRef = useRef<any>(null)
+
+  // Cadeia unificada de voz via useVoiceCapture (MediaRecorder padrão + Whisper + fallback Web Speech)
+  const voiceCapture = useVoiceCapture({
+    onTranscriptReady: (transcript) => {
+      // Na /copilot, a transcrição entra diretamente na caixa de mensagem para o usuário revisar e enviar
+      setInputText(transcript)
+      toast({
+        title: 'Áudio transcrito!',
+        description: 'Texto inserido no campo de mensagem.',
+      })
+    },
+    onError: (err) => {
+      console.warn('[CopilotPage] voiceCapture erro:', err)
+    },
+  })
+
+  const {
+    isListening,
+    isTranscribing,
+    audioCaptureMode,
+    errorMessage: voiceErrorMessage,
+    infoMessage: voiceInfoMessage,
+    needsAudioResume,
+    realAudioLevels,
+    elapsedSeconds: voiceElapsedSeconds,
+    interimTranscript,
+    startListening,
+    stopListeningAndProcess,
+    cancelListening,
+    retryListening,
+    clearError: clearVoiceError,
+    resumeAudioContextOnTouch,
+  } = voiceCapture
+
+  // Sincroniza transcrição intermediária em tempo real no input
+  useEffect(() => {
+    if (interimTranscript) {
+      setInputText(interimTranscript)
+    }
+  }, [interimTranscript])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -305,54 +346,23 @@ export function CopilotPage() {
     }
   }
 
-  // Microfone nativo Web Speech
-  const toggleListening = () => {
+  // Controle de microfone unificado via useVoiceCapture
+  const handleToggleListening = useCallback(async () => {
     if (isListening) {
-      recognitionRef.current?.stop()
-      setIsListening(false)
+      const text = await stopListeningAndProcess()
+      if (text) {
+        setInputText(text)
+      }
       return
     }
 
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-
-    if (!SpeechRecognition) {
-      toast({
-        title: 'Microfone não suportado',
-        description: 'Seu navegador não suporta captura por voz. Digite no campo abaixo.',
-        variant: 'destructive',
-      })
+    if (!hasConsent && !getLocalAiConsent()) {
+      setShowConsentModal(true)
       return
     }
 
-    try {
-      const recognition = new SpeechRecognition()
-      recognition.lang = 'pt-BR'
-      recognition.continuous = false
-      recognition.interimResults = false
-
-      recognition.onstart = () => {
-        setIsListening(true)
-      }
-      recognition.onresult = (e: any) => {
-        const text = e.results?.[0]?.[0]?.transcript || ''
-        if (text) {
-          processInput(text)
-        }
-      }
-      recognition.onerror = () => {
-        setIsListening(false)
-      }
-      recognition.onend = () => {
-        setIsListening(false)
-      }
-
-      recognitionRef.current = recognition
-      recognition.start()
-    } catch {
-      setIsListening(false)
-    }
-  }
+    startListening()
+  }, [hasConsent, isListening, startListening, stopListeningAndProcess])
 
   return (
     <div className="flex flex-col h-[calc(100vh-5rem)] md:h-[calc(100vh-6rem)] max-w-2xl mx-auto bg-white/70 backdrop-blur-sm rounded-3xl border border-border/40 shadow-curiango overflow-hidden relative">
@@ -484,45 +494,208 @@ export function CopilotPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Barra de Entrada (Texto + Botão de Voz) */}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          processInput(inputText)
-        }}
-        className="p-3 bg-white border-t border-border/40 flex items-center gap-2"
-      >
-        <button
-          type="button"
-          onClick={toggleListening}
-          aria-label={isListening ? 'Parar microfone' : 'Falar comando por voz'}
-          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer shrink-0 ${
-            isListening
-              ? 'bg-finance-expense text-white animate-pulse'
-              : 'bg-slate-100 text-slate-700 hover:bg-brand-amber/20 hover:text-brand'
-          }`}
-        >
-          <Mic className="w-4 h-4" strokeWidth={1.5} />
-        </button>
+      {/* Rodapé e Barra de Entrada (Texto + Microfone Unificado CDS v1.0) */}
+      <div className="p-3 bg-white border-t border-border/40 space-y-2">
+        {/* Banner transitório de escuta contínua (ex: no-speech) */}
+        {voiceInfoMessage && (
+          <div
+            data-testid="copilot-audio-info"
+            className="text-xs px-3 py-1.5 rounded-xl border border-amber-200 bg-amber-50/95 text-amber-900 flex items-center gap-2 text-left animate-in fade-in"
+          >
+            <span className="relative flex h-2 w-2 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+            </span>
+            <p className="text-[11px] leading-tight font-medium text-amber-800">
+              {voiceInfoMessage}
+            </p>
+          </div>
+        )}
 
-        <input
-          type="text"
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          placeholder="Pergunte algo ou lance um gasto..."
-          disabled={isProcessing}
-          className="flex-1 bg-slate-50 border border-border/60 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-slate-800 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-amber min-w-0"
-        />
+        {/* FIX 3: Banner de ativação de áudio caso o AudioContext esteja suspenso */}
+        {needsAudioResume && (
+          <button
+            type="button"
+            data-testid="banner-audio-resume"
+            onClick={resumeAudioContextOnTouch}
+            className="w-full text-xs px-3 py-1.5 rounded-xl border border-sky-300 bg-sky-50 text-sky-950 flex items-center justify-between gap-2 text-left cursor-pointer hover:bg-sky-100 transition-colors animate-in fade-in"
+          >
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Volume2 className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+              <span className="text-[11px] font-semibold truncate">
+                Toque na tela para ativar o áudio
+              </span>
+            </div>
+            <span className="text-[10px] uppercase font-bold text-sky-700 shrink-0">Ativar</span>
+          </button>
+        )}
 
-        <button
-          type="submit"
-          disabled={!inputText.trim() || isProcessing}
-          aria-label="Enviar mensagem"
-          className="w-10 h-10 rounded-xl bg-brand text-white hover:bg-brand-light disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all cursor-pointer shrink-0"
-        >
-          <Send className="w-4 h-4" strokeWidth={1.5} />
-        </button>
-      </form>
+        {/* Alerta de erro de áudio com botão Tentar de novo */}
+        {voiceErrorMessage && (
+          <div
+            role="alert"
+            data-testid="copilot-audio-error"
+            className="text-xs px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50/90 text-rose-900 flex items-center justify-between gap-2 text-left animate-in fade-in"
+          >
+            <div className="flex items-start gap-1.5 min-w-0">
+              <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+              <p className="text-[11px] leading-tight font-medium break-words text-rose-800">
+                {voiceErrorMessage}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                clearVoiceError()
+                retryListening()
+              }}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border border-rose-300 hover:bg-rose-100/70 text-rose-900 text-[10px] font-semibold shrink-0 cursor-pointer transition-colors shadow-2xs"
+            >
+              <RotateCcw className="w-2.5 h-2.5 text-rose-600" />
+              <span>Tentar de novo</span>
+            </button>
+          </div>
+        )}
+
+        {/* Status de gravação: Badge de modo ("Captação estável" esmeralda / "Captação do navegador" âmbar) + Waveform */}
+        {(isListening || isTranscribing) && (
+          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-amber-500/15 border border-[#FCA311]/50 shadow-xs text-xs animate-in fade-in">
+            <div className="flex items-center gap-2 min-w-0">
+              {isListening ? (
+                <>
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FCA311] opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#E08E08]" />
+                  </span>
+                  <span className="text-[#14213D] font-bold text-[11px] truncate">
+                    Ouvindo... fale naturalmente
+                  </span>
+                  {/* Badge de modo de captação CDS */}
+                  <span
+                    data-testid="audio-capture-mode-badge"
+                    data-mode={audioCaptureMode || 'media_recorder'}
+                    className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-semibold tracking-wide shrink-0 ${
+                      audioCaptureMode === 'web_speech'
+                        ? 'bg-amber-100 text-amber-800 border border-amber-300/80'
+                        : 'bg-emerald-100 text-emerald-800 border border-emerald-300/80'
+                    }`}
+                  >
+                    {audioCaptureMode === 'web_speech'
+                      ? 'Captação do navegador'
+                      : 'Captação estável'}
+                  </span>
+                </>
+              ) : (
+                <span className="text-[#14213D] font-medium text-[11px] flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#FCA311] animate-pulse" />
+                  Transcrevendo áudio...
+                </span>
+              )}
+            </div>
+
+            {isListening && (
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Waveform REAL de 5 bandas */}
+                <div
+                  data-testid="copilot-waveform"
+                  className="flex items-center gap-1 h-4 px-1.5 py-0.5 rounded-full bg-[#14213D] border border-[#FCA311]/60 shadow-xs"
+                  aria-label="Gravando áudio"
+                >
+                  {realAudioLevels.map((lvl, bIdx) => {
+                    const barHeightPx = Math.max(3, Math.round(lvl * 14))
+                    return (
+                      <span
+                        key={bIdx}
+                        className="w-0.5 bg-[#FCA311] rounded-full transition-all duration-75"
+                        style={{ height: `${barHeightPx}px` }}
+                      />
+                    )
+                  })}
+                </div>
+
+                <span
+                  data-testid="copilot-elapsed-time"
+                  className="font-mono text-[10px] font-bold text-white px-1.5 py-0.5 rounded-md bg-[#14213D] border border-[#FCA311]/40"
+                >
+                  {Math.floor(voiceElapsedSeconds / 60)
+                    .toString()
+                    .padStart(2, '0')}
+                  :{(voiceElapsedSeconds % 60).toString().padStart(2, '0')}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Linha de Ação: Se estiver ouvindo, botões dedicados de Parar e Cancelar; senão formulário normal */}
+        {isListening ? (
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={cancelListening}
+              className="min-h-[44px] min-w-[44px] px-3.5 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-300/80 text-[#64748B] hover:text-[#14213D] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-curiango active:scale-95"
+              aria-label="Cancelar gravação"
+            >
+              <X className="w-4 h-4 text-[#64748B]" />
+              <span>Cancelar</span>
+            </button>
+
+            {/* Centro: Indicador pulsante */}
+            <div className="relative flex items-center justify-center">
+              <span className="absolute -inset-1.5 rounded-full bg-[#FCA311]/30 animate-ping pointer-events-none" />
+              <div className="relative w-11 h-11 rounded-full bg-[#14213D] text-white border-2 border-[#FCA311] flex items-center justify-center shadow-curiango">
+                <Mic className="w-4 h-4 text-[#FCA311]" />
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleToggleListening}
+              className="min-h-[44px] min-w-[44px] px-4 py-2 rounded-2xl bg-[#14213D] hover:bg-[#14213D]/90 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-curiango active:scale-95 border border-[#FCA311]/40"
+              aria-label="Parar gravação e transcrever"
+            >
+              <Square className="w-3.5 h-3.5 fill-[#FCA311] text-[#FCA311]" />
+              <span>Concluir</span>
+            </button>
+          </div>
+        ) : (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              processInput(inputText)
+            }}
+            className="flex items-center gap-2"
+          >
+            <button
+              type="button"
+              onClick={handleToggleListening}
+              aria-label="Falar comando por voz"
+              disabled={isProcessing || isTranscribing}
+              className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 hover:bg-brand-amber/20 hover:text-brand flex items-center justify-center transition-all cursor-pointer shrink-0 disabled:opacity-40"
+            >
+              <Mic className="w-4 h-4" strokeWidth={1.5} />
+            </button>
+
+            <input
+              type="text"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              placeholder="Pergunte algo ou lance um gasto..."
+              disabled={isProcessing || isTranscribing}
+              className="flex-1 bg-slate-50 border border-border/60 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-slate-800 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-amber min-w-0"
+            />
+
+            <button
+              type="submit"
+              disabled={!inputText.trim() || isProcessing || isTranscribing}
+              aria-label="Enviar mensagem"
+              className="w-10 h-10 rounded-xl bg-brand text-white hover:bg-brand-light disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all cursor-pointer shrink-0"
+            >
+              <Send className="w-4 h-4" strokeWidth={1.5} />
+            </button>
+          </form>
+        )}
+      </div>
 
       {/* Modal / Overlay de Consentimento LGPD (IA) - mesmo padrão de diálogo da Rodada 7 */}
       {showConsentModal && (
