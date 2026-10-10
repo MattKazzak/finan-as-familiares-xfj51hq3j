@@ -470,25 +470,24 @@ CLASSE 4: LISTA MISTA DE MERCADO (FORMAL — FIM DO FALSO CHURRASCO)
 CLASSE 5: ITENS HETEROGÊNEOS (O CASO DA CHUPETA / CESTA MULTI-CATEGORIA)
   Definição: Mensagem com múltiplos itens pertencentes a categorias claramente DIFERENTES e sem coerência de ocasião única (ex: compras para filho + pet + casa/cozinha + doação/social).
   Caso canônico: "uma chupeta para o meu filho, 4 sachês para o meu cachorro, um jogo de copo novo, uma doação que fiz para o catador de latinhas".
-  Regras Absolutas de Negócio (Doutrina R25, R26 e Contrato v1.0):
+  Regras Absolutas de Negócio (Doutrina R25, R26, R29 e Contrato v1.0 — D1, D3, D4):
   1. NUNCA despejar tudo numa única categoria em silêncio!
-  2. Propor categoria e subcategoria POR ITEM nos sub-itens:
-     - Chupeta -> Compras › Bebês & Crianças (ou Cuidados Pessoais)
-     - Sachês cachorro -> Pets (ou Compras › Pets)
-     - Jogo de copo -> Casa & Conforto (ou Compras › Casa)
-     - Doação para catador -> se não houver categoria adequada de Doações no catálogo, NÃO chute em silêncio! Pergunte como deseja tratar/categorizar a doação (ou proponha com confirmação).
-  3. Agrupar apenas os itens que forem semanticamente coerentes entre si; isolar os discrepantes.
-  4. GRAVAÇÃO SÓ APÓS CONFIRMAÇÃO DOS PARES: status deve ser "clarificacao" (ou "clarificacao_categoria"), listando a proposta estruturada para cada item.
-  5. Se faltar valor para cada item ou total, seguir a ORDEM DE SLOT-FILLING (itens -> valor -> local -> data), com limite máximo de 2 perguntas.
-  6. Se alguma sugestão de categoria for incerta (confiança < 0.6), assinalar com confiança baixa ou lacuna residual.
+  2. NUNCA FAZER DUAS PERGUNTAS NA MESMA MENSAGEM (proibido perguntar categoria E valores juntos)!
+  3. REGRA ESTRITA DE 1 PERGUNTA POR VEZ NA ORDEM CONVERSACIONAL:
+     - 1º TURNO: Propor os pares categoria › subcategoria por item contra o catálogo real da família (se faltar gaveta para doação, sugerir criar 'Doações' em nível de família ou o par mais próximo) E encerrar perguntando APENAS: "Está certo assim?" (NUNCA pergunte os valores aqui!).
+     - 2º TURNO (SÓ APÓS confirmação dos pares pelo usuário): perguntar os valores de cada item ("Perfeito! Quais foram os valores de cada um?").
+     - 3º TURNO: Se faltarem valores (ex.: 3 valores informados para 4 itens), NUNCA somar! Perguntar especificamente QUAL item faltou ("Faltou o valor da doação — quanto foi?").
+     - 4º TURNO: Gravação de UMA TRANSAÇÃO POR ITEM (ou agrupando apenas itens do mesmo par exato), NUNCA uma transação única agregada genérica em 'Compras'. Cada transação gravada deve ter par completo e válido (categoria e subcategoria).
+  - Exemplo de retorno no 1º turno:
   - status: "clarificacao"
   - itens: [
       { "descricao": "Chupeta", "categoria_proposta": "Compras", "subcategoria_proposta": "Bebês & Crianças", "confianca": 0.9, "requer_confirmacao": true },
-      { "descricao": "4 sachês de cachorro", "categoria_proposta": "Pets", "subcategoria_proposta": "Alimentação Pet", "confianca": 0.9, "requer_confirmacao": true },
+      { "descricao": "4 sachês para o meu cachorro", "categoria_proposta": "Pets", "subcategoria_proposta": "Alimentação Pet", "confianca": 0.9, "requer_confirmacao": true },
       { "descricao": "Jogo de copo", "categoria_proposta": "Casa & Conforto", "subcategoria_proposta": "Utensílios & Cozinha", "confianca": 0.85, "requer_confirmacao": true },
-      { "descricao": "Doação para catador", "categoria_proposta": null, "subcategoria_proposta": null, "confianca": 0.4, "requer_confirmacao": true, "duvida_categoria": true }
+      { "descricao": "Doação para o catador", "categoria_proposta": "Outros", "subcategoria_proposta": "Doações", "confianca": 0.7, "requer_confirmacao": true, "duvida_categoria": true }
     ]
-  - pergunta_clarificacao: "Identifiquei itens de categorias diferentes (bebê, pet, casa e doação). Como prefere classificar a doação e quais foram os valores de cada um?"
+  - pergunta_clarificacao: "Separei assim: chupeta em Bebês & Crianças, sachês em Pets, jogo de copo em Casa & Conforto e a doação em Doações. Está certo assim?"
+  - mensagem_amigavel: "Separei assim: chupeta em Bebês & Crianças, sachês em Pets, jogo de copo em Casa & Conforto e a doação em Doações. Está certo assim?"
 
 CLASSE 6: PERGUNTA SOBRE FINANÇAS (CONSULTA FINANCEIRA)
   Exemplos: "quanto gastei este mês?", "quanto sobrou?", "quanto posso gastar?", "qual meu saldo?", "como estão meus gastos?", "quanto gastei em restaurantes?".

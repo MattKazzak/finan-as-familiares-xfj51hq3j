@@ -515,6 +515,64 @@ export function extractAmountFromVoiceText(text: string): {
 }
 
 /**
+ * Extrai TODOS os valores monetários encontrados no texto.
+ * Essencial para validar cardinalidade de respostas multi-item (D3):
+ * se o usuário informar 3 valores para 4 itens ("27, 19 e 100"),
+ * podemos saber que faltou 1 valor e NUNCA somar parciais.
+ */
+export function extractAllAmountsFromVoiceText(text: string): Array<{
+  amountCents: number
+  matchedText: string
+}> {
+  const normalized = text.trim()
+  if (!normalized) return []
+
+  const results: Array<{ amountCents: number; matchedText: string; index: number }> = []
+
+  // Regex de dígitos (ex: 27, 19, 100, 25.50, R$ 50)
+  const digitRegex =
+    /(?:r\$\s*)?(\d+)(?:[,.](\d{1,2}))?(?:\s*(?:reais|real))?(?:\s*e\s*(\d{1,2})\s*centavos?)?/gi
+
+  let dMatch: RegExpExecArray | null
+  while ((dMatch = digitRegex.exec(normalized)) !== null) {
+    const fullMatch = dMatch[0].trim()
+    if (!fullMatch || !dMatch[1]) continue
+
+    const whole = parseInt(dMatch[1], 10)
+    let cents = 0
+    if (dMatch[2]) {
+      let centsPart = dMatch[2]
+      if (centsPart.length === 1) centsPart += '0'
+      cents = parseInt(centsPart.slice(0, 2), 10)
+    } else if (dMatch[3]) {
+      cents = parseInt(dMatch[3], 10)
+    }
+
+    const amountCents = whole * 100 + cents
+    if (amountCents > 0) {
+      results.push({
+        amountCents,
+        matchedText: fullMatch,
+        index: dMatch.index,
+      })
+    }
+  }
+
+  // Se já encontrou múltiplos por dígitos, retorna
+  if (results.length > 0) {
+    return results.map((r) => ({ amountCents: r.amountCents, matchedText: r.matchedText }))
+  }
+
+  // Fallback para único valor via extractAmountFromVoiceText
+  const single = extractAmountFromVoiceText(normalized)
+  if (single.amountCents > 0) {
+    return [{ amountCents: single.amountCents, matchedText: single.matchedText }]
+  }
+
+  return []
+}
+
+/**
  * Detecta método de pagamento a partir do texto
  */
 export function extractPaymentMethod(text: string): {
@@ -1781,9 +1839,11 @@ export function parseVoiceInput(
     })
 
     const hasDonationItem = proposedItems.some((pi) => pi.duvida_categoria)
+    // D1: Ordem conversacional estrita — 1 pergunta por vez:
+    // 1º turno: propor os pares e perguntar "Está certo assim?" (NUNCA perguntar valores junto!)
     const questionText = hasDonationItem
-      ? 'Identifiquei itens de categorias diferentes (bebê, pet, casa e doação). Como prefere classificar a doação e quais foram os valores de cada um?'
-      : 'Identifiquei itens de categorias diferentes. Como prefere organizar as categorias e valores de cada um?'
+      ? 'Separei assim: chupeta em Bebês & Crianças, sachês em Pets, jogo de copo em Utensílios & Cozinha e a doação em Doações. Está certo assim?'
+      : 'Separei os itens por categoria. Está certo assim?'
 
     return {
       rawText,

@@ -30,6 +30,7 @@ import { CategoryHighlightChip } from '@/components/categories/CategoryHighlight
 import {
   ParsedVoiceTransaction,
   StructuredSuggestionOption,
+  extractAllAmountsFromVoiceText,
   isCategorySubcategoryPairValid,
   suggestCategoryAndBucket,
 } from '@/services/voice-parser'
@@ -524,6 +525,57 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           }
         }
 
+        // D1 & D4: Confirmação de pares da Classe 5 (ex: "está certo", "isso", "sim", "está certo assim", "pode ser")
+        const isClass5Confirmation =
+          Boolean(existingPartial) &&
+          existingPartial?.routerClasse === 5 &&
+          Array.isArray(existingPartial?.extractedItems) &&
+          existingPartial.extractedItems.length >= 2 &&
+          /^(sim|est[aá] certo|est[aá] certo assim|isso|perfeito|pode ser|confirmo|beleza|fechado|pode gravar)\b/i.test(
+            textToProcess.replace(/[.!?]/g, '').trim(),
+          )
+
+        if (isClass5Confirmation && existingPartial) {
+          // Usuário confirmou os pares propostos! Agora avança para o 2º turno: perguntar os valores
+          const askValuesMsg = 'Perfeito! Quais foram os valores de cada um?'
+
+          const updatedWithConfirmedPairs: ParsedVoiceTransaction = {
+            ...existingPartial,
+            aiStatus: 'falta_valor',
+            clarificationQuestion: askValuesMsg,
+            friendlyMessage: askValuesMsg,
+          }
+
+          setPendingTransaction(updatedWithConfirmedPairs)
+          pendingTransactionRef.current = updatedWithConfirmedPairs
+
+          if (family?.id) {
+            saveCopilotMessage({
+              familyId: family.id,
+              role: 'assistant',
+              content: askValuesMsg,
+              cardType: 'falta_valor',
+            }).catch(() => {})
+          }
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `assistant-${Date.now()}`,
+              sender: 'assistant',
+              text: askValuesMsg,
+              timestamp: new Date(),
+              cardData: updatedWithConfirmedPairs,
+              cardType: 'falta_valor',
+            },
+          ])
+
+          setTimeout(() => {
+            startRecording({ forAmountOnly: true })
+          }, 400)
+          return
+        }
+
         // T3: Confirmação do usuário para criar subcategoria ou categoria sugerida
         // Ex: Usuário disse "sim", "pode criar", "cria aí", "confirmo" durante pendência com sugestão de gaveta/subcategoria
         const isCreateSubConfirmation =
@@ -545,9 +597,24 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             subToCreate = heuristic.subcategoryName || 'Tabaco & Cigarros'
           }
 
-          const targetCat = categories.find(
+          let targetCat = categories.find(
             (c) => c.name.toLowerCase() === existingPartial.categoryNameSuggestion?.toLowerCase(),
           )
+
+          // Se a categoria sugerida ainda não existir no catálogo da família (ex: "Outros"), cria antes
+          if (!targetCat && family?.id) {
+            try {
+              targetCat = await addNewCategory(
+                existingPartial.categoryNameSuggestion,
+                existingPartial.type || 'expense',
+                '#64748B',
+                'Tag',
+                existingPartial.bucketSuggestion || 'lifestyle',
+              )
+            } catch (catErr) {
+              console.warn('Erro ao auto-criar categoria pai no chat:', catErr)
+            }
+          }
 
           if (targetCat && subToCreate) {
             try {
@@ -661,6 +728,201 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
         // Caso 3: Segundo turno — usuário informou o valor após uma transação parcial pendente
         if (existingPartial && (isAmountOnly || existingPartial.aiStatus === 'falta_valor')) {
+          // D3 & D4: Verificação especial para Classe 5 (Itens Heterogêneos multi-item)
+          const isClass5Pending =
+            existingPartial.routerClasse === 5 &&
+            Array.isArray(existingPartial.extractedItems) &&
+            existingPartial.extractedItems.length >= 2
+
+          if (isClass5Pending) {
+            const pendingItems = existingPartial.extractedItems || []
+            // Extrai todos os valores do texto (ex: "27 chupeta, 19 sache, 100 copo")
+            const foundAmounts = extractAllAmountsFromVoiceText(textToProcess)
+
+            // Se o usuário estiver fornecendo o valor que faltava (ex: "a doação foi 50" ou "50" ou "faltou 50")
+            const isSingleMissingValue =
+              foundAmounts.length === 1 &&
+              pendingItems.some((it) => it.valor === null || it.valor === undefined)
+
+            if (isSingleMissingValue && pendingItems.filter((it) => it.valor).length >= 1) {
+              // Preenche o item restante que estava sem valor
+              const missingItem = pendingItems.find(
+                (it) => it.valor === null || it.valor === undefined,
+              )
+              if (missingItem) {
+                missingItem.valor = foundAmounts[0].amountCents / 100
+              }
+
+              // Se todos os itens agora têm valor, grava UMA transação POR ITEM!
+              const allHaveValues = pendingItems.every(
+                (it) => typeof it.valor === 'number' && it.valor > 0,
+              )
+              if (allHaveValues) {
+                const resultsSummary: string[] = []
+                for (const item of pendingItems) {
+                  const itemAmountCents = Math.round((item.valor || 0) * 100)
+                  const itemCat = item.categoria_proposta || 'Outros'
+                  const itemSub = item.subcategoria_proposta || 'Outros'
+                  const itemFormatted = (itemAmountCents / 100).toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                  })
+
+                  await executeAutonomousTransaction({
+                    rawText: `${item.descricao} ${itemAmountCents}`,
+                    amountCents: itemAmountCents,
+                    amountFormatted: itemFormatted,
+                    type: 'expense',
+                    description: item.descricao,
+                    categoryNameSuggestion: itemCat,
+                    subcategoryNameSuggestion: itemSub,
+                    bucketSuggestion: 'lifestyle',
+                    confidence: 0.95,
+                    aiStatus: 'sucesso',
+                  })
+
+                  resultsSummary.push(`${itemFormatted} em ${itemCat} › ${itemSub}`)
+                }
+
+                setPendingTransaction(null)
+                pendingTransactionRef.current = null
+
+                const finalSummaryMsg = `Lançamentos realizados com sucesso:\n${resultsSummary.map((s) => `• ${s}`).join('\n')} 👍!`
+
+                if (family?.id) {
+                  saveCopilotMessage({
+                    familyId: family.id,
+                    role: 'assistant',
+                    content: finalSummaryMsg,
+                    cardType: 'sucesso',
+                  }).catch(() => {})
+                }
+
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: `assistant-${Date.now()}`,
+                    sender: 'assistant',
+                    text: finalSummaryMsg,
+                    timestamp: new Date(),
+                    cardType: 'sucesso',
+                  },
+                ])
+                return
+              }
+            }
+
+            // D3: Validar cardinalidade! Se valoresInformados.length < itensPendentes.length:
+            // NUNCA somar! Perguntar qual faltou.
+            if (foundAmounts.length > 0 && foundAmounts.length < pendingItems.length) {
+              // Atribui os valores encontrados aos primeiros itens (ou pelo match do texto)
+              const updatedItems = pendingItems.map((it, idx) => {
+                if (idx < foundAmounts.length) {
+                  return { ...it, valor: foundAmounts[idx].amountCents / 100 }
+                }
+                return { ...it, valor: null }
+              })
+
+              const missingItem = updatedItems.find((it) => it.valor === null)
+              const rawDesc = (missingItem?.descricao || 'o item restante').toLowerCase()
+              const cleanDesc = rawDesc.replace(/^(um|uma|o|a)\s+/i, '')
+              const askMissingMsg = `Faltou o valor da ${cleanDesc} — quanto foi?`
+
+              const updatedPendingClasse5: ParsedVoiceTransaction = {
+                ...existingPartial,
+                extractedItems: updatedItems,
+                clarificationQuestion: askMissingMsg,
+                friendlyMessage: askMissingMsg,
+                aiStatus: 'falta_valor',
+              }
+
+              setPendingTransaction(updatedPendingClasse5)
+              pendingTransactionRef.current = updatedPendingClasse5
+
+              if (family?.id) {
+                saveCopilotMessage({
+                  familyId: family.id,
+                  role: 'assistant',
+                  content: askMissingMsg,
+                  cardType: 'falta_valor',
+                }).catch(() => {})
+              }
+
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: `assistant-${Date.now()}`,
+                  sender: 'assistant',
+                  text: askMissingMsg,
+                  timestamp: new Date(),
+                  cardData: updatedPendingClasse5,
+                  cardType: 'falta_valor',
+                },
+              ])
+
+              setTimeout(() => {
+                startRecording({ forAmountOnly: true })
+              }, 400)
+              return
+            }
+
+            // Se todos os valores foram informados de uma vez (foundAmounts.length >= pendingItems.length):
+            if (foundAmounts.length >= pendingItems.length) {
+              const resultsSummary: string[] = []
+              for (let i = 0; i < pendingItems.length; i++) {
+                const item = pendingItems[i]
+                const itemAmountCents = foundAmounts[i].amountCents
+                const itemCat = item.categoria_proposta || 'Outros'
+                const itemSub = item.subcategoria_proposta || 'Outros'
+                const itemFormatted = (itemAmountCents / 100).toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                })
+
+                await executeAutonomousTransaction({
+                  rawText: `${item.descricao} ${itemAmountCents}`,
+                  amountCents: itemAmountCents,
+                  amountFormatted: itemFormatted,
+                  type: 'expense',
+                  description: item.descricao,
+                  categoryNameSuggestion: itemCat,
+                  subcategoryNameSuggestion: itemSub,
+                  bucketSuggestion: 'lifestyle',
+                  confidence: 0.95,
+                  aiStatus: 'sucesso',
+                })
+
+                resultsSummary.push(`${itemFormatted} em ${itemCat} › ${itemSub}`)
+              }
+
+              setPendingTransaction(null)
+              pendingTransactionRef.current = null
+
+              const finalSummaryMsg = `Lançamentos realizados com sucesso:\n${resultsSummary.map((s) => `• ${s}`).join('\n')} 👍!`
+
+              if (family?.id) {
+                saveCopilotMessage({
+                  familyId: family.id,
+                  role: 'assistant',
+                  content: finalSummaryMsg,
+                  cardType: 'sucesso',
+                }).catch(() => {})
+              }
+
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: `assistant-${Date.now()}`,
+                  sender: 'assistant',
+                  text: finalSummaryMsg,
+                  timestamp: new Date(),
+                  cardType: 'sucesso',
+                },
+              ])
+              return
+            }
+          }
+
           if (parsed.amountCents > 0) {
             // CASO 1: Preserva a categoria, subcategoria e descrição identificadas no 1º turno!
             // Se parsed trouxer nova categoria ou fallback, mantém o item e categoria do existingPartial se existirem
@@ -802,6 +1064,88 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
               timestamp: new Date(),
               cardData: parsed,
               cardType: 'modo_cesta',
+            },
+          ])
+          return
+        }
+
+        // D2 — "O que você sugere?" / "O que você acha?" repetia a pendência sem sugerir:
+        // Detectar pedido de sugestão (/sugere|sugest[aã]o|o que voc[eê] acha|o que acha|qual você sugere/i)
+        // durante pendência, propor subcategoria CONCRETA (ex.: "Doações", criação no nível família)
+        // e lembrar a pendência na mesma resposta (doutrina R29).
+        const isAskingForSuggestion =
+          Boolean(existingPartial) &&
+          /(?:sugere|sugest[aã]o|o que voc[eê] acha|o que acha|qual voc[eê] sugere|qual acha|o que voc[eê] recomenda)/i.test(
+            textToProcess,
+          )
+
+        if (isAskingForSuggestion && existingPartial) {
+          // Localizar subcategoria concreta sugerida
+          const pendingDesc = existingPartial.description || ''
+          const isDonationRelated = /doa[cç][aã]o|catador|esmola|social/i.test(
+            pendingDesc + ' ' + (existingPartial.rawText || ''),
+          )
+
+          let concreteSub = 'Doações'
+          let concreteCat = 'Outros'
+          let concreteBucket: BudgetBucket = 'lifestyle'
+
+          if (isDonationRelated) {
+            concreteSub = 'Doações'
+            concreteCat = 'Outros'
+            concreteBucket = 'lifestyle'
+          } else {
+            const heuristic = suggestCategoryAndBucket(pendingDesc, categories)
+            concreteSub = heuristic.subcategoryName || 'Outros'
+            concreteCat = heuristic.categoryName || 'Compras'
+            concreteBucket = heuristic.bucket || 'lifestyle'
+          }
+
+          const suggestionText = `Sugiro criar a subcategoria "${concreteSub}" dentro de ${concreteCat} para a família. Quer que eu crie agora e coloque aí?`
+
+          const updatedPendingWithSuggestion: ParsedVoiceTransaction = {
+            ...existingPartial,
+            categoryNameSuggestion: concreteCat,
+            subcategoryNameSuggestion: concreteSub,
+            bucketSuggestion: concreteBucket,
+            aiStatus: 'clarificacao_categoria',
+            clarificationQuestion: suggestionText,
+            clarificationOptions: [
+              `✨ Criar nova: ${concreteCat} › subcategoria ${concreteSub}`,
+              '📁 Outra categoria',
+            ],
+            structuredOptions: [
+              {
+                tipo: 'nova',
+                rotulo: `✨ Criar nova: ${concreteCat} › subcategoria ${concreteSub}`,
+                categoria: concreteCat,
+                subcategoria: concreteSub,
+                balde: concreteBucket,
+              },
+            ],
+          }
+
+          setPendingTransaction(updatedPendingWithSuggestion)
+          pendingTransactionRef.current = updatedPendingWithSuggestion
+
+          if (family?.id) {
+            saveCopilotMessage({
+              familyId: family.id,
+              role: 'assistant',
+              content: suggestionText,
+              cardType: 'clarificacao_categoria',
+            }).catch(() => {})
+          }
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `assistant-${Date.now()}`,
+              sender: 'assistant',
+              text: suggestionText,
+              timestamp: new Date(),
+              cardData: updatedPendingWithSuggestion,
+              cardType: 'clarificacao_categoria',
             },
           ])
           return

@@ -398,10 +398,10 @@ describe('Contrato de Comportamento do Copilot v1.0 — Router de Intenções (F
         ],
         transacao: null,
         pergunta_clarificacao:
-          'Identifiquei itens de categorias diferentes (bebê, pet, casa e doação). Como prefere classificar a doação e quais foram os valores de cada um?',
+          'Separei assim: chupeta em Bebês & Crianças, sachês em Pets, jogo de copo em Utensílios & Cozinha e a doação em Doações. Está certo assim?',
         opcoes_sugestao: null,
         mensagem_amigavel:
-          'Identifiquei itens de categorias diferentes (bebê, pet, casa e doação). Como prefere classificar a doação e quais foram os valores de cada um?',
+          'Separei assim: chupeta em Bebês & Crianças, sachês em Pets, jogo de copo em Utensílios & Cozinha e a doação em Doações. Está certo assim?',
       }
 
       const parsedMapped = mapAiResponseToParsedTransaction(edgeClass5Response, text)
