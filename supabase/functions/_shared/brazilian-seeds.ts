@@ -23,6 +23,7 @@ export type SemanticIntent =
   | 'conveniencia_posto'
   | 'bebes_criancas'
   | 'tabaco_cigarros'
+  | 'eventos_reunioes'
   | 'marmitas_refeicoes'
   | 'coparticipacao'
   | 'restituicao_ir'
@@ -338,6 +339,28 @@ export const BRAZILIAN_MERCHANT_SEEDS: readonly SeedMerchantEntry[] = [
     patterns: ['pensao', 'pensão', 'pensao inss', 'aposentadoria', 'beneficio inss', 'inss pensao'],
     suggestedSubcategoryNames: ['Aposentadoria & Pensão', 'Rendimentos'],
   },
+  // 18. Eventos & Reuniões (Lazer)
+  {
+    intent: 'eventos_reunioes',
+    patterns: [
+      'churrasco',
+      'festa',
+      'encontro',
+      'show',
+      'ingresso',
+      'ingressos',
+      'sympla',
+      'eventim',
+      'ticketmaster',
+      'happy hour',
+      'confraternizacao',
+      'confraternização',
+      'aniversario',
+      'aniversário',
+      'resenha',
+    ],
+    suggestedSubcategoryNames: ['Eventos & Reuniões', 'Lazer'],
+  },
 ] as const
 
 /**
@@ -390,6 +413,7 @@ export function matchMerchantSeed(description: string): {
         '13o',
         'pod',
         'vape',
+        'show',
       ])
 
       if (SHORT_BOUNDARY_TERMS.has(normPat)) {
@@ -492,6 +516,20 @@ export function resolveCategoryForIntent(
       pool.find((c) => {
         const n = normalize(c.name)
         return n.includes('alimentacao') || n.includes('mercado')
+      }) ||
+      pool.find((c) => c.budget_bucket === 'lifestyle') ||
+      pool[0] ||
+      null
+  } else if (intent === 'eventos_reunioes') {
+    // Busca preferencialmente Lazer › Eventos & Reuniões
+    matchedCat =
+      pool.find((c) => {
+        const n = normalize(c.name)
+        return n.includes('lazer')
+      }) ||
+      pool.find((c) => {
+        const n = normalize(c.name)
+        return n.includes('restaurante') || n.includes('delivery')
       }) ||
       pool.find((c) => c.budget_bucket === 'lifestyle') ||
       pool[0] ||

@@ -301,7 +301,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
 
   // Iniciar automaticamente o fluxo de Onboarding (OnboardingWizardDialog)
   // Decisão de Produto (Tarefa 2.1 & 2.2):
-  // Se a família ativa está incompleta (0 categorias OU contagem != 19/118 OU 0 regras de IA)
+  // Se a família ativa está incompleta (0 categorias OU contagem != 19/117 OU 0 regras de IA)
   // OU renda zero/nula, redireciona/abre imediatamente o wizard desde o início.
   // Estado parcial = wizard sempre (sem permitir dismiss temporário em sessionStorage).
   useEffect(() => {

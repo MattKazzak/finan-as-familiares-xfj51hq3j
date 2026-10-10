@@ -165,7 +165,7 @@ export interface CategorySeedDefinition {
 
 /**
  * Taxonomia Canônica Oficial do Curiangoo:
- * 19 categorias mestras (15 despesas nos 3 baldes + 4 receitas) e 118 subcategorias.
+ * 19 categorias mestras (15 despesas nos 3 baldes + 4 receitas) e 117 subcategorias.
  */
 export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
   // Essentials (Necessidades - 50%)
@@ -613,11 +613,6 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
         keywords: ['cinemark', 'ingresso.com', 'kinoplex', 'uci', 'cinema'],
       },
       {
-        name: 'Shows & Eventos',
-        icon: 'Ticket',
-        keywords: ['sympla', 'eventim', 'show', 'teatro', 'evento'],
-      },
-      {
         name: 'Passeios & Parques',
         icon: 'Sun',
         keywords: ['passeio', 'parque', 'clube', 'resort', 'zoologico', 'aquario'],
@@ -663,6 +658,13 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
           'aniversario',
           'aniversário',
           'encontro',
+          'show',
+          'ingresso',
+          'happy hour',
+          'sympla',
+          'eventim',
+          'teatro',
+          'evento',
         ],
       },
     ],
@@ -1038,7 +1040,7 @@ export async function seedStandardizedCategoriesAndApplyPlan({
 
   // 2. Fallback somente após esgotar todas as tentativas de retry
   console.error(
-    '[onboarding] RPC activate_family_onboarding_plan falhou após retries. Acionando fallback canônico completo (19/118 + regras):',
+    '[onboarding] RPC activate_family_onboarding_plan falhou após retries. Acionando fallback canônico completo (19/117 + regras):',
     {
       familyId,
       monthlyNetIncomeCents,
@@ -1058,7 +1060,7 @@ export async function seedStandardizedCategoriesAndApplyPlan({
     console.warn('[onboarding] Não foi possível exibir toast de fallback:', toastErr)
   }
 
-  // Fallback canônico completo (19 categorias / 118 subcategorias + regras de IA):
+  // Fallback canônico completo (19 categorias / 117 subcategorias + regras de IA):
   // NUNCA mais semear árvores parciais ou degradadas (ex: 15/96).
   await updateFamilyDetails(familyId, {
     monthly_net_income_cents: monthlyNetIncomeCents,
@@ -1107,7 +1109,7 @@ export async function seedStandardizedCategoriesAndApplyPlan({
   let createdSubcategoriesCount = 0
   let totalBudgetCents = 0
 
-  // 1. Semeia as 19 categorias e 118 subcategorias de CANONICAL_CATEGORIES
+  // 1. Semeia as 19 categorias e 117 subcategorias de CANONICAL_CATEGORIES
   for (let i = 0; i < CANONICAL_CATEGORIES.length; i++) {
     const catDef = CANONICAL_CATEGORIES[i]
     const catKey = catDef.name.trim().toLowerCase()

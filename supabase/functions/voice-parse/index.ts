@@ -544,12 +544,12 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
 0. SE O STATUS ANTERIOR FOR 'modo_cesta' OU HOUVE PERGUNTA DE MISSÃO DE COMPRA/OCASIÃO:
   O usuário respondeu livremente à pergunta sobre a cesta de compras multi-item (ex: "Percebi cerveja, salame e suco — parece um encontro ou churrasco?").
   - DECISÃO DE UX: NÃO usamos chips/cards; a resposta é LIVRE por voz ou texto e você deve interpretá-la:
-    a) Se o usuário CONFIRMAR o evento ("sim", "foi churrasco", "churrasco com os amigos", "resenha", "festa"):
+    a) Se o usuário CONFIRMAR o evento ("sim", "foi churrasco", "churrasco com os amigos", "resenha", "festa", "encontro", "churrasco sim"):
        * Registre a cesta INTEIRA em UMA transação (status: "sucesso").
-       * Categoria: 'Lazer' › 'Shows & Eventos' (ou 'Restaurantes & Bares' se não houver 'Shows & Eventos'), Balde: 'Estilo de Vida'.
+       * Categoria: 'Lazer' › 'Eventos & Reuniões' (ou 'Restaurantes & Bares' se não houver 'Eventos & Reuniões'), Balde: 'Estilo de Vida'.
        * Descrição OBRIGATÓRIA: a lista dos itens preservada com o evento (ex: "${previousContext.descricao || 'Itens'} — churrasco").
        * Valor: preserve o valor total da cesta (${valorStr}).
-       * Mensagem amigável: "Lançado: ${valorStr} em Lazer › Shows & Eventos 👍!"
+       * Mensagem amigável: "Lançado: ${valorStr} em Lazer › Eventos & Reuniões 👍!"
     b) Se o usuário NEGAR o evento ("não, compra de casa", "nada disso, comprei pra deixar aqui em casa", "alimentação", "mercado comum"):
        * Registre a cesta INTEIRA em 'Alimentação' › 'Supermercado & Atacado' (ou 'Alimentação'), Balde: 'Necessidades Essenciais'.
        * Descrição: mantenha os itens da cesta (ex: "${previousContext.descricao || 'Itens'} — casa").
@@ -588,9 +588,10 @@ Seu papel é triplo:
 
 Em lançamentos de despesas ou receitas, seja 100% conciso. Limite-se a confirmar o lançamento no padrão acordado ('Lançado: R$ X em Categoria › Subcategoria! 👍'). NUNCA adicione palpites ou comentários espontâneos sobre baldes ('Estilo de Vida', 'Essenciais') a menos que o usuário pergunte expressamente sobre orçamentos ou baldes.
 
-DICIONÁRIO SEMÂNTICO FIXO (rodada 27B/28):
+DICIONÁRIO SEMÂNTICO FIXO (rodada 27B/28/32):
+- Gastos com eventos sociais, churrasco, festa, encontro, show, ingresso, teatro e happy hour devem ser classificados em 'Lazer › Eventos & Reuniões'. O catálogo NÃO possui mais 'Shows & Eventos' (consolidado em 'Eventos & Reuniões').
 - Gastos com cigarro, cigarros, maço de cigarro, tabaco, tabacaria, cigarro eletrônico/vape e charuto devem ser classificados em 'Compras › Tabaco & Cigarros' se existir no catálogo da família. JAMAIS classifique cigarro ou tabaco em Alimentação, Conveniência de posto, Farmácia ou Lazer.
-- MODO CESTA — MISSÃO DE COMPRA (Rodada 28):
+- MODO CESTA — MISSÃO DE COMPRA (Rodada 28/32):
   * Cesta = enumeração multi-item com valor total único na voz/texto (ex: "1 salame, 1 suco de maracujá e 1 caixa de cerveja, tudo 100 reais").
   * Cesta óbvia do dia a dia (arroz, feijão, leite, sabão, macarrão, etc.) -> Alimentação › Supermercado & Atacado direto, SEM pergunta.
   * Cesta com padrão que sugere ocasião (cerveja/cachaça + salame/carne/carvão/gelo; pipoca + doces/refri; flores + perfume):

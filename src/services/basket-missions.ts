@@ -12,7 +12,7 @@
  *     - Resposta parcial ("cerveja pro churrasco, resto é da casa") → DIVIDIR a cesta por contexto, pedindo valores faltantes ou estimando proporcionalmente com confirmação ("aproximadamente R$ 40 da cerveja?").
  * (d) Registro da cesta inteira: 1 transação na categoria da missão com a LISTA DE ITENS na descrição ("Salame, suco de maracujá, cerveja — churrasco"). Divisão em múltiplas transações SÓ quando o usuário pedir;
  * (e) Se a resposta livre for ambígua, UMA pergunta de follow-up (máximo 2 perguntas por cesta — nunca dez); desistência ambígua → categoriza na subcategoria mais específica do contexto + badge "sugestão incerta".
- * (f) Catálogo Canônico 19/117: Lazer › Shows & Eventos (ou Restaurantes & Bares), Compras › Presentes, Compras › Bebês & Crianças, Alimentação › Supermercado & Atacado.
+ * (f) Catálogo Canônico 19/117: Lazer › Eventos & Reuniões, Compras › Presentes, Compras › Bebês & Crianças, Alimentação › Supermercado & Atacado.
  */
 
 import { BudgetBucket } from '@/types/finance'

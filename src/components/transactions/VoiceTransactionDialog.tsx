@@ -144,6 +144,13 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   const recordingTimerRef = useRef<any>(null)
   const recordingDurationRef = useRef<number>(0)
 
+  // Modo ativo de captura de áudio ('media_recorder' padrão vs 'web_speech' fallback)
+  const [activeAudioCaptureMode, setActiveAudioCaptureMode] = useState<
+    'media_recorder' | 'web_speech' | null
+  >(null)
+  const activeAudioCaptureModeRef = useRef<'media_recorder' | 'web_speech' | null>(null)
+  const userRequestedStopRef = useRef<boolean>(false)
+
   // Waveform real via AnalyserNode (5 frequências reais para alimentar as barras)
   const [realAudioLevels, setRealAudioLevels] = useState<number[]>([0.15, 0.25, 0.2, 0.3, 0.15])
   const audioContextRef = useRef<AudioContext | null>(null)
@@ -214,6 +221,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
   // Parar gravação ativa de forma segura
   const stopListening = useCallback(() => {
+    userRequestedStopRef.current = true
     if (recordingTimerRef.current) {
       clearInterval(recordingTimerRef.current)
       recordingTimerRef.current = null
@@ -1136,6 +1144,8 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       setRecordingElapsedSeconds(0)
       recordingDurationRef.current = 0
 
+      userRequestedStopRef.current = false
+
       const hasMediaRecorder =
         typeof window !== 'undefined' &&
         typeof navigator !== 'undefined' &&
@@ -1143,8 +1153,12 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         typeof navigator.mediaDevices.getUserMedia === 'function' &&
         typeof window.MediaRecorder !== 'undefined'
 
-      // CAMINHO 1: MediaRecorder com AnalyserNode (Áudio cru universal + Whisper)
+      // CAMINHO 1: MediaRecorder com AnalyserNode (PADRÃO sempre que a API existir)
       if (hasMediaRecorder) {
+        setActiveAudioCaptureMode('media_recorder')
+        activeAudioCaptureModeRef.current = 'media_recorder'
+        console.log('[AudioCapture] modo=media_recorder (padrão Whisper + AnalyserNode)')
+
         navigator.mediaDevices
           .getUserMedia({ audio: true })
           .then((stream) => {
@@ -1296,11 +1310,13 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         return
       }
 
-      // CAMINHO 2: Fallback Web Speech API (para navegadores sem MediaRecorder/getUserMedia)
+      // CAMINHO 2: Fallback Web Speech API (exclusivo para navegadores sem MediaRecorder/getUserMedia)
       const SpeechRecognition =
         (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
 
       if (!SpeechRecognition) {
+        setActiveAudioCaptureMode(null)
+        activeAudioCaptureModeRef.current = null
         setPermissionStatus('unsupported')
         setErrorMessage(
           'Seu navegador não suporta reconhecimento de voz nativo nem MediaRecorder. Digite abaixo e envie para o Copilot.',
@@ -1308,6 +1324,10 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         setIsListening(false)
         return
       }
+
+      setActiveAudioCaptureMode('web_speech')
+      activeAudioCaptureModeRef.current = 'web_speech'
+      console.log('[AudioCapture] modo=web_speech (fallback sem corte automático)')
 
       try {
         const recognition = new SpeechRecognition()
@@ -1420,6 +1440,24 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         }
 
         recognition.onend = () => {
+          if (latestTranscriptRef.current.trim()) {
+            finalBufferRef.current = latestTranscriptRef.current.trim()
+          }
+
+          // Se o usuário NÃO tocou Parar/Cancelar e não houve erro fatal,
+          // RECONECTA IMEDIATAMENTE (neutraliza corte automático de silêncio do Web Speech)
+          if (!userRequestedStopRef.current && !hadErrorRef.current) {
+            console.log(
+              '[AudioCapture] Web Speech onend disparado antes do toque em Parar: reconectando gravação...',
+            )
+            try {
+              recognition.start()
+              return
+            } catch (reconnectErr) {
+              console.warn('[AudioCapture] Falha ao reconectar Web Speech:', reconnectErr)
+            }
+          }
+
           if (recordingTimerRef.current) {
             clearInterval(recordingTimerRef.current)
             recordingTimerRef.current = null
@@ -1427,10 +1465,6 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           recognitionRef.current = null
           setIsListening(false)
           setAudioDetected(false)
-
-          if (latestTranscriptRef.current.trim()) {
-            finalBufferRef.current = latestTranscriptRef.current.trim()
-          }
         }
 
         recognitionRef.current = recognition
@@ -1456,6 +1490,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
   // Cancelar gravação sem enviar nada para processamento
   const handleCancelRecording = useCallback(() => {
+    userRequestedStopRef.current = true
     stopListening()
     audioChunksRef.current = []
     latestTranscriptRef.current = ''
@@ -1468,6 +1503,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   // Parar gravação e transcrever áudio gravado (ou usar texto capturado via Web Speech)
   // Coloca o texto transcrito NO CAMPO DE TEXTO para o usuário conferir/editar antes de enviar
   const handleStopRecordingAndProcess = useCallback(async () => {
+    userRequestedStopRef.current = true
     const recorder = mediaRecorderRef.current
     const isUsingMediaRecorder = recorder && recorder.state !== 'inactive'
 
@@ -2777,6 +2813,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 {/* Waveform REAL alimentada via AnalyserNode (5 barras com energia sonora real) */}
                 <div
                   data-testid="recording-waveform"
+                  data-audiocapture-mode={activeAudioCaptureMode || 'idle'}
                   className="flex items-center gap-1 h-5 px-2 py-0.5 rounded-full bg-[#14213D] border border-[#FCA311]/60 shadow-xs"
                   aria-label="Gravando áudio"
                 >

@@ -1390,11 +1390,61 @@ export function parseVoiceInput(
 
     const freeInterpretation = interpretFreeTextBasketResponse(trimmed, fakeAnalysis)
 
+    // Validação estrita do par canônico no catálogo real da família (Regra R25/R26/R32)
+    // Se a categoria/subcategoria sugerida não existir no catálogo da família, NÃO grava gaveta inexistente;
+    // em vez disso, pergunta ao usuário.
+    const checkPairInCatalog = (
+      catName: string,
+      subName?: string,
+    ): { exists: boolean; categoryId?: string; subcategoryId?: string } => {
+      const cat = categories.find(
+        (c) => normalizeWord(c.name) === normalizeWord(catName) && c.type === effectiveType,
+      )
+      if (!cat) return { exists: false }
+      if (!subName) return { exists: true, categoryId: cat.id }
+
+      const subs = (cat as any).subcategories || (cat as any).transaction_subcategories || []
+      const sub = subs.find((s: any) => normalizeWord(s.name) === normalizeWord(subName))
+      if (!sub) return { exists: false, categoryId: cat.id }
+      return { exists: true, categoryId: cat.id, subcategoryId: sub.id }
+    }
+
     if (freeInterpretation.intent === 'confirm_event') {
       const finalCat = freeInterpretation.category
       const finalSub = freeInterpretation.subcategory
       const finalBucket = freeInterpretation.bucket
       const itemsDesc = fakeAnalysis.itemsDescription || contextoAnterior.descricao || description
+
+      const pairCheck = checkPairInCatalog(finalCat, finalSub)
+      if (categories.length > 0 && !pairCheck.exists) {
+        // Par canônico inexistente na família -> perguntar, nunca gravar par inexistente (R32)
+        const askMsg = `Entendi o evento (${finalSub || finalCat}), mas não encontrei essa gaveta na sua família. Onde prefere organizar esse lançamento?`
+        return {
+          rawText,
+          amountCents: basketPendingTotal,
+          amountFormatted: (basketPendingTotal / 100).toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+          }),
+          type: effectiveType,
+          description: itemsDesc,
+          establishment: contextoAnterior.estabelecimento || establishment,
+          paymentMethod: method,
+          categoryNameSuggestion: finalCat,
+          subcategoryNameSuggestion: finalSub || undefined,
+          bucketSuggestion: finalBucket,
+          confidence: 0.6,
+          processingSource: 'local',
+          aiStatus: 'clarificacao',
+          tipoResposta: 'transacao',
+          intencao: 'transacao',
+          clarificationQuestion: askMsg,
+          clarificationOptions: null,
+          friendlyMessage: askMsg,
+          isBasket: true,
+          basketItemsDescription: itemsDesc,
+        }
+      }
 
       const formattedTotal = (basketPendingTotal / 100).toLocaleString('pt-BR', {
         style: 'currency',
@@ -1437,6 +1487,36 @@ export function parseVoiceInput(
       const itemsDesc = itemsList
         ? `${itemsList} — casa`
         : contextoAnterior.descricao || description
+
+      const pairCheck = checkPairInCatalog(finalCat, finalSub)
+      if (categories.length > 0 && !pairCheck.exists) {
+        const askMsg = `Entendi que é para a casa, mas não encontrei ${finalCat} › ${finalSub} na sua família. Onde deseja registrar?`
+        return {
+          rawText,
+          amountCents: basketPendingTotal,
+          amountFormatted: (basketPendingTotal / 100).toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+          }),
+          type: effectiveType,
+          description: itemsDesc,
+          establishment: contextoAnterior.estabelecimento || establishment,
+          paymentMethod: method,
+          categoryNameSuggestion: finalCat,
+          subcategoryNameSuggestion: finalSub,
+          bucketSuggestion: finalBucket,
+          confidence: 0.6,
+          processingSource: 'local',
+          aiStatus: 'clarificacao',
+          tipoResposta: 'transacao',
+          intencao: 'transacao',
+          clarificationQuestion: askMsg,
+          clarificationOptions: null,
+          friendlyMessage: askMsg,
+          isBasket: true,
+          basketItemsDescription: itemsDesc,
+        }
+      }
 
       const formattedTotal = (basketPendingTotal / 100).toLocaleString('pt-BR', {
         style: 'currency',
@@ -1481,7 +1561,7 @@ export function parseVoiceInput(
         establishment: contextoAnterior.estabelecimento || establishment,
         paymentMethod: method,
         categoryNameSuggestion: 'Lazer',
-        subcategoryNameSuggestion: 'Shows & Eventos',
+        subcategoryNameSuggestion: 'Eventos & Reuniões',
         bucketSuggestion: 'lifestyle',
         confidence: 0.9,
         processingSource: 'local',

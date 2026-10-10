@@ -242,7 +242,7 @@ export async function fetchUserIncompleteFamilies(
     const totalRules = ruleCount ?? 0
 
     const isIncomplete =
-      totalCats === 0 || totalCats !== 19 || totalSubs !== 118 || totalRules === 0
+      totalCats === 0 || totalCats !== 19 || totalSubs !== 117 || totalRules === 0
 
     if (isIncomplete) {
       result.push({
@@ -389,12 +389,12 @@ export async function fetchFamilyData() {
     console.warn('[family] Erro não impeditivo ao checar regras de categorização:', rulesErr)
 
   // Critério Canônico de Família Incompleta (c):
-  // Catálogo vazio (0 categorias) OU contagem != 19 categorias / 118 subcategorias OU 0 regras de IA
+  // Catálogo vazio (0 categorias) OU contagem != 19 categorias / 117 subcategorias OU 0 regras de IA
   const catLen = categories?.length ?? 0
   const subLen = subcategories?.length ?? 0
   const ruleLen = rulesCount ?? 0
 
-  const isIncomplete = catLen === 0 || catLen !== 19 || subLen !== 118 || ruleLen === 0
+  const isIncomplete = catLen === 0 || catLen !== 19 || subLen !== 117 || ruleLen === 0
 
   const completeness: FamilyCompletenessStatus = {
     isIncomplete,
@@ -402,7 +402,7 @@ export async function fetchFamilyData() {
     subcategoryCount: subLen,
     ruleCount: ruleLen,
     reason: isIncomplete
-      ? `Incompleto: ${catLen}/19 categorias, ${subLen}/118 subcategorias, ${ruleLen} regras de IA`
+      ? `Incompleto: ${catLen}/19 categorias, ${subLen}/117 subcategorias, ${ruleLen} regras de IA`
       : undefined,
   }
 

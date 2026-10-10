@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { CANONICAL_CATEGORIES } from '@/types/finance'
 import { STANDARDIZED_CATEGORIES_TREE } from '@/services/onboarding'
 
-describe('Consistência do Catálogo Canônico Curiangoo (19 categorias / 118 subcategorias)', () => {
+describe('Consistência do Catálogo Canônico Curiangoo (19 categorias / 117 subcategorias)', () => {
   it('garante que CANONICAL_CATEGORIES possui 19 categorias (15 despesa + 4 receita)', () => {
     expect(CANONICAL_CATEGORIES.length).toBe(19)
 
@@ -20,16 +20,16 @@ describe('Consistência do Catálogo Canônico Curiangoo (19 categorias / 118 su
     expect(future.length).toBe(3)
   })
 
-  it('garante que a soma total de subcategorias canônicas é exatamente 118', () => {
+  it('garante que a soma total de subcategorias canônicas é exatamente 117', () => {
     const totalSubs = CANONICAL_CATEGORIES.reduce((acc, c) => acc + c.subcategories.length, 0)
-    expect(totalSubs).toBe(118)
+    expect(totalSubs).toBe(117)
 
-    // 98 subcategorias de despesas
+    // 97 subcategorias de despesas
     const expenseSubs = CANONICAL_CATEGORIES.filter((c) => c.type === 'expense').reduce(
       (acc, c) => acc + c.subcategories.length,
       0,
     )
-    expect(expenseSubs).toBe(98)
+    expect(expenseSubs).toBe(97)
 
     // 20 subcategorias de receitas
     const incomeSubs = CANONICAL_CATEGORIES.filter((c) => c.type === 'income').reduce(
@@ -83,6 +83,16 @@ describe('Consistência do Catálogo Canônico Curiangoo (19 categorias / 118 su
     expect(allNames).toContain('Dívidas & Empréstimos')
     expect(allNames).toContain('Bebês & Crianças')
     expect(allNames).toContain('Tesouro Direto')
+  })
+
+  it('garante presença da subcategoria "Eventos & Reuniões" em Lazer com ícone PartyPopper e ausência de "Shows & Eventos"', () => {
+    const lazer = CANONICAL_CATEGORIES.find((c) => c.name === 'Lazer')
+    expect(lazer).toBeDefined()
+    const lazerSubs = lazer!.subcategories.map((s) => s.name)
+    expect(lazerSubs).toContain('Eventos & Reuniões')
+    expect(lazerSubs).not.toContain('Shows & Eventos')
+    const eventos = lazer!.subcategories.find((s) => s.name === 'Eventos & Reuniões')
+    expect(eventos?.icon).toBe('PartyPopper')
   })
 
   it('proíbe expressamente que STANDARDIZED_CATEGORIES_TREE seja usada como fonte de semeadura do fallback de onboarding', async () => {
