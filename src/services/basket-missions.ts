@@ -231,7 +231,7 @@ export const BASKET_MISSION_PATTERNS: BasketMissionPattern[] = [
     name: 'Evento Social & Churrasco',
     requiresUserConfirmation: true, // NUNCA grava evento em silêncio!
     targetCategory: 'Lazer',
-    targetSubcategory: 'Shows & Eventos', // ou Restaurantes & Bares dependendo do contexto
+    targetSubcategory: 'Eventos & Reuniões',
     targetBucket: 'lifestyle',
     eventTag: 'churrasco',
     matches: (items: string[], rawText: string) => {
@@ -525,13 +525,13 @@ export function interpretFreeTextBasketResponse(
     return {
       intent: 'split_basket',
       category: 'Lazer',
-      subcategory: 'Shows & Eventos',
+      subcategory: 'Eventos & Reuniões',
       bucket: 'lifestyle',
       splitItems: [
         {
           description: 'Cerveja — churrasco',
           category: 'Lazer',
-          subcategory: 'Shows & Eventos',
+          subcategory: 'Eventos & Reuniões',
           bucket: 'lifestyle',
           estimatedAmountCents: estimatedBeerCents,
           needsAmountConfirmation: true,

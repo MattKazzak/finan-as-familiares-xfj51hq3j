@@ -285,7 +285,7 @@ export function OnboardingWizardDialog({
         modelPresetId: confirmedModelId,
       })
 
-      // Guarda de completude: verifica se a família possui o catálogo 19/117 e regras completas
+      // Guarda de completude: verifica se a família possui o catálogo 19/118 e regras completas
       try {
         const [{ count: catCount }, { count: subCount }, { count: rulesCount }] = await Promise.all(
           [
@@ -308,9 +308,9 @@ export function OnboardingWizardDialog({
         const totalSubs = subCount ?? 0
         const totalRules = rulesCount ?? 0
 
-        if (totalCats !== 19 || totalSubs !== 117 || totalRules < 40) {
+        if (totalCats !== 19 || totalSubs !== 118 || totalRules < 40) {
           console.warn(
-            `[onboarding] Guarda de completude acionada: catálogo parcial detectado (${totalCats}/19 categorias, ${totalSubs}/117 subs, ${totalRules} regras). Re-executando activate_family_onboarding_plan...`,
+            `[onboarding] Guarda de completude acionada: catálogo parcial detectado (${totalCats}/19 categorias, ${totalSubs}/118 subs, ${totalRules} regras). Re-executando activate_family_onboarding_plan...`,
           )
           await activateFamilyOnboardingPlanRpc({
             familyId: family.id,

@@ -55,6 +55,7 @@ import {
   AlertCircle,
   Hammer,
   Dumbbell,
+  PartyPopper,
   LucideIcon,
 } from 'lucide-react'
 
@@ -113,6 +114,7 @@ const iconMap: Record<string, LucideIcon> = {
   AlertCircle,
   Hammer,
   Dumbbell,
+  PartyPopper,
 }
 
 interface CategoryIconProps {
@@ -278,4 +280,5 @@ export const AVAILABLE_ICONS = [
   'AlertCircle',
   'Hammer',
   'Dumbbell',
+  'PartyPopper',
 ]

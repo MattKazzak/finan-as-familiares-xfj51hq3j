@@ -205,7 +205,7 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
       { name: 'Marmitas & Refeições no Trabalho', icon: 'Salad' },
     ],
   },
-  // 8. Lazer (lifestyle, 7 subcategorias)
+  // 8. Lazer (lifestyle, 8 subcategorias)
   {
     name: 'Lazer',
     bucket: 'lifestyle',
@@ -221,6 +221,7 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
       { name: 'Viagens: Passeios & Pacotes', icon: 'Compass' },
       { name: 'Hobbies & Jogos', icon: 'Gamepad2' },
       { name: 'Livros & Cultura', icon: 'Book' },
+      { name: 'Eventos & Reuniões', icon: 'PartyPopper' },
     ],
   },
   // 9. Cuidados Pessoais & Bem-estar (lifestyle, 5 subcategorias)

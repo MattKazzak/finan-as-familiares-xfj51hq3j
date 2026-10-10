@@ -13,47 +13,22 @@ import {
   interpretFreeTextBasketResponse,
 } from '../basket-missions'
 import { parseVoiceInput } from '../voice-parser'
+import { CANONICAL_CATEGORIES } from '@/types/finance'
 
-const mockCategories = [
-  {
-    id: 'cat-alimentacao',
-    name: 'Alimentação',
-    type: 'expense' as const,
-    color: '#10B981',
-    icon: 'Utensils',
-    bucket: 'essentials' as const,
-    subcategories: [
-      { id: 'sub-mercado', name: 'Supermercado & Atacado' },
-      { id: 'sub-rest', name: 'Restaurantes & Bares' },
-    ],
-  },
-  {
-    id: 'cat-lazer',
-    name: 'Lazer',
-    type: 'expense' as const,
-    color: '#F59E0B',
-    icon: 'Ticket',
-    bucket: 'lifestyle' as const,
-    subcategories: [
-      { id: 'sub-eventos', name: 'Shows & Eventos' },
-      { id: 'sub-cinema', name: 'Cinema' },
-      { id: 'sub-viagens', name: 'Viagens & Hospedagem' },
-    ],
-  },
-  {
-    id: 'cat-compras',
-    name: 'Compras',
-    type: 'expense' as const,
-    color: '#EC4899',
-    icon: 'ShoppingBag',
-    bucket: 'lifestyle' as const,
-    subcategories: [
-      { id: 'sub-bebes', name: 'Bebês & Crianças' },
-      { id: 'sub-presentes', name: 'Presentes' },
-      { id: 'sub-tabaco', name: 'Tabaco & Cigarros' },
-    ],
-  },
-]
+// Adaptar CANONICAL_CATEGORIES com IDs para simular catálogo real carregado
+const realCategories = CANONICAL_CATEGORIES.map((cat, catIdx) => ({
+  id: `cat-${catIdx}-${cat.name}`,
+  name: cat.name,
+  type: cat.type,
+  color: cat.color,
+  icon: cat.icon,
+  bucket: cat.bucket,
+  subcategories: cat.subcategories.map((sub, subIdx) => ({
+    id: `sub-${catIdx}-${subIdx}-${sub.name}`,
+    name: sub.name,
+    icon: sub.icon,
+  })),
+}))
 
 describe('Modo Cesta — Missão de Compra (Rodada 28)', () => {
   describe('Detecção e Extração de Itens (extractEnumeratedItems & isBasketInput)', () => {
@@ -85,7 +60,7 @@ describe('Modo Cesta — Missão de Compra (Rodada 28)', () => {
       expect(analysis.requiresConfirmation).toBe(true) // Regra c: NUNCA grava evento em silêncio!
       expect(analysis.missionType).toBe('social_event')
       expect(analysis.suggestedCategory).toBe('Lazer')
-      expect(analysis.suggestedSubcategory).toBe('Shows & Eventos')
+      expect(analysis.suggestedSubcategory).toBe('Eventos & Reuniões')
       expect(analysis.suggestedBucket).toBe('lifestyle')
       expect(analysis.naturalQuestion).toContain('Percebi')
       expect(analysis.naturalQuestion).toContain('churrasco')
@@ -140,18 +115,18 @@ describe('Modo Cesta — Missão de Compra (Rodada 28)', () => {
       10000,
     )
 
-    it('confirmação afirmativa: "foi um churrasco sim" → Lazer › Shows & Eventos', () => {
+    it('confirmação afirmativa: "foi um churrasco sim" → Lazer › Eventos & Reuniões', () => {
       const interpretation = interpretFreeTextBasketResponse(
         'foi um churrasco sim',
         churrascoAnalysis,
       )
       expect(interpretation.intent).toBe('confirm_event')
       expect(interpretation.category).toBe('Lazer')
-      expect(interpretation.subcategory).toBe('Shows & Eventos')
+      expect(interpretation.subcategory).toBe('Eventos & Reuniões')
       expect(interpretation.bucket).toBe('lifestyle')
     })
 
-    it('confirmação alternativa: "sim, resenha com os amigos" → Lazer › Shows & Eventos', () => {
+    it('confirmação alternativa: "sim, resenha com os amigos" → Lazer › Eventos & Reuniões', () => {
       const interpretation = interpretFreeTextBasketResponse(
         'sim, resenha com os amigos',
         churrascoAnalysis,
@@ -195,7 +170,7 @@ describe('Modo Cesta — Missão de Compra (Rodada 28)', () => {
     it('Turno 1: Lança cesta de churrasco → devolve status modo_cesta com pergunta natural e SEM chips', () => {
       const parsed = parseVoiceInput(
         '1 salame, 1 suco de maracujá e 1 caixa de cerveja, tudo 100 reais',
-        mockCategories,
+        realCategories,
       )
 
       expect(parsed.aiStatus).toBe('modo_cesta')
@@ -206,31 +181,31 @@ describe('Modo Cesta — Missão de Compra (Rodada 28)', () => {
     })
 
     it('Turno 2: Usuário responde livremente "foi um churrasco sim" → Lança 1 transação em Lazer com descrição dos itens', () => {
-      const parsedTurn2 = parseVoiceInput('foi um churrasco sim', mockCategories, {
+      const parsedTurn2 = parseVoiceInput('foi um churrasco sim', realCategories, {
         descricao: 'Salame, suco de maracujá, cerveja',
         valor: 100,
         status: 'modo_cesta',
         categoria: 'Lazer',
-        subcategoria: 'Shows & Eventos',
+        subcategoria: 'Eventos & Reuniões',
         balde: 'lifestyle',
       })
 
       expect(parsedTurn2.aiStatus).toBe('sucesso')
       expect(parsedTurn2.amountCents).toBe(10000)
       expect(parsedTurn2.categoryNameSuggestion).toBe('Lazer')
-      expect(parsedTurn2.subcategoryNameSuggestion).toBe('Shows & Eventos')
+      expect(parsedTurn2.subcategoryNameSuggestion).toBe('Eventos & Reuniões')
       expect(parsedTurn2.bucketSuggestion).toBe('lifestyle')
       expect(parsedTurn2.description).toContain('Salame')
       expect(parsedTurn2.description).toContain('churrasco')
     })
 
     it('Turno 2 alternativo: Usuário responde "não, compra de casa" → Lança em Alimentação › Supermercado & Atacado', () => {
-      const parsedTurn2 = parseVoiceInput('não, compra de casa', mockCategories, {
+      const parsedTurn2 = parseVoiceInput('não, compra de casa', realCategories, {
         descricao: 'Salame, suco de maracujá, cerveja',
         valor: 100,
         status: 'modo_cesta',
         categoria: 'Lazer',
-        subcategoria: 'Shows & Eventos',
+        subcategoria: 'Eventos & Reuniões',
         balde: 'lifestyle',
       })
 
@@ -243,7 +218,7 @@ describe('Modo Cesta — Missão de Compra (Rodada 28)', () => {
     })
 
     it('Cesta óbvia: "arroz, feijão e leite 40 reais" → Grava direto em Alimentação sem pergunta', () => {
-      const parsed = parseVoiceInput('arroz, feijão e leite, tudo 40 reais', mockCategories)
+      const parsed = parseVoiceInput('arroz, feijão e leite, tudo 40 reais', realCategories)
 
       expect(parsed.aiStatus).toBe('sucesso')
       expect(parsed.amountCents).toBe(4000)

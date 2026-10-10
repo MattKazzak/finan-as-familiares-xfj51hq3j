@@ -731,7 +731,7 @@ export default function ProfilePage() {
                     {incFam.name || 'Família sem nome'}
                   </div>
                   <div className="text-xs text-slate-500 mt-0.5">
-                    {incFam.catCount}/19 categorias • {incFam.subcatCount}/117 subcategorias •{' '}
+                    {incFam.catCount}/19 categorias • {incFam.subcatCount}/118 subcategorias •{' '}
                     {incFam.ruleCount} regras
                   </div>
                 </div>
