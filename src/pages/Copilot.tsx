@@ -541,9 +541,10 @@ export function CopilotPage() {
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">
-              O Curiangoo Copilot utiliza inteligência artificial para interpretar sua fala ou texto
-              e sugerir categorias e valores automaticamente. Nenhum dado é compartilhado para fins
-              externos. Deseja permitir o processamento por IA?
+              O Curiangoo Copilot utiliza inteligência artificial para transcrever sua gravação de
+              voz, interpretar sua fala ou texto e sugerir categorias e valores automaticamente. O
+              áudio é processado exclusivamente para transcrição e nenhum dado é compartilhado para
+              fins externos. Deseja permitir o processamento por IA?
             </p>
 
             <div className="flex items-center justify-end gap-2 pt-1">
