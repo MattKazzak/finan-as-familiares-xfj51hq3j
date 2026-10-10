@@ -237,6 +237,41 @@ export const BASKET_MISSION_PATTERNS: BasketMissionPattern[] = [
     matches: (items: string[], rawText: string) => {
       const allText = items.join(' ') + ' ' + rawText
       const normText = norm(allText)
+
+      // Regra da Classe 4 (Contrato v1.0 / Rodada 39):
+      // Presença de itens de casa, limpeza ou despensa básica contradiz a ocasião de churrasco/festa,
+      // caracterizando Lista Mista de Mercado (Classe 4) direto para Alimentação sem falso churrasco.
+      const HOUSEHOLD_CONTRADICTING_KEYWORDS = [
+        'sabao',
+        'sabão',
+        'detergente',
+        'amaciante',
+        'desinfetante',
+        'agua sanitaria',
+        'água sanitária',
+        'papel higienico',
+        'papel higiênico',
+        'pasta de dente',
+        'miojo',
+        'esponja',
+        'arroz',
+        'feijao',
+        'feijão',
+        'oleo',
+        'óleo',
+        'farinha',
+        'leite',
+        'acucar',
+        'açúcar',
+      ]
+      const hasContradictingHouseholdItem = HOUSEHOLD_CONTRADICTING_KEYWORDS.some((kw) =>
+        normText.includes(kw),
+      )
+
+      if (hasContradictingHouseholdItem) {
+        return false // Lista mista de mercado! Não disparar ocasião de churrasco.
+      }
+
       const hasAlcohol = ALCOHOL_KEYWORDS.some((kw) => normText.includes(kw))
       const hasBbqOrPetisco = BBQ_PETISCO_KEYWORDS.some((kw) => normText.includes(kw))
       const hasExplicitEventWord =
@@ -415,10 +450,35 @@ export function isBasketInput(text: string): boolean {
 /**
  * Analisa a cesta completa e determina a missão de compra
  */
-export function analyzeBasketMission(text: string, totalAmountCents: number): BasketAnalysisResult {
+export function analyzeBasketMission(
+  text: string,
+  totalAmountCents: number,
+  options?: { routerClasse?: number },
+): BasketAnalysisResult {
   const items = extractEnumeratedItems(text)
   const itemNames = items.map((i) => i.name)
   const itemsSummary = itemNames.join(', ').toLowerCase()
+
+  // TAREFA 2 — Subordinação do Matcher ao Router (Contrato v1.0 / Fim do Falso Churrasco):
+  // Se o router já classificou a mensagem como Classe 4 (lista mista de mercado),
+  // a hipótese de ocasião/churrasco é sumariamente descartada e a cesta grava como mercado direto.
+  if (options?.routerClasse === 4) {
+    const pantryPattern = BASKET_MISSION_PATTERNS.find((p) => p.id === 'pantry_staple')
+    return {
+      isBasket: items.length >= 2,
+      items,
+      totalAmountCents,
+      matchedPattern: pantryPattern,
+      missionType: 'pantry_staple',
+      requiresConfirmation: false,
+      naturalQuestion: undefined,
+      suggestedCategory: 'Alimentação',
+      suggestedSubcategory: 'Supermercado & Atacado',
+      suggestedBucket: 'essentials',
+      itemsDescription: itemNames.join(', '),
+      eventTag: 'supermercado',
+    }
+  }
 
   // Busca padrão no dicionário
   let matchedPattern: BasketMissionPattern | undefined

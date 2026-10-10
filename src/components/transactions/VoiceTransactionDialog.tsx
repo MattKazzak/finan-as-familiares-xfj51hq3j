@@ -609,7 +609,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           return
         }
 
-        // Caso 2: Falta de valor (início do fluxo em 2 turnos)
+        // Caso 2: Falta de valor ou itens (Classe 2 do Contrato v1.0 — Itens antes de valor)
         if (parsed.aiStatus === 'falta_valor') {
           setPendingTransaction(parsed)
           pendingTransactionRef.current = parsed
@@ -617,8 +617,19 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           const localDesc = parsed.establishment
             ? `${parsed.description} na ${parsed.establishment}`
             : parsed.description
+
+          // Contrato v1.0: se as lacunas contiverem 'itens' ou a pergunta for sobre itens, priorizar itens
+          const isAskingForItems =
+            parsed.routerLacunas?.includes('itens') ||
+            parsed.clarificationQuestion?.toLowerCase().includes('o que você comprou') ||
+            parsed.friendlyMessage?.toLowerCase().includes('o que você comprou')
+
           const friendlyMsg =
-            parsed.friendlyMessage || `Identifiquei ${localDesc}. Quanto custou? 🥐`
+            parsed.friendlyMessage ||
+            parsed.clarificationQuestion ||
+            (isAskingForItems
+              ? 'O que você comprou? Me conta os itens que eu já organizo pra você!'
+              : `Identifiquei ${localDesc}. Quanto custou? 👍`)
 
           if (family?.id) {
             saveCopilotMessage({
@@ -641,9 +652,9 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             },
           ])
 
-          // Deixar o mic pronto para ouvir o valor
+          // Deixar o mic pronto para ouvir a resposta
           setTimeout(() => {
-            startRecording({ forAmountOnly: true })
+            startRecording({ forAmountOnly: !isAskingForItems })
           }, 400)
           return
         }

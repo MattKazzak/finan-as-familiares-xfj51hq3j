@@ -2,83 +2,102 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
-interface PreviousContextPayload {
-  descricao?: string
+// Types para parsing e resposta
+interface ParsedVoiceTransaction {
+  descricao: string
   estabelecimento?: string | null
-  categoria?: string
-  subcategoria?: string
-  balde?: string
-  tipo?: 'despesa' | 'receita'
-  valor?: number | null
-  status?: string | null
-  opcoes_sugestao?: any[] | null
+  valor: number | null
+  tipo: 'despesa' | 'receita'
+  balde: 'Necessidades Essenciais' | 'Estilo de Vida' | 'Metas & Investimentos'
+  categoria?: string | null
+  subcategoria?: string | null
+  metodo_pagamento?: 'pix' | 'debito' | 'credito' | 'dinheiro' | null
+  itens?: Array<{ descricao: string; quantidade: number | null; valor: number | null }> | null
 }
 
-interface ChatMessagePayloadItem {
-  role?: 'user' | 'assistant'
-  content?: string
+interface StructuredSuggestionOption {
+  tipo: 'existente' | 'nova'
+  rotulo: string
+  categoria: string
+  subcategoria?: string | null
+  balde?: string | null
 }
 
-interface CategoryPayloadItem {
-  id?: string
-  name: string
-  type: string
-  budget_bucket?: string | null
-  subcategories?: Array<{ id?: string; name: string }>
-}
-
-interface RequestPayload {
-  texto?: string
-  familyId?: string
-  contexto_anterior?: PreviousContextPayload | null
-  historico_mensagens?: ChatMessagePayloadItem[] | null
-  categorias?: CategoryPayloadItem[] | null
+interface VoiceAiResponse {
+  status:
+    | 'sucesso'
+    | 'clarificacao'
+    | 'clarificacao_categoria'
+    | 'falta_valor'
+    | 'invalido'
+    | 'consulta'
+    | 'acao_executada'
+    | 'modo_cesta'
+  acao?: 'criar' | 'reclassificar' | 'ajustar_valor' | 'ajustar_descricao' | 'desfazer' | null
+  tipo_resposta?: 'transacao' | 'consulta' | 'consultoria_categoria' | 'acao'
+  intencao?:
+    | 'transacao'
+    | 'consulta'
+    | 'consultoria_categoria'
+    | 'correcao'
+    | 'desfazer'
+    | 'social'
+    | null
+  router?: {
+    classe: number | null
+    confianca: number | null
+    lacunas: string[] | null
+  }
+  itens?: Array<{ descricao: string; quantidade: number | null; valor: number | null }> | null
+  confianca?: number | null
+  lacunas?: string[] | null
+  resposta_consulta?: string | null
+  transacao: ParsedVoiceTransaction | null
+  pergunta_clarificacao?: string | null
+  opcoes_sugestao?: StructuredSuggestionOption[] | null
+  mensagem_amigavel?: string | null
+  error?: string
+  error_detail?: string
 }
 
 function formatCentsToBRL(cents: number): string {
-  return (cents / 100).toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  })
+  const abs = Math.abs(cents)
+  const reais = Math.floor(abs / 100)
+  const centavos = abs % 100
+  const formattedReais = reais.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  const formattedCentavos = centavos.toString().padStart(2, '0')
+  return `R$ ${formattedReais},${formattedCentavos}`
 }
 
-Deno.serve(async (req: Request) => {
+function normalizeText(text: string): string {
+  return (text || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing Supabase configuration')
       return new Response(
         JSON.stringify({
           status: 'invalido',
+          error: 'CONFIG_ERROR',
+          error_detail: 'Configuração do Supabase ausente',
           transacao: null,
           pergunta_clarificacao: null,
           opcoes_sugestao: null,
-          mensagem_amigavel: 'Sessão não autenticada. Faça login novamente.',
-        }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      )
-    }
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY') ?? ''
-
-    if (!openaiApiKey) {
-      return new Response(
-        JSON.stringify({
-          status: 'invalido',
-          error: 'OPENAI_API_KEY_NOT_CONFIGURED',
-          error_detail: 'Chave OPENAI_API_KEY não configurada no backend Supabase.',
-          transacao: null,
-          pergunta_clarificacao: null,
-          opcoes_sugestao: null,
-          mensagem_amigavel: 'Chave de inteligência artificial não configurada no servidor.',
+          mensagem_amigavel: 'Erro de configuração do servidor.',
         }),
         {
           status: 500,
@@ -87,46 +106,38 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // Cliente Supabase no contexto da autenticação do usuário
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: { Authorization: authHeader },
-      },
-    })
-
-    // Obter usuário da sessão
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
-
-    if (userError || !user) {
+    if (!openaiApiKey) {
+      console.error('Missing OpenAI API key')
       return new Response(
         JSON.stringify({
           status: 'invalido',
+          error: 'CONFIG_ERROR',
+          error_detail: 'Chave da API OpenAI não configurada no Supabase',
           transacao: null,
           pergunta_clarificacao: null,
           opcoes_sugestao: null,
-          mensagem_amigavel: 'Sessão expirada. Faça login novamente.',
+          mensagem_amigavel: 'A IA de reconhecimento de voz não está configurada.',
         }),
         {
-          status: 401,
+          status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         },
       )
     }
 
-    let body: RequestPayload = {}
-    try {
-      body = await req.json()
-    } catch {
+    const body = await req.json()
+    const { texto, family_id, contexto_anterior, historico_mensagens } = body
+
+    if (!texto || typeof texto !== 'string' || !texto.trim()) {
       return new Response(
         JSON.stringify({
           status: 'invalido',
+          error: 'EMPTY_TEXT',
+          error_detail: 'Nenhum texto informado para processamento',
           transacao: null,
           pergunta_clarificacao: null,
           opcoes_sugestao: null,
-          mensagem_amigavel: 'Texto não informado.',
+          mensagem_amigavel: 'Não consegui entender. Poderia falar novamente?',
         }),
         {
           status: 400,
@@ -135,358 +146,156 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    const texto = body.texto?.trim()
-    if (!texto) {
-      return new Response(
-        JSON.stringify({
-          status: 'invalido',
-          transacao: null,
-          pergunta_clarificacao: null,
-          opcoes_sugestao: null,
-          mensagem_amigavel: 'Não consegui ouvir nada. Toque no microfone e tente falar novamente!',
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      )
-    }
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Buscar família se não vier no body
-    let targetFamilyId = body.familyId
+    // Obter family_id do token se não fornecido
+    let targetFamilyId = family_id
     if (!targetFamilyId) {
-      const { data: memberRecord } = await supabase
-        .from('family_members')
-        .select('family_id')
-        .limit(1)
-        .maybeSingle()
-
-      if (memberRecord?.family_id) {
-        targetFamilyId = memberRecord.family_id
-      } else {
-        const { data: familyRecord } = await supabase
-          .from('families')
-          .select('id')
-          .limit(1)
-          .maybeSingle()
-        if (familyRecord?.id) {
-          targetFamilyId = familyRecord.id
+      const authHeader = req.headers.get('Authorization')
+      if (authHeader) {
+        const token = authHeader.replace('Bearer ', '')
+        const {
+          data: { user },
+          error: authError,
+        } = await supabase.auth.getUser(token)
+        if (!authError && user) {
+          const { data: memberData } = await supabase
+            .from('family_members')
+            .select('family_id')
+            .eq('user_id', user.id)
+            .limit(1)
+            .single()
+          if (memberData?.family_id) {
+            targetFamilyId = memberData.family_id
+          }
         }
       }
     }
 
-    // Otimização de Performance:
-    // Se a requisição for um lançamento de gasto/receita ou resposta de valor (contexto_anterior presente),
-    // pule as consultas pesadas de extrato, últimos 7 dias e orçamentos.
-    // Busque o resumo financeiro SOMENTE se a mensagem contiver termos consultivos explícitos.
-    const normalizedText = texto.toLowerCase()
-    const hasPreviousContext = Boolean(
-      body.contexto_anterior &&
-      (body.contexto_anterior.descricao ||
-        body.contexto_anterior.valor ||
-        body.contexto_anterior.categoria ||
-        body.contexto_anterior.status),
-    )
-
-    const isConsultativeQuery =
-      !hasPreviousContext &&
-      (normalizedText.includes('quanto posso gastar') ||
-        normalizedText.includes('quanto ainda posso') ||
-        normalizedText.includes('posso gastar') ||
-        normalizedText.includes('saldo') ||
-        normalizedText.includes('quanto ganhei') ||
-        normalizedText.includes('quanto recebi') ||
-        normalizedText.includes('minhas receitas') ||
-        normalizedText.includes('minha receita') ||
-        normalizedText.includes('qual minha renda') ||
-        normalizedText.includes('gastos da semana') ||
-        normalizedText.includes('gasto da semana') ||
-        normalizedText.includes('maior gasto') ||
-        normalizedText.includes('meus gastos') ||
-        normalizedText.includes('extrato') ||
-        normalizedText.includes('como estao meus') ||
-        normalizedText.includes('como estão meus') ||
-        normalizedText.includes('baldes') ||
-        normalizedText.includes('balde') ||
-        normalizedText.includes('orçamento') ||
-        normalizedText.includes('orcamento') ||
-        normalizedText.includes('quanto gastei') ||
-        normalizedText.includes('quanto sobrou') ||
-        normalizedText.includes('onde você lançou') ||
-        normalizedText.includes('onde voce lancou') ||
-        normalizedText.includes('onde você colocou') ||
-        normalizedText.includes('qual foi o valor') ||
-        normalizedText.includes('o que você anotou') ||
-        normalizedText.includes('o que você lançou') ||
-        normalizedText.includes('teto') ||
-        normalizedText.includes('de onde você tirou') ||
-        normalizedText.includes('da onde você tirou') ||
-        normalizedText.includes('da onde voce tirou') ||
-        normalizedText.includes('de onde voce tirou') ||
-        normalizedText.includes('desenhos para gastar') ||
-        normalizedText.includes('dinheiro para gastar') ||
-        normalizedText.includes('para gastar esse mês') ||
-        normalizedText.includes('pra gastar esse mes'))
-
-    // 1. Categorias: utilize body.categorias enviado pelo front-end sempre que disponível (sem query no banco)
+    // Carregar catálogo da família
     let categoriesList: any[] = []
-    if (Array.isArray(body.categorias) && body.categorias.length > 0) {
-      categoriesList = body.categorias.map((c) => ({
-        id: c.id,
-        name: c.name,
-        type: c.type,
-        budget_bucket: c.budget_bucket,
-        transaction_subcategories: (c.subcategories || []).map((s) => ({ id: s.id, name: s.name })),
-      }))
-    } else {
-      let categoriesQuery = supabase
-        .from('transaction_categories')
-        .select('id, name, type, budget_bucket, transaction_subcategories(id, name)')
-        .order('sort_order', { ascending: true })
-
-      if (targetFamilyId) {
-        categoriesQuery = categoriesQuery.eq('family_id', targetFamilyId)
-      }
-      const { data: categoriesData } = await categoriesQuery
-      categoriesList = categoriesData || []
-    }
-
-    // 2. Membros da família (apenas se targetFamilyId existir)
     let membersData: any[] = []
+    let familyData: any = null
+
     if (targetFamilyId) {
-      let membersQuery = supabase
-        .from('family_members')
-        .select('id, name, is_admin')
-        .eq('family_id', targetFamilyId)
-      const { data: mData } = await membersQuery
-      membersData = mData || []
+      const [catRes, membersRes, famRes] = await Promise.all([
+        supabase
+          .from('transaction_categories')
+          .select('id, name, type, budget_bucket, transaction_subcategories(id, name)')
+          .eq('family_id', targetFamilyId)
+          .order('name'),
+        supabase.from('family_members').select('id, name, role').eq('family_id', targetFamilyId),
+        supabase
+          .from('families')
+          .select('id, name, monthly_net_income, budget_model')
+          .eq('id', targetFamilyId)
+          .single(),
+      ])
+
+      categoriesList = catRes.data || []
+      membersData = membersRes.data || []
+      familyData = famRes.data || null
     }
 
-    // 3. Resumo financeiro condicional (economiza ~8 queries em lançamentos rápidos e turno 2)
+    // Buscar resumo financeiro recente para contexto
     let financialSummaryContext = ''
-    if (isConsultativeQuery) {
-      const now = new Date()
-      const currentYear = now.getFullYear()
-      const currentMonthNum = now.getMonth() + 1
-      const currentMonthStr = `${currentYear}-${String(currentMonthNum).padStart(2, '0')}-01`
-      const nextMonthStr = `${now.getMonth() === 11 ? currentYear + 1 : currentYear}-${String(
-        ((now.getMonth() + 1) % 12) + 1,
-      ).padStart(2, '0')}-01`
+    if (targetFamilyId) {
+      try {
+        const now = new Date()
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+        const endOfMonth = new Date(
+          now.getFullYear(),
+          now.getMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+        ).toISOString()
 
-      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      const sevenDaysAgoStr = `${sevenDaysAgo.getFullYear()}-${String(sevenDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(sevenDaysAgo.getDate()).padStart(2, '0')}`
-
-      // Executa as consultas financeiras em paralelo para máxima velocidade (incluindo metas, recorrentes e investimentos)
-      const [famRes, monthTxRes, recentTxRes, budgetsRes, goalsRes, recurringRes, investmentsRes] =
-        await Promise.all([
-          targetFamilyId
-            ? supabase
-                .from('families')
-                .select('id, name, monthly_net_income_cents, budget_model')
-                .eq('id', targetFamilyId)
-                .maybeSingle()
-            : Promise.resolve({ data: null }),
-          targetFamilyId
-            ? supabase
-                .from('transactions')
-                .select(
-                  'id, amount_cents, type, description, transaction_date, category_id, transaction_categories(name, budget_bucket)',
-                )
-                .gte('transaction_date', currentMonthStr)
-                .lt('transaction_date', nextMonthStr)
-                .eq('status', 'confirmed')
-                .eq('family_id', targetFamilyId)
-            : Promise.resolve({ data: [] }),
-          targetFamilyId
-            ? supabase
-                .from('transactions')
-                .select(
-                  'id, amount_cents, type, description, transaction_date, transaction_categories(name)',
-                )
-                .gte('transaction_date', sevenDaysAgoStr)
-                .eq('type', 'expense')
-                .eq('status', 'confirmed')
-                .eq('family_id', targetFamilyId)
-                .order('amount_cents', { ascending: false })
-                .limit(5)
-            : Promise.resolve({ data: [] }),
-          targetFamilyId
-            ? supabase
-                .from('budgets')
-                .select('amount_cents, category_id, transaction_categories(name, budget_bucket)')
-                .eq('month', currentMonthStr)
-                .eq('family_id', targetFamilyId)
-            : Promise.resolve({ data: [] }),
-          targetFamilyId
-            ? supabase
-                .from('goals')
-                .select('name, target_amount_cents, current_amount_cents, deadline')
-                .eq('family_id', targetFamilyId)
-                .order('created_at', { ascending: true })
-                .limit(8)
-            : Promise.resolve({ data: [] }),
-          targetFamilyId
-            ? supabase
-                .from('recurring_incomes')
-                .select('description, amount_cents, recurrence_day, is_active')
-                .eq('family_id', targetFamilyId)
-                .eq('is_active', true)
-                .limit(8)
-            : Promise.resolve({ data: [] }),
-          targetFamilyId
-            ? supabase
-                .from('investments')
-                .select('asset_type, current_price_cents, quantity')
-                .eq('family_id', targetFamilyId)
-            : Promise.resolve({ data: [] }),
+        const [txRes, goalsRes, recurringRes, invRes] = await Promise.all([
+          supabase
+            .from('transactions')
+            .select('amount, type, date, transaction_categories(name, budget_bucket)')
+            .eq('family_id', targetFamilyId)
+            .gte('date', startOfMonth.split('T')[0])
+            .lte('date', endOfMonth.split('T')[0]),
+          supabase
+            .from('goals')
+            .select('title, target_amount, current_amount, deadline')
+            .eq('family_id', targetFamilyId)
+            .limit(10),
+          supabase
+            .from('recurring_incomes')
+            .select('description, amount, type')
+            .eq('family_id', targetFamilyId)
+            .eq('is_active', true)
+            .limit(10),
+          supabase
+            .from('investments')
+            .select('type, quantity, current_price, purchase_price')
+            .eq('family_id', targetFamilyId)
+            .limit(20),
         ])
 
-      const familyData: any = famRes.data
-      const monthTransactions: any[] = monthTxRes.data || []
-      const topWeekExpenses: any[] = recentTxRes.data || []
-      const monthlyBudgets: any[] = budgetsRes.data || []
-      const goalsData: any[] = goalsRes.data || []
-      const recurringData: any[] = recurringRes.data || []
-      const investmentsData: any[] = investmentsRes.data || []
+        const txs = txRes.data || []
+        let totalReceitasCents = 0
+        let totalDespesasCents = 0
+        let essentialSpentCents = 0
+        let lifestyleSpentCents = 0
+        let goalsSpentCents = 0
 
-      let totalExpenseMonthCents = 0
-      let totalIncomeMonthCents = 0
-      const expensesByBucketCents = {
-        essentials: 0,
-        lifestyle: 0,
-        future: 0,
-      }
-
-      monthTransactions.forEach((tx: any) => {
-        const amount = Number(tx.amount_cents || 0)
-        if (tx.type === 'expense') {
-          totalExpenseMonthCents += amount
-          const bucket = tx.transaction_categories?.budget_bucket || 'lifestyle'
-          if (bucket === 'essential' || bucket === 'essentials') {
-            expensesByBucketCents.essentials += amount
-          } else if (bucket === 'goals' || bucket === 'future') {
-            expensesByBucketCents.future += amount
+        for (const t of txs) {
+          const amt = Number(t.amount) || 0
+          if (t.type === 'income') {
+            totalReceitasCents += amt
           } else {
-            expensesByBucketCents.lifestyle += amount
+            totalDespesasCents += amt
+            const bucket = (t as any).transaction_categories?.budget_bucket
+            if (bucket === 'essential') essentialSpentCents += amt
+            else if (bucket === 'lifestyle') lifestyleSpentCents += amt
+            else if (bucket === 'goals') goalsSpentCents += amt
           }
-        } else if (tx.type === 'income') {
-          totalIncomeMonthCents += amount
         }
-      })
 
-      let totalBudgetConfiguredCents = 0
-      monthlyBudgets.forEach((b: any) => {
-        totalBudgetConfiguredCents += Number(b.amount_cents || 0)
-      })
+        const saldoRealCents = totalReceitasCents - totalDespesasCents
+        const tetoPlanejadoCents = familyData?.monthly_net_income || 0
 
-      const netIncomeCents = Number(familyData?.monthly_net_income_cents || 0)
-      const budgetModel = familyData?.budget_model || '60_25_15'
+        const goalsSummary =
+          (goalsRes.data || [])
+            .map(
+              (g: any) =>
+                `- Meta "${g.title}": saldo ${formatCentsToBRL(g.current_amount || 0)} de ${formatCentsToBRL(g.target_amount || 0)}`,
+            )
+            .join('\n') || 'Nenhuma meta cadastrada'
 
-      let targets = { essentials: 60, lifestyle: 25, future: 15 }
-      if (budgetModel === '50_30_20') {
-        targets = { essentials: 50, lifestyle: 30, future: 20 }
-      } else if (budgetModel === '70_20_10') {
-        targets = { essentials: 70, lifestyle: 20, future: 10 }
-      } else if (budgetModel === '60_20_20') {
-        targets = { essentials: 60, lifestyle: 20, future: 20 }
-      }
+        const recurringSummary =
+          (recurringRes.data || [])
+            .map(
+              (r: any) =>
+                `- Recorrente "${r.description}": ${formatCentsToBRL(r.amount || 0)} (${r.type || 'fixo'})`,
+            )
+            .join('\n') || 'Nenhuma receita recorrente ativa cadastrada'
 
-      const targetEssentialsCents = Math.round((netIncomeCents * targets.essentials) / 100)
-      const targetLifestyleCents = Math.round((netIncomeCents * targets.lifestyle) / 100)
-      const targetGoalsCents = Math.round((netIncomeCents * targets.future) / 100)
+        const investmentTypesSummary =
+          (invRes.data || [])
+            .map((inv: any) => {
+              const val = Math.round((Number(inv.quantity) || 0) * (Number(inv.current_price) || 0))
+              return `- Tipo "${inv.type}": ${formatCentsToBRL(val)}`
+            })
+            .join('\n') || 'Nenhum investimento registrado'
 
-      const remainingLifestyleCents =
-        targetLifestyleCents > 0
-          ? Math.max(0, targetLifestyleCents - expensesByBucketCents.lifestyle)
-          : null
-
-      // Teto de planejamento orçamentário configurado (NÃO É RECEITA NEM SALDO EM CONTA)
-      const plannedBudgetCapCents =
-        totalBudgetConfiguredCents > 0
-          ? totalBudgetConfiguredCents
-          : netIncomeCents > 0
-            ? netIncomeCents
-            : 0
-
-      // Saldo orçamentário restante para despesas com base no teto de planejamento
-      const remainingBudgetCapMonthCents =
-        plannedBudgetCapCents > 0 ? plannedBudgetCapCents - totalExpenseMonthCents : null
-
-      // Saldo financeiro real do mês (exclusivamente dinheiro real que entrou - despesas reais)
-      const realCashflowBalanceCents = totalIncomeMonthCents - totalExpenseMonthCents
-
-      const maiorGastoSemana =
-        topWeekExpenses && topWeekExpenses.length > 0 ? topWeekExpenses[0] : null
-
-      // Agregação compacta de Metas da família
-      const goalsSummary =
-        goalsData.length > 0
-          ? goalsData
-              .map((g: any) => {
-                const target = Number(g.target_amount_cents || 0)
-                const current = Number(g.current_amount_cents || 0)
-                const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0
-                const deadlineStr = g.deadline ? ` prazo: ${g.deadline}` : ''
-                return `* "${g.name}": ${pct}% (${formatCentsToBRL(current)} de ${formatCentsToBRL(target)})${deadlineStr}`
-              })
-              .join('\n  ')
-          : 'Nenhuma meta cadastrada.'
-
-      // Agregação compacta de Receitas Recorrentes ativas
-      const recurringSummary =
-        recurringData.length > 0
-          ? recurringData
-              .map((r: any) => {
-                const day = r.recurrence_day ? `todo dia ${r.recurrence_day}` : 'mensal'
-                return `* "${r.description}": ${formatCentsToBRL(Number(r.amount_cents || 0))} (${day})`
-              })
-              .join('\n  ')
-          : 'Nenhuma receita recorrente ativa.'
-
-      // Agregação de dados financeiros reais do mês
-      const investmentTotalsByType: Record<string, number> = {}
-      let totalInvestedAllCents = 0
-      investmentsData.forEach((inv: any) => {
-        const type = String(inv.asset_type || 'outros').toLowerCase()
-        const price = Number(inv.current_price_cents || 0)
-        const qty = Number(inv.quantity || 0)
-        const totalPosition = Math.round(price * qty)
-        investmentTotalsByType[type] = (investmentTotalsByType[type] || 0) + totalPosition
-        totalInvestedAllCents += totalPosition
-      })
-
-      const investmentTypesSummary =
-        Object.keys(investmentTotalsByType).length > 0
-          ? Object.entries(investmentTotalsByType)
-              .map(
-                ([type, totalCents]) => `* ${type.toUpperCase()}: ${formatCentsToBRL(totalCents)}`,
-              )
-              .join('\n  ') +
-            `\n  * Total Geral Investido: ${formatCentsToBRL(totalInvestedAllCents)}`
-          : 'Nenhum investimento cadastrado.'
-
-      financialSummaryContext = `
-DADOS FINANCEIROS REAIS DA FAMÍLIA (MÊS ATUAL: ${currentMonthStr.slice(0, 7)}):
-MÉTRICAS FINANCEIRAS DO MÊS:
-- receitas_mes: ${formatCentsToBRL(totalIncomeMonthCents)} (em centavos: ${totalIncomeMonthCents}). ATENÇÃO: É EXCLUSIVAMENTE a soma de transações reais confirmadas de entrada ('income') ocorridas no mês. NUNCA somar nem incluir teto_planejado_onboarding aqui. Se nenhuma transação de renda foi lançada no mês, o valor é R$ 0,00.
-- despesas_mes: ${formatCentsToBRL(totalExpenseMonthCents)} (em centavos: ${totalExpenseMonthCents}). Soma das transações reais confirmadas de saída ('expense') ocorridas no mês.
-- saldo_real_mes (receitas_mes - despesas_mes): ${formatCentsToBRL(realCashflowBalanceCents)}. Este é o saldo financeiro real acumulado das transações reais do mês atual.
-- teto_planejado_onboarding: ${netIncomeCents > 0 ? formatCentsToBRL(netIncomeCents) : 'Não informado'} [Teto de Planejamento dos Baldes (NÃO É RECEITA REAL, NÃO É SALÁRIO RECEBIDO, NÃO É SALDO EM CONTA)].
-- Modelo Orçamentário da Família: ${targets.essentials}/${targets.lifestyle}/${targets.future} (Essenciais ${targets.essentials}%, Estilo de Vida ${targets.lifestyle}%, Metas/Futuro ${targets.future}%)
-- Detalhamento de despesas por balde vs metas teóricas de planejamento:
-  * Necessidades Essenciais: ${formatCentsToBRL(expensesByBucketCents.essentials)}${targetEssentialsCents > 0 ? ` (Teto meta teórico: ${formatCentsToBRL(targetEssentialsCents)})` : ''}
-  * Estilo de Vida: ${formatCentsToBRL(expensesByBucketCents.lifestyle)}${targetLifestyleCents > 0 ? ` (Teto meta teórico: ${formatCentsToBRL(targetLifestyleCents)} | Margem teórica restante: ${formatCentsToBRL(remainingLifestyleCents ?? 0)})` : ''}
-  * Metas & Investimentos: ${formatCentsToBRL(expensesByBucketCents.future)}${targetGoalsCents > 0 ? ` (Teto meta teórico: ${formatCentsToBRL(targetGoalsCents)})` : ''}
-- Teto de orçamento planejado para o mês: ${plannedBudgetCapCents > 0 ? formatCentsToBRL(plannedBudgetCapCents) : 'Sem teto fixo cadastrado'}
-- Margem de teto orçamentário restante para gastar este mês: ${
-        remainingBudgetCapMonthCents !== null
-          ? `${formatCentsToBRL(remainingBudgetCapMonthCents)} (margem restante baseada no teto de planejamento de ${formatCentsToBRL(plannedBudgetCapCents)})`
-          : `Despesas realizadas: ${formatCentsToBRL(totalExpenseMonthCents)}.`
-      }
-- Maior gasto dos últimos 7 dias: ${
-        maiorGastoSemana
-          ? `"${maiorGastoSemana.description || 'Gasto'}" no valor de ${formatCentsToBRL(Number(maiorGastoSemana.amount_cents || 0))} em ${maiorGastoSemana.transaction_date}${maiorGastoSemana.transaction_categories?.name ? ` (${maiorGastoSemana.transaction_categories.name})` : ''}`
-          : 'Nenhum gasto registrado nos últimos 7 dias.'
-      }
+        financialSummaryContext = `
+DADOS FINANCEIROS REAIS DA FAMÍLIA NESTE MÊS:
+- Receitas reais realizadas no mês: ${formatCentsToBRL(totalReceitasCents)}
+- Despesas reais realizadas no mês: ${formatCentsToBRL(totalDespesasCents)}
+- Saldo real do mês (receitas - despesas): ${formatCentsToBRL(saldoRealCents)}
+- Total de transações registradas neste mês: ${txs.length}
+- Gastos reais por balde:
+  * Necessidades Essenciais: ${formatCentsToBRL(essentialSpentCents)}
+  * Estilo de Vida: ${formatCentsToBRL(lifestyleSpentCents)}
+  * Metas & Investimentos: ${formatCentsToBRL(goalsSpentCents)}
+- Teto orçamentário planejado no onboarding (renda cadastrada): ${formatCentsToBRL(tetoPlanejadoCents)}
+- Modelo orçamentário da família: ${familyData?.budget_model || '50-30-20'}
 - Metas financeiras da família:
   ${goalsSummary}
 - Receitas recorrentes ativas cadastradas:
@@ -494,6 +303,9 @@ MÉTRICAS FINANCEIRAS DO MÊS:
 - Investimentos agregados por categoria de ativo:
   ${investmentTypesSummary}
 `
+      } catch (sumErr) {
+        console.warn('Erro ao montar contexto financeiro resumido:', sumErr)
+      }
     }
 
     // Formatar categorias e subcategorias para o System Prompt
@@ -524,7 +336,9 @@ MÉTRICAS FINANCEIRAS DO MÊS:
       const opcoesStr =
         Array.isArray(previousContext.opcoes_sugestao) && previousContext.opcoes_sugestao.length > 0
           ? previousContext.opcoes_sugestao
-              .map((o) => (typeof o === 'string' ? `"${o}"` : `"${o?.rotulo || o?.categoria}"`))
+              .map((o: any) =>
+                typeof o === 'string' ? `"${o}"` : `"${o?.rotulo || o?.categoria}"`,
+              )
               .join(', ')
           : 'Nenhuma'
 
@@ -581,23 +395,83 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
     }
 
     const systemPrompt = `Você é o Curiangoo AI (Curiangoo Copilot), assistente financeiro inteligente do app Curiangoo para finanças familiares (Metodologia de 3 Baldes: 60/25/15 ou 50/30/20).
-Seu papel é triplo:
-1. LANÇAMENTO AUTÔNOMO (fala/texto de gastos ou receitas): transformar em transação financeira imediata, inferindo categoria e subcategoria com base no catálogo da família sem travar o usuário.
-2. RECLASSIFICAÇÃO, CORREÇÃO OU DESFAZER DE LANÇAMENTOS ANTERIORES: quando o usuário pedir para mudar categoria ("Supermercado não, coloca em hortifruti", "muda pra farmácia"), alterar valor ("não é esse valor, foi 70", "corrige o valor para 80"), trocar descrição ("não é arroz, é feijão") ou desfazer ("desfaz esse gasto", "cancela", "apaga").
-3. CONSULTAS FINANCEIRAS E ORIENTAÇÃO RÁPIDA: responder sintética e precisamente perguntas sobre saldo disponível, quanto pode gastar, despesas recentes e orçamentos por balde.
 
-Em lançamentos de despesas ou receitas, seja 100% conciso. Limite-se a confirmar o lançamento no padrão acordado ('Lançado: R$ X em Categoria › Subcategoria! 👍'). NUNCA adicione palpites ou comentários espontâneos sobre baldes ('Estilo de Vida', 'Essenciais') a menos que o usuário pergunte expressamente sobre orçamentos ou baldes.
+=======================================================
+CONTRATO DE COMPORTAMENTO DO COPILOT v1.0 — ROUTER DE INTENÇÕES (9 CLASSES)
+=======================================================
+Toda mensagem do usuário DEVE ser classificada PRIMEIRO em UMA das 9 classes a seguir antes de qualquer ação. A classificação deve ser expressa no nó "router" do JSON com "classe" (1 a 9) e "confianca" (0.0 a 1.0):
 
-DICIONÁRIO SEMÂNTICO FIXO (rodada 27B/28/32):
-- Gastos com eventos sociais, churrasco, festa, encontro, show, ingresso, teatro e happy hour devem ser classificados em 'Lazer › Eventos & Reuniões'. O catálogo NÃO possui mais 'Shows & Eventos' (consolidado em 'Eventos & Reuniões').
-- Gastos com cigarro, cigarros, maço de cigarro, tabaco, tabacaria, cigarro eletrônico/vape e charuto devem ser classificados em 'Compras › Tabaco & Cigarros' se existir no catálogo da família. JAMAIS classifique cigarro ou tabaco em Alimentação, Conveniência de posto, Farmácia ou Lazer.
-- MODO CESTA — MISSÃO DE COMPRA (Rodada 28/32):
-  * Cesta = enumeração multi-item com valor total único na voz/texto (ex: "1 salame, 1 suco de maracujá e 1 caixa de cerveja, tudo 100 reais").
-  * Cesta óbvia do dia a dia (arroz, feijão, leite, sabão, macarrão, etc.) -> Alimentação › Supermercado & Atacado direto, SEM pergunta.
-  * Cesta com padrão que sugere ocasião (cerveja/cachaça + salame/carne/carvão/gelo; pipoca + doces/refri; flores + perfume):
-    - JAMAIS grave evento social em silêncio! Faça UMA pergunta natural: "Percebi [itens] — parece um encontro ou churrasco?"
-    - Retorne status "clarificacao" com a pergunta em "pergunta_clarificacao" e "mensagem_amigavel", com a transação pendente contendo valor total e descrição com a lista dos itens.
-    - Quando o usuário responde livremente ("foi um churrasco sim", "não, compra de casa"), interprete a resposta conforme as regras de contexto anterior!
+CLASSE 1: LANÇAMENTO COMPLETO (Item/local específico + valor monetário)
+  Exemplos: "gastei 80 no mercado", "almoço 45 reais no débito", "salário de 5000 caiu", "50 reais de gasolina no posto Shell".
+  Ação: Lançar IMEDIATAMENTE (status: "sucesso"). Inferir categoria e subcategoria do catálogo da família.
+  Mensagem amigável: padrão "Lançado: R$ [valor] em [Categoria] › [Subcategoria] 👍!" (ou "Lançado: R$ [valor] em [Categoria] 👍!").
+
+CLASSE 2: LANÇAMENTO VAGO / INCOMPLETO
+  (A) DESCRIÇÃO GENÉRICA ("comprei algumas coisas", "umas coisas", "umas paradas", "compras", "umas comprinhas", "gastei numas coisas"):
+      REGRA FUNDAMENTAL DO CONTRATO: PERGUNTE OS ITENS PRIMEIRO, NUNCA O VALOR!
+      Mesmo que o usuário mencione valor ("comprei umas coisas por 50 reais"), você precisa saber O QUE foi comprado para categorizar.
+      Se não disse valor nem itens ("comprei algumas coisas"): pergunte "O que você comprou?".
+      NUNCA pergunte valor antes dos itens!
+      status: "falta_valor"
+      lacunas: ["itens"] (ou ["itens", "valor"])
+      pergunta_clarificacao: "O que você comprou?"
+      mensagem_amigavel: "O que você comprou? Me conta os itens que eu já organizo pra você!"
+  (B) DESCRIÇÃO ESPECÍFICA SEM VALOR ("paguei o mercado", "coxinha na padaria", "almoço no restaurante", "gasolina no posto"):
+      Itens/serviço estão claros, falta o valor monetário.
+      status: "falta_valor"
+      lacunas: ["valor"]
+      pergunta_clarificacao: "Quanto custou?"
+      mensagem_amigavel: "Identifiquei [Item]. Quanto custou? 👍"
+  (C) Limite rigoroso de no máximo 2 perguntas (doutrina R28).
+
+CLASSE 3: CESTA COM OCASIÃO (Conjunto coerente que sugere evento ou encontro)
+  Exemplos: "carne, carvão e cerveja, tudo 100", "picanha, carvão, gelo e cerveja 180 reais", "pipoca, refri e doces 45".
+  Requisito: conjunto harmônico e COERENTE de ocasião (churrasco, festa, resenha), SEM itens de abastecimento doméstico/higiene/limpeza contradizendo.
+  Ação: NÃO grave ocasião em silêncio! Faça UMA pergunta natural conversacional:
+  status: "clarificacao"
+  pergunta_clarificacao: "Percebi carne, carvão e cerveja — parece um churrasco ou encontro com os amigos?"
+  mensagem_amigavel: "Percebi carne, carvão e cerveja — parece um churrasco ou encontro com os amigos? Se for, já coloco em Lazer › Eventos & Reuniões!"
+  transacao pendente com valor total e lista de itens em descricao.
+
+CLASSE 4: LISTA MISTA DE MERCADO (FIM DO FALSO CHURRASCO)
+  Exemplos: "uma caixa de cerveja, uma caixa de sabão em pó, dois salames, dois miojos de pote, tudo na mercearia Parada Certa. Ficou 118 reais", "arroz, feijão, sabão em pó, cerveja e salame no mercado deu 120".
+  Critério: presença de itens de casa/limpeza/despensa (sabão, miojo, arroz, detergente, papel higiênico, amaciante) CONTRADIZ a ocasião de lazer/churrasco.
+  Ação: Gravar DIRETO como Alimentação › Supermercado & Atacado (ou Alimentação), balde Necessidades Essenciais, SEM perguntar sobre churrasco!
+  status: "sucesso"
+  transacao: { descricao: "cerveja, sabão em pó, salame, miojo — mercado", valor: 118, categoria: "Alimentação", subcategoria: "Supermercado & Atacado", balde: "Necessidades Essenciais" }
+  mensagem_amigavel: "Lançado: R$ 118,00 em Alimentação › Supermercado & Atacado 👍!"
+
+CLASSE 5: ITENS HETEROGÊNEOS SEM VALOR CONSOLIDADO
+  Exemplos: vários itens com valores separados em mensagem única ("20 de estacionamento e 50 de mercado").
+  Ação: Lançar o primeiro e informar o segundo, ou processar com clareza. (Sem valor consolidado único não é cesta).
+
+CLASSE 6: PERGUNTA SOBRE FINANÇAS (CONSULTA FINANCEIRA)
+  Exemplos: "quanto gastei este mês?", "quanto sobrou?", "quanto posso gastar?", "qual meu saldo?", "como estão meus gastos?", "quanto gastei em restaurantes?".
+  Ação: status: "consulta", tipo_resposta: "consulta", transacao: null.
+  Responda com base no resumo financeiro fornecido, diferenciando receita real de teto planejado.
+
+CLASSE 7: CONVERSA / SOCIAL / SAUDAÇÕES
+  Exemplos: "bom dia", "boa tarde", "boa noite", "oi", "olá", "e aí curiangoo", "como você está?", "tudo bem?".
+  Ação CRÍTICA: NUNCA tente extrair transação de saudação! NUNCA marque como 'invalido' com mensagem de erro!
+  status: "consulta" (ou status social/conversacional, tipo_resposta: "consulta", transacao: null)
+  Resposta curta, calorosa, personalidade Curiangoo acolhedora + gancho útil convidativo:
+  Exemplo: "Bom dia! Pronto pra registrar algo ou ver como estão as finanças de vocês?"
+  Exemplo: "Olá! Tudo ótimo por aqui. No que posso ajudar nas contas da família hoje?"
+
+CLASSE 8: COMANDOS
+  Exemplos: "cancela", "cancelar", "esquece", "desfaz", "apaga a última", "criar subcategoria X", "muda para farmácia".
+  Ação: Se "cancela" / "esquece" durante pendência ou clarificação: descarta a pendência com alívio cordial ("Tudo bem, cancelado! Não registrei nada.").
+  Se "desfaz" de lançamento recente: acao: "desfazer", status: "acao_executada", mensagem: "Lançamento desfeito!".
+  Se "muda para [categoria]": acao: "reclassificar", status: "sucesso".
+
+CLASSE 9: DESCONHECIDO / FORA DE ESCOPO
+  Exemplos: mensagem sobre política partidária, esportes aleatórios, "qual a previsão do tempo?", "quem vai ganhar a eleição?", ruído ininteligível ("asdfghjk").
+  Ação: Redirecionamento elegante e acolhedor para as finanças da família, sem arrogância e sem card de transação:
+  Exemplo: "Prefiro não opinar sobre isso! Mas se quiser falar sobre os gastos, receitas ou metas da família, estou 100% por aqui."
+  status: "invalido" (ou "consulta"), tipo_resposta: "consulta", transacao: null.
+
+REGRA DE DESAMBIGUAÇÃO EM CONFIANÇA BAIXA:
+Se a confiança entre duas classes for baixa (< 0.65), faça UMA pergunta de desambiguação clara e natural, NUNCA dê chute cego!
 
 ${previousContextPrompt}
 
@@ -615,93 +489,31 @@ Membros da família cadastrados:
 ${membersContext || 'Membro padrão'}
 
 =======================================================
-REGRAS OBRIGATÓRIAS DE CONFIRMAÇÃO E SEMÂNTICA (CRÍTICAS)
+REGRAS OBRIGATÓRIAS DE CONFIRMAÇÃO E SEMÂNTICA
 =======================================================
-
-1. PADRÃO OBRIGATÓRIO DE CONFIRMAÇÃO (STATUS 'sucesso'):
-- Se houver subcategoria válida do catálogo da família:
-  "Lançado: R$ [valor] em [Nome da Categoria] › [Nome da Subcategoria] [emoji]!"
-  Exemplo: "Lançado: R$ 35,00 em Restaurantes & Delivery › Restaurantes & Bares 👍!"
-- Se NÃO houver subcategoria válida do catálogo da família: sugira o nome semanticamente e pergunte se o usuário deseja criá-la na categoria-mãe apropriada, ou pergunte a gaveta correta.
-- NUNCA force pares cruzados inválidos como "Alimentação › Utilidades & Casa" (Utilidades & Casa é de Compras).
-
-2. REGRA ANTI-CHUTE E PROTOCOLO DE CRIAÇÃO VIA CHAT (T3):
-- Item ou gasto sem gaveta/subcategoria óbvia no catálogo: NUNCA recuse ou classifique arbitrariamente!
-- A IA PODE e DEVE sugerir o nome semântico mais adequado e oferecer para criar sob a categoria-mãe legítima (ex.: para carteira de cigarro ou fumo, sugerir 'Tabaco & Cigarros' dentro de Compras: "Para cigarros eu sugeriria 'Tabaco & Cigarros' dentro de Compras. Quer que eu crie?").
-- Usuário confirmando ("sim", "pode criar", "cria aí") -> crie como subcategoria personalizada da família herdando o balde da categoria-mãe.
-- Em itens de bebês/crianças (ex: 'fraldas', 'enxoval'), classifique em 'Compras › Bebês & Crianças'.
-
-3. DOUTRINA OPERACIONAL MULTI-CENÁRIOS (T4):
-(i) MÚLTIPLOS LANÇAMENTOS COM VALORES INDIVIDUAIS: Se a mensagem contiver vários itens com valores próprios (ex: "paguei 20 de estacionamento e 50 de mercado"), lance como 2 itens distintos (ou processe o primeiro e avise o segundo). ATENÇÃO: Sem valor total único declarado, NÃO é Modo Cesta!
-(ii) RECEITA OU DESPESA RECORRENTE ("todo mês pago academia", "recebo aluguel todo dia 10"): sugira criar uma regra recorrente na mensagem ("Identifiquei uma despesa fixa de academia. Gostaria de salvar como recorrente mensal?").
-(iii) VALORES AMBÍGUOS ("gastei vinte e cinquenta", "foi cem e pouco"): faça UMA pergunta de clarificação objetiva antes de assumir o número errado.
-(iv) COMANDOS FORA DE ESCOPO FINANCEIRO ("qual a previsão do tempo?", "conta uma piada"): responda de maneira leve, acolhedora e bem-humorada, redirecionando com carinho para as finanças da família.
-
-3. REGRAS SEMÂNTICAS DE ALIMENTAÇÃO E LANCHES (CONTEXTO BRASIL):
-- NUNCA classificar como "Delivery" despesas de comida de rua, feira, pastel, praia, quiosque, salgado ou padaria.
-- A subcategoria "Delivery (iFood/Rappi)" (ou equivalente de Delivery) é EXCLUSIVA para pedidos de entrega em domicílio/casa ou quando o usuário citar expressamente aplicativos de delivery ("no ifood", "pelo rappi", "pedi delivery", "entrega em casa").
-- Para comidas rápidas consumidas no local ou na rua (ex: pastel de feira, lanche, salgado, coxinha, esfiha, food truck, quiosque, água de coco na praia), classificar em Fast Food & Lanches ou Restaurantes & Bares.
-- Compras de feira livre / hortifruti de abastecimento da casa (frutas, verduras, legumes para cozinhar em casa): classificar em "Alimentação › Hortifruti & Feira" (Necessidades Essenciais). Já o pastel frito consumido na feira ("pastel na feira", "caldo de cana"): classificar em Restaurantes & Delivery / Lanches (Estilo de Vida).
+- Eventos sociais, resenha e churrasco -> 'Lazer › Eventos & Reuniões' (Estilo de Vida).
+- Cigarro / tabaco / fumo / vape -> 'Compras › Tabaco & Cigarros' se existir (nunca Alimentação ou Farmácia).
+- Comida de rua / lanches / pastel consumido no local -> 'Restaurantes & Delivery › Fast Food & Lanches' ou 'Restaurantes & Bares' (nunca 'Delivery' a menos que seja entrega em domicílio/app).
+- Hortifruti e compras de abastecimento -> 'Alimentação › Hortifruti & Feira'.
 
 =======================================================
-DIRETRIZES DE INTELIGÊNCIA REAL (PADRÃO OURO):
+ESQUEMA JSON OBRIGATÓRIO (response_format: json_object)
 =======================================================
-
-1. INFERÊNCIA AUTÔNOMA DE CATEGORIA:
-  - Quando descrição e valor existirem, SEMPRE infira e selecione a melhor categoria existente e subcategoria correspondente do catálogo da família acima.
-  - NÃO trave a tela com opções de escolha se a categoria puder ser inferida com razoável confiança!
-  - Retorne "status": "sucesso" com a categoria e subcategoria preenchidas de forma legítima e com a "mensagem_amigavel" no padrão de confirmação.
-
-2. AÇÕES DE CORREÇÃO, RECLASSIFICAÇÃO OU CANCELAMENTO:
-  - Se o usuário disser algo como "desfaz esse gasto", "cancela esse lançamento", "apaga a última", retorne:
-    * "status": "acao_executada" (ou "sucesso")
-    * "acao": "desfazer"
-    * "mensagem_amigavel": "Lançamento desfeito!"
-  - Se o usuário disser "Supermercado não, coloca em hortifruti", "muda para farmácia", "coloca em Lazer", identifique a nova categoria e subcategoria e retorne:
-    * "status": "sucesso"
-    * "acao": "reclassificar"
-    * "transacao" atualizada com a nova categoria/subcategoria.
-    * "mensagem_amigavel": "Ajustado para [Nome da Categoria] › [Nome da Subcategoria]!"
-  - Se o usuário disser "não é esse valor, foi 70", "corrige para 50 reais", retorne:
-    * "status": "sucesso"
-    * "acao": "ajustar_valor"
-    * "transacao" com novo valor.
-    * "mensagem_amigavel": "Valor corrigido para R$ [novo_valor]!"
-  - Se o usuário disser "não é arroz, é feijão", preserve o valor e categoria anteriores e atualize apenas a descrição:
-    * "status": "sucesso"
-    * "acao": "ajustar_descricao"
-    * "transacao" com nova descrição.
-    * "mensagem_amigavel": "Descrição corrigida para Feijão!"
-
-3. NÚMEROS PUROS E SLOT-FILLING (REGRA DE TURNO 2):
-  - Se a mensagem contiver um número isolado como "12", "12 reais", "doze", "doze reais", "52", "52 reais", "cinquenta e dois" e havia contexto anterior sem valor (status anterior 'falta_valor'), capture esse número como o valor da transação pendente.
-  - MESCLE com a descrição do contexto anterior e RETORNE IMEDIATAMENTE "status": "sucesso" com a transação completa, sem re-perguntar.
-  - Use o padrão de confirmação em "mensagem_amigavel": "Lançado: R$ [valor] em [Nome da Categoria] › [Nome da Subcategoria] 👍!" ou "Lançado: R$ [valor] em [Nome da Categoria] 👍!".
-
-4. CONSULTAS FINANCEIRAS, REGRA CRÍTICA DE SALDO/RECEITAS E MEMÓRIA DA CONVERSA RECENTE:
-  - REGRA CRÍTICA DE DISTINÇÃO ENTRE RECEITA REAL E TETO DE PLANEJAMENTO:
-    Atenção: 'teto_planejado_onboarding' (ou 'monthly_net_income' da família) é apenas a meta teórica para divisão dos baldes orçamentários (60/25/15 ou 50/30/20). NUNCA considere esse valor como receita realizada, salário recebido ou saldo real em conta. NUNCA some esse teto com receitas reais. O dinheiro real que entrou no mês é única e exclusivamente 'receitas_mes' (soma das transações reais confirmadas de receita). Responda a consultas de saldo e receitas baseando-se no dinheiro que realmente entrou.
-    * Se o usuário perguntar "quanto ganhei esse mês?", "qual minha receita?", "quanto recebi?": responda EXCLUSIVAMENTE com o valor de 'receitas_mes'. Se 'receitas_mes' for zero ou não houver lançamentos de entrada, informe com clareza que nenhuma receita foi registrada no mês ainda (ou o valor de receitas_mes), podendo mencionar de forma totalmente separada a meta planejada apenas se for relevante para contexto.
-    * Se o usuário perguntar "qual meu saldo?" ou "quanto tenho?": o saldo do mês é obtido unicamente pelas transações reais ('saldo_real_mes' = receitas_mes - despesas_mes). NUNCA some a renda cadastrada do onboarding ao saldo em conta!
-    * Se o usuário perguntar "quanto ainda posso gastar?" ou sobre orçamentos/baldes: use a margem orçamentária dos baldes ou do teto planejado, explicando com clareza que se trata do teto orçamentário planejado.
-    * Se o usuário perguntar sobre o teto ou de onde ele veio (ex: "Da onde você tirou esse teto?", "Por que teto de 3.600?"): responda diretamente com base no histórico da conversa e no teto de planejamento cadastrado no perfil/onboarding da família, explicando com transparência pedagógica e cordial que é o valor definido para o planejamento orçamentário.
-  - Quando o usuário fizer perguntas contextuais ou follow-ups sobre respostas e lançamentos recentes (ex: "Da onde você tirou esse teto?", "onde você lançou o almoço?", "qual foi o valor que você anotou?", "em qual categoria ficou?"), você DEVE responder conversacionalmente lendo o histórico recente de mensagens enviado.
-  - NUNCA marque essas perguntas contextuais como "invalido" e NUNCA peça para "falar novamente".
-  - Retorne:
-    * "status": "consulta"
-    * "tipo_resposta": "consulta"
-    * "transacao": null
-    * "resposta_consulta": resposta direta, acolhedora e precisa em português.
-    * "mensagem_amigavel": mesma resposta direta em linguagem natural.
-  - Quando o usuário perguntar "Quanto ainda posso gastar?", "Como estão meus gastos?", responda de forma sintética, direta e acolhedora em 2-3 linhas, citando a margem do teto planejado do mês e a situação do balde de Estilo de Vida com base no resumo financeiro fornecido.
-  - Perguntas gerais fora do domínio financeiro ou ruído sem sentido podem retornar "invalido", mas com um texto curto e amigável para balão de chat (sem tom rústico de erro ou card).
-
-Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido (response_format: json_object) com o seguinte esquema:
+Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido no formato:
 {
+  "router": {
+    "classe": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9,
+    "nome_classe": "lancamento_completo" | "lancamento_vago" | "cesta_ocasiao" | "lista_mista_mercado" | "itens_heterogeneos" | "pergunta_financas" | "social_saudacao" | "comandos" | "fora_escopo",
+    "confianca": number,
+    "lacunas": string[] | null
+  },
   "status": "sucesso" | "clarificacao" | "clarificacao_categoria" | "falta_valor" | "invalido" | "consulta" | "acao_executada",
   "acao": "criar" | "reclassificar" | "ajustar_valor" | "ajustar_descricao" | "desfazer" | null,
   "tipo_resposta": "transacao" | "consulta" | "consultoria_categoria" | "acao",
-  "intencao": "transacao" | "consulta" | "consultoria_categoria" | "correcao" | "desfazer" | null,
+  "intencao": "transacao" | "consulta" | "consultoria_categoria" | "correcao" | "desfazer" | "social" | null,
+  "itens": Array<{ "descricao": string, "quantidade": number | null, "valor": number | null }> | null,
+  "confianca": number | null,
+  "lacunas": string[] | null,
   "resposta_consulta": string | null,
   "transacao": {
     "descricao": string,
@@ -711,7 +523,8 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido (response_format: jso
     "balde": "Necessidades Essenciais" | "Estilo de Vida" | "Metas & Investimentos",
     "categoria": string | null,
     "subcategoria": string | null,
-    "metodo_pagamento": "pix" | "debito" | "credito" | "dinheiro" | null
+    "metodo_pagamento": "pix" | "debito" | "credito" | "dinheiro" | null,
+    "itens": Array<{ "descricao": string, "quantidade": number | null, "valor": number | null }> | null
   } | null,
   "pergunta_clarificacao": string | null,
   "opcoes_sugestao": Array<{
@@ -722,50 +535,7 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido (response_format: jso
     "balde": string | null
   }> | string[] | null,
   "mensagem_amigavel": string | null
-}
-
-Comportamentos esperados:
-1. "consulta" (PERGUNTA / DÚVIDA / CONSULTA):
-   - O usuário fez uma pergunta sobre as finanças (ex.: "quanto ainda posso gastar esse mês?", "quanto ganhei esse mês?", "qual meu saldo?", "quanto gastei essa semana?", "qual foi o maior gasto?", "como estão meus gastos?").
-   - "status": "consulta"
-   - "tipo_resposta": "consulta"
-   - "transacao": null
-   - Respeite rigorosamente a REGRA CRÍTICA: receitas e saldo real baseiam-se única e exclusivamente em 'receitas_mes' e transações reais do mês, NUNCA em 'teto_planejado_onboarding'.
-   - "resposta_consulta": Resposta direta, acolhedora, concisa e precisa em português brasileiro com os valores exatos em R$ formatados a partir do resumo financeiro fornecido.
-   - "mensagem_amigavel": O mesmo texto de resposta amigável.
-   - NUNCA crie card de despesa para consultas.
-
-2. "sucesso" (LANÇAMENTO COM VALOR E CATEGORIA JÁ EXISTENTE OU CLARA):
-   - O usuário falou um gasto ou receita com valor (ex.: "almoço 45 reais no débito", "duas cervejas 80 reais", "salário de 5000 caiu").
-   - A categoria correspondente JÁ CONSTA nas categorias cadastradas da família acima.
-   - "status": "sucesso"
-   - "tipo_resposta": "transacao"
-   - Preencha todos os campos da "transacao". O campo "valor" deve ser um float positivo em reais (ex: 45.0 ou 80.0). Preencha "estabelecimento" se houver.
-   - "categoria": nome exato de categoria existente ou compatível.
-   - "subcategoria": use do catálogo da família se existir, ou sugira criação coerente caso o usuário confirme.
-   - "balde": classifique rigorosamente entre "Necessidades Essenciais", "Estilo de Vida" ou "Metas & Investimentos".
-   - "mensagem_amigavel": se houver subcategoria, "Lançado: R$ [valor] em [Categoria] › [Subcategoria] [emoji]!". Se não houver subcategoria, "Lançado: R$ [valor] em [Categoria] [emoji]!".
-
-3. "clarificacao_categoria" (DESATIVADA A FORÇAGEM DE ESCOLHA):
-   - A IA deve SEMPRE escolher a melhor categoria/subcategoria existente da família autonomamente, sem travar o usuário perguntando escolha entre existente vs nova.
-
-4. "falta_valor" (LANÇAMENTO SEM VALOR):
-   - O usuário citou um item ou compra claro (ex: "coxinha na padaria", "uma caixa de cerveja na parada certa", "almoço no restaurante", "gasolina no posto"), mas NÃO disse o valor monetário.
-   - "status": "falta_valor"
-   - "tipo_resposta": "transacao"
-   - Preserve o item preenchendo "transacao" parcial com "valor": null, inferindo já a melhor categoria/subcategoria existente.
-   - "pergunta_clarificacao": "Quanto custou?"
-   - "mensagem_amigavel": Responda de forma puramente conversacional e direta, estilo balão de chat (ex: "Identifiquei Coxinha na Padaria. Quanto custou? 🥐").
-
-5. "clarificacao" (VALOR EXISTE, MAS DESCRIÇÃO TOTALMENTE AMBÍGUA OU GÍRIA):
-   - Há um valor monetário identificado, mas o termo é ambíguo ou gíria sem sentido financeiro reconhecível (ex: "pindamonhangaba 8 reais").
-   - "status": "clarificacao"
-   - "tipo_resposta": "transacao"
-   - Preencha o valor na transacao, elabore "pergunta_clarificacao" e exatamente 3 "opcoes_sugestao".
-
-6. "invalido":
-   - Ruído, conversa desconexa sem sentido financeiro nem pergunta.
-   - "status": "invalido"`
+}`
 
     // Sanitização e validação das últimas 6 mensagens de histórico
     let sanitizedHistory: Array<{ role: 'user' | 'assistant'; content: string }> = []
@@ -811,11 +581,6 @@ Comportamentos esperados:
       { role: 'user', content: texto },
     ]
 
-    // Teto de tokens para evitar truncamento de JSON da OpenAI:
-    // O modelo gpt-4o-mini gera apenas os tokens necessários. Um teto de 1000 tokens garante
-    // que o JSON estruturado nunca seja cortado pela metade em nenhum caminho (lançamentos,
-    // slot-filling 'falta_valor', reclassificações ou consultas explicativas), mantendo a resposta
-    // ultrarrápida sem causar quebra de serialização (Rodada 25).
     const maxTokens = 1000
 
     // Chamada à API da OpenAI
@@ -886,8 +651,6 @@ Comportamentos esperados:
         content,
       )
 
-      // Fallback amigável com log claro no servidor:
-      // Se tivermos contexto anterior de slot-filling (falta_valor) ou valor na mensagem, tenta não frustrar o usuário
       return new Response(
         JSON.stringify({
           status: 'invalido',
@@ -904,6 +667,14 @@ Comportamentos esperados:
         },
       )
     }
+
+    // Logging obrigatório do IntentRouter [T1]
+    const routerClasse = parsedAiJson?.router?.classe ?? parsedAiJson?.classe_intencao ?? null
+    const routerConfianca =
+      parsedAiJson?.router?.confianca ?? parsedAiJson?.confianca_intencao ?? null
+    console.log(
+      `[IntentRouter] classe=${routerClasse ?? 'n/a'} confiança=${routerConfianca ?? 'n/a'}`,
+    )
 
     // Normalização defensiva da resposta garantindo que os status e campos cheguem intactos
     const validStatuses = [
@@ -1011,12 +782,33 @@ Comportamentos esperados:
             ? 'acao'
             : 'transacao',
       intencao: parsedAiJson?.intencao ?? (isConsultoriaCategoria ? 'consultiva' : null),
+      router: {
+        classe: routerClasse,
+        confianca: routerConfianca,
+        lacunas: Array.isArray(parsedAiJson?.router?.lacunas)
+          ? parsedAiJson.router.lacunas
+          : Array.isArray(parsedAiJson?.lacunas)
+            ? parsedAiJson.lacunas
+            : null,
+      },
+      itens: Array.isArray(parsedAiJson?.itens)
+        ? parsedAiJson.itens
+        : Array.isArray(parsedAiJson?.transacao?.itens)
+          ? parsedAiJson.transacao.itens
+          : null,
+      confianca: routerConfianca ?? parsedAiJson?.confianca ?? null,
+      lacunas: Array.isArray(parsedAiJson?.lacunas)
+        ? parsedAiJson.lacunas
+        : Array.isArray(parsedAiJson?.router?.lacunas)
+          ? parsedAiJson.router.lacunas
+          : null,
       resposta_consulta: respostaConsulta,
       transacao: isConsulta ? null : (parsedAiJson?.transacao ?? null),
       pergunta_clarificacao: parsedAiJson?.pergunta_clarificacao ?? null,
       opcoes_sugestao: normalizedOptions,
       mensagem_amigavel: finalMensagemAmigavel,
     }
+
     return new Response(JSON.stringify(sanitizedResponse), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

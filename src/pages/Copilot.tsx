@@ -351,8 +351,17 @@ export function CopilotPage() {
       } else if (parsed.aiStatus === 'falta_valor') {
         setPendingTx(parsed)
         cardType = 'falta_valor'
+        const isAskingForItems =
+          parsed.routerLacunas?.includes('itens') ||
+          parsed.clarificationQuestion?.toLowerCase().includes('o que você comprou') ||
+          parsed.friendlyMessage?.toLowerCase().includes('o que você comprou')
+
         assistantText =
-          parsed.friendlyMessage || `Entendi "${parsed.description}". Qual foi o valor?`
+          parsed.friendlyMessage ||
+          parsed.clarificationQuestion ||
+          (isAskingForItems
+            ? 'O que você comprou? Me conta os itens que eu já organizo pra você!'
+            : `Entendi "${parsed.description}". Qual foi o valor?`)
       } else if (parsed.aiStatus === 'sucesso' && parsed.amountCents > 0) {
         setPendingTx(null)
         cardType = 'transacao'

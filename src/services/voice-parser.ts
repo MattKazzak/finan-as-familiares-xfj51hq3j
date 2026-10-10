@@ -20,6 +20,12 @@ export type VoiceAiStatus =
   | 'acao_executada'
   | 'modo_cesta'
 
+export interface VoiceAiTransactionItem {
+  descricao: string
+  quantidade?: number | null
+  valor?: number | null
+}
+
 export interface VoiceAiTransaction {
   descricao: string
   estabelecimento?: string | null
@@ -29,6 +35,7 @@ export interface VoiceAiTransaction {
   categoria: string | null
   subcategoria: string | null
   metodo_pagamento: string | null
+  itens?: VoiceAiTransactionItem[] | null
 }
 
 export type SuggestionOptionType = 'existente' | 'nova'
@@ -63,8 +70,18 @@ export interface VoiceAiResponse {
     | 'transacao'
     | 'correcao'
     | 'desfazer'
+    | 'social'
     | string
     | null
+  router?: {
+    classe: number | null
+    nome_classe?: string | null
+    confianca: number | null
+    lacunas?: string[] | null
+  } | null
+  itens?: VoiceAiTransactionItem[] | null
+  confianca?: number | null
+  lacunas?: string[] | null
   resposta_consulta?: string | null
   transacao: VoiceAiTransaction | null
   pergunta_clarificacao: string | null
@@ -115,6 +132,11 @@ export interface ParsedVoiceTransaction {
   structuredOptions?: StructuredSuggestionOption[] | null
   friendlyMessage?: string | null
   aiError?: string | null
+  // Contrato v1.0 — Router de Intenções e Extração Estruturada (R39)
+  routerClasse?: number | null
+  routerConfianca?: number | null
+  routerLacunas?: string[] | null
+  extractedItems?: VoiceAiTransactionItem[] | null
   // Rodada 28: Modo Cesta
   isBasket?: boolean
   basketItemsDescription?: string
@@ -1690,20 +1712,67 @@ export function parseVoiceInput(
   let friendlyMessage: string | null = null
 
   if (amountCents <= 0) {
-    const hasRecognizableContext = Boolean(
-      categoryName ||
-      establishment ||
-      ESTABLISHMENT_WORDS.some((est) => new RegExp(`\\b${est}\\b`, 'i').test(rawLower)),
-    )
+    // Contrato v1.0 — Classe 2 (Itens antes de valor):
+    // Se a descrição for genérica ("comprei algumas coisas", "umas coisas", "compras", "umas comprinhas"),
+    // perguntar primeiro OS ITENS ("O que você comprou?"), NUNCA o valor!
+    const GENERIC_EXPENSE_TERMS = [
+      'algumas coisas',
+      'umas coisas',
+      'umas paradas',
+      'umas comprinhas',
+      'umas compras',
+      'compras',
+      'comprei coisas',
+      'comprei algo',
+      'coisinhas',
+      'coisas',
+    ]
+    const isGenericDescription = GENERIC_EXPENSE_TERMS.some((kw) => rawLower.includes(kw))
 
-    if (hasRecognizableContext) {
+    const isPureGreeting =
+      rawLower === 'bom dia' ||
+      rawLower === 'boa tarde' ||
+      rawLower === 'boa noite' ||
+      rawLower === 'oi' ||
+      rawLower === 'ola' ||
+      rawLower === 'olá' ||
+      rawLower.startsWith('como vai') ||
+      rawLower.startsWith('tudo bem')
+
+    if (isPureGreeting) {
+      aiStatus = 'consulta'
+      let greetingReply = 'Olá! Pronto pra registrar algo ou ver como estão as finanças de vocês?'
+      if (rawLower.includes('bom dia')) {
+        greetingReply = 'Bom dia! Pronto pra registrar algo ou ver como estão as finanças de vocês?'
+      } else if (rawLower.includes('boa tarde')) {
+        greetingReply =
+          'Boa tarde! Pronto pra registrar algo ou ver como estão as finanças de vocês?'
+      } else if (rawLower.includes('boa noite')) {
+        greetingReply =
+          'Boa noite! Pronto pra registrar algo ou ver como fecharam as finanças de hoje?'
+      }
+      clarificationQuestion = null
+      friendlyMessage = greetingReply
+    } else if (isGenericDescription) {
       aiStatus = 'falta_valor'
-      clarificationQuestion = 'Quanto custou?'
-      friendlyMessage = 'Entendi o que você comprou! Quanto custou?'
+      clarificationQuestion = 'O que você comprou?'
+      friendlyMessage = 'O que você comprou? Me conta os itens que eu já organizo pra você!'
     } else {
-      aiStatus = 'invalido'
-      friendlyMessage =
-        "Não consegui entender esse lançamento financeiro. Tente algo como: 'Almoço 45 reais no débito no restaurante' ou 'supermercado do zé 180 no pix'"
+      const hasRecognizableContext = Boolean(
+        categoryName ||
+        establishment ||
+        ESTABLISHMENT_WORDS.some((est) => new RegExp(`\\b${est}\\b`, 'i').test(rawLower)),
+      )
+
+      if (hasRecognizableContext) {
+        aiStatus = 'falta_valor'
+        clarificationQuestion = 'Quanto custou?'
+        friendlyMessage = 'Entendi o que você comprou! Quanto custou?'
+      } else {
+        aiStatus = 'invalido'
+        friendlyMessage =
+          "Não consegui entender esse lançamento financeiro. Tente algo como: 'Almoço 45 reais no débito no restaurante' ou 'supermercado do zé 180 no pix'"
+      }
     }
   } else if (!categoryName) {
     // Valor existe, mas o termo/descrição não casou com nenhuma categoria/subcategoria nem termo genérico conhecido
@@ -1895,7 +1964,12 @@ export function mapAiResponseToParsedTransaction(
     categoryNameSuggestion: transacao?.categoria || undefined,
     subcategoryNameSuggestion: transacao?.subcategoria || undefined,
     bucketSuggestion: bucket,
-    confidence: confidenceByStatus[aiData.status] ?? 0.2,
+    confidence:
+      typeof aiData.confianca === 'number'
+        ? aiData.confianca
+        : typeof aiData.router?.confianca === 'number'
+          ? aiData.router.confianca
+          : (confidenceByStatus[aiData.status] ?? 0.2),
     processingSource: 'openai',
     aiStatus: aiData.status,
     acao: aiData.acao || null,
@@ -1907,6 +1981,23 @@ export function mapAiResponseToParsedTransaction(
           ? 'acao'
           : 'transacao',
     intencao: aiData.intencao,
+    routerClasse: typeof aiData.router?.classe === 'number' ? aiData.router.classe : null,
+    routerConfianca:
+      typeof aiData.router?.confianca === 'number'
+        ? aiData.router.confianca
+        : typeof aiData.confianca === 'number'
+          ? aiData.confianca
+          : null,
+    routerLacunas: Array.isArray(aiData.lacunas)
+      ? aiData.lacunas
+      : Array.isArray(aiData.router?.lacunas)
+        ? aiData.router.lacunas
+        : null,
+    extractedItems: Array.isArray(aiData.itens)
+      ? aiData.itens
+      : Array.isArray(transacao?.itens)
+        ? transacao.itens
+        : null,
     respostaConsulta: aiData.resposta_consulta || (isConsulta ? aiData.mensagem_amigavel : null),
     clarificationQuestion: aiData.pergunta_clarificacao,
     clarificationOptions,
