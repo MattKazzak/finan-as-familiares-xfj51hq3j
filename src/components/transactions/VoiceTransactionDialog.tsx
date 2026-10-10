@@ -1924,7 +1924,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         <button
           type="button"
           onClick={() => handleUndoLastTransaction(msg.confirmedTxId)}
-          className="text-rose-600 hover:text-rose-800 font-semibold underline underline-offset-2 transition-colors cursor-pointer"
+          className="text-rose-600 hover:text-rose-800 font-medium transition-colors cursor-pointer"
         >
           [Desfazer]
         </button>
@@ -1932,7 +1932,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         <button
           type="button"
           onClick={() => handleEditLastTransaction(msg.cardData)}
-          className="text-slate-500 hover:text-slate-700 font-semibold underline underline-offset-2 transition-colors cursor-pointer"
+          className="text-slate-500 hover:text-slate-700 font-medium transition-colors cursor-pointer"
         >
           Alterar
         </button>
@@ -2047,7 +2047,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
   const quickPrompts = [
     { label: '🎙️ "Almoço 35 reais"', text: 'Almoço 35 reais' },
-    { label: '📊 "Quanto ainda posso gastar?"', text: 'Quanto ainda posso gastar?' },
+    { label: '📊 "Quanto ainda posso gastar"', text: 'Quanto ainda posso gastar?' },
     { label: '🔍 "Últimos lançamentos"', text: 'Últimos lançamentos' },
   ]
 
@@ -2060,23 +2060,23 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             <div className="flex items-center gap-2.5 min-w-0">
               {/* Avatar do Curiango com status verde ativo */}
               <div className="relative shrink-0">
-                <div className="w-9 h-9 rounded-2xl bg-brand text-white flex items-center justify-center font-bold shadow-sm p-1 border border-brand">
+                <div className="w-9 h-9 rounded-2xl bg-brand text-white flex items-center justify-center font-semibold shadow-sm p-1 border border-brand">
                   <CuriangoLogo size={22} color="#FCA311" />
                 </div>
                 <span
-                  className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"
+                  className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"
                   title="Copilot Online"
                 />
               </div>
 
               <div className="min-w-0">
-                <DialogTitle className="text-sm sm:text-base font-bold text-slate-900 tracking-tight flex items-center gap-1.5">
-                  <span className="truncate">Curiango Copilot</span>
-                  <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
+                <DialogTitle className="text-sm sm:text-base font-semibold text-slate-900 tracking-tight flex items-center gap-1.5">
+                  <span>Curiango Copilot</span>
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
                     IA Ativa
                   </span>
                 </DialogTitle>
-                <DialogDescription className="text-[11px] sm:text-xs text-slate-500 truncate">
+                <DialogDescription className="text-[11px] sm:text-xs text-slate-500 break-words">
                   Assistente financeiro da família
                 </DialogDescription>
               </div>
@@ -2087,7 +2087,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
               <select
                 value={selectedMemberId}
                 onChange={(e) => setSelectedMemberId(e.target.value)}
-                className="text-[11px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg px-2 py-1 cursor-pointer transition-colors max-w-[110px] truncate"
+                className="text-[11px] font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg px-2 py-1 cursor-pointer transition-colors max-w-[110px]"
                 title="Membro responsável"
               >
                 {members.map((m) => (
@@ -2307,72 +2307,36 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           </div>
         )}
 
-        {/* ================= RODAPÉ FIXO: CONTROLES SEMPRE VISÍVEIS (CDS v1.0) ================= */}
-        <div className="pt-2 border-t border-slate-100 shrink-0 space-y-2 max-w-full">
-          {/* Status e Feedback Visual da Gravação (tempo decorrido + barras pulsantes waveform com alto contraste) */}
-          <div
-            className={`flex items-center justify-between text-xs px-2 py-1 rounded-xl transition-all ${
-              isListening
-                ? 'bg-amber-500/15 border border-[#FCA311]/50 shadow-xs'
-                : 'text-slate-500'
-            }`}
-          >
-            <span className="flex items-center gap-2 font-medium min-w-0">
-              {isListening ? (
-                <>
-                  <span className="relative flex h-2.5 w-2.5 shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FCA311] opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#E08E08]" />
-                  </span>
-                  <span className="text-[#14213D] font-bold text-xs truncate">
-                    Ouvindo... pode falar no seu ritmo
-                  </span>
-                  {/* T1: Indicador visível do modo de captação (CDS v1.0 discreto) */}
-                  <span
-                    data-testid="audio-capture-mode-badge"
-                    data-mode={activeAudioCaptureMode || 'media_recorder'}
-                    className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold tracking-wide shrink-0 ${
-                      activeAudioCaptureMode === 'web_speech'
-                        ? 'bg-amber-100 text-amber-800 border border-amber-300/80'
-                        : 'bg-emerald-100 text-emerald-800 border border-emerald-300/80'
-                    }`}
-                    title={
-                      activeAudioCaptureMode === 'web_speech'
-                        ? 'Captação do navegador ativa (Web Speech API)'
-                        : 'Captação estável ativa (MediaRecorder + Whisper)'
-                    }
-                  >
-                    {activeAudioCaptureMode === 'web_speech'
-                      ? 'Captação do navegador'
-                      : 'Captação estável'}
-                  </span>
-                </>
-              ) : isTranscribingAudio ? (
-                <span className="text-[#14213D] font-medium flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#FCA311] animate-pulse" />
-                  Transcrevendo áudio...
-                </span>
-              ) : isProcessingAi ? (
-                <span className="text-[#14213D] font-medium flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#FCA311] animate-pulse" />
-                  Processando com IA...
-                </span>
-              ) : (
-                <span className="text-[#64748B]">Microfone pronto</span>
-              )}
-            </span>
+        {/* ================= RODAPÉ FIXO: CONTROLES DE ENTRADA (CALMA VISUAL CDS v1.0) ================= */}
+        <div className="pt-2 border-t border-slate-100 shrink-0 max-w-full">
+          {/* Linha de status de transição quando transcrevendo ou processando com IA */}
+          {(isTranscribingAudio || isProcessingAi) && !isListening && (
+            <div className="mb-2 flex items-center gap-2 text-xs text-slate-600 px-1">
+              <span className="w-2 h-2 rounded-full bg-brand-amber animate-pulse shrink-0" />
+              <span className="font-medium text-[11px] text-[#14213D]">
+                {isTranscribingAudio ? 'Transcrevendo áudio' : 'Processando com IA'}
+              </span>
+            </div>
+          )}
 
-            {isListening && (
-              <div className="flex items-center gap-2 shrink-0">
-                {/* Waveform REAL alimentada via AnalyserNode (5 barras com energia sonora real) */}
+          {/* TAREFA 1 & 2 — SUBSTITUIÇÃO DIRETA: Linha calma de gravação OU Barra de input com microfone integrado */}
+          {isListening ? (
+            /* LINHA DE GRAVAÇÃO CALMA: Waveform (5 barras) + timer + botão Parar primário + Cancelar discreto */
+            <div
+              data-testid="voice-recording-line"
+              className="flex items-center justify-between gap-3 min-h-[48px] px-3.5 py-1.5 rounded-2xl bg-slate-50 border border-border/60 shadow-curiango"
+            >
+              {/* Lado esquerdo: Waveform de 5 barras + Cronômetro discreto + Badge em fallback se aplicável */}
+              <div className="flex items-center gap-3 min-w-0">
+                {/* Waveform REAL alimentada via AnalyserNode (5 barras) */}
                 <div
                   data-testid="recording-waveform"
                   data-audiocapture-mode={activeAudioCaptureMode || 'idle'}
-                  className="flex items-center gap-1 h-5 px-2 py-0.5 rounded-full bg-[#14213D] border border-[#FCA311]/60 shadow-xs"
+                  className="flex items-center gap-1 h-5 px-2 py-0.5 rounded-full bg-[#14213D]"
                   aria-label="Gravando áudio"
                 >
                   {realAudioLevels.map((lvl, bIdx) => {
-                    const barHeightPx = Math.max(4, Math.round(lvl * 18))
+                    const barHeightPx = Math.max(4, Math.round(lvl * 16))
                     return (
                       <span
                         key={bIdx}
@@ -2383,96 +2347,96 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                   })}
                 </div>
 
-                {/* Tempo decorrido em mm:ss com badge de destaque */}
+                {/* Cronômetro discreto */}
                 <span
                   data-testid="recording-elapsed-time"
-                  className="font-mono text-xs font-bold text-white px-2 py-0.5 rounded-md bg-[#14213D] border border-[#FCA311]/40"
+                  className="font-mono text-xs font-semibold text-slate-700 tracking-tight"
                 >
                   {Math.floor(recordingElapsedSeconds / 60)
                     .toString()
                     .padStart(2, '0')}
                   :{(recordingElapsedSeconds % 60).toString().padStart(2, '0')}
                 </span>
-              </div>
-            )}
-          </div>
 
-          {/* Estado GRAVANDO: Controles dedicados PARAR e CANCELAR com anel pulsante */}
-          {isListening ? (
-            <div className="flex items-center justify-between gap-2 py-0.5">
-              {/* Botão Cancelar: descarta sem enviar (>= 44px) */}
-              <button
-                type="button"
-                onClick={handleCancelRecording}
-                className="min-h-[44px] min-w-[44px] px-3.5 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-300/80 text-[#64748B] hover:text-[#14213D] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-curiango active:scale-95"
-                aria-label="Cancelar gravação"
-              >
-                <X className="w-4 h-4 text-[#64748B]" />
-                <span>Cancelar</span>
-              </button>
-
-              {/* Centro: Botão de microfone com anel pulsante visual */}
-              <div className="relative flex items-center justify-center">
-                <span className="absolute -inset-1.5 rounded-full bg-[#FCA311]/30 animate-ping pointer-events-none" />
-                <span className="absolute -inset-3 rounded-full bg-[#FCA311]/15 animate-pulse pointer-events-none" />
-                <div className="relative w-12 h-12 rounded-full bg-[#14213D] text-white border-2 border-[#FCA311] flex items-center justify-center shadow-curiango">
-                  <Mic className="w-5 h-5 text-[#FCA311]" />
-                </div>
+                {/* Informação técnica/diagnóstica INVISÍVEL por padrão: exibida APENAS em fallback web_speech em âmbar */}
+                {activeAudioCaptureMode === 'web_speech' && (
+                  <span
+                    data-testid="audio-capture-mode-badge"
+                    data-mode={activeAudioCaptureMode}
+                    className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold tracking-wide shrink-0 bg-amber-100 text-amber-800 border border-amber-300/80"
+                    title="Captação do navegador ativa (Web Speech API)"
+                  >
+                    Captação do navegador
+                  </span>
+                )}
               </div>
 
-              {/* Botão Parar: conclui e envia para processamento (>= 44px) */}
-              <button
-                type="button"
-                onClick={handleStopRecordingAndProcess}
-                className="min-h-[44px] min-w-[44px] px-4 py-2 rounded-2xl bg-[#14213D] hover:bg-[#14213D]/90 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-curiango active:scale-95 border border-[#FCA311]/40"
-                aria-label="Parar gravação e processar"
-              >
-                <Square className="w-3.5 h-3.5 fill-[#FCA311] text-[#FCA311]" />
-                <span>Parar</span>
-              </button>
+              {/* Lado direito: Cancelar (texto discreto) + Parar (ação primária única) */}
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleCancelRecording}
+                  className="px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                  aria-label="Cancelar gravação"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleStopRecordingAndProcess}
+                  className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-brand hover:bg-brand-light text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
+                  aria-label="Parar gravação e processar"
+                >
+                  <Square className="w-3.5 h-3.5 fill-[#FCA311] text-[#FCA311]" />
+                  <span>Parar</span>
+                </button>
+              </div>
             </div>
           ) : (
-            /* Estado REPOUSO: Microfone + Campo de digitação */
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  if (!hasAiConsent && !getAiConsent()) {
-                    setShowConsentPrompt(true)
-                  } else {
-                    startRecording()
-                  }
-                }}
-                disabled={isProcessingAi}
-                className="min-h-[44px] min-w-[44px] w-11 h-11 rounded-2xl bg-white border border-[rgba(20,33,61,0.12)] text-[#14213D] hover:bg-amber-50 hover:border-[#FCA311] hover:text-[#14213D] flex items-center justify-center shadow-curiango transition-all active:scale-95 disabled:opacity-40 cursor-pointer"
-                title="Toque para começar a falar"
-                aria-label="Começar a falar"
-              >
-                <Mic className="w-5 h-5 text-[#14213D]" />
-              </button>
+            /* TAREFA 2: BARRA DE ENTRADA UNIFICADA (Microfone DENTRO do campo à direita, padrão WhatsApp/ChatGPT) */
+            <form
+              onSubmit={handleChatTextSubmit}
+              className="relative flex items-center w-full min-w-0"
+            >
+              <Input
+                value={inputVal}
+                onChange={(e) => setInputVal(e.target.value)}
+                placeholder="Mensagem ou fale..."
+                disabled={isProcessingAi || isTranscribingAudio}
+                className="w-full rounded-2xl h-11 text-xs sm:text-sm bg-slate-50 border-border/60 text-[#14213D] placeholder:text-muted-foreground focus:bg-white focus:border-brand-amber focus:ring-1 focus:ring-brand-amber transition-colors min-w-0 pr-20"
+              />
 
-              {/* Input de Texto + Botão Enviar */}
-              <form
-                onSubmit={handleChatTextSubmit}
-                className="flex-1 flex items-center gap-1.5 min-w-0"
-              >
-                <Input
-                  value={inputVal}
-                  onChange={(e) => setInputVal(e.target.value)}
-                  placeholder="Fale no microfone ou digite aqui..."
-                  disabled={isProcessingAi}
-                  className="rounded-2xl h-11 text-xs bg-slate-50 border-[rgba(20,33,61,0.12)] text-[#14213D] focus:bg-white focus:border-[#FCA311] focus:ring-1 focus:ring-[#FCA311] transition-colors min-w-0"
-                />
-                <Button
-                  type="submit"
-                  disabled={!inputVal.trim() || isProcessingAi}
-                  className="min-h-[44px] min-w-[44px] bg-[#14213D] hover:bg-[#14213D]/90 text-white rounded-2xl font-semibold text-xs h-11 px-3.5 gap-1 shrink-0 shadow-curiango disabled:opacity-40"
+              <div className="absolute right-1.5 flex items-center gap-1">
+                {/* Microfone integrado dentro do input */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!hasAiConsent && !getAiConsent()) {
+                      setShowConsentPrompt(true)
+                    } else {
+                      startRecording()
+                    }
+                  }}
+                  disabled={isProcessingAi || isTranscribingAudio}
+                  aria-label="Falar comando por voz"
+                  title="Falar comando por voz"
+                  className="w-8 h-8 rounded-xl text-slate-600 hover:text-brand hover:bg-slate-200/60 flex items-center justify-center transition-all cursor-pointer disabled:opacity-40"
                 >
-                  <Send className="w-3.5 h-3.5 text-[#FCA311]" />
-                  <span>Enviar</span>
-                </Button>
-              </form>
-            </div>
+                  <Mic className="w-4 h-4 text-[#14213D]" strokeWidth={1.5} />
+                </button>
+
+                {/* Botão Enviar com ícone Send */}
+                <button
+                  type="submit"
+                  disabled={!inputVal.trim() || isProcessingAi || isTranscribingAudio}
+                  aria-label="Enviar mensagem"
+                  className="w-8 h-8 rounded-xl bg-brand text-white hover:bg-brand-light disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all cursor-pointer shrink-0"
+                >
+                  <Send className="w-3.5 h-3.5 text-[#FCA311]" strokeWidth={1.5} />
+                </button>
+              </div>
+            </form>
           )}
         </div>
       </DialogContent>
