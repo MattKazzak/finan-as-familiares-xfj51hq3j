@@ -2319,38 +2319,18 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             </div>
           )}
 
-          {/* TAREFA 1 & 2 — SUBSTITUIÇÃO DIRETA: Linha calma de gravação OU Barra de input com microfone integrado */}
+          {/* TAREFA 1 & 2 & 3: Linha coesa de gravação (Waveform livre + Parar harmônico circular) OU Barra de input com microfone integrado */}
           {isListening ? (
-            /* LINHA DE GRAVAÇÃO CALMA: Waveform (5 barras) + timer + botão Parar primário + Cancelar discreto */
+            /* LINHA DE GRAVAÇÃO COESA CDS: Cronômetro discreto + Waveform livre flutuante no centro + Cancelar discreto + Parar circular harmônico */
             <div
               data-testid="voice-recording-line"
-              className="flex items-center justify-between gap-3 min-h-[48px] px-3.5 py-1.5 rounded-2xl bg-slate-50 border border-border/60 shadow-curiango"
+              className="flex items-center justify-between gap-2.5 min-h-[48px] px-2.5 sm:px-3.5 py-1 w-full min-w-0"
             >
-              {/* Lado esquerdo: Waveform de 5 barras + Cronômetro discreto + Badge em fallback se aplicável */}
-              <div className="flex items-center gap-3 min-w-0">
-                {/* Waveform REAL alimentada via AnalyserNode (5 barras) */}
-                <div
-                  data-testid="recording-waveform"
-                  data-audiocapture-mode={activeAudioCaptureMode || 'idle'}
-                  className="flex items-center gap-1 h-5 px-2 py-0.5 rounded-full bg-[#14213D]"
-                  aria-label="Gravando áudio"
-                >
-                  {realAudioLevels.map((lvl, bIdx) => {
-                    const barHeightPx = Math.max(4, Math.round(lvl * 16))
-                    return (
-                      <span
-                        key={bIdx}
-                        className="w-1 bg-[#FCA311] rounded-full transition-all duration-75"
-                        style={{ height: `${barHeightPx}px` }}
-                      />
-                    )
-                  })}
-                </div>
-
-                {/* Cronômetro discreto */}
+              {/* Lado esquerdo: Cronômetro discreto + Badge sutil apenas se em fallback web_speech */}
+              <div className="flex items-center gap-2 shrink-0">
                 <span
                   data-testid="recording-elapsed-time"
-                  className="font-mono text-xs font-semibold text-slate-700 tracking-tight"
+                  className="font-mono text-xs font-semibold text-[#14213D] tracking-tight tabular-nums"
                 >
                   {Math.floor(recordingElapsedSeconds / 60)
                     .toString()
@@ -2358,25 +2338,43 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                   :{(recordingElapsedSeconds % 60).toString().padStart(2, '0')}
                 </span>
 
-                {/* Informação técnica/diagnóstica INVISÍVEL por padrão: exibida APENAS em fallback web_speech em âmbar */}
                 {activeAudioCaptureMode === 'web_speech' && (
                   <span
                     data-testid="audio-capture-mode-badge"
                     data-mode={activeAudioCaptureMode}
-                    className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold tracking-wide shrink-0 bg-amber-100 text-amber-800 border border-amber-300/80"
+                    className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium tracking-tight shrink-0 bg-amber-50 text-amber-800 border border-amber-200/80"
                     title="Captação do navegador ativa (Web Speech API)"
                   >
-                    Captação do navegador
+                    Navegador
                   </span>
                 )}
               </div>
 
-              {/* Lado direito: Cancelar (texto discreto) + Parar (ação primária única) */}
-              <div className="flex items-center gap-2 shrink-0">
+              {/* Centro: Waveform LIVRE — flutuando diretamente sobre o fundo, sem caixa/fundo azul/borda */}
+              <div
+                data-testid="recording-waveform"
+                data-audiocapture-mode={activeAudioCaptureMode || 'idle'}
+                className="flex-1 flex items-center justify-center gap-1.5 h-7 px-2 min-w-0"
+                aria-label="Gravando áudio"
+              >
+                {realAudioLevels.map((lvl, bIdx) => {
+                  const barHeightPx = Math.max(4, Math.round(lvl * 24))
+                  return (
+                    <span
+                      key={bIdx}
+                      className="w-1 bg-[#FCA311] rounded-full transition-[height] duration-150 ease-out"
+                      style={{ height: `${barHeightPx}px` }}
+                    />
+                  )
+                })}
+              </div>
+
+              {/* Lado direito: Cancelar (texto discreto) + Botão Parar circular harmônico CDS (≥44px de toque) */}
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={handleCancelRecording}
-                  className="px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                  className="px-2 py-1.5 text-xs font-medium text-[#64748B] hover:text-[#14213D] transition-colors cursor-pointer"
                   aria-label="Cancelar gravação"
                 >
                   Cancelar
@@ -2385,11 +2383,11 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 <button
                   type="button"
                   onClick={handleStopRecordingAndProcess}
-                  className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-brand hover:bg-brand-light text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
+                  className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-[#14213D] flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 group"
                   aria-label="Parar gravação e processar"
+                  title="Parar gravação"
                 >
-                  <Square className="w-3.5 h-3.5 fill-[#FCA311] text-[#FCA311]" />
-                  <span>Parar</span>
+                  <Square className="w-4 h-4 fill-[#14213D] text-[#14213D] rounded-xs group-hover:scale-105 transition-transform" />
                 </button>
               </div>
             </div>
