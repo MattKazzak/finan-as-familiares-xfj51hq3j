@@ -1954,6 +1954,86 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   // Renderizador do Card clarificacao_categoria e clarificacao no Chat com pílulas interativas
   const renderClarificationCategoryCard = (data: ParsedVoiceTransaction) => {
     const isCategoryClarification = data.aiStatus === 'clarificacao_categoria'
+    const isClass5Heterogeneous =
+      data.routerClasse === 5 ||
+      (Array.isArray(data.extractedItems) &&
+        data.extractedItems.length >= 2 &&
+        data.extractedItems.some((it) => it.categoria_proposta))
+
+    // Se for Classe 5 com sub-itens e propostas por item
+    if (isClass5Heterogeneous && data.extractedItems && data.extractedItems.length > 0) {
+      return (
+        <div
+          data-testid="heterogeneous-items-card"
+          className="mt-2.5 rounded-2xl border border-indigo-200/90 bg-gradient-to-br from-indigo-50/90 via-sky-50/50 to-white p-3 sm:p-3.5 space-y-3 shadow-xs text-left"
+        >
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5">
+              <span className="w-5 h-5 rounded-md bg-indigo-600 text-white flex items-center justify-center font-bold text-[10px] shadow-xs">
+                <Tag className="w-3 h-3" />
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-900">
+                Itens Heterogêneos (Classe 5)
+              </span>
+            </div>
+            <p className="text-xs font-semibold text-slate-800 leading-snug">
+              {data.clarificationQuestion ||
+                'Proposta de categorias por item (confirme ou ajuste):'}
+            </p>
+          </div>
+
+          <div className="space-y-2 pt-1">
+            {data.extractedItems.map((item, idx) => {
+              const isUncertain =
+                item.duvida_categoria ||
+                (typeof item.confianca === 'number' && item.confianca < 0.6)
+              return (
+                <div
+                  key={idx}
+                  data-testid={`heterogeneous-item-row-${idx}`}
+                  className="p-2 rounded-xl bg-white/90 border border-slate-200/80 flex items-center justify-between gap-2 text-xs"
+                >
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-semibold text-slate-900 truncate">{item.descricao}</span>
+                    <span className="text-[11px] text-slate-600">
+                      {item.categoria_proposta ? (
+                        <>
+                          <span className="font-medium text-emerald-700">
+                            {item.categoria_proposta}
+                          </span>
+                          {item.subcategoria_proposta && (
+                            <span> › {item.subcategoria_proposta}</span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-amber-700 italic font-medium">
+                          Sem categoria definida
+                        </span>
+                      )}
+                    </span>
+                  </div>
+
+                  {isUncertain && (
+                    <span
+                      data-testid="uncertain-suggestion-badge"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-300/80 text-amber-900 font-bold text-[10px] shrink-0"
+                    >
+                      <AlertCircle className="w-3 h-3 text-amber-600 shrink-0" />
+                      <span>sugestão incerta</span>
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          <p className="text-[10px] text-slate-500 italic">
+            Fale ou digite como prefere categorizar os itens incertos e os valores de cada um.
+          </p>
+        </div>
+      )
+    }
+
     const titleText = isCategoryClarification
       ? 'Onde prefere organizar essa despesa?'
       : data.clarificationQuestion || 'Identifiquei o valor! Escolha uma opção para completar:'

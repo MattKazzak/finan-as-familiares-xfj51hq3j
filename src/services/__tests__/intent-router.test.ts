@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { parseVoiceWithAi } from '../voice-ai'
-import { mapAiResponseToParsedTransaction, VoiceAiResponse } from '../voice-parser'
+import { mapAiResponseToParsedTransaction, parseVoiceInput, VoiceAiResponse } from '../voice-parser'
 import { analyzeBasketMission, isBasketInput } from '../basket-missions'
 
 describe('Contrato de Comportamento do Copilot v1.0 — Router de Intenções (Fase 1)', () => {
@@ -248,7 +248,7 @@ describe('Contrato de Comportamento do Copilot v1.0 — Router de Intenções (F
     })
   })
 
-  describe('TAREFA 2 — Classe 4 vs Classe 3 (Fim do Falso Churrasco)', () => {
+  describe('TAREFA 3 — Classe 4 Formal: Lista Mista de Mercado (Fim do Falso Churrasco)', () => {
     it('Lista da Mercearia Parada Certa (cerveja, sabão em pó, salame, miojo) NÃO dispara pergunta de churrasco e grava mercado direto', () => {
       const text =
         'uma caixa de cerveja, uma caixa de sabão em pó, dois salames, dois miojos de pote, tudo na mercearia Parada Certa. Ficou 118 reais'
@@ -317,6 +317,212 @@ describe('Contrato de Comportamento do Copilot v1.0 — Router de Intenções (F
       expect(parsed.routerClasse).toBe(9)
       expect(parsed.amountCents).toBe(0)
       expect(parsed.friendlyMessage).toContain('Prefiro não opinar sobre isso')
+    })
+  })
+
+  describe('FASE 2 — Contrato de Comportamento do Copilot v1.0 (Testes Dedicados)', () => {
+    // (a) o caso da chupeta/sachês/copo/doação → propostas por item com confirmação
+    it('(a) Caso Canônico da Chupeta (Classe 5): deve propor categorias por item, isolar discrepantes e exigir confirmação', () => {
+      const text =
+        'uma chupeta para o meu filho, 4 sachês para o meu cachorro, um jogo de copo novo, uma doação que fiz para o catador de latinhas'
+
+      const parsedLocal = parseVoiceInput(text, mockCategories)
+
+      expect(parsedLocal.routerClasse).toBe(5)
+      expect(parsedLocal.aiStatus).toBe('clarificacao')
+      expect(parsedLocal.extractedItems).toBeDefined()
+      expect(parsedLocal.extractedItems?.length).toBeGreaterThanOrEqual(4)
+
+      const items = parsedLocal.extractedItems || []
+      const babyItem = items.find((i) => i.categoria_proposta === 'Compras')
+      const petItem = items.find((i) => i.categoria_proposta === 'Pets')
+      const homeItem = items.find((i) => i.categoria_proposta === 'Casa & Conforto')
+      const donationItem = items.find((i) => i.duvida_categoria || i.categoria_proposta === null)
+
+      expect(babyItem).toBeDefined()
+      expect(babyItem?.subcategoria_proposta).toBe('Bebês & Crianças')
+      expect(petItem).toBeDefined()
+      expect(homeItem).toBeDefined()
+      expect(donationItem).toBeDefined()
+      // Doação sem categoria adequada -> perguntar como tratar
+      expect(donationItem?.duvida_categoria).toBe(true)
+      expect(parsedLocal.friendlyMessage).toContain('doação')
+      expect(parsedLocal.isUncertainSuggestion).toBe(true)
+
+      // Teste do mapper com resposta da Edge Function da Classe 5
+      const edgeClass5Response: VoiceAiResponse = {
+        status: 'clarificacao',
+        tipo_resposta: 'transacao',
+        intencao: 'transacao',
+        router: {
+          classe: 5,
+          nome_classe: 'itens_heterogeneos',
+          confianca: 0.9,
+          lacunas: ['itens', 'valor'],
+        },
+        confianca: 0.85,
+        lacunas: ['itens', 'valor'],
+        itens: [
+          {
+            descricao: 'uma chupeta para o meu filho',
+            categoria_proposta: 'Compras',
+            subcategoria_proposta: 'Bebês & Crianças',
+            confianca: 0.95,
+            requer_confirmacao: true,
+            duvida_categoria: false,
+          },
+          {
+            descricao: '4 sachês para o meu cachorro',
+            categoria_proposta: 'Pets',
+            subcategoria_proposta: 'Alimentação Pet',
+            confianca: 0.9,
+            requer_confirmacao: true,
+            duvida_categoria: false,
+          },
+          {
+            descricao: 'um jogo de copo novo',
+            categoria_proposta: 'Casa & Conforto',
+            subcategoria_proposta: 'Utensílios & Cozinha',
+            confianca: 0.85,
+            requer_confirmacao: true,
+            duvida_categoria: false,
+          },
+          {
+            descricao: 'uma doação que fiz para o catador de latinhas',
+            categoria_proposta: null,
+            subcategoria_proposta: null,
+            confianca: 0.4,
+            requer_confirmacao: true,
+            duvida_categoria: true,
+          },
+        ],
+        transacao: null,
+        pergunta_clarificacao:
+          'Identifiquei itens de categorias diferentes (bebê, pet, casa e doação). Como prefere classificar a doação e quais foram os valores de cada um?',
+        opcoes_sugestao: null,
+        mensagem_amigavel:
+          'Identifiquei itens de categorias diferentes (bebê, pet, casa e doação). Como prefere classificar a doação e quais foram os valores de cada um?',
+      }
+
+      const parsedMapped = mapAiResponseToParsedTransaction(edgeClass5Response, text)
+
+      expect(parsedMapped.routerClasse).toBe(5)
+      expect(parsedMapped.aiStatus).toBe('clarificacao')
+      expect(parsedMapped.extractedItems?.length).toBe(4)
+      expect(parsedMapped.isUncertainSuggestion).toBe(true) // Doação tem confiança < 0.6 e duvida_categoria
+      expect(parsedMapped.friendlyMessage).toContain('doação')
+    })
+
+    // (b) "paguei o mercado" (específico sem valor) → pergunta o valor
+    it('(b) "paguei o mercado" (descrição específica sem valor) → pergunta o valor', () => {
+      const text = 'paguei o mercado'
+      const parsed = parseVoiceInput(text, mockCategories)
+
+      expect(parsed.aiStatus).toBe('falta_valor')
+      expect(parsed.routerClasse).toBe(2)
+      expect(parsed.routerLacunas).toEqual(['valor'])
+      expect(parsed.clarificationQuestion).toBe('Quanto custou?')
+      expect(parsed.friendlyMessage).toContain('Quanto custou?')
+    })
+
+    // (c) "comprei umas paradas" (vago) → pergunta os itens
+    it('(c) "comprei umas paradas" (descrição vaga) → pergunta os itens primeiro', () => {
+      const text = 'comprei umas paradas'
+      const parsed = parseVoiceInput(text, mockCategories)
+
+      expect(parsed.aiStatus).toBe('falta_valor')
+      expect(parsed.routerClasse).toBe(2)
+      expect(parsed.routerLacunas).toContain('itens')
+      expect(parsed.clarificationQuestion).toBe('O que você comprou?')
+      expect(parsed.friendlyMessage).toContain('O que você comprou?')
+      expect(parsed.friendlyMessage).not.toContain('Quanto custou?')
+    })
+
+    // (d) lista mista nomeada ("na Parada Certa") → mercado direto com local preservado
+    it('(d) Lista mista nomeada ("na Parada Certa") → mercado direto com estabelecimento preservado (Classe 4 formal)', () => {
+      const text =
+        'uma caixa de cerveja, sabão em pó, salame e miojo na Mercearia Parada Certa deu 118 reais'
+
+      const analysis = analyzeBasketMission(text, 11800, { routerClasse: 4 })
+      expect(analysis.requiresConfirmation).toBe(false)
+      expect(analysis.suggestedCategory).toBe('Alimentação')
+      expect(analysis.suggestedSubcategory).toBe('Supermercado & Atacado')
+
+      // Resposta simulada da Edge Function para a Classe 4 formal
+      const edgeClass4Response: VoiceAiResponse = {
+        status: 'sucesso',
+        tipo_resposta: 'transacao',
+        intencao: 'transacao',
+        router: {
+          classe: 4,
+          nome_classe: 'lista_mista_mercado',
+          confianca: 0.96,
+          lacunas: null,
+        },
+        confianca: 0.96,
+        lacunas: null,
+        transacao: {
+          descricao: 'cerveja, sabão em pó, salame, miojo — mercado',
+          estabelecimento: 'Mercearia Parada Certa',
+          valor: 118,
+          tipo: 'despesa',
+          balde: 'Necessidades Essenciais',
+          categoria: 'Alimentação',
+          subcategoria: 'Supermercado & Atacado',
+          metodo_pagamento: null,
+        },
+        pergunta_clarificacao: null,
+        opcoes_sugestao: null,
+        mensagem_amigavel: 'Lançado: R$ 118,00 em Alimentação › Supermercado & Atacado 👍!',
+      }
+
+      const parsed = mapAiResponseToParsedTransaction(edgeClass4Response, text)
+
+      expect(parsed.routerClasse).toBe(4)
+      expect(parsed.aiStatus).toBe('sucesso')
+      expect(parsed.establishment).toBe('Mercearia Parada Certa')
+      expect(parsed.categoryNameSuggestion).toBe('Alimentação')
+      expect(parsed.subcategoryNameSuggestion).toBe('Supermercado & Atacado')
+      expect(parsed.amountCents).toBe(11800)
+    })
+
+    // (e) interação que atinge o limite de 2 perguntas → sugestão incerta no gap restante
+    it('(e) Limite de 2 perguntas atingido: não faz 3ª pergunta e assinala sugestão incerta no gap restante', () => {
+      // Simula uma resposta da Edge após esgotar o limite de perguntas (2 turnos de slot-filling)
+      const afterTwoQuestionsResponse: VoiceAiResponse = {
+        status: 'sucesso',
+        tipo_resposta: 'transacao',
+        intencao: 'transacao',
+        router: {
+          classe: 1,
+          nome_classe: 'lancamento_completo',
+          confianca: 0.55, // Confiança baixa residual
+          lacunas: ['local', 'data'],
+        },
+        confianca: 0.55,
+        lacunas: ['local', 'data'],
+        transacao: {
+          descricao: 'Compras diversas',
+          estabelecimento: null,
+          valor: 50,
+          tipo: 'despesa',
+          balde: 'Necessidades Essenciais',
+          categoria: 'Alimentação',
+          subcategoria: null,
+          metodo_pagamento: null,
+        },
+        pergunta_clarificacao: null, // Sem nova pergunta! Limite de 2 perguntas atingido
+        opcoes_sugestao: null,
+        mensagem_amigavel: 'Lançado: R$ 50,00 em Alimentação 👍!',
+      }
+
+      const parsed = mapAiResponseToParsedTransaction(afterTwoQuestionsResponse, 'deu 50 reais')
+
+      expect(parsed.aiStatus).toBe('sucesso')
+      expect(parsed.clarificationQuestion).toBeNull()
+      // Deve ter badge de sugestão incerta ativa devido à confiança < 0.6
+      expect(parsed.confidence).toBeLessThan(0.6)
+      expect(parsed.isUncertainSuggestion).toBe(true)
     })
   })
 })

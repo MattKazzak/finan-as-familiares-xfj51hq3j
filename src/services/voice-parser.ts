@@ -8,6 +8,7 @@ import {
   isBasketInput,
   analyzeBasketMission,
   interpretFreeTextBasketResponse,
+  extractEnumeratedItems,
 } from './basket-missions'
 
 export type VoiceAiStatus =
@@ -24,6 +25,11 @@ export interface VoiceAiTransactionItem {
   descricao: string
   quantidade?: number | null
   valor?: number | null
+  categoria_proposta?: string | null
+  subcategoria_proposta?: string | null
+  confianca?: number | null
+  requer_confirmacao?: boolean
+  duvida_categoria?: boolean
 }
 
 export interface VoiceAiTransaction {
@@ -1698,6 +1704,115 @@ export function parseVoiceInput(
     }
   }
 
+  // DETECÇÃO DA CLASSE 5 NO PARSER LOCAL: Itens heterogêneos (o caso da chupeta)
+  // Mensagem contendo múltiplos itens de categorias claramente diferentes (ex: bebê + pet + casa + doação)
+  const isHeterogeneousInput = (() => {
+    const normT = normalizeWord(rawText)
+    const hasBaby = /chupeta|mamadeira|fralda|lenco umedecido/.test(normT)
+    const hasPet = /sache|racao|pet|cachorro|gato/.test(normT)
+    const hasHome = /copo|jogo de copo|panela|prato|toalha/.test(normT)
+    const hasDonation = /doacao|catador|esmola|ajuda/.test(normT)
+    const heterogeneousThemes = [hasBaby, hasPet, hasHome, hasDonation].filter(Boolean).length
+    return heterogeneousThemes >= 2
+  })()
+
+  if (isHeterogeneousInput) {
+    const rawItems = extractEnumeratedItems(rawText)
+    const proposedItems: VoiceAiTransactionItem[] = rawItems.map((it) => {
+      const itName = normalizeWord(it.name)
+      if (/chupeta|mamadeira|fralda|bebe|bebê|filho/.test(itName)) {
+        return {
+          descricao: it.name,
+          quantidade: it.quantity || 1,
+          valor: null,
+          categoria_proposta: 'Compras',
+          subcategoria_proposta: 'Bebês & Crianças',
+          confianca: 0.9,
+          requer_confirmacao: true,
+          duvida_categoria: false,
+        }
+      }
+      if (/sache|sachê|cachorro|gato|pet|racao|ração/.test(itName)) {
+        return {
+          descricao: it.name,
+          quantidade: it.quantity || 4,
+          valor: null,
+          categoria_proposta: 'Pets',
+          subcategoria_proposta: 'Alimentação Pet',
+          confianca: 0.9,
+          requer_confirmacao: true,
+          duvida_categoria: false,
+        }
+      }
+      if (/copo|jogo de copo|panela|cozinha|casa/.test(itName)) {
+        return {
+          descricao: it.name,
+          quantidade: it.quantity || 1,
+          valor: null,
+          categoria_proposta: 'Casa & Conforto',
+          subcategoria_proposta: 'Utensílios & Cozinha',
+          confianca: 0.85,
+          requer_confirmacao: true,
+          duvida_categoria: false,
+        }
+      }
+      if (/doacao|doação|catador|esmola|ajuda/.test(itName)) {
+        return {
+          descricao: it.name,
+          quantidade: 1,
+          valor: null,
+          categoria_proposta: null,
+          subcategoria_proposta: null,
+          confianca: 0.4,
+          requer_confirmacao: true,
+          duvida_categoria: true,
+        }
+      }
+      return {
+        descricao: it.name,
+        quantidade: it.quantity || null,
+        valor: null,
+        categoria_proposta: 'Outros',
+        subcategoria_proposta: null,
+        confianca: 0.5,
+        requer_confirmacao: true,
+        duvida_categoria: true,
+      }
+    })
+
+    const hasDonationItem = proposedItems.some((pi) => pi.duvida_categoria)
+    const questionText = hasDonationItem
+      ? 'Identifiquei itens de categorias diferentes (bebê, pet, casa e doação). Como prefere classificar a doação e quais foram os valores de cada um?'
+      : 'Identifiquei itens de categorias diferentes. Como prefere organizar as categorias e valores de cada um?'
+
+    return {
+      rawText,
+      amountCents,
+      amountFormatted,
+      type: effectiveType,
+      description,
+      establishment,
+      paymentMethod: method,
+      categoryNameSuggestion: undefined,
+      subcategoryNameSuggestion: undefined,
+      bucketSuggestion: 'lifestyle',
+      confidence: 0.8,
+      processingSource: 'local',
+      aiStatus: 'clarificacao',
+      tipoResposta: 'transacao',
+      intencao: 'transacao',
+      routerClasse: 5,
+      routerConfianca: 0.9,
+      routerLacunas: ['itens', 'valor'],
+      extractedItems: proposedItems,
+      clarificationQuestion: questionText,
+      clarificationOptions: null,
+      friendlyMessage: questionText,
+      isBasket: true,
+      isUncertainSuggestion: true,
+    }
+  }
+
   // 5. Categoria & Balde
   const { categoryName, bucket, subcategoryName } = suggestCategoryAndBucket(
     `${description} ${rawText}`,
@@ -1710,10 +1825,12 @@ export function parseVoiceInput(
   let clarificationOptions: string[] | null = null
   let structuredOptions: StructuredSuggestionOption[] | null = null
   let friendlyMessage: string | null = null
+  let localRouterClasse: number | null = null
+  let localRouterLacunas: string[] | null = null
 
   if (amountCents <= 0) {
-    // Contrato v1.0 — Classe 2 (Itens antes de valor):
-    // Se a descrição for genérica ("comprei algumas coisas", "umas coisas", "compras", "umas comprinhas"),
+    // Contrato v1.0 — Classe 2 (Ordem Canônica: (1) itens -> (2) valor -> (3) local -> (4) data)
+    // Se a descrição for genérica ("comprei algumas coisas", "umas coisas", "compras", "umas comprinhas", "umas paradas"),
     // perguntar primeiro OS ITENS ("O que você comprou?"), NUNCA o valor!
     const GENERIC_EXPENSE_TERMS = [
       'algumas coisas',
@@ -1741,6 +1858,7 @@ export function parseVoiceInput(
 
     if (isPureGreeting) {
       aiStatus = 'consulta'
+      localRouterClasse = 7
       let greetingReply = 'Olá! Pronto pra registrar algo ou ver como estão as finanças de vocês?'
       if (rawLower.includes('bom dia')) {
         greetingReply = 'Bom dia! Pronto pra registrar algo ou ver como estão as finanças de vocês?'
@@ -1754,7 +1872,10 @@ export function parseVoiceInput(
       clarificationQuestion = null
       friendlyMessage = greetingReply
     } else if (isGenericDescription) {
+      // Ordem canônica: 1º itens
       aiStatus = 'falta_valor'
+      localRouterClasse = 2
+      localRouterLacunas = ['itens', 'valor']
       clarificationQuestion = 'O que você comprou?'
       friendlyMessage = 'O que você comprou? Me conta os itens que eu já organizo pra você!'
     } else {
@@ -1765,7 +1886,10 @@ export function parseVoiceInput(
       )
 
       if (hasRecognizableContext) {
+        // Ordem canônica: itens já existem, 2º valor
         aiStatus = 'falta_valor'
+        localRouterClasse = 2
+        localRouterLacunas = ['valor']
         clarificationQuestion = 'Quanto custou?'
         friendlyMessage = 'Entendi o que você comprou! Quanto custou?'
       } else {
@@ -1837,6 +1961,8 @@ export function parseVoiceInput(
     confidence: Math.min(confidence, 1.0),
     processingSource: 'local',
     aiStatus,
+    routerClasse: localRouterClasse,
+    routerLacunas: localRouterLacunas,
     clarificationQuestion,
     clarificationOptions,
     structuredOptions,
@@ -2004,5 +2130,12 @@ export function mapAiResponseToParsedTransaction(
     structuredOptions,
     friendlyMessage: aiData.mensagem_amigavel,
     aiError: aiData.error_detail || (aiData.error ? `Erro: ${aiData.error}` : null),
+    isUncertainSuggestion:
+      (typeof aiData.confianca === 'number' && aiData.confianca < 0.6) ||
+      (typeof aiData.router?.confianca === 'number' && aiData.router.confianca < 0.6) ||
+      (Array.isArray(aiData.itens) &&
+        aiData.itens.some(
+          (it) => it.duvida_categoria || (typeof it.confianca === 'number' && it.confianca < 0.6),
+        )),
   }
 }

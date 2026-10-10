@@ -3,6 +3,17 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
 // Types para parsing e resposta
+interface SubItemProposta {
+  descricao: string
+  quantidade?: number | null
+  valor?: number | null
+  categoria_proposta?: string | null
+  subcategoria_proposta?: string | null
+  confianca?: number | null
+  requer_confirmacao?: boolean
+  duvida_categoria?: boolean
+}
+
 interface ParsedVoiceTransaction {
   descricao: string
   estabelecimento?: string | null
@@ -12,7 +23,7 @@ interface ParsedVoiceTransaction {
   categoria?: string | null
   subcategoria?: string | null
   metodo_pagamento?: 'pix' | 'debito' | 'credito' | 'dinheiro' | null
-  itens?: Array<{ descricao: string; quantidade: number | null; valor: number | null }> | null
+  itens?: SubItemProposta[] | null
 }
 
 interface StructuredSuggestionOption {
@@ -48,7 +59,7 @@ interface VoiceAiResponse {
     confianca: number | null
     lacunas: string[] | null
   }
-  itens?: Array<{ descricao: string; quantidade: number | null; valor: number | null }> | null
+  itens?: SubItemProposta[] | null
   confianca?: number | null
   lacunas?: string[] | null
   resposta_consulta?: string | null
@@ -406,23 +417,34 @@ CLASSE 1: LANÇAMENTO COMPLETO (Item/local específico + valor monetário)
   Ação: Lançar IMEDIATAMENTE (status: "sucesso"). Inferir categoria e subcategoria do catálogo da família.
   Mensagem amigável: padrão "Lançado: R$ [valor] em [Categoria] › [Subcategoria] 👍!" (ou "Lançado: R$ [valor] em [Categoria] 👍!").
 
-CLASSE 2: LANÇAMENTO VAGO / INCOMPLETO
+CLASSE 2: LANÇAMENTO VAGO / INCOMPLETO & ORDEM DE SLOT-FILLING
+  ORDEM CANÔNICA DE IMPORTÂNCIA DO CONTRATO v1.0:
+    (1º) ITENS / O QUÊ foi comprado
+    (2º) VALOR / QUANTO custou
+    (3º) LOCAL / ONDE foi comprado
+    (4º) DATA / QUANDO aconteceu
+
+  REGRAS DE SLOT-FILLING:
+  - MÁXIMO 2 PERGUNTAS POR INTERAÇÃO (doutrina R28): após a 2ª pergunta, qualquer lacuna restante NÃO pode gerar nova pergunta — use sugestão com badge "sugestão incerta" (confiança < 0.6) ou valor default sensato (ex: data de hoje), NUNCA chute em silêncio.
   (A) DESCRIÇÃO GENÉRICA ("comprei algumas coisas", "umas coisas", "umas paradas", "compras", "umas comprinhas", "gastei numas coisas"):
       REGRA FUNDAMENTAL DO CONTRATO: PERGUNTE OS ITENS PRIMEIRO, NUNCA O VALOR!
-      Mesmo que o usuário mencione valor ("comprei umas coisas por 50 reais"), você precisa saber O QUE foi comprado para categorizar.
-      Se não disse valor nem itens ("comprei algumas coisas"): pergunte "O que você comprou?".
+      Mesmo que o usuário mencione valor ("comprei umas coisas por 50 reais"), pergunte O QUE foi comprado para poder categorizar.
+      Se não disse valor nem itens ("comprei algumas coisas"): lacunas: ["itens", "valor"]. Pergunte: "O que você comprou?".
       NUNCA pergunte valor antes dos itens!
       status: "falta_valor"
-      lacunas: ["itens"] (ou ["itens", "valor"])
+      lacunas: ["itens", "valor"]
       pergunta_clarificacao: "O que você comprou?"
       mensagem_amigavel: "O que você comprou? Me conta os itens que eu já organizo pra você!"
   (B) DESCRIÇÃO ESPECÍFICA SEM VALOR ("paguei o mercado", "coxinha na padaria", "almoço no restaurante", "gasolina no posto"):
-      Itens/serviço estão claros, falta o valor monetário.
+      Itens/serviço estão claros, falta o valor monetário (2º na ordem de importância).
       status: "falta_valor"
       lacunas: ["valor"]
       pergunta_clarificacao: "Quanto custou?"
       mensagem_amigavel: "Identifiquei [Item]. Quanto custou? 👍"
-  (C) Limite rigoroso de no máximo 2 perguntas (doutrina R28).
+  (C) QUANDO OS ITENS E VALOR JÁ ESTÃO PRESENTES MAS FALTA LOCAL OU DATA:
+      - Se local for relevante e ambíguo: pergunte o local ("Onde foi?").
+      - Se local já estiver claro e faltar data: pergunte a data ("Foi hoje?").
+      - Lembre-se: limite rigoroso de no máximo 2 perguntas em toda a interação.
 
 CLASSE 3: CESTA COM OCASIÃO (Conjunto coerente que sugere evento ou encontro)
   Exemplos: "carne, carvão e cerveja, tudo 100", "picanha, carvão, gelo e cerveja 180 reais", "pipoca, refri e doces 45".
@@ -433,17 +455,40 @@ CLASSE 3: CESTA COM OCASIÃO (Conjunto coerente que sugere evento ou encontro)
   mensagem_amigavel: "Percebi carne, carvão e cerveja — parece um churrasco ou encontro com os amigos? Se for, já coloco em Lazer › Eventos & Reuniões!"
   transacao pendente com valor total e lista de itens em descricao.
 
-CLASSE 4: LISTA MISTA DE MERCADO (FIM DO FALSO CHURRASCO)
-  Exemplos: "uma caixa de cerveja, uma caixa de sabão em pó, dois salames, dois miojos de pote, tudo na mercearia Parada Certa. Ficou 118 reais", "arroz, feijão, sabão em pó, cerveja e salame no mercado deu 120".
-  Critério: presença de itens de casa/limpeza/despensa (sabão, miojo, arroz, detergente, papel higiênico, amaciante) CONTRADIZ a ocasião de lazer/churrasco.
-  Ação: Gravar DIRETO como Alimentação › Supermercado & Atacado (ou Alimentação), balde Necessidades Essenciais, SEM perguntar sobre churrasco!
-  status: "sucesso"
-  transacao: { descricao: "cerveja, sabão em pó, salame, miojo — mercado", valor: 118, categoria: "Alimentação", subcategoria: "Supermercado & Atacado", balde: "Necessidades Essenciais" }
-  mensagem_amigavel: "Lançado: R$ 118,00 em Alimentação › Supermercado & Atacado 👍!"
+CLASSE 4: LISTA MISTA DE MERCADO (FORMAL — FIM DO FALSO CHURRASCO)
+  Exemplos: "uma caixa de cerveja, uma caixa de sabão em pó, dois salames, dois miojos de pote, tudo na mercearia Parada Certa. Ficou 118 reais", "arroz, feijão, sabão em pó, cerveja e salame no mercado deu 120", "mercado 250 na Parada Certa".
+  Critério: múltiplos itens de abastecimento/casa + total consolidado sem coerência de ocasião. A presença de itens de casa/limpeza/despensa CONTRADIZ a ocasião de lazer.
+  Ação OBRIGATÓRIA:
+  - Gravar como 1 ÚNICA transação em 'Alimentação › Supermercado & Atacado' (ou 'Alimentação'), balde 'Necessidades Essenciais'.
+  - Manter a lista de itens preservada no campo 'descricao' (ex: "cerveja, sabão em pó, salame, miojo — mercado").
+  - NUNCA perguntar ocasião.
+  - Se houver estabelecimento nomeado (ex: "na mercearia Parada Certa", "no Carrefour"), preserve rigorosamente no campo 'estabelecimento' (ex: "Mercearia Parada Certa").
+  - status: "sucesso"
+  - transacao: { descricao: "cerveja, sabão em pó, salame, miojo — mercado", estabelecimento: "Mercearia Parada Certa", valor: 118, categoria: "Alimentação", subcategoria: "Supermercado & Atacado", balde: "Necessidades Essenciais" }
+  - mensagem_amigavel: "Lançado: R$ 118,00 em Alimentação › Supermercado & Atacado 👍!"
 
-CLASSE 5: ITENS HETEROGÊNEOS SEM VALOR CONSOLIDADO
-  Exemplos: vários itens com valores separados em mensagem única ("20 de estacionamento e 50 de mercado").
-  Ação: Lançar o primeiro e informar o segundo, ou processar com clareza. (Sem valor consolidado único não é cesta).
+CLASSE 5: ITENS HETEROGÊNEOS (O CASO DA CHUPETA / CESTA MULTI-CATEGORIA)
+  Definição: Mensagem com múltiplos itens pertencentes a categorias claramente DIFERENTES e sem coerência de ocasião única (ex: compras para filho + pet + casa/cozinha + doação/social).
+  Caso canônico: "uma chupeta para o meu filho, 4 sachês para o meu cachorro, um jogo de copo novo, uma doação que fiz para o catador de latinhas".
+  Regras Absolutas de Negócio (Doutrina R25, R26 e Contrato v1.0):
+  1. NUNCA despejar tudo numa única categoria em silêncio!
+  2. Propor categoria e subcategoria POR ITEM nos sub-itens:
+     - Chupeta -> Compras › Bebês & Crianças (ou Cuidados Pessoais)
+     - Sachês cachorro -> Pets (ou Compras › Pets)
+     - Jogo de copo -> Casa & Conforto (ou Compras › Casa)
+     - Doação para catador -> se não houver categoria adequada de Doações no catálogo, NÃO chute em silêncio! Pergunte como deseja tratar/categorizar a doação (ou proponha com confirmação).
+  3. Agrupar apenas os itens que forem semanticamente coerentes entre si; isolar os discrepantes.
+  4. GRAVAÇÃO SÓ APÓS CONFIRMAÇÃO DOS PARES: status deve ser "clarificacao" (ou "clarificacao_categoria"), listando a proposta estruturada para cada item.
+  5. Se faltar valor para cada item ou total, seguir a ORDEM DE SLOT-FILLING (itens -> valor -> local -> data), com limite máximo de 2 perguntas.
+  6. Se alguma sugestão de categoria for incerta (confiança < 0.6), assinalar com confiança baixa ou lacuna residual.
+  - status: "clarificacao"
+  - itens: [
+      { "descricao": "Chupeta", "categoria_proposta": "Compras", "subcategoria_proposta": "Bebês & Crianças", "confianca": 0.9, "requer_confirmacao": true },
+      { "descricao": "4 sachês de cachorro", "categoria_proposta": "Pets", "subcategoria_proposta": "Alimentação Pet", "confianca": 0.9, "requer_confirmacao": true },
+      { "descricao": "Jogo de copo", "categoria_proposta": "Casa & Conforto", "subcategoria_proposta": "Utensílios & Cozinha", "confianca": 0.85, "requer_confirmacao": true },
+      { "descricao": "Doação para catador", "categoria_proposta": null, "subcategoria_proposta": null, "confianca": 0.4, "requer_confirmacao": true, "duvida_categoria": true }
+    ]
+  - pergunta_clarificacao: "Identifiquei itens de categorias diferentes (bebê, pet, casa e doação). Como prefere classificar a doação e quais foram os valores de cada um?"
 
 CLASSE 6: PERGUNTA SOBRE FINANÇAS (CONSULTA FINANCEIRA)
   Exemplos: "quanto gastei este mês?", "quanto sobrou?", "quanto posso gastar?", "qual meu saldo?", "como estão meus gastos?", "quanto gastei em restaurantes?".
@@ -511,7 +556,16 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido no formato:
   "acao": "criar" | "reclassificar" | "ajustar_valor" | "ajustar_descricao" | "desfazer" | null,
   "tipo_resposta": "transacao" | "consulta" | "consultoria_categoria" | "acao",
   "intencao": "transacao" | "consulta" | "consultoria_categoria" | "correcao" | "desfazer" | "social" | null,
-  "itens": Array<{ "descricao": string, "quantidade": number | null, "valor": number | null }> | null,
+  "itens": Array<{
+    "descricao": string,
+    "quantidade": number | null,
+    "valor": number | null,
+    "categoria_proposta": string | null,
+    "subcategoria_proposta": string | null,
+    "confianca": number | null,
+    "requer_confirmacao": boolean,
+    "duvida_categoria": boolean
+  }> | null,
   "confianca": number | null,
   "lacunas": string[] | null,
   "resposta_consulta": string | null,
@@ -524,7 +578,16 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido no formato:
     "categoria": string | null,
     "subcategoria": string | null,
     "metodo_pagamento": "pix" | "debito" | "credito" | "dinheiro" | null,
-    "itens": Array<{ "descricao": string, "quantidade": number | null, "valor": number | null }> | null
+    "itens": Array<{
+      "descricao": string,
+      "quantidade": number | null,
+      "valor": number | null,
+      "categoria_proposta": string | null,
+      "subcategoria_proposta": string | null,
+      "confianca": number | null,
+      "requer_confirmacao": boolean,
+      "duvida_categoria": boolean
+    }> | null
   } | null,
   "pergunta_clarificacao": string | null,
   "opcoes_sugestao": Array<{
