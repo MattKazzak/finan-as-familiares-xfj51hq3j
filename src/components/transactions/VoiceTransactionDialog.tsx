@@ -1181,6 +1181,13 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
               const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
               if (AudioContextClass) {
                 const audioCtx = new AudioContextClass()
+                // No mobile/Chrome/PWA, AudioContext pode inicializar em estado 'suspended'
+                if (audioCtx.state === 'suspended') {
+                  audioCtx.resume().catch((resErr) => {
+                    console.warn('[AudioCapture] Falha ao resumir AudioContext suspenso:', resErr)
+                  })
+                }
+
                 const source = audioCtx.createMediaStreamSource(stream)
                 const analyser = audioCtx.createAnalyser()
                 analyser.fftSize = 64
@@ -1284,7 +1291,11 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             }, 1000)
           })
           .catch((mediaErr: any) => {
-            console.warn('getUserMedia erro:', mediaErr)
+            console.error('[AudioCapture] Falha explícita no MediaRecorder/getUserMedia:', mediaErr)
+            // REGRA: QUALQUER falha do MediaRecorder deve ser LOGADA e VISÍVEL — NUNCA fallback silencioso.
+            setActiveAudioCaptureMode('media_recorder')
+            activeAudioCaptureModeRef.current = 'media_recorder'
+
             if (
               mediaErr?.name === 'NotAllowedError' ||
               mediaErr?.name === 'PermissionDeniedError' ||
@@ -1292,16 +1303,18 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             ) {
               setPermissionStatus('denied')
               setErrorMessage(
-                'Permissão de microfone negada. Toque no ícone de cadeado/configurações ao lado do link no navegador e libere o Microfone para este site.',
+                'Permissão de microfone negada. Toque no cadeado ou configurações do navegador/PWA e libere o Microfone para o Curiangoo.',
               )
             } else if (
               mediaErr?.name === 'NotFoundError' ||
               mediaErr?.name === 'DevicesNotFoundError'
             ) {
-              setErrorMessage('Nenhum microfone encontrado ou o áudio do aparelho está bloqueado.')
+              setErrorMessage(
+                'Nenhum microfone detectado no aparelho ou áudio bloqueado pelo sistema operacional.',
+              )
             } else {
               setErrorMessage(
-                'Não foi possível ativar o microfone. Você pode digitar abaixo e enviar com o Copilot.',
+                `Não foi possível iniciar a captação estável (${mediaErr?.message || mediaErr?.name || 'erro no dispositivo'}). Toque em Tentar de novo ou digite abaixo.`,
               )
             }
             setIsListening(false)
@@ -1440,21 +1453,44 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         }
 
         recognition.onend = () => {
+          // Preserva todo o texto acumulado até o momento sem perder nada
           if (latestTranscriptRef.current.trim()) {
             finalBufferRef.current = latestTranscriptRef.current.trim()
           }
 
-          // Se o usuário NÃO tocou Parar/Cancelar e não houve erro fatal,
-          // RECONECTA IMEDIATAMENTE (neutraliza corte automático de silêncio do Web Speech)
+          // Invariante absoluto: em NENHUM dos caminhos a gravação encerra sem ação do usuário.
+          // Neutraliza o corte automático de ~3s do SpeechRecognition reiniciando a sessão
+          // e mantendo o buffer acumulado intacto.
           if (!userRequestedStopRef.current && !hadErrorRef.current) {
             console.log(
-              '[AudioCapture] Web Speech onend disparado antes do toque em Parar: reconectando gravação...',
+              '[AudioCapture] Web Speech onend disparado antes do toque em Parar: reconectando gravação com texto preservado...',
             )
             try {
               recognition.start()
               return
             } catch (reconnectErr) {
-              console.warn('[AudioCapture] Falha ao reconectar Web Speech:', reconnectErr)
+              console.warn(
+                '[AudioCapture] Falha ao reconectar Web Speech com mesma instância, tentando recriar:',
+                reconnectErr,
+              )
+              try {
+                const freshRecognition = new SpeechRecognition()
+                freshRecognition.lang = 'pt-BR'
+                freshRecognition.continuous = true
+                freshRecognition.interimResults = true
+                freshRecognition.maxAlternatives = 1
+                freshRecognition.onstart = recognition.onstart
+                freshRecognition.onaudiostart = recognition.onaudiostart
+                freshRecognition.onspeechstart = recognition.onspeechstart
+                freshRecognition.onresult = recognition.onresult
+                freshRecognition.onerror = recognition.onerror
+                freshRecognition.onend = recognition.onend
+                recognitionRef.current = freshRecognition
+                freshRecognition.start()
+                return
+              } catch (freshErr) {
+                console.warn('[AudioCapture] Falha ao criar fresh recognition:', freshErr)
+              }
             }
           }
 
@@ -2791,6 +2827,25 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                   </span>
                   <span className="text-[#14213D] font-bold text-xs truncate">
                     Ouvindo... pode falar no seu ritmo
+                  </span>
+                  {/* T1: Indicador visível do modo de captação (CDS v1.0 discreto) */}
+                  <span
+                    data-testid="audio-capture-mode-badge"
+                    data-mode={activeAudioCaptureMode || 'media_recorder'}
+                    className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold tracking-wide shrink-0 ${
+                      activeAudioCaptureMode === 'web_speech'
+                        ? 'bg-amber-100 text-amber-800 border border-amber-300/80'
+                        : 'bg-emerald-100 text-emerald-800 border border-emerald-300/80'
+                    }`}
+                    title={
+                      activeAudioCaptureMode === 'web_speech'
+                        ? 'Captação do navegador ativa (Web Speech API)'
+                        : 'Captação estável ativa (MediaRecorder + Whisper)'
+                    }
+                  >
+                    {activeAudioCaptureMode === 'web_speech'
+                      ? 'Captação do navegador'
+                      : 'Captação estável'}
                   </span>
                 </>
               ) : isTranscribingAudio ? (

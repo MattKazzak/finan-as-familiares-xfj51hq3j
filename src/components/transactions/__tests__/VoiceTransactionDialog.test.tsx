@@ -2091,4 +2091,106 @@ describe('VoiceTransactionDialog (Curiangoo Copilot Mini-Chat)', () => {
       })
     })
   })
+
+  describe('R33 - Indicador visível de modo de captação e invariante de não corte', () => {
+    it('[T1 & T2] Exibe badge "Captação do navegador" quando em modo web_speech', async () => {
+      let capturedInstance: any = null
+      function MockSpeechRecognition() {
+        const self = {
+          lang: '',
+          continuous: true,
+          interimResults: false,
+          maxAlternatives: 1,
+          onstart: null as any,
+          onaudiostart: null as any,
+          onspeechstart: null as any,
+          onresult: null as any,
+          onerror: null as any,
+          onend: null as any,
+          start() {
+            if (self.onstart) self.onstart()
+          },
+          stop() {
+            if (self.onend) self.onend()
+          },
+          abort() {},
+        }
+        capturedInstance = self
+        return self
+      }
+      ;(window as any).SpeechRecognition = MockSpeechRecognition
+
+      render(
+        <VoiceTransactionDialog
+          open={true}
+          onOpenChange={vi.fn()}
+          onOpenManualTransaction={vi.fn()}
+        />,
+      )
+
+      await waitFor(() => {
+        expect(capturedInstance).toBeTruthy()
+        const badge = screen.getByTestId('audio-capture-mode-badge')
+        expect(badge).toBeDefined()
+        expect(badge.textContent).toBe('Captação do navegador')
+      })
+    })
+
+    it('[T2 (d)] Reconexão do Web Speech preserva texto acumulado e reinicia recognition', async () => {
+      let capturedInstance: any = null
+      let startCalls = 0
+      function MockSpeechRecognition() {
+        const self = {
+          lang: '',
+          continuous: true,
+          interimResults: true,
+          maxAlternatives: 1,
+          onstart: null as any,
+          onaudiostart: null as any,
+          onspeechstart: null as any,
+          onresult: null as any,
+          onerror: null as any,
+          onend: null as any,
+          start() {
+            startCalls++
+            if (self.onstart) self.onstart()
+          },
+          stop() {
+            if (self.onend) self.onend()
+          },
+          abort() {},
+        }
+        capturedInstance = self
+        return self
+      }
+      ;(window as any).SpeechRecognition = MockSpeechRecognition
+
+      render(
+        <VoiceTransactionDialog
+          open={true}
+          onOpenChange={vi.fn()}
+          onOpenManualTransaction={vi.fn()}
+        />,
+      )
+
+      await waitFor(() => {
+        expect(capturedInstance).toBeTruthy()
+        expect(startCalls).toBe(1)
+      })
+
+      // Simula primeiro resultado de voz
+      capturedInstance.onresult({
+        results: [[{ transcript: 'almoço no shopping 45 reais' }]],
+      })
+
+      // Simula término prematuro do Web Speech (onend antes do usuário clicar em Parar)
+      // Deve disparar reconexão sem fechar a escuta
+      capturedInstance.onend()
+
+      // Reconecta chamando start() novamente
+      expect(startCalls).toBe(2)
+      // Continua ouvindo! Não deve ter encerrado a escuta
+      expect(screen.getByText(/Ouvindo... pode falar no seu ritmo/i)).toBeDefined()
+    })
+  })
 })
