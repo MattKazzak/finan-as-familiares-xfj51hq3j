@@ -48,6 +48,7 @@ vi.mock('@hooks/use-value-privacy', () => ({
 
 vi.mock('@services/copilot', () => ({
   fetchCopilotMessages: vi.fn().mockResolvedValue([]),
+  fetchCopilotMessagesWithHasMore: vi.fn().mockResolvedValue({ messages: [], hasMore: false }),
   saveCopilotMessage: vi.fn().mockResolvedValue({ id: 'msg-saved-1' }),
 }))
 
@@ -63,6 +64,10 @@ describe('CopilotPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     ;(CopilotService.fetchCopilotMessages as any).mockResolvedValue([])
+    ;(CopilotService.fetchCopilotMessagesWithHasMore as any).mockResolvedValue({
+      messages: [],
+      hasMore: false,
+    })
   })
 
   it('renderiza CopilotTypingBubble durante processamento da mensagem e oculta quando concluído', async () => {
@@ -108,6 +113,61 @@ describe('CopilotPage', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('copilot-typing-indicator')).toBeNull()
       expect(screen.getByText('Lançado R$ 12,00 em Café!')).toBeDefined()
+    })
+  })
+
+  it('exibe botão "Carregar mensagens mais antigas" quando hasMore for true e carrega lote anterior preservando mensagens', async () => {
+    const initialBatch = [
+      {
+        id: 'msg-2',
+        family_id: 'fam-test-1',
+        user_id: 'usr-1',
+        role: 'user' as const,
+        content: 'Segunda mensagem recente',
+        card_type: null,
+        created_at: '2026-03-30T12:00:00.000Z',
+      },
+    ]
+
+    const olderBatch = [
+      {
+        id: 'msg-1',
+        family_id: 'fam-test-1',
+        user_id: 'usr-1',
+        role: 'user' as const,
+        content: 'Primeira mensagem antiga',
+        card_type: null,
+        created_at: '2026-03-30T11:00:00.000Z',
+      },
+    ]
+
+    ;(CopilotService.fetchCopilotMessagesWithHasMore as any)
+      .mockResolvedValueOnce({ messages: initialBatch, hasMore: true })
+      .mockResolvedValueOnce({ messages: olderBatch, hasMore: false })
+
+    render(<CopilotPage />)
+
+    // Aguarda carregar mensagens iniciais
+    await waitFor(() => {
+      expect(screen.getByText('Segunda mensagem recente')).toBeDefined()
+    })
+
+    // Botão de carregar mais antigas deve estar visível
+    const loadOlderBtn = screen.getByTestId('load-older-messages-button')
+    expect(loadOlderBtn).toBeDefined()
+    expect(loadOlderBtn.textContent).toContain('Carregar mensagens mais antigas')
+
+    // Clica para carregar mensagens antigas
+    fireEvent.click(loadOlderBtn)
+
+    await waitFor(() => {
+      expect(screen.getByText('Primeira mensagem antiga')).toBeDefined()
+      expect(screen.getByText('Segunda mensagem recente')).toBeDefined()
+    })
+
+    // Botão some quando não há mais mensagens antigas (hasMore: false)
+    await waitFor(() => {
+      expect(screen.queryByTestId('load-older-messages-button')).toBeNull()
     })
   })
 

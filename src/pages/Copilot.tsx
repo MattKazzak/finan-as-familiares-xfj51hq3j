@@ -22,7 +22,11 @@ import { CopilotTypingBubble } from '@/components/brand/CopilotTypingBubble'
 import { CategoryHighlightChip } from '@/components/categories/CategoryHighlightChip'
 import { useToast } from '@/hooks/use-toast'
 import { parseVoiceWithAi } from '@/services/voice-ai'
-import { fetchCopilotMessages, saveCopilotMessage } from '@/services/copilot'
+import {
+  fetchCopilotMessagesWithHasMore,
+  saveCopilotMessage,
+  type CopilotMessageRecord,
+} from '@/services/copilot'
 import {
   getLocalAiConsent,
   fetchUserPreferencesWithFallback,
@@ -56,7 +60,14 @@ export function CopilotPage() {
   const [showConsentModal, setShowConsentModal] = useState(false)
   const [pendingTx, setPendingTx] = useState<ParsedVoiceTransaction | null>(null)
 
+  // Paginação do histórico
+  const [hasMoreOlder, setHasMoreOlder] = useState(false)
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false)
+  const [oldestMessageDate, setOldestMessageDate] = useState<string | null>(null)
+
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
+  const shouldAutoScrollRef = useRef(true)
 
   // Cadeia unificada de voz via useVoiceCapture (MediaRecorder padrão + Whisper + fallback Web Speech)
   const voiceCapture = useVoiceCapture({
@@ -103,10 +114,12 @@ export function CopilotPage() {
   }
 
   useEffect(() => {
-    scrollToBottom()
+    if (shouldAutoScrollRef.current) {
+      scrollToBottom()
+    }
   }, [messages, isProcessing])
 
-  // Inicialização: carrega consentimento do banco com fallback e histórico das 20 mensagens
+  // Inicialização: carrega consentimento do banco com fallback e lote inicial mais recente (25 msgs)
   useEffect(() => {
     fetchUserPreferencesWithFallback().then((pref) => {
       setHasConsent(pref.aiConsent)
@@ -116,9 +129,12 @@ export function CopilotPage() {
     })
 
     if (family?.id) {
-      fetchCopilotMessages(family.id, 20)
-        .then((history) => {
+      shouldAutoScrollRef.current = true
+      fetchCopilotMessagesWithHasMore(family.id, { limitCount: 25 })
+        .then(({ messages: history, hasMore }) => {
+          setHasMoreOlder(hasMore)
           if (history && history.length > 0) {
+            setOldestMessageDate(history[0].created_at)
             const mapped: CopilotChatMessage[] = history.map((rec) => ({
               id: rec.id,
               sender: rec.role,
@@ -128,6 +144,7 @@ export function CopilotPage() {
             }))
             setMessages(mapped)
           } else {
+            setOldestMessageDate(null)
             setMessages([
               {
                 id: 'init-msg',
@@ -140,6 +157,8 @@ export function CopilotPage() {
           }
         })
         .catch(() => {
+          setHasMoreOlder(false)
+          setOldestMessageDate(null)
           setMessages([
             {
               id: 'init-msg',
@@ -152,6 +171,56 @@ export function CopilotPage() {
         })
     }
   }, [family?.id, currentMember?.name])
+
+  // Carrega lote anterior (mais antigas) preservando rigorosamente a posição de rolagem
+  const handleLoadOlderMessages = async () => {
+    if (!family?.id || isLoadingOlder || !hasMoreOlder || !oldestMessageDate) return
+
+    const container = scrollContainerRef.current
+    const prevScrollHeight = container?.scrollHeight ?? 0
+    const prevScrollTop = container?.scrollTop ?? 0
+
+    setIsLoadingOlder(true)
+    shouldAutoScrollRef.current = false
+
+    try {
+      const { messages: olderRecords, hasMore } = await fetchCopilotMessagesWithHasMore(family.id, {
+        limitCount: 25,
+        beforeCreatedAt: oldestMessageDate,
+      })
+
+      if (olderRecords && olderRecords.length > 0) {
+        setOldestMessageDate(olderRecords[0].created_at)
+        setHasMoreOlder(hasMore)
+
+        const olderMapped: CopilotChatMessage[] = olderRecords.map((rec) => ({
+          id: rec.id,
+          sender: rec.role,
+          text: rec.content,
+          timestamp: new Date(rec.created_at),
+          cardType: rec.card_type,
+        }))
+
+        // Prepend das mensagens mais antigas no topo
+        setMessages((prev) => [...olderMapped, ...prev])
+
+        // Preserva o scroll milimetricamente no próximo tick de layout
+        requestAnimationFrame(() => {
+          if (container) {
+            const newScrollHeight = container.scrollHeight
+            const delta = newScrollHeight - prevScrollHeight
+            container.scrollTop = prevScrollTop + delta
+          }
+        })
+      } else {
+        setHasMoreOlder(false)
+      }
+    } catch (err: any) {
+      console.warn('[CopilotPage] Falha ao carregar mensagens antigas:', err?.message)
+    } finally {
+      setIsLoadingOlder(false)
+    }
+  }
 
   const handleConsentAccept = async () => {
     await saveUserAiConsent(true)
@@ -231,6 +300,7 @@ export function CopilotPage() {
       text,
       timestamp: new Date(),
     }
+    shouldAutoScrollRef.current = true
     setMessages((prev) => [...prev, userMsg])
     setInputText('')
     setIsProcessing(true)
@@ -392,8 +462,38 @@ export function CopilotPage() {
         </div>
       </div>
 
-      {/* Área de Mensagens */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50/50">
+      {/* Área de Mensagens com scroll preservado */}
+      <div
+        ref={scrollContainerRef}
+        data-testid="copilot-messages-container"
+        className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50/50"
+      >
+        {/* Botão discreto no TOPO: Carregar mensagens mais antigas (CDS v1.0) */}
+        {hasMoreOlder && (
+          <div className="flex justify-center pt-1 pb-2">
+            <button
+              type="button"
+              data-testid="load-older-messages-button"
+              onClick={handleLoadOlderMessages}
+              disabled={isLoadingOlder}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium text-slate-600 hover:text-brand bg-white/90 hover:bg-white border border-border/60 hover:border-brand-amber/50 shadow-2xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-wait"
+              aria-label="Carregar mensagens mais antigas"
+            >
+              {isLoadingOlder ? (
+                <>
+                  <span className="w-2.5 h-2.5 rounded-full border-2 border-brand-amber border-t-transparent animate-spin" />
+                  <span>Carregando anteriores...</span>
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="w-3 h-3 text-slate-400 group-hover:text-brand" />
+                  <span>Carregar mensagens mais antigas</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
         {messages.map((m) => {
           const isUser = m.sender === 'user'
           return (

@@ -20,19 +20,45 @@ export interface SaveCopilotMessageInput {
 /**
  * Busca as últimas mensagens da família para o Copilot (ordem cronológica para renderização no chat)
  */
+export interface FetchCopilotMessagesOptions {
+  limitCount?: number
+  beforeCreatedAt?: string | null
+}
+
+export interface FetchCopilotMessagesResult {
+  messages: CopilotMessageRecord[]
+  hasMore: boolean
+}
+
+/**
+ * Busca lote de mensagens da família para o Copilot (ordem cronológica crescente).
+ * Suporta paginação incremental por cursor de data (`beforeCreatedAt`).
+ */
 export async function fetchCopilotMessages(
   familyId: string,
-  limitCount = 20,
+  limitCountOrOptions: number | FetchCopilotMessagesOptions = 25,
 ): Promise<CopilotMessageRecord[]> {
+  const options: FetchCopilotMessagesOptions =
+    typeof limitCountOrOptions === 'number'
+      ? { limitCount: limitCountOrOptions }
+      : limitCountOrOptions
+
+  const limitCount = options.limitCount ?? 25
+  const beforeCreatedAt = options.beforeCreatedAt
+
   if (!familyId) return []
 
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('copilot_messages')
       .select('id, family_id, user_id, role, content, card_type, created_at')
       .eq('family_id', familyId)
-      .order('created_at', { ascending: false })
-      .limit(limitCount)
+
+    if (beforeCreatedAt) {
+      query = query.lt('created_at', beforeCreatedAt)
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false }).limit(limitCount)
 
     if (error) {
       console.warn('[copilot-service] Falha silenciosa ao buscar histórico:', error.message)
@@ -46,6 +72,56 @@ export async function fetchCopilotMessages(
   } catch (err: any) {
     console.warn('[copilot-service] Erro inesperado ao buscar histórico:', err?.message)
     return []
+  }
+}
+
+/**
+ * Busca lote de mensagens com indicação precisa de hasMore (se existem mensagens mais antigas).
+ */
+export async function fetchCopilotMessagesWithHasMore(
+  familyId: string,
+  options: FetchCopilotMessagesOptions = {},
+): Promise<FetchCopilotMessagesResult> {
+  const limitCount = options.limitCount ?? 25
+  const beforeCreatedAt = options.beforeCreatedAt
+
+  if (!familyId) return { messages: [], hasMore: false }
+
+  try {
+    let query = supabase
+      .from('copilot_messages')
+      .select('id, family_id, user_id, role, content, card_type, created_at')
+      .eq('family_id', familyId)
+
+    if (beforeCreatedAt) {
+      query = query.lt('created_at', beforeCreatedAt)
+    }
+
+    // Pede limitCount + 1 para saber com certeza se há próxima página
+    const { data, error } = await query
+      .order('created_at', { ascending: false })
+      .limit(limitCount + 1)
+
+    if (error) {
+      console.warn(
+        '[copilot-service] Falha silenciosa ao buscar histórico paginado:',
+        error.message,
+      )
+      return { messages: [], hasMore: false }
+    }
+
+    if (!data || data.length === 0) return { messages: [], hasMore: false }
+
+    const hasMore = data.length > limitCount
+    const items = hasMore ? data.slice(0, limitCount) : data
+
+    return {
+      messages: (items as CopilotMessageRecord[]).reverse(),
+      hasMore,
+    }
+  } catch (err: any) {
+    console.warn('[copilot-service] Erro inesperado ao buscar histórico paginado:', err?.message)
+    return { messages: [], hasMore: false }
   }
 }
 

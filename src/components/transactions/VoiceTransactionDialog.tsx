@@ -1161,7 +1161,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
       // Carrega até 20 mensagens do histórico persistido da família (Parte 1.4)
       if (family?.id) {
-        fetchCopilotMessages(family.id, 20)
+        fetchCopilotMessages(family.id, 25)
           .then((historyRecords) => {
             if (historyRecords && historyRecords.length > 0) {
               const mappedHistory: ChatMessage[] = historyRecords.map((rec) => ({
