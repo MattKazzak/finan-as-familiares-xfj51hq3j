@@ -36,7 +36,11 @@ import { createTransaction } from '@/services/transactions'
 import { BUCKET_METADATA } from '@/types/budget-presets'
 import { formatBRL } from '@/lib/formatters'
 import type { BudgetBucket } from '@/types/finance'
-import type { ParsedVoiceTransaction, StructuredSuggestionOption } from '@/services/voice-parser'
+import {
+  type ParsedVoiceTransaction,
+  type StructuredSuggestionOption,
+  extractAllAmountsFromVoiceText,
+} from '@/services/voice-parser'
 import { useVoiceCapture } from '@/hooks/use-voice-capture'
 
 export interface CopilotChatMessage {
@@ -314,22 +318,264 @@ export function CopilotPage() {
     }
 
     try {
+      // PONTO 1: Descartar pendência anterior ao iniciar fluxo NOVO de lançamento
+      // Se há pendência ativa mas a mensagem do usuário é claramente o início de um novo lançamento independente
+      // (ex.: "comprei...", "gastei...", "paguei...", ou novo lote multi-item), descartar a pendência anterior.
+      const isStartingNewExpense =
+        Boolean(pendingTx) &&
+        /^(gastei|comprei|paguei|lan[cç]a|lan[cç]ar|registra|registrar|recebi|pix|deu|uma?\s+[a-z]+.*,)\b/i.test(
+          text,
+        )
+
+      let effectivePendingTx = isStartingNewExpense ? null : pendingTx
+      if (isStartingNewExpense && pendingTx) {
+        setPendingTx(null)
+      }
+
+      // PONTO 2: Interceptar confirmação "Sim" de proposta da Classe 5
+      // Se há proposta de Classe 5 pendente e usuário responde "Sim", "está certo", etc.:
+      // NUNCA chamar a edge nem reutilizar valores antigos do histórico!
+      // Obrigatoriamente perguntar os valores: "Agora os valores: quanto foi cada item?"
+      const isClass5ProposalPending =
+        Boolean(effectivePendingTx) &&
+        effectivePendingTx?.routerClasse === 5 &&
+        Array.isArray(effectivePendingTx?.extractedItems) &&
+        effectivePendingTx.extractedItems.length >= 2
+
+      const isAffirmativeConfirmation =
+        /^(sim|est[aá] certo|est[aá] certo assim|isso|perfeito|pode ser|confirmo|beleza|fechado|pode gravar)\b/i.test(
+          text.replace(/[.!?]/g, '').trim(),
+        )
+
+      if (isClass5ProposalPending && effectivePendingTx && isAffirmativeConfirmation) {
+        const askValuesMsg = 'Agora os valores: quanto foi cada item?'
+        const updatedPending: ParsedVoiceTransaction = {
+          ...effectivePendingTx,
+          aiStatus: 'falta_valor',
+          clarificationQuestion: askValuesMsg,
+          friendlyMessage: askValuesMsg,
+        }
+        setPendingTx(updatedPending)
+
+        if (family?.id) {
+          saveCopilotMessage({
+            familyId: family.id,
+            role: 'assistant',
+            content: askValuesMsg,
+            cardType: 'falta_valor',
+          }).catch(() => {})
+        }
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `asst-${Date.now()}`,
+            sender: 'assistant',
+            text: askValuesMsg,
+            timestamp: new Date(),
+            cardType: 'falta_valor',
+            cardData: updatedPending,
+          },
+        ])
+        setIsProcessing(false)
+        return
+      }
+
+      // PONTO 3: Gravação da Classe 5 pós-pergunta de valores:
+      // Se a proposta da Classe 5 já está confirmada e aguardando valores (aiStatus === 'falta_valor')
+      if (
+        isClass5ProposalPending &&
+        effectivePendingTx &&
+        effectivePendingTx.aiStatus === 'falta_valor'
+      ) {
+        const pendingItems = effectivePendingTx.extractedItems || []
+        const foundAmounts = extractAllAmountsFromVoiceText(text)
+
+        // Caso A: Usuário enviou valor que faltava (1 valor faltante)
+        const isSingleMissing =
+          foundAmounts.length === 1 &&
+          pendingItems.some((it) => it.valor === null || it.valor === undefined)
+
+        if (isSingleMissing && pendingItems.filter((it) => it.valor).length >= 1) {
+          const missingItem = pendingItems.find((it) => it.valor === null || it.valor === undefined)
+          if (missingItem) {
+            missingItem.valor = foundAmounts[0].amountCents / 100
+          }
+
+          const allHaveValues = pendingItems.every(
+            (it) => typeof it.valor === 'number' && it.valor > 0,
+          )
+
+          if (allHaveValues) {
+            const resultsSummary: string[] = []
+            for (const item of pendingItems) {
+              const itemAmountCents = Math.round((item.valor || 0) * 100)
+              const itemCat = item.categoria_proposta || 'Outros'
+              const itemSub = item.subcategoria_proposta || 'Outros'
+              const itemFormatted = formatBRL(itemAmountCents)
+
+              await executeAutonomousSave({
+                rawText: `${item.descricao} ${itemAmountCents}`,
+                amountCents: itemAmountCents,
+                amountFormatted: itemFormatted,
+                type: 'expense',
+                description: item.descricao,
+                categoryNameSuggestion: itemCat,
+                subcategoryNameSuggestion: itemSub,
+                bucketSuggestion: 'lifestyle',
+                confidence: 0.95,
+                aiStatus: 'sucesso',
+              })
+
+              resultsSummary.push(`${itemFormatted} em ${itemCat} › ${itemSub}`)
+            }
+
+            setPendingTx(null)
+            const finalSummaryMsg = `Lançamentos realizados com sucesso:\n${resultsSummary.map((s) => `• ${s}`).join('\n')} 👍!`
+
+            if (family?.id) {
+              saveCopilotMessage({
+                familyId: family.id,
+                role: 'assistant',
+                content: finalSummaryMsg,
+                cardType: 'sucesso',
+              }).catch(() => {})
+            }
+
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `asst-${Date.now()}`,
+                sender: 'assistant',
+                text: finalSummaryMsg,
+                timestamp: new Date(),
+                cardType: 'sucesso',
+              },
+            ])
+            setIsProcessing(false)
+            return
+          }
+        }
+
+        // Caso B: Menos valores que itens (ex: 3 valores para 4 itens) → NUNCA somar!
+        if (foundAmounts.length > 0 && foundAmounts.length < pendingItems.length) {
+          const updatedItems = pendingItems.map((it, idx) => {
+            if (idx < foundAmounts.length) {
+              return { ...it, valor: foundAmounts[idx].amountCents / 100 }
+            }
+            return { ...it, valor: null }
+          })
+
+          const missingItem = updatedItems.find((it) => it.valor === null)
+          const rawDesc = (missingItem?.descricao || 'o item restante').toLowerCase()
+          const cleanDesc = rawDesc.replace(/^(um|uma|o|a)\s+/i, '')
+          const askMissingMsg = `Faltou o valor da ${cleanDesc} — quanto foi?`
+
+          const updatedPendingClasse5: ParsedVoiceTransaction = {
+            ...effectivePendingTx,
+            extractedItems: updatedItems,
+            clarificationQuestion: askMissingMsg,
+            friendlyMessage: askMissingMsg,
+            aiStatus: 'falta_valor',
+          }
+
+          setPendingTx(updatedPendingClasse5)
+
+          if (family?.id) {
+            saveCopilotMessage({
+              familyId: family.id,
+              role: 'assistant',
+              content: askMissingMsg,
+              cardType: 'falta_valor',
+            }).catch(() => {})
+          }
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `asst-${Date.now()}`,
+              sender: 'assistant',
+              text: askMissingMsg,
+              timestamp: new Date(),
+              cardData: updatedPendingClasse5,
+              cardType: 'falta_valor',
+            },
+          ])
+          setIsProcessing(false)
+          return
+        }
+
+        // Caso C: Todos os valores informados de uma vez (foundAmounts.length >= pendingItems.length)
+        if (foundAmounts.length >= pendingItems.length) {
+          const resultsSummary: string[] = []
+          for (let i = 0; i < pendingItems.length; i++) {
+            const item = pendingItems[i]
+            const itemAmountCents = foundAmounts[i].amountCents
+            const itemCat = item.categoria_proposta || 'Outros'
+            const itemSub = item.subcategoria_proposta || 'Outros'
+            const itemFormatted = formatBRL(itemAmountCents)
+
+            await executeAutonomousSave({
+              rawText: `${item.descricao} ${itemAmountCents}`,
+              amountCents: itemAmountCents,
+              amountFormatted: itemFormatted,
+              type: 'expense',
+              description: item.descricao,
+              categoryNameSuggestion: itemCat,
+              subcategoryNameSuggestion: itemSub,
+              bucketSuggestion: 'lifestyle',
+              confidence: 0.95,
+              aiStatus: 'sucesso',
+            })
+
+            resultsSummary.push(`${itemFormatted} em ${itemCat} › ${itemSub}`)
+          }
+
+          setPendingTx(null)
+          const finalSummaryMsg = `Lançamentos realizados com sucesso:\n${resultsSummary.map((s) => `• ${s}`).join('\n')} 👍!`
+
+          if (family?.id) {
+            saveCopilotMessage({
+              familyId: family.id,
+              role: 'assistant',
+              content: finalSummaryMsg,
+              cardType: 'sucesso',
+            }).catch(() => {})
+          }
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `asst-${Date.now()}`,
+              sender: 'assistant',
+              text: finalSummaryMsg,
+              timestamp: new Date(),
+              cardType: 'sucesso',
+            },
+          ])
+          setIsProcessing(false)
+          return
+        }
+      }
+
       // Monta histórico recente sanitizado para o motor consultivo
       const historicoSanitizado = messages.slice(-6).map((m) => ({
         role: m.sender,
         content: m.text,
       }))
 
-      const previousCtx = pendingTx
+      const previousCtx = effectivePendingTx
         ? {
-            descricao: pendingTx.description,
-            estabelecimento: pendingTx.establishment,
-            valor: pendingTx.amountCents > 0 ? pendingTx.amountCents / 100 : null,
-            categoria: pendingTx.categoryNameSuggestion,
-            subcategoria: pendingTx.subcategoryNameSuggestion,
-            balde: pendingTx.bucketSuggestion,
-            tipo: pendingTx.type,
-            status: pendingTx.aiStatus,
+            descricao: effectivePendingTx.description,
+            estabelecimento: effectivePendingTx.establishment,
+            valor: effectivePendingTx.amountCents > 0 ? effectivePendingTx.amountCents / 100 : null,
+            categoria: effectivePendingTx.categoryNameSuggestion,
+            subcategoria: effectivePendingTx.subcategoryNameSuggestion,
+            balde: effectivePendingTx.bucketSuggestion,
+            tipo: effectivePendingTx.type,
+            status: effectivePendingTx.aiStatus,
+            routerClasse: effectivePendingTx.routerClasse,
+            itens: effectivePendingTx.extractedItems,
           }
         : undefined
 

@@ -293,7 +293,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   const handleStopAndProcess = useCallback(
     async (overrideText?: string) => {
       const isAmountOnly = isListeningForAmountOnlyRef.current
-      const existingPartial = pendingTransactionRef.current
+      let existingPartial = pendingTransactionRef.current
 
       // No instante exato em que parar a escuta, desativa o mic
       stopListening()
@@ -335,6 +335,70 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
       }
 
       try {
+        // PONTO 1: Descartar pendência anterior ao iniciar fluxo NOVO de lançamento
+        const isStartingNewExpense =
+          Boolean(existingPartial) &&
+          /^(gastei|comprei|paguei|lan[cç]a|lan[cç]ar|registra|registrar|recebi|pix|deu|uma?\s+[a-z]+.*,)\b/i.test(
+            textToProcess,
+          )
+
+        if (isStartingNewExpense) {
+          existingPartial = null
+          setPendingTransaction(null)
+          pendingTransactionRef.current = null
+        }
+
+        // PONTO 2: Confirmação "Sim" de proposta da Classe 5 antes de chamar IA
+        const isClass5ProposalPending =
+          Boolean(existingPartial) &&
+          existingPartial?.routerClasse === 5 &&
+          Array.isArray(existingPartial?.extractedItems) &&
+          existingPartial.extractedItems.length >= 2
+
+        const isAffirmativeConfirmation =
+          /^(sim|est[aá] certo|est[aá] certo assim|isso|perfeito|pode ser|confirmo|beleza|fechado|pode gravar)\b/i.test(
+            textToProcess.replace(/[.!?]/g, '').trim(),
+          )
+
+        if (isClass5ProposalPending && existingPartial && isAffirmativeConfirmation) {
+          const askValuesMsg = 'Agora os valores: quanto foi cada item?'
+          const updatedWithConfirmedPairs: ParsedVoiceTransaction = {
+            ...existingPartial,
+            aiStatus: 'falta_valor',
+            clarificationQuestion: askValuesMsg,
+            friendlyMessage: askValuesMsg,
+          }
+
+          setPendingTransaction(updatedWithConfirmedPairs)
+          pendingTransactionRef.current = updatedWithConfirmedPairs
+
+          if (family?.id) {
+            saveCopilotMessage({
+              familyId: family.id,
+              role: 'assistant',
+              content: askValuesMsg,
+              cardType: 'falta_valor',
+            }).catch(() => {})
+          }
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `assistant-${Date.now()}`,
+              sender: 'assistant',
+              text: askValuesMsg,
+              timestamp: new Date(),
+              cardData: updatedWithConfirmedPairs,
+              cardType: 'falta_valor',
+            },
+          ])
+
+          setTimeout(() => {
+            startRecording({ forAmountOnly: true })
+          }, 400)
+          return
+        }
+
         const previousContext =
           isAmountOnly ||
           existingPartial?.aiStatus === 'falta_valor' ||

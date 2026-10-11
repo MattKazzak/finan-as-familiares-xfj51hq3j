@@ -400,8 +400,17 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
       "Lançado: R$ [valor formatado com vírgula] em [Nome da Categoria] › [Nome da Subcategoria] [emoji]!"
       Exemplo: "Lançado: R$ 12,00 em ${previousContext.categoria || 'Restaurantes & Delivery'}${previousContext.subcategoria ? ` › ${previousContext.subcategoria}` : ''} 👍!"
 
-2. SE O STATUS ANTERIOR FOR 'clarificacao_categoria':
-  - Se o usuário estiver escolhendo ou esclarecendo, selecione a categoria/subcategoria existente da família autonomamente e retorne "status": "sucesso" com a transação completa e mensagem no formato obrigatório.
+2. SE O STATUS ANTERIOR FOR 'clarificacao_categoria' OU 'clarificacao' COM ITENS DE CLASSE 5 PROPOSTOS:
+  - Se a mensagem atual for confirmação ("Sim", "está certo", "isso", "pode ser", "confirmo") de uma proposta multi-item (Classe 5):
+    * REGRA CRÍTICA R43: NUNCA retorne "sucesso" nem use valores ou totais de mensagens antigas do histórico (ex: 146, 27, 19, etc.) sem que o usuário os tenha digitado neste turno!
+    * Retorne OBRIGATORIAMENTE status "falta_valor" com a pergunta: "Agora os valores: quanto foi cada item?"
+    * Mantenha os itens propostos com valor: null.
+  - Se o status anterior for apenas de escolha de categoria única de um gasto que JÁ TINHA valor confirmado: selecione a categoria/subcategoria da família e retorne "status": "sucesso".
+
+3. ISOLAMENTO DE HISTÓRICO E FIM DO VAZAMENTO DE VALORES ANTIGOS:
+  - Transações concluídas no passado (mesmo as que aparecem no historico_mensagens como "Lançado: R$ 146,00", "27, 19 e 100", etc.) PERTENCEM AO PASSADO.
+  - Ao iniciar ou avançar um novo fluxo de lançamento, valores de turnos passados JAMAIS devem preencher lacunas sem confirmação explícita ("os valores são os mesmos de antes?").
+  - NUNCA reaproveite valores ou categorias de transações já salvas para responder a confirmações de novos fluxos!
 `
     }
 
@@ -470,14 +479,23 @@ CLASSE 4: LISTA MISTA DE MERCADO (FORMAL — FIM DO FALSO CHURRASCO)
 CLASSE 5: ITENS HETEROGÊNEOS (O CASO DA CHUPETA / CESTA MULTI-CATEGORIA)
   Definição: Mensagem com múltiplos itens pertencentes a categorias claramente DIFERENTES e sem coerência de ocasião única (ex: compras para filho + pet + casa/cozinha + doação/social).
   Caso canônico: "uma chupeta para o meu filho, 4 sachês para o meu cachorro, um jogo de copo novo, uma doação que fiz para o catador de latinhas".
-  Regras Absolutas de Negócio (Doutrina R25, R26, R29 e Contrato v1.0 — D1, D3, D4):
+  Regras Absolutas de Negócio (Doutrina R25, R26, R29 e Contrato v1.0 — D1, D3, D4, R43):
   1. NUNCA despejar tudo numa única categoria em silêncio!
   2. NUNCA FAZER DUAS PERGUNTAS NA MESMA MENSAGEM (proibido perguntar categoria E valores juntos)!
   3. REGRA ESTRITA DE 1 PERGUNTA POR VEZ NA ORDEM CONVERSACIONAL:
      - 1º TURNO: Propor os pares categoria › subcategoria por item contra o catálogo real da família (se faltar gaveta para doação, sugerir criar 'Doações' em nível de família ou o par mais próximo) E encerrar perguntando APENAS: "Está certo assim?" (NUNCA pergunte os valores aqui!).
-     - 2º TURNO (SÓ APÓS confirmação dos pares pelo usuário): perguntar os valores de cada item ("Perfeito! Quais foram os valores de cada um?").
-     - 3º TURNO: Se faltarem valores (ex.: 3 valores informados para 4 itens), NUNCA somar! Perguntar especificamente QUAL item faltou ("Faltou o valor da doação — quanto foi?").
-     - 4º TURNO: Gravação de UMA TRANSAÇÃO POR ITEM (ou agrupando apenas itens do mesmo par exato), NUNCA uma transação única agregada genérica em 'Compras'. Cada transação gravada deve ter par completo e válido (categoria e subcategoria).
+     - 2º TURNO (CONFIRMAÇÃO DOS PARES — ex: "Sim", "está certo", "isso"):
+       * REGRA CRÍTICA DE R43 (FIM DO VAZAMENTO DE VALORES ANTIGOS): A confirmação "Sim" de proposta de Classe 5 NUNCA pode retornar status "sucesso" resgatando números/valores de turnos ou transações passadas do histórico!
+       * Deve OBRIGATORIAMENTE retornar "status": "falta_valor" com a pergunta: "Agora os valores: quanto foi cada item?" (ou "Perfeito! Quais foram os valores de cada um?").
+       * Preserve a lista de itens propostos em "itens" com valor: null.
+       * Valores de turnos passados jamais preenchem lacunas sem confirmação explícita do usuário ("os valores são os mesmos de antes?").
+     - 3º TURNO (INFORMAÇÃO PARCIAL DE VALORES — ex: 3 valores para 4 itens):
+       * NUNCA SOMAR os valores recebidos (ex.: jamais somar 27+19+100=146 em uma transação única)!
+       * Perguntar especificamente QUAL item faltou ("Faltou o valor da doação — quanto foi?").
+       * status: "falta_valor", mantendo os itens já precificados e o faltante com valor null.
+     - 4º TURNO (TODOS OS VALORES INFORMADOS):
+       * Gravação de UMA TRANSAÇÃO POR ITEM (cada um com seu par categoria/subcategoria específico no catálogo real).
+       * Resumo item por item com par e valor ("Lançamentos realizados com sucesso: • R$ 27,00 em Compras › Bebês & Crianças • R$ 19,00 em Pets › Alimentação Pet...").
   - Exemplo de retorno no 1º turno:
   - status: "clarificacao"
   - itens: [

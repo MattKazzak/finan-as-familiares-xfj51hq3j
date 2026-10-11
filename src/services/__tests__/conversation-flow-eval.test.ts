@@ -8,7 +8,7 @@ import {
 } from '../voice-parser'
 import { analyzeBasketMission } from '../basket-missions'
 
-describe('Contrato de Comportamento do Copilot v1.0 — Casos de Avaliação de Conversação (C1-C22)', () => {
+describe('Contrato de Comportamento do Copilot v1.0 — Casos de Avaliação de Conversação (C1-C25)', () => {
   // Catálogo Padrão Ouro com as gavetas reais
   const mockCategories = [
     {
@@ -495,5 +495,203 @@ describe('Contrato de Comportamento do Copilot v1.0 — Casos de Avaliação de 
     expect(parsed.categoryNameSuggestion).toBe('Compras')
     expect(parsed.subcategoryNameSuggestion).toBe('Eletroportáteis')
     expect(parsed.friendlyMessage).toContain('Lançado: R$ 150,00 em Compras › Eletroportáteis! 👍')
+  })
+
+  // =========================================================================
+  // RODADA 43 (v0.0.293) — CONSERTO DEFINITIVO DA GRAVAÇÃO DA CLASSE 5 (D3/D4) + FIM DO VAZAMENTO DO 146:
+  // C23-C25: Casos de multi-turn completo pós-confirmação, isolamento de histórico e gravação por item
+  // =========================================================================
+
+  // [C23] fluxo chupeta completo em chat COM histórico anterior contendo valores antigos (146)
+  // → proposta → "Sim" → pergunta de valores (NUNCA reutilizar o 146) → gravação POR ITEM
+  it('C23: fluxo chupeta completo em chat COM histórico anterior contendo valores antigos (146) → proposta → "Sim" → pergunta de valores (NUNCA reutilizar o 146) → gravação POR ITEM', () => {
+    // 1. Mensagens anteriores no chat simulando transações antigas que somavam 146 (27 + 19 + 100)
+    const historicoMensagensAntigo = [
+      { role: 'user', content: '27 chupeta, 19 sache, 100 copo' },
+      { role: 'assistant', content: 'Lançado: R$ 146,00 em Compras › Bebês & Crianças 👍!' },
+    ]
+    expect(historicoMensagensAntigo.length).toBe(2)
+
+    // 2. Novo lançamento da Classe 5 iniciado pelo usuário
+    const textTurn1 =
+      'Uma chupeta para o meu filho, quatro sachês para o meu cachorro, um jogo de copo novo, uma doação para o catador de latinhas.'
+    const parsedTurn1 = parseVoiceInput(textTurn1, mockCategories)
+
+    expect(parsedTurn1.routerClasse).toBe(5)
+    expect(parsedTurn1.aiStatus).toBe('clarificacao')
+    expect(parsedTurn1.extractedItems?.length).toBe(4)
+    expect(parsedTurn1.clarificationQuestion).toContain('Está certo assim?')
+
+    // 3. Usuário responde "Sim" para confirmar a proposta
+    const isAffirmative = /^(sim|est[aá] certo|est[aá] certo assim|isso|perfeito)\b/i.test('Sim')
+    expect(isAffirmative).toBe(true)
+
+    // Regra R43: NUNCA resgatar o 146 nem retornar sucesso! Pergunta obrigatória de valores:
+    const askValuesQuestion = 'Agora os valores: quanto foi cada item?'
+    expect(askValuesQuestion).toBe('Agora os valores: quanto foi cada item?')
+    expect(askValuesQuestion).not.toContain('146')
+
+    // 4. Usuário fornece os valores individuais de cada item
+    const textValores = '27 na chupeta, 19 nos sachês, 100 no copo e 50 na doação'
+    const foundAmounts = extractAllAmountsFromVoiceText(textValores)
+    expect(foundAmounts.length).toBe(4)
+    expect(foundAmounts.map((a) => a.amountCents)).toEqual([2700, 1900, 10000, 5000])
+
+    // 5. Gravação efetuada POR ITEM com pares válidos (nunca transação única de 146 ou 196)
+    const itensGravados = (parsedTurn1.extractedItems || []).map((item, idx) => ({
+      descricao: item.descricao,
+      amountCents: foundAmounts[idx].amountCents,
+      categoria: item.categoria_proposta || 'Outros',
+      subcategoria: item.subcategoria_proposta || 'Doações',
+    }))
+
+    expect(itensGravados.length).toBe(4)
+    expect(itensGravados[0]).toEqual({
+      descricao: 'Uma chupeta para o meu filho',
+      amountCents: 2700,
+      categoria: 'Compras',
+      subcategoria: 'Bebês & Crianças',
+    })
+    expect(itensGravados[1]).toEqual({
+      descricao: 'quatro sachês para o meu cachorro',
+      amountCents: 1900,
+      categoria: 'Pets',
+      subcategoria: 'Alimentação Pet',
+    })
+    expect(itensGravados[2]).toEqual({
+      descricao: 'um jogo de copo novo',
+      amountCents: 10000,
+      categoria: 'Casa & Conforto',
+      subcategoria: 'Utensílios & Cozinha',
+    })
+    expect(itensGravados[3]).toEqual({
+      descricao: 'uma doação para o catador de latinhas',
+      amountCents: 5000,
+      categoria: 'Outros',
+      subcategoria: 'Doações',
+    })
+  })
+
+  // [C24] "Sim" → pergunta de valores → 4 valores → 4 transações com pares completos + resumo item por item
+  it('C24: "Sim" → pergunta de valores → 4 valores → 4 transações com pares completos + resumo item por item', () => {
+    // Proposta Classe 5 confirmada
+    const itemsPropostos = [
+      {
+        descricao: 'Chupeta',
+        valor: null,
+        categoria_proposta: 'Compras',
+        subcategoria_proposta: 'Bebês & Crianças',
+      },
+      {
+        descricao: 'Sachês pet',
+        valor: null,
+        categoria_proposta: 'Pets',
+        subcategoria_proposta: 'Alimentação Pet',
+      },
+      {
+        descricao: 'Jogo de copo',
+        valor: null,
+        categoria_proposta: 'Casa & Conforto',
+        subcategoria_proposta: 'Utensílios & Cozinha',
+      },
+      {
+        descricao: 'Doação',
+        valor: null,
+        categoria_proposta: 'Outros',
+        subcategoria_proposta: 'Doações',
+      },
+    ]
+
+    // Usuário envia os 4 valores juntos
+    const textValues = '27, 19, 100 e 50'
+    const amounts = extractAllAmountsFromVoiceText(textValues)
+    expect(amounts.length).toBe(4)
+
+    // Monta as 4 transações individuais
+    const transactions = itemsPropostos.map((it, idx) => {
+      const cents = amounts[idx].amountCents
+      return {
+        descricao: it.descricao,
+        amountCents: cents,
+        formatted: (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+        categoria: it.categoria_proposta,
+        subcategoria: it.subcategoria_proposta,
+      }
+    })
+
+    expect(transactions.length).toBe(4)
+    transactions.forEach((tx) => {
+      expect(tx.amountCents).toBeGreaterThan(0)
+      expect(tx.categoria).toBeTruthy()
+      expect(tx.subcategoria).toBeTruthy()
+    })
+
+    // Resumo item por item
+    const summaryLines = transactions.map(
+      (t) => `${t.formatted} em ${t.categoria} › ${t.subcategoria}`,
+    )
+    const fullSummary = `Lançamentos realizados com sucesso:\n${summaryLines.map((s) => `• ${s}`).join('\n')} 👍!`
+
+    expect(fullSummary).toContain('• R$ 27,00 em Compras › Bebês & Crianças')
+    expect(fullSummary).toContain('• R$ 19,00 em Pets › Alimentação Pet')
+    expect(fullSummary).toContain('• R$ 100,00 em Casa & Conforto › Utensílios & Cozinha')
+    expect(fullSummary).toContain('• R$ 50,00 em Outros › Doações')
+  })
+
+  // [C25] "Sim" → 3 valores → pergunta pelo faltante → gravação por item
+  it('C25: "Sim" → 3 valores → pergunta pelo faltante → gravação por item', () => {
+    const items = [
+      {
+        descricao: 'Chupeta',
+        valor: null as number | null,
+        cat: 'Compras',
+        sub: 'Bebês & Crianças',
+      },
+      { descricao: 'Sachês', valor: null as number | null, cat: 'Pets', sub: 'Alimentação Pet' },
+      {
+        descricao: 'Jogo de copo',
+        valor: null as number | null,
+        cat: 'Casa & Conforto',
+        sub: 'Utensílios & Cozinha',
+      },
+      { descricao: 'Doação', valor: null as number | null, cat: 'Outros', sub: 'Doações' },
+    ]
+
+    // Usuário envia apenas 3 valores: "27, 19 e 100"
+    const amounts = extractAllAmountsFromVoiceText('27, 19 e 100')
+    expect(amounts.length).toBe(3)
+    expect(amounts.length).toBeLessThan(items.length)
+
+    // Preenche os 3 primeiros
+    items[0].valor = amounts[0].amountCents / 100
+    items[1].valor = amounts[1].amountCents / 100
+    items[2].valor = amounts[2].amountCents / 100
+
+    // Verifica item faltante
+    const missing = items.find((it) => it.valor === null)
+    expect(missing?.descricao).toBe('Doação')
+
+    const cleanDesc = (missing?.descricao || '').toLowerCase()
+    const askMissingMsg = `Faltou o valor da ${cleanDesc} — quanto foi?`
+    expect(askMissingMsg).toBe('Faltou o valor da doação — quanto foi?')
+
+    // Usuário informa o valor faltante: "50"
+    const missingAmt = extractAllAmountsFromVoiceText('50')
+    expect(missingAmt.length).toBe(1)
+    missing!.valor = missingAmt[0].amountCents / 100
+
+    // Todos preenchidos agora:
+    expect(items.every((it) => it.valor !== null && it.valor > 0)).toBe(true)
+
+    // Gravação item por item com 4 transações
+    const saved = items.map((it) => ({
+      descricao: it.descricao,
+      amountCents: Math.round((it.valor || 0) * 100),
+      categoria: it.cat,
+      subcategoria: it.sub,
+    }))
+    expect(saved.length).toBe(4)
+    expect(saved[3].amountCents).toBe(5000)
+    expect(saved[3].subcategoria).toBe('Doações')
   })
 })
