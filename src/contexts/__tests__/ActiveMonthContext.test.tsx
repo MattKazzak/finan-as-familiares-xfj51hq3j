@@ -105,7 +105,7 @@ describe('ActiveMonthContext & MonthSelector - Estado Global e Seletor Reutiliz�
   })
 
   describe('Componente MonthSelector', () => {
-    it('renderiza mês em destaque e estação do hemisfério sul abaixo', () => {
+    it('renderiza mês em destaque no MonthSelector sem estação (removida na R53)', () => {
       render(
         <ActiveMonthProvider initialMonth="2024-10">
           <MonthSelector />
@@ -114,11 +114,14 @@ describe('ActiveMonthContext & MonthSelector - Estado Global e Seletor Reutiliz�
 
       // Outubro 2024 em destaque
       expect(screen.getByText(/Outubro 2024/i)).toBeDefined()
-      // Estação do Hemisfério Sul abaixo: Primavera
-      expect(screen.getByText('Primavera')).toBeDefined()
+      // Estação removida do chip / seletor
+      expect(screen.queryByText('Primavera')).toBeNull()
+      expect(screen.queryByText('Verão')).toBeNull()
+      expect(screen.queryByText('Outono')).toBeNull()
+      expect(screen.queryByText('Inverno')).toBeNull()
     })
 
-    it('ao clicar na seta esquerda retrocede o mês ativo e atualiza a estação', () => {
+    it('ao clicar na seta esquerda retrocede o mês ativo', () => {
       render(
         <ActiveMonthProvider initialMonth="2024-10">
           <MonthSelector />
@@ -126,14 +129,13 @@ describe('ActiveMonthContext & MonthSelector - Estado Global e Seletor Reutiliz�
       )
 
       expect(screen.getByText(/Outubro 2024/i)).toBeDefined()
-      expect(screen.getByText('Primavera')).toBeDefined()
 
       const prevBtn = screen.getByRole('button', { name: /mês anterior/i })
       fireEvent.click(prevBtn)
 
-      // Setembro 2024 -> Inverno
+      // Setembro 2024
       expect(screen.getByText(/Setembro 2024/i)).toBeDefined()
-      expect(screen.getByText('Inverno')).toBeDefined()
+      expect(screen.queryByText('Inverno')).toBeNull()
     })
 
     it('desabilita o botão próximo mês quando atinge o mês atual do sistema', () => {
