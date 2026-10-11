@@ -88,6 +88,7 @@ export interface VoiceAiResponse {
   itens?: VoiceAiTransactionItem[] | null
   confianca?: number | null
   lacunas?: string[] | null
+  mes_alvo?: string | null
   resposta_consulta?: string | null
   transacao: VoiceAiTransaction | null
   pergunta_clarificacao: string | null
@@ -144,6 +145,7 @@ export interface ParsedVoiceTransaction {
   routerLacunas?: string[] | null
   extractedItems?: VoiceAiTransactionItem[] | null
   // Rodada 28: Modo Cesta
+  mesAlvo?: string | null
   isBasket?: boolean
   basketItemsDescription?: string
   basketEventTag?: string
@@ -3017,6 +3019,7 @@ export function mapAiResponseToParsedTransaction(
     clarificationOptions,
     structuredOptions,
     friendlyMessage: aiData.mensagem_amigavel,
+    mesAlvo: aiData.mes_alvo || null,
     aiError: aiData.error_detail || (aiData.error ? `Erro: ${aiData.error}` : null),
     isUncertainSuggestion:
       (typeof aiData.confianca === 'number' && aiData.confianca < 0.6) ||

@@ -18,6 +18,7 @@ import {
   X,
 } from 'lucide-react'
 import { useFamily } from '@/hooks/use-family'
+import { useActiveMonth } from '@/contexts/ActiveMonthContext'
 import { CopilotTypingBubble } from '@/components/brand/CopilotTypingBubble'
 import { CategoryHighlightChip } from '@/components/categories/CategoryHighlightChip'
 import { useToast } from '@/hooks/use-toast'
@@ -93,6 +94,7 @@ export function CopilotPage() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const { family, members, categories, currentMember, triggerRefresh } = useFamily()
+  const { activeMonth, setActiveMonth } = useActiveMonth()
 
   const [messages, setMessages] = useState<CopilotChatMessage[]>([])
   const [inputText, setInputText] = useState('')
@@ -1242,6 +1244,7 @@ export function CopilotPage() {
         texto: text,
         familyId: family?.id,
         categories,
+        activeMonth,
         contexto_anterior: previousCtx as any,
         historico_mensagens: historicoSanitizado as any,
       })
@@ -1254,6 +1257,96 @@ export function CopilotPage() {
           text,
         ) &&
           parsed.amountCents > 0)
+
+      // TAREFA 3: Comando da Classe 8 de troca explícita de mês ("me mostra janeiro", etc.)
+      const isMonthNavigationCommand =
+        parsed.acao === 'mudar_mes' ||
+        (parsed.routerClasse === 8 && /mudar_mes|trocar_mes/i.test(parsed.acao || '')) ||
+        /^(me\s+mostra|mostrar?|mudar?\s+para|ir\s+para|trocar?\s+m[eê]s\s+para|mudar?\s+m[eê]s\s+para|ver)\s+(janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s+de\s+\d{4})?/i.test(
+          text.trim(),
+        )
+
+      if (isMonthNavigationCommand) {
+        // Mapeamento em português
+        const monthsMapPt: Record<string, string> = {
+          janeiro: '01',
+          fevereiro: '02',
+          marco: '03',
+          março: '03',
+          abril: '04',
+          maio: '05',
+          junho: '06',
+          julho: '07',
+          agosto: '08',
+          setembro: '09',
+          outubro: '10',
+          novembro: '11',
+          dezembro: '12',
+        }
+
+        let targetMonthStr = parsed.mesAlvo || null
+
+        if (!targetMonthStr) {
+          const match = text.match(
+            /(janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s+de\s+(\d{4}))?/i,
+          )
+          if (match) {
+            const rawMonthName = match[1].toLowerCase()
+            const monthCode = monthsMapPt[rawMonthName]
+            const yearStr =
+              match[2] || activeMonth?.split('-')[0] || String(new Date().getFullYear())
+            if (monthCode) {
+              targetMonthStr = `${yearStr}-${monthCode}`
+            }
+          }
+        }
+
+        if (targetMonthStr && /^\d{4}-\d{2}$/.test(targetMonthStr)) {
+          // Atualiza o activeMonth global (Home, Transações e Orçamentos)
+          setActiveMonth(targetMonthStr)
+          triggerRefresh()
+
+          const [y, m] = targetMonthStr.split('-')
+          const monthNamesList = [
+            'janeiro',
+            'fevereiro',
+            'março',
+            'abril',
+            'maio',
+            'junho',
+            'julho',
+            'agosto',
+            'setembro',
+            'outubro',
+            'novembro',
+            'dezembro',
+          ]
+          const monthLabel = `${monthNamesList[parseInt(m, 10) - 1]} de ${y}`
+          const confirmationText = `Mostrando ${monthLabel} — Home, Transações e Orçamentos atualizados.`
+
+          if (family?.id) {
+            saveCopilotMessage({
+              familyId: family.id,
+              role: 'assistant',
+              content: confirmationText,
+              cardType: 'acao',
+            }).catch(() => {})
+          }
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `asst-${Date.now()}`,
+              sender: 'assistant',
+              text: confirmationText,
+              timestamp: new Date(),
+              cardType: 'acao',
+            },
+          ])
+          setIsProcessing(false)
+          return
+        }
+      }
 
       const isUnsupportedCommand =
         /^(apaga|apagar|deleta|deletar|remove|remover|exclui|excluir)\b/i.test(text.trim())

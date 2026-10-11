@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json()
-    const { texto, family_id, contexto_anterior, historico_mensagens } = body
+    const { texto, family_id, contexto_anterior, historico_mensagens, active_month } = body
 
     const textoNormalizadoPtBr =
       typeof texto === 'string' ? normalizeBrazilianCurrencyString(texto) : texto
@@ -230,20 +230,43 @@ Deno.serve(async (req) => {
       familyData = famRes.data || null
     }
 
-    // Buscar resumo financeiro recente para contexto
+    // Buscar resumo financeiro do mês ativo (active_month no formato YYYY-MM) para contexto
     let financialSummaryContext = ''
+    let activeMonthLabel = ''
     if (targetFamilyId) {
       try {
         const now = new Date()
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-        const endOfMonth = new Date(
-          now.getFullYear(),
-          now.getMonth() + 1,
-          0,
-          23,
-          59,
-          59,
-        ).toISOString()
+        let refYear = now.getFullYear()
+        let refMonthIndex = now.getMonth() // 0-indexed
+
+        if (typeof active_month === 'string' && /^\d{4}-\d{2}$/.test(active_month.trim())) {
+          const [yStr, mStr] = active_month.trim().split('-')
+          const parsedY = parseInt(yStr, 10)
+          const parsedM = parseInt(mStr, 10) - 1
+          if (!isNaN(parsedY) && !isNaN(parsedM) && parsedM >= 0 && parsedM <= 11) {
+            refYear = parsedY
+            refMonthIndex = parsedM
+          }
+        }
+
+        const monthNamesPt = [
+          'janeiro',
+          'fevereiro',
+          'março',
+          'abril',
+          'maio',
+          'junho',
+          'julho',
+          'agosto',
+          'setembro',
+          'outubro',
+          'novembro',
+          'dezembro',
+        ]
+        activeMonthLabel = `${monthNamesPt[refMonthIndex]} de ${refYear}`
+
+        const startOfMonth = new Date(refYear, refMonthIndex, 1).toISOString()
+        const endOfMonth = new Date(refYear, refMonthIndex + 1, 0, 23, 59, 59).toISOString()
 
         const [txRes, goalsRes, recurringRes, invRes] = await Promise.all([
           supabase
@@ -318,12 +341,13 @@ Deno.serve(async (req) => {
             .join('\n') || 'Nenhum investimento registrado'
 
         financialSummaryContext = `
-DADOS FINANCEIROS REAIS DA FAMÍLIA NESTE MÊS:
-- Receitas reais realizadas no mês: ${formatCentsToBRL(totalReceitasCents)}
-- Despesas reais realizadas no mês: ${formatCentsToBRL(totalDespesasCents)}
-- Saldo real do mês (receitas - despesas): ${formatCentsToBRL(saldoRealCents)}
-- Total de transações registradas neste mês: ${txs.length}
-- Gastos reais por balde:
+DADOS FINANCEIROS REAIS DA FAMÍLIA PARA O MÊS ATIVO SELECIONADO (${activeMonthLabel.toUpperCase()}):
+- Mês de referência atualmente visualizado: ${activeMonthLabel} (formato ISO: ${refYear}-${String(refMonthIndex + 1).padStart(2, '0')})
+- Receitas reais realizadas no mês ativo (${activeMonthLabel}): ${formatCentsToBRL(totalReceitasCents)}
+- Despesas reais realizadas no mês ativo (${activeMonthLabel}): ${formatCentsToBRL(totalDespesasCents)}
+- Saldo real do mês ativo (${activeMonthLabel}): ${formatCentsToBRL(saldoRealCents)}
+- Total de transações registradas neste mês ativo: ${txs.length}
+- Gastos reais por balde no mês ativo:
   * Necessidades Essenciais: ${formatCentsToBRL(essentialSpentCents)}
   * Estilo de Vida: ${formatCentsToBRL(lifestyleSpentCents)}
   * Metas & Investimentos: ${formatCentsToBRL(goalsSpentCents)}
@@ -565,10 +589,13 @@ CLASSE 5: ITENS HETEROGÊNEOS (O CASO DA CHUPETA / CESTA MULTI-CATEGORIA)
   - pergunta_clarificacao: "Separei assim:\n• Chupeta → **Compras** › **Bebês & Crianças**\n• Sachês → **Pets** › **Alimentação Pet**\n• Jogo de copo → **Compras** › **Utilidades & Casa**\n• Doação → **Outros** › **Doações**\nEstá certo assim?"
   - mensagem_amigavel: "Separei assim:\n• Chupeta → **Compras** › **Bebês & Crianças**\n• Sachês → **Pets** › **Alimentação Pet**\n• Jogo de copo → **Compras** › **Utilidades & Casa**\n• Doação → **Outros** › **Doações**\nEstá certo assim?"
 
-CLASSE 6: PERGUNTA SOBRE FINANÇAS (CONSULTA FINANCEIRA)
+CLASSE 6: PERGUNTA SOBRE FINANÇAS (CONSULTA FINANCEIRA CONSCIENTE DO MÊS ATIVO)
   Exemplos: "quanto gastei este mês?", "quanto sobrou?", "quanto posso gastar?", "qual meu saldo?", "como estão meus gastos?", "quanto gastei em restaurantes?".
+  REGRA CRÍTICA DO MÊS ATIVO:
+  - O Copilot responde SEMPRE sobre o MÊS ATIVO visualizado (${activeMonthLabel || 'mês selecionado'}), NUNCA sobre o mês corrente fixo se forem diferentes!
+  - Ao responder "quanto gastei este mês?" ou similar, mencione ou contextualize o mês de referência (${activeMonthLabel || 'mês ativo'}) e use EXCLUSIVAMENTE os dados financeiros reais daquele mês.
   Ação: status: "consulta", tipo_resposta: "consulta", transacao: null.
-  Responda com base no resumo financeiro fornecido, diferenciando receita real de teto planejado.
+  Responda com base no resumo financeiro fornecido do mês ativo, diferenciando receita real de teto planejado.
 
 CLASSE 7: CONVERSA / SOCIAL / SAUDAÇÕES
   Exemplos: "bom dia", "boa tarde", "boa noite", "oi", "olá", "e aí curiangoo", "como você está?", "tudo bem?".
@@ -600,6 +627,21 @@ CLASSE 8: COMANDOS E CORREÇÕES DIRETAS (FIM DO FINGIMENTO — REGRA TRANSVERSA
   (D) CANCELAMENTO / DESFAZER RECENTE:
       * "cancela" / "esquece" durante pendência: descarta a pendência ("Tudo bem, cancelado! Não registrei nada.").
       * "desfaz" de lançamento acabado de criar na sessão: acao: "desfazer", status: "acao_executada".
+  (E) COMANDO EXPLÍCITO DE TROCA/NAVEGAÇÃO DE MÊS (Classe 8 — ADITAMENTO v2.1):
+      * Exemplos: "me mostra janeiro", "mudar para janeiro", "ver fevereiro de 2026", "mostrar dezembro", "ir para janeiro", "trocar mês para janeiro", "mudar mês para março".
+      * A edge deve classificar como:
+        - router.classe = 8
+        - router.nome_classe = "comandos"
+        - acao: "mudar_mes"
+        - intencao: "comando"
+        - status: "acao_executada"
+        - tipo_resposta: "acao"
+        - transacao: null
+      * Identifique o mês e ano solicitados (se o ano não for dito, use o ano do mês ativo atual ou 2026).
+      * Formate o mês no padrão YYYY-MM (ex: "2026-01" para janeiro) e retorne no campo 'mes_alvo' ou 'resposta_consulta'.
+      * mensagem_amigavel NO PADRÃO OBRIGATÓRIO:
+        "Mostrando [nome do mês] de [ano] — Home, Transações e Orçamentos atualizados."
+        Exemplo para "me mostra janeiro": "Mostrando janeiro de 2026 — Home, Transações e Orçamentos atualizados."
 
 CLASSE 9: DESCONHECIDO / FORA DE ESCOPO
   Exemplos: mensagem sobre política partidária, esportes aleatórios, "qual a previsão do tempo?", "quem vai ganhar a eleição?", ruído ininteligível ("asdfghjk").
@@ -673,7 +715,8 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido no formato:
     "lacunas": string[] | null
   },
   "status": "sucesso" | "clarificacao" | "clarificacao_categoria" | "falta_valor" | "invalido" | "consulta" | "acao_executada",
-  "acao": "criar" | "reclassificar" | "ajustar_valor" | "ajustar_descricao" | "desfazer" | null,
+  "acao": "criar" | "reclassificar" | "ajustar_valor" | "ajustar_descricao" | "desfazer" | "mudar_mes" | null,
+  "mes_alvo": string | null,
   "tipo_resposta": "transacao" | "consulta" | "consultoria_categoria" | "acao",
   "intencao": "transacao" | "consulta" | "consultoria_categoria" | "correcao" | "desfazer" | "social" | null,
   "itens": Array<{
@@ -871,6 +914,9 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido no formato:
       'modo_cesta',
     ]
     const status = validStatuses.includes(parsedAiJson?.status) ? parsedAiJson.status : 'invalido'
+
+    const isMudarMes = parsedAiJson?.acao === 'mudar_mes'
+    const mesAlvo = parsedAiJson?.mes_alvo || null
 
     const isConsulta = status === 'consulta' || parsedAiJson?.tipo_resposta === 'consulta'
     const isConsultoriaCategoria =
@@ -1291,11 +1337,12 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido no formato:
     const sanitizedResponse = {
       status: unmappedItems.length > 0 && status === 'sucesso' ? 'clarificacao' : status,
       acao: parsedAiJson?.acao ?? null,
+      mes_alvo: mesAlvo,
       tipo_resposta: isConsulta
         ? 'consulta'
         : isConsultoriaCategoria
           ? 'consultoria_categoria'
-          : parsedAiJson?.acao === 'desfazer'
+          : parsedAiJson?.acao === 'desfazer' || isMudarMes
             ? 'acao'
             : 'transacao',
       intencao: parsedAiJson?.intencao ?? (isConsultoriaCategoria ? 'consultiva' : null),

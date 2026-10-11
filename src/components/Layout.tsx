@@ -296,8 +296,8 @@ export default function Layout() {
           <Outlet />
         </main>
 
-        {/* BOTÃO FLUTUANTE DO COPILOT (ACESSO RÁPIDO PARA /copilot EM TODAS AS TELAS) */}
-        <CuriangoFloatingButton />
+        {/* BOTÃO FLUTUANTE DO COPILOT (ACESSO RÁPIDO PARA /copilot — SOMENTE NA HOME) */}
+        {location.pathname === '/inicio' && <CuriangoFloatingButton />}
 
         {/* BANNER EDUCATIVO DE INSTALAÇÃO PWA (POSICIONADO ACIMA DO DOCK FLUTUANTE) */}
         <InstallPwaBanner variant="bottom-nav" />

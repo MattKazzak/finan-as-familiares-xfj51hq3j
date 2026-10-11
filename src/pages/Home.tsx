@@ -39,7 +39,6 @@ import {
   ChevronRight,
   Users,
   Calendar,
-  Mic,
   Sparkles,
   Eye,
   EyeOff,
@@ -841,12 +840,12 @@ export default function Home() {
             <button
               type="button"
               onClick={() => navigate('/copilot')}
-              aria-label="Falar com o Curiango"
+              aria-label="Falar com o Curiangoo"
               className="w-full group bg-white/95 hover:bg-white text-slate-800 rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 shadow-md hover:shadow-lg transition-all duration-200 border border-[#E5E5E5] flex items-center justify-between gap-2.5 cursor-pointer active:scale-[0.99] text-left touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
             >
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#FCA311] via-[#fba825] to-[#ffb845] text-[#14213D] flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform">
-                  <Mic className="w-4 h-4 stroke-[2.5]" />
+                <div className="w-8 h-8 rounded-xl bg-[#14213D] text-[#FCA311] flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform border border-[#FCA311]/40">
+                  <CuriangoLogo size={18} color="#FCA311" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <span className="text-xs sm:text-sm font-medium text-slate-600 group-hover:text-slate-900 transition-colors block leading-tight break-words">

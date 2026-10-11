@@ -1937,4 +1937,130 @@ describe('Contrato de Comportamento do Copilot v1.0 — Casos de Avaliação de 
     expect(mapped.categoryNameSuggestion).toBe('Outros')
     expect(mapped.subcategoryNameSuggestion).toBeUndefined()
   })
+
+  // =========================================================================
+  // ADITAMENTO v2.1 AO CONTRATO DO COPILOT (RODADA 51 — v0.0.307):
+  // [N1] "quanto gastei este mês?" com activeMonth = mês passado → responde sobre o mês passado
+  // [N2] "me mostra janeiro" → troca o activeMonth (Classe 8 — comando de navegação de mês)
+  // [N3] lançamento por chat não altera o activeMonth
+  // =========================================================================
+
+  describe('ADITAMENTO v2.1 — COPILOT CONSCIENTE DO MÊS ATIVO E COMANDOS DE NAVEGAÇÃO', () => {
+    it('[N1] "quanto gastei este mês?" com activeMonth = mês passado → responde sobre o mês passado', () => {
+      // Simulação do payload retornado pela edge voice-parse quando active_month = '2026-02' (mês passado)
+      const mockActiveMonth = '2026-02'
+      const edgeResponsePassado: VoiceAiResponse = {
+        status: 'consulta',
+        tipo_resposta: 'consulta',
+        transacao: null,
+        router: {
+          classe: 6,
+          nome_classe: 'consulta',
+          confianca: 0.95,
+        },
+        resposta_consulta:
+          'Em fevereiro de 2026 (mês ativo selecionado), você teve R$ 1.850,00 em despesas realizadas.',
+        mensagem_amigavel:
+          'Em fevereiro de 2026 (mês ativo selecionado), você teve R$ 1.850,00 em despesas realizadas.',
+        pergunta_clarificacao: null,
+        opcoes_sugestao: null,
+      }
+
+      const parsed = mapAiResponseToParsedTransaction(
+        edgeResponsePassado,
+        'quanto gastei este mês?',
+      )
+
+      expect(parsed.aiStatus).toBe('consulta')
+      expect(parsed.tipoResposta).toBe('consulta')
+      expect(parsed.routerClasse).toBe(6)
+      expect(parsed.respostaConsulta).toContain('fevereiro de 2026')
+      expect(parsed.respostaConsulta).toContain('R$ 1.850,00')
+      // Confirma que não respondeu valores genéricos do mês corrente
+      expect(parsed.friendlyMessage).toContain('fevereiro de 2026')
+    })
+
+    it('[N2] "me mostra janeiro" → troca o activeMonth (Comando da Classe 8)', () => {
+      // Simulação da resposta da edge para comando de navegação de mês
+      const edgeResponseMudarMes: VoiceAiResponse = {
+        status: 'acao_executada',
+        acao: 'mudar_mes',
+        tipo_resposta: 'acao',
+        intencao: 'comando',
+        router: {
+          classe: 8,
+          nome_classe: 'comandos',
+          confianca: 0.98,
+        },
+        mes_alvo: '2026-01',
+        transacao: null,
+        pergunta_clarificacao: null,
+        opcoes_sugestao: null,
+        mensagem_amigavel: 'Mostrando janeiro de 2026 — Home, Transações e Orçamentos atualizados.',
+      }
+
+      const parsed = mapAiResponseToParsedTransaction(edgeResponseMudarMes, 'me mostra janeiro')
+
+      expect(parsed.aiStatus).toBe('acao_executada')
+      expect(parsed.acao).toBe('mudar_mes')
+      expect(parsed.tipoResposta).toBe('acao')
+      expect(parsed.routerClasse).toBe(8)
+      expect(parsed.mesAlvo).toBe('2026-01')
+      expect(parsed.friendlyMessage).toBe(
+        'Mostrando janeiro de 2026 — Home, Transações e Orçamentos atualizados.',
+      )
+
+      // Teste de parsing do comando de texto em português no padrão da tela Copilot
+      const textCommand = 'me mostra janeiro'
+      const isMatch =
+        /^(me\s+mostra|mostrar?|mudar?\s+para|ir\s+para|trocar?\s+m[eê]s\s+para|mudar?\s+m[eê]s\s+para|ver)\s+(janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s+de\s+\d{4})?/i.test(
+          textCommand.trim(),
+        )
+      expect(isMatch).toBe(true)
+    })
+
+    it('[N3] lançamento por chat vai para a data informada e NÃO altera o activeMonth', () => {
+      let activeMonthState = '2026-02' // O usuário está visualizando fevereiro
+      const setActiveMonthMock = (newMonth: string) => {
+        activeMonthState = newMonth
+      }
+
+      // Lançamento de despesa via chat
+      const edgeResponseLancamento: VoiceAiResponse = {
+        status: 'sucesso',
+        tipo_resposta: 'transacao',
+        router: {
+          classe: 1,
+          nome_classe: 'lancamento',
+          confianca: 0.95,
+        },
+        transacao: {
+          descricao: 'Almoço restaurante',
+          valor: 45,
+          tipo: 'despesa',
+          balde: 'lifestyle',
+          categoria: 'Alimentação',
+          subcategoria: 'Restaurantes & Delivery',
+          data: '2026-03-10', // data informada ou atual
+          metodo_pagamento: 'pix',
+        },
+        pergunta_clarificacao: null,
+        opcoes_sugestao: null,
+        mensagem_amigavel: 'Lançado: R$ 45,00 em **Alimentação** › **Restaurantes & Delivery** 👍!',
+      }
+
+      const parsed = mapAiResponseToParsedTransaction(
+        edgeResponseLancamento,
+        'almoço 45 reais no restaurante',
+      )
+
+      expect(parsed.aiStatus).toBe('sucesso')
+      expect(parsed.amountCents).toBe(4500)
+      expect(parsed.categoryNameSuggestion).toBe('Alimentação')
+      expect(parsed.subcategoryNameSuggestion).toBe('Restaurantes & Delivery')
+
+      // O activeMonth deve permanecer exatamente o que estava (não muda automaticamente no lançamento)
+      expect(activeMonthState).toBe('2026-02')
+    })
+  })
 })

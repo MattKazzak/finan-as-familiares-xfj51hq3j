@@ -530,34 +530,17 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       expect(screen.getByText('R$ 900,00')).toBeDefined()
     })
 
-    it('renderiza o atalho do Copilot por voz na Home e dispara a abertura ao clicar', async () => {
-      const mockOpenVoice = vi.fn()
-      // Atualiza temporariamente o mock para testar a chamada
-      const useFamilyModule = await import('@/hooks/use-family')
-      vi.spyOn(useFamilyModule, 'useFamily').mockReturnValue({
-        family: mockFamily,
-        members: [{ id: 'm-1', name: 'Lucas', is_admin: true }],
-        categories: mockCategories,
-        currentMember: { id: 'm-1', name: 'Lucas', is_admin: true },
-        openWhoIsUsing: vi.fn(),
-        selectedMemberId: null,
-        setSelectedMemberId: vi.fn(),
-        openNewTransaction: mockOpenNewTransaction,
-        openVoiceDialog: mockOpenVoice,
-        refreshTrigger: 0,
-        triggerRefresh: vi.fn(),
-      } as any)
-
+    it('renderiza o atalho do Copilot na Home e navega para /copilot ao clicar', async () => {
       renderWithProviders(<Home />)
 
       await waitFor(() => {
         expect(screen.getByText('Receitas do Mês')).toBeDefined()
       })
-      const copilotBtn = screen.getByRole('button', { name: /falar com o curiango/i })
+      const copilotBtn = screen.getByRole('button', { name: /falar com o curiangoo/i })
       expect(copilotBtn).toBeDefined()
 
       fireEvent.click(copilotBtn)
-      expect(mockOpenVoice).toHaveBeenCalledTimes(1)
+      expect(mockNavigate).toHaveBeenCalledWith('/copilot')
     })
 
     it('não possui truncate nos elementos principais da Home (baldes 50/30/20, chips de membros, transações)', async () => {

@@ -43,6 +43,7 @@ export interface ParseVoiceWithAiOptions {
   }>
   contexto_anterior?: VoiceAiPreviousContext | null
   historico_mensagens?: ChatMessagePayload[] | null
+  activeMonth?: string | null
 }
 
 /**
@@ -55,6 +56,7 @@ export async function parseVoiceWithAi({
   categories = [],
   contexto_anterior,
   historico_mensagens,
+  activeMonth,
 }: ParseVoiceWithAiOptions): Promise<ParsedVoiceTransaction> {
   const trimmed = texto.trim()
   if (!trimmed) {
@@ -83,6 +85,8 @@ export async function parseVoiceWithAi({
       body: {
         texto: trimmed,
         familyId,
+        family_id: familyId,
+        active_month: activeMonth || null,
         contexto_anterior: contexto_anterior || null,
         historico_mensagens:
           Array.isArray(historico_mensagens) && historico_mensagens.length > 0
