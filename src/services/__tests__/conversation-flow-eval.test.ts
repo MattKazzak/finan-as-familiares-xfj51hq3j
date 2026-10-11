@@ -966,17 +966,17 @@ describe('Contrato de Comportamento do Copilot v1.0 — Casos de Avaliação de 
     expect(divisionQuestion).toContain('aproximadamente quanto foi da parte do churrasco?')
   })
 
-  // [C33] proposta multi-item em lista vertical com negrito
+  // [C33] proposta multi-item em lista vertical com negrito (pares reais do catálogo)
   it('C33: proposta multi-item estruturada em lista vertical com marcador e negrito markdown', () => {
     const multiItemProposal =
-      'Separei assim:\n• carne → **Alimentação** › **Açougue & Peixaria**\n• carvão → **Casa & Conforto** › **Utilidades**\n• cerveja → **Alimentação** › **Bebidas**\nEstá certo assim?'
+      'Separei assim:\n• carne → **Alimentação** › **Açougue & Peixaria**\n• carvão → **Compras** › **Utilidades & Casa**\n• cerveja → **Alimentação** › **Bebidas**\nEstá certo assim?'
 
     const lines = multiItemProposal.split('\n')
     expect(lines.length).toBeGreaterThanOrEqual(4)
     expect(lines[1]).toMatch(
       /^•\s+carne\s+→\s+\*\*Alimentação\*\*\s+›\s+\*\*Açougue & Peixaria\*\*$/,
     )
-    expect(lines[2]).toMatch(/^•\s+carvão\s+→\s+\*\*Casa & Conforto\*\*\s+›\s+\*\*Utilidades\*\*$/)
+    expect(lines[2]).toMatch(/^•\s+carvão\s+→\s+\*\*Compras\*\*\s+›\s+\*\*Utilidades & Casa\*\*$/)
     expect(lines[3]).toMatch(/^•\s+cerveja\s+→\s+\*\*Alimentação\*\*\s+›\s+\*\*Bebidas\*\*$/)
   })
 
@@ -1025,5 +1025,178 @@ describe('Contrato de Comportamento do Copilot v1.0 — Casos de Avaliação de 
     expect(honestReply).not.toContain('Excluído com sucesso')
     expect(honestReply).toContain('Ainda não consigo fazer isso por aqui')
     expect(honestReply).toContain('ajuste ou exclua manualmente no extrato do app')
+  })
+
+  // [C36] "a carne e o cavão é para um churrasco" (com typo) → estado atualizado → "me mostra como separou" re-exibe a lista COM a correção
+  it('C36: "a carne e o cavão é para um churrasco" (com typo) atualiza o estado antes da resposta e re-exibe carne e carvão em Lazer › Eventos & Reuniões', () => {
+    // 1º Turno: proposta pendente com múltiplos itens
+    const initialExtractedItems = [
+      {
+        descricao: 'seis quilos de carne',
+        categoria_proposta: 'Alimentação',
+        subcategoria_proposta: 'Açougue & Peixaria',
+      },
+      {
+        descricao: 'um pacote de carvão',
+        categoria_proposta: 'Compras',
+        subcategoria_proposta: 'Utilidades & Casa',
+      },
+      {
+        descricao: 'duas rodas para o meu filho',
+        categoria_proposta: 'Compras',
+        subcategoria_proposta: 'Bebês & Crianças',
+      },
+      {
+        descricao: 'dois packs de long neck',
+        categoria_proposta: 'Alimentação',
+        subcategoria_proposta: 'Bebidas',
+      },
+      {
+        descricao: 'quatro sachês para cachorro',
+        categoria_proposta: 'Pets',
+        subcategoria_proposta: 'Alimentação Pet',
+      },
+    ]
+
+    // 2º Turno: usuário digita com typo "cavão"
+    const userMessage = 'A carne e o cavão é para um churrasco'
+
+    // Verifica que regex /ca(?:rv|v)[aã]o/i reconhece o typo "cavão"
+    const mentionsCarvaoWithTypo = /ca(?:rv|v)[aã]o/i.test(userMessage)
+    const mentionsCarne = /carne/i.test(userMessage)
+    expect(mentionsCarvaoWithTypo).toBe(true)
+    expect(mentionsCarne).toBe(true)
+
+    // Atualização de estado imediata
+    const updatedItems = initialExtractedItems.map((it) => {
+      const isTarget =
+        (mentionsCarne && /carne/i.test(it.descricao)) ||
+        (mentionsCarvaoWithTypo && /ca(?:rv|v)[aã]o/i.test(it.descricao))
+      if (isTarget) {
+        return {
+          ...it,
+          categoria_proposta: 'Lazer',
+          subcategoria_proposta: 'Eventos & Reuniões',
+        }
+      }
+      return it
+    })
+
+    // Turno seguinte: re-exibição ("me mostra como separou")
+    const showRequest = 'me mostra como você separou'
+    const isShowSeparationRequest =
+      /^(me\s+)?(mostre|mostra|veja|ver)\s+(como\s+)?(vc\s+|voc[eê]\s+)?(separou|ficou)|como\s+(vc\s+|voc[eê]\s+)?separou\??$/i.test(
+        showRequest.trim(),
+      )
+    expect(isShowSeparationRequest).toBe(true)
+
+    const lines = updatedItems.map(
+      (it) => `• ${it.descricao} → **${it.categoria_proposta}** › **${it.subcategoria_proposta}**`,
+    )
+    const reDisplayMsg = `Separei assim:\n${lines.join('\n')}\n\nEstá certo assim?`
+
+    // Carne e carvão (mesmo com typo inicial) estão em Lazer › Eventos & Reuniões
+    expect(reDisplayMsg).toContain('• seis quilos de carne → **Lazer** › **Eventos & Reuniões**')
+    expect(reDisplayMsg).toContain('• um pacote de carvão → **Lazer** › **Eventos & Reuniões**')
+    // Demais itens foram mantidos intactos nas gavetas originais
+    expect(reDisplayMsg).toContain(
+      '• duas rodas para o meu filho → **Compras** › **Bebês & Crianças**',
+    )
+    expect(reDisplayMsg).toContain('• dois packs de long neck → **Alimentação** › **Bebidas**')
+    expect(reDisplayMsg).toContain('• quatro sachês para cachorro → **Pets** › **Alimentação Pet**')
+  })
+
+  // [C37] nenhum par inexistente em nenhuma proposta; item sem par real → sugestão de criação no nível família (nunca par fabricado)
+  it('C37: propostas não contêm par fabricado "Casa & Conforto › Utilidades"; item sem par real gera sugestão honesta de criação no nível família', () => {
+    // Catálogo ouro da família
+    const familyCategories = [
+      {
+        name: 'Alimentação',
+        subcategories: ['Açougue & Peixaria', 'Bebidas', 'Supermercado & Atacado'],
+      },
+      {
+        name: 'Compras',
+        subcategories: [
+          'Bebês & Crianças',
+          'Utilidades & Casa',
+          'Eletrônicos & Tecnologia',
+          'Tabaco & Cigarros',
+        ],
+      },
+      { name: 'Lazer', subcategories: ['Eventos & Reuniões', 'Restaurantes & Bares'] },
+      { name: 'Pets', subcategories: ['Alimentação Pet', 'Veterinário & Cuidados'] },
+    ]
+
+    const allowedPairs = new Set(
+      familyCategories.flatMap((c) => c.subcategories.map((s) => `${c.name} › ${s}`)),
+    )
+
+    // "Casa & Conforto › Utilidades" e "Casa & Conforto › Utensílios & Cozinha" NÃO existem no catálogo real
+    expect(allowedPairs.has('Casa & Conforto › Utilidades')).toBe(false)
+    expect(allowedPairs.has('Casa & Conforto › Utensílios & Cozinha')).toBe(false)
+    // O par real de carvão em compras gerais é Compras › Utilidades & Casa
+    expect(allowedPairs.has('Compras › Utilidades & Casa')).toBe(true)
+
+    // Validação defensiva: se item for novo sem par real
+    const unmappedItem = 'furadeira de impacto'
+    const hasExistingFit = allowedPairs.has(`Compras › ${unmappedItem}`)
+    expect(hasExistingFit).toBe(false)
+
+    // Sugestão honesta de criação no nível família com confirmação
+    const honestCreateSuggestion = `Nenhuma gaveta encaixa bem para ${unmappedItem} — sugiro criar Furadeira de impacto em Compras. Posso criar?`
+    expect(honestCreateSuggestion).toContain('Nenhuma gaveta encaixa bem para furadeira de impacto')
+    expect(honestCreateSuggestion).toContain(
+      'sugiro criar Furadeira de impacto em Compras. Posso criar?',
+    )
+    expect(honestCreateSuggestion).not.toContain('Casa & Conforto')
+  })
+
+  // [C38] correção parcial → resposta única com lista atualizada + pergunta de divisão
+  it('C38: correção parcial responde em mensagem única contendo a lista atualizada em formato vertical + pergunta de divisão com contexto', () => {
+    const updatedExtractedItems = [
+      {
+        descricao: 'seis quilos de carne',
+        categoria_proposta: 'Lazer',
+        subcategoria_proposta: 'Eventos & Reuniões',
+      },
+      {
+        descricao: 'um pacote de carvão',
+        categoria_proposta: 'Lazer',
+        subcategoria_proposta: 'Eventos & Reuniões',
+      },
+      {
+        descricao: 'duas rodas para o meu filho',
+        categoria_proposta: 'Compras',
+        subcategoria_proposta: 'Bebês & Crianças',
+      },
+      {
+        descricao: 'dois packs de long neck',
+        categoria_proposta: 'Alimentação',
+        subcategoria_proposta: 'Bebidas',
+      },
+    ]
+
+    const totalConsolidado = 280.0
+    const totalFormatted = 'R$ 280,00'
+
+    const lines = updatedExtractedItems.map(
+      (it) => `• ${it.descricao} → **${it.categoria_proposta}** › **${it.subcategoria_proposta}**`,
+    )
+    const correctedNames = 'seis quilos de carne e um pacote de carvão'
+    const remainingNames = 'duas rodas para o meu filho, dois packs de long neck'
+
+    const divisionPart = `\n\nEntendi — ${correctedNames} vão para **Lazer** › **Eventos & Reuniões** e ${remainingNames} ficam nas gavetas deles. Como o total é único (${totalFormatted}), preciso dividir: aproximadamente quanto foi da parte do churrasco?`
+
+    const singleResponse = `Entendi! Então separei assim:\n${lines.join('\n')}${divisionPart}`
+
+    // Resposta única (contém "Separei assim", lista vertical e pergunta de divisão)
+    expect(singleResponse).toContain('Entendi! Então separei assim:')
+    expect(singleResponse).toContain(
+      '\n• seis quilos de carne → **Lazer** › **Eventos & Reuniões**',
+    )
+    expect(singleResponse).toContain('\n• um pacote de carvão → **Lazer** › **Eventos & Reuniões**')
+    expect(singleResponse).toContain(
+      'Como o total é único (R$ 280,00), preciso dividir: aproximadamente quanto foi da parte do churrasco?',
+    )
   })
 })

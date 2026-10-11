@@ -384,13 +384,140 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           pendingTransactionRef.current = null
         }
 
-        // PONTO 2: Confirmação "Sim" de proposta da Classe 5 antes de chamar IA
+        // PATCH 4: Paridade com Copilot.tsx — Detecção de correção parcial de Classe 5 e re-exibição
         const isClass5ProposalPending =
           Boolean(existingPartial) &&
-          existingPartial?.routerClasse === 5 &&
+          (existingPartial?.routerClasse === 5 || existingPartial?.isBasket) &&
           Array.isArray(existingPartial?.extractedItems) &&
           existingPartial.extractedItems.length >= 2
 
+        const isAttributionToChurrasco = isClass5ProposalPending && /churrasco/i.test(textToProcess)
+
+        if (isAttributionToChurrasco && existingPartial?.extractedItems) {
+          const mentionsCarne = /carne/i.test(textToProcess)
+          const mentionsCarvao = /ca(?:rv|v)[aã]o/i.test(textToProcess)
+          const updatedExtractedItems = existingPartial.extractedItems.map((it) => {
+            const isTarget =
+              (mentionsCarne && /carne/i.test(it.descricao)) ||
+              (mentionsCarvao && /ca(?:rv|v)[aã]o/i.test(it.descricao))
+            if (isTarget) {
+              return {
+                ...it,
+                categoria_proposta: 'Lazer',
+                subcategoria_proposta: 'Eventos & Reuniões',
+              }
+            }
+            return it
+          })
+
+          const updatedPendingState: ParsedVoiceTransaction = {
+            ...existingPartial,
+            extractedItems: updatedExtractedItems,
+          }
+          setPendingTransaction(updatedPendingState)
+          pendingTransactionRef.current = updatedPendingState
+
+          const totalNum =
+            existingPartial.amountCents > 0
+              ? existingPartial.amountCents / 100
+              : Number(
+                  existingPartial.amountFormatted?.replace(/[^\d,]/g, '').replace(',', '.') || 0,
+                )
+
+          const totalFormatted =
+            existingPartial.amountFormatted ||
+            (totalNum > 0
+              ? totalNum.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+              : 'R$ 0,00')
+
+          const lines = updatedExtractedItems.map((it) => {
+            const cat = it.categoria_proposta || 'Outros'
+            const sub = it.subcategoria_proposta ? ` › **${it.subcategoria_proposta}**` : ''
+            return `• ${it.descricao} → **${cat}**${sub}`
+          })
+
+          const correctedItemsNames =
+            updatedExtractedItems
+              .filter((it) => it.categoria_proposta === 'Lazer')
+              .map((it) => it.descricao)
+              .join(' e ') || 'carne e carvão'
+
+          const remainingItemsNames =
+            updatedExtractedItems
+              .filter((it) => it.categoria_proposta !== 'Lazer')
+              .map((it) => it.descricao)
+              .join(', ') || 'demais itens'
+
+          const divisionPart =
+            totalNum > 0
+              ? `\n\nEntendi — ${correctedItemsNames} vão para **Lazer** › **Eventos & Reuniões** e ${remainingItemsNames} ficam nas gavetas deles. Como o total é único (${totalFormatted}), preciso dividir: aproximadamente quanto foi da parte do churrasco?`
+              : '\n\nEstá certo assim?'
+
+          const oneCorrectionResponse = `Entendi! Então separei assim:\n${lines.join('\n')}${divisionPart}`
+
+          if (family?.id) {
+            saveCopilotMessage({
+              familyId: family.id,
+              role: 'assistant',
+              content: oneCorrectionResponse,
+              cardType: 'clarificacao',
+            }).catch(() => {})
+          }
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `assistant-${Date.now()}`,
+              sender: 'assistant',
+              text: oneCorrectionResponse,
+              timestamp: new Date(),
+              cardType: 'clarificacao',
+              cardData: updatedPendingState,
+            },
+          ])
+          return
+        }
+
+        const isShowSeparationRequest =
+          Boolean(existingPartial) &&
+          Array.isArray(existingPartial?.extractedItems) &&
+          existingPartial.extractedItems.length >= 2 &&
+          /^(me\s+)?(mostre|mostra|veja|ver)\s+(como\s+)?(vc\s+|voc[eê]\s+)?(separou|ficou)|como\s+(vc\s+|voc[eê]\s+)?separou\??$/i.test(
+            textToProcess.trim(),
+          )
+
+        if (isShowSeparationRequest && existingPartial?.extractedItems) {
+          const lines = existingPartial.extractedItems.map((it) => {
+            const cat = it.categoria_proposta || 'Outros'
+            const sub = it.subcategoria_proposta ? ` › **${it.subcategoria_proposta}**` : ''
+            return `• ${it.descricao} → **${cat}**${sub}`
+          })
+          const reDisplayMsg = `Separei assim:\n${lines.join('\n')}\n\nEstá certo assim?`
+
+          if (family?.id) {
+            saveCopilotMessage({
+              familyId: family.id,
+              role: 'assistant',
+              content: reDisplayMsg,
+              cardType: 'clarificacao',
+            }).catch(() => {})
+          }
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `assistant-${Date.now()}`,
+              sender: 'assistant',
+              text: reDisplayMsg,
+              timestamp: new Date(),
+              cardType: 'clarificacao',
+              cardData: existingPartial,
+            },
+          ])
+          return
+        }
+
+        // PONTO 2: Confirmação "Sim" de proposta da Classe 5 antes de chamar IA
         const isAffirmativeConfirmation =
           /^(sim|est[aá] certo|est[aá] certo assim|isso|perfeito|pode ser|confirmo|beleza|fechado|pode gravar)\b/i.test(
             textToProcess.replace(/[.!?]/g, '').trim(),

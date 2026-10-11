@@ -600,7 +600,7 @@ export function CopilotPage() {
         content: m.text,
       }))
 
-      // TAREFA 1 & TAREFA 2: Atualização semântica do estado de itens pendentes
+      // TAREFA 1 & TAREFA 2 (PATCH 3): Atualização semântica do estado de itens pendentes
       // Se há pendência multi-item ativa e o usuário faz correção (com ou sem "não", com "também", etc.)
       let updatedExtractedItems = effectivePendingTx?.extractedItems
         ? [...effectivePendingTx.extractedItems]
@@ -613,11 +613,11 @@ export function CopilotPage() {
       if (isAttributionToChurrasco && updatedExtractedItems) {
         // Aplica a correção EXCLUSIVAMENTE aos itens citados na mensagem de correção
         const mentionsCarne = /carne/i.test(text)
-        const mentionsCarvao = /carv[aã]o/i.test(text)
+        const mentionsCarvao = /ca(?:rv|v)[aã]o/i.test(text)
         updatedExtractedItems = updatedExtractedItems.map((it) => {
           const isTarget =
             (mentionsCarne && /carne/i.test(it.descricao)) ||
-            (mentionsCarvao && /carv[aã]o/i.test(it.descricao))
+            (mentionsCarvao && /ca(?:rv|v)[aã]o/i.test(it.descricao))
           if (isTarget) {
             return {
               ...it,
@@ -627,6 +627,75 @@ export function CopilotPage() {
           }
           return it
         })
+
+        // Grava IMEDIATAMENTE no estado da pendência antes de montar a resposta
+        setPendingTx((prev) => (prev ? { ...prev, extractedItems: updatedExtractedItems } : prev))
+
+        // Se houver total único consolidado, a resposta da correção é UMA mensagem:
+        // "Entendi! Então separei assim:" + lista vertical (um item por linha) + pergunta de divisão com contexto
+        const totalNum =
+          effectivePendingTx.amountCents > 0
+            ? effectivePendingTx.amountCents / 100
+            : Number(
+                effectivePendingTx.amountFormatted?.replace(/[^\d,]/g, '').replace(',', '.') || 0,
+              )
+
+        const totalFormatted =
+          effectivePendingTx.amountFormatted ||
+          (totalNum > 0
+            ? totalNum.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+            : 'R$ 0,00')
+
+        const lines = updatedExtractedItems.map((it) => {
+          const cat = it.categoria_proposta || 'Outros'
+          const sub = it.subcategoria_proposta ? ` › **${it.subcategoria_proposta}**` : ''
+          return `• ${it.descricao} → **${cat}**${sub}`
+        })
+
+        const correctedItemsNames =
+          updatedExtractedItems
+            .filter((it) => it.categoria_proposta === 'Lazer')
+            .map((it) => it.descricao)
+            .join(' e ') || 'carne e carvão'
+
+        const remainingItemsNames =
+          updatedExtractedItems
+            .filter((it) => it.categoria_proposta !== 'Lazer')
+            .map((it) => it.descricao)
+            .join(', ') || 'demais itens'
+
+        const divisionPart =
+          totalNum > 0
+            ? `\n\nEntendi — ${correctedItemsNames} vão para **Lazer** › **Eventos & Reuniões** e ${remainingItemsNames} ficam nas gavetas deles. Como o total é único (${totalFormatted}), preciso dividir: aproximadamente quanto foi da parte do churrasco?`
+            : '\n\nEstá certo assim?'
+
+        const oneCorrectionResponse = `Entendi! Então separei assim:\n${lines.join('\n')}${divisionPart}`
+
+        if (family?.id) {
+          saveCopilotMessage({
+            familyId: family.id,
+            role: 'assistant',
+            content: oneCorrectionResponse,
+            cardType: 'clarificacao',
+          }).catch(() => {})
+        }
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `asst-${Date.now()}`,
+            sender: 'assistant',
+            text: oneCorrectionResponse,
+            timestamp: new Date(),
+            cardType: 'clarificacao',
+            cardData: {
+              ...effectivePendingTx,
+              extractedItems: updatedExtractedItems,
+            },
+          },
+        ])
+        setIsProcessing(false)
+        return
       }
 
       // TAREFA 2: Re-exibição reflete correções acumuladas

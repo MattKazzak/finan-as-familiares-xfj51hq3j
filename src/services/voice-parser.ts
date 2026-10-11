@@ -1182,9 +1182,9 @@ export function findNextBestCategoryOption(
   const normDesc = normalizeWord(description)
 
   // Caso especial do liquidificador:
-  // 1ª proposta: Casa & Conforto › Utensílios & Cozinha
-  // 1º "não": próxima melhor opção = Compras › Eletrodomésticos (ou Compras › Eletrônicos & Tecnologia se existir)
-  // 2º "não": nada mais encaixa bem → sugerir criar nova subcategoria no nível família ("Eletroportáteis" ou "Cozinha")
+  // 1ª proposta: Compras › Utilidades & Casa
+  // 1º "não": próxima melhor opção = Compras › Eletrônicos & Tecnologia (se existir)
+  // 2º "não": nada mais encaixa bem → sugerir criar nova subcategoria no nível família ("Eletroportáteis")
   if (/liquidificador/i.test(normDesc)) {
     if (attemptCount >= 2) {
       return {
@@ -1425,8 +1425,8 @@ export function parseVoiceInput(
         style: 'currency',
         currency: 'BRL',
       })
-      const cat = contextoAnterior.categoria || 'Casa & Conforto'
-      const sub = contextoAnterior.subcategoria || 'Utensílios & Cozinha'
+      const cat = contextoAnterior.categoria || 'Compras'
+      const sub = contextoAnterior.subcategoria || 'Utilidades & Casa'
       const friendlyConfirmation = sub
         ? `Lançado: ${pendingFormatted} em ${cat} › ${sub}! 👍`
         : `Lançado: ${pendingFormatted} em ${cat}! 👍`
@@ -2031,8 +2031,8 @@ export function parseVoiceInput(
           descricao: it.name,
           quantidade: it.quantity || 1,
           valor: null,
-          categoria_proposta: 'Casa & Conforto',
-          subcategoria_proposta: 'Utensílios & Cozinha',
+          categoria_proposta: 'Compras',
+          subcategoria_proposta: 'Utilidades & Casa',
           confianca: 0.85,
           requer_confirmacao: true,
           duvida_categoria: false,
@@ -2066,7 +2066,7 @@ export function parseVoiceInput(
     // D1: Ordem conversacional estrita — 1 pergunta por vez:
     // 1º turno: propor os pares e perguntar "Está certo assim?" (NUNCA perguntar valores junto!)
     const questionText = hasDonationItem
-      ? 'Separei assim: chupeta em Bebês & Crianças, sachês em Pets, jogo de copo em Utensílios & Cozinha e a doação em Doações. Está certo assim?'
+      ? 'Separei assim: chupeta em Bebês & Crianças, sachês em Pets, jogo de copo em Utilidades & Casa e a doação em Doações. Está certo assim?'
       : 'Separei os itens por categoria. Está certo assim?'
 
     return {
@@ -2117,13 +2117,11 @@ export function parseVoiceInput(
   // Se o item for liquidificador ou se houver valor positivo e item específico, propor par completo e perguntar "Está certo assim?"
   const isLiquidifierItem = /liquidificador/i.test(rawText)
   if (isLiquidifierItem) {
-    // Par canônico/confirmado: Casa & Conforto › Utensílios & Cozinha (ou Casa & Conforto)
-    const matchedCasaCat = categories.find((c) => /casa|conforto/i.test(c.name))
-    const catProposta = matchedCasaCat?.name || 'Casa & Conforto'
-    const subProposta = 'Utensílios & Cozinha'
-    const baldeProposto = matchedCasaCat
-      ? normalizeBucketName(matchedCasaCat.budget_bucket)
-      : 'essentials'
+    // Par canônico/confirmado do catálogo ouro: Compras › Utilidades & Casa
+    const matchedCat = categories.find((c) => /compras/i.test(c.name))
+    const catProposta = matchedCat?.name || 'Compras'
+    const subProposta = 'Utilidades & Casa'
+    const baldeProposto = matchedCat ? normalizeBucketName(matchedCat.budget_bucket) : 'lifestyle'
 
     const questionProposta = `Separei liquidificador em ${catProposta} › ${subProposta}. Está certo assim?`
 

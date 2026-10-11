@@ -559,11 +559,11 @@ CLASSE 5: ITENS HETEROGÊNEOS (O CASO DA CHUPETA / CESTA MULTI-CATEGORIA)
   - itens: [
       { "descricao": "Chupeta", "categoria_proposta": "Compras", "subcategoria_proposta": "Bebês & Crianças", "confianca": 0.9, "requer_confirmacao": true },
       { "descricao": "4 sachês para o meu cachorro", "categoria_proposta": "Pets", "subcategoria_proposta": "Alimentação Pet", "confianca": 0.9, "requer_confirmacao": true },
-      { "descricao": "Jogo de copo", "categoria_proposta": "Casa & Conforto", "subcategoria_proposta": "Utensílios & Cozinha", "confianca": 0.85, "requer_confirmacao": true },
+      { "descricao": "Jogo de copo", "categoria_proposta": "Compras", "subcategoria_proposta": "Utilidades & Casa", "confianca": 0.85, "requer_confirmacao": true },
       { "descricao": "Doação para o catador", "categoria_proposta": "Outros", "subcategoria_proposta": "Doações", "confianca": 0.7, "requer_confirmacao": true, "duvida_categoria": true }
     ]
-  - pergunta_clarificacao: "Separei assim: chupeta em **Compras** › **Bebês & Crianças**, sachês em **Pets** › **Alimentação Pet**, jogo de copo em **Casa & Conforto** › **Utensílios & Cozinha** e a doação em **Outros** › **Doações**. Está certo assim?"
-  - mensagem_amigavel: "Separei assim: chupeta em **Compras** › **Bebês & Crianças**, sachês em **Pets** › **Alimentação Pet**, jogo de copo em **Casa & Conforto** › **Utensílios & Cozinha** e a doação em **Outros** › **Doações**. Está certo assim?"
+  - pergunta_clarificacao: "Separei assim:\n• Chupeta → **Compras** › **Bebês & Crianças**\n• Sachês → **Pets** › **Alimentação Pet**\n• Jogo de copo → **Compras** › **Utilidades & Casa**\n• Doação → **Outros** › **Doações**\nEstá certo assim?"
+  - mensagem_amigavel: "Separei assim:\n• Chupeta → **Compras** › **Bebês & Crianças**\n• Sachês → **Pets** › **Alimentação Pet**\n• Jogo de copo → **Compras** › **Utilidades & Casa**\n• Doação → **Outros** › **Doações**\nEstá certo assim?"
 
 CLASSE 6: PERGUNTA SOBRE FINANÇAS (CONSULTA FINANCEIRA)
   Exemplos: "quanto gastei este mês?", "quanto sobrou?", "quanto posso gastar?", "qual meu saldo?", "como estão meus gastos?", "quanto gastei em restaurantes?".
@@ -627,8 +627,9 @@ REGRAS OBRIGATÓRIAS DE CONFIRMAÇÃO E SEMÂNTICA
   Exemplo de formato obrigatório:
   "Separei assim:
   • carne → **Alimentação** › **Açougue & Peixaria**
-  • carvão → **Casa & Conforto** › **Utilidades**
+  • carvão → **Compras** › **Utilidades & Casa**
   Está certo assim?"
+  (ou **Lazer** › **Eventos & Reuniões** quando a ocasião for churrasco/evento).
 - FORMATO EM NEGRITO (Decisão de Produto do Usuário): Em TODAS as respostas estruturadas da IA (propostas por item, confirmações "Lançado", resumos finais), DESTAQUE categoria e subcategoria em NEGRITO com markdown: **Categoria** › **Subcategoria** (ou **Categoria** quando não houver sub). Exemplo: "Lançado: R$ 280,00 em **Lazer** › **Eventos & Reuniões** 👍!".
 - Eventos sociais, resenha e churrasco -> 'Lazer › Eventos & Reuniões' (Estilo de Vida).
 - Cigarro / tabaco / fumo / vape -> 'Compras › Tabaco & Cigarros' se existir (nunca Alimentação ou Farmácia).
@@ -642,7 +643,7 @@ Aplicável a TODAS as classes de lançamento (1, 2, 3, 4, 5).
 Decisão de Produto (ADITAMENTO v1.1 do Contrato de Comportamento):
 O usuário NÃO deve precisar conhecer o catálogo — a IA é a especialista em ONDE encaixa; o usuário é a autoridade sobre O QUE comprou.
 (a) PERGUNTA ABERTA DE CATEGORIA É TERMINANTEMENTE PROIBIDA em qualquer classe de lançamento ("em qual categoria?", "qual é a categoria?", "onde quer organizar?"). A IA SEMPRE PROPÕE o par mais provável e confirma;
-(b) A IA propõe o par (categoria › subcategoria) mais provável para cada item, NOMEANDO o par completo ("Separei liquidificador em **Casa & Conforto** › **Utensílios & Cozinha**. Está certo assim?" ou "chupeta → **Bebês & Crianças** › **Fraldas & Higiene**"), usando: catálogo real da família + contexto da mensagem + regras de aprendizado existentes;
+(b) A IA propõe o par (categoria › subcategoria) mais provável para cada item, NOMEANDO o par completo ("Separei liquidificador em **Compras** › **Utilidades & Casa**. Está certo assim?" ou "chupeta → **Compras** › **Bebês & Crianças**"), usando: catálogo real da família + contexto da mensagem + regras de aprendizado existentes;
 (c) Se o usuário confirma ("sim", "isso", "pode", "está certo", "pode ser"): o fluxo segue imediatamente para conclusão;
 (d) Se o usuário discorda ("não", "não é isso", "errado"): a IA propõe a PRÓXIMA MELHOR opção (ex.: "Que tal **Compras** › **Eletrônicos & Tecnologia**? Fica melhor assim?") — NUNCA volta à pergunta aberta;
 (e) Se nada encaixa ou o usuário discordar novamente: a IA propõe CRIAR subcategoria nova ("Nenhuma gaveta encaixa bem — sugiro criar Eletroportáteis em **Compras**. Posso criar?"). Com a confirmação do usuário, a subcategoria é criada no nível da FAMÍLIA (nunca no catálogo canônico global — regra R29);
@@ -941,8 +942,128 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido no formato:
       }
     }
 
+    // Validação defensiva contra o catálogo real da família (PATCH 1 — Fim dos pares fabricados)
+    // Extrai o catálogo estruturado de categoriesList recebido pela edge
+    const allowedCatalogPairs = new Map<string, Set<string>>()
+    const allowedCategories = new Set<string>()
+
+    if (Array.isArray(categoriesList) && categoriesList.length > 0) {
+      for (const cat of categoriesList) {
+        const catNameNorm = (cat?.name || '').trim().toLowerCase()
+        if (catNameNorm) {
+          allowedCategories.add(catNameNorm)
+          const subSet = new Set<string>()
+          const subs = Array.isArray(cat?.transaction_subcategories)
+            ? cat.transaction_subcategories
+            : []
+          for (const s of subs) {
+            const subName = (typeof s === 'string' ? s : s?.name || '').trim().toLowerCase()
+            if (subName) subSet.add(subName)
+          }
+          allowedCatalogPairs.set(catNameNorm, subSet)
+        }
+      }
+    }
+
+    const isCatalogAvailable = allowedCategories.size > 0
+
+    const isPairValid = (catName?: string | null, subName?: string | null) => {
+      if (!isCatalogAvailable) return true
+      if (!catName) return true
+      const catNorm = catName.trim().toLowerCase()
+      if (!allowedCategories.has(catNorm)) return false
+      if (!subName) return true
+      const subNorm = subName.trim().toLowerCase()
+      const subs = allowedCatalogPairs.get(catNorm)
+      return subs ? subs.has(subNorm) : true
+    }
+
+    // Valida itens propostos na raiz ou em transacao
+    let validatedItens = Array.isArray(parsedAiJson?.itens)
+      ? [...parsedAiJson.itens]
+      : Array.isArray(parsedAiJson?.transacao?.itens)
+        ? [...parsedAiJson.transacao.itens]
+        : null
+
+    const unmappedItems: Array<{ descricao: string; suggestedCat: string; suggestedSub: string }> =
+      []
+
+    if (isCatalogAvailable && Array.isArray(validatedItens)) {
+      validatedItens = validatedItens.map((it: any) => {
+        const cat = it?.categoria_proposta || null
+        const sub = it?.subcategoria_proposta || null
+        if (!cat) return it
+
+        if (!isPairValid(cat, sub)) {
+          console.warn(
+            `[voice-parse] Par fabricado detectado e expurgado da proposta: "${cat} › ${sub}" para item "${it?.descricao}"`,
+          )
+          // Tenta encontrar categoria mais próxima no catálogo real (ex: 'Compras')
+          let fallbackCat = 'Compras'
+          for (const realCat of allowedCategories) {
+            if (realCat === 'compras' || realCat.includes('compras')) {
+              fallbackCat = realCat.charAt(0).toUpperCase() + realCat.slice(1)
+              break
+            }
+          }
+          const suggestedSubName = it?.descricao
+            ? it.descricao.charAt(0).toUpperCase() + it.descricao.slice(1)
+            : 'Novo Item'
+          unmappedItems.push({
+            descricao: it?.descricao || 'item',
+            suggestedCat: fallbackCat,
+            suggestedSub: suggestedSubName,
+          })
+          return {
+            ...it,
+            categoria_proposta: null,
+            subcategoria_proposta: null,
+            duvida_categoria: true,
+            requer_confirmacao: true,
+          }
+        }
+        return it
+      })
+    }
+
+    // Valida transação individual se houver
+    let validatedTx = isConsulta
+      ? null
+      : parsedAiJson?.transacao
+        ? { ...parsedAiJson.transacao }
+        : null
+    if (isCatalogAvailable && validatedTx && validatedTx.categoria) {
+      if (!isPairValid(validatedTx.categoria, validatedTx.subcategoria)) {
+        console.warn(
+          `[voice-parse] Par fabricado detectado na transação: "${validatedTx.categoria} › ${validatedTx.subcategoria}"`,
+        )
+        const invalidSub = validatedTx.subcategoria
+        const invalidDesc = validatedTx.descricao || 'gasto'
+        validatedTx.categoria = 'Compras'
+        validatedTx.subcategoria = null
+        if (status === 'sucesso') {
+          // Converte para clarificacao honesta de criação em nível de família
+          unmappedItems.push({
+            descricao: invalidDesc,
+            suggestedCat: 'Compras',
+            suggestedSub: invalidSub || invalidDesc,
+          })
+        }
+      }
+    }
+
+    let defensiveClarification = parsedAiJson?.pergunta_clarificacao ?? null
+    let defensiveMensagem = finalMensagemAmigavel
+
+    if (unmappedItems.length > 0) {
+      const firstUnmapped = unmappedItems[0]
+      const honestSuggestion = `Nenhuma gaveta encaixa bem para ${firstUnmapped.descricao} — sugiro criar ${firstUnmapped.suggestedSub} em ${firstUnmapped.suggestedCat}. Posso criar?`
+      defensiveClarification = honestSuggestion
+      defensiveMensagem = honestSuggestion
+    }
+
     const sanitizedResponse = {
-      status,
+      status: unmappedItems.length > 0 && status === 'sucesso' ? 'clarificacao' : status,
       acao: parsedAiJson?.acao ?? null,
       tipo_resposta: isConsulta
         ? 'consulta'
@@ -961,11 +1082,7 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido no formato:
             ? parsedAiJson.lacunas
             : null,
       },
-      itens: Array.isArray(parsedAiJson?.itens)
-        ? parsedAiJson.itens
-        : Array.isArray(parsedAiJson?.transacao?.itens)
-          ? parsedAiJson.transacao.itens
-          : null,
+      itens: validatedItens,
       confianca: routerConfianca ?? parsedAiJson?.confianca ?? null,
       lacunas: Array.isArray(parsedAiJson?.lacunas)
         ? parsedAiJson.lacunas
@@ -973,10 +1090,10 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido no formato:
           ? parsedAiJson.router.lacunas
           : null,
       resposta_consulta: respostaConsulta,
-      transacao: isConsulta ? null : (parsedAiJson?.transacao ?? null),
-      pergunta_clarificacao: parsedAiJson?.pergunta_clarificacao ?? null,
+      transacao: validatedTx,
+      pergunta_clarificacao: defensiveClarification,
       opcoes_sugestao: normalizedOptions,
-      mensagem_amigavel: finalMensagemAmigavel,
+      mensagem_amigavel: defensiveMensagem,
     }
 
     return new Response(JSON.stringify(sanitizedResponse), {
