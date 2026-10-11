@@ -996,15 +996,13 @@ export default function Home() {
                   <h3 className="font-semibold text-sm text-[#14213D] dark:text-white leading-tight break-words">
                     Orçamento em 3 Baldes
                   </h3>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] text-slate-400 font-medium block">
-                      {budgetModelLabel}
-                    </span>
-                    <span className="text-[10px] text-slate-300 font-normal select-none">·</span>
-                    <span className="text-[10px] text-[#14213D] font-semibold break-words">
-                      {formatMonthYear(activeDate)}
-                    </span>
-                  </div>
+                  {budgetModelLabel ? (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] text-slate-400 font-medium block">
+                        {budgetModelLabel}
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>

@@ -268,15 +268,26 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
     })
   })
 
-  it('exibe o mês de referência no cabeçalho e não exibe o número herói safe-to-spend', async () => {
+  it('exibe o modelo no cabeçalho do card sem duplicar o rótulo de mês (que mora no seletor) e não exibe o herói safe-to-spend', async () => {
     renderWithProviders(<Home />)
 
     await waitFor(() => {
       expect(screen.getByText('Orçamento em 3 Baldes')).toBeDefined()
     })
 
-    // O cabeçalho deve exibir o modelo e o mês de referência formatado
+    // O cabeçalho do card deve exibir o modelo orçamentário
     expect(screen.getByText(/50 \/ 30 \/ 20/)).toBeDefined()
+
+    // O seletor de mês compacto no topo da página permanece intacto como navegação oficial
+    const monthSelectorGroup = screen.getByRole('group', { name: /seletor de mês/i })
+    expect(monthSelectorGroup).toBeDefined()
+
+    // O rótulo duplicado de mês ("Outubro 2026") NÃO existe dentro do card de 3 Baldes
+    const bucketsCard = screen.getByText('Orçamento em 3 Baldes').closest('div.bg-card\\/90, div')
+    expect(bucketsCard).toBeDefined()
+    // Dentro do bloco de subtítulo do título do card, apenas o modelo deve existir
+    expect(screen.queryByText('·')).toBeNull()
+
     // O herói "Livre para gastar este mês" foi completamente removido
     expect(screen.queryByText(/Livre para gastar este mês/i)).toBeNull()
     expect(screen.queryByText(/Atenção/i)).toBeNull()
