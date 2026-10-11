@@ -706,18 +706,35 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       expect(truncatedElements.length).toBe(0)
     })
 
-    it('renderiza o novo Header moderno fintech com saudação por horário, subtítulo Família e botões de privacidade e notificações', async () => {
+    it('renderiza o novo Header moderno fintech com saudação por horário, subtítulo com nome da família (sem rótulo "Família") e botões de privacidade e notificações', async () => {
       renderWithProviders(<Home />)
 
       await waitFor(() => {
         expect(screen.getByText('Receitas')).toBeDefined()
       })
-      expect(screen.getByText('Família')).toBeDefined()
+      expect(screen.queryByText('Família')).toBeNull()
+      expect(screen.getByText('Silva')).toBeDefined()
       expect(screen.getByRole('button', { name: /mostrar valores|ocultar valores/i })).toBeDefined()
       expect(screen.getByRole('button', { name: /notificações/i })).toBeDefined()
       expect(
         screen.getByRole('button', { name: /trocar membro ativo ou abrir perfil/i }),
       ).toBeDefined()
+    })
+
+    it('esconde totalmente a linha de subtítulo quando a família não tem nome', async () => {
+      mockFamily = {
+        id: 'fam-empty',
+        name: '',
+        monthly_net_income_cents: 600000,
+      }
+
+      renderWithProviders(<Home />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Receitas')).toBeDefined()
+      })
+      expect(screen.queryByText('Família')).toBeNull()
+      expect(screen.queryByText('Silva')).toBeNull()
     })
 
     it('botão de privacidade oculta o saldo e os valores monetários com máscara ao ser clicado', async () => {

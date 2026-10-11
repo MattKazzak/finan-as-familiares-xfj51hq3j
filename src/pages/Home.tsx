@@ -582,23 +582,19 @@ export default function Home() {
                   )}
                 </h1>
               </div>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <p className="text-[11px] sm:text-xs text-slate-500 font-medium leading-none">
-                  Família
-                </p>
-                <span className="text-[10px] text-slate-300 select-none">·</span>
-                {family?.name ? (
-                  <span className="text-[11px] sm:text-xs font-semibold text-[#14213D] leading-none break-words">
+              {family?.name?.trim() ? (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className="text-[11px] sm:text-xs text-slate-500 font-medium leading-none break-words">
                     {formatFamilyDisplayName(family.name)}
-                  </span>
-                ) : isLongLoading ? (
-                  <span className="text-[10px] text-slate-400 italic">
+                  </p>
+                </div>
+              ) : isLongLoading ? (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] text-slate-400 italic leading-none">
                     Carregando seus dados...
                   </span>
-                ) : (
-                  <span className="inline-block h-3 w-20 bg-slate-200/90 rounded-md animate-pulse" />
-                )}
-              </div>
+                </div>
+              ) : null}
             </div>
           </div>
 
