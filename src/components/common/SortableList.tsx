@@ -18,6 +18,8 @@ export interface SortableListProps<T> {
 export interface DragHandleProps {
   onPointerDown: (e: React.PointerEvent) => void
   onTouchStart?: (e: React.TouchEvent) => void
+  onTouchEnd?: (e: React.TouchEvent) => void
+  onTouchCancel?: (e: React.TouchEvent) => void
   style?: React.CSSProperties
   className?: string
   'data-drag-handle'?: boolean
@@ -618,12 +620,17 @@ export function SortableList<T>({
         (e.currentTarget as HTMLElement)
       startPos.current = { x: e.clientX, y: e.clientY }
 
+      // No desktop com mouse, arrasto imediato pelo handle
       measureItems(index)
       startDrag(index)
     },
     onTouchStart: (e: React.TouchEvent) => {
-      e.stopPropagation()
-      if (e.touches.length !== 1) return
+      // NÃO chamamos stopPropagation() aqui para que os listeners nativos de window (touchmove/touchend)
+      // e eventuais eventos pais possam coordenar scroll sem quebrar.
+      if (e.touches.length !== 1) {
+        clearHoldTimer()
+        return
+      }
       const touch = e.touches[0]
 
       isTouchModeRef.current = true
@@ -633,9 +640,23 @@ export function SortableList<T>({
         (e.currentTarget.closest('[data-sortable-index]') as HTMLElement) ||
         (e.currentTarget as HTMLElement)
       startPos.current = { x: touch.clientX, y: touch.clientY }
+      initialScrollYRef.current = window.scrollY || window.pageYOffset || 0
 
+      clearHoldTimer()
+      setIsPressing(index)
       measureItems(index)
-      startDrag(index)
+
+      // No mobile / touch: exige PRESS-AND-HOLD (long press) exatamente igual às categorias.
+      // Se o usuário apenas deslizar o dedo (scroll normal), o handle cancela e a página rola livremente.
+      longPressTimer.current = setTimeout(() => {
+        startDrag(index)
+      }, longPressDelay)
+    },
+    onTouchEnd: () => {
+      if (!isDraggingRef.current) clearHoldTimer()
+    },
+    onTouchCancel: () => {
+      if (!isDraggingRef.current) clearHoldTimer()
     },
     'data-drag-handle': true,
     'aria-grabbed': draggedIndex === index,

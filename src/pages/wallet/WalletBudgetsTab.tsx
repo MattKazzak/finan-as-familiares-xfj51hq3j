@@ -871,9 +871,9 @@ export function WalletBudgetsTab() {
                                       e.stopPropagation()
                                       e.preventDefault()
                                     }}
-                                    className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-700 active:text-emerald-600 cursor-grab active:cursor-grabbing shrink-0 touch-none rounded-lg hover:bg-slate-100 active:bg-slate-200 transition-colors"
-                                    title="Arraste para reordenar subcategoria"
-                                    aria-label={`Arrastar subcategoria ${subItem.subcategory.name}`}
+                                    className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-700 active:text-emerald-600 cursor-grab active:cursor-grabbing shrink-0 touch-pan-y rounded-lg hover:bg-slate-100 active:bg-slate-200 transition-colors"
+                                    title="Segure e arraste para reordenar subcategoria"
+                                    aria-label={`Segure e arraste para reordenar subcategoria ${subItem.subcategory.name}`}
                                   >
                                     <GripVertical className="w-4 h-4" />
                                   </button>

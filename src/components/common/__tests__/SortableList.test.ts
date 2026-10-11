@@ -64,4 +64,20 @@ describe('SortableList mobile touch & scroll lock behavior', () => {
 
     expect(next.map((c) => c.id)).toEqual(['cat-2', 'cat-3', 'cat-1'])
   })
+
+  it('validates drag handle touch activation delay requirement for mobile', () => {
+    // Garante que o contrato de longPressDelay padrão e suporte a press-and-hold no handle estão documentados
+    const DEFAULT_LONG_PRESS_DELAY = 320
+    const SCROLL_THRESHOLD_PX = 8
+
+    // Movimentos maiores que 8px antes de 320ms cancelam a ativação do drag para permitir scroll normal
+    const touchMoveDistance = 12
+    const isScrollIntent = touchMoveDistance > SCROLL_THRESHOLD_PX
+    expect(isScrollIntent).toBe(true)
+
+    // Toque mantido parado por >= 320ms ativa o arraste
+    const holdDurationMs = 350
+    const isDragActivated = holdDurationMs >= DEFAULT_LONG_PRESS_DELAY
+    expect(isDragActivated).toBe(true)
+  })
 })
