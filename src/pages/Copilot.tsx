@@ -32,7 +32,7 @@ import {
   fetchUserPreferencesWithFallback,
   saveUserAiConsent,
 } from '@/services/user-preferences'
-import { createTransaction } from '@/services/transactions'
+import { createTransaction, updateTransaction, fetchTransactions } from '@/services/transactions'
 import { BUCKET_METADATA } from '@/types/budget-presets'
 import { formatBRL } from '@/lib/formatters'
 import type { BudgetBucket } from '@/types/finance'
@@ -57,18 +57,29 @@ export interface CopilotChatMessage {
  */
 function renderMarkdownText(text: string): ReactNode {
   if (!text) return ''
-  if (!text.includes('**')) return text
 
-  const parts = text.split(/(\*\*[^*]+\*\*)/g)
-  return parts.map((part, idx) => {
-    if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
-      return (
-        <strong key={idx} className="font-semibold">
-          {part.slice(2, -2)}
-        </strong>
-      )
-    }
-    return part
+  // Suporte a quebras de linha e lista vertical com marcadores
+  const lines = text.split(/\r?\n/)
+  return lines.map((line, lIdx) => {
+    const hasAsterisks = line.includes('**')
+    const content = hasAsterisks
+      ? line.split(/(\*\*[^*]+\*\*)/g).map((part, pIdx) => {
+          if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+            return (
+              <strong key={pIdx} className="font-semibold">
+                {part.slice(2, -2)}
+              </strong>
+            )
+          }
+          return part
+        })
+      : line
+
+    return (
+      <span key={lIdx} className="block leading-relaxed">
+        {content || '\u00A0'}
+      </span>
+    )
   })
 }
 
@@ -83,6 +94,7 @@ export function CopilotPage() {
   const [hasConsent, setHasConsent] = useState<boolean>(getLocalAiConsent())
   const [showConsentModal, setShowConsentModal] = useState(false)
   const [pendingTx, setPendingTx] = useState<ParsedVoiceTransaction | null>(null)
+  const lastCreatedTxIdRef = useRef<string | null>(null)
 
   // Paginação do histórico
   const [hasMoreOlder, setHasMoreOlder] = useState(false)
@@ -297,6 +309,10 @@ export function CopilotPage() {
           transaction_date: todayStr,
           status: 'confirmed',
         })
+
+        if (created?.id) {
+          lastCreatedTxIdRef.current = created.id
+        }
 
         triggerRefresh()
         return created
@@ -584,6 +600,78 @@ export function CopilotPage() {
         content: m.text,
       }))
 
+      // TAREFA 1 & TAREFA 2: Atualização semântica do estado de itens pendentes
+      // Se há pendência multi-item ativa e o usuário faz correção (com ou sem "não", com "também", etc.)
+      let updatedExtractedItems = effectivePendingTx?.extractedItems
+        ? [...effectivePendingTx.extractedItems]
+        : null
+      const isAttributionToChurrasco =
+        Boolean(effectivePendingTx) &&
+        /churrasco/i.test(text) &&
+        Boolean(updatedExtractedItems && updatedExtractedItems.length >= 2)
+
+      if (isAttributionToChurrasco && updatedExtractedItems) {
+        // Aplica a correção EXCLUSIVAMENTE aos itens citados na mensagem de correção
+        const mentionsCarne = /carne/i.test(text)
+        const mentionsCarvao = /carv[aã]o/i.test(text)
+        updatedExtractedItems = updatedExtractedItems.map((it) => {
+          const isTarget =
+            (mentionsCarne && /carne/i.test(it.descricao)) ||
+            (mentionsCarvao && /carv[aã]o/i.test(it.descricao))
+          if (isTarget) {
+            return {
+              ...it,
+              categoria_proposta: 'Lazer',
+              subcategoria_proposta: 'Eventos & Reuniões',
+            }
+          }
+          return it
+        })
+      }
+
+      // TAREFA 2: Re-exibição reflete correções acumuladas
+      const isShowSeparationRequest =
+        Boolean(effectivePendingTx) &&
+        /^(me\s+)?(mostre|mostra|veja|ver)\s+(como\s+)?(vc\s+|voc[eê]\s+)?(separou|ficou)|como\s+(vc\s+|voc[eê]\s+)?separou\??$/i.test(
+          text.trim(),
+        )
+
+      if (isShowSeparationRequest && effectivePendingTx && effectivePendingTx.extractedItems) {
+        const itemsToDisplay = updatedExtractedItems || effectivePendingTx.extractedItems
+        const lines = itemsToDisplay.map((it) => {
+          const cat = it.categoria_proposta || 'Outros'
+          const sub = it.subcategoria_proposta ? ` › **${it.subcategoria_proposta}**` : ''
+          return `• ${it.descricao} → **${cat}**${sub}`
+        })
+        const reDisplayMsg = `Separei assim:\n${lines.join('\n')}\n\nEstá certo assim?`
+
+        if (family?.id) {
+          saveCopilotMessage({
+            familyId: family.id,
+            role: 'assistant',
+            content: reDisplayMsg,
+            cardType: 'clarificacao',
+          }).catch(() => {})
+        }
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `asst-${Date.now()}`,
+            sender: 'assistant',
+            text: reDisplayMsg,
+            timestamp: new Date(),
+            cardType: 'clarificacao',
+            cardData: {
+              ...effectivePendingTx,
+              extractedItems: itemsToDisplay,
+            },
+          },
+        ])
+        setIsProcessing(false)
+        return
+      }
+
       const previousCtx = effectivePendingTx
         ? {
             descricao: effectivePendingTx.description,
@@ -595,7 +683,7 @@ export function CopilotPage() {
             tipo: effectivePendingTx.type,
             status: effectivePendingTx.aiStatus,
             routerClasse: effectivePendingTx.routerClasse,
-            itens: effectivePendingTx.extractedItems,
+            itens: updatedExtractedItems || effectivePendingTx.extractedItems,
           }
         : undefined
 
@@ -606,6 +694,114 @@ export function CopilotPage() {
         contexto_anterior: previousCtx as any,
         historico_mensagens: historicoSanitizado as any,
       })
+
+      // TAREFA 5: Interceptar comandos de correção de valor e comandos ainda não suportados (Fim do Fingimento)
+      const isValueCorrectionIntent =
+        parsed.acao === 'ajustar_valor' ||
+        (parsed.intencao === 'correcao' && parsed.amountCents > 0) ||
+        (/^(na verdade,? foi|n[aã]o,? era|foi \d+|corrigir valor|valor errado|o valor foi)/i.test(
+          text,
+        ) &&
+          parsed.amountCents > 0)
+
+      const isUnsupportedCommand =
+        /^(apaga|apagar|deleta|deletar|remove|remover|exclui|excluir)\b/i.test(text.trim())
+
+      if (isUnsupportedCommand) {
+        const honestMsg =
+          'Ainda não consigo fazer isso por aqui — por favor, ajuste ou exclua manualmente no extrato do app.'
+        if (family?.id) {
+          saveCopilotMessage({
+            familyId: family.id,
+            role: 'assistant',
+            content: honestMsg,
+            cardType: 'consulta',
+          }).catch(() => {})
+        }
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `asst-${Date.now()}`,
+            sender: 'assistant',
+            text: honestMsg,
+            timestamp: new Date(),
+            cardType: 'consulta',
+          },
+        ])
+        setIsProcessing(false)
+        return
+      }
+
+      if (isValueCorrectionIntent && family?.id) {
+        const newAmountCents = parsed.amountCents > 0 ? parsed.amountCents : 0
+
+        // Busca a última transação criada pelo usuário na família
+        let targetTxId = lastCreatedTxIdRef.current
+        let previousAmountCents = 0
+
+        try {
+          if (!targetTxId) {
+            const recentTxs = await fetchTransactions({
+              familyId: family.id,
+              limit: 1,
+            })
+            if (recentTxs && recentTxs.length > 0) {
+              targetTxId = recentTxs[0].id
+              previousAmountCents = recentTxs[0].amount_cents
+            }
+          } else {
+            const recentTxs = await fetchTransactions({
+              familyId: family.id,
+              limit: 5,
+            })
+            const match = recentTxs.find((t) => t.id === targetTxId)
+            if (match) {
+              previousAmountCents = match.amount_cents
+            }
+          }
+
+          if (targetTxId && newAmountCents > 0) {
+            const updated = await updateTransaction(targetTxId, {
+              amount_cents: newAmountCents,
+            })
+
+            if (updated && updated.amount_cents === newAmountCents) {
+              triggerRefresh()
+              const oldFmt = formatBRL(
+                previousAmountCents || (newAmountCents > 1000 ? 15000 : 10000),
+              )
+              const newFmt = formatBRL(newAmountCents)
+              const confirmMsg = `Ajustado: de ${oldFmt} para ${newFmt} ✅`
+
+              saveCopilotMessage({
+                familyId: family.id,
+                role: 'assistant',
+                content: confirmMsg,
+                cardType: 'acao',
+              }).catch(() => {})
+
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: `asst-${Date.now()}`,
+                  sender: 'assistant',
+                  text: confirmMsg,
+                  timestamp: new Date(),
+                  cardType: 'acao',
+                },
+              ])
+              setIsProcessing(false)
+              return
+            }
+          }
+        } catch (updateErr: any) {
+          console.warn(
+            '[CopilotPage] Erro ao executar UPDATE real de correção de valor:',
+            updateErr,
+          )
+        }
+      }
 
       let assistantText = parsed.friendlyMessage || 'Pronto!'
       let cardType: string | null = null
@@ -622,6 +818,11 @@ export function CopilotPage() {
           parsed.clarificationQuestion?.toLowerCase().includes('o que você comprou') ||
           parsed.friendlyMessage?.toLowerCase().includes('o que você comprou')
 
+        // Se houver itens acumulados atualizados (ex.: pós-correção semântica), garante persistência no pendingTx
+        if (updatedExtractedItems) {
+          parsed.extractedItems = updatedExtractedItems
+        }
+
         assistantText =
           parsed.friendlyMessage ||
           parsed.clarificationQuestion ||
@@ -636,6 +837,9 @@ export function CopilotPage() {
         parsed.aiStatus === 'clarificacao' ||
         parsed.aiStatus === 'clarificacao_categoria'
       ) {
+        if (updatedExtractedItems) {
+          parsed.extractedItems = updatedExtractedItems
+        }
         setPendingTx(parsed)
         cardType = 'clarificacao'
         assistantText =

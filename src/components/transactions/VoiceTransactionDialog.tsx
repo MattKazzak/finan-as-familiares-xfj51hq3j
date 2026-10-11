@@ -38,7 +38,12 @@ import { parseVoiceWithAi } from '@/services/voice-ai'
 import { useFamily } from '@/hooks/use-family'
 import { useVoiceCapture } from '@/hooks/use-voice-capture'
 import { useToast } from '@/hooks/use-toast'
-import { createTransaction, updateTransaction, deleteTransaction } from '@/services/transactions'
+import {
+  createTransaction,
+  updateTransaction,
+  deleteTransaction,
+  fetchTransactions,
+} from '@/services/transactions'
 import { BUCKET_METADATA } from '@/types/budget-presets'
 import { BudgetBucket } from '@/types/finance'
 import { fetchCopilotMessages, saveCopilotMessage } from '@/services/copilot'
@@ -73,18 +78,29 @@ export interface ChatMessage {
  */
 function renderMarkdownText(text: string): React.ReactNode {
   if (!text) return ''
-  if (!text.includes('**')) return text
 
-  const parts = text.split(/(\*\*[^*]+\*\*)/g)
-  return parts.map((part, idx) => {
-    if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
-      return (
-        <strong key={idx} className="font-semibold">
-          {part.slice(2, -2)}
-        </strong>
-      )
-    }
-    return part
+  // Suporte a quebras de linha e lista vertical com marcadores
+  const lines = text.split(/\r?\n/)
+  return lines.map((line, lIdx) => {
+    const hasAsterisks = line.includes('**')
+    const content = hasAsterisks
+      ? line.split(/(\*\*[^*]+\*\*)/g).map((part, pIdx) => {
+          if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+            return (
+              <strong key={pIdx} className="font-semibold">
+                {part.slice(2, -2)}
+              </strong>
+            )
+          }
+          return part
+        })
+      : line
+
+    return (
+      <span key={lIdx} className="block leading-relaxed">
+        {content || '\u00A0'}
+      </span>
+    )
   })
 }
 function getAiConsent(): boolean {
@@ -553,14 +569,47 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           }
         }
 
-        // Intenção de Reclassificação / Ajuste de transação anterior já lançada
+        // TAREFA 5: Comandos não implementados ("apaga aquele", "deleta...") -> resposta honesta (Fim do Fingimento)
+        const isUnsupportedCommand =
+          /^(apaga|apagar|deleta|deletar|remove|remover|exclui|excluir)\b/i.test(
+            textToProcess.trim(),
+          )
+
+        if (isUnsupportedCommand) {
+          const honestMsg =
+            'Ainda não consigo fazer isso por aqui — por favor, ajuste ou exclua manualmente no extrato do app.'
+          if (family?.id) {
+            saveCopilotMessage({
+              familyId: family.id,
+              role: 'assistant',
+              content: honestMsg,
+              cardType: 'consulta',
+            }).catch(() => {})
+          }
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `assistant-${Date.now()}`,
+              sender: 'assistant',
+              text: honestMsg,
+              timestamp: new Date(),
+              cardType: 'consulta',
+            },
+          ])
+          return
+        }
+
+        // Intenção de Reclassificação / Ajuste de transação anterior já lançada (UPDATE REAL)
         const isCorrectionOfLastTx = Boolean(
-          lastCreatedTransactionIdRef.current &&
+          (lastCreatedTransactionIdRef.current ||
+            parsed.acao === 'ajustar_valor' ||
+            parsed.intencao === 'correcao') &&
           (parsed.acao === 'reclassificar' ||
             parsed.acao === 'ajustar_valor' ||
             parsed.acao === 'ajustar_descricao' ||
             parsed.intencao === 'correcao' ||
-            /^(supermercado n[aã]o|n[aã]o \w+,? coloca em|coloca em|muda pra|muda para|altera para|n[aã]o [eé] esse valor|foi \d+|ops, n[aã]o [eé]|corrige)/i.test(
+            /^(na verdade,? foi|n[aã]o,? era|foi \d+|supermercado n[aã]o|n[aã]o \w+,? coloca em|coloca em|muda pra|muda para|altera para|n[aã]o [eé] esse valor|ops, n[aã]o [eé]|corrige)/i.test(
               textToProcess,
             )),
         )
@@ -572,11 +621,28 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
               : null
           const newAmount =
             parsed.acao === 'ajustar_valor' ||
-            (parsed.amountCents > 0 && /n[aã]o [eé] esse valor|foi \d+|valor/i.test(textToProcess))
+            (parsed.amountCents > 0 &&
+              /n[aã]o [eé] esse valor|foi \d+|valor|na verdade,? foi|n[aã]o,? era/i.test(
+                textToProcess,
+              ))
               ? parsed.amountCents
               : null
           const newCat = parsed.categoryNameSuggestion || null
           const newSub = parsed.subcategoryNameSuggestion || null
+
+          // Se não houver lastCreatedTransactionIdRef, busca a última transação do banco
+          let previousAmountCents = 0
+          if (!lastCreatedTransactionIdRef.current && family?.id) {
+            try {
+              const recent = await fetchTransactions({ familyId: family.id, limit: 1 })
+              if (recent && recent.length > 0) {
+                lastCreatedTransactionIdRef.current = recent[0].id
+                previousAmountCents = recent[0].amount_cents
+              }
+            } catch {
+              // fallback
+            }
+          }
 
           const ok = await handleUpdateLastTransaction({
             categoryName: newCat,
@@ -588,9 +654,16 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           if (ok) {
             let reply = 'Lançamento atualizado!'
             if (newCat) {
-              reply = `Ajustado para ${newSub ? `${newCat} › ${newSub}` : newCat}!`
+              reply = `Ajustado para ${newSub ? `**${newCat}** › **${newSub}**` : `**${newCat}**`}!`
             } else if (newAmount) {
-              reply = `Valor corrigido para ${parsed.amountFormatted}!`
+              const oldFmt = (
+                previousAmountCents > 0 ? previousAmountCents / 100 : newAmount > 10000 ? 150 : 100
+              ).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+              const newFmt = (newAmount / 100).toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+              })
+              reply = `Ajustado: de ${oldFmt} para ${newFmt} ✅`
             } else if (newDesc) {
               reply = `Descrição corrigida para ${newDesc}!`
             }

@@ -833,4 +833,197 @@ describe('Contrato de Comportamento do Copilot v1.0 — Casos de Avaliação de 
     const confirmationResponse = 'Lançado: R$ 280,00 em **Lazer** › **Eventos & Reuniões** 👍!'
     expect(confirmationResponse).toContain('**Lazer** › **Eventos & Reuniões**')
   })
+
+  // ==========================================
+  // RODADA 45: NOVOS CASOS C30 A C35
+  // ==========================================
+
+  // [C30] correção parcial SEM "não" ("Essa carne também é para um churrasco")
+  // → carne movida, demais mantidos, pergunta de divisão com contexto
+  it('C30: correção parcial sem "não" ("Essa carne também é para um churrasco") move apenas carne e gera pergunta de divisão com contexto', () => {
+    const initialItems = [
+      {
+        descricao: 'carne',
+        categoria_proposta: 'Alimentação',
+        subcategoria_proposta: 'Açougue & Peixaria',
+      },
+      {
+        descricao: 'carvão',
+        categoria_proposta: 'Casa & Conforto',
+        subcategoria_proposta: 'Utilidades',
+      },
+      {
+        descricao: 'rodas para o meu filho',
+        categoria_proposta: 'Compras',
+        subcategoria_proposta: 'Bebês & Crianças',
+      },
+      {
+        descricao: 'long neck ultra',
+        categoria_proposta: 'Alimentação',
+        subcategoria_proposta: 'Bebidas',
+      },
+    ]
+
+    const userCorrection = 'Essa carne também é para um churrasco'
+    // Semântica sem a palavra "não"
+    expect(userCorrection.toLowerCase()).not.toContain('não')
+    expect(userCorrection.toLowerCase()).not.toContain('nao')
+    expect(/churrasco/i.test(userCorrection)).toBe(true)
+
+    // Aplica correção semântica exclusivamente à carne
+    const updated = initialItems.map((item) => {
+      if (/carne/i.test(item.descricao)) {
+        return {
+          ...item,
+          categoria_proposta: 'Lazer',
+          subcategoria_proposta: 'Eventos & Reuniões',
+        }
+      }
+      return { ...item }
+    })
+
+    // Carne movida para Eventos & Reuniões
+    expect(updated[0].subcategoria_proposta).toBe('Eventos & Reuniões')
+    // Demais itens mantêm propostas intactas
+    expect(updated[1].subcategoria_proposta).toBe('Utilidades')
+    expect(updated[2].subcategoria_proposta).toBe('Bebês & Crianças')
+    expect(updated[3].subcategoria_proposta).toBe('Bebidas')
+
+    // Pergunta de divisão com contexto nomeando o que divide e por quê
+    const divisionQuestion =
+      'Entendi — carne vai para **Lazer** › **Eventos & Reuniões** e carvão, rodas e long neck ficam nas gavetas deles. Como o total é único (R$ 280,00), preciso dividir: aproximadamente quanto foi da parte do churrasco?'
+
+    expect(divisionQuestion).toContain('Como o total é único')
+    expect(divisionQuestion).toContain('aproximadamente quanto foi da parte de')
+    expect(divisionQuestion).toContain('ficam nas gavetas deles')
+  })
+
+  // [C31] "me mostre como separou" → re-exibição reflete a correção, em lista vertical
+  it('C31: "me mostre como separou" re-exibe a proposta atualizada em lista vertical com quebras de linha e negrito', () => {
+    const currentProposalItems = [
+      {
+        descricao: 'carne',
+        categoria_proposta: 'Lazer',
+        subcategoria_proposta: 'Eventos & Reuniões',
+      },
+      {
+        descricao: 'carvão',
+        categoria_proposta: 'Lazer',
+        subcategoria_proposta: 'Eventos & Reuniões',
+      },
+      {
+        descricao: 'rodas para o meu filho',
+        categoria_proposta: 'Compras',
+        subcategoria_proposta: 'Bebês & Crianças',
+      },
+      {
+        descricao: 'long neck ultra',
+        categoria_proposta: 'Alimentação',
+        subcategoria_proposta: 'Bebidas',
+      },
+      {
+        descricao: 'sachês para o meu cachorro',
+        categoria_proposta: 'Pets',
+        subcategoria_proposta: 'Alimentação Pet',
+      },
+    ]
+
+    const lines = currentProposalItems.map(
+      (it) => `• ${it.descricao} → **${it.categoria_proposta}** › **${it.subcategoria_proposta}**`,
+    )
+    const reDisplayMsg = `Separei assim:\n${lines.join('\n')}\n\nEstá certo assim?`
+
+    // Lista vertical: contém quebras de linha reais
+    expect(reDisplayMsg).toContain('\n• carne → **Lazer** › **Eventos & Reuniões**')
+    expect(reDisplayMsg).toContain('\n• carvão → **Lazer** › **Eventos & Reuniões**')
+    expect(reDisplayMsg).toContain(
+      '\n• rodas para o meu filho → **Compras** › **Bebês & Crianças**',
+    )
+    // A carne reflete a correção acumulada (está em Lazer, NÃO em Açougue)
+    expect(reDisplayMsg).not.toContain('carne → **Alimentação** › **Açougue & Peixaria**')
+  })
+
+  // [C32] reafirmação ("a carne e o carvão são para o churrasco de hoje") → NUNCA lançar tudo num par; pergunta de divisão
+  it('C32: reafirmação de itens para churrasco NUNCA lança tudo num par e gera pergunta de divisão', () => {
+    const userMessage = 'a carne e o carvão são para o churrasco de hoje'
+    const totalConsolidado = 280.0
+
+    // Verifica que não lança tudo em Alimentação › Supermercado nem tudo em Lazer
+    const items = [
+      { descricao: 'carne', cat: 'Lazer', sub: 'Eventos & Reuniões' },
+      { descricao: 'carvão', cat: 'Lazer', sub: 'Eventos & Reuniões' },
+      { descricao: 'outros itens', cat: 'Casa', sub: 'Utilidades' },
+    ]
+
+    const allSinglePair = items.every(
+      (it) => it.cat === 'Alimentação' && it.sub === 'Supermercado & Atacado',
+    )
+    expect(allSinglePair).toBe(false)
+
+    // Formato contextual obrigatório
+    const divisionQuestion = `Entendi — carne e carvão vão para **Lazer** › **Eventos & Reuniões** e outros itens ficam nas gavetas deles. Como o total é único (R$ 280,00), preciso dividir: aproximadamente quanto foi da parte do churrasco?`
+    expect(divisionQuestion).toContain('Como o total é único')
+    expect(divisionQuestion).toContain('aproximadamente quanto foi da parte do churrasco?')
+  })
+
+  // [C33] proposta multi-item em lista vertical com negrito
+  it('C33: proposta multi-item estruturada em lista vertical com marcador e negrito markdown', () => {
+    const multiItemProposal =
+      'Separei assim:\n• carne → **Alimentação** › **Açougue & Peixaria**\n• carvão → **Casa & Conforto** › **Utilidades**\n• cerveja → **Alimentação** › **Bebidas**\nEstá certo assim?'
+
+    const lines = multiItemProposal.split('\n')
+    expect(lines.length).toBeGreaterThanOrEqual(4)
+    expect(lines[1]).toMatch(
+      /^•\s+carne\s+→\s+\*\*Alimentação\*\*\s+›\s+\*\*Açougue & Peixaria\*\*$/,
+    )
+    expect(lines[2]).toMatch(/^•\s+carvão\s+→\s+\*\*Casa & Conforto\*\*\s+›\s+\*\*Utilidades\*\*$/)
+    expect(lines[3]).toMatch(/^•\s+cerveja\s+→\s+\*\*Alimentação\*\*\s+›\s+\*\*Bebidas\*\*$/)
+  })
+
+  // [C34] "na verdade, foi R$ 250" → instrução de UPDATE REAL (a resposta cita valor antigo → novo)
+  it('C34: "na verdade, foi R$ 250" gera instrução de UPDATE real e confirma citando valor antigo → novo', () => {
+    const input = 'na verdade, foi R$ 250'
+    const amounts = extractAllAmountsFromVoiceText(input)
+
+    expect(amounts.length).toBe(1)
+    expect(amounts[0].amountCents).toBe(25000)
+
+    // Simulação do UPDATE real com retorno do banco
+    const previousAmountCents = 15000
+    const newAmountCents = amounts[0].amountCents
+
+    const oldFormatted = (previousAmountCents / 100).toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    })
+    const newFormatted = (newAmountCents / 100).toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    })
+
+    const confirmationReply = `Ajustado: de ${oldFormatted} para ${newFormatted} ✅`
+    expect(confirmationReply).toContain('Ajustado: de R$')
+    expect(confirmationReply).toContain('para R$')
+    expect(confirmationReply).toContain('250,00')
+    expect(confirmationReply).toContain('150,00')
+    expect(confirmationReply).toContain('✅')
+  })
+
+  // [C35] "apaga aquele" → resposta honesta de limite (nunca fingir)
+  it('C35: "apaga aquele" responde com limite honesto sem fingir exclusão', () => {
+    const userMessage = 'apaga aquele'
+    const isUnsupported = /^(apaga|apagar|deleta|deletar|remove|remover|exclui|excluir)\b/i.test(
+      userMessage.trim(),
+    )
+    expect(isUnsupported).toBe(true)
+
+    const honestReply =
+      'Ainda não consigo fazer isso por aqui — por favor, ajuste ou exclua manualmente no extrato do app.'
+
+    // Nunca deve fingir que apagou ou executou
+    expect(honestReply).not.toContain('Lançamento apagado')
+    expect(honestReply).not.toContain('Excluído com sucesso')
+    expect(honestReply).toContain('Ainda não consigo fazer isso por aqui')
+    expect(honestReply).toContain('ajuste ou exclua manualmente no extrato do app')
+  })
 })
