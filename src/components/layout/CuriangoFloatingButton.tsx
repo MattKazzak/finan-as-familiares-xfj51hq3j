@@ -16,9 +16,9 @@ const COPILOT_FAB_HINT_DISMISSED_KEY = 'curiangoo_copilot_fab_hint_dismissed_v1'
  * - FAB compacto e silencioso: círculo com o ícone oficial do Curiango (CuriangoLogo)
  * - SEM rótulo permanente
  * - Cor da marca (#14213D) com sombra suave shadow-curiango-dock e borda sutil em rgba(20,33,61,0.08)
- * - Tamanho reduzido (w-12 h-12 / sm:w-13 sm:h-13), não obstrui o conteúdo
+ * - Tamanho reduzido (w-12 h-12 / sm:w-14 sm:h-14), não obstrui o conteúdo
  * - Canto inferior direito acima da barra de navegação:
- *   * Mobile (< md): bottom-20 right-4 (z-40)
+ *   * Mobile (< md): bottom: calc(5rem + env(safe-area-inset-bottom, 0px)) right-4 (z-40)
  *   * Desktop (>= md): bottom-6 right-6
  * - Na primeira visita à Home, uma dica discreta em balão ("Fale com o Curiangoo") aparece 1x e some (persistência via localStorage)
  * - Ao tocar, navega para /copilot (ou executa onClick)
@@ -68,7 +68,10 @@ export const CuriangoFloatingButton: React.FC<CuriangoFloatingButtonProps> = ({ 
   }
 
   return (
-    <div className="fixed z-40 bottom-20 right-4 md:bottom-6 md:right-6 flex flex-col items-end pointer-events-none">
+    <div
+      style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}
+      className="fixed z-40 bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:!bottom-6 md:bottom-6 right-4 md:right-6 flex flex-col items-end pointer-events-none"
+    >
       {/* Balão de Dica Discreta da 1ª Visita (Aparece 1x e some) */}
       {showHint && (
         <div
@@ -87,7 +90,7 @@ export const CuriangoFloatingButton: React.FC<CuriangoFloatingButtonProps> = ({ 
       <button
         type="button"
         onClick={handleClick}
-        className="pointer-events-auto w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-[#14213D] text-white shadow-curiango-dock border border-white/10 hover:border-[#FCA311]/50 hover:scale-105 active:scale-95 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311] focus-visible:ring-offset-2 touch-manipulation cursor-pointer flex items-center justify-center relative group select-none"
+        className="pointer-events-auto w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#14213D] text-white shadow-curiango-dock border border-white/10 hover:border-[#FCA311]/50 hover:scale-105 active:scale-95 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311] focus-visible:ring-offset-2 touch-manipulation cursor-pointer flex items-center justify-center relative group select-none"
         aria-label="Falar com o Curiangoo"
         title="Falar com o Curiangoo — Copilot Inteligente"
       >

@@ -14,6 +14,9 @@ describe('CuriangoFloatingButton (FAB silencioso R52)', () => {
 
     const btn = screen.getByRole('button', { name: /falar com o curiangoo/i })
     expect(btn).toBeDefined()
+    expect(btn.className).toContain('w-12 h-12')
+    expect(btn.className).toContain('sm:w-14 sm:h-14')
+    expect(btn.className).not.toContain('sm:w-13')
     expect(btn.getAttribute('title')).toContain('Falar com o Curiangoo')
 
     // Dica da 1ª visita "Fale com o Curiangoo"
