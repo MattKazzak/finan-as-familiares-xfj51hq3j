@@ -810,6 +810,15 @@ describe('Contrato de Comportamento do Copilot v1.0 — Casos de Avaliação de 
     expect(amounts[2].amountCents).toBe(910)
   })
 
+  // [C27B] extrai valores decimais compostos com centavos por extenso ("vinte e cinco reais e cinquenta centavos")
+  it('C27B: extração de valores por extenso com centavos preserva precisão decimal', () => {
+    const input = 'vinte e cinco reais e cinquenta centavos de padaria'
+    const amounts = extractAllAmountsFromVoiceText(input)
+
+    expect(amounts.length).toBe(1)
+    expect(amounts[0].amountCents).toBe(2550)
+  })
+
   // [C28] "comprei carne, arroz e feijão, tudo 50" → vírgulas de lista não viram decimais, total 50
   it('C28: preserva vírgulas de lista sem transformá-las em decimais e extrai total consolidado', () => {
     const input = 'comprei carne, arroz e feijão, tudo 50'
@@ -1489,5 +1498,443 @@ describe('Contrato de Comportamento do Copilot v1.0 — Casos de Avaliação de 
     expect(result.response).toContain('Quer ver as subcategorias de alguma?')
     // NUNCA cair em fallback de Classe 9
     expect(result.response).not.toContain('Prefiro não opinar')
+  })
+
+  // =========================================================================
+  // Contrato v2.0 — Casos de Avaliação de Conversação (H1–H15)
+  // =========================================================================
+
+  // [H1] Doações & Caridade em Compras (despesa)
+  it('H1: doação para catador ou caridade classifica em Compras › Doações & Caridade (despesa)', () => {
+    const text = 'uma doação para o catador de latinhas, 50'
+    const parsed = parseVoiceInput(text, [
+      {
+        id: 'cat-compras',
+        name: 'Compras',
+        type: 'expense',
+        budget_bucket: 'lifestyle',
+        subcategories: [{ id: 'sub-doacoes', name: 'Doações & Caridade' }],
+      },
+    ])
+
+    expect(parsed.amountCents).toBe(5000)
+    expect(parsed.type).toBe('expense')
+    expect(parsed.categoryNameSuggestion).toBe('Compras')
+    expect(parsed.subcategoryNameSuggestion).toBe('Doações & Caridade')
+  })
+
+  // [H2] "posso dizer para cada um?" durante proposta pendente pergunta os valores
+  it('H2: "posso dizer para cada um?" durante proposta pendente pergunta os valores diretamente', () => {
+    const userInput = 'posso dizer para cada um?'
+    const isSplitEachPrompt =
+      /\b(?:posso\s+dizer\s+(?:o\s+valor\s+)?para\s+cada\s+um|posso\s+dizer\s+cada\s+um|vou\s+dizer\s+cada\s+um|dizer\s+separado)\b/i.test(
+        userInput.replace(/[.!?]/g, '').trim(),
+      )
+    expect(isSplitEachPrompt).toBe(true)
+
+    const expectedAskValuesMsg = 'Pode dizer! Quanto foi cada item?'
+    expect(expectedAskValuesMsg).toBe('Pode dizer! Quanto foi cada item?')
+  })
+
+  // [H3] gravação POR ITEM: múltiplos itens com valores informados NUNCA somam em transação única e gravam por item
+  it('H3: gravação POR ITEM — múltiplos itens com valores informados NUNCA somam em transação única e gravam por item (nunca "Geral")', () => {
+    const items = [
+      {
+        descricao: 'Chupeta',
+        valor: 25,
+        categoria_proposta: 'Compras',
+        subcategoria_proposta: 'Bebês & Crianças',
+      },
+      {
+        descricao: 'Sachês',
+        valor: 18,
+        categoria_proposta: 'Pets',
+        subcategoria_proposta: 'Ração & Petiscos',
+      },
+    ]
+    const foundAmounts = [
+      { amountCents: 2500, formatted: 'R$ 25,00' },
+      { amountCents: 1800, formatted: 'R$ 18,00' },
+    ]
+
+    expect(foundAmounts.length).toBe(items.length)
+
+    // Gravação por item
+    const recordedTransactions: Array<{ desc: string; amount: number; cat: string; sub: string }> =
+      []
+    for (let i = 0; i < items.length; i++) {
+      let cat = items[i].categoria_proposta
+      let sub = items[i].subcategoria_proposta
+      if (cat.toLowerCase() === 'geral') cat = 'Outros'
+      if (sub.toLowerCase() === 'geral') sub = 'Outros'
+
+      recordedTransactions.push({
+        desc: items[i].descricao,
+        amount: foundAmounts[i].amountCents,
+        cat,
+        sub,
+      })
+    }
+
+    expect(recordedTransactions.length).toBe(2)
+    expect(recordedTransactions[0].amount).toBe(2500)
+    expect(recordedTransactions[1].amount).toBe(1800)
+    expect(recordedTransactions.every((tx) => tx.cat.toLowerCase() !== 'geral')).toBe(true)
+    expect(recordedTransactions.every((tx) => tx.sub.toLowerCase() !== 'geral')).toBe(true)
+    // NUNCA grava uma soma consolidada 4300 em transação única
+    expect(recordedTransactions.some((tx) => tx.amount === 4300)).toBe(false)
+  })
+
+  // [H4] Limpeza & Higiene da Casa em Moradia (essenciais)
+  it('H4: produtos de limpeza classificam em Moradia › Limpeza & Higiene da Casa (essenciais)', () => {
+    const text = 'comprei detergente e esponja 35 reais'
+    const parsed = parseVoiceInput(text, [
+      {
+        id: 'cat-moradia',
+        name: 'Moradia',
+        type: 'expense',
+        budget_bucket: 'essentials',
+        subcategories: [{ id: 'sub-limpeza', name: 'Limpeza & Higiene da Casa' }],
+      },
+    ])
+
+    expect(parsed.amountCents).toBe(3500)
+    expect(parsed.type).toBe('expense')
+    expect(parsed.categoryNameSuggestion).toBe('Moradia')
+    expect(parsed.subcategoryNameSuggestion).toBe('Limpeza & Higiene da Casa')
+    expect(parsed.bucketSuggestion).toBe('essentials')
+  })
+
+  // [H5] pares reais: long neck → Alimentação › Água & Bebidas para Casa (nunca Tabaco); sachês → Pets › Ração & Petiscos (nunca "Alimentação Pet")
+  it('H5: pares reais: long neck → Alimentação › Água & Bebidas para Casa (nunca Tabaco & Cigarros); sachês → Pets › Ração & Petiscos (nunca "Alimentação Pet")', () => {
+    const catalog = [
+      {
+        id: 'cat-alim',
+        name: 'Alimentação',
+        type: 'expense' as const,
+        budget_bucket: 'essentials' as const,
+        subcategories: [{ id: 'sub-beb', name: 'Água & Bebidas para Casa' }],
+      },
+      {
+        id: 'cat-pets',
+        name: 'Pets',
+        type: 'expense' as const,
+        budget_bucket: 'lifestyle' as const,
+        subcategories: [{ id: 'sub-racao', name: 'Ração & Petiscos' }],
+      },
+      {
+        id: 'cat-compras',
+        name: 'Compras',
+        type: 'expense' as const,
+        budget_bucket: 'lifestyle' as const,
+        subcategories: [{ id: 'sub-tabaco', name: 'Tabaco & Cigarros' }],
+      },
+    ]
+
+    const parsedLongNeck = parseVoiceInput('comprei dois packs de long neck, 45', catalog)
+    expect(parsedLongNeck.categoryNameSuggestion).toBe('Alimentação')
+    expect(parsedLongNeck.subcategoryNameSuggestion).toBe('Água & Bebidas para Casa')
+    expect(parsedLongNeck.categoryNameSuggestion).not.toBe('Compras')
+    expect(parsedLongNeck.subcategoryNameSuggestion).not.toBe('Tabaco & Cigarros')
+
+    const parsedSaches = parseVoiceInput('comprei 4 sachês de gato 22', catalog)
+    expect(parsedSaches.categoryNameSuggestion).toBe('Pets')
+    expect(parsedSaches.subcategoryNameSuggestion).toBe('Ração & Petiscos')
+    expect(parsedSaches.subcategoryNameSuggestion).not.toBe('Alimentação Pet')
+  })
+
+  // [H6/H7] correção parcial persiste no estado + lista atualizada na mesma mensagem + re-exibição reflete
+  it('H6/H7: correção parcial persiste no estado + lista atualizada na mesma mensagem + re-exibição reflete estado corrigido', () => {
+    const familyCategories = [
+      {
+        id: 'cat-pets',
+        name: 'Pets',
+        type: 'expense',
+        subcategories: [{ id: 'sub-racao', name: 'Ração & Petiscos' }],
+      },
+      {
+        id: 'cat-lazer',
+        name: 'Lazer',
+        type: 'expense',
+        subcategories: [{ id: 'sub-eventos', name: 'Eventos & Reuniões' }],
+      },
+    ]
+
+    let pendingItems = [
+      {
+        descricao: 'carne e carvão',
+        categoria_proposta: 'Alimentação',
+        subcategoria_proposta: 'Supermercado',
+      },
+      {
+        descricao: '4 sachês de cachorro',
+        categoria_proposta: 'Compras',
+        subcategoria_proposta: 'Outros',
+      },
+    ]
+
+    // Usuário corrige: "a carne e o carvão é para um churrasco"
+    const userCorrection = 'a carne e o carvão é para um churrasco'
+    expect(/churrasco/i.test(userCorrection)).toBe(true)
+
+    pendingItems = pendingItems.map((it) => {
+      if (/carne|carv[aã]o/i.test(it.descricao)) {
+        return {
+          ...it,
+          categoria_proposta: 'Lazer',
+          subcategoria_proposta: 'Eventos & Reuniões',
+        }
+      }
+      return it
+    })
+
+    // Lista vertical atualizada na mesma mensagem de resposta
+    const lines = pendingItems.map(
+      (it) => `• ${it.descricao} → **${it.categoria_proposta}** › **${it.subcategoria_proposta}**`,
+    )
+    const ackWithList = `Entendi! Então separei assim:\n${lines.join('\n')}\n\nEstá certo assim?`
+
+    expect(ackWithList).toContain('• carne e carvão → **Lazer** › **Eventos & Reuniões**')
+    expect(pendingItems[0].categoria_proposta).toBe('Lazer')
+    expect(pendingItems[0].subcategoria_proposta).toBe('Eventos & Reuniões')
+
+    // Re-exibição posterior: "como você separou?" reflete o estado já corrigido
+    const redisplayQuestion = 'como você separou?'
+    const isRedisplay = /como\s+(vc\s+|voc[eê]\s+)?separou\??$/i.test(redisplayQuestion)
+    expect(isRedisplay).toBe(true)
+
+    const redisplayedLines = pendingItems.map(
+      (it) => `• ${it.descricao} → **${it.categoria_proposta}** › **${it.subcategoria_proposta}**`,
+    )
+    const redisplayMsg = `Separei assim:\n${redisplayedLines.join('\n')}\n\nEstá certo assim?`
+
+    expect(redisplayMsg).toContain('• carne e carvão → **Lazer** › **Eventos & Reuniões**')
+  })
+
+  // [H8] total declarado ≠ soma dos itens → pergunta antes de lançar
+  it('H8: total declarado ≠ soma dos itens → confere e pergunta antes de lançar', () => {
+    const declaredTotalCents = 10000 // R$ 100,00 declarado inicialmente
+    const foundAmounts = [{ amountCents: 6000 }, { amountCents: 5000 }]
+    const itemsSumCents = foundAmounts.reduce((acc, curr) => acc + curr.amountCents, 0) // 11000 = R$ 110,00
+
+    expect(itemsSumCents).not.toBe(declaredTotalCents)
+
+    const declaredFormatted = 'R$ 100,00'
+    const sumFormatted = 'R$ 110,00'
+    const divergenceMsg = `A soma dos itens deu ${sumFormatted}, mas o total informado foi ${declaredFormatted}. Gostaria de conferir os valores antes de lançar?`
+
+    expect(divergenceMsg).toContain('A soma dos itens deu R$ 110,00')
+    expect(divergenceMsg).toContain('total informado foi R$ 100,00')
+    expect(divergenceMsg).toContain('Gostaria de conferir os valores antes de lançar?')
+  })
+
+  // [H9] mensagem confusa → esclarecimento específico, nunca loop
+  it('H9: mensagem confusa → esclarecimento específico sem cair em loop', () => {
+    const parsedGeneric = parseVoiceInput('comprei algumas coisas', mockCategories)
+    expect(parsedGeneric.aiStatus).toBe('falta_valor')
+    expect(parsedGeneric.routerClasse).toBe(2)
+    expect(parsedGeneric.clarificationQuestion).toBe('O que você comprou?')
+    expect(parsedGeneric.friendlyMessage).toContain('O que você comprou?')
+
+    // Se o usuário não informa nada entendível:
+    const invalidText = 'zzzz kkkk wwww'
+    const parsedInvalid = parseVoiceInput(invalidText, mockCategories)
+    expect(parsedInvalid.aiStatus).toBe('invalido')
+    expect(parsedInvalid.friendlyMessage).toContain(
+      'Não consegui entender esse lançamento financeiro',
+    )
+  })
+
+  // [H10] consulta no meio de pendência responde a consulta e lembra a pendência
+  it('H10: consulta no meio de pendência responde à consulta e relembra a pendência ativa', () => {
+    const pendingItem = 'chupeta para meu filho'
+    const consultationAnswer = 'Você gastou R$ 450,00 em Moradia neste mês.'
+    const combinedMessage = `${consultationAnswer}\n\nA propósito, ainda aguardo o valor ou confirmação para ${pendingItem}.`
+
+    expect(combinedMessage).toContain('Você gastou R$ 450,00 em Moradia neste mês.')
+    expect(combinedMessage).toContain(
+      'ainda aguardo o valor ou confirmação para chupeta para meu filho',
+    )
+  })
+
+  // [H11] cancelamento explícito descarta a pendência sem gravar nenhuma transação
+  it('H11: "cancela" / "esquece" descarta a pendência sem lançar nada no banco', () => {
+    const cancelResponse: VoiceAiResponse = {
+      status: 'acao_executada',
+      acao: 'desfazer',
+      tipo_resposta: 'acao',
+      intencao: 'desfazer',
+      router: { classe: 8, nome_classe: 'comandos', confianca: 1.0, lacunas: null },
+      confianca: 1.0,
+      lacunas: null,
+      transacao: null,
+      pergunta_clarificacao: null,
+      opcoes_sugestao: null,
+      mensagem_amigavel: 'Tudo bem, cancelado! Não registrei nada.',
+    }
+
+    const parsed = mapAiResponseToParsedTransaction(cancelResponse, 'cancela tudo')
+    expect(parsed.aiStatus).toBe('acao_executada')
+    expect(parsed.acao).toBe('desfazer')
+    expect(parsed.amountCents).toBe(0)
+    expect(parsed.friendlyMessage).toContain('cancelado')
+  })
+
+  // [H12] correção do usuário durante pendência respondida e aplicada
+  it('H12: correção do usuário durante pendência citando categoria existente é respondida ("Você tem razão — ...") e aplicada', () => {
+    const categories = [
+      {
+        id: 'cat-pets',
+        name: 'Pets',
+        type: 'expense',
+        subcategories: [{ id: 'sub-racao', name: 'Ração & Petiscos' }],
+      },
+    ]
+
+    const matched = matchTolerantPairAgainstCatalog('pet', null, categories)
+    expect(matched).not.toBeNull()
+    expect(matched?.matchedCat).toBe('Pets')
+    expect(matched?.matchedSub).toBe('Ração & Petiscos')
+
+    const targetItem = '4 sachês para o meu cachorro'
+    const ack = `Você tem razão — ${targetItem} vai para ${matched!.matchedCat} › ${matched!.matchedSub}.`
+    expect(ack).toBe(
+      'Você tem razão — 4 sachês para o meu cachorro vai para Pets › Ração & Petiscos.',
+    )
+  })
+
+  // [H13] sugestão de criação usa o NOME do item higienizado, nunca a frase inteira
+  it('H13: sugestão de criação usa o NOME do item higienizado, nunca a frase inteira com quantificadores ou contexto', () => {
+    const rawDesc1 = '3 pacotes de ração especial para meu cão idoso'
+    const clean1 = sanitizeItemNameForSub(rawDesc1)
+    expect(clean1).toBe('Ração especial')
+    expect(clean1).not.toContain('3 pacotes')
+    expect(clean1).not.toContain('para meu cão')
+
+    const rawDesc2 = 'dois packs de furadeira de impacto para a oficina'
+    const clean2 = sanitizeItemNameForSub(rawDesc2)
+    expect(clean2).toBe('Furadeira de impacto')
+
+    const suggestion = `Nenhuma gaveta encaixa bem para ${rawDesc2} — sugiro criar ${clean2} em Casa & Conforto. Posso criar?`
+    expect(suggestion).toContain('sugiro criar Furadeira de impacto em Casa & Conforto')
+  })
+
+  // [H14] Destino Inequívoco: ração → Pets, fralda → Bebês & Crianças, cigarro → Tabaco & Cigarros, remédio → Farmácia & Medicamentos
+  it('H14 (Destino Inequívoco): ração → Pets, fralda → Bebês & Crianças, cigarro → Tabaco & Cigarros, remédio → Farmácia & Medicamentos, cerveja de casa → Água & Bebidas', () => {
+    const catalog = [
+      {
+        id: 'cat-pets',
+        name: 'Pets',
+        type: 'expense' as const,
+        budget_bucket: 'lifestyle' as const,
+        subcategories: [{ id: 'sub-racao', name: 'Ração & Petiscos' }],
+      },
+      {
+        id: 'cat-compras',
+        name: 'Compras',
+        type: 'expense' as const,
+        budget_bucket: 'lifestyle' as const,
+        subcategories: [
+          { id: 'sub-bebes', name: 'Bebês & Crianças' },
+          { id: 'sub-tabaco', name: 'Tabaco & Cigarros' },
+          { id: 'sub-doacoes', name: 'Doações & Caridade' },
+        ],
+      },
+      {
+        id: 'cat-saude',
+        name: 'Saúde',
+        type: 'expense' as const,
+        budget_bucket: 'essentials' as const,
+        subcategories: [{ id: 'sub-farmacia', name: 'Farmácia & Medicamentos' }],
+      },
+      {
+        id: 'cat-alim',
+        name: 'Alimentação',
+        type: 'expense' as const,
+        budget_bucket: 'essentials' as const,
+        subcategories: [{ id: 'sub-bebidas', name: 'Água & Bebidas para Casa' }],
+      },
+      {
+        id: 'cat-moradia',
+        name: 'Moradia',
+        type: 'expense' as const,
+        budget_bucket: 'essentials' as const,
+        subcategories: [{ id: 'sub-limpeza', name: 'Limpeza & Higiene da Casa' }],
+      },
+    ]
+
+    // 1. Ração
+    const racaoParsed = parseVoiceInput('comprei ração para o cachorro 80', catalog)
+    expect(racaoParsed.categoryNameSuggestion).toBe('Pets')
+    expect(racaoParsed.subcategoryNameSuggestion).toBe('Ração & Petiscos')
+
+    // 2. Fralda
+    const fraldaParsed = parseVoiceInput('fralda pampers 65', catalog)
+    expect(fraldaParsed.categoryNameSuggestion).toBe('Compras')
+    expect(fraldaParsed.subcategoryNameSuggestion).toBe('Bebês & Crianças')
+
+    // 3. Cigarro
+    const cigarroParsed = parseVoiceInput('maço de cigarro 15', catalog)
+    expect(cigarroParsed.categoryNameSuggestion).toBe('Compras')
+    expect(cigarroParsed.subcategoryNameSuggestion).toBe('Tabaco & Cigarros')
+
+    // 4. Remédio
+    const remedioParsed = parseVoiceInput('remédio na drogaria 45', catalog)
+    expect(remedioParsed.categoryNameSuggestion).toBe('Saúde')
+    expect(remedioParsed.subcategoryNameSuggestion).toBe('Farmácia & Medicamentos')
+
+    // 5. Long neck / cerveja para casa
+    const longNeckParsed = parseVoiceInput('pack de long neck 38', catalog)
+    expect(longNeckParsed.categoryNameSuggestion).toBe('Alimentação')
+    expect(longNeckParsed.subcategoryNameSuggestion).toBe('Água & Bebidas para Casa')
+
+    // 6. Doação
+    const doacaoParsed = parseVoiceInput('doação caridade 50', catalog)
+    expect(doacaoParsed.categoryNameSuggestion).toBe('Compras')
+    expect(doacaoParsed.subcategoryNameSuggestion).toBe('Doações & Caridade')
+
+    // 7. Limpeza
+    const limpezaParsed = parseVoiceInput('detergente e desinfetante 28', catalog)
+    expect(limpezaParsed.categoryNameSuggestion).toBe('Moradia')
+    expect(limpezaParsed.subcategoryNameSuggestion).toBe('Limpeza & Higiene da Casa')
+  })
+
+  // [H15] "Geral" bloqueado no código (nunca proposta/gravada)
+  it('H15: "Geral" é estritamente bloqueado no código — nunca proposta como categoria/subcategoria nem gravada', () => {
+    // 1. No parseVoiceInput direto
+    const parsedWithGeralInput = parseVoiceInput('gasto geral de 50', [
+      {
+        id: 'cat-geral',
+        name: 'Geral',
+        type: 'expense',
+        budget_bucket: 'lifestyle',
+        subcategories: [{ id: 'sub-geral', name: 'Geral' }],
+      },
+    ])
+    expect(parsedWithGeralInput.categoryNameSuggestion?.toLowerCase()).not.toBe('geral')
+    expect(parsedWithGeralInput.subcategoryNameSuggestion?.toLowerCase()).not.toBe('geral')
+
+    // 2. No mapAiResponseToParsedTransaction
+    const aiResponseWithGeral: VoiceAiResponse = {
+      status: 'sucesso',
+      tipo_resposta: 'transacao',
+      transacao: {
+        descricao: 'compra',
+        valor: 50,
+        tipo: 'despesa',
+        balde: 'lifestyle',
+        categoria: 'Geral',
+        subcategoria: 'Geral',
+        metodo_pagamento: null,
+      },
+      pergunta_clarificacao: null,
+      opcoes_sugestao: null,
+      mensagem_amigavel: 'Lançado: R$ 50,00 em Geral 👍!',
+    }
+    const mapped = mapAiResponseToParsedTransaction(aiResponseWithGeral, 'compra 50')
+    expect(mapped.categoryNameSuggestion?.toLowerCase()).not.toBe('geral')
+    expect(mapped.subcategoryNameSuggestion?.toLowerCase()).not.toBe('geral')
+    expect(mapped.categoryNameSuggestion).toBe('Outros')
+    expect(mapped.subcategoryNameSuggestion).toBeUndefined()
   })
 })

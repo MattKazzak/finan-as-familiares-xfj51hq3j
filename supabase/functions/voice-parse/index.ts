@@ -947,15 +947,15 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido no formato:
           finalMensagemAmigavel.toLowerCase().includes(sub.toLowerCase())
 
         if (!hasSubInMessage) {
-          finalMensagemAmigavel = `Lançado: ${valorFormatado} em **${cat}** › **${sub}** 👍!`
+          finalMensagemAmigavel = `Lançado: ${valorFormatado} em **${rawCat}** › **${sub}** 👍!`
         }
       } else {
         const hasCatInMessage =
           typeof finalMensagemAmigavel === 'string' &&
-          finalMensagemAmigavel.toLowerCase().includes(cat.toLowerCase())
+          finalMensagemAmigavel.toLowerCase().includes(rawCat.toLowerCase())
 
         if (!hasCatInMessage || finalMensagemAmigavel.includes(' › ')) {
-          finalMensagemAmigavel = `Lançado: ${valorFormatado} em **${cat}** 👍!`
+          finalMensagemAmigavel = `Lançado: ${valorFormatado} em **${rawCat}** 👍!`
         }
       }
     }
