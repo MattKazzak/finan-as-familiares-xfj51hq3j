@@ -228,6 +228,28 @@ function normalizeWord(word: string): string {
 }
 
 /**
+ * Normalizador pt-BR de números e moedas:
+ * (a) "N,NN" ou "N,N" (vírgula seguida de 1-2 dígitos delimitada) -> decimal pt-BR (ex: "6,75" -> 6.75)
+ * (b) Vírgula seguida de espaço + próxima palavra -> separador de lista (NÃO decimal, preservada intacta)
+ * (c) Ponto como milhar: "1.250" ou "10.000" -> remove o ponto de milhar (1250, 10000)
+ * (d) "reais" / "real" / "reia" / "reias" / "pila" / "pilas" -> reconhecidos como sufixos monetários válidos
+ */
+export function normalizeBrazilianCurrencyString(text: string): string {
+  if (!text) return ''
+  let res = text
+
+  // 1. Ponto como milhar: ex: 1.250 ou 12.500 ou 1.250,50
+  // Padrão: dígito seguido de ponto e exatamente 3 dígitos seguidos de vírgula, espaço, sufixo monetário ou fim
+  res = res.replace(/(\d+)\.(\d{3})(?=[,\s]|$)/g, '$1$2')
+
+  // 2. "N,NN" ou "N,N" (vírgula seguida de 1-2 dígitos delimitada) -> decimal pt-BR (ex: "6,75" -> 6.75)
+  // Vírgula seguida de espaço + próxima palavra -> separador de lista (NÃO decimal, preservada intacta)
+  res = res.replace(/(\d+),(\d{1,2})(?!\d)(?!\s+[a-zA-Zá-úÁ-Ú])/g, '$1.$2')
+
+  return res
+}
+
+/**
  * Converte sequência de palavras de números em pt-BR para valor numérico.
  * Ex: "oitenta e cinco" -> 85; "cento e cinquenta" -> 150; "dois mil e quinhentos" -> 2500
  */
@@ -309,22 +331,25 @@ export function extractAmountFromVoiceText(text: string): {
   }
 
   // 1 & 2. Extrair todos os candidatos numéricos baseados em dígitos
-  // Padrão completo que cobre centavos explícitos e inteiros com centavos por extenso
+  // Normalizador pt-BR: suporta "6,75", "10 reais", "9,10", "1.250" (ponto de milhar) e sufixos reais/reia/pila.
+  // Vírgulas seguidas de espaço + palavra (ex: "carne, arroz") são lista e NÃO viram decimal.
+  const normalizedForDigits = normalizeBrazilianCurrencyString(normalized)
+
   const digitRegex =
-    /(?:r\$\s*)?(\d+)(?:[,.](\d{1,2}))?(?:\s*(?:reais|real))?(?:\s*e\s*(\d{1,2})\s*centavos?)?/gi
+    /(?:r\$\s*)?(\d+)(?:[,.](\d{1,2}))?(?:\s*(?:reais|real|reia|reias|pila|pilas))?(?:\s*e\s*(\d{1,2})\s*centavos?)?/gi
 
   // Gatilhos monetários para cálculo de proximidade
-  const triggerRegex = /(?:r\$|reais|real|centavos?)/gi
+  const triggerRegex = /(?:r\$|reais|real|reia|reias|pila|pilas|centavos?)/gi
   const triggers: Array<{ start: number; end: number }> = []
   let tMatch: RegExpExecArray | null
-  while ((tMatch = triggerRegex.exec(normalized)) !== null) {
+  while ((tMatch = triggerRegex.exec(normalizedForDigits)) !== null) {
     triggers.push({ start: tMatch.index, end: tMatch.index + tMatch[0].length })
   }
 
   const digitCandidates: CandidateMatch[] = []
   let dMatch: RegExpExecArray | null
 
-  while ((dMatch = digitRegex.exec(normalized)) !== null) {
+  while ((dMatch = digitRegex.exec(normalizedForDigits)) !== null) {
     const fullMatch = dMatch[0].trim()
     if (!fullMatch || !dMatch[1]) continue
 
@@ -529,12 +554,15 @@ export function extractAllAmountsFromVoiceText(text: string): Array<{
 
   const results: Array<{ amountCents: number; matchedText: string; index: number }> = []
 
-  // Regex de dígitos (ex: 27, 19, 100, 25.50, R$ 50)
+  // Normalizador pt-BR para extração de todos os valores monetários
+  const normalizedForDigits = normalizeBrazilianCurrencyString(normalized)
+
+  // Regex de dígitos (ex: 27, 19, 100, 25.50, 6,75, 10 reais, 9,10, R$ 50, pila)
   const digitRegex =
-    /(?:r\$\s*)?(\d+)(?:[,.](\d{1,2}))?(?:\s*(?:reais|real))?(?:\s*e\s*(\d{1,2})\s*centavos?)?/gi
+    /(?:r\$\s*)?(\d+)(?:[,.](\d{1,2}))?(?:\s*(?:reais|real|reia|reias|pila|pilas))?(?:\s*e\s*(\d{1,2})\s*centavos?)?/gi
 
   let dMatch: RegExpExecArray | null
-  while ((dMatch = digitRegex.exec(normalized)) !== null) {
+  while ((dMatch = digitRegex.exec(normalizedForDigits)) !== null) {
     const fullMatch = dMatch[0].trim()
     if (!fullMatch || !dMatch[1]) continue
 

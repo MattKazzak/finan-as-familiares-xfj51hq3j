@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Mic,
@@ -50,6 +50,26 @@ export interface CopilotChatMessage {
   timestamp: Date
   cardType?: string | null
   cardData?: ParsedVoiceTransaction | null
+}
+
+/**
+ * Renderizador de markdown para negrito (**texto**) nas mensagens do Copilot
+ */
+function renderMarkdownText(text: string): ReactNode {
+  if (!text) return ''
+  if (!text.includes('**')) return text
+
+  const parts = text.split(/(\*\*[^*]+\*\*)/g)
+  return parts.map((part, idx) => {
+    if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+      return (
+        <strong key={idx} className="font-semibold">
+          {part.slice(2, -2)}
+        </strong>
+      )
+    }
+    return part
+  })
 }
 
 export function CopilotPage() {
@@ -763,7 +783,7 @@ export function CopilotPage() {
                     : 'bg-white text-brand border border-border/60 rounded-bl-xs'
                 }`}
               >
-                <p className="whitespace-pre-wrap break-words">{m.text}</p>
+                <p className="whitespace-pre-wrap break-words">{renderMarkdownText(m.text)}</p>
 
                 {/* Renderização de Card de Lançamento se aplicável */}
                 {m.cardData && m.cardData.amountCents > 0 && (

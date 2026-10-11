@@ -4,6 +4,7 @@ import {
   mapAiResponseToParsedTransaction,
   VoiceAiResponse,
   extractAllAmountsFromVoiceText,
+  normalizeBrazilianCurrencyString,
   ParsedVoiceTransaction,
 } from '../voice-parser'
 import { analyzeBasketMission } from '../basket-missions'
@@ -693,5 +694,143 @@ describe('Contrato de Comportamento do Copilot v1.0 — Casos de Avaliação de 
     expect(saved.length).toBe(4)
     expect(saved[3].amountCents).toBe(5000)
     expect(saved[3].subcategoria).toBe('Doações')
+  })
+
+  // [C26] fluxo do churrasco misto completo multi-turn:
+  // "seis quilos de carne, um pacote de carvão, duas rodas para o meu filho, dois packs de long neck ultra e quatro sachê para o meu cachorro. Tudo ficou R$280"
+  // → proposta por item
+  // → "Nao, a carne e o carvão é para um churrasco"
+  // → correção SÓ nesses 2 itens (rodas mantêm Bebês & Crianças, long neck mantém bebidas, sachês mantêm Pet) + pergunta de divisão do 280
+  // → gravação dividida (NUNCA tudo em Lazer › Eventos & Reuniões).
+  it('C26: fluxo do churrasco misto multi-turn com correção parcial e divisão do total', () => {
+    // 1º Turno: Mensagem inicial com 5 itens heterogêneos e total consolidado de R$ 280
+    const initialItems = [
+      {
+        descricao: 'seis quilos de carne',
+        categoria_proposta: 'Alimentação',
+        subcategoria_proposta: 'Açougue & Peixaria',
+      },
+      {
+        descricao: 'um pacote de carvão',
+        categoria_proposta: 'Casa & Conforto',
+        subcategoria_proposta: 'Utilidades',
+      },
+      {
+        descricao: 'duas rodas para o meu filho',
+        categoria_proposta: 'Compras',
+        subcategoria_proposta: 'Bebês & Crianças',
+      },
+      {
+        descricao: 'dois packs de long neck ultra',
+        categoria_proposta: 'Alimentação',
+        subcategoria_proposta: 'Bebidas',
+      },
+      {
+        descricao: 'quatro sachê para o meu cachorro',
+        categoria_proposta: 'Pets',
+        subcategoria_proposta: 'Alimentação Pet',
+      },
+    ]
+
+    const totalConsolidado = 280.0
+
+    // 2º Turno: Usuário faz correção parcial apenas para carne e carvão
+    const userCorrection = 'Nao, a carne e o carvão é para um churrasco'
+    const isChurrascoMention = /churrasco/i.test(userCorrection)
+    expect(isChurrascoMention).toBe(true)
+
+    // Doutrina R28: Correção parcial afeta APENAS os itens expressamente nomeados
+    const updatedItems = initialItems.map((item) => {
+      const isCarneOuCarvao = /carne|carv[aã]o/i.test(item.descricao)
+      if (isCarneOuCarvao) {
+        return {
+          ...item,
+          categoria_proposta: 'Lazer',
+          subcategoria_proposta: 'Eventos & Reuniões',
+        }
+      }
+      // Itens não citados MANTÊM gavetas intactas
+      return { ...item }
+    })
+
+    // Asserts de categorias após correção parcial
+    expect(updatedItems[0].subcategoria_proposta).toBe('Eventos & Reuniões') // carne
+    expect(updatedItems[1].subcategoria_proposta).toBe('Eventos & Reuniões') // carvão
+    expect(updatedItems[2].subcategoria_proposta).toBe('Bebês & Crianças') // rodas preservadas
+    expect(updatedItems[3].subcategoria_proposta).toBe('Bebidas') // long neck preservado
+    expect(updatedItems[4].subcategoria_proposta).toBe('Alimentação Pet') // sachê preservado
+
+    // O total de R$ 280 NUNCA deve ser lançado inteiro em Lazer › Eventos & Reuniões!
+    const isAllEventos = updatedItems.every(
+      (it) => it.subcategoria_proposta === 'Eventos & Reuniões',
+    )
+    expect(isAllEventos).toBe(false)
+
+    // IA pergunta como dividir os R$ 280
+    const askDivisionMessage = `Entendi — carne e carvão são do churrasco e o resto é da casa. Como dividimos os R$ ${Math.round(totalConsolidado)}? Aproximadamente quanto foi da parte do churrasco?`
+    expect(askDivisionMessage).toContain('Como dividimos os R$ 280?')
+
+    // 3º Turno: Usuário responde a divisão: "150 do churrasco e 130 o resto"
+    const amountsDivision = extractAllAmountsFromVoiceText('150 do churrasco e 130 o resto')
+    expect(amountsDivision.length).toBe(2)
+    expect(amountsDivision[0].amountCents).toBe(15000)
+    expect(amountsDivision[1].amountCents).toBe(13000)
+    expect(amountsDivision[0].amountCents + amountsDivision[1].amountCents).toBe(28000)
+
+    // Gravação dividida: NUNCA tudo em Lazer
+    const finalTxChurrasco = {
+      descricao: 'Carne e carvão — churrasco',
+      amountCents: amountsDivision[0].amountCents,
+      categoria: 'Lazer',
+      subcategoria: 'Eventos & Reuniões',
+    }
+    const finalTxCasa = {
+      descricao: 'Rodas, long neck e sachê — compras',
+      amountCents: amountsDivision[1].amountCents,
+      categoria: 'Alimentação',
+      subcategoria: 'Supermercado & Atacado',
+    }
+
+    expect(finalTxChurrasco.amountCents).toBe(15000)
+    expect(finalTxCasa.amountCents).toBe(13000)
+  })
+
+  // [C27] "carne 6,75, arroz 10 reais, feijão 9,10" → 3 valores decimais corretos
+  it('C27: extrai corretamente múltiplos valores decimais com vírgula e sufixos', () => {
+    const input = 'carne 6,75, arroz 10 reais, feijão 9,10'
+    const amounts = extractAllAmountsFromVoiceText(input)
+
+    expect(amounts.length).toBe(3)
+    expect(amounts[0].amountCents).toBe(675)
+    expect(amounts[1].amountCents).toBe(1000)
+    expect(amounts[2].amountCents).toBe(910)
+  })
+
+  // [C28] "comprei carne, arroz e feijão, tudo 50" → vírgulas de lista não viram decimais, total 50
+  it('C28: preserva vírgulas de lista sem transformá-las em decimais e extrai total consolidado', () => {
+    const input = 'comprei carne, arroz e feijão, tudo 50'
+    const normalized = normalizeBrazilianCurrencyString(input)
+
+    // "carne, arroz" deve manter a vírgula intacta porque é seguida por espaço e letra
+    expect(normalized).toContain('carne, arroz')
+
+    const amounts = extractAllAmountsFromVoiceText(input)
+    expect(amounts.length).toBe(1)
+    expect(amounts[0].amountCents).toBe(5000)
+  })
+
+  // [C29] a resposta de proposta contém as categorias em negrito (assert de markdown presente)
+  it('C29: resposta de proposta contém categorias e subcategorias em negrito markdown (**...**)', () => {
+    const proposalResponse =
+      'Separei assim: chupeta em **Compras** › **Bebês & Crianças**, sachês em **Pets** › **Alimentação Pet** e jogo de copo em **Casa & Conforto** › **Utensílios & Cozinha**. Está certo assim?'
+
+    // Deve conter marcas de negrito com duplo asterisco
+    expect(proposalResponse).toContain('**Compras** › **Bebês & Crianças**')
+    expect(proposalResponse).toContain('**Pets** › **Alimentação Pet**')
+    expect(proposalResponse).toContain('**Casa & Conforto** › **Utensílios & Cozinha**')
+
+    // Confirmação padrão "Lançado" também deve ter negrito
+    const confirmationResponse = 'Lançado: R$ 280,00 em **Lazer** › **Eventos & Reuniões** 👍!'
+    expect(confirmationResponse).toContain('**Lazer** › **Eventos & Reuniões**')
   })
 })

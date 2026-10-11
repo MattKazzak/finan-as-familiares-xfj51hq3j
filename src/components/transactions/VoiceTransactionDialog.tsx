@@ -67,6 +67,26 @@ export interface ChatMessage {
   undoAction?: () => void
   editAction?: () => void
 }
+
+/**
+ * Renderizador de markdown para negrito (**texto**) nas mensagens do VoiceTransactionDialog
+ */
+function renderMarkdownText(text: string): React.ReactNode {
+  if (!text) return ''
+  if (!text.includes('**')) return text
+
+  const parts = text.split(/(\*\*[^*]+\*\*)/g)
+  return parts.map((part, idx) => {
+    if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+      return (
+        <strong key={idx} className="font-semibold">
+          {part.slice(2, -2)}
+        </strong>
+      )
+    }
+    return part
+  })
+}
 function getAiConsent(): boolean {
   return getLocalAiConsent()
 }
@@ -2680,7 +2700,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                   }`}
                 >
                   <p className="text-xs sm:text-[13px] leading-relaxed whitespace-pre-wrap">
-                    {msg.text}
+                    {renderMarkdownText(msg.text)}
                   </p>
 
                   {/* Chip de categoria CDS com seletor contextual integrado no balão de sucesso */}

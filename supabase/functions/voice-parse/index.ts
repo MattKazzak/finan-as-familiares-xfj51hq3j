@@ -88,6 +88,25 @@ function normalizeText(text: string): string {
     .trim()
 }
 
+/**
+ * Normalizador pt-BR de números e moedas:
+ * (a) "N,NN" ou "N,N" (vírgula seguida de 1-2 dígitos delimitada) -> decimal pt-BR (ex: "6,75" -> 6.75)
+ * (b) Vírgula seguida de espaço + próxima palavra -> separador de lista (NÃO decimal, preservada intacta)
+ * (c) Ponto como milhar: "1.250" ou "10.000" -> remove o ponto de milhar (1250, 10000)
+ * (d) "reais" / "real" / "reia" / "reias" / "pila" / "pilas" -> reconhecidos como sufixos monetários válidos
+ */
+function normalizeBrazilianCurrencyString(text: string): string {
+  if (!text) return ''
+  let res = text
+  // (c) Ponto como milhar: ex: 1.250 ou 10.000 ou 1.250,50
+  res = res.replace(/(\d+)\.(\d{3})(?=[,\s]|$)/g, '$1$2')
+  // (a) "N,NN" ou "N,N": vírgula seguida de 1-2 dígitos NÃO seguida de outro dígito
+  // e que não seja seguida por espaço e letra (vírgula de lista).
+  // Exemplo: "6,75" -> "6.75", "9,10" -> "9.10". "carne, arroz" permanece com a vírgula intacta.
+  res = res.replace(/(\d+),(\d{1,2})(?!\d)(?!\s+[a-zA-Zá-úÁ-Ú])/g, '$1.$2')
+  return res
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -138,6 +157,9 @@ Deno.serve(async (req) => {
 
     const body = await req.json()
     const { texto, family_id, contexto_anterior, historico_mensagens } = body
+
+    const textoNormalizadoPtBr =
+      typeof texto === 'string' ? normalizeBrazilianCurrencyString(texto) : texto
 
     if (!texto || typeof texto !== 'string' || !texto.trim()) {
       return new Response(
@@ -374,12 +396,12 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
        * Categoria: 'Lazer' › 'Eventos & Reuniões' (ou 'Restaurantes & Bares' se não houver 'Eventos & Reuniões'), Balde: 'Estilo de Vida'.
        * Descrição OBRIGATÓRIA: a lista dos itens preservada com o evento (ex: "${previousContext.descricao || 'Itens'} — churrasco").
        * Valor: preserve o valor total da cesta (${valorStr}).
-       * Mensagem amigável: "Lançado: ${valorStr} em Lazer › Eventos & Reuniões 👍!"
+       * Mensagem amigável: "Lançado: ${valorStr} em **Lazer** › **Eventos & Reuniões** 👍!"
     b) Se o usuário NEGAR o evento ("não, compra de casa", "nada disso, comprei pra deixar aqui em casa", "alimentação", "mercado comum"):
        * Registre a cesta INTEIRA em 'Alimentação' › 'Supermercado & Atacado' (ou 'Alimentação'), Balde: 'Necessidades Essenciais'.
        * Descrição: mantenha os itens da cesta (ex: "${previousContext.descricao || 'Itens'} — casa").
        * Valor: preserve o valor total da cesta (${valorStr}).
-       * Mensagem amigável: "Lançado: ${valorStr} em Alimentação › Supermercado & Atacado 👍!"
+       * Mensagem amigável: "Lançado: ${valorStr} em **Alimentação** › **Supermercado & Atacado** 👍!"
     c) Se a resposta for PARCIAL ou pedir DIVISÃO ("cerveja pro churrasco, resto é da casa", "só a cerveja foi pro churrasco"):
        * Se o usuário não deu os valores exatos de cada parte, responda educadamente com uma proposta de divisão proporcional (ex: ~40% cerveja e 60% casa) pedindo confirmação rápida, NUNCA chute valores em silêncio!
        * Ou se ele informou ("cerveja foi 40, resto casa"), divida e confirme.
@@ -396,15 +418,31 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
     * Escolha a melhor categoria e subcategoria existente da família para esse item (ou use a categoria anterior "${previousContext.categoria || ''}").
     * RETORNE OBRIGATORIAMENTE "status": "sucesso"!
     * Preencha a "transacao" completa com "descricao", "estabelecimento", "valor", "categoria", "subcategoria", "balde" e "tipo".
-    * Em "mensagem_amigavel", siga estritamente o PADRÃO OBRIGATÓRIO DE CONFIRMAÇÃO:
-      "Lançado: R$ [valor formatado com vírgula] em [Nome da Categoria] › [Nome da Subcategoria] [emoji]!"
-      Exemplo: "Lançado: R$ 12,00 em ${previousContext.categoria || 'Restaurantes & Delivery'}${previousContext.subcategoria ? ` › ${previousContext.subcategoria}` : ''} 👍!"
+    * Em "mensagem_amigavel", siga estritamente o PADRÃO OBRIGATÓRIO DE CONFIRMAÇÃO EM NEGRITO:
+      "Lançado: R$ [valor formatado com vírgula] em **[Nome da Categoria]** › **[Nome da Subcategoria]** [emoji]!"
+      Exemplo: "Lançado: R$ 12,00 em **${previousContext.categoria || 'Restaurantes & Delivery'}**${previousContext.subcategoria ? ` › **${previousContext.subcategoria}**` : ''} 👍!"
 
 2. SE O STATUS ANTERIOR FOR 'clarificacao_categoria' OU 'clarificacao' COM ITENS DE CLASSE 5 PROPOSTOS:
   - Se a mensagem atual for confirmação ("Sim", "está certo", "isso", "pode ser", "confirmo") de uma proposta multi-item (Classe 5):
     * REGRA CRÍTICA R43: NUNCA retorne "sucesso" nem use valores ou totais de mensagens antigas do histórico (ex: 146, 27, 19, etc.) sem que o usuário os tenha digitado neste turno!
-    * Retorne OBRIGATORIAMENTE status "falta_valor" com a pergunta: "Agora os valores: quanto foi cada item?"
+    * Se a mensagem de proposta original já possuía um valor total consolidado único informado (ex: "Tudo ficou R$ 280", "tudo 280", "total 280"):
+      - Se todos os itens estão na mesma categoria ou occasion, mantenha a ocasião.
+      - Se os itens pertencem a categorias/ocasiões DIFERENTES (ex: churrasco + casa/filho/pet), a IA NUNCA grava tudo num par único em silêncio!
+      - status: "falta_valor" (ou "clarificacao")
+      - lacunas: ["divisao_valores"]
+      - PERGUNTE COMO DIVIDIR: "Entendi! Como dividimos os R$ [total]? Aproximadamente quanto foi da parte de cada um?" (ou "Como dividimos os R$ 280? Quanto foi da carne e carvão e quanto do restante?").
+    * Se não havia valor total prévio:
+      - Retorne OBRIGATORIAMENTE status "falta_valor" com a pergunta: "Agora os valores: quanto foi cada item?"
     * Mantenha os itens propostos com valor: null.
+  - Se a mensagem atual for CORREÇÃO PARCIAL ("Não, a carne e o carvão é para um churrasco", "carne e carvão pro churrasco", "o carvão é pro churrasco"):
+    * A correção vale EXCLUSIVAMENTE para os itens expressamente nomeados na mensagem (ex: carne e carvão -> **Lazer** › **Eventos & Reuniões**)!
+    * Os itens NÃO mencionados MANTÊM as gavetas e categorias propostas anteriormente (ex: rodas -> Compras › Bebês & Crianças, long neck -> Alimentação › Bebidas, sachês -> Pets › Alimentação Pet).
+    * Se após a correção os itens ficarem em pares/destinações diferentes e o total for consolidado/único (ex: R$ 280):
+      - NUNCA lance o valor total de R$ 280 em um único par em silêncio!
+      - status: "falta_valor" (ou "clarificacao")
+      - Proponha a divisão e PERGUNTE como dividir:
+        "Entendi — carne e carvão são do churrasco e o resto é da casa. Como dividimos os R$ 280? Aproximadamente quanto foi da parte do churrasco?"
+      - Gravação SÓ após a divisão confirmada pelo usuário!
   - Se o status anterior for apenas de escolha de categoria única de um gasto que JÁ TINHA valor confirmado: selecione a categoria/subcategoria da família e retorne "status": "sucesso".
 
 3. ISOLAMENTO DE HISTÓRICO E FIM DO VAZAMENTO DE VALORES ANTIGOS:
@@ -424,7 +462,7 @@ Toda mensagem do usuário DEVE ser classificada PRIMEIRO em UMA das 9 classes a 
 CLASSE 1: LANÇAMENTO COMPLETO (Item/local específico + valor monetário)
   Exemplos: "gastei 80 no mercado", "almoço 45 reais no débito", "salário de 5000 caiu", "50 reais de gasolina no posto Shell".
   Ação: Lançar IMEDIATAMENTE (status: "sucesso"). Inferir categoria e subcategoria do catálogo da família.
-  Mensagem amigável: padrão "Lançado: R$ [valor] em [Categoria] › [Subcategoria] 👍!" (ou "Lançado: R$ [valor] em [Categoria] 👍!").
+  Mensagem amigável: padrão "Lançado: R$ [valor] em **[Categoria]** › **[Subcategoria]** 👍!" (ou "Lançado: R$ [valor] em **[Categoria]** 👍!").
 
 CLASSE 2: LANÇAMENTO VAGO / INCOMPLETO & ORDEM DE SLOT-FILLING
   ORDEM CANÔNICA DE IMPORTÂNCIA DO CONTRATO v1.0:
@@ -461,7 +499,7 @@ CLASSE 3: CESTA COM OCASIÃO (Conjunto coerente que sugere evento ou encontro)
   Ação: NÃO grave ocasião em silêncio! Faça UMA pergunta natural conversacional:
   status: "clarificacao"
   pergunta_clarificacao: "Percebi carne, carvão e cerveja — parece um churrasco ou encontro com os amigos?"
-  mensagem_amigavel: "Percebi carne, carvão e cerveja — parece um churrasco ou encontro com os amigos? Se for, já coloco em Lazer › Eventos & Reuniões!"
+  mensagem_amigavel: "Percebi carne, carvão e cerveja — parece um churrasco ou encontro com os amigos? Se for, já coloco em **Lazer** › **Eventos & Reuniões**!"
   transacao pendente com valor total e lista de itens em descricao.
 
 CLASSE 4: LISTA MISTA DE MERCADO (FORMAL — FIM DO FALSO CHURRASCO)
@@ -474,7 +512,7 @@ CLASSE 4: LISTA MISTA DE MERCADO (FORMAL — FIM DO FALSO CHURRASCO)
   - Se houver estabelecimento nomeado (ex: "na mercearia Parada Certa", "no Carrefour"), preserve rigorosamente no campo 'estabelecimento' (ex: "Mercearia Parada Certa").
   - status: "sucesso"
   - transacao: { descricao: "cerveja, sabão em pó, salame, miojo — mercado", estabelecimento: "Mercearia Parada Certa", valor: 118, categoria: "Alimentação", subcategoria: "Supermercado & Atacado", balde: "Necessidades Essenciais" }
-  - mensagem_amigavel: "Lançado: R$ 118,00 em Alimentação › Supermercado & Atacado 👍!"
+  - mensagem_amigavel: "Lançado: R$ 118,00 em **Alimentação** › **Supermercado & Atacado** 👍!"
 
 CLASSE 5: ITENS HETEROGÊNEOS (O CASO DA CHUPETA / CESTA MULTI-CATEGORIA)
   Definição: Mensagem com múltiplos itens pertencentes a categorias claramente DIFERENTES e sem coerência de ocasião única (ex: compras para filho + pet + casa/cozinha + doação/social).
@@ -483,19 +521,26 @@ CLASSE 5: ITENS HETEROGÊNEOS (O CASO DA CHUPETA / CESTA MULTI-CATEGORIA)
   1. NUNCA despejar tudo numa única categoria em silêncio!
   2. NUNCA FAZER DUAS PERGUNTAS NA MESMA MENSAGEM (proibido perguntar categoria E valores juntos)!
   3. REGRA ESTRITA DE 1 PERGUNTA POR VEZ NA ORDEM CONVERSACIONAL:
-     - 1º TURNO: Propor os pares categoria › subcategoria por item contra o catálogo real da família (se faltar gaveta para doação, sugerir criar 'Doações' em nível de família ou o par mais próximo) E encerrar perguntando APENAS: "Está certo assim?" (NUNCA pergunte os valores aqui!).
-     - 2º TURNO (CONFIRMAÇÃO DOS PARES — ex: "Sim", "está certo", "isso"):
-       * REGRA CRÍTICA DE R43 (FIM DO VAZAMENTO DE VALORES ANTIGOS): A confirmação "Sim" de proposta de Classe 5 NUNCA pode retornar status "sucesso" resgatando números/valores de turnos ou transações passadas do histórico!
-       * Deve OBRIGATORIAMENTE retornar "status": "falta_valor" com a pergunta: "Agora os valores: quanto foi cada item?" (ou "Perfeito! Quais foram os valores de cada um?").
-       * Preserve a lista de itens propostos em "itens" com valor: null.
-       * Valores de turnos passados jamais preenchem lacunas sem confirmação explícita do usuário ("os valores são os mesmos de antes?").
+     - 1º TURNO: Propor os pares categoria › subcategoria por item contra o catálogo real da família (se faltar gaveta para doação, sugerir criar 'Doações' em nível de família ou o par mais próximo) E encerrar perguntando APENAS: "Está certo assim?" (NUNCA pergunte os valores aqui!). DESTAQUE categoria e subcategoria em NEGRITO markdown (**Categoria** › **Subcategoria**).
+     - 2º TURNO (CONFIRMAÇÃO OU CORREÇÃO PARCIAL):
+       * SE FOR CONFIRMAÇÃO ("Sim", "está certo", "isso"):
+         - REGRA CRÍTICA DE R43 (FIM DO VAZAMENTO DE VALORES ANTIGOS): A confirmação "Sim" de proposta de Classe 5 NUNCA pode retornar status "sucesso" resgatando números/valores de turnos passados!
+         - Se houver total único consolidado (ex: "tudo 280"): pergunte como dividir ("Como dividimos os R$ 280?").
+         - Se não houver valor: retorne status "falta_valor" perguntando: "Agora os valores: quanto foi cada item?".
+       * SE FOR CORREÇÃO PARCIAL ("Não, a carne e o carvão é para um churrasco"):
+         - DOUTRINA R28 DE CORREÇÃO PARCIAL: A correção aplica-se EXCLUSIVAMENTE aos itens citados na mensagem de correção; todos os itens NÃO citados MANTÊM suas categorias e subcategorias propostas no 1º turno!
+         - NUNCA despejar o total consolidado em um único par após correção parcial!
+         - Se o valor for total consolidado (ex: R$ 280), proponha a divisão e pergunte:
+           "Entendi — carne e carvão são do churrasco e o resto é da casa. Como dividimos os R$ 280? Aproximadamente quanto foi da parte do churrasco?"
+         - Preserve os itens com as categorias atualizadas (carne e carvão em **Lazer** › **Eventos & Reuniões**, os demais com as propostas anteriores intactas).
+       * Preserve a lista de itens propostos em "itens".
      - 3º TURNO (INFORMAÇÃO PARCIAL DE VALORES — ex: 3 valores para 4 itens):
        * NUNCA SOMAR os valores recebidos (ex.: jamais somar 27+19+100=146 em uma transação única)!
        * Perguntar especificamente QUAL item faltou ("Faltou o valor da doação — quanto foi?").
        * status: "falta_valor", mantendo os itens já precificados e o faltante com valor null.
      - 4º TURNO (TODOS OS VALORES INFORMADOS):
        * Gravação de UMA TRANSAÇÃO POR ITEM (cada um com seu par categoria/subcategoria específico no catálogo real).
-       * Resumo item por item com par e valor ("Lançamentos realizados com sucesso: • R$ 27,00 em Compras › Bebês & Crianças • R$ 19,00 em Pets › Alimentação Pet...").
+       * Resumo item por item com par e valor ("Lançamentos realizados com sucesso: • R$ 27,00 em **Compras** › **Bebês & Crianças** • R$ 19,00 em **Pets** › **Alimentação Pet**...").
   - Exemplo de retorno no 1º turno:
   - status: "clarificacao"
   - itens: [
@@ -504,8 +549,8 @@ CLASSE 5: ITENS HETEROGÊNEOS (O CASO DA CHUPETA / CESTA MULTI-CATEGORIA)
       { "descricao": "Jogo de copo", "categoria_proposta": "Casa & Conforto", "subcategoria_proposta": "Utensílios & Cozinha", "confianca": 0.85, "requer_confirmacao": true },
       { "descricao": "Doação para o catador", "categoria_proposta": "Outros", "subcategoria_proposta": "Doações", "confianca": 0.7, "requer_confirmacao": true, "duvida_categoria": true }
     ]
-  - pergunta_clarificacao: "Separei assim: chupeta em Bebês & Crianças, sachês em Pets, jogo de copo em Casa & Conforto e a doação em Doações. Está certo assim?"
-  - mensagem_amigavel: "Separei assim: chupeta em Bebês & Crianças, sachês em Pets, jogo de copo em Casa & Conforto e a doação em Doações. Está certo assim?"
+  - pergunta_clarificacao: "Separei assim: chupeta em **Compras** › **Bebês & Crianças**, sachês em **Pets** › **Alimentação Pet**, jogo de copo em **Casa & Conforto** › **Utensílios & Cozinha** e a doação em **Outros** › **Doações**. Está certo assim?"
+  - mensagem_amigavel: "Separei assim: chupeta em **Compras** › **Bebês & Crianças**, sachês em **Pets** › **Alimentação Pet**, jogo de copo em **Casa & Conforto** › **Utensílios & Cozinha** e a doação em **Outros** › **Doações**. Está certo assim?"
 
 CLASSE 6: PERGUNTA SOBRE FINANÇAS (CONSULTA FINANCEIRA)
   Exemplos: "quanto gastei este mês?", "quanto sobrou?", "quanto posso gastar?", "qual meu saldo?", "como estão meus gastos?", "quanto gastei em restaurantes?".
@@ -553,6 +598,7 @@ ${membersContext || 'Membro padrão'}
 =======================================================
 REGRAS OBRIGATÓRIAS DE CONFIRMAÇÃO E SEMÂNTICA
 =======================================================
+- FORMATO EM NEGRITO (Decisão de Produto do Usuário): Em TODAS as respostas estruturadas da IA (propostas por item, confirmações "Lançado", resumos finais), DESTAQUE categoria e subcategoria em NEGRITO com markdown: **Categoria** › **Subcategoria** (ou **Categoria** quando não houver sub). Exemplo: "Separei assim: carne em **Açougue & Peixaria**, carvão em **Eventos & Reuniões**..." e "Lançado: R$ 280,00 em **Lazer › Eventos & Reuniões** 👍!".
 - Eventos sociais, resenha e churrasco -> 'Lazer › Eventos & Reuniões' (Estilo de Vida).
 - Cigarro / tabaco / fumo / vape -> 'Compras › Tabaco & Cigarros' se existir (nunca Alimentação ou Farmácia).
 - Comida de rua / lanches / pastel consumido no local -> 'Restaurantes & Delivery › Fast Food & Lanches' ou 'Restaurantes & Bares' (nunca 'Delivery' a menos que seja entrega em domicílio/app).
@@ -565,10 +611,10 @@ Aplicável a TODAS as classes de lançamento (1, 2, 3, 4, 5).
 Decisão de Produto (ADITAMENTO v1.1 do Contrato de Comportamento):
 O usuário NÃO deve precisar conhecer o catálogo — a IA é a especialista em ONDE encaixa; o usuário é a autoridade sobre O QUE comprou.
 (a) PERGUNTA ABERTA DE CATEGORIA É TERMINANTEMENTE PROIBIDA em qualquer classe de lançamento ("em qual categoria?", "qual é a categoria?", "onde quer organizar?"). A IA SEMPRE PROPÕE o par mais provável e confirma;
-(b) A IA propõe o par (categoria › subcategoria) mais provável para cada item, NOMEANDO o par completo ("Separei liquidificador em Casa & Conforto › Utensílios & Cozinha. Está certo assim?" ou "chupeta → Bebês & Crianças › Fraldas & Higiene"), usando: catálogo real da família + contexto da mensagem + regras de aprendizado existentes;
+(b) A IA propõe o par (categoria › subcategoria) mais provável para cada item, NOMEANDO o par completo ("Separei liquidificador em **Casa & Conforto** › **Utensílios & Cozinha**. Está certo assim?" ou "chupeta → **Bebês & Crianças** › **Fraldas & Higiene**"), usando: catálogo real da família + contexto da mensagem + regras de aprendizado existentes;
 (c) Se o usuário confirma ("sim", "isso", "pode", "está certo", "pode ser"): o fluxo segue imediatamente para conclusão;
-(d) Se o usuário discorda ("não", "não é isso", "errado"): a IA propõe a PRÓXIMA MELHOR opção (ex.: "Que tal Compras › Eletrônicos & Tecnologia? Fica melhor assim?") — NUNCA volta à pergunta aberta;
-(e) Se nada encaixa ou o usuário discordar novamente: a IA propõe CRIAR subcategoria nova ("Nenhuma gaveta encaixa bem — sugiro criar Eletroportáteis em Compras. Posso criar?"). Com a confirmação do usuário, a subcategoria é criada no nível da FAMÍLIA (nunca no catálogo canônico global — regra R29);
+(d) Se o usuário discorda ("não", "não é isso", "errado"): a IA propõe a PRÓXIMA MELHOR opção (ex.: "Que tal **Compras** › **Eletrônicos & Tecnologia**? Fica melhor assim?") — NUNCA volta à pergunta aberta;
+(e) Se nada encaixa ou o usuário discordar novamente: a IA propõe CRIAR subcategoria nova ("Nenhuma gaveta encaixa bem — sugiro criar Eletroportáteis em **Compras**. Posso criar?"). Com a confirmação do usuário, a subcategoria é criada no nível da FAMÍLIA (nunca no catálogo canônico global — regra R29);
 (f) O esforço do usuário é SEMPRE binário ("sim" ou "não") — nunca navegar catálogo nem adivinhar nomes de gavetas.
 
 =======================================================
@@ -671,7 +717,7 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido no formato:
     const openAiMessages = [
       { role: 'system', content: systemPrompt },
       ...sanitizedHistory,
-      { role: 'user', content: texto },
+      { role: 'user', content: textoNormalizadoPtBr || texto },
     ]
 
     const maxTokens = 1000
@@ -851,7 +897,7 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido no formato:
           finalMensagemAmigavel.toLowerCase().includes(sub.toLowerCase())
 
         if (!hasSubInMessage) {
-          finalMensagemAmigavel = `Lançado: ${valorFormatado} em ${cat} › ${sub} 👍!`
+          finalMensagemAmigavel = `Lançado: ${valorFormatado} em **${cat}** › **${sub}** 👍!`
         }
       } else {
         const hasCatInMessage =
@@ -859,7 +905,7 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido no formato:
           finalMensagemAmigavel.toLowerCase().includes(cat.toLowerCase())
 
         if (!hasCatInMessage || finalMensagemAmigavel.includes(' › ')) {
-          finalMensagemAmigavel = `Lançado: ${valorFormatado} em ${cat} 👍!`
+          finalMensagemAmigavel = `Lançado: ${valorFormatado} em **${cat}** 👍!`
         }
       }
     }
