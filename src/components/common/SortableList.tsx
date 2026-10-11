@@ -49,6 +49,10 @@ interface ScrollLockState {
 let scrollLockState: ScrollLockState | null = null
 let lockCount = 0
 
+// Lock global singleton para impedir que duas instâncias SortableList arrastem simultaneamente
+let activeGlobalSortableId: string | null = null
+let instanceCounter = 0
+
 function acquireBodyScrollLock(): void {
   if (typeof document === 'undefined') return
   lockCount++
@@ -128,6 +132,7 @@ export function SortableList<T>({
   dragHandleOnly = false,
   longPressDelay = 320,
 }: SortableListProps<T>) {
+  const instanceIdRef = useRef<string>(`sortable-${++instanceCounter}`)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
@@ -206,6 +211,10 @@ export function SortableList<T>({
       } catch {
         // Ignora
       }
+    }
+
+    if (activeGlobalSortableId === instanceIdRef.current) {
+      activeGlobalSortableId = null
     }
 
     isDraggingRef.current = false
@@ -288,6 +297,12 @@ export function SortableList<T>({
   // Disparar início do arrasto
   const startDrag = useCallback(
     (index: number) => {
+      // Se outra instância de SortableList já estiver arrastando, não inicia nesta
+      if (activeGlobalSortableId !== null && activeGlobalSortableId !== instanceIdRef.current) {
+        cleanupDrag()
+        return
+      }
+
       // 1. Limpa qualquer seleção de texto nativa que possa ter iniciado
       clearWindowSelection()
 
@@ -303,6 +318,7 @@ export function SortableList<T>({
       }
 
       // 4. Atualiza estado para arrastando
+      activeGlobalSortableId = instanceIdRef.current
       isDraggingRef.current = true
       draggedIndexRef.current = index
       overIndexRef.current = index
@@ -560,7 +576,8 @@ export function SortableList<T>({
       target.closest('a') ||
       target.closest('[role="menuitem"]') ||
       target.closest('[role="dialog"]') ||
-      target.closest('[data-drag-handle]'),
+      target.closest('[data-drag-handle]') ||
+      target.closest('[data-sortable-container]'),
     )
   }
 
@@ -574,9 +591,7 @@ export function SortableList<T>({
     }
 
     const touch = e.touches[0]
-    const cardEl =
-      (e.currentTarget.closest('[data-sortable-index]') as HTMLElement) ||
-      (e.currentTarget as HTMLElement)
+    const cardEl = e.currentTarget as HTMLElement
 
     isTouchModeRef.current = true
     activeTouchIdRef.current = touch.identifier
@@ -603,9 +618,7 @@ export function SortableList<T>({
     if (e.button !== 0) return
     if (isInteractiveTarget(e.target as HTMLElement | null)) return
 
-    const cardEl =
-      (e.currentTarget.closest('[data-sortable-index]') as HTMLElement) ||
-      (e.currentTarget as HTMLElement)
+    const cardEl = e.currentTarget as HTMLElement
 
     isTouchModeRef.current = false
     activePointerIdRef.current = e.pointerId
@@ -626,27 +639,53 @@ export function SortableList<T>({
     )
   }
 
-  // Grip handle dedicado (ícone de arrasto explícito)
+  // Grip handle dedicado (ícone de arrasto explícito ou área definida para arrasto)
   const createDragHandleProps = (index: number): DragHandleProps => ({
     onPointerDown: (e: React.PointerEvent) => {
+      const target = e.target as HTMLElement | null
+      const isExplicitGrip = Boolean(
+        e.currentTarget.getAttribute('data-drag-handle') === 'true' &&
+        e.currentTarget.tagName.toLowerCase() === 'button',
+      )
+      if (!isExplicitGrip && isInteractiveTarget(target)) return
       if (e.pointerType === 'touch') return
       if (e.button !== 0) return
       e.stopPropagation()
 
       isTouchModeRef.current = false
       activePointerIdRef.current = e.pointerId
-      activeTargetElRef.current =
-        (e.currentTarget.closest('[data-sortable-index]') as HTMLElement) ||
+      const targetCard =
+        (e.currentTarget.closest('[data-sortable-item]') as HTMLElement) ||
         (e.currentTarget as HTMLElement)
+      activeTargetElRef.current = targetCard
       startPos.current = { x: e.clientX, y: e.clientY }
 
-      // No desktop com mouse, arrasto imediato pelo handle
-      measureItems(index)
-      startDrag(index)
+      if (isExplicitGrip) {
+        // Se for o botão de alça (grip handle), arrasto imediato no desktop com mouse
+        measureItems(index)
+        startDrag(index)
+      } else {
+        // Se for a linha inteira da categoria no desktop, pequena segurada para não colidir com o clique normal
+        clearHoldTimer()
+        setIsPressing(index)
+        measureItems(index)
+        longPressTimer.current = setTimeout(
+          () => {
+            startDrag(index)
+          },
+          Math.min(220, longPressDelay),
+        )
+      }
     },
     onTouchStart: (e: React.TouchEvent) => {
-      // NÃO chamamos stopPropagation() aqui para que os listeners nativos de window (touchmove/touchend)
-      // e eventuais eventos pais possam coordenar scroll sem quebrar.
+      const target = e.target as HTMLElement | null
+      const isExplicitGrip = Boolean(
+        e.currentTarget.getAttribute('data-drag-handle') === 'true' &&
+        e.currentTarget.tagName.toLowerCase() === 'button',
+      )
+      if (!isExplicitGrip && isInteractiveTarget(target)) return
+      // Impede propagação do evento de toque para listas/elementos ancestrais
+      e.stopPropagation()
       if (e.touches.length !== 1) {
         clearHoldTimer()
         return
@@ -656,9 +695,10 @@ export function SortableList<T>({
       isTouchModeRef.current = true
       activeTouchIdRef.current = touch.identifier
       activePointerIdRef.current = null
-      activeTargetElRef.current =
-        (e.currentTarget.closest('[data-sortable-index]') as HTMLElement) ||
+      const targetCard =
+        (e.currentTarget.closest('[data-sortable-item]') as HTMLElement) ||
         (e.currentTarget as HTMLElement)
+      activeTargetElRef.current = targetCard
       startPos.current = { x: touch.clientX, y: touch.clientY }
       initialScrollYRef.current = window.scrollY || window.pageYOffset || 0
 
@@ -672,10 +712,12 @@ export function SortableList<T>({
         startDrag(index)
       }, longPressDelay)
     },
-    onTouchEnd: () => {
+    onTouchEnd: (e: React.TouchEvent) => {
+      e.stopPropagation()
       if (!isDraggingRef.current) clearHoldTimer()
     },
-    onTouchCancel: () => {
+    onTouchCancel: (e: React.TouchEvent) => {
+      e.stopPropagation()
       if (!isDraggingRef.current) clearHoldTimer()
     },
     onContextMenu: (e: React.MouseEvent) => {
@@ -701,6 +743,7 @@ export function SortableList<T>({
   return (
     <div
       ref={containerRef}
+      data-sortable-container="true"
       className={`space-y-3 relative ${draggedIndex !== null ? 'select-none' : ''} ${className}`}
       onClickCapture={handleCaptureClick}
     >
@@ -744,18 +787,38 @@ export function SortableList<T>({
           <div
             key={id}
             data-sortable-index={index}
+            data-sortable-item="true"
             ref={(el) => {
               if (el) itemRefs.current.set(id, el)
               else itemRefs.current.delete(id)
             }}
-            onTouchStart={(e) => handleCardTouchStart(e, index)}
+            onTouchStart={(e) => {
+              // Se o toque veio de dentro de uma sublista ou elemento descendente que pertença a outro SortableList, ignora no pai
+              const target = e.target as HTMLElement | null
+              if (target) {
+                const innerContainer = target.closest('[data-sortable-container]')
+                if (innerContainer && innerContainer !== containerRef.current) {
+                  return
+                }
+              }
+              handleCardTouchStart(e, index)
+            }}
             onTouchEnd={() => {
               if (!isDraggingRef.current) clearHoldTimer()
             }}
             onTouchCancel={() => {
               if (!isDraggingRef.current) clearHoldTimer()
             }}
-            onPointerDown={(e) => handleCardPointerDown(e, index)}
+            onPointerDown={(e) => {
+              const target = e.target as HTMLElement | null
+              if (target) {
+                const innerContainer = target.closest('[data-sortable-container]')
+                if (innerContainer && innerContainer !== containerRef.current) {
+                  return
+                }
+              }
+              handleCardPointerDown(e, index)
+            }}
             onPointerUp={() => {
               if (!isDraggingRef.current) clearHoldTimer()
             }}

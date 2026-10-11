@@ -422,11 +422,12 @@ export function WalletBudgetsTab() {
           <SortableList
             items={categoryBudgetData.list}
             keyExtractor={(item) => item.category.id}
+            dragHandleOnly={true}
             onReorder={async (newOrder) => {
               const orderedIds = newOrder.map((it) => it.category.id)
               await reorderCategoriesList(orderedIds)
             }}
-            renderItem={(item, _idx, _dragHandleProps, isDragging) => {
+            renderItem={(item, _idx, catDragHandleProps, isDragging) => {
               const isExpanded = Boolean(expandedBudgetCategories[item.category.id])
               const hasSubcats = item.subcategories.length > 0
 
@@ -445,6 +446,7 @@ export function WalletBudgetsTab() {
                 >
                   {/* Bloco da Categoria Pai */}
                   <div
+                    {...catDragHandleProps}
                     onClick={() => openCategoryTransactionsDrawer(item.category, null, 'category')}
                     className="p-3 sm:p-3.5 hover:bg-slate-50/80 cursor-pointer transition-colors group select-none touch-manipulation"
                   >
@@ -841,6 +843,10 @@ export function WalletBudgetsTab() {
                   {isExpanded ? (
                     <div
                       key={`budget-subcats-${item.category.id}`}
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onTouchMove={(e) => e.stopPropagation()}
+                      onTouchEnd={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
                       className="bg-slate-50/70 border-t border-slate-100 divide-y divide-slate-100/80 pl-2.5 sm:pl-6 pr-2.5 sm:pr-4 py-1.5"
                     >
                       {hasSubcats ? (
@@ -855,13 +861,14 @@ export function WalletBudgetsTab() {
                           renderItem={(subItem, _sIdx, subDragHandleProps, isSubDragging) => (
                             <div
                               key={`budget-sub-${subItem.subcategory.id}`}
-                              onClick={() =>
+                              onClick={(e) => {
+                                e.stopPropagation()
                                 openCategoryTransactionsDrawer(
                                   item.category,
                                   subItem.subcategory,
                                   'subcategory',
                                 )
-                              }
+                              }}
                               style={{
                                 WebkitTouchCallout: 'none',
                                 WebkitUserSelect: 'none',

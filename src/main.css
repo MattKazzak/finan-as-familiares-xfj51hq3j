@@ -191,6 +191,11 @@
     -webkit-touch-callout: none !important;
   }
 
+  /* Quando uma subcategoria está sendo pressionada, garante que não propague destaque ao pai */
+  [data-sortable-container] [data-sortable-container] .sortable-card-pressing {
+    isolation: isolate;
+  }
+
   /* Cards e itens arrastáveis de listas reordenáveis nunca disparam seleção acidental de texto */
   [data-sortable-index] {
     -webkit-touch-callout: none;
