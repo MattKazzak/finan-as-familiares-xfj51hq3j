@@ -639,6 +639,12 @@ REGRAS OBRIGATÓRIAS DE CONFIRMAÇÃO E SEMÂNTICA
 - FORMATO EM NEGRITO (Decisão de Produto do Usuário): Em TODAS as respostas estruturadas da IA (propostas por item, confirmações "Lançado", resumos finais), DESTAQUE categoria e subcategoria em NEGRITO com markdown: **Categoria** › **Subcategoria** (ou **Categoria** quando não houver sub). Exemplo: "Lançado: R$ 280,00 em **Lazer** › **Eventos & Reuniões** 👍!".
 - Eventos sociais, resenha e churrasco -> 'Lazer › Eventos & Reuniões' (Estilo de Vida).
 - Cigarro / tabaco / fumo / vape -> 'Compras › Tabaco & Cigarros' se existir (nunca Alimentação ou Farmácia).
+- Doação / doar / caridade / doação para o catador -> 'Compras › Doações & Caridade' (despesa).
+- Limpeza da casa / detergente / desinfetante / amaciante / esponja / sabão em pó -> 'Moradia › Limpeza & Higiene da Casa' (NUNCA Alimentação).
+- Cerveja / long neck / refrigerante / água / bebidas compradas para casa -> 'Alimentação › Água & Bebidas para Casa' (NUNCA Tabaco & Cigarros).
+- Ração / sachê / sachês de pet / petiscos de cachorro ou gato -> 'Pets › Ração & Petiscos' (NUNCA Alimentação Pet ou Compras).
+- Fralda / fraldas / lenço umedecido de bebê -> 'Compras › Bebês & Crianças' (NUNCA balde genérico).
+- Remédio / medicamento / farmácia -> 'Saúde › Farmácia & Medicamentos' (NUNCA balde genérico).
 - Comida de rua / lanches / pastel consumido no local -> 'Restaurantes & Delivery › Fast Food & Lanches' ou 'Restaurantes & Bares' (nunca 'Delivery' a menos que seja entrega em domicílio/app).
 - Hortifruti e compras de abastecimento -> 'Alimentação › Hortifruti & Feira'.
 
@@ -904,7 +910,9 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido no formato:
           if (tipo === 'existente') {
             rotulo = `📁 Usar existente: ${opt.categoria || 'Geral'}${opt.subcategoria ? ` › subcategoria ${opt.subcategoria}` : ''}`
           } else {
-            rotulo = `✨ Criar nova: ${opt.categoria || 'Geral'}${opt.balde ? ` (${opt.balde})` : ''}`
+            const cleanCatName =
+              opt.categoria && opt.categoria.toLowerCase() !== 'geral' ? opt.categoria : 'Outros'
+            rotulo = `✨ Criar nova: ${cleanCatName}${opt.balde ? ` (${opt.balde})` : ''}`
           }
         }
         return {
@@ -921,8 +929,12 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido no formato:
     let finalMensagemAmigavel = parsedAiJson?.mensagem_amigavel ?? respostaConsulta ?? null
     if (status === 'sucesso' && parsedAiJson?.transacao) {
       const tx = parsedAiJson.transacao
-      const cat = (tx.categoria || 'Geral').trim()
-      const sub = tx.subcategoria ? tx.subcategoria.trim() : null
+      let rawCat = (tx.categoria || 'Outros').trim()
+      if (rawCat.toLowerCase() === 'geral') rawCat = 'Outros'
+      tx.categoria = rawCat
+
+      let sub = tx.subcategoria ? tx.subcategoria.trim() : null
+      if (sub && sub.toLowerCase() === 'geral') sub = null
       tx.subcategoria = sub || null
 
       const valorNum = tx.valor !== undefined && tx.valor !== null ? Number(tx.valor) : 0
@@ -996,13 +1008,27 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido no formato:
       'alimentacao pet': ['racao & petiscos', 'racao', 'petiscos', 'pet'],
       petiscos: ['racao & petiscos'],
       racao: ['racao & petiscos'],
+      sache: ['racao & petiscos'],
+      saches: ['racao & petiscos'],
+      'sache pet': ['racao & petiscos'],
       bebidas: ['agua & bebidas para casa', 'bebidas para casa'],
       bebida: ['agua & bebidas para casa'],
       'bebidas para casa': ['agua & bebidas para casa'],
+      'long neck': ['agua & bebidas para casa'],
+      cerveja: ['agua & bebidas para casa'],
       criancas: ['bebes & criancas'],
       bebes: ['bebes & criancas'],
       bebe: ['bebes & criancas'],
       filho: ['bebes & criancas'],
+      fralda: ['bebes & criancas'],
+      fraldas: ['bebes & criancas'],
+      cigarro: ['tabaco & cigarros'],
+      cigarros: ['tabaco & cigarros'],
+      tabaco: ['tabaco & cigarros'],
+      remedio: ['farmacia & medicamentos'],
+      remedios: ['farmacia & medicamentos'],
+      medicamento: ['farmacia & medicamentos'],
+      medicamentos: ['farmacia & medicamentos'],
       'utilidades domesticas': ['utilidades & casa', 'casa & conforto'],
       eletronicos: ['eletronicos & tecnologia'],
       jogos: ['jogos & streaming', 'lazer'],
@@ -1010,6 +1036,15 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido no formato:
       churrasco: ['eventos & reunioes'],
       gastronomia: ['restaurantes & delivery'],
       'gastronomia e delivery': ['restaurantes & delivery'],
+      doacao: ['doacoes & caridade'],
+      doacoes: ['doacoes & caridade'],
+      caridade: ['doacoes & caridade'],
+      limpeza: ['limpeza & higiene da casa'],
+      'limpeza da casa': ['limpeza & higiene da casa'],
+      detergente: ['limpeza & higiene da casa'],
+      desinfetante: ['limpeza & higiene da casa'],
+      amaciante: ['limpeza & higiene da casa'],
+      esponja: ['limpeza & higiene da casa'],
     }
 
     // Higienizador do nome do item na sugestão de criação (T2: limpa quantificadores e contexto)

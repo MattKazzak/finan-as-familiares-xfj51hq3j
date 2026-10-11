@@ -626,6 +626,50 @@ export function CopilotPage() {
           text.replace(/[.!?]/g, '').trim(),
         )
 
+      // H2/H3: Caminho 'Posso dizer para cada um?' ou confirmação da proposta -> Pergunta valores
+      const isSplitEachPrompt =
+        /\b(?:posso\s+dizer\s+(?:o\s+valor\s+)?para\s+cada\s+um|posso\s+dizer\s+cada\s+um|vou\s+dizer\s+cada\s+um|dizer\s+separado)\b/i.test(
+          text.replace(/[.!?]/g, '').trim(),
+        )
+
+      if (
+        isClass5ProposalPending &&
+        effectivePendingTx &&
+        (isAffirmativeConfirmation || isSplitEachPrompt)
+      ) {
+        const askValuesMsg = 'Pode dizer! Quanto foi cada item?'
+        const updatedPending: ParsedVoiceTransaction = {
+          ...effectivePendingTx,
+          aiStatus: 'falta_valor',
+          clarificationQuestion: askValuesMsg,
+          friendlyMessage: askValuesMsg,
+        }
+        setPendingTx(updatedPending)
+
+        if (family?.id) {
+          saveCopilotMessage({
+            familyId: family.id,
+            role: 'assistant',
+            content: askValuesMsg,
+            cardType: 'falta_valor',
+          }).catch(() => {})
+        }
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `asst-${Date.now()}`,
+            sender: 'assistant',
+            text: askValuesMsg,
+            timestamp: new Date(),
+            cardType: 'falta_valor',
+            cardData: updatedPending,
+          },
+        ])
+        setIsProcessing(false)
+        return
+      }
+
       if (isClass5ProposalPending && effectivePendingTx && isAffirmativeConfirmation) {
         const askValuesMsg = 'Agora os valores: quanto foi cada item?'
         const updatedPending: ParsedVoiceTransaction = {
@@ -689,8 +733,10 @@ export function CopilotPage() {
             const resultsSummary: string[] = []
             for (const item of pendingItems) {
               const itemAmountCents = Math.round((item.valor || 0) * 100)
-              const itemCat = item.categoria_proposta || 'Outros'
-              const itemSub = item.subcategoria_proposta || 'Outros'
+              let itemCat = item.categoria_proposta || 'Outros'
+              let itemSub = item.subcategoria_proposta || 'Outros'
+              if (itemCat.toLowerCase() === 'geral') itemCat = 'Outros'
+              if (itemSub.toLowerCase() === 'geral') itemSub = 'Outros'
               const itemFormatted = formatBRL(itemAmountCents)
 
               await executeAutonomousSave({
@@ -784,14 +830,64 @@ export function CopilotPage() {
           return
         }
 
-        // Caso C: Todos os valores informados de uma vez (foundAmounts.length >= pendingItems.length)
+        // H8: Verificação de divergência — se houver total declarado no contexto da pendência
+        // e a soma dos itens informados for diferente do total declarado, CONFERIR E PERGUNTAR antes de lançar!
         if (foundAmounts.length >= pendingItems.length) {
+          const declaredTotalCents = effectivePendingTx.amountCents || 0
+          const itemsSumCents = foundAmounts
+            .slice(0, pendingItems.length)
+            .reduce((acc, curr) => acc + curr.amountCents, 0)
+
+          if (declaredTotalCents > 0 && itemsSumCents !== declaredTotalCents) {
+            const declaredFormatted = formatBRL(declaredTotalCents)
+            const sumFormatted = formatBRL(itemsSumCents)
+            const divergenceMsg = `A soma dos itens deu ${sumFormatted}, mas o total informado foi ${declaredFormatted}. Gostaria de conferir os valores antes de lançar?`
+
+            const updatedPendingWithDivergence: ParsedVoiceTransaction = {
+              ...effectivePendingTx,
+              clarificationQuestion: divergenceMsg,
+              friendlyMessage: divergenceMsg,
+              aiStatus: 'clarificacao',
+            }
+
+            setPendingTx(updatedPendingWithDivergence)
+
+            if (family?.id) {
+              saveCopilotMessage({
+                familyId: family.id,
+                role: 'assistant',
+                content: divergenceMsg,
+                cardType: 'clarificacao',
+              }).catch(() => {})
+            }
+
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `asst-${Date.now()}`,
+                sender: 'assistant',
+                text: divergenceMsg,
+                timestamp: new Date(),
+                cardData: updatedPendingWithDivergence,
+                cardType: 'clarificacao',
+              },
+            ])
+            setIsProcessing(false)
+            return
+          }
+
+          // Caso C: Todos os valores informados de uma vez (foundAmounts.length >= pendingItems.length)
           const resultsSummary: string[] = []
           for (let i = 0; i < pendingItems.length; i++) {
             const item = pendingItems[i]
             const itemAmountCents = foundAmounts[i].amountCents
-            const itemCat = item.categoria_proposta || 'Outros'
-            const itemSub = item.subcategoria_proposta || 'Outros'
+            let itemCat = item.categoria_proposta || 'Outros'
+            let itemSub = item.subcategoria_proposta || 'Outros'
+
+            // BLOQUEAR 'Geral' NO CÓDIGO
+            if (itemCat.toLowerCase() === 'geral') itemCat = 'Outros'
+            if (itemSub.toLowerCase() === 'geral') itemSub = 'Outros'
+
             const itemFormatted = formatBRL(itemAmountCents)
 
             await executeAutonomousSave({

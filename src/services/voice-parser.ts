@@ -785,6 +785,8 @@ export function suggestCategoryAndBucket(
       keywords: [
         'fralda',
         'fraldas',
+        'lenço umedecido',
+        'lenco umedecido',
         'enxoval',
         'bebe',
         'bebes',
@@ -806,6 +808,25 @@ export function suggestCategoryAndBucket(
         'tabaco',
         'tabacaria',
         'charuto',
+        'maço de cigarro',
+        'maco de cigarro',
+      ],
+      defaultCategory: 'Compras',
+      bucket: 'lifestyle',
+      candidateExistingCategories: ['Compras'],
+    },
+    // Doações & Caridade (Compras) — rodada 49
+    {
+      keywords: [
+        'doacao',
+        'doação',
+        'doacoes',
+        'doações',
+        'doar',
+        'caridade',
+        'doacao para o catador',
+        'doação para o catador',
+        'catador',
       ],
       defaultCategory: 'Compras',
       bucket: 'lifestyle',
@@ -838,6 +859,12 @@ export function suggestCategoryAndBucket(
         'iptu',
         'moradia',
         'casa',
+        'limpeza da casa',
+        'produtos de limpeza',
+        'detergente',
+        'desinfetante',
+        'amaciante',
+        'esponja',
       ],
       defaultCategory: 'Moradia',
       bucket: 'essentials',
@@ -872,7 +899,6 @@ export function suggestCategoryAndBucket(
         'lanche',
         'pizza',
         'hamburguer',
-        'cerveja',
         'chope',
         'bar',
         'boteco',
@@ -883,6 +909,44 @@ export function suggestCategoryAndBucket(
       ],
       defaultCategory: 'Alimentação / Lazer',
       bucket: 'lifestyle',
+    },
+    // Água & Bebidas para Casa (Alimentação) — H5 / H14
+    {
+      keywords: [
+        'long neck',
+        'longneck',
+        'cerveja',
+        'pack de cerveja',
+        'fardo de cerveja',
+        'cerveja para casa',
+        'refrigerante',
+        'agua mineral',
+        'água mineral',
+        'galao de agua',
+        'galão de água',
+      ],
+      defaultCategory: 'Alimentação',
+      bucket: 'essentials',
+      candidateExistingCategories: ['Alimentação'],
+    },
+    // Pets — Ração & Petiscos — H5 / H14
+    {
+      keywords: [
+        'racao',
+        'ração',
+        'racao de cachorro',
+        'racao de gato',
+        'sache',
+        'sachê',
+        'saches',
+        'sachês',
+        'petisco',
+        'petiscos',
+        'biscoito de cachorro',
+      ],
+      defaultCategory: 'Pets',
+      bucket: 'lifestyle',
+      candidateExistingCategories: ['Pets'],
     },
     {
       keywords: [
@@ -1137,13 +1201,27 @@ const CANONICAL_LOCAL_ALIASES: Record<string, string[]> = {
   'alimentacao pet': ['racao & petiscos', 'racao', 'petiscos', 'pet'],
   petiscos: ['racao & petiscos'],
   racao: ['racao & petiscos'],
+  sache: ['racao & petiscos'],
+  saches: ['racao & petiscos'],
+  'sache pet': ['racao & petiscos'],
   bebidas: ['agua & bebidas para casa', 'bebidas para casa'],
   bebida: ['agua & bebidas para casa'],
   'bebidas para casa': ['agua & bebidas para casa'],
+  'long neck': ['agua & bebidas para casa'],
+  cerveja: ['agua & bebidas para casa'],
   criancas: ['bebes & criancas'],
   bebes: ['bebes & criancas'],
   bebe: ['bebes & criancas'],
   filho: ['bebes & criancas'],
+  fralda: ['bebes & criancas'],
+  fraldas: ['bebes & criancas'],
+  cigarro: ['tabaco & cigarros'],
+  cigarros: ['tabaco & cigarros'],
+  tabaco: ['tabaco & cigarros'],
+  remedio: ['farmacia & medicamentos'],
+  remedios: ['farmacia & medicamentos'],
+  medicamento: ['farmacia & medicamentos'],
+  medicamentos: ['farmacia & medicamentos'],
   'utilidades domesticas': ['utilidades & casa', 'casa & conforto'],
   eletronicos: ['eletronicos & tecnologia'],
   jogos: ['jogos & streaming', 'lazer'],
@@ -1151,6 +1229,15 @@ const CANONICAL_LOCAL_ALIASES: Record<string, string[]> = {
   churrasco: ['eventos & reunioes'],
   gastronomia: ['restaurantes & delivery'],
   'gastronomia e delivery': ['restaurantes & delivery'],
+  doacao: ['doacoes & caridade'],
+  doacoes: ['doacoes & caridade'],
+  caridade: ['doacoes & caridade'],
+  limpeza: ['limpeza & higiene da casa'],
+  'limpeza da casa': ['limpeza & higiene da casa'],
+  detergente: ['limpeza & higiene da casa'],
+  desinfetante: ['limpeza & higiene da casa'],
+  amaciante: ['limpeza & higiene da casa'],
+  esponja: ['limpeza & higiene da casa'],
 }
 /**
  * Higienizador de nome do item para sugestões de criação (T2: limpa quantificadores e contexto)
@@ -2405,13 +2492,14 @@ export function parseVoiceInput(
           duvida_categoria: false,
         }
       }
-      if (/sache|sachê|cachorro|gato|pet|racao|ração/.test(itName)) {
+      // H5: sachês -> Pets › Ração & Petiscos (NUNCA 'Alimentação Pet')
+      if (/sache|sachê|saches|sachês|cachorro|gato|pet|racao|ração/.test(itName)) {
         return {
           descricao: it.name,
           quantidade: it.quantity || 4,
           valor: null,
           categoria_proposta: 'Pets',
-          subcategoria_proposta: 'Alimentação Pet',
+          subcategoria_proposta: 'Ração & Petiscos',
           confianca: 0.9,
           requer_confirmacao: true,
           duvida_categoria: false,
@@ -2429,16 +2517,17 @@ export function parseVoiceInput(
           duvida_categoria: false,
         }
       }
-      if (/doacao|doação|catador|esmola|ajuda/.test(itName)) {
+      // H1 / T2: Doações & Caridade em Compras (despesa)
+      if (/doacao|doação|catador|esmola|ajuda|caridade/.test(itName)) {
         return {
           descricao: it.name,
           quantidade: 1,
           valor: null,
-          categoria_proposta: null,
-          subcategoria_proposta: null,
-          confianca: 0.4,
+          categoria_proposta: 'Compras',
+          subcategoria_proposta: 'Doações & Caridade',
+          confianca: 0.9,
           requer_confirmacao: true,
-          duvida_categoria: true,
+          duvida_categoria: false,
         }
       }
       return {
@@ -2453,11 +2542,13 @@ export function parseVoiceInput(
       }
     })
 
-    const hasDonationItem = proposedItems.some((pi) => pi.duvida_categoria)
+    const hasDonationItem = proposedItems.some((pi) =>
+      /doacao|catador|caridade/i.test(pi.descricao),
+    )
     // D1: Ordem conversacional estrita — 1 pergunta por vez:
     // 1º turno: propor os pares e perguntar "Está certo assim?" (NUNCA perguntar valores junto!)
     const questionText = hasDonationItem
-      ? 'Separei assim: chupeta em Bebês & Crianças, sachês em Pets, jogo de copo em Utilidades & Casa e a doação em Doações. Está certo assim?'
+      ? 'Separei assim: chupeta em Bebês & Crianças, sachês em Pets › Ração & Petiscos, jogo de copo em Utilidades & Casa e a doação em Compras › Doações & Caridade. Está certo assim?'
       : 'Separei os itens por categoria. Está certo assim?'
 
     return {
@@ -2489,10 +2580,79 @@ export function parseVoiceInput(
   }
 
   // 5. Categoria & Balde
-  const { categoryName, bucket, subcategoryName } = suggestCategoryAndBucket(
+  const heuristic = suggestCategoryAndBucket(
     `${description} ${rawText}`,
     categories.filter((c) => c.type === effectiveType),
   )
+
+  // H14 — REGRA DE DESTINO INEQUÍVOCO (Anti-engolimento por balde genérico):
+  // ração/sachê -> Pets › Ração & Petiscos
+  // fralda -> Compras › Bebês & Crianças
+  // cigarro -> Compras › Tabaco & Cigarros
+  // remédio -> Saúde › Farmácia & Medicamentos
+  // long neck / cerveja para casa -> Alimentação › Água & Bebidas para Casa
+  const textToTest = normalizeWord(`${description} ${rawText}`)
+  let specificCat: string | null = null
+  let specificSub: string | null = null
+  let specificBucket: 'essentials' | 'lifestyle' | 'future' = 'lifestyle'
+
+  if (
+    /\b(?:racao|ra[cç][aã]o|sache|sach[eê]|saches|sach[eê]s|petisco|petiscos)\b/i.test(textToTest)
+  ) {
+    specificCat = 'Pets'
+    specificSub = 'Ração & Petiscos'
+    specificBucket = 'lifestyle'
+  } else if (/\b(?:fralda|fraldas|len[cç]o\s+umedecido)\b/i.test(textToTest)) {
+    specificCat = 'Compras'
+    specificSub = 'Bebês & Crianças'
+    specificBucket = 'lifestyle'
+  } else if (
+    /\b(?:cigarro|cigarros|tabaco|vape|charuto|ma[cç]o\s+de\s+cigarro)\b/i.test(textToTest)
+  ) {
+    specificCat = 'Compras'
+    specificSub = 'Tabaco & Cigarros'
+    specificBucket = 'lifestyle'
+  } else if (
+    /\b(?:remedio|rem[eé]dio|remedios|rem[eé]dios|medicamento|medicamentos|farmacia|farm[aá]cia|drogaria)\b/i.test(
+      textToTest,
+    )
+  ) {
+    specificCat = 'Saúde'
+    specificSub = 'Farmácia & Medicamentos'
+    specificBucket = 'essentials'
+  } else if (
+    /\b(?:long\s*neck|longneck|cerveja\s+para\s+casa|pack\s+de\s+cerveja)\b/i.test(textToTest)
+  ) {
+    specificCat = 'Alimentação'
+    specificSub = 'Água & Bebidas para Casa'
+    specificBucket = 'essentials'
+  } else if (
+    /\b(?:doacao|doa[cç][aã]o|doacoes|doa[cç][oõ]es|catador|caridade)\b/i.test(textToTest)
+  ) {
+    specificCat = 'Compras'
+    specificSub = 'Doações & Caridade'
+    specificBucket = 'lifestyle'
+  } else if (
+    /\b(?:detergente|desinfetante|amaciante|esponja|limpeza\s+da\s+casa|produtos\s+de\s+limpeza)\b/i.test(
+      textToTest,
+    )
+  ) {
+    specificCat = 'Moradia'
+    specificSub = 'Limpeza & Higiene da Casa'
+    specificBucket = 'essentials'
+  }
+
+  let categoryName = specificCat || heuristic.categoryName || undefined
+  let subcategoryName = specificSub || heuristic.subcategoryName || undefined
+  let bucket = specificCat ? specificBucket : heuristic.bucket
+
+  // BLOQUEAR 'Geral' NO CÓDIGO — Substituição estrita pela categoria real de destino
+  if (categoryName && categoryName.toLowerCase() === 'geral') {
+    categoryName = 'Outros'
+  }
+  if (subcategoryName && subcategoryName.toLowerCase() === 'geral') {
+    subcategoryName = undefined
+  }
 
   // Determinar status do fallback local:
   let aiStatus: VoiceAiStatus = 'invalido'
@@ -2745,6 +2905,16 @@ export function mapAiResponseToParsedTransaction(
     aiData.tipo_resposta === 'acao' ||
     aiData.acao === 'desfazer'
 
+  // Bloqueio rigoroso de "Geral" no mapeamento da IA
+  let finalCatSuggestion = transacao?.categoria || undefined
+  let finalSubSuggestion = transacao?.subcategoria || undefined
+  if (finalCatSuggestion && finalCatSuggestion.toLowerCase() === 'geral') {
+    finalCatSuggestion = 'Outros'
+  }
+  if (finalSubSuggestion && finalSubSuggestion.toLowerCase() === 'geral') {
+    finalSubSuggestion = undefined
+  }
+
   // Normalização de opções de sugestão para formato string[] e structuredOptions
   let clarificationOptions: string[] | null = null
   let structuredOptions: StructuredSuggestionOption[] | null = null
@@ -2779,7 +2949,11 @@ export function mapAiResponseToParsedTransaction(
         if (tipo === 'existente') {
           rotulo = `📁 Usar existente: ${opt.categoria || opt.subcategoria || 'Outro'}${opt.subcategoria && opt.categoria ? ` › subcategoria ${opt.subcategoria}` : ''}`
         } else {
-          rotulo = `✨ Criar nova: ${opt.categoria || 'Nova Categoria'}${opt.balde ? ` (${opt.balde})` : ''}`
+          const cleanCatName =
+            opt.categoria && opt.categoria.toLowerCase() !== 'geral'
+              ? opt.categoria
+              : 'Nova Categoria'
+          rotulo = `✨ Criar nova: ${cleanCatName}${opt.balde ? ` (${opt.balde})` : ''}`
         }
       }
       return {
@@ -2801,8 +2975,8 @@ export function mapAiResponseToParsedTransaction(
     description: isConsulta ? rawText : transacao?.descricao || rawText,
     establishment: transacao?.estabelecimento || undefined,
     paymentMethod,
-    categoryNameSuggestion: transacao?.categoria || undefined,
-    subcategoryNameSuggestion: transacao?.subcategoria || undefined,
+    categoryNameSuggestion: finalCatSuggestion,
+    subcategoryNameSuggestion: finalSubSuggestion,
     bucketSuggestion: bucket,
     confidence:
       typeof aiData.confianca === 'number'

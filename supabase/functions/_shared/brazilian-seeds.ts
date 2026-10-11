@@ -23,6 +23,8 @@ export type SemanticIntent =
   | 'conveniencia_posto'
   | 'bebes_criancas'
   | 'tabaco_cigarros'
+  | 'doacoes_caridade'
+  | 'limpeza_higiene_moradia'
   | 'eventos_reunioes'
   | 'marmitas_refeicoes'
   | 'coparticipacao'
@@ -282,6 +284,40 @@ export const BRAZILIAN_MERCHANT_SEEDS: readonly SeedMerchantEntry[] = [
       'pod',
     ],
     suggestedSubcategoryNames: ['Tabaco & Cigarros', 'Compras'],
+  },
+  // 10B. Doações & Caridade (Compras) — rodada 49
+  {
+    intent: 'doacoes_caridade',
+    patterns: [
+      'doacao',
+      'doação',
+      'doacoes',
+      'doações',
+      'doar',
+      'caridade',
+      'doacao para o catador',
+      'doação para o catador',
+      'catador',
+      'ajuda social',
+    ],
+    suggestedSubcategoryNames: ['Doações & Caridade', 'Compras'],
+  },
+  // 10C. Limpeza & Higiene da Casa (Moradia) — rodada 49
+  {
+    intent: 'limpeza_higiene_moradia',
+    patterns: [
+      'limpeza da casa',
+      'produtos de limpeza',
+      'sabao em po',
+      'sabão em pó',
+      'detergente',
+      'desinfetante',
+      'amaciante',
+      'esponja',
+      'papel higienico',
+      'papel higiênico',
+    ],
+    suggestedSubcategoryNames: ['Limpeza & Higiene da Casa', 'Moradia'],
   },
   // 11. Marmitas & Refeições no Trabalho (Restaurantes & Delivery)
   {
@@ -552,6 +588,26 @@ export function resolveCategoryForIntent(
         return n.includes('compras') || n.includes('tabaco')
       }) ||
       pool.find((c) => c.budget_bucket === 'lifestyle') ||
+      pool[0] ||
+      null
+  } else if (intent === 'doacoes_caridade') {
+    // Busca Compras / Doações & Caridade
+    matchedCat =
+      pool.find((c) => {
+        const n = normalize(c.name)
+        return n.includes('compras') || n.includes('doac') || n.includes('caridade')
+      }) ||
+      pool.find((c) => c.budget_bucket === 'lifestyle') ||
+      pool[0] ||
+      null
+  } else if (intent === 'limpeza_higiene_moradia') {
+    // Busca Moradia / Limpeza & Higiene da Casa
+    matchedCat =
+      pool.find((c) => {
+        const n = normalize(c.name)
+        return n.includes('moradia') || n.includes('limpeza')
+      }) ||
+      pool.find((c) => c.budget_bucket === 'essentials') ||
       pool[0] ||
       null
   } else if (intent === 'coparticipacao') {

@@ -77,7 +77,7 @@ export interface CanonicalCategoryDefinition {
  * Taxonomia Canônica Oficial Curiangoo (D0 a D4 - 19 categorias / ~62 subcategorias)
  */
 export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
-  // 1. Moradia (essentials, 11 subcategorias)
+  // 1. Moradia (essentials, 12 subcategorias)
   {
     name: 'Moradia',
     bucket: 'essentials',
@@ -97,9 +97,10 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
       { name: 'Manutenção & Reparos', icon: 'Wrench' },
       { name: 'Serviços Domésticos', icon: 'Sparkles' },
       { name: 'Mudança', icon: 'Truck' },
+      { name: 'Limpeza & Higiene da Casa', icon: 'Sparkles' },
     ],
   },
-  // 2. Alimentação (essentials, 6 subcategorias)
+  // 2. Alimentação (essentials, 5 subcategorias)
   {
     name: 'Alimentação',
     bucket: 'essentials',
@@ -113,7 +114,6 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
       { name: 'Hortifruti & Feira', icon: 'Apple' },
       { name: 'Padaria & Mercearia', icon: 'Coffee' },
       { name: 'Água & Bebidas para Casa', icon: 'Droplets' },
-      { name: 'Limpeza & Higiene da Casa', icon: 'Sparkles' },
     ],
   },
   // 3. Transporte (essentials, 7 subcategorias)
@@ -257,7 +257,7 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
       { name: 'Clubes de Assinatura', icon: 'Sparkles' },
     ],
   },
-  // 11. Compras (lifestyle, 9 subcategorias)
+  // 11. Compras (lifestyle, 10 subcategorias)
   {
     name: 'Compras',
     bucket: 'lifestyle',
@@ -275,6 +275,7 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
       { name: 'Presentes', icon: 'Gift' },
       { name: 'Bebês & Crianças', icon: 'Smile' },
       { name: 'Tabaco & Cigarros', icon: 'Flame' },
+      { name: 'Doações & Caridade', icon: 'HeartHandshake' },
     ],
   },
   // 12. Pets (lifestyle, 3 subcategorias)

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { CANONICAL_CATEGORIES } from '@/types/finance'
 import { STANDARDIZED_CATEGORIES_TREE } from '@/services/onboarding'
 
-describe('Consistência do Catálogo Canônico Curiangoo (19 categorias / 117 subcategorias)', () => {
+describe('Consistência do Catálogo Canônico Curiangoo (19 categorias / 118 subcategorias)', () => {
   it('garante que CANONICAL_CATEGORIES possui 19 categorias (15 despesa + 4 receita)', () => {
     expect(CANONICAL_CATEGORIES.length).toBe(19)
 
@@ -20,16 +20,16 @@ describe('Consistência do Catálogo Canônico Curiangoo (19 categorias / 117 su
     expect(future.length).toBe(3)
   })
 
-  it('garante que a soma total de subcategorias canônicas é exatamente 117', () => {
+  it('garante que a soma total de subcategorias canônicas é exatamente 118 (Alimentação: 5, Moradia: 12, Compras: 10)', () => {
     const totalSubs = CANONICAL_CATEGORIES.reduce((acc, c) => acc + c.subcategories.length, 0)
-    expect(totalSubs).toBe(117)
+    expect(totalSubs).toBe(118)
 
-    // 97 subcategorias de despesas
+    // 98 subcategorias de despesas
     const expenseSubs = CANONICAL_CATEGORIES.filter((c) => c.type === 'expense').reduce(
       (acc, c) => acc + c.subcategories.length,
       0,
     )
-    expect(expenseSubs).toBe(97)
+    expect(expenseSubs).toBe(98)
 
     // 20 subcategorias de receitas
     const incomeSubs = CANONICAL_CATEGORIES.filter((c) => c.type === 'income').reduce(
@@ -37,6 +37,22 @@ describe('Consistência do Catálogo Canônico Curiangoo (19 categorias / 117 su
       0,
     )
     expect(incomeSubs).toBe(20)
+
+    // Composição específica R49
+    const moradia = CANONICAL_CATEGORIES.find((c) => c.name === 'Moradia')
+    const alimentacao = CANONICAL_CATEGORIES.find((c) => c.name === 'Alimentação')
+    const compras = CANONICAL_CATEGORIES.find((c) => c.name === 'Compras')
+
+    expect(moradia?.subcategories.length).toBe(12)
+    expect(moradia?.subcategories.some((s) => s.name === 'Limpeza & Higiene da Casa')).toBe(true)
+
+    expect(alimentacao?.subcategories.length).toBe(5)
+    expect(alimentacao?.subcategories.some((s) => s.name === 'Limpeza & Higiene da Casa')).toBe(
+      false,
+    )
+
+    expect(compras?.subcategories.length).toBe(10)
+    expect(compras?.subcategories.some((s) => s.name === 'Doações & Caridade')).toBe(true)
   })
 
   it('garante paridade exata entre STANDARDIZED_CATEGORIES_TREE (despesas) e CANONICAL_CATEGORIES', () => {
