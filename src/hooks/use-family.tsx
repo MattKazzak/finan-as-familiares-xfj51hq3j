@@ -24,6 +24,7 @@ import {
   reorderCategories,
   reorderSubcategories,
   FamilyCompletenessStatus,
+  checkFamilyHasTransactions,
 } from '@/services/family'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
@@ -160,6 +161,7 @@ interface FamilyContextType {
     } | null,
   ) => void
   completeness: FamilyCompletenessStatus | null
+  hasAnyTransactions: boolean
   refreshTrigger: number
   triggerRefresh: () => void
 }
@@ -207,6 +209,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     importedAt: Date
   } | null>(null)
   const [completeness, setCompleteness] = useState<FamilyCompletenessStatus | null>(null)
+  const [hasAnyTransactions, setHasAnyTransactions] = useState<boolean>(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   // Membro ativo salvo localmente por dispositivo
@@ -256,6 +259,10 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
       setFamily(data.family)
       setMembers(data.members)
       setCategories(data.categories)
+      const txCount =
+        (data as any)?.completeness?.transactionCount ?? (data as any)?.transactionCount ?? 0
+      const hasTxs = Boolean((data as any)?.hasAnyTransactions || txCount > 0)
+      setHasAnyTransactions(hasTxs)
       setCompleteness(data.completeness || null)
     } catch (err: any) {
       console.error('Erro ao carregar dados da família:', err)
@@ -300,20 +307,40 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   }, [loading, members, family?.monthly_net_income_cents, setActiveMemberId])
 
   // Iniciar automaticamente o fluxo de Onboarding (OnboardingWizardDialog)
-  // Decisão de Produto (Tarefa 2.1 & 2.2):
-  // Se a família ativa está incompleta (0 categorias OU contagem != 19/117 OU 0 regras de IA)
-  // OU renda zero/nula, redireciona/abre imediatamente o wizard desde o início.
-  // Estado parcial = wizard sempre (sem permitir dismiss temporário em sessionStorage).
+  // BLINDAGEM DE ROTEAMENTO (R50):
+  // Família em uso real NUNCA vê onboarding, em nenhuma hipótese (nem por renda zero, nem por catálogo).
+  // Se a família tem qualquer transação, o onboarding JAMAIS abre automaticamente.
+  // Onboarding só abre para família NOVA: sem transações E (renda zero OU catálogo vazio / sem regras).
   useEffect(() => {
     if (!loading && family) {
+      // Guarda absoluta: se já sabemos pelo contexto que possui transações, não abre nunca
+      if (hasAnyTransactions || (completeness?.transactionCount ?? 0) > 0) {
+        return
+      }
+
       const hasNoIncome = !family.monthly_net_income_cents || family.monthly_net_income_cents <= 0
       const isIncomplete = completeness?.isIncomplete ?? (!categories || categories.length === 0)
 
-      if (hasNoIncome || isIncomplete) {
+      if (!hasNoIncome && !isIncomplete) {
+        return
+      }
+
+      // Verificação assíncrona adicional e barata para blindagem completa antes de abrir o wizard
+      let isSubscribed = true
+      checkFamilyHasTransactions(family.id).then((inDbHasTxs) => {
+        if (!isSubscribed) return
+        if (inDbHasTxs) {
+          setHasAnyTransactions(true)
+          return
+        }
         setIsOnboardingOpen(true)
+      })
+
+      return () => {
+        isSubscribed = false
       }
     }
-  }, [loading, family, categories, completeness])
+  }, [loading, family, categories, completeness, hasAnyTransactions])
 
   const updateFamily = async (updates: {
     name?: string
@@ -683,6 +710,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         lastImportSummary,
         setLastImportSummary,
         completeness,
+        hasAnyTransactions,
         refreshTrigger,
         triggerRefresh,
       }}

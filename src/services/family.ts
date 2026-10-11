@@ -139,6 +139,8 @@ export interface FamilyCompletenessStatus {
   categoryCount: number
   subcategoryCount: number
   ruleCount: number
+  transactionCount?: number
+  hasAnyTransactions?: boolean
   reason?: string
 }
 
@@ -241,8 +243,7 @@ export async function fetchUserIncompleteFamilies(
     const totalSubs = subCount ?? 0
     const totalRules = ruleCount ?? 0
 
-    const isIncomplete =
-      totalCats === 0 || totalCats !== 19 || totalSubs !== 117 || totalRules === 0
+    const isIncomplete = totalCats === 0 || totalRules === 0
 
     if (isIncomplete) {
       result.push({
@@ -268,7 +269,16 @@ export async function fetchFamilyData() {
       members: [],
       categories: [],
       subcategories: [],
-      completeness: { isIncomplete: false, categoryCount: 0, subcategoryCount: 0, ruleCount: 0 },
+      completeness: {
+        isIncomplete: false,
+        categoryCount: 0,
+        subcategoryCount: 0,
+        ruleCount: 0,
+        transactionCount: 0,
+        hasAnyTransactions: false,
+      },
+      hasAnyTransactions: false,
+      transactionCount: 0,
     }
   }
 
@@ -348,7 +358,16 @@ export async function fetchFamilyData() {
       members: [],
       categories: [],
       subcategories: [],
-      completeness: { isIncomplete: false, categoryCount: 0, subcategoryCount: 0, ruleCount: 0 },
+      completeness: {
+        isIncomplete: false,
+        categoryCount: 0,
+        subcategoryCount: 0,
+        ruleCount: 0,
+        transactionCount: 0,
+        hasAnyTransactions: false,
+      },
+      hasAnyTransactions: false,
+      transactionCount: 0,
     }
   }
 
@@ -357,6 +376,7 @@ export async function fetchFamilyData() {
     { data: categories, error: catErr },
     { data: subcategories, error: subErr },
     { count: rulesCount, error: rulesErr },
+    { count: transactionsCount, error: txErr },
   ] = await Promise.all([
     (supabase as any)
       .from('family_members')
@@ -380,6 +400,10 @@ export async function fetchFamilyData() {
       .from('categorization_rules')
       .select('id', { count: 'exact', head: true })
       .eq('family_id', family.id),
+    (supabase as any)
+      .from('transactions')
+      .select('id', { count: 'exact', head: true })
+      .eq('family_id', family.id),
   ])
 
   if (memErr) throw memErr
@@ -387,23 +411,26 @@ export async function fetchFamilyData() {
   if (subErr) throw subErr
   if (rulesErr)
     console.warn('[family] Erro não impeditivo ao checar regras de categorização:', rulesErr)
+  if (txErr) console.warn('[family] Erro não impeditivo ao checar transações da família:', txErr)
 
-  // Critério Canônico de Família Incompleta (c):
-  // Catálogo vazio (0 categorias) OU contagem != 19 categorias / 117 subcategorias OU 0 regras de IA
+  // Critério de Família Incompleta (R50):
+  // Catálogo vazio (0 categorias) OU 0 regras de IA.
+  // Fim da igualdade exata com contagens hardcoded: catálogo evolui e usuários criam subcategorias custom.
   const catLen = categories?.length ?? 0
   const subLen = subcategories?.length ?? 0
   const ruleLen = rulesCount ?? 0
+  const txLen = transactionsCount ?? 0
 
-  const isIncomplete = catLen === 0 || catLen !== 19 || subLen !== 117 || ruleLen === 0
+  const isIncomplete = catLen === 0 || ruleLen === 0
 
   const completeness: FamilyCompletenessStatus = {
     isIncomplete,
     categoryCount: catLen,
     subcategoryCount: subLen,
     ruleCount: ruleLen,
-    reason: isIncomplete
-      ? `Incompleto: ${catLen}/19 categorias, ${subLen}/117 subcategorias, ${ruleLen} regras de IA`
-      : undefined,
+    transactionCount: txLen,
+    hasAnyTransactions: txLen > 0,
+    reason: isIncomplete ? `Incompleto: ${catLen} categorias, ${ruleLen} regras de IA` : undefined,
   }
 
   // Associar subcategorias às categorias correspondentes
@@ -426,6 +453,30 @@ export async function fetchFamilyData() {
     categories: enrichedCategories as TransactionCategory[],
     subcategories: (subcategories || []) as any[],
     completeness,
+    hasAnyTransactions: txLen > 0,
+    transactionCount: txLen,
+  }
+}
+
+/**
+ * Consulta rápida de existência de transações na família (head: true count).
+ */
+export async function checkFamilyHasTransactions(familyId: string): Promise<boolean> {
+  try {
+    const { count, error } = await (supabase as any)
+      .from('transactions')
+      .select('id', { count: 'exact', head: true })
+      .eq('family_id', familyId)
+      .limit(1)
+
+    if (error) {
+      console.warn('[family] Erro ao verificar transações da família:', error)
+      return false
+    }
+    return (count ?? 0) > 0
+  } catch (err) {
+    console.warn('[family] Exceção ao verificar transações da família:', err)
+    return false
   }
 }
 
