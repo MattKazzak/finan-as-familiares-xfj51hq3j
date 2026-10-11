@@ -312,64 +312,42 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
     expect(screen.getByText('Futuro & Metas')).toBeDefined()
   })
 
-  describe('Rótulo Visual Inteligente de Receitas', () => {
-    it('caso (a): monthIncomeCents === 0 e plannedIncomeCents > 0 exibe R$ 0,00, badge de previsto e micro-ação', async () => {
-      mockFamily = {
-        id: 'fam-1',
-        name: 'Silva',
-        monthly_net_income_cents: 800000, // R$ 8.000,00 previsto
-      }
-      // Nenhuma transação de receita no mês
-      vi.mocked(transactionsService.fetchTransactions).mockResolvedValue([])
-
+  describe('Card do Saldo - Tarefas R55 (Fim do +200% e Previsto no Card Expandido)', () => {
+    it('T1: card fechado NÃO renderiza percentual de tendência nem seta TrendingUp/TrendingDown', async () => {
       renderWithProviders(<Home />)
 
       await waitFor(() => {
-        expect(screen.getByText('Receitas')).toBeDefined()
+        expect(screen.getByText('Saldo Total da Família')).toBeDefined()
       })
 
-      // Abrir progressive disclosure do card de saldo
-      const balanceCard = screen.getByRole('region', { name: /card de saldo da família/i })
-      fireEvent.click(balanceCard)
+      // Card fechado tem rótulo Saldo Total, o saldo e receitas/despesas
+      expect(screen.getByText('Saldo Total da Família')).toBeDefined()
+      expect(screen.getByText('Receitas')).toBeDefined()
+      expect(screen.getByText('Despesas')).toBeDefined()
 
-      // Valor realizado zerado
-      expect(screen.getByText('R$ 0,00')).toBeDefined()
-
-      // Badge/texto sutil com o previsto
-      expect(screen.getByText('(Previsto: R$ 8.000,00)')).toBeDefined()
-
-      // Linha de apoio e micro-ação
-      expect(screen.getByText('Aguardando entradas do mês')).toBeDefined()
-      const salaryBtn = screen.getByRole('button', { name: '[Registrar salário]' })
-      expect(salaryBtn).toBeDefined()
-
-      // Clicar em "Registrar salário" chama openNewTransaction com preenchimento pré-configurado
-      fireEvent.click(salaryBtn)
-      expect(mockOpenNewTransaction).toHaveBeenCalledWith({
-        initialType: 'income',
-        initialCategoryId: 'cat-salario',
-        initialAmountCents: 800000,
-        initialDescription: 'Salário mensal',
-      })
+      // Não há span de percentual solto (+200%, -50%, etc.)
+      expect(screen.queryByText(/\+\d+%/)).toBeNull()
+      expect(screen.queryByText(/-\d+%/)).toBeNull()
+      expect(screen.queryByText(/vs mês ant\./i)).toBeNull()
     })
 
-    it('caso (b.1): monthIncomeCents > 0 e menor que plannedIncomeCents exibe meta discreta "de {previsto}"', async () => {
+    it('T2 (a): card expandido exibe "R$ X de R$ Y previstos" e barra de progresso com cap em 100%', async () => {
       mockFamily = {
         id: 'fam-1',
         name: 'Silva',
-        monthly_net_income_cents: 600000, // R$ 6.000,00 previsto
+        monthly_net_income_cents: 770000, // R$ 7.700,00 renda líquida declarada da família
       }
       const currentMonth = currentMonthTest
       vi.mocked(transactionsService.fetchTransactions).mockResolvedValue([
         {
-          id: 'tx-inc-partial',
+          id: 'tx-inc-4925',
           family_id: 'fam-1',
           member_id: 'm-1',
           category_id: 'cat-salario',
-          amount_cents: 300000, // R$ 3.000,00 realizado
+          amount_cents: 492500, // R$ 4.925,00 realizado
           type: 'income',
           status: 'confirmed',
-          description: 'Adiantamento',
+          description: 'Salário parcial',
           transaction_date: `${currentMonth}-05`,
           created_at: `${currentMonth}-05T12:00:00Z`,
         },
@@ -378,20 +356,25 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       renderWithProviders(<Home />)
 
       await waitFor(() => {
-        expect(screen.getByText('Receitas')).toBeDefined()
+        expect(screen.getByText('Saldo Total da Família')).toBeDefined()
       })
 
-      // Abrir progressive disclosure
+      // Abrir card expandido
       const balanceCard = screen.getByRole('region', { name: /card de saldo da família/i })
       fireEvent.click(balanceCard)
 
-      expect(screen.getByText('R$ 3.000,00')).toBeDefined()
-      expect(screen.getByText('de R$ 6.000,00')).toBeDefined()
-      expect(screen.queryByText('Aguardando entradas do mês')).toBeNull()
-      expect(screen.queryByText('✓ Previsto atingido')).toBeNull()
+      // Receitas do mês: "R$ 4.925,00 de R$ 7.700,00 previstos"
+      expect(screen.getByText(/4\.925,00\s+de\s+R\$\s*7\.700,00\s+previstos/i)).toBeDefined()
+
+      // Barra de progresso com valor proporcional (4925 / 7700 = ~64%)
+      const progressBar = screen.getByRole('progressbar', {
+        name: /progresso das receitas em relação ao previsto/i,
+      })
+      expect(progressBar).toBeDefined()
+      expect(progressBar.getAttribute('aria-valuenow')).toBe('64')
     })
 
-    it('caso (b.2): monthIncomeCents >= plannedIncomeCents exibe "✓ Previsto atingido"', async () => {
+    it('T2 (a) - superação: quando receitas > previsto, a barra cap em 100% e indica superação informativa', async () => {
       mockFamily = {
         id: 'fam-1',
         name: 'Silva',
@@ -400,14 +383,14 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       const currentMonth = currentMonthTest
       vi.mocked(transactionsService.fetchTransactions).mockResolvedValue([
         {
-          id: 'tx-inc-full',
+          id: 'tx-inc-super',
           family_id: 'fam-1',
           member_id: 'm-1',
           category_id: 'cat-salario',
-          amount_cents: 600000, // R$ 6.000,00 realizado
+          amount_cents: 800000, // R$ 8.000,00 realizado (> 6.000)
           type: 'income',
           status: 'confirmed',
-          description: 'Salário integral',
+          description: 'Salário + Bônus',
           transaction_date: `${currentMonth}-05`,
           created_at: `${currentMonth}-05T12:00:00Z`,
         },
@@ -416,55 +399,170 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       renderWithProviders(<Home />)
 
       await waitFor(() => {
-        expect(screen.getByText('Receitas')).toBeDefined()
+        expect(screen.getByText('Saldo Total da Família')).toBeDefined()
       })
 
-      // Abrir progressive disclosure
       const balanceCard = screen.getByRole('region', { name: /card de saldo da família/i })
       fireEvent.click(balanceCard)
 
-      expect(screen.getByText('R$ 6.000,00')).toBeDefined()
-      expect(screen.getByText('✓ Previsto atingido')).toBeDefined()
-      expect(screen.queryByText(/de R\$/)).toBeNull()
-      expect(screen.queryByText('Aguardando entradas do mês')).toBeNull()
+      expect(screen.getByText(/8\.000,00\s+de\s+R\$\s*6\.000,00\s+previstos/i)).toBeDefined()
+      expect(screen.getByText('(acima do previsto)')).toBeDefined()
+
+      const progressBar = screen.getByRole('progressbar', {
+        name: /progresso das receitas em relação ao previsto/i,
+      })
+      expect(progressBar.getAttribute('aria-valuenow')).toBe('100')
+      expect(progressBar.getAttribute('style')).toContain('width: 100%')
     })
 
-    it('caso (c): plannedIncomeCents === 0 mantém o comportamento atual (só valor realizado)', async () => {
+    it('T2 (b): despesas do mês exibe valor e orçamento previsto quando há orçamentos definidos', async () => {
       mockFamily = {
         id: 'fam-1',
         name: 'Silva',
-        monthly_net_income_cents: 0, // Sem previsão definida
+        monthly_net_income_cents: 600000,
+        budget_model: '50_30_20',
       }
       const currentMonth = currentMonthTest
+      // Default budgets somam 3.000 + 1.800 + 1.200 = 6.000 orçados
+      // Gastos mock: 1.500 + 600 + 400 = 2.500
+      renderWithProviders(<Home />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Saldo Total da Família')).toBeDefined()
+      })
+
+      const balanceCard = screen.getByRole('region', { name: /card de saldo da família/i })
+      fireEvent.click(balanceCard)
+
+      // Despesas: "R$ 2.500,00 de R$ 6.000,00 orçados"
+      expect(screen.getByText(/2\.500,00\s+de\s+R\$\s*6\.000,00\s+orçados/i)).toBeDefined()
+      const expenseBar = screen.getByRole('progressbar', {
+        name: /progresso das despesas em relação ao orçamento/i,
+      })
+      expect(expenseBar).toBeDefined()
+      expect(expenseBar.getAttribute('aria-valuenow')).toBe('42') // 2500 / 6000 = 42%
+    })
+
+    it('T2 (c) & (d): comparação com mês anterior em linguagem natural seguindo o activeMonth, sem percentual solto', async () => {
+      mockFamily = {
+        id: 'fam-1',
+        name: 'Silva',
+        monthly_net_income_cents: 600000,
+      }
+      const now = new Date()
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+      const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`
+
       vi.mocked(transactionsService.fetchTransactions).mockResolvedValue([
+        // Mês anterior: receita 600, despesa 400
         {
-          id: 'tx-inc-only',
+          id: 'tx-prev-inc',
           family_id: 'fam-1',
           member_id: 'm-1',
           category_id: 'cat-salario',
-          amount_cents: 250000,
+          amount_cents: 60000,
           type: 'income',
           status: 'confirmed',
-          description: 'Receita avulsa',
-          transaction_date: `${currentMonth}-02`,
-          created_at: `${currentMonth}-02T12:00:00Z`,
+          description: 'Freela ant',
+          transaction_date: `${prevMonth}-15`,
+          created_at: `${prevMonth}-15T12:00:00Z`,
+        },
+        {
+          id: 'tx-prev-exp',
+          family_id: 'fam-1',
+          member_id: 'm-1',
+          category_id: 'cat-1',
+          amount_cents: 40000,
+          type: 'expense',
+          status: 'confirmed',
+          description: 'Luz ant',
+          transaction_date: `${prevMonth}-20`,
+          created_at: `${prevMonth}-20T12:00:00Z`,
+        },
+        // Mês ativo: receita 1.802, despesa 900
+        {
+          id: 'tx-cur-inc',
+          family_id: 'fam-1',
+          member_id: 'm-1',
+          category_id: 'cat-salario',
+          amount_cents: 180200,
+          type: 'income',
+          status: 'confirmed',
+          description: 'Salário ativo',
+          transaction_date: `${currentMonth}-05`,
+          created_at: `${currentMonth}-05T12:00:00Z`,
+        },
+        {
+          id: 'tx-cur-exp',
+          family_id: 'fam-1',
+          member_id: 'm-1',
+          category_id: 'cat-2',
+          amount_cents: 90000,
+          type: 'expense',
+          status: 'confirmed',
+          description: 'Mercado ativo',
+          transaction_date: `${currentMonth}-08`,
+          created_at: `${currentMonth}-08T12:00:00Z`,
         },
       ])
 
       renderWithProviders(<Home />)
 
       await waitFor(() => {
-        expect(screen.getByText('Receitas')).toBeDefined()
+        expect(screen.getByText('Saldo Total da Família')).toBeDefined()
       })
 
-      // Abrir progressive disclosure
       const balanceCard = screen.getByRole('region', { name: /card de saldo da família/i })
       fireEvent.click(balanceCard)
 
-      expect(screen.getByText('R$ 2.500,00')).toBeDefined()
-      expect(screen.queryByText(/Previsto:/)).toBeNull()
-      expect(screen.queryByText('Aguardando entradas do mês')).toBeNull()
-      expect(screen.queryByText('[Registrar salário]')).toBeNull()
+      // Comparação em linguagem natural com valores em destaque
+      expect(screen.getByText(/Comparação \(/i)).toBeDefined()
+      expect(screen.getByText(/Receitas:/i)).toBeDefined()
+      expect(screen.getByText('R$ 600,00')).toBeDefined()
+      expect(screen.getByText('R$ 1.802,00')).toBeDefined()
+      expect(screen.getByText(/Despesas:/i)).toBeDefined()
+      expect(screen.getByText('R$ 400,00')).toBeDefined()
+      expect(screen.getByText('R$ 900,00')).toBeDefined()
+
+      // ZERO percentual de tendência tipo "+200% vs mês ant." no corpo do card expandido
+      expect(screen.queryByText(/vs mês ant\./i)).toBeNull()
+      expect(screen.queryByText(/\+200%/)).toBeNull()
+    })
+
+    it('T3: reatividade — se a renda líquida da família mudar, o previsto reflete automaticamente', async () => {
+      mockFamily = {
+        id: 'fam-1',
+        name: 'Silva',
+        monthly_net_income_cents: 950000, // Nova renda atualizada no Perfil: R$ 9.500,00
+      }
+      const currentMonth = currentMonthTest
+      vi.mocked(transactionsService.fetchTransactions).mockResolvedValue([
+        {
+          id: 'tx-inc-1',
+          family_id: 'fam-1',
+          member_id: 'm-1',
+          category_id: 'cat-salario',
+          amount_cents: 500000,
+          type: 'income',
+          status: 'confirmed',
+          description: 'Salário',
+          transaction_date: `${currentMonth}-05`,
+          created_at: `${currentMonth}-05T12:00:00Z`,
+        },
+      ])
+
+      renderWithProviders(<Home />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Saldo Total da Família')).toBeDefined()
+      })
+
+      const balanceCard = screen.getByRole('region', { name: /card de saldo da família/i })
+      fireEvent.click(balanceCard)
+
+      // Renda de 9.500 refletida imediatamente sem hardcode
+      expect(screen.getByText(/5\.000,00\s+de\s+R\$\s*9\.500,00\s+previstos/i)).toBeDefined()
     })
 
     it('desconsidera transações projetadas no saldo total, nas receitas/despesas do mês e nos baldes', async () => {

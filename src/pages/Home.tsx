@@ -29,8 +29,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import type { Transaction, DefaultBudget, Budget } from '@/types/finance'
 import { BUDGET_PRESET_ITEMS } from '@/types/budget-presets'
 import {
-  TrendingUp,
-  TrendingDown,
   ArrowUpRight,
   ArrowDownRight,
   Plus,
@@ -188,52 +186,53 @@ export default function Home() {
   // Renda líquida prevista da família
   const plannedIncomeCents = family?.monthly_net_income_cents || 0
 
-  // Cálculos de saldo total acumulado e métricas do mês
-  const { totalBalanceCents, monthIncomeCents, monthExpenseCents, trendPercentage } =
-    useMemo(() => {
-      let incomeTotal = 0
-      let expenseTotal = 0
-      let mIncome = 0
-      let mExpense = 0
-      let prevMIncome = 0
-      let prevMExpense = 0
+  // Cálculos de saldo total acumulado e métricas do mês ativo e do mês imediatamente anterior
+  const {
+    totalBalanceCents,
+    monthIncomeCents,
+    monthExpenseCents,
+    prevMonthIncomeCents,
+    prevMonthExpenseCents,
+    prevMonthDate,
+  } = useMemo(() => {
+    let incomeTotal = 0
+    let expenseTotal = 0
+    let mIncome = 0
+    let mExpense = 0
+    let prevMIncome = 0
+    let prevMExpense = 0
 
-      const now = new Date()
-      const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-      const prevMonthStr = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}`
+    // Mês anterior relativo estritamente ao activeMonth (ex: out/2026 -> set/2026)
+    const prevDate = new Date(activeDate.getFullYear(), activeDate.getMonth() - 1, 1)
+    const prevMonthStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`
 
-      // Apenas transações confirmadas/efetivadas (não projetadas) contam para saldo e totais do mês
-      const effectiveTransactions = transactions.filter((tx) => tx.status !== 'projected')
+    // Apenas transações confirmadas/efetivadas (não projetadas) contam para saldo e totais do mês
+    const effectiveTransactions = transactions.filter((tx) => tx.status !== 'projected')
 
-      effectiveTransactions.forEach((tx) => {
-        const txMonth = tx.transaction_date.slice(0, 7)
-        if (tx.type === 'income') {
-          incomeTotal += tx.amount_cents
-          if (txMonth === currentMonthStr) mIncome += tx.amount_cents
-          if (txMonth === prevMonthStr) prevMIncome += tx.amount_cents
-        } else {
-          expenseTotal += tx.amount_cents
-          if (txMonth === currentMonthStr) mExpense += tx.amount_cents
-          if (txMonth === prevMonthStr) prevMExpense += tx.amount_cents
-        }
-      })
-
-      const totalBalance = incomeTotal - expenseTotal
-      const currentNet = mIncome - mExpense
-      const prevNet = prevMIncome - prevMExpense
-
-      let trend = 0
-      if (prevNet !== 0) {
-        trend = Math.round(((currentNet - prevNet) / Math.abs(prevNet)) * 100)
+    effectiveTransactions.forEach((tx) => {
+      const txMonth = tx.transaction_date.slice(0, 7)
+      if (tx.type === 'income') {
+        incomeTotal += tx.amount_cents
+        if (txMonth === currentMonthStr) mIncome += tx.amount_cents
+        if (txMonth === prevMonthStr) prevMIncome += tx.amount_cents
+      } else {
+        expenseTotal += tx.amount_cents
+        if (txMonth === currentMonthStr) mExpense += tx.amount_cents
+        if (txMonth === prevMonthStr) prevMExpense += tx.amount_cents
       }
+    })
 
-      return {
-        totalBalanceCents: totalBalance,
-        monthIncomeCents: mIncome,
-        monthExpenseCents: mExpense,
-        trendPercentage: trend,
-      }
-    }, [transactions, currentMonthStr])
+    const totalBalance = incomeTotal - expenseTotal
+
+    return {
+      totalBalanceCents: totalBalance,
+      monthIncomeCents: mIncome,
+      monthExpenseCents: mExpense,
+      prevMonthIncomeCents: prevMIncome,
+      prevMonthExpenseCents: prevMExpense,
+      prevMonthDate: prevDate,
+    }
+  }, [transactions, currentMonthStr, activeDate])
 
   // Mapa de baldes para as categorias (respeita budget_bucket da categoria com fallback por palavras-chave)
   const categoryBucketMap = useMemo(() => {
@@ -710,35 +709,17 @@ export default function Home() {
           {/* Efeito de luz decorativo âmbar sutil */}
           <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#FCA311]/15 rounded-full blur-3xl pointer-events-none" />
 
-          {/* Rótulo e Contexto em peso leve */}
+          {/* Rótulo e Contexto em peso leve — NENHUM percentual solto no card fechado */}
           <div className="flex items-center justify-between gap-2 mb-1.5">
             <span className="text-xs uppercase font-medium tracking-wider text-slate-300/90">
               Saldo Total da Família
             </span>
             <div className="flex items-center gap-1.5">
-              {trendPercentage !== 0 && (
-                <div
-                  className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0 ${
-                    trendPercentage > 0
-                      ? 'bg-emerald-500/15 text-emerald-300'
-                      : 'bg-rose-500/15 text-rose-300'
-                  }`}
-                >
-                  {trendPercentage > 0 ? (
-                    <TrendingUp className="w-3 h-3" strokeWidth={1.5} />
-                  ) : (
-                    <TrendingDown className="w-3 h-3" strokeWidth={1.5} />
-                  )}
-                  <span>
-                    {trendPercentage > 0 ? `+${trendPercentage}%` : `${trendPercentage}%`}
-                  </span>
-                </div>
-              )}
               <span
-                className="text-[10px] text-white/50 group-hover:text-white/80 transition-colors ml-1"
+                className="text-[11px] text-white/50 group-hover:text-white/80 transition-colors"
                 title="Toque para ver detalhes"
               >
-                {isBalanceDetailsExpanded ? '▾' : '▸'}
+                {isBalanceDetailsExpanded ? '▾ Recolher' : '▸ Ver detalhes'}
               </span>
             </div>
           </div>
@@ -798,97 +779,203 @@ export default function Home() {
             </div>
           </div>
 
-          {/* PROGRESSIVE DISCLOSURE — Detalhes (meta de receitas, previsto e comparações) ao tocar no card */}
+          {/* PROGRESSIVE DISCLOSURE — Detalhes (Receitas x Previsto, Despesas x Orçamento e Comparação em Linguagem Natural) */}
           {isBalanceDetailsExpanded && (
             <div
               onClick={(e) => e.stopPropagation()}
-              className="mt-4 pt-3.5 border-t border-white/10 space-y-2.5 text-xs text-slate-200/90 animate-in fade-in slide-in-from-top-1 duration-200"
+              className="mt-4 pt-3.5 border-t border-white/10 space-y-3.5 text-xs text-slate-200/90 animate-in fade-in slide-in-from-top-1 duration-200"
             >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-slate-300">Receitas do Mês:</span>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-semibold text-white">
-                    {maskValue(formatBRL(monthIncomeCents))}
-                  </span>
-                  {monthIncomeCents === 0 && plannedIncomeCents > 0 && (
-                    <span className="text-[11px] text-slate-300">
-                      (Previsto: {maskValue(formatBRL(plannedIncomeCents))})
-                    </span>
-                  )}
-                  {monthIncomeCents > 0 &&
-                    plannedIncomeCents > 0 &&
-                    monthIncomeCents < plannedIncomeCents && (
-                      <span className="text-[11px] text-slate-300">
-                        de {maskValue(formatBRL(plannedIncomeCents))}
+              {/* (a) RECEITAS DO MÊS: "R$ X de R$ Y previstos" + barra fina (2-4px) com cap em 100% */}
+              <div className="space-y-1.5">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="text-slate-300 font-medium">Receitas do mês:</span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {plannedIncomeCents > 0 ? (
+                      <span className="font-semibold text-white">
+                        {maskValue(formatBRL(monthIncomeCents))} de{' '}
+                        {maskValue(formatBRL(plannedIncomeCents))} previstos
+                      </span>
+                    ) : (
+                      <span className="font-semibold text-white">
+                        {maskValue(formatBRL(monthIncomeCents))}
                       </span>
                     )}
-                  {monthIncomeCents > 0 &&
-                    plannedIncomeCents > 0 &&
-                    monthIncomeCents >= plannedIncomeCents && (
-                      <span className="text-[11px] font-semibold text-emerald-300">
-                        ✓ Previsto atingido
-                      </span>
-                    )}
-                </div>
-              </div>
 
-              {/* Barra fina e discreta de proporção Receitas x Previsto quando aplicável */}
-              {plannedIncomeCents > 0 && (
-                <div className="space-y-1">
+                    {plannedIncomeCents > 0 && monthIncomeCents > plannedIncomeCents && (
+                      <span className="text-[11px] font-medium text-emerald-300">
+                        (acima do previsto)
+                      </span>
+                    )}
+                    {plannedIncomeCents > 0 && monthIncomeCents === plannedIncomeCents && (
+                      <span className="text-[11px] font-medium text-emerald-300">
+                        (previsto atingido)
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Barra de progresso FINA e discreta (h-1 = 4px) com cap em 100% */}
+                {plannedIncomeCents > 0 && (
                   <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden">
                     <div
                       className="bg-emerald-400 h-full rounded-full transition-all duration-500"
                       style={{
                         width: `${Math.min(
                           100,
-                          Math.round((monthIncomeCents / plannedIncomeCents) * 100),
+                          Math.max(0, Math.round((monthIncomeCents / plannedIncomeCents) * 100)),
                         )}%`,
                       }}
+                      role="progressbar"
+                      aria-label="Progresso das receitas em relação ao previsto"
+                      aria-valuenow={Math.min(
+                        100,
+                        Math.max(0, Math.round((monthIncomeCents / plannedIncomeCents) * 100)),
+                      )}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
                     />
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Micro-ação quando zero entradas e há previsão cadastrada */}
-              {monthIncomeCents === 0 && plannedIncomeCents > 0 && (
-                <div className="pt-1 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-300">
-                  <span>Aguardando entradas do mês</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const salaryCategory = categories.find((c) => {
-                        const nameLower = (c.name || '').toLowerCase()
-                        return (
-                          c.type === 'income' &&
-                          (nameLower.includes('salário') ||
-                            nameLower.includes('salario') ||
-                            nameLower.includes('remunera') ||
-                            nameLower.includes('renda'))
-                        )
-                      })
-                      openNewTransaction({
-                        initialType: 'income',
-                        initialCategoryId: salaryCategory?.id,
-                        initialAmountCents: plannedIncomeCents,
-                        initialDescription: 'Salário mensal',
-                      })
-                    }}
-                    className="font-semibold underline underline-offset-4 hover:text-[#FCA311] transition-colors cursor-pointer text-[#FCA311] active:scale-95 py-0.5"
-                  >
-                    [Registrar salário]
-                  </button>
-                </div>
-              )}
+                {/* Micro-ação quando zero entradas e há previsão cadastrada */}
+                {monthIncomeCents === 0 && plannedIncomeCents > 0 && (
+                  <div className="pt-0.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-300">
+                    <span>Aguardando entradas do mês</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const salaryCategory = categories.find((c) => {
+                          const nameLower = (c.name || '').toLowerCase()
+                          return (
+                            c.type === 'income' &&
+                            (nameLower.includes('salário') ||
+                              nameLower.includes('salario') ||
+                              nameLower.includes('remunera') ||
+                              nameLower.includes('renda'))
+                          )
+                        })
+                        openNewTransaction({
+                          initialType: 'income',
+                          initialCategoryId: salaryCategory?.id,
+                          initialAmountCents: plannedIncomeCents,
+                          initialDescription: 'Salário mensal',
+                        })
+                      }}
+                      className="font-semibold underline underline-offset-4 hover:text-[#FCA311] transition-colors cursor-pointer text-[#FCA311] active:scale-95 py-0.5"
+                    >
+                      [Registrar salário]
+                    </button>
+                  </div>
+                )}
+              </div>
 
-              {trendPercentage !== 0 && (
-                <div className="pt-1 flex items-center justify-between text-[11px] text-slate-300">
-                  <span>Comparação com mês anterior:</span>
-                  <span className={trendPercentage > 0 ? 'text-emerald-300' : 'text-rose-300'}>
-                    {trendPercentage > 0 ? `+${trendPercentage}%` : `${trendPercentage}%`} vs mês
-                    ant.
-                  </span>
-                </div>
-              )}
+              {/* (b) DESPESAS DO MÊS: "R$ X de R$ Y previstos" quando houver orçamento/balde definido; senão só o gasto */}
+              {(() => {
+                const totalExpenseBudget =
+                  bucketsData.essentials.limitCents +
+                  bucketsData.lifestyle.limitCents +
+                  bucketsData.future.limitCents
+
+                return (
+                  <div className="space-y-1.5 pt-1 border-t border-white/5">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <span className="text-slate-300 font-medium">Despesas do mês:</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {totalExpenseBudget > 0 ? (
+                          <span className="font-semibold text-white">
+                            {maskValue(formatBRL(monthExpenseCents))} de{' '}
+                            {maskValue(formatBRL(totalExpenseBudget))} orçados
+                          </span>
+                        ) : (
+                          <span className="font-semibold text-white">
+                            {maskValue(formatBRL(monthExpenseCents))}
+                          </span>
+                        )}
+
+                        {totalExpenseBudget > 0 && monthExpenseCents > totalExpenseBudget && (
+                          <span className="text-[11px] font-medium text-rose-300">
+                            (acima do orçamento)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {totalExpenseBudget > 0 && (
+                      <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            monthExpenseCents > totalExpenseBudget ? 'bg-rose-400' : 'bg-slate-300'
+                          }`}
+                          style={{
+                            width: `${Math.min(
+                              100,
+                              Math.max(
+                                0,
+                                Math.round((monthExpenseCents / totalExpenseBudget) * 100),
+                              ),
+                            )}%`,
+                          }}
+                          role="progressbar"
+                          aria-label="Progresso das despesas em relação ao orçamento"
+                          aria-valuenow={Math.min(
+                            100,
+                            Math.max(0, Math.round((monthExpenseCents / totalExpenseBudget) * 100)),
+                          )}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+
+              {/* (c) COMPARAÇÃO COM MÊS ANTERIOR EM LINGUAGEM NATURAL — NUNCA percentual solto, segue activeMonth */}
+              {(() => {
+                const activeMonthLabel = formatMonthYear(activeDate)
+                const prevMonthLabel = formatMonthYear(prevMonthDate)
+
+                const hasAnyActivity =
+                  monthIncomeCents > 0 ||
+                  monthExpenseCents > 0 ||
+                  prevMonthIncomeCents > 0 ||
+                  prevMonthExpenseCents > 0
+
+                if (!hasAnyActivity) return null
+
+                return (
+                  <div className="pt-2 border-t border-white/10 text-[11px] text-slate-300/90 space-y-1">
+                    <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-400 block">
+                      Comparação ({prevMonthLabel.split(' ')[0]} vs {activeMonthLabel.split(' ')[0]}
+                      ):
+                    </span>
+                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                      <span>
+                        Receitas: {prevMonthLabel.split(' ')[0]}:{' '}
+                        <strong className="text-white font-medium">
+                          {maskValue(formatBRL(prevMonthIncomeCents))}
+                        </strong>{' '}
+                        · {activeMonthLabel.split(' ')[0]}:{' '}
+                        <strong className="text-white font-medium">
+                          {maskValue(formatBRL(monthIncomeCents))}
+                        </strong>
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                      <span>
+                        Despesas: {prevMonthLabel.split(' ')[0]}:{' '}
+                        <strong className="text-white font-medium">
+                          {maskValue(formatBRL(prevMonthExpenseCents))}
+                        </strong>{' '}
+                        · {activeMonthLabel.split(' ')[0]}:{' '}
+                        <strong className="text-white font-medium">
+                          {maskValue(formatBRL(monthExpenseCents))}
+                        </strong>
+                      </span>
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
           )}
         </div>
