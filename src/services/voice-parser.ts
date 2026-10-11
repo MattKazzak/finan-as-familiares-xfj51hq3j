@@ -1098,33 +1098,190 @@ export function categoryExistsInFamilyList(
  * Se subcategoria for informada, ela DEVE pertencer à categoria indicada.
  * NUNCA permite pares órfãos ou cruzados como "Alimentação › Utilidades & Casa".
  */
+const STOPWORDS_PT_SET = new Set([
+  'de',
+  'da',
+  'do',
+  'dos',
+  'das',
+  'para',
+  'pra',
+  'pro',
+  'e',
+  '&',
+  'a',
+  'o',
+  'em',
+  'um',
+  'uma',
+  'uns',
+  'umas',
+  'meu',
+  'minha',
+])
+
+export function stripAccentsText(str: string): string {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+export function tokenizeText(str: string): string[] {
+  const clean = stripAccentsText(str).replace(/[^a-z0-9\s]/g, ' ')
+  return clean.split(/\s+/).filter((t) => t.length >= 2 && !STOPWORDS_PT_SET.has(t))
+}
+
+const CANONICAL_LOCAL_ALIASES: Record<string, string[]> = {
+  'alimentacao pet': ['racao & petiscos', 'racao', 'petiscos', 'pet'],
+  petiscos: ['racao & petiscos'],
+  racao: ['racao & petiscos'],
+  bebidas: ['agua & bebidas para casa', 'bebidas para casa'],
+  bebida: ['agua & bebidas para casa'],
+  'bebidas para casa': ['agua & bebidas para casa'],
+  criancas: ['bebes & criancas'],
+  bebes: ['bebes & criancas'],
+  bebe: ['bebes & criancas'],
+  filho: ['bebes & criancas'],
+  'utilidades domesticas': ['utilidades & casa', 'casa & conforto'],
+  eletronicos: ['eletronicos & tecnologia'],
+  jogos: ['jogos & streaming', 'lazer'],
+  evento: ['eventos & reunioes'],
+  churrasco: ['eventos & reunioes'],
+}
+
+/**
+ * Higienizador de nome do item para sugestões de criação (T2: limpa quantificadores e contexto)
+ */
+export function sanitizeItemNameForSub(rawDesc: string): string {
+  if (!rawDesc) return 'Novo Item'
+  let s = rawDesc.trim()
+  s = s.replace(
+    /^(?:\d+|um|uma|dois|duas|tres|três|quatro|cinco|seis|sete|oito|nove|dez|\d+\s*(?:packs?|pacotes?|latas?|garrafas?|unidades?|kg|quilos?|g|gramas?|litros?|l))\s*(?:de\s+)?/i,
+    '',
+  )
+  s = s.replace(/\s+(?:para|pra|pro)\s+(?:o|a|os|as|meu|minha|nosso|nossa)?\s*.*$/i, '')
+  s = s.replace(/[^\w\s-]/g, '').trim()
+  if (!s) s = rawDesc.trim()
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+/**
+ * Casa tolerante de par (categoria, subcategoria) contra o catálogo real.
+ * Ordem: (a) exato; (b) contenção; (c) aliases; (d) token-overlap na categoria; (e) token-overlap com nome da categoria
+ */
+export function matchTolerantPairAgainstCatalog(
+  categoryName: string | null | undefined,
+  subcategoryName: string | null | undefined,
+  categories: Array<
+    | CategoryWithSubcategoriesInput
+    | { id?: string; name: string; subcategories?: any[]; transaction_subcategories?: any[] }
+  >,
+): { matchedCat: string; matchedSub: string | null } | null {
+  if (!categories || categories.length === 0) {
+    return categoryName ? { matchedCat: categoryName, matchedSub: subcategoryName || null } : null
+  }
+  if (!categoryName) return null
+
+  const propCatNorm = stripAccentsText(categoryName)
+  const propSubNorm = subcategoryName ? stripAccentsText(subcategoryName) : ''
+
+  // 1. Achar categoria real
+  let targetCat = categories.find((c) => stripAccentsText(c.name) === propCatNorm)
+  if (!targetCat) {
+    targetCat = categories.find((c) => {
+      const cNorm = stripAccentsText(c.name)
+      return cNorm.includes(propCatNorm) || propCatNorm.includes(cNorm)
+    })
+  }
+  if (!targetCat) {
+    const propCatTokens = tokenizeText(propCatNorm)
+    let bestScore = 0
+    for (const c of categories) {
+      const cTokens = tokenizeText(c.name)
+      const common = propCatTokens.filter((t) => cTokens.includes(t))
+      if (common.length > bestScore) {
+        bestScore = common.length
+        targetCat = c
+      }
+    }
+  }
+
+  if (!targetCat) return null
+
+  const rawSubs =
+    (targetCat as any).subcategories || (targetCat as any).transaction_subcategories || []
+  const subsList: Array<{ originalName: string; normName: string }> = rawSubs
+    .map((s: any) => {
+      const orig = typeof s === 'string' ? s : s?.name || ''
+      return { originalName: orig, normName: stripAccentsText(orig) }
+    })
+    .filter((s: { originalName: string }) => s.originalName.length > 0)
+
+  if (!propSubNorm || subsList.length === 0) {
+    return { matchedCat: targetCat.name, matchedSub: null }
+  }
+
+  // 2. (a) Exato
+  const exact = subsList.find((s) => s.normName === propSubNorm)
+  if (exact) return { matchedCat: targetCat.name, matchedSub: exact.originalName }
+
+  // (b) Contenção mútua
+  const contain = subsList.find(
+    (s) => s.normName.includes(propSubNorm) || propSubNorm.includes(s.normName),
+  )
+  if (contain) return { matchedCat: targetCat.name, matchedSub: contain.originalName }
+
+  // (c) Aliases
+  const aliases = CANONICAL_LOCAL_ALIASES[propSubNorm] || []
+  for (const alias of aliases) {
+    const aNorm = stripAccentsText(alias)
+    const m = subsList.find(
+      (s) => s.normName === aNorm || s.normName.includes(aNorm) || aNorm.includes(s.normName),
+    )
+    if (m) return { matchedCat: targetCat.name, matchedSub: m.originalName }
+  }
+
+  // (d) Token-overlap
+  const propSubTokens = tokenizeText(propSubNorm)
+  let bestSub: { originalName: string; normName: string } | null = null
+  let bestScore = 0
+  for (const s of subsList) {
+    const sTokens = tokenizeText(s.normName)
+    const common = propSubTokens.filter((t) => sTokens.includes(t))
+    if (common.length > bestScore) {
+      bestScore = common.length
+      bestSub = s
+    }
+  }
+  if (bestSub && bestScore > 0) {
+    return { matchedCat: targetCat.name, matchedSub: bestSub.originalName }
+  }
+
+  // (e) Token overlap com o nome da categoria
+  const catTokens = tokenizeText(targetCat.name)
+  const overlapWithCat = propSubTokens.some((t) => catTokens.includes(t))
+  if (overlapWithCat && subsList.length > 0) {
+    return { matchedCat: targetCat.name, matchedSub: subsList[0].originalName }
+  }
+
+  return null
+}
+
+/**
+ * Valida se um par (categoria, subcategoria) existe legitimamente no catálogo da família.
+ * Usa matching tolerante canônico.
+ */
 export function isCategorySubcategoryPairValid(
   categoryName: string,
   subcategoryName: string | null | undefined,
   categories: Array<
-    CategoryWithSubcategoriesInput | { id?: string; name: string; subcategories?: any[] }
+    | CategoryWithSubcategoriesInput
+    | { id?: string; name: string; subcategories?: any[]; transaction_subcategories?: any[] }
   >,
 ): boolean {
-  if (!categoryName) return false
-  const catNorm = normalizeWord(categoryName)
-  const matchedCat = categories.find((c) => {
-    const cNorm = normalizeWord(c.name)
-    return cNorm === catNorm || cNorm.includes(catNorm) || catNorm.includes(cNorm)
-  })
-
-  if (!matchedCat) return false
-  if (!subcategoryName) return true
-
-  const subNorm = normalizeWord(subcategoryName)
-  if (!matchedCat.subcategories || !Array.isArray(matchedCat.subcategories)) {
-    return false
-  }
-
-  return matchedCat.subcategories.some((s: any) => {
-    const sName = typeof s === 'string' ? s : s?.name || ''
-    const sNorm = normalizeWord(sName)
-    return sNorm === subNorm || sNorm.includes(subNorm) || subNorm.includes(sNorm)
-  })
+  return matchTolerantPairAgainstCatalog(categoryName, subcategoryName, categories) !== null
 }
 
 /**
@@ -1217,12 +1374,12 @@ export function findNextBestCategoryOption(
   // Comportamento genérico para outros itens:
   if (attemptCount >= 2) {
     const parentCat = categories.find((c) => c.type === 'expense')?.name || 'Outros'
-    const newSubName = description.trim() || 'Diversos'
+    const cleanSub = sanitizeItemNameForSub(description)
     return {
       action: 'suggest_create',
-      question: `Nenhuma gaveta encaixa bem — sugiro criar ${newSubName} em ${parentCat}. Posso criar?`,
-      friendlyMessage: `Nenhuma gaveta encaixa bem — sugiro criar ${newSubName} em ${parentCat}. Posso criar?`,
-      suggestedNewSubcategory: newSubName,
+      question: `Nenhuma gaveta encaixa bem para ${description.trim()} — sugiro criar ${cleanSub} em ${parentCat}. Posso criar?`,
+      friendlyMessage: `Nenhuma gaveta encaixa bem para ${description.trim()} — sugiro criar ${cleanSub} em ${parentCat}. Posso criar?`,
+      suggestedNewSubcategory: cleanSub,
       suggestedParentCategory: parentCat,
       bucket: 'lifestyle',
     }

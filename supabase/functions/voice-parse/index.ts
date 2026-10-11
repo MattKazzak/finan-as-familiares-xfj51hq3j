@@ -942,40 +942,211 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido no formato:
       }
     }
 
-    // Validação defensiva contra o catálogo real da família (PATCH 1 — Fim dos pares fabricados)
-    // Extrai o catálogo estruturado de categoriesList recebido pela edge
-    const allowedCatalogPairs = new Map<string, Set<string>>()
-    const allowedCategories = new Set<string>()
+    // Validação defensiva contra o catálogo real da família (MATCHING TOLERANTE DO PAR — Fim da supercorreção)
+    // Extrai o catálogo estruturado com nomes originais e normalizados
+    interface RealCategoryInfo {
+      originalName: string
+      normName: string
+      subs: Array<{ originalName: string; normName: string }>
+    }
+
+    const realCatalog: RealCategoryInfo[] = []
+    const STOPWORDS_PT = new Set([
+      'de',
+      'da',
+      'do',
+      'dos',
+      'das',
+      'para',
+      'pra',
+      'pro',
+      'e',
+      '&',
+      'a',
+      'o',
+      'em',
+      'um',
+      'uma',
+      'uns',
+      'umas',
+      'meu',
+      'minha',
+    ])
+
+    const stripAccents = (str: string) =>
+      str
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim()
+
+    const tokenize = (str: string): string[] => {
+      const clean = stripAccents(str).replace(/[^a-z0-9\s]/g, ' ')
+      return clean.split(/\s+/).filter((t) => t.length >= 2 && !STOPWORDS_PT.has(t))
+    }
+
+    // Dicionário canônico de aliases para matching semântico do par
+    const CANONICAL_ALIASES: Record<string, string[]> = {
+      'alimentacao pet': ['racao & petiscos', 'racao', 'petiscos', 'pet'],
+      petiscos: ['racao & petiscos'],
+      racao: ['racao & petiscos'],
+      bebidas: ['agua & bebidas para casa', 'bebidas para casa'],
+      bebida: ['agua & bebidas para casa'],
+      'bebidas para casa': ['agua & bebidas para casa'],
+      criancas: ['bebes & criancas'],
+      bebes: ['bebes & criancas'],
+      bebe: ['bebes & criancas'],
+      filho: ['bebes & criancas'],
+      'utilidades domesticas': ['utilidades & casa', 'casa & conforto'],
+      eletronicos: ['eletronicos & tecnologia'],
+      jogos: ['jogos & streaming', 'lazer'],
+      evento: ['eventos & reunioes'],
+      churrasco: ['eventos & reunioes'],
+    }
+
+    // Higienizador do nome do item na sugestão de criação (T2: limpa quantificadores e contexto)
+    const sanitizeItemNameForSub = (rawDesc: string): string => {
+      if (!rawDesc) return 'Novo Item'
+      let s = rawDesc.trim()
+      // Remove quantificadores no início (ex: "4", "quatro", "dois", "2 packs de", "1 pacote de", "seis quilos de")
+      s = s.replace(
+        /^(?:\d+|um|uma|dois|duas|tres|três|quatro|cinco|seis|sete|oito|nove|dez|\d+\s*(?:packs?|pacotes?|latas?|garrafas?|unidades?|kg|quilos?|g|gramas?|litros?|l))\s*(?:de\s+)?/i,
+        '',
+      )
+      // Remove cláusulas de contexto ("para o meu cachorro", "para o churrasco", "pra...", "pro...")
+      s = s.replace(/\s+(?:para|pra|pro)\s+(?:o|a|os|as|meu|minha|nosso|nossa)?\s*.*$/i, '')
+      s = s.replace(/[^\w\s-]/g, '').trim()
+      if (!s) s = rawDesc.trim()
+      return s.charAt(0).toUpperCase() + s.slice(1)
+    }
 
     if (Array.isArray(categoriesList) && categoriesList.length > 0) {
       for (const cat of categoriesList) {
-        const catNameNorm = (cat?.name || '').trim().toLowerCase()
-        if (catNameNorm) {
-          allowedCategories.add(catNameNorm)
-          const subSet = new Set<string>()
-          const subs = Array.isArray(cat?.transaction_subcategories)
+        const catOrig = (cat?.name || '').trim()
+        if (catOrig) {
+          const catNorm = stripAccents(catOrig)
+          const subsRaw = Array.isArray(cat?.transaction_subcategories)
             ? cat.transaction_subcategories
             : []
-          for (const s of subs) {
-            const subName = (typeof s === 'string' ? s : s?.name || '').trim().toLowerCase()
-            if (subName) subSet.add(subName)
-          }
-          allowedCatalogPairs.set(catNameNorm, subSet)
+          const subs = subsRaw
+            .map((s: any) => {
+              const subOrig = (typeof s === 'string' ? s : s?.name || '').trim()
+              return {
+                originalName: subOrig,
+                normName: stripAccents(subOrig),
+              }
+            })
+            .filter((s: { originalName: string }) => s.originalName.length > 0)
+
+          realCatalog.push({
+            originalName: catOrig,
+            normName: catNorm,
+            subs,
+          })
         }
       }
     }
 
-    const isCatalogAvailable = allowedCategories.size > 0
+    const isCatalogAvailable = realCatalog.length > 0
 
-    const isPairValid = (catName?: string | null, subName?: string | null) => {
-      if (!isCatalogAvailable) return true
-      if (!catName) return true
-      const catNorm = catName.trim().toLowerCase()
-      if (!allowedCategories.has(catNorm)) return false
-      if (!subName) return true
-      const subNorm = subName.trim().toLowerCase()
-      const subs = allowedCatalogPairs.get(catNorm)
-      return subs ? subs.has(subNorm) : true
+    // Encontra o par real (categoria real + subcategoria real) usando matching tolerante
+    const matchTolerantPair = (
+      proposedCat?: string | null,
+      proposedSub?: string | null,
+    ): { matchedCat: string; matchedSub: string | null } | null => {
+      if (!isCatalogAvailable) {
+        return {
+          matchedCat: proposedCat || 'Compras',
+          matchedSub: proposedSub || null,
+        }
+      }
+      if (!proposedCat) return null
+
+      const propCatNorm = stripAccents(proposedCat)
+      const propSubNorm = proposedSub ? stripAccents(proposedSub) : ''
+
+      // 1. Localiza a categoria real (exata, contenção ou token-overlap)
+      let targetCat = realCatalog.find((c) => c.normName === propCatNorm)
+      if (!targetCat) {
+        targetCat = realCatalog.find(
+          (c) => c.normName.includes(propCatNorm) || propCatNorm.includes(c.normName),
+        )
+      }
+      if (!targetCat) {
+        const propCatTokens = tokenize(propCatNorm)
+        let bestScore = 0
+        for (const c of realCatalog) {
+          const cTokens = tokenize(c.normName)
+          const common = propCatTokens.filter((t) => cTokens.includes(t))
+          if (common.length > bestScore) {
+            bestScore = common.length
+            targetCat = c
+          }
+        }
+      }
+
+      if (!targetCat) return null
+      if (!propSubNorm || targetCat.subs.length === 0) {
+        return { matchedCat: targetCat.originalName, matchedSub: null }
+      }
+
+      // 2. Casa a subcategoria dentro da categoria real encontrada
+      // (a) Igualdade exata após normalização
+      const exactSub = targetCat.subs.find((s) => s.normName === propSubNorm)
+      if (exactSub) {
+        return { matchedCat: targetCat.originalName, matchedSub: exactSub.originalName }
+      }
+
+      // (b) Contenção mútua
+      const containSub = targetCat.subs.find(
+        (s) => s.normName.includes(propSubNorm) || propSubNorm.includes(s.normName),
+      )
+      if (containSub) {
+        return { matchedCat: targetCat.originalName, matchedSub: containSub.originalName }
+      }
+
+      // (c) Matching por Sinônimos / Aliases canônicos
+      const aliases = CANONICAL_ALIASES[propSubNorm] || []
+      for (const alias of aliases) {
+        const aliasNorm = stripAccents(alias)
+        const matched = targetCat.subs.find(
+          (s) =>
+            s.normName === aliasNorm ||
+            s.normName.includes(aliasNorm) ||
+            aliasNorm.includes(s.normName),
+        )
+        if (matched) {
+          return { matchedCat: targetCat.originalName, matchedSub: matched.originalName }
+        }
+      }
+
+      // (d) Token-overlap dentro da categoria real (ignora stopwords)
+      const propSubTokens = tokenize(propSubNorm)
+      let bestSub: { originalName: string; normName: string } | null = null
+      let bestSubScore = 0
+
+      for (const s of targetCat.subs) {
+        const sTokens = tokenize(s.normName)
+        const common = propSubTokens.filter((t) => sTokens.includes(t))
+        if (common.length > bestSubScore) {
+          bestSubScore = common.length
+          bestSub = s
+        }
+      }
+
+      if (bestSub && bestSubScore > 0) {
+        return { matchedCat: targetCat.originalName, matchedSub: bestSub.originalName }
+      }
+
+      // (e) Se a subcategoria proposta tem token em comum com a própria categoria ou aliases globais
+      const catTokens = tokenize(targetCat.normName)
+      const overlapWithCat = propSubTokens.some((t) => catTokens.includes(t))
+      if (overlapWithCat && targetCat.subs.length > 0) {
+        // Casa a subcategoria mais representativa dessa categoria
+        return { matchedCat: targetCat.originalName, matchedSub: targetCat.subs[0].originalName }
+      }
+
+      return null
     }
 
     // Valida itens propostos na raiz ou em transacao
@@ -994,35 +1165,42 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido no formato:
         const sub = it?.subcategoria_proposta || null
         if (!cat) return it
 
-        if (!isPairValid(cat, sub)) {
-          console.warn(
-            `[voice-parse] Par fabricado detectado e expurgado da proposta: "${cat} › ${sub}" para item "${it?.descricao}"`,
-          )
-          // Tenta encontrar categoria mais próxima no catálogo real (ex: 'Compras')
-          let fallbackCat = 'Compras'
-          for (const realCat of allowedCategories) {
-            if (realCat === 'compras' || realCat.includes('compras')) {
-              fallbackCat = realCat.charAt(0).toUpperCase() + realCat.slice(1)
-              break
-            }
-          }
-          const suggestedSubName = it?.descricao
-            ? it.descricao.charAt(0).toUpperCase() + it.descricao.slice(1)
-            : 'Novo Item'
-          unmappedItems.push({
-            descricao: it?.descricao || 'item',
-            suggestedCat: fallbackCat,
-            suggestedSub: suggestedSubName,
-          })
+        const match = matchTolerantPair(cat, sub)
+        if (match) {
+          // Atualiza para os NOMES REAIS do catálogo da família
           return {
             ...it,
-            categoria_proposta: null,
-            subcategoria_proposta: null,
-            duvida_categoria: true,
-            requer_confirmacao: true,
+            categoria_proposta: match.matchedCat,
+            subcategoria_proposta: match.matchedSub,
+            duvida_categoria: false,
           }
         }
-        return it
+
+        console.warn(
+          `[voice-parse] Item sem gaveta real correspondente: "${cat} › ${sub}" para item "${it?.descricao}"`,
+        )
+        // Encontra categoria mais próxima no catálogo real (ex: 'Compras')
+        let fallbackCat = 'Compras'
+        const realCompras = realCatalog.find((c) => c.normName.includes('compras'))
+        if (realCompras) {
+          fallbackCat = realCompras.originalName
+        } else if (realCatalog.length > 0) {
+          fallbackCat = realCatalog[0].originalName
+        }
+
+        const suggestedSubName = sanitizeItemNameForSub(it?.descricao || '')
+        unmappedItems.push({
+          descricao: it?.descricao || 'item',
+          suggestedCat: fallbackCat,
+          suggestedSub: suggestedSubName,
+        })
+        return {
+          ...it,
+          categoria_proposta: null,
+          subcategoria_proposta: null,
+          duvida_categoria: true,
+          requer_confirmacao: true,
+        }
       })
     }
 
@@ -1033,20 +1211,25 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido no formato:
         ? { ...parsedAiJson.transacao }
         : null
     if (isCatalogAvailable && validatedTx && validatedTx.categoria) {
-      if (!isPairValid(validatedTx.categoria, validatedTx.subcategoria)) {
+      const match = matchTolerantPair(validatedTx.categoria, validatedTx.subcategoria)
+      if (match) {
+        validatedTx.categoria = match.matchedCat
+        validatedTx.subcategoria = match.matchedSub
+      } else {
         console.warn(
-          `[voice-parse] Par fabricado detectado na transação: "${validatedTx.categoria} › ${validatedTx.subcategoria}"`,
+          `[voice-parse] Par sem gaveta real na transação: "${validatedTx.categoria} › ${validatedTx.subcategoria}"`,
         )
-        const invalidSub = validatedTx.subcategoria
         const invalidDesc = validatedTx.descricao || 'gasto'
-        validatedTx.categoria = 'Compras'
+        let fallbackCat = 'Compras'
+        const realCompras = realCatalog.find((c) => c.normName.includes('compras'))
+        if (realCompras) fallbackCat = realCompras.originalName
+        validatedTx.categoria = fallbackCat
         validatedTx.subcategoria = null
         if (status === 'sucesso') {
-          // Converte para clarificacao honesta de criação em nível de família
           unmappedItems.push({
             descricao: invalidDesc,
-            suggestedCat: 'Compras',
-            suggestedSub: invalidSub || invalidDesc,
+            suggestedCat: fallbackCat,
+            suggestedSub: sanitizeItemNameForSub(invalidDesc),
           })
         }
       }

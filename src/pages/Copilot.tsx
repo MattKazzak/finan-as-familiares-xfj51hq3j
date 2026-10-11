@@ -40,6 +40,9 @@ import {
   type ParsedVoiceTransaction,
   type StructuredSuggestionOption,
   extractAllAmountsFromVoiceText,
+  matchTolerantPairAgainstCatalog,
+  stripAccentsText,
+  tokenizeText,
 } from '@/services/voice-parser'
 import { useVoiceCapture } from '@/hooks/use-voice-capture'
 
@@ -601,101 +604,244 @@ export function CopilotPage() {
       }))
 
       // TAREFA 1 & TAREFA 2 (PATCH 3): Atualização semântica do estado de itens pendentes
-      // Se há pendência multi-item ativa e o usuário faz correção (com ou sem "não", com "também", etc.)
+      // Se há pendência multi-item ativa e o usuário faz correção (churrasco OU menção de categoria/subcategoria do catálogo)
       let updatedExtractedItems = effectivePendingTx?.extractedItems
         ? [...effectivePendingTx.extractedItems]
         : null
-      const isAttributionToChurrasco =
+
+      const isMultiItemPending =
         Boolean(effectivePendingTx) &&
-        /churrasco/i.test(text) &&
         Boolean(updatedExtractedItems && updatedExtractedItems.length >= 2)
 
-      if (isAttributionToChurrasco && updatedExtractedItems) {
-        // Aplica a correção EXCLUSIVAMENTE aos itens citados na mensagem de correção
-        const mentionsCarne = /carne/i.test(text)
-        const mentionsCarvao = /ca(?:rv|v)[aã]o/i.test(text)
-        updatedExtractedItems = updatedExtractedItems.map((it) => {
-          const isTarget =
-            (mentionsCarne && /carne/i.test(it.descricao)) ||
-            (mentionsCarvao && /ca(?:rv|v)[aã]o/i.test(it.descricao))
-          if (isTarget) {
-            return {
-              ...it,
-              categoria_proposta: 'Lazer',
-              subcategoria_proposta: 'Eventos & Reuniões',
+      if (isMultiItemPending && updatedExtractedItems) {
+        const textNorm = stripAccentsText(text)
+        const isChurrascoMention = /churrasco/i.test(text)
+        const isCorrectionIntent =
+          isChurrascoMention ||
+          /^(n[oó]s\s+temos|temos\s+a\s+categoria|[eé]\s+para\s+o|[eé]\s+pra|vai\s+em|coloca\s+em|muda\s+pra|isso\s+vai\s+em|isso\s+[eé]\s+em)/i.test(
+            textNorm,
+          ) ||
+          /(?:vai\s+em|coloca\s+em|muda\s+pra|categoria)\s+[a-z]+/i.test(textNorm)
+
+        if (isCorrectionIntent) {
+          if (isChurrascoMention) {
+            // Caso de churrasco (Lazer › Eventos & Reuniões)
+            const mentionsCarne = /carne/i.test(text)
+            const mentionsCarvao = /ca(?:rv|v)[aã]o/i.test(text)
+            updatedExtractedItems = updatedExtractedItems.map((it) => {
+              const isTarget =
+                (mentionsCarne && /carne/i.test(it.descricao)) ||
+                (mentionsCarvao && /ca(?:rv|v)[aã]o/i.test(it.descricao)) ||
+                (!mentionsCarne && !mentionsCarvao) // se não especificou, alvo = todos relacionados
+              if (isTarget) {
+                return {
+                  ...it,
+                  categoria_proposta: 'Lazer',
+                  subcategoria_proposta: 'Eventos & Reuniões',
+                }
+              }
+              return it
+            })
+
+            setPendingTx((prev) =>
+              prev ? { ...prev, extractedItems: updatedExtractedItems } : prev,
+            )
+
+            const totalNum =
+              effectivePendingTx.amountCents > 0
+                ? effectivePendingTx.amountCents / 100
+                : Number(
+                    effectivePendingTx.amountFormatted?.replace(/[^\d,]/g, '').replace(',', '.') ||
+                      0,
+                  )
+            const totalFormatted =
+              effectivePendingTx.amountFormatted ||
+              (totalNum > 0
+                ? totalNum.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                : 'R$ 0,00')
+
+            const lines = updatedExtractedItems.map((it) => {
+              const cat = it.categoria_proposta || 'Outros'
+              const sub = it.subcategoria_proposta ? ` › **${it.subcategoria_proposta}**` : ''
+              return `• ${it.descricao} → **${cat}**${sub}`
+            })
+
+            const correctedItemsNames =
+              updatedExtractedItems
+                .filter((it) => it.categoria_proposta === 'Lazer')
+                .map((it) => it.descricao)
+                .join(' e ') || 'carne e carvão'
+
+            const remainingItemsNames =
+              updatedExtractedItems
+                .filter((it) => it.categoria_proposta !== 'Lazer')
+                .map((it) => it.descricao)
+                .join(', ') || 'demais itens'
+
+            const divisionPart =
+              totalNum > 0
+                ? `\n\nEntendi — ${correctedItemsNames} vão para **Lazer** › **Eventos & Reuniões** e ${remainingItemsNames} ficam nas gavetas deles. Como o total é único (${totalFormatted}), preciso dividir: aproximadamente quanto foi da parte do churrasco?`
+                : '\n\nEstá certo assim?'
+
+            const oneCorrectionResponse = `Entendi! Então separei assim:\n${lines.join('\n')}${divisionPart}`
+
+            if (family?.id) {
+              saveCopilotMessage({
+                familyId: family.id,
+                role: 'assistant',
+                content: oneCorrectionResponse,
+                cardType: 'clarificacao',
+              }).catch(() => {})
             }
-          }
-          return it
-        })
 
-        // Grava IMEDIATAMENTE no estado da pendência antes de montar a resposta
-        setPendingTx((prev) => (prev ? { ...prev, extractedItems: updatedExtractedItems } : prev))
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `asst-${Date.now()}`,
+                sender: 'assistant',
+                text: oneCorrectionResponse,
+                timestamp: new Date(),
+                cardType: 'clarificacao',
+                cardData: {
+                  ...effectivePendingTx,
+                  extractedItems: updatedExtractedItems,
+                },
+              },
+            ])
+            setIsProcessing(false)
+            return
+          } else {
+            // Correção semântica genérica de categoria/subcategoria (ex: "Nós temos a categoria pet", "é para o cachorro, vai em pet", "isso vai em bebidas")
+            // 1. Tenta extrair a categoria ou par citado
+            let candidateCat: string | null = null
+            let candidateSub: string | null = null
 
-        // Se houver total único consolidado, a resposta da correção é UMA mensagem:
-        // "Entendi! Então separei assim:" + lista vertical (um item por linha) + pergunta de divisão com contexto
-        const totalNum =
-          effectivePendingTx.amountCents > 0
-            ? effectivePendingTx.amountCents / 100
-            : Number(
-                effectivePendingTx.amountFormatted?.replace(/[^\d,]/g, '').replace(',', '.') || 0,
+            // Extrai possíveis termos após "categoria", "em", "pra"
+            const matchExplicit = text.match(
+              /(?:categoria|em|pra|para)\s+([a-zA-Zá-úÁ-Ú&]+(?:\s+[a-zA-Zá-úÁ-Ú&]+)?)/i,
+            )
+            if (matchExplicit) {
+              const term = matchExplicit[1].trim()
+              // Testa se o termo casa com categoria do catálogo
+              const pairMatch = matchTolerantPairAgainstCatalog(term, null, categories)
+              if (pairMatch) {
+                candidateCat = pairMatch.matchedCat
+                candidateSub = pairMatch.matchedSub
+              } else {
+                // Tenta achar categoria que tenha token overlap
+                for (const cat of categories) {
+                  const m = matchTolerantPairAgainstCatalog(cat.name, term, categories)
+                  if (m) {
+                    candidateCat = m.matchedCat
+                    candidateSub = m.matchedSub
+                    break
+                  }
+                }
+              }
+            }
+
+            // Fallback: busca por palavras-chave diretas no texto da mensagem
+            if (!candidateCat) {
+              if (/pet|cachorro|gato|sach[eê]|ra[cç][aã]o/i.test(textNorm)) {
+                const m = matchTolerantPairAgainstCatalog('Pets', 'Ração & Petiscos', categories)
+                if (m) {
+                  candidateCat = m.matchedCat
+                  candidateSub = m.matchedSub
+                }
+              } else if (/bebida|cerveja|refrigerante|suco|agua|água/i.test(textNorm)) {
+                const m = matchTolerantPairAgainstCatalog(
+                  'Alimentação',
+                  'Água & Bebidas para Casa',
+                  categories,
+                )
+                if (m) {
+                  candidateCat = m.matchedCat
+                  candidateSub = m.matchedSub
+                }
+              }
+            }
+
+            if (candidateCat) {
+              // Identifica qual item da pendência sofre a correção
+              let targetItemDesc = ''
+              updatedExtractedItems = updatedExtractedItems.map((it) => {
+                const itNorm = stripAccentsText(it.descricao)
+                // Se a mensagem citar palavras do item ou o contexto semântico do item
+                const itTokens = tokenizeText(it.descricao)
+                const textTokens = tokenizeText(text)
+                const isTarget =
+                  itTokens.some((t) => textTokens.includes(t)) ||
+                  (/pet|cachorro|gato/i.test(textNorm) &&
+                    /sach[eê]|pet|cachorro|gato|racao/i.test(itNorm)) ||
+                  (/bebida/i.test(textNorm) && /pack|long neck|cerveja|bebida/i.test(itNorm)) ||
+                  (/filho|crian[cç]a|bebe/i.test(textNorm) && /roda|brinquedo|fralda/i.test(itNorm))
+
+                if (isTarget) {
+                  targetItemDesc = it.descricao
+                  return {
+                    ...it,
+                    categoria_proposta: candidateCat!,
+                    subcategoria_proposta: candidateSub || it.subcategoria_proposta || null,
+                  }
+                }
+                return it
+              })
+
+              if (!targetItemDesc) {
+                targetItemDesc = updatedExtractedItems[0].descricao
+                updatedExtractedItems[0] = {
+                  ...updatedExtractedItems[0],
+                  categoria_proposta: candidateCat,
+                  subcategoria_proposta:
+                    candidateSub || updatedExtractedItems[0].subcategoria_proposta || null,
+                }
+              }
+
+              // Grava IMEDIATAMENTE no estado da pendência antes de responder
+              setPendingTx((prev) =>
+                prev ? { ...prev, extractedItems: updatedExtractedItems } : prev,
               )
 
-        const totalFormatted =
-          effectivePendingTx.amountFormatted ||
-          (totalNum > 0
-            ? totalNum.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-            : 'R$ 0,00')
+              const catDisplay = candidateCat
+              const subDisplay = candidateSub ? ` › ${candidateSub}` : ''
+              const ackMsg = `Você tem razão — ${targetItemDesc} vai para ${catDisplay}${subDisplay}.`
 
-        const lines = updatedExtractedItems.map((it) => {
-          const cat = it.categoria_proposta || 'Outros'
-          const sub = it.subcategoria_proposta ? ` › **${it.subcategoria_proposta}**` : ''
-          return `• ${it.descricao} → **${cat}**${sub}`
-        })
+              const lines = updatedExtractedItems.map((it) => {
+                const cat = it.categoria_proposta || 'Outros'
+                const sub = it.subcategoria_proposta ? ` › **${it.subcategoria_proposta}**` : ''
+                return `• ${it.descricao} → **${cat}**${sub}`
+              })
 
-        const correctedItemsNames =
-          updatedExtractedItems
-            .filter((it) => it.categoria_proposta === 'Lazer')
-            .map((it) => it.descricao)
-            .join(' e ') || 'carne e carvão'
+              const fullReply = `${ackMsg}\n\nSeparei assim:\n${lines.join('\n')}\n\nEstá certo assim?`
 
-        const remainingItemsNames =
-          updatedExtractedItems
-            .filter((it) => it.categoria_proposta !== 'Lazer')
-            .map((it) => it.descricao)
-            .join(', ') || 'demais itens'
+              if (family?.id) {
+                saveCopilotMessage({
+                  familyId: family.id,
+                  role: 'assistant',
+                  content: fullReply,
+                  cardType: 'clarificacao',
+                }).catch(() => {})
+              }
 
-        const divisionPart =
-          totalNum > 0
-            ? `\n\nEntendi — ${correctedItemsNames} vão para **Lazer** › **Eventos & Reuniões** e ${remainingItemsNames} ficam nas gavetas deles. Como o total é único (${totalFormatted}), preciso dividir: aproximadamente quanto foi da parte do churrasco?`
-            : '\n\nEstá certo assim?'
-
-        const oneCorrectionResponse = `Entendi! Então separei assim:\n${lines.join('\n')}${divisionPart}`
-
-        if (family?.id) {
-          saveCopilotMessage({
-            familyId: family.id,
-            role: 'assistant',
-            content: oneCorrectionResponse,
-            cardType: 'clarificacao',
-          }).catch(() => {})
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: `asst-${Date.now()}`,
+                  sender: 'assistant',
+                  text: fullReply,
+                  timestamp: new Date(),
+                  cardType: 'clarificacao',
+                  cardData: {
+                    ...effectivePendingTx,
+                    extractedItems: updatedExtractedItems,
+                  },
+                },
+              ])
+              setIsProcessing(false)
+              return
+            }
+          }
         }
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `asst-${Date.now()}`,
-            sender: 'assistant',
-            text: oneCorrectionResponse,
-            timestamp: new Date(),
-            cardType: 'clarificacao',
-            cardData: {
-              ...effectivePendingTx,
-              extractedItems: updatedExtractedItems,
-            },
-          },
-        ])
-        setIsProcessing(false)
-        return
       }
 
       // TAREFA 2: Re-exibição reflete correções acumuladas

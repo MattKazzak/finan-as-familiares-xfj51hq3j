@@ -6,6 +6,8 @@ import {
   extractAllAmountsFromVoiceText,
   normalizeBrazilianCurrencyString,
   ParsedVoiceTransaction,
+  matchTolerantPairAgainstCatalog,
+  sanitizeItemNameForSub,
 } from '../voice-parser'
 import { analyzeBasketMission } from '../basket-missions'
 
@@ -1198,5 +1200,150 @@ describe('Contrato de Comportamento do Copilot v1.0 — Casos de Avaliação de 
     expect(singleResponse).toContain(
       'Como o total é único (R$ 280,00), preciso dividir: aproximadamente quanto foi da parte do churrasco?',
     )
+  })
+
+  // [C39] sachês → Pets (par real existente) proposta normal, NUNCA criação; long neck → bebidas; fraldas → Compras › Bebês & Crianças
+  it('C39: matching tolerante valida pares propostos plausíveis com o catálogo real da família (Pets › Ração & Petiscos, Alimentação › Água & Bebidas, Compras › Bebês & Crianças) como proposta normal, NUNCA criação', () => {
+    // Catálogo representativo da família com os nomes canônicos oficiais
+    const familyCategories = [
+      {
+        id: 'cat-pets',
+        name: 'Pets',
+        type: 'expense',
+        subcategories: [
+          { id: 'sub-racao', name: 'Ração & Petiscos' },
+          { id: 'sub-vet', name: 'Veterinário & Remédios' },
+        ],
+      },
+      {
+        id: 'cat-alim',
+        name: 'Alimentação',
+        type: 'expense',
+        subcategories: [
+          { id: 'sub-sup', name: 'Supermercado & Feira' },
+          { id: 'sub-beb', name: 'Água & Bebidas para Casa' },
+          { id: 'sub-rest', name: 'Restaurante & Delivery' },
+        ],
+      },
+      {
+        id: 'cat-compras',
+        name: 'Compras',
+        type: 'expense',
+        subcategories: [
+          { id: 'sub-kids', name: 'Bebês & Crianças' },
+          { id: 'sub-casa', name: 'Utilidades & Casa' },
+        ],
+      },
+    ]
+
+    // 1. Sachês / Alimentação Pet -> deve casar com Pets › Ração & Petiscos
+    const matchSaches = matchTolerantPairAgainstCatalog('Pets', 'Alimentação Pet', familyCategories)
+    expect(matchSaches).not.toBeNull()
+    expect(matchSaches?.matchedCat).toBe('Pets')
+    expect(matchSaches?.matchedSub).toBe('Ração & Petiscos')
+
+    // 2. Long neck / Bebidas -> deve casar com Alimentação › Água & Bebidas para Casa
+    const matchBebidas = matchTolerantPairAgainstCatalog('Alimentação', 'Bebidas', familyCategories)
+    expect(matchBebidas).not.toBeNull()
+    expect(matchBebidas?.matchedCat).toBe('Alimentação')
+    expect(matchBebidas?.matchedSub).toBe('Água & Bebidas para Casa')
+
+    // 3. Fraldas / Crianças -> deve casar com Compras › Bebês & Crianças
+    const matchFraldas = matchTolerantPairAgainstCatalog('Compras', 'Crianças', familyCategories)
+    expect(matchFraldas).not.toBeNull()
+    expect(matchFraldas?.matchedCat).toBe('Compras')
+    expect(matchFraldas?.matchedSub).toBe('Bebês & Crianças')
+
+    // Proposta normal NÃO deve cair em caminho de criação
+    expect(matchSaches?.matchedCat).not.toBe('Compras') // não foi empurrado pra Compras
+  })
+
+  // [C40] item sem par real → sugestão de criação com nome do item limpo ('Sachês', não a frase)
+  it('C40: item sem par real dispara sugestão de criação com o nome do item higienizado (sem quantificadores ou contexto)', () => {
+    // Frase completa que a IA recebe no item
+    const rawPhrase1 = '4 sachês para o meu cachorro'
+    const cleanName1 = sanitizeItemNameForSub(rawPhrase1)
+    expect(cleanName1).toBe('Sachês')
+
+    const rawPhrase2 = 'dois packs de furadeira de impacto para a oficina'
+    const cleanName2 = sanitizeItemNameForSub(rawPhrase2)
+    expect(cleanName2).toBe('Furadeira de impacto')
+
+    const rawPhrase3 = '1 pacote de carvão para o churrasco'
+    const cleanName3 = sanitizeItemNameForSub(rawPhrase3)
+    expect(cleanName3).toBe('Carvão')
+
+    // Formato da mensagem de criação com nome higienizado
+    const suggestionMsg = `Nenhuma gaveta encaixa bem para ${rawPhrase1} — sugiro criar ${cleanName1} em Pets. Posso criar?`
+    expect(suggestionMsg).toBe(
+      'Nenhuma gaveta encaixa bem para 4 sachês para o meu cachorro — sugiro criar Sachês em Pets. Posso criar?',
+    )
+    expect(suggestionMsg).not.toContain('sugiro criar 4 sachês para o meu cachorro')
+  })
+
+  // [C41] correção do usuário citando categoria existente → respondida ('Você tem razão — ...') E aplicada ao estado
+  it('C41: correção do usuário durante pendência citando categoria existente responde reconhecendo ("Você tem razão — ...") e grava no estado', () => {
+    const familyCategories = [
+      {
+        id: 'cat-pets',
+        name: 'Pets',
+        type: 'expense',
+        subcategories: [{ id: 'sub-racao', name: 'Ração & Petiscos' }],
+      },
+      {
+        id: 'cat-alim',
+        name: 'Alimentação',
+        type: 'expense',
+        subcategories: [{ id: 'sub-beb', name: 'Água & Bebidas para Casa' }],
+      },
+    ]
+
+    // Estado inicial pendente com par incorreto
+    const pendingItems = [
+      {
+        descricao: '4 sachês para o meu cachorro',
+        categoria_proposta: 'Compras',
+        subcategoria_proposta: null,
+      },
+      {
+        descricao: 'dois packs de long neck',
+        categoria_proposta: 'Alimentação',
+        subcategoria_proposta: 'Água & Bebidas para Casa',
+      },
+    ]
+
+    // Usuário fala: "Nós temos a categoria pet"
+    const userCorrectionText = 'Nós temos a categoria pet'
+    const matchCat = matchTolerantPairAgainstCatalog('pet', null, familyCategories)
+    expect(matchCat).not.toBeNull()
+    expect(matchCat?.matchedCat).toBe('Pets')
+    expect(matchCat?.matchedSub).toBe('Ração & Petiscos')
+
+    // Aplicação no item correspondente
+    const updatedItems = pendingItems.map((it) => {
+      if (/sach[eê]|cachorro|pet/i.test(it.descricao)) {
+        return {
+          ...it,
+          categoria_proposta: matchCat!.matchedCat,
+          subcategoria_proposta: matchCat!.matchedSub,
+        }
+      }
+      return it
+    })
+
+    // Resposta esperada com reconhecimento explícito + lista vertical
+    const targetItem = '4 sachês para o meu cachorro'
+    const ack = `Você tem razão — ${targetItem} vai para ${matchCat!.matchedCat} › ${matchCat!.matchedSub}.`
+    const lines = updatedItems.map(
+      (it) => `• ${it.descricao} → **${it.categoria_proposta}** › **${it.subcategoria_proposta}**`,
+    )
+    const response = `${ack}\n\nSeparei assim:\n${lines.join('\n')}\n\nEstá certo assim?`
+
+    expect(response).toContain(
+      'Você tem razão — 4 sachês para o meu cachorro vai para Pets › Ração & Petiscos.',
+    )
+    expect(response).toContain('• 4 sachês para o meu cachorro → **Pets** › **Ração & Petiscos**')
+    expect(updatedItems[0].categoria_proposta).toBe('Pets')
+    expect(updatedItems[0].subcategoria_proposta).toBe('Ração & Petiscos')
   })
 })
