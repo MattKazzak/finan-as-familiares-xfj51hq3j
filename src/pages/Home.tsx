@@ -537,7 +537,14 @@ export default function Home() {
               aria-label="Trocar membro ativo ou abrir perfil"
               title={members.length > 1 ? 'Trocar perfil / membro' : 'Perfil do membro'}
             >
-              <Avatar className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl border-2 border-[#14213D] shadow-sm transition-all group-hover:border-[#FCA311]">
+              <Avatar className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl border-2 border-[#14213D] shadow-sm transition-all group-hover:border-[#FCA311] overflow-hidden">
+                {family?.avatar_url && (
+                  <AvatarImage
+                    src={family.avatar_url}
+                    alt={family.name ? `Foto da Família ${family.name}` : 'Foto da Família'}
+                    className="w-full h-full object-cover"
+                  />
+                )}
                 <AvatarFallback className="bg-gradient-to-tr from-[#14213D] to-[#1f3159] text-white font-semibold text-xs sm:text-sm rounded-2xl">
                   {memberInitial}
                 </AvatarFallback>

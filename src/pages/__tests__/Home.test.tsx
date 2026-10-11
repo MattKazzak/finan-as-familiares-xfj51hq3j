@@ -759,5 +759,58 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
         expect(screen.queryByText('R$ ••••••')).toBeNull()
       })
     })
+
+    it('R54: renderiza imagem no avatar do cabeçalho quando a família possui avatar_url', async () => {
+      mockFamily = {
+        id: 'fam-with-avatar',
+        name: 'Silva',
+        monthly_net_income_cents: 600000,
+        avatar_url: 'https://img.usecurling.com/p/200/200?q=family',
+      }
+
+      renderWithProviders(<Home />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Receitas')).toBeDefined()
+      })
+
+      const avatarButton = screen.getByRole('button', {
+        name: /trocar membro ativo ou abrir perfil/i,
+      })
+      expect(avatarButton).toBeDefined()
+
+      // Imagem do avatar presente com a URL da família e alt descritivo
+      const avatarImg = avatarButton.querySelector('img')
+      expect(avatarImg).toBeDefined()
+      expect(avatarImg?.getAttribute('src')).toBe('https://img.usecurling.com/p/200/200?q=family')
+      expect(avatarImg?.getAttribute('alt')).toBe('Foto da Família Silva')
+    })
+
+    it('R54: preserva fallback com inicial do membro quando a família NÃO possui avatar_url', async () => {
+      mockFamily = {
+        id: 'fam-without-avatar',
+        name: 'Silva',
+        monthly_net_income_cents: 600000,
+        avatar_url: null,
+      }
+
+      renderWithProviders(<Home />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Receitas')).toBeDefined()
+      })
+
+      const avatarButton = screen.getByRole('button', {
+        name: /trocar membro ativo ou abrir perfil/i,
+      })
+      expect(avatarButton).toBeDefined()
+
+      // Sem elemento img quando avatar_url é null
+      const avatarImg = avatarButton.querySelector('img')
+      expect(avatarImg).toBeNull()
+
+      // Fallback com inicial "L" (de Lucas) presente
+      expect(avatarButton.textContent).toContain('L')
+    })
   })
 })
