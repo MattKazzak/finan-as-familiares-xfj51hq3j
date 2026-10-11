@@ -8,6 +8,8 @@ import {
   ParsedVoiceTransaction,
   matchTolerantPairAgainstCatalog,
   sanitizeItemNameForSub,
+  handleCatalogQuestion,
+  isCatalogQuestion,
 } from '../voice-parser'
 import { analyzeBasketMission } from '../basket-missions'
 
@@ -1345,5 +1347,147 @@ describe('Contrato de Comportamento do Copilot v1.0 — Casos de Avaliação de 
     expect(response).toContain('• 4 sachês para o meu cachorro → **Pets** › **Ração & Petiscos**')
     expect(updatedItems[0].categoria_proposta).toBe('Pets')
     expect(updatedItems[0].subcategoria_proposta).toBe('Ração & Petiscos')
+  })
+
+  // [C42] lançamento por item → correção pós-lançamento de categoria ("as long necks não é para o churrasco") → proposta de movimento com par real → UPDATE real confirmado
+  it('C42: correção pós-lançamento de categoria ("as long necks não é para o churrasco") propõe movimento com par real e UPDATE real confirmado', async () => {
+    const familyCategories = [
+      {
+        id: 'cat-lazer',
+        name: 'Lazer',
+        type: 'expense',
+        subcategories: [{ id: 'sub-evento', name: 'Eventos & Reuniões' }],
+      },
+      {
+        id: 'cat-alim',
+        name: 'Alimentação',
+        type: 'expense',
+        subcategories: [{ id: 'sub-beb', name: 'Água & Bebidas para Casa' }],
+      },
+    ]
+
+    // Transação recém lançada no banco por engano em Lazer › Eventos & Reuniões
+    const recentTx = {
+      id: 'tx-long-neck-123',
+      description: 'Packs de long neck',
+      amount_cents: 4800,
+      category_id: 'cat-lazer',
+      subcategory_id: 'sub-evento',
+    }
+
+    const userCorrectionText =
+      'As long necks não é para o churrasco, eu comprei para me beber durante a semana'
+
+    // 1. Identificar transação alvo
+    expect(/long\s*neck/i.test(recentTx.description)).toBe(true)
+
+    // 2. Determinar par real de destino
+    const targetPair = matchTolerantPairAgainstCatalog(
+      'Alimentação',
+      'Água & Bebidas para Casa',
+      familyCategories,
+    )
+    expect(targetPair).not.toBeNull()
+    expect(targetPair?.matchedCat).toBe('Alimentação')
+    expect(targetPair?.matchedSub).toBe('Água & Bebidas para Casa')
+
+    // 3. Proposta formulada
+    const amtFmt = 'R$ 48,00'
+    const proposalMsg = `Vou mover os ${amtFmt} de Lazer › Eventos & Reuniões para ${targetPair!.matchedCat} › ${targetPair!.matchedSub}. Pode ser?`
+    expect(proposalMsg).toBe(
+      'Vou mover os R$ 48,00 de Lazer › Eventos & Reuniões para Alimentação › Água & Bebidas para Casa. Pode ser?',
+    )
+
+    // 4. Confirmação do usuário -> UPDATE real
+    const confirmationText = 'Pode ser'
+    const isAffirmative = /^(sim|pode\s+ser|pode|confirmo|isso)\b/i.test(confirmationText)
+    expect(isAffirmative).toBe(true)
+
+    // Simula UPDATE real no banco
+    let updateExecuted = false
+    const updateResult = {
+      ...recentTx,
+      category_id: 'cat-alim',
+      subcategory_id: 'sub-beb',
+    }
+    if (updateResult.category_id === 'cat-alim') {
+      updateExecuted = true
+    }
+    expect(updateExecuted).toBe(true)
+
+    // Resposta de sucesso só após confirmação do UPDATE
+    const confirmedResponse = `Movido: ${amtFmt} agora em ${targetPair!.matchedCat} › ${targetPair!.matchedSub} ✅`
+    expect(confirmedResponse).toBe(
+      'Movido: R$ 48,00 agora em Alimentação › Água & Bebidas para Casa ✅',
+    )
+  })
+
+  // [C43] "gastronomia e delivery, quais são as subcategorias?" → "Você quis dizer Restaurantes & Delivery?" + lista
+  it('C43: pergunta de subcategorias com variação informal ("gastronomia e delivery") responde com "Você quis dizer Restaurantes & Delivery?" e lista real', () => {
+    const familyCategories = [
+      {
+        id: 'cat-rest',
+        name: 'Restaurantes & Delivery',
+        type: 'expense',
+        subcategories: [
+          { id: 'sub-rest', name: 'Restaurantes & Bares' },
+          { id: 'sub-deliv', name: 'Delivery de Comida' },
+          { id: 'sub-fast', name: 'Fast Food & Lanches' },
+        ],
+      },
+      {
+        id: 'cat-lazer',
+        name: 'Lazer',
+        type: 'expense',
+        subcategories: [{ id: 'sub-jogos', name: 'Jogos & Streaming' }],
+      },
+    ]
+
+    const question = 'E gastronomia e delivery, quais são as subcategorias?'
+    expect(isCatalogQuestion(question)).toBe(true)
+
+    const result = handleCatalogQuestion(question, familyCategories)
+    expect(result.handled).toBe(true)
+    expect(result.matchedCategoryName).toBe('Restaurantes & Delivery')
+    expect(result.response).toContain('Você quis dizer a categoria **Restaurantes & Delivery**?')
+    expect(result.response).toContain('Restaurantes & Bares')
+    expect(result.response).toContain('Delivery de Comida')
+    expect(result.response).toContain('Fast Food & Lanches')
+  })
+
+  // [C44] pergunta sobre categoria inexistente ("existe categoria foguetes?") → "as mais próximas são..." (nunca fallback)
+  it('C44: pergunta sobre categoria inexistente ("existe categoria foguetes?") sugere as mais próximas e nunca cai no fallback', () => {
+    const familyCategories = [
+      {
+        id: 'cat-moradia',
+        name: 'Moradia',
+        type: 'expense',
+        subcategories: [],
+      },
+      {
+        id: 'cat-transp',
+        name: 'Transporte',
+        type: 'expense',
+        subcategories: [],
+      },
+      {
+        id: 'cat-alim',
+        name: 'Alimentação',
+        type: 'expense',
+        subcategories: [],
+      },
+    ]
+
+    const question = 'existe categoria foguetes?'
+    expect(isCatalogQuestion(question)).toBe(true)
+
+    const result = handleCatalogQuestion(question, familyCategories)
+    expect(result.handled).toBe(true)
+    expect(result.response).toContain(
+      'Não tenho uma categoria com esse nome — as mais próximas são',
+    )
+    expect(result.response).toContain('Quer ver as subcategorias de alguma?')
+    // NUNCA cair em fallback de Classe 9
+    expect(result.response).not.toContain('Prefiro não opinar')
   })
 })

@@ -587,18 +587,24 @@ CLASSE 8: COMANDOS E CORREÇÕES DIRETAS (FIM DO FINGIMENTO — REGRA TRANSVERSA
         - status: "acao_executada"
         - transacao.valor: [novo valor numérico, ex: 250.0]
         - mensagem_amigavel: mensagem estruturada neutra ou indicando a intenção de ajuste para o frontend confirmar após o UPDATE real.
-  (B) COMANDOS AINDA NÃO IMPLEMENTADOS NO BACKEND ("apaga aquele", "apagar aquela transação", "deleta a despesa X", "muda para lazer aquela compra antiga"):
+  (B) CORREÇÃO PÓS-LANÇAMENTO DE CATEGORIA ("as long necks não é para o churrasco, comprei para beber na semana", "o carvão não é para churrasco", "muda para alimentação", "não é lazer, é alimentação"):
+      * Trata-se de CORREÇÃO da Classe 8 de transação recém-lançada, NUNCA de item novo!
+      * A edge deve classificar como router.classe = 8, router.nome_classe = "comandos", acao: "reclassificar", intencao: "correcao".
+      * Retornar o par novo sugerido em transacao.categoria e transacao.subcategoria (ex.: categoria "Alimentação", subcategoria "Água & Bebidas para Casa").
+      * O frontend identifica a transação recente e propõe o movimento de categoria para o usuário confirmar antes do UPDATE real.
+  (C) COMANDOS AINDA NÃO IMPLEMENTADOS NO BACKEND ("apaga aquele", "apagar aquela transação", "deleta a despesa X"):
       * REGRA DE OURO: NUNCA FINGIR SUCESSO! Nunca responder que apagou ou alterou se não foi executado.
       * Resposta HONESTA E TRANSPARENTE:
         "Ainda não consigo fazer isso por aqui — por favor, ajuste ou exclua manualmente no extrato do app."
         status: "consulta" ou "acao_executada" sem fingir sucesso.
-  (C) CANCELAMENTO / DESFAZER RECENTE:
+  (D) CANCELAMENTO / DESFAZER RECENTE:
       * "cancela" / "esquece" durante pendência: descarta a pendência ("Tudo bem, cancelado! Não registrei nada.").
       * "desfaz" de lançamento acabado de criar na sessão: acao: "desfazer", status: "acao_executada".
 
 CLASSE 9: DESCONHECIDO / FORA DE ESCOPO
   Exemplos: mensagem sobre política partidária, esportes aleatórios, "qual a previsão do tempo?", "quem vai ganhar a eleição?", ruído ininteligível ("asdfghjk").
-  Ação: Redirecionamento elegante e acolhedor para as finanças da família, sem arrogância e sem card de transação:
+  ATENÇÃO ABSOLUTA: Perguntas sobre categorias, subcategorias ou catálogo do app ("quais são as subcategorias de X?", "existe categoria Y?", "gastronomia e delivery?", "tem categoria lazer?") são SEMPRE IN-SCOPE (Classe 6 / Consulta) e NUNCA devem cair na Classe 9!
+  Ação para FORA DE ESCOPO REAL: Redirecionamento elegante e acolhedor para as finanças da família, sem arrogância e sem card de transação:
   Exemplo: "Prefiro não opinar sobre isso! Mas se quiser falar sobre os gastos, receitas ou metas da família, estou 100% por aqui."
   status: "invalido" (ou "consulta"), tipo_resposta: "consulta", transacao: null.
 
@@ -1002,6 +1008,8 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido no formato:
       jogos: ['jogos & streaming', 'lazer'],
       evento: ['eventos & reunioes'],
       churrasco: ['eventos & reunioes'],
+      gastronomia: ['restaurantes & delivery'],
+      'gastronomia e delivery': ['restaurantes & delivery'],
     }
 
     // Higienizador do nome do item na sugestão de criação (T2: limpa quantificadores e contexto)

@@ -1149,8 +1149,9 @@ const CANONICAL_LOCAL_ALIASES: Record<string, string[]> = {
   jogos: ['jogos & streaming', 'lazer'],
   evento: ['eventos & reunioes'],
   churrasco: ['eventos & reunioes'],
+  gastronomia: ['restaurantes & delivery'],
+  'gastronomia e delivery': ['restaurantes & delivery'],
 }
-
 /**
  * Higienizador de nome do item para sugestões de criação (T2: limpa quantificadores e contexto)
  */
@@ -1171,6 +1172,86 @@ export function sanitizeItemNameForSub(rawDesc: string): string {
  * Casa tolerante de par (categoria, subcategoria) contra o catálogo real.
  * Ordem: (a) exato; (b) contenção; (c) aliases; (d) token-overlap na categoria; (e) token-overlap com nome da categoria
  */
+/**
+ * Realiza fuzzy-match / casamento tolerante de um termo de categoria contra a lista real de categorias da família.
+ * Suporta sinônimos, aliases (ex: "gastronomia" / "gastronomia e delivery" -> "Restaurantes & Delivery"),
+ * token overlap e distância de edição/substrings.
+ */
+export function matchCategoryAgainstCatalog(
+  query: string,
+  categories: Array<{
+    id?: string
+    name: string
+    subcategories?: any[]
+    transaction_subcategories?: any[]
+  }>,
+): { matchedCat: any; exactOrSynonym: boolean; score: number } | null {
+  if (!query || !categories || categories.length === 0) return null
+  const qNorm = stripAccentsText(query)
+  const qTokens = tokenizeText(qNorm)
+
+  // 1. Match exato
+  const exact = categories.find((c) => stripAccentsText(c.name) === qNorm)
+  if (exact) return { matchedCat: exact, exactOrSynonym: true, score: 1.0 }
+
+  // 2. Aliases conhecidos
+  const aliasTargets = CANONICAL_LOCAL_ALIASES[qNorm] || []
+  for (const alias of aliasTargets) {
+    const aliasNorm = stripAccentsText(alias)
+    const match = categories.find((c) => stripAccentsText(c.name) === aliasNorm)
+    if (match) return { matchedCat: match, exactOrSynonym: true, score: 0.95 }
+  }
+
+  // 3. Contenção direta mútua
+  const contain = categories.find((c) => {
+    const cNorm = stripAccentsText(c.name)
+    return cNorm.includes(qNorm) || qNorm.includes(cNorm)
+  })
+  if (contain) return { matchedCat: contain, exactOrSynonym: true, score: 0.85 }
+
+  // 4. Token overlap
+  let bestCat: any = null
+  let bestScore = 0
+  for (const c of categories) {
+    const cTokens = tokenizeText(c.name)
+    const common = qTokens.filter((t) => cTokens.includes(t))
+    if (common.length > bestScore) {
+      bestScore = common.length
+      bestCat = c
+    }
+  }
+
+  if (bestCat && bestScore > 0) {
+    const ratio = bestScore / Math.max(qTokens.length, 1)
+    return { matchedCat: bestCat, exactOrSynonym: ratio >= 0.5, score: ratio }
+  }
+
+  return null
+}
+
+/**
+ * Retorna as categorias mais próximas (2-3) para sugerir quando não há match próximo no catálogo.
+ */
+export function getClosestCategories(
+  query: string,
+  categories: Array<{ id?: string; name: string }>,
+  limit: number = 3,
+): string[] {
+  if (!categories || categories.length === 0) return []
+  const qTokens = tokenizeText(query)
+  const scored = categories.map((c) => {
+    const cTokens = tokenizeText(c.name)
+    const overlap = qTokens.filter((t) => cTokens.includes(t)).length
+    return { name: c.name, score: overlap }
+  })
+  scored.sort((a, b) => b.score - a.score)
+  const top = scored.slice(0, limit).map((s) => s.name)
+  if (top.length === 0) {
+    return categories.slice(0, limit).map((c) => c.name)
+  }
+  return top
+}
+
 export function matchTolerantPairAgainstCatalog(
   categoryName: string | null | undefined,
   subcategoryName: string | null | undefined,
@@ -1288,6 +1369,159 @@ export function isCategorySubcategoryPairValid(
  * Detecta se a mensagem é uma pergunta de dúvida, reflexiva ou metaconversa (ex: "Qual faz mais sentido?", "O que você acha?")
  * NUNCA deve ser interpretada como nome de categoria!
  */
+/**
+ * Detecta se a mensagem é uma pergunta sobre o catálogo de categorias/subcategorias do app.
+ * Perguntas sobre o catálogo são SEMPRE in-scope e NUNCA devem cair no fallback da Classe 9.
+ * Exemplos:
+ * - "quais são as subcategorias de X?"
+ * - "E gastronomia e delivery, quais são as subcategorias?"
+ * - "quais subcategorias tem em Alimentação?"
+ * - "existe categoria Y?"
+ * - "existe categoria foguetes?"
+ * - "tem categoria lazer?"
+ */
+export function isCatalogQuestion(text: string): boolean {
+  const norm = stripAccentsText(text)
+  const patterns = [
+    /quais\s+(sao|são)?\s*(as\s+)?subcategorias/i,
+    /quais\s+subcategorias/i,
+    /quais\s+as\s+sub/i,
+    /subcategorias\s+d[ea]/i,
+    /subcategorias\s+em/i,
+    /existe\s+(a\s+)?categoria/i,
+    /existe\s+subcategoria/i,
+    /tem\s+(a\s+)?categoria/i,
+    /temos\s+(a\s+)?categoria/i,
+    /quais\s+(as\s+)?categorias\s+(que\s+)?(a\s+gente\s+tem|temos|existem)/i,
+    /quais\s+sao\s+as\s+categorias/i,
+    /lista\s+(as\s+)?categorias/i,
+    /lista\s+(as\s+)?subcategorias/i,
+  ]
+  return patterns.some((p) => p.test(norm))
+}
+
+/**
+ * Processa uma pergunta sobre o catálogo de categorias e subcategorias e gera resposta acolhedora e precisa.
+ */
+export function handleCatalogQuestion(
+  text: string,
+  categories: Array<{
+    id?: string
+    name: string
+    subcategories?: any[]
+    transaction_subcategories?: any[]
+  }>,
+): {
+  handled: boolean
+  response: string
+  matchedCategoryName?: string
+  subcategoriesList?: string[]
+} {
+  if (!isCatalogQuestion(text)) {
+    return { handled: false, response: '' }
+  }
+
+  const norm = stripAccentsText(text)
+
+  // 1. Pergunta sobre quais são todas as categorias
+  if (
+    /quais\s+sao\s+as\s+categorias|quais\s+categorias\s+temos|lista\s+(as\s+)?categorias/i.test(
+      norm,
+    )
+  ) {
+    const names = categories.map((c) => c.name)
+    const listStr = names.map((n) => `• **${n}**`).join('\n')
+    return {
+      handled: true,
+      response: `As categorias cadastradas na família são:\n\n${listStr}\n\nQuer ver as subcategorias de alguma delas?`,
+    }
+  }
+
+  // 2. Extrai o termo de interesse da pergunta
+  // Casos:
+  // "E gastronomia e delivery, quais são as subcategorias?"
+  // "quais são as subcategorias de gastronomia e delivery?"
+  // "existe categoria foguetes?"
+  let candidateTerm = ''
+  const termMatch1 = text.match(
+    /(?:quais\s+(?:sao|são)?\s*(?:as\s+)?subcategorias\s+(?:de|da|do|em)\s+)([^?.,!]+)/i,
+  )
+  const termMatch2 = text.match(
+    /(?:e\s+)?([^?,.!]+?)(?:,\s*|\s+)?quais\s+(?:sao|são)?\s*(?:as\s+)?subcategorias/i,
+  )
+  const termMatch3 = text.match(/(?:existe|tem|temos)\s+(?:a\s+)?categoria\s+([^?.,!]+)/i)
+
+  if (termMatch1) {
+    candidateTerm = termMatch1[1].trim()
+  } else if (termMatch2) {
+    candidateTerm = termMatch2[1].trim()
+  } else if (termMatch3) {
+    candidateTerm = termMatch3[1].trim()
+  } else {
+    // Fallback: limpa pontuação e stop-phrases
+    candidateTerm = text
+      .replace(/quais\s+(sao|são)?\s*(as\s+)?subcategorias/gi, '')
+      .replace(/existe\s+(a\s+)?categoria/gi, '')
+      .replace(/tem\s+(a\s+)?categoria/gi, '')
+      .replace(/subcategorias/gi, '')
+      .replace(/[?,.!]/g, '')
+      .trim()
+  }
+
+  // Limpa prefixos como "e ", "sobre "
+  candidateTerm = candidateTerm.replace(/^(e|sobre|pra|para|a|o)\s+/i, '').trim()
+
+  const match = matchCategoryAgainstCatalog(candidateTerm, categories)
+
+  if (match && match.matchedCat) {
+    const cat = match.matchedCat
+    const rawSubs = cat.subcategories || cat.transaction_subcategories || []
+    const subNames: string[] = rawSubs
+      .map((s: any) => (typeof s === 'string' ? s : s?.name || ''))
+      .filter((n: string) => n.length > 0)
+
+    const subsFormatted =
+      subNames.length > 0
+        ? subNames.map((s) => `• ${s}`).join('\n')
+        : 'Nenhuma subcategoria cadastrada ainda.'
+
+    const isFuzzy = stripAccentsText(cat.name) !== stripAccentsText(candidateTerm)
+    const isQuestionAboutExistence = /(existe|tem|temos)\s+(?:a\s+)?categoria/i.test(norm)
+
+    let response = ''
+    if (isQuestionAboutExistence) {
+      if (isFuzzy) {
+        response = `Você quis dizer a categoria **${cat.name}**? Sim, ela existe no app! As subcategorias dela são:\n\n${subsFormatted}`
+      } else {
+        response = `Sim! A categoria **${cat.name}** existe no app. As subcategorias dela são:\n\n${subsFormatted}`
+      }
+    } else {
+      if (isFuzzy) {
+        response = `Você quis dizer a categoria **${cat.name}**? As subcategorias dela são:\n\n${subsFormatted}`
+      } else {
+        response = `As subcategorias de **${cat.name}** são:\n\n${subsFormatted}`
+      }
+    }
+
+    return {
+      handled: true,
+      response,
+      matchedCategoryName: cat.name,
+      subcategoriesList: subNames,
+    }
+  }
+
+  // Sem match próximo -> Sugerir 2-3 categorias reais mais próximas
+  const closest = getClosestCategories(candidateTerm, categories, 3)
+  const closestFormatted = closest.map((c) => `**${c}**`).join(', ')
+  const response = `Não tenho uma categoria com esse nome — as mais próximas são ${closestFormatted}. Quer ver as subcategorias de alguma?`
+
+  return {
+    handled: true,
+    response,
+  }
+}
+
 export function isConsultativeOrReflectiveQuestion(text: string): boolean {
   const norm = normalizeWord(text)
   const patterns = [

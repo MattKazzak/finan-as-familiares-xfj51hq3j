@@ -41,6 +41,9 @@ import {
   type StructuredSuggestionOption,
   extractAllAmountsFromVoiceText,
   matchTolerantPairAgainstCatalog,
+  matchCategoryAgainstCatalog,
+  handleCatalogQuestion,
+  isCatalogQuestion,
   stripAccentsText,
   tokenizeText,
 } from '@/services/voice-parser'
@@ -98,6 +101,16 @@ export function CopilotPage() {
   const [showConsentModal, setShowConsentModal] = useState(false)
   const [pendingTx, setPendingTx] = useState<ParsedVoiceTransaction | null>(null)
   const lastCreatedTxIdRef = useRef<string | null>(null)
+  // Estado para proposta de movimento de categoria aguardando confirmação (Classe 8)
+  const [pendingCategoryMovement, setPendingCategoryMovement] = useState<{
+    txId: string
+    description: string
+    amountCents: number
+    oldCat: string
+    oldSub: string | null
+    newCat: string
+    newSub: string | null
+  } | null>(null)
 
   // Paginação do histórico
   const [hasMoreOlder, setHasMoreOlder] = useState(false)
@@ -357,6 +370,233 @@ export function CopilotPage() {
     }
 
     try {
+      // TAREFA 2: HANDLER DE PERGUNTAS SOBRE O CATÁLOGO (FIM DO FALLBACK EM PERGUNTA IN-SCOPE)
+      // Perguntas sobre categorias/subcategorias do app ("quais são as subcategorias de X?", "existe categoria Y?") NUNCA caem no fallback
+      if (isCatalogQuestion(text)) {
+        const catalogResult = handleCatalogQuestion(text, categories)
+        if (catalogResult.handled) {
+          if (family?.id) {
+            saveCopilotMessage({
+              familyId: family.id,
+              role: 'assistant',
+              content: catalogResult.response,
+              cardType: 'consulta',
+            }).catch(() => {})
+          }
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `asst-${Date.now()}`,
+              sender: 'assistant',
+              text: catalogResult.response,
+              timestamp: new Date(),
+              cardType: 'consulta',
+            },
+          ])
+          setIsProcessing(false)
+          return
+        }
+      }
+
+      // TAREFA 1: Confirmação de Movimento de Categoria pendente ("Pode ser?", "Sim", "Confirma", etc.)
+      const isAffirmativeMovementConfirm =
+        /^(sim|pode\s+ser|pode|confirmo|confirmar|isso|est[aá]\s+certo|perfeito|beleza|fechado)\b/i.test(
+          text.replace(/[.!?]/g, '').trim(),
+        )
+
+      if (pendingCategoryMovement && isAffirmativeMovementConfirm) {
+        const movement = pendingCategoryMovement
+        setPendingCategoryMovement(null)
+
+        // Localiza a categoria e subcategoria de destino
+        let targetCat = categories.find(
+          (c) => stripAccentsText(c.name) === stripAccentsText(movement.newCat),
+        )
+        if (!targetCat) {
+          targetCat = categories.find((c) =>
+            stripAccentsText(c.name).includes(stripAccentsText(movement.newCat)),
+          )
+        }
+
+        let targetSubId: string | null = null
+        if (targetCat && movement.newSub) {
+          const rawSubs =
+            targetCat.subcategories || (targetCat as any).transaction_subcategories || []
+          const foundSub = rawSubs.find(
+            (s: any) =>
+              stripAccentsText(typeof s === 'string' ? s : s?.name || '') ===
+              stripAccentsText(movement.newSub!),
+          )
+          if (foundSub && typeof foundSub !== 'string') {
+            targetSubId = foundSub.id
+          }
+        }
+
+        try {
+          const updatePayload: any = {}
+          if (targetCat) updatePayload.category_id = targetCat.id
+          if (targetSubId) updatePayload.subcategory_id = targetSubId
+
+          const updated = await updateTransaction(movement.txId, updatePayload)
+          if (updated) {
+            triggerRefresh()
+            const amtFmt = formatBRL(movement.amountCents)
+            const targetPairFmt = movement.newSub
+              ? `${movement.newCat} › ${movement.newSub}`
+              : movement.newCat
+            const confirmReply = `Movido: ${amtFmt} agora em ${targetPairFmt} ✅`
+
+            if (family?.id) {
+              saveCopilotMessage({
+                familyId: family.id,
+                role: 'assistant',
+                content: confirmReply,
+                cardType: 'acao',
+              }).catch(() => {})
+            }
+
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `asst-${Date.now()}`,
+                sender: 'assistant',
+                text: confirmReply,
+                timestamp: new Date(),
+                cardType: 'acao',
+              },
+            ])
+            setIsProcessing(false)
+            return
+          }
+        } catch (updateErr) {
+          console.warn('[CopilotPage] Erro ao mover transação de categoria:', updateErr)
+        }
+      }
+
+      // TAREFA 1: Interceptar intenção de correção pós-lançamento de CATEGORIA (Classe 8 expandida)
+      // Mensagens como:
+      // "As long necks não é para o churrasco, eu comprei para me beber durante a semana"
+      // "o carvão não é para churrasco, é para casa"
+      // "o almoço não é lazer, muda para alimentação"
+      // "muda para alimentação"
+      const isPostLaunchCategoryCorrection =
+        /(?:n[aã]o\s+[eé]\s+(?:para|pra|pro)|comprei\s+para\s+(?:me\s+)?beber|muda\s+(?:para|pra)|coloca\s+em|altera\s+(?:para|pra)|o\s+.*n[aã]o\s+[eé]\s+para)/i.test(
+          text,
+        )
+
+      if (isPostLaunchCategoryCorrection && family?.id) {
+        try {
+          const recentTxs = await fetchTransactions({
+            familyId: family.id,
+            limit: 10,
+          })
+
+          if (recentTxs && recentTxs.length > 0) {
+            // 1. Identificar a transação alvo
+            // Procura por tokens da descrição da transação na mensagem do usuário
+            const userTokens = tokenizeText(text)
+            let matchedTx = recentTxs.find((tx) => {
+              const txTokens = tokenizeText(tx.description)
+              return txTokens.some((t) => userTokens.includes(t))
+            })
+
+            // Se não casar por token específico, tenta sinônimos como 'long neck' -> 'cerveja' ou última transação
+            if (!matchedTx && /long\s*neck|cerveja|pack/i.test(text)) {
+              matchedTx = recentTxs.find((tx) =>
+                /long\s*neck|cerveja|pack|bebida/i.test(tx.description),
+              )
+            }
+            if (!matchedTx && lastCreatedTxIdRef.current) {
+              matchedTx = recentTxs.find((tx) => tx.id === lastCreatedTxIdRef.current)
+            }
+            if (!matchedTx) {
+              matchedTx = recentTxs[0]
+            }
+
+            if (matchedTx) {
+              // 2. Determinar o par novo via casamento tolerante (R47)
+              // Se a mensagem mencionar bebidas/semana/casa -> Alimentação › Água & Bebidas para Casa
+              let targetPairMatch = null
+              if (/beber|semana|casa|bebida|long\s*neck|cerveja/i.test(text)) {
+                targetPairMatch = matchTolerantPairAgainstCatalog(
+                  'Alimentação',
+                  'Água & Bebidas para Casa',
+                  categories,
+                )
+              }
+              if (!targetPairMatch) {
+                // Tenta extrair menção explícita de categoria (ex: "muda para Lazer", "coloca em Mercado")
+                const explicitCat = text.match(
+                  /(?:para|pra|em)\s+([a-zA-Zá-úÁ-Ú&]+(?:\s+[a-zA-Zá-úÁ-Ú&]+)?)/i,
+                )
+                if (explicitCat) {
+                  targetPairMatch = matchTolerantPairAgainstCatalog(
+                    explicitCat[1].trim(),
+                    null,
+                    categories,
+                  )
+                }
+              }
+
+              if (targetPairMatch) {
+                // Obtém o nome da categoria antiga
+                const oldCatObj = categories.find((c) => c.id === matchedTx?.category_id)
+                const oldCatName = oldCatObj?.name || 'Lazer'
+                const oldSubObj = oldCatObj?.subcategories?.find(
+                  (s) => s.id === matchedTx?.subcategory_id,
+                )
+                const oldSubName = oldSubObj?.name || 'Eventos & Reuniões'
+                const oldPairFmt = oldSubName ? `${oldCatName} › ${oldSubName}` : oldCatName
+                const newPairFmt = targetPairMatch.matchedSub
+                  ? `${targetPairMatch.matchedCat} › ${targetPairMatch.matchedSub}`
+                  : targetPairMatch.matchedCat
+
+                const amtFmt = formatBRL(matchedTx.amount_cents)
+                const proposalMsg = `Vou mover os ${amtFmt} de ${oldPairFmt} para ${newPairFmt}. Pode ser?`
+
+                setPendingCategoryMovement({
+                  txId: matchedTx.id,
+                  description: matchedTx.description,
+                  amountCents: matchedTx.amount_cents,
+                  oldCat: oldCatName,
+                  oldSub: oldSubName,
+                  newCat: targetPairMatch.matchedCat,
+                  newSub: targetPairMatch.matchedSub,
+                })
+
+                if (family.id) {
+                  saveCopilotMessage({
+                    familyId: family.id,
+                    role: 'assistant',
+                    content: proposalMsg,
+                    cardType: 'clarificacao',
+                  }).catch(() => {})
+                }
+
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: `asst-${Date.now()}`,
+                    sender: 'assistant',
+                    text: proposalMsg,
+                    timestamp: new Date(),
+                    cardType: 'clarificacao',
+                  },
+                ])
+                setIsProcessing(false)
+                return
+              }
+            }
+          }
+        } catch (fetchErr) {
+          console.warn(
+            '[CopilotPage] Erro ao buscar transações recentes para correção de categoria:',
+            fetchErr,
+          )
+        }
+      }
+
       // PONTO 1: Descartar pendência anterior ao iniciar fluxo NOVO de lançamento
       // Se há pendência ativa mas a mensagem do usuário é claramente o início de um novo lançamento independente
       // (ex.: "comprei...", "gastei...", "paguei...", ou novo lote multi-item), descartar a pendência anterior.

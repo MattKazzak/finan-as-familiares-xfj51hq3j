@@ -34,6 +34,9 @@ import {
   isCategorySubcategoryPairValid,
   suggestCategoryAndBucket,
   matchTolerantPairAgainstCatalog,
+  matchCategoryAgainstCatalog,
+  handleCatalogQuestion,
+  isCatalogQuestion,
   stripAccentsText,
   tokenizeText,
 } from '@/services/voice-parser'
@@ -716,6 +719,33 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           content: m.text,
         }))
 
+        // TAREFA 2: HANDLER DE PERGUNTAS SOBRE O CATÁLOGO (FIM DO FALLBACK EM PERGUNTA IN-SCOPE)
+        if (isCatalogQuestion(textToProcess)) {
+          const catalogResult = handleCatalogQuestion(textToProcess, categories)
+          if (catalogResult.handled) {
+            if (family?.id) {
+              saveCopilotMessage({
+                familyId: family.id,
+                role: 'assistant',
+                content: catalogResult.response,
+                cardType: 'consulta',
+              }).catch(() => {})
+            }
+
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `assistant-${Date.now()}`,
+                sender: 'assistant',
+                text: catalogResult.response,
+                timestamp: new Date(),
+                cardType: 'consulta',
+              },
+            ])
+            return
+          }
+        }
+
         const parsed = await parseVoiceWithAi({
           texto: textToProcess,
           familyId: family?.id,
@@ -863,6 +893,175 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             },
           ])
           return
+        }
+
+        // TAREFA 1: Confirmação de Movimento de Categoria pendente no modal de voz ("Pode ser?", "Sim", "Confirma", etc.)
+        const isCategoryMovementConfirmed =
+          /^(sim|pode\s+ser|pode|confirmo|confirmar|isso|est[aá]\s+certo|perfeito|beleza|fechado)\b/i.test(
+            textToProcess.replace(/[.!?]/g, '').trim(),
+          )
+
+        if (
+          (pendingTransactionRef.current as any)?.pendingCategoryMovement &&
+          isCategoryMovementConfirmed
+        ) {
+          const movement = (pendingTransactionRef.current as any).pendingCategoryMovement
+          pendingTransactionRef.current = null
+          setPendingTransaction(null)
+
+          const ok = await handleUpdateLastTransaction({
+            categoryName: movement.newCat,
+            subcategoryName: movement.newSub,
+          })
+
+          if (ok) {
+            const amtFmt = (movement.amountCents / 100).toLocaleString('pt-BR', {
+              style: 'currency',
+              currency: 'BRL',
+            })
+            const targetPairFmt = movement.newSub
+              ? `${movement.newCat} › ${movement.newSub}`
+              : movement.newCat
+            const confirmReply = `Movido: ${amtFmt} agora em ${targetPairFmt} ✅`
+
+            if (family?.id) {
+              saveCopilotMessage({
+                familyId: family.id,
+                role: 'assistant',
+                content: confirmReply,
+                cardType: 'acao',
+              }).catch(() => {})
+            }
+
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `assistant-${Date.now()}`,
+                sender: 'assistant',
+                text: confirmReply,
+                timestamp: new Date(),
+                cardType: 'acao',
+              },
+            ])
+            return
+          }
+        }
+
+        // TAREFA 1: Interceptar intenção de correção pós-lançamento de CATEGORIA no modal de voz (Classe 8 expandida)
+        const isPostLaunchCategoryCorrection =
+          /(?:n[aã]o\s+[eé]\s+(?:para|pra|pro)|comprei\s+para\s+(?:me\s+)?beber|muda\s+(?:para|pra)|coloca\s+em|altera\s+(?:para|pra)|o\s+.*n[aã]o\s+[eé]\s+para)/i.test(
+            textToProcess,
+          )
+
+        if (isPostLaunchCategoryCorrection && family?.id) {
+          try {
+            const recentTxs = await fetchTransactions({
+              familyId: family.id,
+              limit: 10,
+            })
+
+            if (recentTxs && recentTxs.length > 0) {
+              const userTokens = tokenizeText(textToProcess)
+              let matchedTx = recentTxs.find((tx) => {
+                const txTokens = tokenizeText(tx.description)
+                return txTokens.some((t) => userTokens.includes(t))
+              })
+
+              if (!matchedTx && /long\s*neck|cerveja|pack/i.test(textToProcess)) {
+                matchedTx = recentTxs.find((tx) =>
+                  /long\s*neck|cerveja|pack|bebida/i.test(tx.description),
+                )
+              }
+              if (!matchedTx && lastCreatedTransactionIdRef.current) {
+                matchedTx = recentTxs.find((tx) => tx.id === lastCreatedTransactionIdRef.current)
+              }
+              if (!matchedTx) {
+                matchedTx = recentTxs[0]
+              }
+
+              if (matchedTx) {
+                let targetPairMatch = null
+                if (/beber|semana|casa|bebida|long\s*neck|cerveja/i.test(textToProcess)) {
+                  targetPairMatch = matchTolerantPairAgainstCatalog(
+                    'Alimentação',
+                    'Água & Bebidas para Casa',
+                    categories,
+                  )
+                }
+                if (!targetPairMatch) {
+                  const explicitCat = textToProcess.match(
+                    /(?:para|pra|em)\s+([a-zA-Zá-úÁ-Ú&]+(?:\s+[a-zA-Zá-úÁ-Ú&]+)?)/i,
+                  )
+                  if (explicitCat) {
+                    targetPairMatch = matchTolerantPairAgainstCatalog(
+                      explicitCat[1].trim(),
+                      null,
+                      categories,
+                    )
+                  }
+                }
+
+                if (targetPairMatch) {
+                  const oldCatObj = categories.find((c) => c.id === matchedTx?.category_id)
+                  const oldCatName = oldCatObj?.name || 'Lazer'
+                  const oldSubObj = oldCatObj?.subcategories?.find(
+                    (s) => s.id === matchedTx?.subcategory_id,
+                  )
+                  const oldSubName = oldSubObj?.name || 'Eventos & Reuniões'
+                  const oldPairFmt = oldSubName ? `${oldCatName} › ${oldSubName}` : oldCatName
+                  const newPairFmt = targetPairMatch.matchedSub
+                    ? `${targetPairMatch.matchedCat} › ${targetPairMatch.matchedSub}`
+                    : targetPairMatch.matchedCat
+
+                  const amtFmt = (matchedTx.amount_cents / 100).toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                  })
+                  const proposalMsg = `Vou mover os ${amtFmt} de ${oldPairFmt} para ${newPairFmt}. Pode ser?`
+
+                  lastCreatedTransactionIdRef.current = matchedTx.id
+                  const movementData = {
+                    txId: matchedTx.id,
+                    description: matchedTx.description,
+                    amountCents: matchedTx.amount_cents,
+                    oldCat: oldCatName,
+                    oldSub: oldSubName,
+                    newCat: targetPairMatch.matchedCat,
+                    newSub: targetPairMatch.matchedSub,
+                  }
+                  ;(pendingTransactionRef.current as any) = {
+                    pendingCategoryMovement: movementData,
+                  }
+
+                  if (family.id) {
+                    saveCopilotMessage({
+                      familyId: family.id,
+                      role: 'assistant',
+                      content: proposalMsg,
+                      cardType: 'clarificacao',
+                    }).catch(() => {})
+                  }
+
+                  setMessages((prev) => [
+                    ...prev,
+                    {
+                      id: `assistant-${Date.now()}`,
+                      sender: 'assistant',
+                      text: proposalMsg,
+                      timestamp: new Date(),
+                      cardType: 'clarificacao',
+                    },
+                  ])
+                  return
+                }
+              }
+            }
+          } catch (fetchErr) {
+            console.warn(
+              '[VoiceDialog] Erro ao buscar transações recentes para correção de categoria:',
+              fetchErr,
+            )
+          }
         }
 
         // Intenção de Reclassificação / Ajuste de transação anterior já lançada (UPDATE REAL)
