@@ -184,11 +184,17 @@
   }
 
   /* Durante a segurada preliminar (press-hold), previne touch actions e seleções de texto nativas */
-  .sortable-card-pressing {
-    touch-action: none !important;
+  .sortable-card-pressing,
+  .sortable-card-pressing * {
     user-select: none !important;
     -webkit-user-select: none !important;
     -webkit-touch-callout: none !important;
+  }
+
+  /* Cards e itens arrastáveis de listas reordenáveis nunca disparam seleção acidental de texto */
+  [data-sortable-index] {
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 

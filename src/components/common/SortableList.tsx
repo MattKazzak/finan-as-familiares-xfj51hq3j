@@ -20,6 +20,7 @@ export interface DragHandleProps {
   onTouchStart?: (e: React.TouchEvent) => void
   onTouchEnd?: (e: React.TouchEvent) => void
   onTouchCancel?: (e: React.TouchEvent) => void
+  onContextMenu?: (e: React.MouseEvent) => void
   style?: React.CSSProperties
   className?: string
   'data-drag-handle'?: boolean
@@ -168,6 +169,22 @@ export function SortableList<T>({
     }
   }, [])
 
+  // Limpa qualquer seleção de texto nativa residual no DOM
+  const clearWindowSelection = useCallback(() => {
+    if (typeof window !== 'undefined' && window.getSelection) {
+      try {
+        const sel = window.getSelection()
+        if (sel && sel.empty) {
+          sel.empty()
+        } else if (sel && sel.removeAllRanges) {
+          sel.removeAllRanges()
+        }
+      } catch {
+        // Ignora
+      }
+    }
+  }, [])
+
   // Garante liberação do lock físico de scroll
   const unlockBodyScroll = useCallback(() => {
     if (isScrollLockedRef.current) {
@@ -271,18 +288,21 @@ export function SortableList<T>({
   // Disparar início do arrasto
   const startDrag = useCallback(
     (index: number) => {
-      // 1. Mede imediatamente posições caso ainda não tenham sido medidas
+      // 1. Limpa qualquer seleção de texto nativa que possa ter iniciado
+      clearWindowSelection()
+
+      // 2. Mede imediatamente posições caso ainda não tenham sido medidas
       if (initialRectsRef.current.size === 0) {
         measureItems(index)
       }
 
-      // 2. Trava o scroll do body fisicamente (position: fixed)
+      // 3. Trava o scroll do body fisicamente (position: fixed)
       if (!isScrollLockedRef.current) {
         isScrollLockedRef.current = true
         acquireBodyScrollLock()
       }
 
-      // 3. Atualiza estado para arrastando
+      // 4. Atualiza estado para arrastando
       isDraggingRef.current = true
       draggedIndexRef.current = index
       overIndexRef.current = index
@@ -291,7 +311,7 @@ export function SortableList<T>({
       setDragTranslateY(0)
       setIsPressing(null)
 
-      // 4. Pointer capture se estiver em modo mouse/pointer
+      // 5. Pointer capture se estiver em modo mouse/pointer
       if (
         !isTouchModeRef.current &&
         activeTargetElRef.current &&
@@ -304,7 +324,7 @@ export function SortableList<T>({
         }
       }
 
-      // 5. Haptic feedback imediato (vibração suave no celular)
+      // 6. Haptic feedback imediato (vibração suave no celular)
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
         try {
           navigator.vibrate?.([30])
@@ -313,7 +333,7 @@ export function SortableList<T>({
         }
       }
     },
-    [measureItems],
+    [clearWindowSelection, measureItems],
   )
 
   // Finaliza a reordenação com sucesso se os índices forem válidos
@@ -658,6 +678,14 @@ export function SortableList<T>({
     onTouchCancel: () => {
       if (!isDraggingRef.current) clearHoldTimer()
     },
+    onContextMenu: (e: React.MouseEvent) => {
+      e.preventDefault()
+    },
+    style: {
+      WebkitTouchCallout: 'none',
+      WebkitUserSelect: 'none',
+      userSelect: 'none',
+    },
     'data-drag-handle': true,
     'aria-grabbed': draggedIndex === index,
   })
@@ -696,14 +724,20 @@ export function SortableList<T>({
 
         const inlineStyle: React.CSSProperties = isDragging
           ? {
-              transform: `translate3d(0, ${dragTranslateY}px, 0) scale(1.02)`,
+              transform: `translate3d(0, ${dragTranslateY}px, 0)`,
               zIndex: 50,
               touchAction: 'none',
               pointerEvents: 'none',
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+              WebkitTouchCallout: 'none',
             }
           : {
               transform: displacementY !== 0 ? `translate3d(0, ${displacementY}px, 0)` : undefined,
               zIndex: isOver ? 10 : 1,
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+              WebkitTouchCallout: 'none',
             }
 
         return (
@@ -728,12 +762,17 @@ export function SortableList<T>({
             onPointerCancel={() => {
               if (!isDraggingRef.current) clearHoldTimer()
             }}
+            onContextMenu={(e) => {
+              if (isDraggingRef.current || isCurrentlyPressing) {
+                e.preventDefault()
+              }
+            }}
             style={inlineStyle}
-            className={`relative ${
+            className={`relative select-none [-webkit-touch-callout:none] [-webkit-user-select:none] ${
               isDragging
-                ? 'shadow-2xl ring-2 ring-emerald-500 rounded-2xl opacity-95 pointer-events-none transition-none cursor-grabbing touch-none select-none'
+                ? 'shadow-lg ring-1.5 ring-emerald-500/80 rounded-2xl opacity-95 pointer-events-none transition-none cursor-grabbing touch-none'
                 : isCurrentlyPressing
-                  ? 'scale-[0.99] transition-transform duration-200 sortable-card-pressing'
+                  ? 'transition-colors duration-150 sortable-card-pressing'
                   : 'transition-transform duration-250 ease-out will-change-transform touch-pan-y'
             }`}
           >

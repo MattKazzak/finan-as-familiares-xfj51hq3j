@@ -432,11 +432,16 @@ export function WalletBudgetsTab() {
 
               return (
                 <div
-                  className={`border rounded-2xl overflow-hidden bg-white transition-all ${
+                  className={`border rounded-2xl overflow-hidden bg-white transition-all select-none ${
                     isDragging
-                      ? 'border-emerald-500 shadow-xl'
+                      ? 'border-emerald-500/80 shadow-md ring-1 ring-emerald-500/30'
                       : 'border-slate-200/80 shadow-2xs hover:border-slate-300'
                   }`}
+                  style={{
+                    WebkitTouchCallout: 'none',
+                    WebkitUserSelect: 'none',
+                    userSelect: 'none',
+                  }}
                 >
                   {/* Bloco da Categoria Pai */}
                   <div
@@ -857,8 +862,15 @@ export function WalletBudgetsTab() {
                                   'subcategory',
                                 )
                               }
-                              className={`py-2 px-2 sm:px-2.5 flex flex-col sm:flex-row sm:items-center justify-between rounded-xl cursor-pointer transition-colors group/sub gap-1.5 sm:gap-3 touch-manipulation ${
-                                isSubDragging ? 'bg-white shadow-md' : 'hover:bg-white'
+                              style={{
+                                WebkitTouchCallout: 'none',
+                                WebkitUserSelect: 'none',
+                                userSelect: 'none',
+                              }}
+                              className={`py-2 px-2 sm:px-2.5 flex flex-col sm:flex-row sm:items-center justify-between rounded-xl cursor-pointer transition-colors group/sub gap-1.5 sm:gap-3 touch-manipulation select-none ${
+                                isSubDragging
+                                  ? 'bg-white shadow-md ring-1 ring-emerald-500/40'
+                                  : 'hover:bg-white'
                               }`}
                             >
                               {/* Linha superior no mobile / lado esquerdo no desktop: Alça de arrasto + Nome + Badges + Ações no mobile */}
