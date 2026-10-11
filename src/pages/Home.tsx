@@ -525,11 +525,15 @@ export default function Home() {
 
   return (
     <div className="space-y-4 sm:space-y-5 max-w-5xl mx-auto w-full min-w-0 overflow-x-hidden">
-      {/* 1. CABEÇALHO COESO E INTEGRADO (Saudação + Seletor de Mês Compacto + Ações de Cabeçalho) */}
-      <header className="pt-1 pb-1">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 min-w-0">
+      {/* 1. CABEÇALHO REORGANIZADO (R62: Linha 1 = Identidade + Ações | Linha 2 = Navegação de Tempo) */}
+      <header className="pt-1 pb-1 space-y-2.5 sm:space-y-3">
+        {/* Linha 1: Identidade (Avatar + Saudação + Família) + Ações à Direita (👁 Privacidade + 🔔 Notificações) */}
+        <div
+          data-testid="header-greeting-row"
+          className="flex items-center justify-between gap-2 sm:gap-3 min-w-0"
+        >
           {/* Lado Esquerdo: Avatar arredondado do membro ativo + Saudação por horário + Subtítulo Família */}
-          <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
             <button
               type="button"
               onClick={openWhoIsUsing}
@@ -560,21 +564,21 @@ export default function Home() {
             </button>
 
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 min-w-0">
                 <h1
-                  className="text-base sm:text-lg font-bold text-[#14213D] tracking-tight leading-tight break-words flex items-center gap-1.5"
+                  className="text-base sm:text-lg font-bold text-[#14213D] tracking-tight leading-tight truncate flex items-center gap-1.5"
                   title={timeGreeting.fullGreetingWithName || `${timeGreeting.rawGreeting}!`}
                 >
                   {timeGreeting.fullGreetingWithName ? (
-                    <span>{timeGreeting.fullGreetingWithName}</span>
+                    <span className="truncate">{timeGreeting.fullGreetingWithName}</span>
                   ) : isLongLoading ? (
                     <span className="text-sm font-medium text-slate-500 animate-pulse">
                       Carregando seus dados...
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-2">
+                    <span className="inline-flex items-center gap-2 truncate">
                       <span>{timeGreeting.rawGreeting}!</span>
-                      <span className="inline-block h-5 w-24 bg-slate-200/90 rounded-md animate-pulse align-middle" />
+                      <span className="inline-block h-5 w-24 bg-slate-200/90 rounded-md animate-pulse align-middle shrink-0" />
                     </span>
                   )}
                   {timeGreeting.period === 'morning' ? (
@@ -590,14 +594,14 @@ export default function Home() {
                 </h1>
               </div>
               {family?.name?.trim() ? (
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <p className="text-[11px] sm:text-xs text-slate-500 font-medium leading-none break-words">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <p className="text-[11px] sm:text-xs text-slate-500 font-medium leading-none truncate">
                     {formatFamilyDisplayName(family.name)}
                   </p>
                 </div>
               ) : isLongLoading ? (
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[10px] text-slate-400 italic leading-none">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-[10px] text-slate-400 italic leading-none truncate">
                     Carregando seus dados...
                   </span>
                 </div>
@@ -605,49 +609,50 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Lado Direito: Seletor de Mês Compacto + Ações (Privacidade + Notificações) em faixa coesa */}
-          <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
-            {/* Seletor Compacto de Mês integrado ao cabeçalho (Chip + Estação com ícone pastel) */}
-            <MonthSelector variant="chip" />
+          {/* Lado Direito da Linha 1: Ações de Tela (👁 Privacidade + 🔔 Notificações) */}
+          <div className="flex items-center gap-1 shrink-0">
+            {/* Botão de Privacidade: Alternar visibilidade de valores */}
+            <button
+              type="button"
+              onClick={toggleHideValues}
+              className="p-1.5 sm:p-2 rounded-2xl text-slate-600 hover:text-[#14213D] hover:bg-[#E5E5E5]/60 border border-transparent hover:border-[#E5E5E5] transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
+              aria-label={hideValues ? 'Mostrar valores' : 'Ocultar valores'}
+              title={
+                hideValues
+                  ? 'Mostrar valores monetários'
+                  : 'Ocultar valores monetários (modo privacidade)'
+              }
+            >
+              {hideValues ? (
+                <EyeOff className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2] text-[#FCA311]" />
+              ) : (
+                <Eye className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2]" />
+              )}
+            </button>
 
-            <div className="flex items-center gap-1 shrink-0">
-              {/* Botão de Privacidade: Alternar visibilidade de valores */}
-              <button
-                type="button"
-                onClick={toggleHideValues}
-                className="p-1.5 sm:p-2 rounded-2xl text-slate-600 hover:text-[#14213D] hover:bg-[#E5E5E5]/60 border border-transparent hover:border-[#E5E5E5] transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
-                aria-label={hideValues ? 'Mostrar valores' : 'Ocultar valores'}
-                title={
-                  hideValues
-                    ? 'Mostrar valores monetários'
-                    : 'Ocultar valores monetários (modo privacidade)'
-                }
-              >
-                {hideValues ? (
-                  <EyeOff className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2] text-[#FCA311]" />
-                ) : (
-                  <Eye className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2]" />
-                )}
-              </button>
-
-              {/* Sininho de Notificações Discreto */}
-              <button
-                type="button"
-                onClick={() => {
-                  toast({
-                    title: 'Notificações do Curiangoo',
-                    description: 'Você está em dia com todas as finanças e alertas da família!',
-                  })
-                }}
-                className="relative p-1.5 sm:p-2 rounded-2xl text-slate-600 hover:text-[#14213D] hover:bg-[#E5E5E5]/60 border border-transparent hover:border-[#E5E5E5] transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
-                aria-label="Notificações"
-                title="Notificações da família"
-              >
-                <Bell className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2]" />
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#FCA311] ring-2 ring-white" />
-              </button>
-            </div>
+            {/* Sininho de Notificações Discreto */}
+            <button
+              type="button"
+              onClick={() => {
+                toast({
+                  title: 'Notificações do Curiangoo',
+                  description: 'Você está em dia com todas as finanças e alertas da família!',
+                })
+              }}
+              className="relative p-1.5 sm:p-2 rounded-2xl text-slate-600 hover:text-[#14213D] hover:bg-[#E5E5E5]/60 border border-transparent hover:border-[#E5E5E5] transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
+              aria-label="Notificações"
+              title="Notificações da família"
+            >
+              <Bell className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2]" />
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#FCA311] ring-2 ring-white" />
+            </button>
           </div>
+        </div>
+
+        {/* Linha 2: Navegação do Tempo — Seletor de Mês Compacto SOZINHO e alinhado */}
+        <div data-testid="header-month-row" className="flex items-center justify-start min-w-0">
+          {/* Seletor Compacto de Mês integrado ao cabeçalho (Chip + Estação com ícone pastel) */}
+          <MonthSelector variant="chip" />
         </div>
       </header>
 

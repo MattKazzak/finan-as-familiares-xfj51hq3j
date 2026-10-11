@@ -712,12 +712,13 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
         ),
       ).toBeDefined()
 
-      // O container principal da Home não deve ter elementos com a classe truncate
-      const truncatedElements = container.querySelectorAll('.truncate')
+      // O container principal da Home não deve ter elementos com a classe truncate dentro da seção explicativa dos baldes
+      const bucketsCard = screen.getByText('Orçamento em 3 Baldes').closest('div')
+      const truncatedElements = bucketsCard?.querySelectorAll('.truncate') ?? []
       expect(truncatedElements.length).toBe(0)
     })
 
-    it('renderiza o novo Header moderno fintech com saudação por horário, subtítulo com nome da família (sem rótulo "Família") e botões de privacidade e notificações', async () => {
+    it('R62: renderiza o cabeçalho reorganizado com Linha 1 (saudação + nome família + 👁 + 🔔) e Linha 2 (seletor de mês sozinho)', async () => {
       renderWithProviders(<Home />)
 
       await waitFor(() => {
@@ -725,6 +726,29 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       })
       expect(screen.queryByText('Família')).toBeNull()
       expect(screen.getByText('Silva')).toBeDefined()
+
+      const greetingRow = screen.getByTestId('header-greeting-row')
+      const monthRow = screen.getByTestId('header-month-row')
+      expect(greetingRow).toBeDefined()
+      expect(monthRow).toBeDefined()
+
+      // Botões de privacidade e notificações estão dentro da Linha 1 (header-greeting-row)
+      const privacyBtnInGreeting = greetingRow.querySelector('button[aria-label="Ocultar valores"]')
+      const bellBtnInGreeting = greetingRow.querySelector('button[aria-label="Notificações"]')
+      const avatarBtnInGreeting = greetingRow.querySelector(
+        'button[aria-label="Trocar membro ativo ou abrir perfil"]',
+      )
+
+      expect(privacyBtnInGreeting).not.toBeNull()
+      expect(bellBtnInGreeting).not.toBeNull()
+      expect(avatarBtnInGreeting).not.toBeNull()
+
+      // Linha 2 contém o seletor de mês e NÃO contém os botões de privacidade ou notificações
+      const monthSelectorGroup = monthRow.querySelector('[aria-label="Seletor de mês"]')
+      expect(monthSelectorGroup).not.toBeNull()
+      expect(monthRow.querySelector('button[aria-label="Ocultar valores"]')).toBeNull()
+      expect(monthRow.querySelector('button[aria-label="Notificações"]')).toBeNull()
+
       expect(screen.getByRole('button', { name: /mostrar valores|ocultar valores/i })).toBeDefined()
       expect(screen.getByRole('button', { name: /notificações/i })).toBeDefined()
       expect(
