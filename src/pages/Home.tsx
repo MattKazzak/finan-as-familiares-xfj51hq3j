@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFamily } from '@/hooks/use-family'
+import { useActiveMonth } from '@/contexts/ActiveMonthContext'
+import { MonthSelector } from '@/components/common/MonthSelector'
 import {
   fetchTransactions,
   fetchDefaultBudgets,
@@ -131,11 +133,9 @@ export default function Home() {
     }
   }, [currentMember?.name])
 
-  // Mês atual formato YYYY-MM (baseado no horário local)
-  const currentMonthStr = useMemo(() => {
-    const now = new Date()
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  }, [])
+  // Mês visto global pelo usuário — sincronizado entre Home, Transações e Orçamentos
+  const { activeMonth, activeDate } = useActiveMonth()
+  const currentMonthStr = activeMonth
 
   const loadData = useCallback(async () => {
     if (!family) return
@@ -654,6 +654,11 @@ export default function Home() {
         </div>
       </header>
 
+      {/* Seletor Global de Mês (Único nas 3 abas: Home, Transações e Orçamentos) */}
+      <div className="flex justify-center w-full">
+        <MonthSelector />
+      </div>
+
       {/* 2. Filtro Horizontal de Membros (Chips) */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none max-w-full">
         <button
@@ -881,7 +886,7 @@ export default function Home() {
                     </span>
                     <span className="text-[10px] text-slate-300 font-normal select-none">·</span>
                     <span className="text-[10px] text-[#14213D] font-semibold break-words">
-                      {formatMonthYear(new Date())}
+                      {formatMonthYear(activeDate)}
                     </span>
                   </div>
                 </div>

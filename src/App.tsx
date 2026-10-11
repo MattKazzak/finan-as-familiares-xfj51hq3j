@@ -5,6 +5,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { AuthProvider, useAuth } from '@/hooks/use-auth'
 import { FamilyProvider } from '@/hooks/use-family'
 import { ImportSessionProvider } from '@/contexts/ImportSessionContext'
+import { ActiveMonthProvider } from '@/contexts/ActiveMonthContext'
 import Layout from '@/components/Layout'
 import Login from '@/pages/Login'
 import ResetPassword from '@/pages/ResetPassword'
@@ -79,7 +80,9 @@ function ProtectedLayout() {
   return (
     <FamilyProvider>
       <ImportSessionProvider>
-        <Layout />
+        <ActiveMonthProvider>
+          <Layout />
+        </ActiveMonthProvider>
       </ImportSessionProvider>
     </FamilyProvider>
   )

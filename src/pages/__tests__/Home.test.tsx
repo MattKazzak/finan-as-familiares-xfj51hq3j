@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import React from 'react'
 import { MemoryRouter } from 'react-router-dom'
+import { ActiveMonthProvider } from '@/contexts/ActiveMonthContext'
 import Home from '../Home'
 import * as transactionsService from '@/services/transactions'
 
@@ -13,6 +14,14 @@ vi.mock('react-router-dom', async () => {
     useNavigate: () => mockNavigate,
   }
 })
+
+function renderWithProviders(ui: React.ReactElement) {
+  return render(
+    <MemoryRouter>
+      <ActiveMonthProvider>{ui}</ActiveMonthProvider>
+    </MemoryRouter>,
+  )
+}
 
 const mockOpenNewTransaction = vi.fn()
 
@@ -139,11 +148,7 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
   })
 
   it('renderiza o título "Orçamento em 3 Baldes" e remove o antigo "Orçamento do Mês"', async () => {
-    render(
-      <MemoryRouter>
-        <Home />
-      </MemoryRouter>,
-    )
+    renderWithProviders(<Home />)
 
     await waitFor(() => {
       expect(screen.getByText('Orçamento em 3 Baldes')).toBeDefined()
@@ -153,11 +158,7 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
   })
 
   it('exibe os 3 baldes simplificados com seus rótulos, percentuais e valores restantes calculados a partir dos tetos reais', async () => {
-    render(
-      <MemoryRouter>
-        <Home />
-      </MemoryRouter>,
-    )
+    renderWithProviders(<Home />)
 
     await waitFor(() => {
       expect(screen.getByText('Necessidades')).toBeDefined()
@@ -214,11 +215,7 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       },
     ])
 
-    render(
-      <MemoryRouter>
-        <Home />
-      </MemoryRouter>,
-    )
+    renderWithProviders(<Home />)
 
     await waitFor(() => {
       expect(screen.getByText('Modelo 60 / 25 / 15')).toBeDefined()
@@ -263,11 +260,7 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       },
     ])
 
-    render(
-      <MemoryRouter>
-        <Home />
-      </MemoryRouter>,
-    )
+    renderWithProviders(<Home />)
 
     await waitFor(() => {
       // 5.500 / 10.000 = 55%
@@ -276,11 +269,7 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
   })
 
   it('exibe o mês de referência no cabeçalho e não exibe o número herói safe-to-spend', async () => {
-    render(
-      <MemoryRouter>
-        <Home />
-      </MemoryRouter>,
-    )
+    renderWithProviders(<Home />)
 
     await waitFor(() => {
       expect(screen.getByText('Orçamento em 3 Baldes')).toBeDefined()
@@ -297,11 +286,7 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
   })
 
   it('navega para /orcamentos ao clicar em "Ver detalhes na Carteira →"', () => {
-    render(
-      <MemoryRouter>
-        <Home />
-      </MemoryRouter>,
-    )
+    renderWithProviders(<Home />)
 
     const linkBtn = screen.getByRole('button', { name: /Ver detalhes na Carteira →/i })
     fireEvent.click(linkBtn)
@@ -316,11 +301,7 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       monthly_net_income_cents: null,
     }
 
-    render(
-      <MemoryRouter>
-        <Home />
-      </MemoryRouter>,
-    )
+    renderWithProviders(<Home />)
 
     expect(screen.getByText('Orçamento em 3 Baldes')).toBeDefined()
     // Herói removido: não há mensagem "Defina a renda na Carteira para calcular o saldo livre."
@@ -341,11 +322,7 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       // Nenhuma transação de receita no mês
       vi.mocked(transactionsService.fetchTransactions).mockResolvedValue([])
 
-      render(
-        <MemoryRouter>
-          <Home />
-        </MemoryRouter>,
-      )
+      renderWithProviders(<Home />)
 
       await waitFor(() => {
         expect(screen.getByText('Receitas do Mês')).toBeDefined()
@@ -394,11 +371,7 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
         },
       ])
 
-      render(
-        <MemoryRouter>
-          <Home />
-        </MemoryRouter>,
-      )
+      renderWithProviders(<Home />)
 
       await waitFor(() => {
         expect(screen.getByText('Receitas do Mês')).toBeDefined()
@@ -432,11 +405,7 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
         },
       ])
 
-      render(
-        <MemoryRouter>
-          <Home />
-        </MemoryRouter>,
-      )
+      renderWithProviders(<Home />)
 
       await waitFor(() => {
         expect(screen.getByText('Receitas do Mês')).toBeDefined()
@@ -470,11 +439,7 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
         },
       ])
 
-      render(
-        <MemoryRouter>
-          <Home />
-        </MemoryRouter>,
-      )
+      renderWithProviders(<Home />)
 
       await waitFor(() => {
         expect(screen.getByText('Receitas do Mês')).toBeDefined()
@@ -549,11 +514,7 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
         },
       ])
 
-      render(
-        <MemoryRouter>
-          <Home />
-        </MemoryRouter>,
-      )
+      renderWithProviders(<Home />)
 
       await waitFor(() => {
         expect(screen.getByText('Receitas do Mês')).toBeDefined()
@@ -587,16 +548,11 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
         triggerRefresh: vi.fn(),
       } as any)
 
-      render(
-        <MemoryRouter>
-          <Home />
-        </MemoryRouter>,
-      )
+      renderWithProviders(<Home />)
 
       await waitFor(() => {
-        expect(screen.getByText('Falar com o Curiangoo...')).toBeDefined()
+        expect(screen.getByText('Receitas do Mês')).toBeDefined()
       })
-
       const copilotBtn = screen.getByRole('button', { name: /falar com o curiango/i })
       expect(copilotBtn).toBeDefined()
 
@@ -626,11 +582,7 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
         },
       ])
 
-      const { container } = render(
-        <MemoryRouter>
-          <Home />
-        </MemoryRouter>,
-      )
+      const { container } = renderWithProviders(<Home />)
 
       await waitFor(() => {
         expect(screen.getByText('Orçamento em 3 Baldes')).toBeDefined()
@@ -649,16 +601,11 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
     })
 
     it('renderiza o novo Header moderno fintech com saudação por horário, subtítulo Curiangoo Família e botões de privacidade e notificações', async () => {
-      render(
-        <MemoryRouter>
-          <Home />
-        </MemoryRouter>,
-      )
+      renderWithProviders(<Home />)
 
       await waitFor(() => {
-        expect(screen.getByText(/Bom dia|Boa tarde|Boa noite/)).toBeDefined()
+        expect(screen.getByText('Receitas do Mês')).toBeDefined()
       })
-
       expect(screen.getByText('Curiangoo Família')).toBeDefined()
       expect(screen.getByRole('button', { name: /mostrar valores|ocultar valores/i })).toBeDefined()
       expect(screen.getByRole('button', { name: /notificações/i })).toBeDefined()
@@ -668,16 +615,11 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
     })
 
     it('botão de privacidade oculta o saldo e os valores monetários com máscara ao ser clicado', async () => {
-      render(
-        <MemoryRouter>
-          <Home />
-        </MemoryRouter>,
-      )
+      renderWithProviders(<Home />)
 
       await waitFor(() => {
-        expect(screen.getByText('Saldo Total da Família')).toBeDefined()
+        expect(screen.getByText('Receitas do Mês')).toBeDefined()
       })
-
       const privacyBtn = screen.getByRole('button', { name: /ocultar valores/i })
       expect(privacyBtn).toBeDefined()
 

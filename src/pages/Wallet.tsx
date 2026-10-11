@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useFamily } from '@/hooks/use-family'
 import { useToast } from '@/hooks/use-toast'
+import { useActiveMonth } from '@/contexts/ActiveMonthContext'
 import type {
   Transaction,
   Budget,
@@ -90,9 +91,14 @@ export function WalletPage() {
     }
   }, [location.pathname])
 
-  // Estado do Mês Selecionado (navegação de mês a mês)
-  const [currentDate, setCurrentDate] = useState<Date>(() => new Date())
-  const monthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`
+  // Estado do Mês Selecionado — Consolidado no activeMonth GLOBAL
+  const {
+    activeMonth,
+    activeDate: currentDate,
+    prevMonth: handlePrevMonth,
+    nextMonth: handleNextMonth,
+  } = useActiveMonth()
+  const monthKey = activeMonth
 
   // Dados carregados do backend
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -319,23 +325,6 @@ export function WalletPage() {
       setLoadingMore(false)
     }
   }, [family, loadingMore, hasMoreTransactions, monthKey, transactions.length, toast])
-
-  // Controles de Navegação de Mês
-  const handlePrevMonth = () => {
-    setCurrentDate((prev) => {
-      const d = new Date(prev)
-      d.setMonth(d.getMonth() - 1)
-      return d
-    })
-  }
-
-  const handleNextMonth = () => {
-    setCurrentDate((prev) => {
-      const d = new Date(prev)
-      d.setMonth(d.getMonth() + 1)
-      return d
-    })
-  }
 
   // Filtragem de Transações
   const filteredTransactions = useMemo(() => {
@@ -1030,7 +1019,7 @@ export function WalletPage() {
     activeTab,
     setActiveTab,
     currentDate,
-    setCurrentDate,
+    setCurrentDate: () => {},
     monthKey,
     handlePrevMonth,
     handleNextMonth,

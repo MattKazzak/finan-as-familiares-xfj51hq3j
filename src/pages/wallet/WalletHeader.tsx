@@ -1,17 +1,10 @@
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, UploadCloud } from 'lucide-react'
-import { formatMonthYear } from '@/lib/formatters'
+import { UploadCloud } from 'lucide-react'
+import { MonthSelector } from '@/components/common/MonthSelector'
 import { useWallet } from './WalletContext'
 
 export function WalletHeader() {
-  const {
-    activeTab,
-    setActiveTab,
-    currentDate,
-    handlePrevMonth,
-    handleNextMonth,
-    openImportStatement,
-  } = useWallet()
+  const { activeTab, setActiveTab, openImportStatement } = useWallet()
   const navigate = useNavigate()
 
   return (
@@ -51,38 +44,20 @@ export function WalletHeader() {
           </div>
         </div>
 
-        {/* Coluna Central: Seletor de Mês & Botão de Importação sempre centralizados */}
+        {/* Coluna Central: Seletor ÚNICO de Mês Reutilizável & Botão de Importação */}
         <div className="flex flex-col items-center gap-1.5 w-full justify-center">
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-2xl border border-slate-200/80 shadow-sm">
+          <MonthSelector>
+            {/* Botão de importação sempre visível logo abaixo da pílula de mês */}
             <button
-              onClick={handlePrevMonth}
-              className="p-1 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors"
-              title="Mês anterior"
+              type="button"
+              onClick={openImportStatement}
+              className="inline-flex items-center justify-center gap-1.5 text-xs font-medium text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 px-3 py-1 rounded-xl transition-colors border border-emerald-200/60 bg-white/80 shadow-2xs active:scale-95 touch-manipulation"
+              title="Importar extrato bancário (OFX ou PDF)"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <UploadCloud className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>Importar OFX ou PDF</span>
             </button>
-            <span className="font-bold text-xs sm:text-sm text-slate-800 px-2 min-w-[120px] text-center">
-              {formatMonthYear(currentDate)}
-            </span>
-            <button
-              onClick={handleNextMonth}
-              className="p-1 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors"
-              title="Próximo mês"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Botão de importação sempre visível logo abaixo da pílula de mês */}
-          <button
-            type="button"
-            onClick={openImportStatement}
-            className="inline-flex items-center justify-center gap-1.5 text-xs font-medium text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 px-3 py-1 rounded-xl transition-colors border border-emerald-200/60 bg-white/80 shadow-2xs active:scale-95 touch-manipulation"
-            title="Importar extrato bancário (OFX ou PDF)"
-          >
-            <UploadCloud className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            <span>Importar OFX ou PDF</span>
-          </button>
+          </MonthSelector>
         </div>
 
         {/* Lado direito (espaçador para equilibrar no desktop em 3 colunas) */}

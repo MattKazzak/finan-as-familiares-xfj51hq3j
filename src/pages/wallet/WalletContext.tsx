@@ -64,7 +64,7 @@ export interface WalletContextType {
 
   // Data / Mês
   currentDate: Date
-  setCurrentDate: React.Dispatch<React.SetStateAction<Date>>
+  setCurrentDate?: React.Dispatch<React.SetStateAction<Date>> | ((...args: any[]) => void)
   monthKey: string
   handlePrevMonth: () => void
   handleNextMonth: () => void
