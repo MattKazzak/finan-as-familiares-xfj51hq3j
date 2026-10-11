@@ -2041,7 +2041,6 @@ describe('Contrato de Comportamento do Copilot v1.0 — Casos de Avaliação de 
           balde: 'lifestyle',
           categoria: 'Alimentação',
           subcategoria: 'Restaurantes & Delivery',
-          data: '2026-03-10', // data informada ou atual
           metodo_pagamento: 'pix',
         },
         pergunta_clarificacao: null,

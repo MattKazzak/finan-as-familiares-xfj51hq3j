@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import React from 'react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
-import { Layout } from '../Layout'
+import Layout from '../Layout'
 
 // Mock de contextos e hooks necessários para renderizar Layout
 vi.mock('@/hooks/use-auth', () => ({
