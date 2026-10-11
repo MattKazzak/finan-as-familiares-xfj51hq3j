@@ -51,7 +51,9 @@ describe('Layout - Botão do Copilot (Regra da Home única)', () => {
 
     const copilotBtn = screen.queryByRole('button', { name: /falar com o curiangoo/i })
     expect(copilotBtn).not.toBeNull()
-    expect(screen.getByText('Falar com o Curiangoo')).toBeDefined()
+    // O FAB agora é silencioso com aria-label/title e dica 1x "Fale com o Curiangoo"
+    expect(copilotBtn?.getAttribute('aria-label')).toBe('Falar com o Curiangoo')
+    expect(screen.getByText('Fale com o Curiangoo')).toBeDefined()
   })
 
   it('NÃO renderiza o botão flutuante do Copilot em outras abas (ex: /carteira)', () => {

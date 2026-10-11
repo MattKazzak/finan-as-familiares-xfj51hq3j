@@ -134,6 +134,7 @@ export default function Home() {
 
   // Mês visto global pelo usuário — sincronizado entre Home, Transações e Orçamentos
   const { activeMonth, activeDate } = useActiveMonth()
+  const [isBalanceDetailsExpanded, setIsBalanceDetailsExpanded] = useState(false)
   const currentMonthStr = activeMonth
 
   const loadData = useCallback(async () => {
@@ -524,10 +525,10 @@ export default function Home() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto w-full min-w-0 overflow-x-hidden">
-      {/* 1. NOVO HEADER FINTECH MODERNO (PADRÃO NUBANK / COPILOT MONEY + PÁSSARO CURIANGOO) */}
+    <div className="space-y-4 sm:space-y-5 max-w-5xl mx-auto w-full min-w-0 overflow-x-hidden">
+      {/* 1. CABEÇALHO COESO E INTEGRADO (Saudação + Seletor de Mês Compacto + Ações de Cabeçalho) */}
       <header className="pt-1 pb-1">
-        <div className="flex items-center justify-between gap-3 min-w-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 min-w-0">
           {/* Lado Esquerdo: Avatar arredondado do membro ativo + Saudação por horário + Subtítulo Curiangoo Família */}
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <button
@@ -537,14 +538,14 @@ export default function Home() {
               aria-label="Trocar membro ativo ou abrir perfil"
               title={members.length > 1 ? 'Trocar perfil / membro' : 'Perfil do membro'}
             >
-              <Avatar className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl border-2 border-[#14213D] shadow-sm transition-all group-hover:border-[#FCA311]">
-                <AvatarFallback className="bg-gradient-to-tr from-[#14213D] to-[#1f3159] text-white font-semibold text-sm sm:text-base rounded-2xl">
+              <Avatar className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl border-2 border-[#14213D] shadow-sm transition-all group-hover:border-[#FCA311]">
+                <AvatarFallback className="bg-gradient-to-tr from-[#14213D] to-[#1f3159] text-white font-semibold text-xs sm:text-sm rounded-2xl">
                   {memberInitial}
                 </AvatarFallback>
               </Avatar>
               {members.length > 1 && (
                 <span
-                  className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#FCA311] text-[#14213D] text-[9px] font-semibold rounded-full flex items-center justify-center border-2 border-white shadow-2xs"
+                  className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-[#FCA311] text-[#14213D] text-[8px] font-semibold rounded-full flex items-center justify-center border-2 border-white shadow-2xs"
                   title="Mais membros disponíveis"
                 >
                   ▾
@@ -555,13 +556,13 @@ export default function Home() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 <h1
-                  className="text-base sm:text-lg md:text-xl font-bold text-[#14213D] tracking-tight leading-snug break-words flex items-center gap-1.5 min-h-[1.75rem]"
+                  className="text-base sm:text-lg font-bold text-[#14213D] tracking-tight leading-tight break-words flex items-center gap-1.5"
                   title={timeGreeting.fullGreetingWithName || `${timeGreeting.rawGreeting}!`}
                 >
                   {timeGreeting.fullGreetingWithName ? (
                     <span>{timeGreeting.fullGreetingWithName}</span>
                   ) : isLongLoading ? (
-                    <span className="text-sm sm:text-base font-medium text-slate-500 animate-pulse">
+                    <span className="text-sm font-medium text-slate-500 animate-pulse">
                       Carregando seus dados...
                     </span>
                   ) : (
@@ -582,7 +583,7 @@ export default function Home() {
                   )}
                 </h1>
               </div>
-              <div className="flex items-center gap-1.5 flex-wrap min-h-[1rem]">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <p className="text-[11px] sm:text-xs text-slate-500 font-medium leading-none">
                   Curiangoo Família
                 </p>
@@ -602,74 +603,72 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Lado Direito: Pássaro Curiangoo discreto + 2 Ícones Lineares Minimalistas (Privacidade de Valores + Notificações) */}
-          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-            {/* Marca oficial do pássaro em traço contínuo minimalista */}
-            <div
-              className="hidden xs:flex items-center justify-center w-9 h-9 rounded-2xl bg-[#E5E5E5]/40 border border-[#E5E5E5] text-[#14213D] transition-transform hover:scale-105 select-none"
-              title="Curiangoo"
-              aria-label="Curiangoo"
-            >
-              <CuriangoLogo size={20} color="#FCA311" />
+          {/* Lado Direito: Seletor de Mês Compacto + Ações (Privacidade + Notificações) em faixa coesa */}
+          <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
+            {/* Seletor Compacto de Mês integrado ao cabeçalho (Chip + Estação com ícone pastel) */}
+            <MonthSelector variant="chip" />
+
+            <div className="flex items-center gap-1 shrink-0">
+              {/* Botão de Privacidade: Alternar visibilidade de valores */}
+              <button
+                type="button"
+                onClick={toggleHideValues}
+                className="p-1.5 sm:p-2 rounded-2xl text-slate-600 hover:text-[#14213D] hover:bg-[#E5E5E5]/60 border border-transparent hover:border-[#E5E5E5] transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
+                aria-label={hideValues ? 'Mostrar valores' : 'Ocultar valores'}
+                title={
+                  hideValues
+                    ? 'Mostrar valores monetários'
+                    : 'Ocultar valores monetários (modo privacidade)'
+                }
+              >
+                {hideValues ? (
+                  <EyeOff className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2] text-[#FCA311]" />
+                ) : (
+                  <Eye className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2]" />
+                )}
+              </button>
+
+              {/* Sininho de Notificações Discreto */}
+              <button
+                type="button"
+                onClick={() => {
+                  toast({
+                    title: 'Notificações do Curiangoo',
+                    description: 'Você está em dia com todas as finanças e alertas da família!',
+                  })
+                }}
+                className="relative p-1.5 sm:p-2 rounded-2xl text-slate-600 hover:text-[#14213D] hover:bg-[#E5E5E5]/60 border border-transparent hover:border-[#E5E5E5] transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
+                aria-label="Notificações"
+                title="Notificações da família"
+              >
+                <Bell className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2]" />
+                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#FCA311] ring-2 ring-white" />
+              </button>
             </div>
-
-            {/* 1. Botão de Privacidade: Alternar visibilidade de valores */}
-            <button
-              type="button"
-              onClick={toggleHideValues}
-              className="p-2 sm:p-2.5 rounded-2xl text-slate-600 hover:text-[#14213D] hover:bg-[#E5E5E5]/60 border border-transparent hover:border-[#E5E5E5] transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
-              aria-label={hideValues ? 'Mostrar valores' : 'Ocultar valores'}
-              title={
-                hideValues
-                  ? 'Mostrar valores monetários'
-                  : 'Ocultar valores monetários (modo privacidade)'
-              }
-            >
-              {hideValues ? (
-                <EyeOff className="w-5 h-5 stroke-[2] text-[#FCA311]" />
-              ) : (
-                <Eye className="w-5 h-5 stroke-[2]" />
-              )}
-            </button>
-
-            {/* 2. Sininho de Notificações Discreto */}
-            <button
-              type="button"
-              onClick={() => {
-                toast({
-                  title: 'Notificações do Curiangoo',
-                  description: 'Você está em dia com todas as finanças e alertas da família!',
-                })
-              }}
-              className="relative p-2 sm:p-2.5 rounded-2xl text-slate-600 hover:text-[#14213D] hover:bg-[#E5E5E5]/60 border border-transparent hover:border-[#E5E5E5] transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
-              aria-label="Notificações"
-              title="Notificações da família"
-            >
-              <Bell className="w-5 h-5 stroke-[2]" />
-              {/* Ponto indicador sutil */}
-              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#FCA311] ring-2 ring-white" />
-            </button>
           </div>
         </div>
       </header>
 
-      {/* Seletor Global de Mês (Único nas 3 abas: Home, Transações e Orçamentos) */}
-      <div className="flex justify-center w-full">
-        <MonthSelector />
-      </div>
-
-      {/* 2. Filtro Horizontal de Membros (Chips) */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none max-w-full">
+      {/* 2. Filtro Horizontal de Membros (Chips Padronizados — CDS v1.0, acabamento sutil sem contraste escuro/claro agressivo) */}
+      <div
+        className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none max-w-full"
+        role="group"
+        aria-label="Filtro de membros"
+      >
         <button
           type="button"
           onClick={() => setSelectedMemberId(null)}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer border touch-manipulation ${
             selectedMemberId === null
-              ? 'bg-[#14213D] text-white shadow-sm ring-2 ring-[#14213D]/25'
-              : 'bg-white text-slate-600 border border-[#E5E5E5] hover:bg-[#E5E5E5]/40'
+              ? 'bg-[#14213D]/10 text-[#14213D] border-[#14213D]/30 shadow-2xs'
+              : 'bg-white/80 text-slate-600 border-slate-200/80 hover:bg-slate-100 hover:text-slate-900'
           }`}
         >
-          <Users className="w-3.5 h-3.5 shrink-0" />
+          <Users
+            className={`w-3.5 h-3.5 shrink-0 ${
+              selectedMemberId === null ? 'text-[#14213D]' : 'text-slate-500'
+            }`}
+          />
           <span>Todos</span>
         </button>
         {members.map((m) => {
@@ -679,14 +678,18 @@ export default function Home() {
               key={m.id}
               type="button"
               onClick={() => setSelectedMemberId(m.id)}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer border touch-manipulation ${
                 isSelected
-                  ? 'bg-emerald-700 text-white shadow-sm ring-2 ring-emerald-600/30'
-                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                  ? 'bg-[#14213D]/10 text-[#14213D] border-[#14213D]/30 shadow-2xs'
+                  : 'bg-white/80 text-slate-600 border-slate-200/80 hover:bg-slate-100 hover:text-slate-900'
               }`}
               title={m.name}
             >
-              <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[9px] font-bold shrink-0">
+              <span
+                className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${
+                  isSelected ? 'bg-[#14213D] text-white' : 'bg-slate-200 text-slate-700'
+                }`}
+              >
                 {m.name.charAt(0).toUpperCase()}
               </span>
               <span>{m.name}</span>
@@ -697,39 +700,54 @@ export default function Home() {
 
       {/* 3. Grid Principal (Card Hero de Saldo + Card Orçamento) */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-        {/* CARD HERO SALDO TOTAL (Desktop 8 col) - Identidade Azul-Marinho #14213D com destaque #FCA311 */}
-        <div className="md:col-span-8 bg-gradient-to-br from-[#14213D] via-[#192a4f] to-[#0e172a] rounded-3xl p-5 sm:p-7 text-white shadow-xl shadow-[#14213D]/25 relative overflow-hidden transition-all hover:shadow-2xl border border-[#14213D]">
+        {/* CARD HERO SALDO TOTAL (Desktop 8 col) — Identidade Nubank/Revolut: 1 herói, zero matrioska, progressive disclosure */}
+        <div
+          onClick={() => setIsBalanceDetailsExpanded((prev) => !prev)}
+          className="md:col-span-8 bg-gradient-to-br from-[#14213D] via-[#192a4f] to-[#0e172a] rounded-3xl p-5 sm:p-7 text-white shadow-xl shadow-[#14213D]/25 relative overflow-hidden transition-all hover:shadow-2xl border border-[#14213D] cursor-pointer select-none group"
+          role="region"
+          aria-label="Card de Saldo da Família"
+        >
           {/* Efeito de luz decorativo âmbar sutil */}
           <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#FCA311]/15 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-            <span className="text-xs uppercase font-bold tracking-wider text-[#FCA311]">
+          {/* Rótulo e Contexto em peso leve */}
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <span className="text-xs uppercase font-medium tracking-wider text-slate-300/90">
               Saldo Total da Família
             </span>
-            {trendPercentage !== 0 && (
-              <div
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 ${
-                  trendPercentage > 0
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                    : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                }`}
+            <div className="flex items-center gap-1.5">
+              {trendPercentage !== 0 && (
+                <div
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0 ${
+                    trendPercentage > 0
+                      ? 'bg-emerald-500/15 text-emerald-300'
+                      : 'bg-rose-500/15 text-rose-300'
+                  }`}
+                >
+                  {trendPercentage > 0 ? (
+                    <TrendingUp className="w-3 h-3" strokeWidth={1.5} />
+                  ) : (
+                    <TrendingDown className="w-3 h-3" strokeWidth={1.5} />
+                  )}
+                  <span>
+                    {trendPercentage > 0 ? `+${trendPercentage}%` : `${trendPercentage}%`}
+                  </span>
+                </div>
+              )}
+              <span
+                className="text-[10px] text-white/50 group-hover:text-white/80 transition-colors ml-1"
+                title="Toque para ver detalhes"
               >
-                {trendPercentage > 0 ? (
-                  <TrendingUp className="w-3.5 h-3.5" strokeWidth={1.5} />
-                ) : (
-                  <TrendingDown className="w-3.5 h-3.5" strokeWidth={1.5} />
-                )}
-                <span>
-                  {trendPercentage > 0 ? `+${trendPercentage}%` : `${trendPercentage}%`} vs mês ant.
-                </span>
-              </div>
-            )}
+                {isBalanceDetailsExpanded ? '▾' : '▸'}
+              </span>
+            </div>
           </div>
 
+          {/* O SALDO É O HERÓI — Número grande em negrito, sem competição */}
           {loading ? (
-            <Skeleton className="h-10 w-48 bg-white/20 rounded-lg my-2" />
+            <Skeleton className="h-12 w-52 bg-white/20 rounded-lg my-2" />
           ) : (
-            <div className="text-2xl sm:text-4xl font-semibold tracking-tight tabular-nums my-2 break-words text-white">
+            <div className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight tabular-nums my-1 sm:my-2 break-words text-white">
               {hideValues ? (
                 <span>R$ ••••••</span>
               ) : (
@@ -738,59 +756,103 @@ export default function Home() {
             </div>
           )}
 
-          <p className="text-xs text-white/70 mb-4 sm:mb-5">
+          <p className="text-[11px] sm:text-xs text-slate-300/80 mb-5">
             {selectedMemberId
               ? `Filtrado por: ${members.find((m) => m.id === selectedMemberId)?.name}`
               : 'Consolidado de todos os membros'}
           </p>
 
-          {/* Chips Receitas e Despesas do Mês: empilhados no mobile (< sm), 2 colunas a partir de sm: */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-white/10">
-            {/* Bloco Receitas do Mês (Semântica financeira verde harmonizado #059669) */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between gap-2 min-w-0 border border-white/10">
-              <div className="flex items-start gap-2.5 sm:gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-300 shrink-0 mt-0.5">
-                  <ArrowUpRight className="w-5 h-5" strokeWidth={1.5} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <span className="text-[10px] sm:text-[11px] uppercase font-bold tracking-wider text-emerald-200/90 block break-words">
-                    Receitas do Mês
+          {/* RECEITAS E DESPESAS EM LINHA LIMPA — ZERO CARD DENTRO DE CARD */}
+          <div className="pt-4 border-t border-white/10 flex items-center justify-between gap-3 sm:gap-6">
+            {/* Bloco Receitas em Linha Limpa */}
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <div className="w-7 h-7 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-300 shrink-0">
+                <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="text-[11px] text-slate-300/80 font-normal block leading-tight">
+                  Receitas
+                </span>
+                <span className="text-sm sm:text-base font-semibold text-white tabular-nums block leading-tight mt-0.5 truncate">
+                  {maskValue(formatBRL(monthIncomeCents))}
+                </span>
+              </div>
+            </div>
+
+            {/* Divisor sutil e limpo */}
+            <div className="w-px h-8 bg-white/15 shrink-0" aria-hidden="true" />
+
+            {/* Bloco Despesas em Linha Limpa */}
+            <div className="flex items-center gap-2.5 min-w-0 flex-1 justify-end sm:justify-start">
+              <div className="w-7 h-7 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-300 shrink-0">
+                <ArrowDownRight className="w-4 h-4" strokeWidth={1.5} />
+              </div>
+              <div className="min-w-0 flex-1 text-right sm:text-left">
+                <span className="text-[11px] text-slate-300/80 font-normal block leading-tight">
+                  Despesas
+                </span>
+                <span className="text-sm sm:text-base font-semibold text-white tabular-nums block leading-tight mt-0.5 truncate">
+                  {maskValue(formatBRL(monthExpenseCents))}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* PROGRESSIVE DISCLOSURE — Detalhes (meta de receitas, previsto e comparações) ao tocar no card */}
+          {isBalanceDetailsExpanded && (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="mt-4 pt-3.5 border-t border-white/10 space-y-2.5 text-xs text-slate-200/90 animate-in fade-in slide-in-from-top-1 duration-200"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-slate-300">Receitas do Mês:</span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-semibold text-white">
+                    {maskValue(formatBRL(monthIncomeCents))}
                   </span>
-                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 mt-0.5">
-                    <span className="text-base sm:text-lg font-bold text-white tabular-nums break-words">
-                      {maskValue(formatBRL(monthIncomeCents))}
+                  {monthIncomeCents === 0 && plannedIncomeCents > 0 && (
+                    <span className="text-[11px] text-slate-300">
+                      (Previsto: {maskValue(formatBRL(plannedIncomeCents))})
                     </span>
-                    {/* Cenário (a): zero e previsto > 0 -> badge/texto sutil (Previsto: ...) */}
-                    {monthIncomeCents === 0 && plannedIncomeCents > 0 && (
-                      <span className="text-xs sm:text-[11px] font-medium text-white/70 break-words">
-                        (Previsto: {maskValue(formatBRL(plannedIncomeCents))})
+                  )}
+                  {monthIncomeCents > 0 &&
+                    plannedIncomeCents > 0 &&
+                    monthIncomeCents < plannedIncomeCents && (
+                      <span className="text-[11px] text-slate-300">
+                        de {maskValue(formatBRL(plannedIncomeCents))}
                       </span>
                     )}
-                    {/* Cenário (b.1): parcial (realizado < previsto) -> de {previsto} */}
-                    {monthIncomeCents > 0 &&
-                      plannedIncomeCents > 0 &&
-                      monthIncomeCents < plannedIncomeCents && (
-                        <span className="text-xs sm:text-[11px] font-medium text-white/70 break-words">
-                          de {maskValue(formatBRL(plannedIncomeCents))}
-                        </span>
-                      )}
-                    {/* Cenário (b.2): atingido ou superado -> ✓ Previsto atingido */}
-                    {monthIncomeCents > 0 &&
-                      plannedIncomeCents > 0 &&
-                      monthIncomeCents >= plannedIncomeCents && (
-                        <span className="text-xs sm:text-[11px] font-bold text-emerald-300 break-words">
-                          ✓ Previsto atingido
-                        </span>
-                      )}
-                  </div>
+                  {monthIncomeCents > 0 &&
+                    plannedIncomeCents > 0 &&
+                    monthIncomeCents >= plannedIncomeCents && (
+                      <span className="text-[11px] font-semibold text-emerald-300">
+                        ✓ Previsto atingido
+                      </span>
+                    )}
                 </div>
               </div>
 
-              {/* Linha de apoio acolhedora quando zero entradas e há previsão cadastrada */}
+              {/* Barra fina e discreta de proporção Receitas x Previsto quando aplicável */}
+              {plannedIncomeCents > 0 && (
+                <div className="space-y-1">
+                  <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden">
+                    <div
+                      className="bg-emerald-400 h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          Math.round((monthIncomeCents / plannedIncomeCents) * 100),
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Micro-ação quando zero entradas e há previsão cadastrada */}
               {monthIncomeCents === 0 && plannedIncomeCents > 0 && (
-                <div className="pt-1.5 border-t border-white/10 text-xs sm:text-[11px] text-white/80 flex flex-wrap items-center gap-1.5 leading-snug">
+                <div className="pt-1 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-300">
                   <span>Aguardando entradas do mês</span>
-                  <span className="opacity-60 hidden xs:inline">·</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -811,59 +873,24 @@ export default function Home() {
                         initialDescription: 'Salário mensal',
                       })
                     }}
-                    className="font-bold underline underline-offset-4 hover:text-[#FCA311] transition-colors cursor-pointer text-[#FCA311] active:scale-95 py-0.5"
+                    className="font-semibold underline underline-offset-4 hover:text-[#FCA311] transition-colors cursor-pointer text-[#FCA311] active:scale-95 py-0.5"
                   >
                     [Registrar salário]
                   </button>
                 </div>
               )}
-            </div>
 
-            {/* Bloco Despesas do Mês (Semântica financeira bordeaux CDS v1.0 #E11D48) */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3 sm:p-3.5 flex items-start gap-2.5 sm:gap-3 min-w-0 border border-white/10">
-              <div className="w-8 h-8 rounded-xl bg-rose-500/20 flex items-center justify-center text-rose-300 shrink-0 mt-0.5">
-                <ArrowDownRight className="w-5 h-5" strokeWidth={1.5} />
-              </div>
-              <div className="min-w-0 flex-1 overflow-hidden">
-                <span className="text-[10px] sm:text-[11px] uppercase font-bold tracking-wider text-rose-200/90 block break-words">
-                  Despesas do Mês
-                </span>
-                <span className="text-base sm:text-lg font-bold text-white tabular-nums break-words block mt-0.5">
-                  {maskValue(formatBRL(monthExpenseCents))}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* ATALHO CURIANGOO COPILOT: Card/pílula de comando estilo input integrado ao topo abaixo do saldo */}
-          <div className="mt-4 pt-3.5 border-t border-white/10">
-            <button
-              type="button"
-              onClick={() => navigate('/copilot')}
-              aria-label="Falar com o Curiangoo"
-              className="w-full group bg-white/95 hover:bg-white text-slate-800 rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 shadow-md hover:shadow-lg transition-all duration-200 border border-[#E5E5E5] flex items-center justify-between gap-2.5 cursor-pointer active:scale-[0.99] text-left touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
-            >
-              <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <div className="w-8 h-8 rounded-xl bg-[#14213D] text-[#FCA311] flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform border border-[#FCA311]/40">
-                  <CuriangoLogo size={18} color="#FCA311" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <span className="text-xs sm:text-sm font-medium text-slate-600 group-hover:text-slate-900 transition-colors block leading-tight break-words">
-                    Falar com o Curiangoo...
-                  </span>
-                  <span className="text-[10px] text-slate-400 block leading-tight break-words sm:hidden">
-                    Toque para abrir o chat do Copilot
+              {trendPercentage !== 0 && (
+                <div className="pt-1 flex items-center justify-between text-[11px] text-slate-300">
+                  <span>Comparação com mês anterior:</span>
+                  <span className={trendPercentage > 0 ? 'text-emerald-300' : 'text-rose-300'}>
+                    {trendPercentage > 0 ? `+${trendPercentage}%` : `${trendPercentage}%`} vs mês
+                    ant.
                   </span>
                 </div>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="hidden sm:inline-flex items-center text-[10px] font-semibold text-[#14213D] bg-[#FCA311]/20 border border-[#FCA311]/40 px-2 py-0.5 rounded-full">
-                  IA Copilot
-                </span>
-                <Sparkles className="w-4 h-4 text-[#FCA311] fill-[#FCA311]/30 shrink-0 group-hover:rotate-12 transition-transform" />
-              </div>
-            </button>
-          </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* CARD ORÇAMENTO EM 3 BALDES (Desktop 4 col) */}

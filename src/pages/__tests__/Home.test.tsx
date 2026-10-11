@@ -325,8 +325,12 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       renderWithProviders(<Home />)
 
       await waitFor(() => {
-        expect(screen.getByText('Receitas do Mês')).toBeDefined()
+        expect(screen.getByText('Receitas')).toBeDefined()
       })
+
+      // Abrir progressive disclosure do card de saldo
+      const balanceCard = screen.getByRole('region', { name: /card de saldo da família/i })
+      fireEvent.click(balanceCard)
 
       // Valor realizado zerado
       expect(screen.getByText('R$ 0,00')).toBeDefined()
@@ -374,8 +378,12 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       renderWithProviders(<Home />)
 
       await waitFor(() => {
-        expect(screen.getByText('Receitas do Mês')).toBeDefined()
+        expect(screen.getByText('Receitas')).toBeDefined()
       })
+
+      // Abrir progressive disclosure
+      const balanceCard = screen.getByRole('region', { name: /card de saldo da família/i })
+      fireEvent.click(balanceCard)
 
       expect(screen.getByText('R$ 3.000,00')).toBeDefined()
       expect(screen.getByText('de R$ 6.000,00')).toBeDefined()
@@ -408,8 +416,12 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       renderWithProviders(<Home />)
 
       await waitFor(() => {
-        expect(screen.getByText('Receitas do Mês')).toBeDefined()
+        expect(screen.getByText('Receitas')).toBeDefined()
       })
+
+      // Abrir progressive disclosure
+      const balanceCard = screen.getByRole('region', { name: /card de saldo da família/i })
+      fireEvent.click(balanceCard)
 
       expect(screen.getByText('R$ 6.000,00')).toBeDefined()
       expect(screen.getByText('✓ Previsto atingido')).toBeDefined()
@@ -442,11 +454,15 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       renderWithProviders(<Home />)
 
       await waitFor(() => {
-        expect(screen.getByText('Receitas do Mês')).toBeDefined()
+        expect(screen.getByText('Receitas')).toBeDefined()
       })
 
+      // Abrir progressive disclosure
+      const balanceCard = screen.getByRole('region', { name: /card de saldo da família/i })
+      fireEvent.click(balanceCard)
+
       expect(screen.getByText('R$ 2.500,00')).toBeDefined()
-      expect(screen.queryByText(/Previsto/)).toBeNull()
+      expect(screen.queryByText(/Previsto:/)).toBeNull()
       expect(screen.queryByText('Aguardando entradas do mês')).toBeNull()
       expect(screen.queryByText('[Registrar salário]')).toBeNull()
     })
@@ -517,7 +533,7 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       renderWithProviders(<Home />)
 
       await waitFor(() => {
-        expect(screen.getByText('Receitas do Mês')).toBeDefined()
+        expect(screen.getByText('Receitas')).toBeDefined()
       })
 
       // Receitas do mês: apenas R$ 1.000,00 (não R$ 6.000,00)
@@ -530,17 +546,26 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       expect(screen.getByText('R$ 900,00')).toBeDefined()
     })
 
-    it('renderiza o atalho do Copilot na Home e navega para /copilot ao clicar', async () => {
+    it('garante que o card de saldo não possui chamada duplicada ao Copilot e o saldo é o herói com progressive disclosure', async () => {
       renderWithProviders(<Home />)
 
       await waitFor(() => {
-        expect(screen.getByText('Receitas do Mês')).toBeDefined()
+        expect(screen.getByText('Receitas')).toBeDefined()
       })
-      const copilotBtn = screen.getByRole('button', { name: /falar com o curiangoo/i })
-      expect(copilotBtn).toBeDefined()
+      // O botão do Copilot foi removido de dentro do card de saldo na R52 (fica apenas o FAB flutuante no Layout)
+      const copilotInsideCard = screen.queryByRole('button', { name: /falar com o curiangoo/i })
+      expect(copilotInsideCard).toBeNull()
 
-      fireEvent.click(copilotBtn)
-      expect(mockNavigate).toHaveBeenCalledWith('/copilot')
+      // O saldo é o herói e receitas e despesas aparecem em linha limpa
+      expect(screen.getByText('Saldo Total da Família')).toBeDefined()
+      expect(screen.getByText('Despesas')).toBeDefined()
+
+      // Ao clicar no card de saldo, ativa progressive disclosure
+      const balanceCard = screen.getByRole('region', { name: /card de saldo da família/i })
+      fireEvent.click(balanceCard)
+
+      // Detalhes aparecem sob demanda
+      expect(screen.getByText(/Receitas do Mês:/i)).toBeDefined()
     })
 
     it('não possui truncate nos elementos principais da Home (baldes 50/30/20, chips de membros, transações)', async () => {
@@ -587,7 +612,7 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       renderWithProviders(<Home />)
 
       await waitFor(() => {
-        expect(screen.getByText('Receitas do Mês')).toBeDefined()
+        expect(screen.getByText('Receitas')).toBeDefined()
       })
       expect(screen.getByText('Curiangoo Família')).toBeDefined()
       expect(screen.getByRole('button', { name: /mostrar valores|ocultar valores/i })).toBeDefined()
@@ -601,7 +626,7 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       renderWithProviders(<Home />)
 
       await waitFor(() => {
-        expect(screen.getByText('Receitas do Mês')).toBeDefined()
+        expect(screen.getByText('Receitas')).toBeDefined()
       })
       const privacyBtn = screen.getByRole('button', { name: /ocultar valores/i })
       expect(privacyBtn).toBeDefined()
