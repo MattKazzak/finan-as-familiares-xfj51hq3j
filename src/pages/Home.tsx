@@ -528,7 +528,7 @@ export default function Home() {
       {/* 1. CABEÇALHO COESO E INTEGRADO (Saudação + Seletor de Mês Compacto + Ações de Cabeçalho) */}
       <header className="pt-1 pb-1">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 min-w-0">
-          {/* Lado Esquerdo: Avatar arredondado do membro ativo + Saudação por horário + Subtítulo Curiangoo Família */}
+          {/* Lado Esquerdo: Avatar arredondado do membro ativo + Saudação por horário + Subtítulo Família */}
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <button
               type="button"
@@ -584,7 +584,7 @@ export default function Home() {
               </div>
               <div className="flex items-center gap-1.5 flex-wrap">
                 <p className="text-[11px] sm:text-xs text-slate-500 font-medium leading-none">
-                  Curiangoo Família
+                  Família
                 </p>
                 <span className="text-[10px] text-slate-300 select-none">·</span>
                 {family?.name ? (

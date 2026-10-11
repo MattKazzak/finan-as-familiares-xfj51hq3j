@@ -706,13 +706,13 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       expect(truncatedElements.length).toBe(0)
     })
 
-    it('renderiza o novo Header moderno fintech com saudação por horário, subtítulo Curiangoo Família e botões de privacidade e notificações', async () => {
+    it('renderiza o novo Header moderno fintech com saudação por horário, subtítulo Família e botões de privacidade e notificações', async () => {
       renderWithProviders(<Home />)
 
       await waitFor(() => {
         expect(screen.getByText('Receitas')).toBeDefined()
       })
-      expect(screen.getByText('Curiangoo Família')).toBeDefined()
+      expect(screen.getByText('Família')).toBeDefined()
       expect(screen.getByRole('button', { name: /mostrar valores|ocultar valores/i })).toBeDefined()
       expect(screen.getByRole('button', { name: /notificações/i })).toBeDefined()
       expect(
