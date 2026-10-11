@@ -8,7 +8,7 @@ import {
 } from '../voice-parser'
 import { analyzeBasketMission } from '../basket-missions'
 
-describe('Contrato de Comportamento do Copilot v1.0 — 18 Casos de Avaliação de Conversação (C1-C18)', () => {
+describe('Contrato de Comportamento do Copilot v1.0 — Casos de Avaliação de Conversação (C1-C22)', () => {
   // Catálogo Padrão Ouro com as gavetas reais
   const mockCategories = [
     {
@@ -400,5 +400,100 @@ describe('Contrato de Comportamento do Copilot v1.0 — 18 Casos de Avaliação 
     const parsed = parseVoiceInput('asdfgh', mockCategories)
     expect(parsed.aiStatus).toBe('invalido')
     expect(parsed.friendlyMessage).toContain('Não consegui entender')
+  })
+
+  // =========================================================================
+  // RODADA 42B (ADITAMENTO v1.1) — REGRA DA PROPOSTA (PROPOSE-THEN-CONFIRM):
+  // C19-C22: Casos de proposta nomeada, discordância, próxima melhor e criação no nível família
+  // =========================================================================
+
+  // [C19] "comprei um liquidificador, 150" → proposta nomeada: Casa & Conforto › Utensílios & Cozinha + "Está certo assim?" — nunca pergunta aberta
+  it('C19: "comprei um liquidificador, 150" → proposta nomeada Casa & Conforto › Utensílios & Cozinha + "Está certo assim?" (nunca pergunta aberta)', () => {
+    const text = 'comprei um liquidificador, 150'
+    const parsed = parseVoiceInput(text, mockCategories)
+
+    expect(parsed.amountCents).toBe(15000)
+    expect(parsed.categoryNameSuggestion).toBe('Casa & Conforto')
+    expect(parsed.subcategoryNameSuggestion).toBe('Utensílios & Cozinha')
+    expect(parsed.aiStatus).toBe('clarificacao')
+    expect(parsed.clarificationQuestion).toContain('Casa & Conforto › Utensílios & Cozinha')
+    expect(parsed.clarificationQuestion).toContain('Está certo assim?')
+
+    // Pergunta aberta NUNCA pode acontecer
+    expect(parsed.clarificationQuestion).not.toContain('em qual categoria')
+    expect(parsed.clarificationQuestion).not.toContain('qual é a categoria')
+    expect(parsed.clarificationQuestion).not.toContain('onde prefere organizar')
+  })
+
+  // [C20] proposta + "não" → PRÓXIMA MELHOR opção proposta (não pergunta aberta)
+  it('C20: proposta + "não" → PRÓXIMA MELHOR opção proposta (não pergunta aberta)', () => {
+    // Contexto com a proposta anterior do liquidificador rejeitada
+    const previousContext = {
+      descricao: 'Liquidificador',
+      valor: 150,
+      categoria: 'Casa & Conforto',
+      subcategoria: 'Utensílios & Cozinha',
+      status: 'clarificacao',
+      tentativa_rejeicao: 1,
+    }
+
+    const text = 'não'
+    const parsed = parseVoiceInput(text, mockCategories, previousContext as any)
+
+    expect(parsed.aiStatus).toBe('clarificacao')
+    // Deve propor a próxima melhor opção (ex: Compras › Eletrônicos & Tecnologia)
+    expect(parsed.categoryNameSuggestion).toBe('Compras')
+    expect(parsed.subcategoryNameSuggestion).toBe('Eletrônicos & Tecnologia')
+    expect(parsed.clarificationQuestion).toContain('Compras › Eletrônicos & Tecnologia')
+    expect(parsed.clarificationQuestion).toContain('Fica melhor assim?')
+
+    // Pergunta aberta eliminada
+    expect(parsed.clarificationQuestion).not.toContain('em qual categoria')
+    expect(parsed.clarificationQuestion).not.toContain('onde prefere')
+  })
+
+  // [C21] proposta + "não" + "não" → sugestão de criar subcategoria nova no nível família
+  it('C21: proposta + "não" + "não" → sugestão de criar subcategoria nova no nível família', () => {
+    // Contexto com a 2ª rejeição consecutiva (tentativa 2)
+    const previousContext = {
+      descricao: 'Liquidificador',
+      valor: 150,
+      categoria: 'Compras',
+      subcategoria: 'Eletrônicos & Tecnologia',
+      status: 'clarificacao',
+      tentativa_rejeicao: 2,
+    }
+
+    const text = 'não'
+    const parsed = parseVoiceInput(text, mockCategories, previousContext as any)
+
+    expect(parsed.aiStatus).toBe('clarificacao')
+    expect(parsed.clarificationQuestion).toContain('Nenhuma gaveta encaixa bem')
+    expect(parsed.clarificationQuestion).toContain('sugiro criar Eletroportáteis em Compras')
+    expect(parsed.clarificationQuestion).toContain('Posso criar?')
+
+    // Pergunta aberta proibida
+    expect(parsed.clarificationQuestion).not.toContain('em qual categoria')
+  })
+
+  // [C22] criação aceita → subcategoria criada no nível família + transação gravada no par novo
+  it('C22: criação aceita → subcategoria criada no nível família + transação gravada no par novo', () => {
+    // Contexto onde a IA sugeriu criar "Eletroportáteis" em "Compras" e usuário confirmou com "sim"
+    const previousContext = {
+      descricao: 'Liquidificador',
+      valor: 150,
+      categoria: 'Compras',
+      subcategoria: 'Eletroportáteis',
+      status: 'clarificacao',
+    }
+
+    const text = 'sim'
+    const parsed = parseVoiceInput(text, mockCategories, previousContext as any)
+
+    expect(parsed.aiStatus).toBe('sucesso')
+    expect(parsed.amountCents).toBe(15000)
+    expect(parsed.categoryNameSuggestion).toBe('Compras')
+    expect(parsed.subcategoryNameSuggestion).toBe('Eletroportáteis')
+    expect(parsed.friendlyMessage).toContain('Lançado: R$ 150,00 em Compras › Eletroportáteis! 👍')
   })
 })

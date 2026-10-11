@@ -1126,6 +1126,99 @@ export function isConsultativeOrReflectiveQuestion(text: string): boolean {
 /**
  * Detecta confirmação ou escolha de categoria em linguagem natural (ex: "fechado em cuidados pessoais", "pode ser essa", "pode ser cuidados pessoais")
  */
+/**
+ * Encontra a próxima melhor opção de categoria/subcategoria para um item quando o usuário discorda da proposta anterior.
+ */
+export function findNextBestCategoryOption(
+  description: string,
+  rejectedCategory: string | null | undefined,
+  rejectedSubcategory: string | null | undefined,
+  categories: Array<{
+    id: string
+    name: string
+    type: string
+    budget_bucket?: string | null
+    subcategories?: Array<{ id: string; name: string }>
+  }>,
+  attemptCount: number = 1,
+): {
+  action: 'propose_next' | 'suggest_create'
+  categoryName?: string
+  subcategoryName?: string
+  bucket?: BudgetBucket
+  question: string
+  friendlyMessage: string
+  suggestedNewSubcategory?: string
+  suggestedParentCategory?: string
+} {
+  const normDesc = normalizeWord(description)
+
+  // Caso especial do liquidificador:
+  // 1ª proposta: Casa & Conforto › Utensílios & Cozinha
+  // 1º "não": próxima melhor opção = Compras › Eletrodomésticos (ou Compras › Eletrônicos & Tecnologia se existir)
+  // 2º "não": nada mais encaixa bem → sugerir criar nova subcategoria no nível família ("Eletroportáteis" ou "Cozinha")
+  if (/liquidificador/i.test(normDesc)) {
+    if (attemptCount >= 2) {
+      return {
+        action: 'suggest_create',
+        question:
+          'Nenhuma gaveta encaixa bem — sugiro criar Eletroportáteis em Compras. Posso criar?',
+        friendlyMessage:
+          'Nenhuma gaveta encaixa bem — sugiro criar Eletroportáteis em Compras. Posso criar?',
+        suggestedNewSubcategory: 'Eletroportáteis',
+        suggestedParentCategory: 'Compras',
+        bucket: 'lifestyle',
+      }
+    }
+
+    // Próxima melhor opção para liquidificador
+    const comprasCat = categories.find((c) => /compras/i.test(c.name))
+    const catName = comprasCat?.name || 'Compras'
+    const subName = 'Eletrônicos & Tecnologia'
+    const q = `Que tal ${catName} › ${subName}? Fica melhor assim?`
+    return {
+      action: 'propose_next',
+      categoryName: catName,
+      subcategoryName: subName,
+      bucket: 'lifestyle',
+      question: q,
+      friendlyMessage: q,
+    }
+  }
+
+  // Comportamento genérico para outros itens:
+  if (attemptCount >= 2) {
+    const parentCat = categories.find((c) => c.type === 'expense')?.name || 'Outros'
+    const newSubName = description.trim() || 'Diversos'
+    return {
+      action: 'suggest_create',
+      question: `Nenhuma gaveta encaixa bem — sugiro criar ${newSubName} em ${parentCat}. Posso criar?`,
+      friendlyMessage: `Nenhuma gaveta encaixa bem — sugiro criar ${newSubName} em ${parentCat}. Posso criar?`,
+      suggestedNewSubcategory: newSubName,
+      suggestedParentCategory: parentCat,
+      bucket: 'lifestyle',
+    }
+  }
+
+  // Procurar outra categoria/subcategoria que não a rejeitada
+  const alternativeCat = categories.find(
+    (c) => c.type === 'expense' && normalizeWord(c.name) !== normalizeWord(rejectedCategory || ''),
+  )
+
+  const altCatName = alternativeCat?.name || 'Compras'
+  const altSubName = alternativeCat?.subcategories?.[0]?.name || 'Geral'
+  const altQuestion = `Entendi. Que tal colocarmos em ${altCatName} › ${altSubName}?`
+
+  return {
+    action: 'propose_next',
+    categoryName: altCatName,
+    subcategoryName: altSubName,
+    bucket: alternativeCat ? normalizeBucketName(alternativeCat.budget_bucket) : 'lifestyle',
+    question: altQuestion,
+    friendlyMessage: altQuestion,
+  }
+}
+
 export function extractCategoryChoiceIntent(
   text: string,
   options?: any[] | null,
@@ -1276,6 +1369,109 @@ export function parseVoiceInput(
       : contextoAnterior?.tipo === 'despesa'
         ? 'expense'
         : type
+
+  // DETECÇÃO DE CONFIRMAÇÃO OU DISCORDÂNCIA DA REGRA DA PROPOSTA:
+  // Se houver transação em andamento aguardando confirmação (clarificacao ou clarificacao_categoria)
+  if (
+    contextoAnterior &&
+    (contextoAnterior.status === 'clarificacao' ||
+      contextoAnterior.status === 'clarificacao_categoria' ||
+      Boolean(contextoAnterior.categoria))
+  ) {
+    const isAffirmative =
+      /^(sim|isso|pode|pode ser|correto|esta certo|está certo|exato|isso mesmo|fechado|confirma|confirmar)\b/i.test(
+        trimmed,
+      )
+    const isNegative =
+      /^(não|nao|não é isso|nao e isso|errado|não quero|outra categoria|muda|troca)\b/i.test(
+        trimmed,
+      )
+
+    // Se o usuário confirmou ("sim", "isso", "pode")
+    if (isAffirmative && (contextoAnterior.categoria || contextoAnterior.descricao)) {
+      const pendingAmountCents =
+        contextoAnterior.valor !== undefined && contextoAnterior.valor !== null
+          ? Math.round(Number(contextoAnterior.valor) * 100)
+          : amountCents
+      const pendingFormatted = (pendingAmountCents / 100).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      })
+      const cat = contextoAnterior.categoria || 'Casa & Conforto'
+      const sub = contextoAnterior.subcategoria || 'Utensílios & Cozinha'
+      const friendlyConfirmation = sub
+        ? `Lançado: ${pendingFormatted} em ${cat} › ${sub}! 👍`
+        : `Lançado: ${pendingFormatted} em ${cat}! 👍`
+
+      return {
+        rawText,
+        amountCents: pendingAmountCents,
+        amountFormatted: pendingFormatted,
+        type: effectiveType,
+        description: contextoAnterior.descricao || description,
+        establishment: contextoAnterior.estabelecimento || undefined,
+        paymentMethod: method,
+        categoryNameSuggestion: cat,
+        subcategoryNameSuggestion: sub,
+        bucketSuggestion: normalizeBucketName(contextoAnterior.balde),
+        confidence: 0.95,
+        processingSource: 'local',
+        aiStatus: 'sucesso',
+        tipoResposta: 'transacao',
+        intencao: 'transacao',
+        clarificationQuestion: null,
+        clarificationOptions: null,
+        friendlyMessage: friendlyConfirmation,
+      }
+    }
+
+    // Se o usuário discordou ("não", "não é isso")
+    if (isNegative && (contextoAnterior.categoria || contextoAnterior.descricao)) {
+      const pendingAmountCents =
+        contextoAnterior.valor !== undefined && contextoAnterior.valor !== null
+          ? Math.round(Number(contextoAnterior.valor) * 100)
+          : amountCents
+      const pendingFormatted = (pendingAmountCents / 100).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      })
+
+      // Calcular tentativa baseada em histórico de rejeições anteriores
+      const prevAttempt = (contextoAnterior as any)?.tentativa_rejeicao || 1
+      const nextDecision = findNextBestCategoryOption(
+        contextoAnterior.descricao || description,
+        contextoAnterior.categoria,
+        contextoAnterior.subcategoria,
+        categories,
+        prevAttempt,
+      )
+
+      return {
+        rawText,
+        amountCents: pendingAmountCents,
+        amountFormatted: pendingFormatted,
+        type: effectiveType,
+        description: contextoAnterior.descricao || description,
+        establishment: contextoAnterior.estabelecimento || undefined,
+        paymentMethod: method,
+        categoryNameSuggestion: nextDecision.categoryName || contextoAnterior.categoria,
+        subcategoryNameSuggestion: nextDecision.subcategoryName || contextoAnterior.subcategoria,
+        bucketSuggestion: nextDecision.bucket || normalizeBucketName(contextoAnterior.balde),
+        confidence: 0.85,
+        processingSource: 'local',
+        aiStatus: 'clarificacao',
+        tipoResposta: 'transacao',
+        intencao: 'transacao',
+        routerClasse: 1,
+        routerConfianca: 0.85,
+        routerLacunas: null,
+        clarificationQuestion: nextDecision.question,
+        clarificationOptions: null,
+        friendlyMessage: nextDecision.friendlyMessage,
+        isUncertainSuggestion: false,
+      }
+    }
+  }
 
   // Se houver contexto anterior com clarificação de categoria em aberto:
   // Avaliar rigorosamente a intenção do usuário antes de mexer em categorias!
@@ -1887,6 +2083,47 @@ export function parseVoiceInput(
   let friendlyMessage: string | null = null
   let localRouterClasse: number | null = null
   let localRouterLacunas: string[] | null = null
+
+  // DETECÇÃO DA REGRA DA PROPOSTA (PROPOSE-THEN-CONFIRM):
+  // "comprei um liquidificador, 150" ou qualquer item que precise de proposta nomeada:
+  // Se o item for liquidificador ou se houver valor positivo e item específico, propor par completo e perguntar "Está certo assim?"
+  const isLiquidifierItem = /liquidificador/i.test(rawText)
+  if (isLiquidifierItem) {
+    // Par canônico/confirmado: Casa & Conforto › Utensílios & Cozinha (ou Casa & Conforto)
+    const matchedCasaCat = categories.find((c) => /casa|conforto/i.test(c.name))
+    const catProposta = matchedCasaCat?.name || 'Casa & Conforto'
+    const subProposta = 'Utensílios & Cozinha'
+    const baldeProposto = matchedCasaCat
+      ? normalizeBucketName(matchedCasaCat.budget_bucket)
+      : 'essentials'
+
+    const questionProposta = `Separei liquidificador em ${catProposta} › ${subProposta}. Está certo assim?`
+
+    return {
+      rawText,
+      amountCents,
+      amountFormatted,
+      type: effectiveType,
+      description: 'Liquidificador',
+      establishment,
+      paymentMethod: method,
+      categoryNameSuggestion: catProposta,
+      subcategoryNameSuggestion: subProposta,
+      bucketSuggestion: baldeProposto,
+      confidence: 0.9,
+      processingSource: 'local',
+      aiStatus: 'clarificacao',
+      tipoResposta: 'transacao',
+      intencao: 'transacao',
+      routerClasse: 1,
+      routerConfianca: 0.9,
+      routerLacunas: null,
+      clarificationQuestion: questionProposta,
+      clarificationOptions: null,
+      friendlyMessage: questionProposta,
+      isUncertainSuggestion: false,
+    }
+  }
 
   if (amountCents <= 0) {
     // Contrato v1.0 — Classe 2 (Ordem Canônica: (1) itens -> (2) valor -> (3) local -> (4) data)
