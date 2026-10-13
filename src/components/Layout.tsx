@@ -307,7 +307,7 @@ export default function Layout() {
           aria-label="Navegação Principal"
           className="md:hidden fixed bottom-3 sm:bottom-4 inset-x-0 z-40 px-3 sm:px-4 max-w-md mx-auto pointer-events-none"
         >
-          <div className="pointer-events-auto w-full bg-white/95 backdrop-blur-md border border-border/40 shadow-curiango-dock rounded-full px-2 py-1.5 flex items-center justify-between transition-all">
+          <div className="pointer-events-auto w-full bg-white/95 backdrop-blur-md border border-[rgba(20,33,61,0.06)] shadow-elevation-3 rounded-full px-2 py-1.5 flex items-center justify-between transition-all">
             {/* 1. Início */}
             <NavLink
               to="/inicio"

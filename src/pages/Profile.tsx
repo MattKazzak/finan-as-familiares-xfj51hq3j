@@ -464,9 +464,11 @@ export default function ProfilePage() {
   const appVersion = packageJson.version || '0.0.181'
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto w-full min-w-0">
-      {/* 1. Card da Família (Hero Editável) - Identidade Azul-Marinho #14213D */}
-      <div className="bg-gradient-to-br from-[#14213D] via-[#192a4f] to-[#0e172a] rounded-3xl p-5 sm:p-6 text-white shadow-xl shadow-[#14213D]/20 border border-[#14213D] flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
+    <div className="space-y-6 sm:space-y-8 max-w-4xl mx-auto w-full min-w-0">
+      {/* 1. Card da Família (Hero Editável) - Identidade Azul-Marinho #14213D com profundidade refinada */}
+      <div className="bg-gradient-to-br from-[#14213D] via-[#1a2d52] to-[#0e172a] rounded-3xl p-6 sm:p-8 text-white shadow-elevation-2 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
+        {/* Luz orgânica de topo */}
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent pointer-events-none" />
         <div className="flex items-center gap-3.5 sm:gap-4 min-w-0 flex-1">
           {/* Avatar da Família com Inicial ou Imagem */}
           <div className="shrink-0">
@@ -516,7 +518,7 @@ export default function ProfilePage() {
       </div>
 
       {/* 2. Card de Renda Líquida Mensal da Família (Base do Orçamento) */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm">
+      <div className="bg-white/95 rounded-3xl border border-[rgba(20,33,61,0.06)] p-6 sm:p-7 shadow-elevation-1">
         {/* Cabeçalho padronizado: Ícone + Título + Badge + Descrição + Ação alinhada */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
@@ -641,7 +643,7 @@ export default function ProfilePage() {
 
       {/* 3. Seletor 'Quem está usando?' por Aparelho (apenas quando houver 2 ou mais membros) */}
       {members.length > 1 && (
-        <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm">
+        <div className="bg-white/95 rounded-3xl border border-[rgba(20,33,61,0.06)] p-6 sm:p-7 shadow-elevation-1">
           <div className="flex items-start sm:items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold shrink-0">
               <Smartphone className="w-5 h-5" />
@@ -752,7 +754,7 @@ export default function ProfilePage() {
       )}
 
       {/* 4. Membros da Família */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm">
+      <div className="bg-white/95 rounded-3xl border border-[rgba(20,33,61,0.06)] p-6 sm:p-7 shadow-elevation-1">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4">
           <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
             <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold shrink-0">
@@ -871,7 +873,8 @@ export default function ProfilePage() {
 
       {/* 5. Atalho de Instalação no Celular (apenas quando não estiver em modo standalone) */}
       {!isStandalone && (
-        <div className="bg-gradient-to-br from-[#14213D] via-[#192a4f] to-[#0e172a] rounded-3xl p-5 sm:p-6 text-white shadow-lg shadow-[#14213D]/25 border border-[#14213D]">
+        <div className="bg-gradient-to-br from-[#14213D] via-[#1a2d52] to-[#0e172a] rounded-3xl p-6 sm:p-7 text-white shadow-elevation-2 border border-white/10 relative overflow-hidden">
+          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
               <div

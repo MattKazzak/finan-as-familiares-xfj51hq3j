@@ -524,9 +524,9 @@ export default function Home() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-5 max-w-5xl mx-auto w-full min-w-0 overflow-x-hidden">
+    <div className="space-y-6 sm:space-y-7 max-w-5xl mx-auto w-full min-w-0 overflow-x-hidden">
       {/* 1. CABEÇALHO REORGANIZADO (R62: Linha 1 = Identidade + Ações | Linha 2 = Navegação de Tempo) */}
-      <header className="pt-1 pb-1 space-y-2.5 sm:space-y-3">
+      <header className="pt-1 pb-1 space-y-3 sm:space-y-3.5">
         {/* Linha 1: Identidade (Avatar + Saudação + Família) + Ações à Direita (👁 Privacidade + 🔔 Notificações) */}
         <div
           data-testid="header-greeting-row"
@@ -658,7 +658,7 @@ export default function Home() {
 
       {/* 2. Filtro Horizontal de Membros (Chips Padronizados — CDS v1.0, acabamento sutil sem contraste escuro/claro agressivo) */}
       <div
-        className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none max-w-full"
+        className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none max-w-full"
         role="group"
         aria-label="Filtro de membros"
       >
@@ -668,7 +668,7 @@ export default function Home() {
           className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer border touch-manipulation ${
             selectedMemberId === null
               ? 'bg-[#14213D]/10 text-[#14213D] border-[#14213D]/30 shadow-2xs'
-              : 'bg-white/80 text-slate-600 border-slate-200/80 hover:bg-slate-100 hover:text-slate-900'
+              : 'bg-white/90 text-slate-600 border-[rgba(20,33,61,0.06)] hover:bg-slate-100 hover:text-slate-900 shadow-2xs'
           }`}
         >
           <Users
@@ -688,7 +688,7 @@ export default function Home() {
               className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer border touch-manipulation ${
                 isSelected
                   ? 'bg-[#14213D]/10 text-[#14213D] border-[#14213D]/30 shadow-2xs'
-                  : 'bg-white/80 text-slate-600 border-slate-200/80 hover:bg-slate-100 hover:text-slate-900'
+                  : 'bg-white/90 text-slate-600 border-[rgba(20,33,61,0.06)] hover:bg-slate-100 hover:text-slate-900 shadow-2xs'
               }`}
               title={m.name}
             >
@@ -706,25 +706,27 @@ export default function Home() {
       </div>
 
       {/* 3. Grid Principal (Card Hero de Saldo + Card Orçamento) */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-5 sm:gap-6">
         {/* CARD HERO SALDO TOTAL (Desktop 8 col) — Identidade Nubank/Revolut: 1 herói, zero matrioska, progressive disclosure */}
         <div
           onClick={() => setIsBalanceDetailsExpanded((prev) => !prev)}
-          className="md:col-span-8 bg-gradient-to-br from-[#14213D] via-[#192a4f] to-[#0e172a] rounded-3xl p-5 sm:p-7 text-white shadow-xl shadow-[#14213D]/25 relative overflow-hidden transition-all hover:shadow-2xl border border-[#14213D] cursor-pointer select-none group"
+          className="md:col-span-8 bg-gradient-to-br from-[#14213D] via-[#1a2d52] to-[#0e172a] rounded-3xl p-6 sm:p-8 text-white shadow-elevation-2 relative overflow-hidden transition-all hover:shadow-elevation-3 border border-white/10 cursor-pointer select-none group"
           role="region"
           aria-label="Card de Saldo da Família"
         >
+          {/* Efeito de luz sutil no topo (acento orgânico) */}
+          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent pointer-events-none" />
           {/* Efeito de luz decorativo âmbar sutil */}
-          <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#FCA311]/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -top-12 -right-12 w-52 h-52 bg-[#FCA311]/15 rounded-full blur-3xl pointer-events-none" />
 
           {/* Rótulo e Contexto em peso leve — NENHUM percentual solto no card fechado */}
-          <div className="flex items-center justify-between gap-2 mb-1.5">
+          <div className="flex items-center justify-between gap-2 mb-2">
             <span className="text-xs uppercase font-medium tracking-wider text-slate-300/90">
               Saldo Total da Família
             </span>
             <div className="flex items-center gap-1.5">
               <span
-                className="text-[11px] text-white/50 group-hover:text-white/80 transition-colors"
+                className="text-[11px] text-white/60 group-hover:text-white/90 transition-colors"
                 title="Toque para ver detalhes"
               >
                 {isBalanceDetailsExpanded ? '▾ Recolher' : '▸ Ver detalhes'}
@@ -732,11 +734,11 @@ export default function Home() {
             </div>
           </div>
 
-          {/* O SALDO É O HERÓI — Número grande em negrito, sem competição */}
+          {/* O SALDO É O HERÓI — Número grande em negrito, com respiro calmo */}
           {loading ? (
             <Skeleton className="h-12 w-52 bg-white/20 rounded-lg my-2" />
           ) : (
-            <div className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight tabular-nums my-1 sm:my-2 break-words text-white">
+            <div className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight tabular-nums my-2 sm:my-3 break-words text-white leading-tight">
               {hideValues ? (
                 <span>R$ ••••••</span>
               ) : (
@@ -745,7 +747,7 @@ export default function Home() {
             </div>
           )}
 
-          <p className="text-[11px] sm:text-xs text-slate-300/80 mb-5">
+          <p className="text-[11px] sm:text-xs text-slate-300/80 mb-6">
             {selectedMemberId
               ? `Filtrado por: ${members.find((m) => m.id === selectedMemberId)?.name}`
               : 'Consolidado de todos os membros'}
@@ -989,16 +991,16 @@ export default function Home() {
         </div>
 
         {/* CARD ORÇAMENTO EM 3 BALDES (Desktop 4 col) */}
-        <div className="md:col-span-4 bg-card/90 backdrop-blur-sm rounded-3xl p-4 sm:p-6 border border-border/40 shadow-curiango flex flex-col justify-between">
+        <div className="md:col-span-4 bg-white/95 backdrop-blur-sm rounded-3xl p-5 sm:p-6 border border-[rgba(20,33,61,0.06)] shadow-elevation-1 flex flex-col justify-between">
           <div>
             {/* Header do Card (ícone Scale neutro + título + subtítulo com mês de referência discreto) */}
             <div className="flex items-center justify-between gap-2 mb-4 min-w-0">
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-slate-100/90 text-[#14213D] flex items-center justify-center shrink-0 shadow-2xs border border-[rgba(20,33,61,0.04)]">
                   <Scale className="w-4 h-4" strokeWidth={1.5} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-sm text-[#14213D] dark:text-white leading-tight break-words">
+                  <h3 className="font-semibold text-sm text-[#14213D] leading-tight break-words">
                     Orçamento em 3 Baldes
                   </h3>
                   {budgetModelLabel ? (
@@ -1024,7 +1026,7 @@ export default function Home() {
                   limit: bucketsData.essentials.limitCents,
                   percent: bucketsData.essentials.percent,
                   isOver: bucketsData.essentials.isOver,
-                  barBg: 'bg-[#14213D]',
+                  barGradient: 'bg-gradient-to-r from-[#14213D] to-[#1f3159]',
                 },
                 {
                   key: 'lifestyle',
@@ -1035,7 +1037,7 @@ export default function Home() {
                   limit: bucketsData.lifestyle.limitCents,
                   percent: bucketsData.lifestyle.percent,
                   isOver: bucketsData.lifestyle.isOver,
-                  barBg: 'bg-[#FCA311]',
+                  barGradient: 'bg-gradient-to-r from-[#FCA311] to-[#fdb744]',
                 },
                 {
                   key: 'future',
@@ -1046,7 +1048,7 @@ export default function Home() {
                   limit: bucketsData.future.limitCents,
                   percent: bucketsData.future.percent,
                   isOver: bucketsData.future.isOver,
-                  barBg: 'bg-[#10B981]',
+                  barGradient: 'bg-gradient-to-r from-[#10B981] to-[#34d399]',
                 },
               ].map((bucket) => {
                 const remaining = bucket.limit - bucket.spent
@@ -1098,11 +1100,13 @@ export default function Home() {
                       </span>
                     </div>
 
-                    {/* Barra de progresso simplificada e limpa */}
-                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    {/* Barra de progresso com gradiente sutil e tom de estourou refinado (#E11D48 com fade suave) */}
+                    <div className="w-full bg-slate-100/90 h-2 rounded-full overflow-hidden shadow-inner">
                       <div
                         className={`h-full rounded-full transition-all duration-700 ${
-                          isOver ? 'bg-[#E11D48]' : bucket.barBg
+                          isOver
+                            ? 'bg-gradient-to-r from-[#E11D48] to-[#f43f5e]'
+                            : bucket.barGradient
                         }`}
                         style={{
                           width: `${Math.min(bucket.percent, 100)}%`,
@@ -1133,13 +1137,13 @@ export default function Home() {
       </div>
 
       {/* 4. Seção Últimas Transações */}
-      <div className="bg-card/90 backdrop-blur-sm rounded-3xl border border-border/40 p-4 sm:p-6 shadow-curiango">
+      <div className="bg-white/95 backdrop-blur-sm rounded-3xl border border-[rgba(20,33,61,0.06)] p-5 sm:p-7 shadow-elevation-1">
         <div className="flex items-center justify-between mb-4 gap-2">
           <div className="min-w-0">
-            <h3 className="font-semibold text-base text-[#14213D] dark:text-white break-words">
+            <h3 className="font-semibold text-base text-[#14213D] break-words">
               Últimas Transações
             </h3>
-            <p className="text-xs text-muted-foreground break-words">
+            <p className="text-xs text-muted-foreground break-words mt-0.5">
               Histórico recente de receitas e despesas
             </p>
           </div>

@@ -1190,7 +1190,7 @@ export function WalletPage() {
 
   return (
     <WalletProvider value={walletContextValue}>
-      <div className="space-y-4 pb-24 max-w-5xl mx-auto">
+      <div className="space-y-6 sm:space-y-7 pb-24 max-w-5xl mx-auto min-w-0">
         {/* Cabeçalho de Navegação de Mês, Tabs e Atalhos */}
         <WalletHeader />
 

@@ -235,13 +235,13 @@ export const CategoryIconBox: React.FC<CategoryIconBoxProps> = ({
     <div
       className={`${className} ${
         hasTint
-          ? 'transition-colors'
-          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200'
+          ? 'transition-all border border-black/5 shadow-2xs'
+          : 'bg-slate-100/90 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-[rgba(20,33,61,0.04)] shadow-2xs'
       }`}
       style={hasTint ? { backgroundColor: tintBg! } : undefined}
     >
       <span
-        className="inline-flex items-center justify-center"
+        className="inline-flex items-center justify-center transition-transform group-hover:scale-105"
         style={hasTint ? { color: harmonizedColor! } : undefined}
       >
         <CategoryIcon name={icon} className={iconClassName} strokeWidth={strokeWidth} />

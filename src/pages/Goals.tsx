@@ -201,14 +201,14 @@ export default function GoalsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 sm:space-y-8 max-w-4xl mx-auto min-w-0">
+      {/* Header com respiro */}
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
             Metas Financeiras
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500">
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
             Planejamento familiar para objetivos de curto, médio e longo prazo
           </p>
         </div>
@@ -216,7 +216,7 @@ export default function GoalsPage() {
         {goals.length > 0 && (
           <Button
             onClick={openCreateDialog}
-            className="bg-brand-amber hover:bg-[#e08e08] text-brand font-bold text-xs rounded-xl shadow-sm gap-1.5 border-0"
+            className="bg-brand-amber hover:bg-[#e08e08] text-brand font-bold text-xs rounded-xl shadow-elevation-1 gap-1.5 border-0"
           >
             <Plus className="w-4 h-4" />
             <span>+ Nova meta</span>
@@ -229,8 +229,8 @@ export default function GoalsPage() {
         <div className="py-12 text-center text-xs text-slate-400">Carregando metas...</div>
       ) : goals.length === 0 ? (
         /* Empty State */
-        <div className="bg-card/90 backdrop-blur-sm rounded-3xl p-12 text-center border border-border/40 shadow-curiango">
-          <div className="w-16 h-16 rounded-3xl bg-brand-gray text-brand flex items-center justify-center mx-auto mb-3">
+        <div className="bg-white/95 backdrop-blur-sm rounded-3xl p-12 text-center border border-[rgba(20,33,61,0.06)] shadow-elevation-1">
+          <div className="w-16 h-16 rounded-3xl bg-slate-100 text-[#14213D] flex items-center justify-center mx-auto mb-3 shadow-2xs border border-[rgba(20,33,61,0.04)]">
             <Target className="w-8 h-8 stroke-[1.5]" />
           </div>
           <h3 className="font-bold text-slate-800 text-base">Nenhuma meta definida</h3>
@@ -239,14 +239,14 @@ export default function GoalsPage() {
           </p>
           <Button
             onClick={openCreateDialog}
-            className="bg-brand-amber hover:bg-[#e08e08] text-brand text-xs font-bold rounded-xl border-0"
+            className="bg-brand-amber hover:bg-[#e08e08] text-brand text-xs font-bold rounded-xl border-0 shadow-elevation-1"
           >
             <Plus className="w-4 h-4 mr-1.5" />
             Criar primeira meta
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
           {goals.map((goal) => {
             const savedCents = goalSavedMap[goal.id] || 0
             const percent = Math.min(Math.round((savedCents / goal.target_amount_cents) * 100), 100)
@@ -264,20 +264,20 @@ export default function GoalsPage() {
             return (
               <div
                 key={goal.id}
-                className="bg-card/90 backdrop-blur-sm rounded-2xl p-4 sm:p-5 border border-border/40 shadow-curiango hover:shadow-md transition-all flex flex-col justify-between group"
+                className="bg-white/95 backdrop-blur-sm rounded-2xl p-5 sm:p-6 border border-[rgba(20,33,61,0.06)] shadow-elevation-1 hover:shadow-elevation-2 transition-all flex flex-col justify-between group"
               >
                 <div>
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100 shadow-2xs">
                         <CategoryIcon
                           name={goal.category?.icon || 'Target'}
-                          className="w-4 h-4 text-buckets-goals"
+                          className="w-4 h-4 text-[#10B981]"
                           strokeWidth={1.5}
                         />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-sm sm:text-base text-brand dark:text-white leading-tight">
+                        <h4 className="font-semibold text-sm sm:text-base text-[#14213D] leading-tight">
                           {goal.name}
                         </h4>
                         {goal.deadline && (
@@ -307,10 +307,10 @@ export default function GoalsPage() {
                   </div>
 
                   {/* Informações Financeiras da Meta */}
-                  <div className="space-y-1 mb-4">
+                  <div className="space-y-1.5 mb-4">
                     <div className="flex items-baseline justify-between text-xs">
                       <span className="text-slate-500 font-medium">Meta Total:</span>
-                      <span className="font-semibold tracking-tight text-brand dark:text-white tabular-nums">
+                      <span className="font-semibold tracking-tight text-[#14213D] tabular-nums">
                         {formatBRL(goal.target_amount_cents)}
                       </span>
                     </div>
@@ -323,10 +323,10 @@ export default function GoalsPage() {
                     </div>
                   </div>
 
-                  {/* Anel / Barra de Progresso CDS */}
-                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden mb-4">
+                  {/* Anel / Barra de Progresso CDS com gradiente orgânico */}
+                  <div className="w-full bg-slate-100/90 h-2.5 rounded-full overflow-hidden mb-4 shadow-inner">
                     <div
-                      className="h-full rounded-full transition-all duration-700 bg-buckets-goals"
+                      className="h-full rounded-full transition-all duration-700 bg-gradient-to-r from-[#10B981] to-[#34d399]"
                       style={{
                         width: `${percent}%`,
                       }}

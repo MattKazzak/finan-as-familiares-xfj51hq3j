@@ -150,7 +150,7 @@ export function BudgetOverviewCard({
   const isOverIncome = totalBudgetPercentOfIncome > 100
 
   return (
-    <section className="bg-card/90 backdrop-blur-sm rounded-3xl p-5 sm:p-7 border border-border/40 shadow-curiango relative overflow-hidden transition-all">
+    <section className="bg-white/95 backdrop-blur-sm rounded-3xl p-6 sm:p-8 border border-[rgba(20,33,61,0.06)] shadow-elevation-1 relative overflow-hidden transition-all">
       {/* Sutil detalhe superior fluido com a paleta oficial */}
       <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#14213D] via-[#FCA311] to-[#10B981]" />
 
@@ -204,7 +204,7 @@ export function BudgetOverviewCard({
       </div>
 
       {/* SEÇÃO DA BARRA SEGMENTADA CONTÍNUA & PROPORCIONAL */}
-      <div className="pt-5 space-y-3">
+      <div className="pt-6 space-y-3.5">
         <div className="flex items-center justify-between text-xs flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-slate-700 dark:text-slate-300">
@@ -229,9 +229,9 @@ export function BudgetOverviewCard({
           </span>
         </div>
 
-        {/* A BARRA ÚNICA MULTI-SEGMENTADA */}
+        {/* A BARRA ÚNICA MULTI-SEGMENTADA COM GRADIENTES SUTIS */}
         <div className="relative">
-          <div className="h-5 sm:h-6 w-full rounded-2xl p-1 bg-slate-100 flex items-center gap-1 overflow-hidden shadow-inner">
+          <div className="h-5 sm:h-6 w-full rounded-2xl p-1 bg-slate-100/90 flex items-center gap-1 overflow-hidden shadow-inner border border-[rgba(20,33,61,0.04)]">
             {/* Segmento Essenciais */}
             <button
               type="button"
@@ -240,9 +240,7 @@ export function BudgetOverviewCard({
               }
               style={{ width: `${Math.max(essentialsWidth, 6)}%` }}
               title={`Essenciais: ${bucketsSummary.essentials.percentIncome}% da renda (${formatBRL(bucketsSummary.essentials.budgetCents)})`}
-              className={`h-full rounded-xl transition-all relative group flex items-center justify-center overflow-hidden cursor-pointer ${
-                BUCKETS_CONFIG[0].barColor
-              } ${BUCKETS_CONFIG[0].barHoverColor} ${
+              className={`h-full rounded-xl transition-all relative group flex items-center justify-center overflow-hidden cursor-pointer bg-gradient-to-r from-[#14213D] to-[#1f3159] hover:brightness-110 ${
                 selectedBucket === 'essentials' ? 'ring-2 ring-slate-800 ring-offset-1 z-10' : ''
               } ${selectedBucket !== 'all' && selectedBucket !== 'essentials' ? 'opacity-40' : 'opacity-100'}`}
             >
@@ -259,9 +257,7 @@ export function BudgetOverviewCard({
               }
               style={{ width: `${Math.max(lifestyleWidth, 6)}%` }}
               title={`Estilo de Vida: ${bucketsSummary.lifestyle.percentIncome}% da renda (${formatBRL(bucketsSummary.lifestyle.budgetCents)})`}
-              className={`h-full rounded-xl transition-all relative group flex items-center justify-center overflow-hidden cursor-pointer ${
-                BUCKETS_CONFIG[1].barColor
-              } ${BUCKETS_CONFIG[1].barHoverColor} ${
+              className={`h-full rounded-xl transition-all relative group flex items-center justify-center overflow-hidden cursor-pointer bg-gradient-to-r from-[#FCA311] to-[#fdb744] hover:brightness-110 ${
                 selectedBucket === 'lifestyle' ? 'ring-2 ring-amber-500 ring-offset-1 z-10' : ''
               } ${selectedBucket !== 'all' && selectedBucket !== 'lifestyle' ? 'opacity-40' : 'opacity-100'}`}
             >
@@ -276,9 +272,7 @@ export function BudgetOverviewCard({
               onClick={() => setSelectedBucket((prev) => (prev === 'future' ? 'all' : 'future'))}
               style={{ width: `${Math.max(futureWidth, 6)}%` }}
               title={`Futuro & Metas: ${bucketsSummary.future.percentIncome}% da renda (${formatBRL(bucketsSummary.future.budgetCents)})`}
-              className={`h-full rounded-xl transition-all relative group flex items-center justify-center overflow-hidden cursor-pointer ${
-                BUCKETS_CONFIG[2].barColor
-              } ${BUCKETS_CONFIG[2].barHoverColor} ${
+              className={`h-full rounded-xl transition-all relative group flex items-center justify-center overflow-hidden cursor-pointer bg-gradient-to-r from-[#10B981] to-[#34d399] hover:brightness-110 ${
                 selectedBucket === 'future' ? 'ring-2 ring-[#10B981] ring-offset-1 z-10' : ''
               } ${selectedBucket !== 'all' && selectedBucket !== 'future' ? 'opacity-40' : 'opacity-100'}`}
             >

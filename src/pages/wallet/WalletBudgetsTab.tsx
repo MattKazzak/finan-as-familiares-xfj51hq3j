@@ -80,9 +80,9 @@ export function WalletBudgetsTab() {
   const { toast } = useToast()
 
   return (
-    <div className="space-y-5 mt-0 animate-in fade-in-50 duration-200">
+    <div className="space-y-6 sm:space-y-7 mt-0 animate-in fade-in-50 duration-200 min-w-0">
       {/* Cabeçalho da Aba Orçamentos: Ações Rápidas (Receitas Fixas & Modelo Sugerido) */}
-      <div className="flex items-center justify-between gap-2 flex-wrap bg-card/90 backdrop-blur-sm p-3.5 rounded-2xl border border-border/40 shadow-curiango">
+      <div className="flex items-center justify-between gap-2 flex-wrap bg-white/95 backdrop-blur-sm p-4 sm:p-5 rounded-2xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1">
         <div className="flex items-center gap-2.5">
           <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-buckets-goals flex items-center justify-center shrink-0">
             <Target className="w-5 h-5 select-none" strokeWidth={1.5} />
@@ -182,7 +182,7 @@ export function WalletBudgetsTab() {
         const consumedPrefix = isFutureMonth ? 'Comprometido ' : 'Gasto '
 
         return (
-          <div className="bg-card/90 backdrop-blur-sm rounded-3xl p-6 border border-border/40 shadow-curiango">
+          <div className="bg-white/95 backdrop-blur-sm rounded-3xl p-6 sm:p-7 border border-[rgba(20,33,61,0.06)] shadow-elevation-1">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs uppercase font-semibold tracking-wider text-muted-foreground">
@@ -201,10 +201,10 @@ export function WalletBudgetsTab() {
               <span
                 className={`text-xs font-semibold px-2.5 py-1 rounded-full self-start sm:self-auto ${
                   categoryBudgetData.isTotalOver
-                    ? 'bg-rose-100 text-finance-expense dark:bg-rose-950/40'
+                    ? 'bg-rose-100 text-finance-expense'
                     : categoryBudgetData.totalPercent >= 75
-                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40'
-                      : 'bg-emerald-100 text-finance-income dark:bg-emerald-950/40'
+                      ? 'bg-amber-100 text-amber-800'
+                      : 'bg-emerald-100 text-finance-income'
                 }`}
               >
                 <span>{badgeText}</span>
@@ -212,7 +212,7 @@ export function WalletBudgetsTab() {
             </div>
 
             <div className="flex items-baseline justify-between mb-3">
-              <span className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground dark:text-white tabular-nums">
+              <span className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground tabular-nums">
                 <span className="text-base sm:text-lg font-medium text-muted-foreground mr-1.5">
                   {consumedPrefix}
                 </span>
@@ -228,15 +228,15 @@ export function WalletBudgetsTab() {
               </span>
             </div>
 
-            {/* Barra de Progresso com Limites CDS: <75% #059669, 75-100% #FCA311, >100% #E11D48 */}
-            <div className="w-full bg-slate-100 dark:bg-slate-800 h-3 rounded-full overflow-hidden">
+            {/* Barra de Progresso com Limites CDS e gradientes orgânicos sutis */}
+            <div className="w-full bg-slate-100/90 h-3 rounded-full overflow-hidden shadow-inner">
               <div
                 className={`h-full rounded-full transition-all duration-700 ${
                   categoryBudgetData.isTotalOver
-                    ? 'bg-finance-expense'
+                    ? 'bg-gradient-to-r from-[#E11D48] to-[#f43f5e]'
                     : categoryBudgetData.totalPercent >= 75
-                      ? 'bg-brand-amber'
-                      : 'bg-finance-income'
+                      ? 'bg-gradient-to-r from-[#FCA311] to-[#fdb744]'
+                      : 'bg-gradient-to-r from-[#059669] to-[#10B981]'
                 }`}
                 style={{ width: `${Math.min(categoryBudgetData.totalPercent, 100)}%` }}
               />
@@ -263,7 +263,7 @@ export function WalletBudgetsTab() {
       />
 
       {/* Lista de Orçamentos com Hierarquia Categoria Pai -> Subcategorias e Gestão Inline com Ícones */}
-      <div className="bg-card/90 backdrop-blur-sm rounded-3xl border border-border/40 p-5 shadow-curiango space-y-4">
+      <div className="bg-white/95 backdrop-blur-sm rounded-3xl border border-[rgba(20,33,61,0.06)] p-6 sm:p-7 shadow-elevation-1 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h3 className="font-semibold text-base text-foreground dark:text-white">

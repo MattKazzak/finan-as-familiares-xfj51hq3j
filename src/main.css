@@ -406,4 +406,23 @@
       transform: none !important;
     }
   }
+
+  /* CDS v1.0 - Classes utilitárias de elevação para profundidade tátil refinada */
+  .shadow-elevation-1 {
+    box-shadow:
+      0 2px 8px -2px rgba(20, 33, 61, 0.04),
+      0 12px 28px -10px rgba(20, 33, 61, 0.06);
+  }
+
+  .shadow-elevation-2 {
+    box-shadow:
+      0 4px 12px -2px rgba(20, 33, 61, 0.05),
+      0 16px 36px -10px rgba(20, 33, 61, 0.08);
+  }
+
+  .shadow-elevation-3 {
+    box-shadow:
+      0 8px 24px -4px rgba(20, 33, 61, 0.08),
+      0 24px 48px -12px rgba(20, 33, 61, 0.14);
+  }
 }

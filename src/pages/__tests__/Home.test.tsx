@@ -848,4 +848,38 @@ describe('Home Page - Card Orçamento em 3 Baldes', () => {
       expect(avatarButton.textContent).toContain('L')
     })
   })
+
+  describe('Rodada 56 — Upgrade da Linguagem Visual (Profundidade, Respiro e Refinamento)', () => {
+    it('aplica tokens de elevação (shadow-elevation-2 no herói de saldo e shadow-elevation-1 nos cards de baldes e transações)', async () => {
+      renderWithProviders(<Home />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Receitas')).toBeDefined()
+      })
+
+      const heroRegion = screen.getByRole('region', { name: /card de saldo da família/i })
+      expect(heroRegion.className).toContain('shadow-elevation-2')
+      expect(heroRegion.className).toContain('rounded-3xl')
+
+      const bucketsHeading = screen.getByText('Orçamento em 3 Baldes')
+      const bucketsCard = bucketsHeading.closest('.rounded-3xl')
+      expect(bucketsCard?.className).toContain('shadow-elevation-1')
+
+      const txHeading = screen.getByText('Últimas Transações')
+      const txCard = txHeading.closest('.rounded-3xl')
+      expect(txCard?.className).toContain('shadow-elevation-1')
+    })
+
+    it('mantém respiro com min-w-0 e overflow horizontal protegido para mobile 360px', async () => {
+      const { container } = renderWithProviders(<Home />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Receitas')).toBeDefined()
+      })
+
+      // O container principal deve ter min-w-0 e max-w-6xl/5xl
+      const rootDiv = container.firstElementChild as HTMLElement
+      expect(rootDiv.className).toContain('min-w-0')
+    })
+  })
 })

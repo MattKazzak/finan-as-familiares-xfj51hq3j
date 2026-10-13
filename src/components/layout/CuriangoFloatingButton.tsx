@@ -170,7 +170,7 @@ export const CuriangoFloatingButton: React.FC<CuriangoFloatingButtonProps> = ({ 
       <button
         type="button"
         onClick={handleClick}
-        className={`pointer-events-auto w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#14213D] text-white shadow-curiango-dock border border-white/10 hover:border-[#FCA311]/50 hover:scale-105 active:scale-95 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311] focus-visible:ring-offset-2 touch-manipulation cursor-pointer flex items-center justify-center relative group select-none motion-reduce:animate-none ${
+        className={`pointer-events-auto w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#14213D] text-white shadow-elevation-3 border border-white/10 hover:border-[#FCA311]/50 hover:scale-105 active:scale-95 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311] focus-visible:ring-offset-2 touch-manipulation cursor-pointer flex items-center justify-center relative group select-none motion-reduce:animate-none ${
           shouldAnimatePulse ? 'animate-fab-breathe' : ''
         }`}
         aria-label="Falar com o Curiangoo"

@@ -142,6 +142,13 @@ export default {
         elevation: '0 4px 20px rgba(0, 0, 0, 0.05)',
         curiango: '0 10px 30px -10px rgba(20, 33, 61, 0.05), 0 2px 6px rgba(0, 0, 0, 0.02)',
         'curiango-dock': '0 20px 40px -15px rgba(20, 33, 61, 0.12)',
+        // Sistema de profundidade e elevação CDS v1.0 (3 níveis refinados de sombra)
+        'elevation-1':
+          '0 2px 8px -2px rgba(20, 33, 61, 0.04), 0 12px 28px -10px rgba(20, 33, 61, 0.06)',
+        'elevation-2':
+          '0 4px 12px -2px rgba(20, 33, 61, 0.05), 0 16px 36px -10px rgba(20, 33, 61, 0.08)',
+        'elevation-3':
+          '0 8px 24px -4px rgba(20, 33, 61, 0.08), 0 24px 48px -12px rgba(20, 33, 61, 0.14)',
       },
       transitionTimingFunction: {
         apple: 'cubic-bezier(0.42, 0, 0.58, 1)',

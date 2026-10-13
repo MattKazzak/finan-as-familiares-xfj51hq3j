@@ -63,10 +63,10 @@ export function WalletTransactionsTab() {
   } = useWallet()
 
   return (
-    <div className="space-y-5 mt-0 animate-in fade-in-50 duration-200">
+    <div className="space-y-6 sm:space-y-7 mt-0 animate-in fade-in-50 duration-200 min-w-0">
       {/* 1. VISÃO DE RESUMO PÓS-IMPORTAÇÃO & SEÇÃO DE REVISÃO DE PENDENTES (Com Barra de Progresso) */}
       {lastImportSummary ? (
-        <div className="rounded-3xl border border-border/40 bg-card/90 backdrop-blur-sm p-4 sm:p-5 shadow-curiango space-y-3 animate-in fade-in-50 duration-200">
+        <div className="rounded-3xl border border-[rgba(20,33,61,0.06)] bg-white/95 backdrop-blur-sm p-5 sm:p-6 shadow-elevation-1 space-y-3 animate-in fade-in-50 duration-200">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0 font-semibold text-base">
@@ -235,9 +235,9 @@ export function WalletTransactionsTab() {
         </div>
       ) : null}
 
-      {/* Summary Strip (3 Mini Cards) */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-card/90 backdrop-blur-sm p-3 sm:p-4 rounded-2xl border border-border/40 shadow-curiango flex flex-col justify-between">
+      {/* Summary Strip (3 Mini Cards com elevação e respiro) */}
+      <div className="grid grid-cols-3 gap-3 sm:gap-4">
+        <div className="bg-white/95 backdrop-blur-sm p-3.5 sm:p-4 rounded-2xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 flex flex-col justify-between">
           <div className="flex items-center gap-1.5 text-[#059669] text-[11px] font-semibold uppercase tracking-wider">
             <ArrowUpRight className="w-3.5 h-3.5" strokeWidth={1.5} />
             <span>Receitas</span>
@@ -247,7 +247,7 @@ export function WalletTransactionsTab() {
           </span>
         </div>
 
-        <div className="bg-card/90 backdrop-blur-sm p-3 sm:p-4 rounded-2xl border border-border/40 shadow-curiango flex flex-col justify-between">
+        <div className="bg-white/95 backdrop-blur-sm p-3.5 sm:p-4 rounded-2xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 flex flex-col justify-between">
           <div className="flex items-center gap-1.5 text-[#E11D48] text-[11px] font-semibold uppercase tracking-wider">
             <ArrowDownRight className="w-3.5 h-3.5" strokeWidth={1.5} />
             <span>Despesas</span>
@@ -257,7 +257,7 @@ export function WalletTransactionsTab() {
           </span>
         </div>
 
-        <div className="bg-card/90 backdrop-blur-sm p-3 sm:p-4 rounded-2xl border border-border/40 shadow-curiango flex flex-col justify-between">
+        <div className="bg-white/95 backdrop-blur-sm p-3.5 sm:p-4 rounded-2xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 flex flex-col justify-between">
           <div className="flex items-center gap-1.5 text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
             <Scale className="w-3.5 h-3.5" strokeWidth={1.5} />
             <span>Saldo Mês</span>
@@ -330,7 +330,7 @@ export function WalletTransactionsTab() {
       </div>
 
       {/* SEÇÃO "ENTRADAS" DA CARTEIRA (TAREFA 5 - PADRÃO CDS V1.0) */}
-      <div className="bg-card/90 backdrop-blur-sm rounded-3xl border border-emerald-200/60 dark:border-emerald-900/40 p-4 sm:p-5 shadow-curiango space-y-3.5">
+      <div className="bg-white/95 backdrop-blur-sm rounded-3xl border border-emerald-200/60 p-5 sm:p-6 shadow-elevation-1 space-y-3.5">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-[#059669] flex items-center justify-center shrink-0 border border-emerald-200/50">
@@ -445,7 +445,7 @@ export function WalletTransactionsTab() {
           Carregando transações...
         </div>
       ) : groupedTransactions.length === 0 ? (
-        <div className="bg-card/90 backdrop-blur-sm rounded-3xl p-10 text-center border border-border/40 shadow-curiango">
+        <div className="bg-white/95 backdrop-blur-sm rounded-3xl p-10 text-center border border-[rgba(20,33,61,0.06)] shadow-elevation-1">
           <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 mx-auto flex items-center justify-center shrink-0 mb-2">
             <CategoryIcon name="Tag" className="w-4 h-4" strokeWidth={1.5} />
           </div>
