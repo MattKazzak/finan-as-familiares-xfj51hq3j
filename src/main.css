@@ -398,4 +398,12 @@
   .animate-spotlight {
     animation: spotlight 2s ease forwards;
   }
+
+  /* R55: Pulso/respiração sutil do Copilot respeitando prefers-reduced-motion */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fab-breathe {
+      animation: none !important;
+      transform: none !important;
+    }
+  }
 }

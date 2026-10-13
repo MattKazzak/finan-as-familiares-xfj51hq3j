@@ -7,13 +7,51 @@ interface CuriangoFloatingButtonProps {
   onClick?: () => void
 }
 
-const COPILOT_FAB_SPEECH_BUBBLE_DISMISSED_KEY = 'curiangoo_copilot_fab_bubble_dismissed_v2'
+export const COPILOT_FAB_SPEECH_BUBBLE_DISMISSED_KEY = 'curiangoo_copilot_fab_bubble_dismissed_v2'
+export const COPILOT_FAB_PULSE_STOPPED_KEY = 'curiangoo_copilot_fab_pulse_stopped_v1'
 
 /**
- * Botão Flutuante do Curiangoo Copilot (v0.0.319 - R54)
+ * Hook para detectar prefers-reduced-motion do usuário.
+ */
+function usePrefersReducedMotion(): boolean {
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return
+    }
+    try {
+      const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+      setPrefersReducedMotion(mediaQuery.matches)
+
+      const handleChange = (event: MediaQueryListEvent) => {
+        setPrefersReducedMotion(event.matches)
+      }
+
+      mediaQuery.addEventListener?.('change', handleChange)
+      return () => {
+        mediaQuery.removeEventListener?.('change', handleChange)
+      }
+    } catch {
+      // Ignora erro em browsers legados/ambientes de teste
+    }
+  }, [])
+
+  return prefersReducedMotion
+}
+
+/**
+ * Botão Flutuante do Curiangoo Copilot (v0.0.320 - R55)
  *
  * Características:
- * - FAB com respiração/pulso sutil (animate-fab-breathe): presença discreta e viva sem virar carnaval.
+ * - FAB com respiração/pulso sutil (animate-fab-breathe):
+ *   (a) Ciclo lento (3 a 4 segundos de respiração).
+ *   (b) Amplitude sutil (escala máx. ≤ 3% e sombra discreta).
+ *   (c) Easing suave (ease-in-out), sem saltos.
+ *   (d) Pausa serena entre ciclos (~12 a 15 segundos) — presença discreta, não carnaval.
+ *   (e) Respeita prefers-reduced-motion (usuários com redução de movimento: sem pulso).
+ *   (f) Pulso para DEFINITIVAMENTE após a primeira interação do usuário com o FAB
+ *       (abriu o Copilot uma vez, o pulso nunca mais volta — persistido no localStorage).
  * - Balão de fala 1x (speech bubble) saindo do FAB com texto curto e caloroso:
  *   "Oi! Sou o Curiangoo — lanço, consulto e analiso pra você"
  * - Some ao toque ou após 6 segundos e fica lembrado no localStorage (nunca repete).
@@ -25,9 +63,17 @@ const COPILOT_FAB_SPEECH_BUBBLE_DISMISSED_KEY = 'curiangoo_copilot_fab_bubble_di
 export const CuriangoFloatingButton: React.FC<CuriangoFloatingButtonProps> = ({ onClick }) => {
   const navigate = useNavigate()
   const [showBubble, setShowBubble] = useState(false)
+  const [isPulseActive, setIsPulseActive] = useState(false)
+  const prefersReducedMotion = usePrefersReducedMotion()
 
   useEffect(() => {
     try {
+      // Checa se o usuário já interagiu com o FAB antes
+      const pulseStopped = localStorage.getItem(COPILOT_FAB_PULSE_STOPPED_KEY)
+      if (!pulseStopped) {
+        setIsPulseActive(true)
+      }
+
       const dismissed = localStorage.getItem(COPILOT_FAB_SPEECH_BUBBLE_DISMISSED_KEY)
       if (!dismissed) {
         setShowBubble(true)
@@ -55,14 +101,26 @@ export const CuriangoFloatingButton: React.FC<CuriangoFloatingButtonProps> = ({ 
     }
   }
 
+  const markPulseStopped = () => {
+    setIsPulseActive(false)
+    try {
+      localStorage.setItem(COPILOT_FAB_PULSE_STOPPED_KEY, 'true')
+    } catch {
+      // Silencioso
+    }
+  }
+
   const handleClick = () => {
     dismissBubble()
+    markPulseStopped()
     if (onClick) {
       onClick()
     } else {
       navigate('/copilot')
     }
   }
+
+  const shouldAnimatePulse = isPulseActive && !prefersReducedMotion
 
   return (
     <div
@@ -108,11 +166,13 @@ export const CuriangoFloatingButton: React.FC<CuriangoFloatingButtonProps> = ({ 
         </div>
       )}
 
-      {/* FAB do Copilot: Círculo da Marca #14213D com Ícone do Curiango + Pulso Sutil */}
+      {/* FAB do Copilot: Círculo da Marca #14213D com Ícone do Curiango + Pulso Sutil Lento */}
       <button
         type="button"
         onClick={handleClick}
-        className="pointer-events-auto w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#14213D] text-white shadow-curiango-dock border border-white/10 hover:border-[#FCA311]/50 hover:scale-105 active:scale-95 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311] focus-visible:ring-offset-2 touch-manipulation cursor-pointer flex items-center justify-center relative group select-none animate-fab-breathe"
+        className={`pointer-events-auto w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#14213D] text-white shadow-curiango-dock border border-white/10 hover:border-[#FCA311]/50 hover:scale-105 active:scale-95 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311] focus-visible:ring-offset-2 touch-manipulation cursor-pointer flex items-center justify-center relative group select-none motion-reduce:animate-none ${
+          shouldAnimatePulse ? 'animate-fab-breathe' : ''
+        }`}
         aria-label="Falar com o Curiangoo"
         title="Falar com o Curiangoo — Copilot Inteligente"
       >

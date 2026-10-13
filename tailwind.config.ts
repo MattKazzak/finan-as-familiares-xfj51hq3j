@@ -29,18 +29,32 @@ export default {
     extend: {
       keyframes: {
         'fab-breathe': {
-          '0%, 100%': {
+          /* R55: Respiração lenta (ciclo 3.5s ativo) + pausa serena de ~12s (total 19s: ~18% ativos, 82% em repouso) */
+          /* 0s a 3.5s (0% a 18.4%): ciclo de respiração sutil (amplitude máxima de escala 1.03 = 3%) */
+          '0%': {
             transform: 'scale(1)',
-            boxShadow: '0 10px 30px -10px rgba(20, 33, 61, 0.25), 0 0 0 0 rgba(252, 163, 17, 0.35)',
+            boxShadow: '0 10px 30px -10px rgba(20, 33, 61, 0.18), 0 0 0 0 rgba(252, 163, 17, 0)',
           },
-          '50%': {
-            transform: 'scale(1.04)',
-            boxShadow: '0 14px 34px -8px rgba(20, 33, 61, 0.32), 0 0 0 6px rgba(252, 163, 17, 0)',
+          '9.2%': {
+            /* ~1.75s: pico da respiração sutil (escala 1.03 = +3%, sombra âmbar translúcida e discreta) */
+            transform: 'scale(1.03)',
+            boxShadow:
+              '0 12px 30px -8px rgba(20, 33, 61, 0.22), 0 0 0 4px rgba(252, 163, 17, 0.12)',
+          },
+          '18.4%': {
+            /* ~3.5s: retorno suave ao repouso */
+            transform: 'scale(1)',
+            boxShadow: '0 10px 30px -10px rgba(20, 33, 61, 0.18), 0 0 0 0 rgba(252, 163, 17, 0)',
+          },
+          /* 18.4% até 100% (~15.5s de repouso silencioso antes do próximo ciclo discreto) */
+          '100%': {
+            transform: 'scale(1)',
+            boxShadow: '0 10px 30px -10px rgba(20, 33, 61, 0.18), 0 0 0 0 rgba(252, 163, 17, 0)',
           },
         },
       },
       animation: {
-        'fab-breathe': 'fab-breathe 3.5s ease-in-out infinite',
+        'fab-breathe': 'fab-breathe 19s ease-in-out infinite',
       },
       fontFamily: {
         sans: ['Inter var', 'SF Pro Display', 'system-ui', 'sans-serif'],
