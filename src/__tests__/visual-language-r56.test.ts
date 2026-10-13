@@ -16,7 +16,7 @@ describe('R56 — Sistema de Profundidade, Respiro e Refinamento Visual', () => 
     expect(shadows['elevation-3']).toContain('rgba(20, 33, 61, 0.08)')
   })
 
-  it('package.json está bumpado para a versão 0.0.321', () => {
-    expect(pkg.version).toBe('0.0.321')
+  it('package.json está bumpado para a versão 0.0.322', () => {
+    expect(pkg.version).toBe('0.0.322')
   })
 })

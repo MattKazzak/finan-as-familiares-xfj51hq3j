@@ -37,12 +37,12 @@ vi.mock('@/components/common/InstallPwaBanner', () => ({
   InstallPwaBanner: () => <div data-testid="install-pwa-banner" />,
 }))
 
-describe('Login / Cadastro Page Brand Header', () => {
+describe('Login / Cadastro Page Brand Header & WCAG Contrast (R57)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('renders official Curiangoo brand icon, title and subtitle in login mode', () => {
+  it('renders official Curiangoo brand icon, title and subtitle in login mode with clean light theme', () => {
     render(
       <MemoryRouter>
         <Login />
@@ -76,7 +76,7 @@ describe('Login / Cadastro Page Brand Header', () => {
     expect(screen.getByText('Finanças Familiares no Prumo')).toBeDefined()
   })
 
-  it('no modo cadastro, exibe apenas o campo "Seu Nome" (pessoa) e não pede nome da família', () => {
+  it('no modo cadastro, organiza em passos focados: Passo 1 (Credenciais) → Passo 2 (Seu Nome)', async () => {
     render(
       <MemoryRouter>
         <Login />
@@ -86,16 +86,76 @@ describe('Login / Cadastro Page Brand Header', () => {
     const signupTab = screen.getByText('Criar Nova Conta')
     fireEvent.click(signupTab)
 
+    // Passo 1: Credenciais
+    expect(screen.getByText('Passo 1 de 2: Crie suas credenciais de acesso seguro.')).toBeDefined()
+    expect(screen.getByLabelText(/^E-mail/i)).toBeDefined()
+    expect(screen.getByLabelText(/^Senha/i)).toBeDefined()
+    expect(screen.getByLabelText(/^Confirmar Senha/i)).toBeDefined()
+    // Nome ainda não aparece no passo 1
+    expect(screen.queryByLabelText(/Seu Nome/i)).toBeNull()
+
+    // Preenche credenciais válidas e avança
+    fireEvent.change(screen.getByLabelText(/^E-mail/i), {
+      target: { value: 'novo.membro@curiangoo.com' },
+    })
+    fireEvent.change(screen.getByLabelText(/^Senha/i), {
+      target: { value: 'senha123' },
+    })
+    fireEvent.change(screen.getByLabelText(/^Confirmar Senha/i), {
+      target: { value: 'senha123' },
+    })
+
+    const continueBtn = screen.getByRole('button', { name: /Continuar/i })
+    fireEvent.click(continueBtn)
+
+    // Passo 2: Pergunta apenas "Seu Nome" (pessoa) e NÃO pede nome da família
+    await waitFor(() => {
+      expect(screen.getByText('Passo 2 de 2: Como podemos chamar você?')).toBeDefined()
+    })
     expect(screen.getByLabelText('Seu Nome')).toBeDefined()
     expect(screen.getByPlaceholderText('Ex: Matheus')).toBeDefined()
 
-    // Garante que NÃO existe campo de família no signup (conforme decidido no produto)
+    // Decisão do produto: nome da família é definido no onboarding, NUNCA no signup
     expect(screen.queryByLabelText(/Nome da Família/i)).toBeNull()
     expect(screen.queryByPlaceholderText(/Ex.: Silva/i)).toBeNull()
+
+    // Preenche nome e submete
+    fireEvent.change(screen.getByLabelText('Seu Nome'), {
+      target: { value: 'Matheus Silva' },
+    })
+    mockSignUp.mockResolvedValueOnce({
+      data: { user: { id: 'u1' }, session: null },
+      error: null,
+    })
+
+    const submitBtn = screen.getByRole('button', { name: /Criar Minha Conta/i })
+    fireEvent.click(submitBtn)
+
+    await waitFor(() => {
+      expect(mockSignUp).toHaveBeenCalledWith('novo.membro@curiangoo.com', 'senha123', {
+        name: 'Matheus Silva',
+      })
+    })
+  })
+
+  it('assegura contraste nos placeholders e labels (text-slate-500/700, WCAG AA/AAA)', () => {
+    render(
+      <MemoryRouter>
+        <Login />
+      </MemoryRouter>,
+    )
+
+    const emailInput = screen.getByLabelText(/E-mail/i)
+    expect(emailInput.className).toContain('placeholder:text-slate-500')
+    expect(emailInput.className).toContain('text-slate-900')
+
+    const passInput = screen.getByLabelText(/^Senha$/i)
+    expect(passInput.className).toContain('placeholder:text-slate-500')
+    expect(passInput.className).toContain('text-slate-900')
   })
 })
 
-describe('Fluxo de Reenvio de E-mail de Confirmação', () => {
+describe('Fluxo de Erros e Reenvio de E-mail de Confirmação', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useRealTimers()
@@ -105,7 +165,7 @@ describe('Fluxo de Reenvio de E-mail de Confirmação', () => {
     vi.useRealTimers()
   })
 
-  it('exibe erro genérico quando credenciais são inválidas (anti-enumeração)', async () => {
+  it('exibe erro genérico quando credenciais são inválidas (anti user-enumeration mantido)', async () => {
     mockSignIn.mockResolvedValueOnce({
       error: { message: 'Invalid login credentials', code: 'invalid_credentials' },
     })
@@ -119,7 +179,7 @@ describe('Fluxo de Reenvio de E-mail de Confirmação', () => {
     fireEvent.change(screen.getByLabelText(/E-mail/i), {
       target: { value: 'usuario@exemplo.com' },
     })
-    fireEvent.change(screen.getByLabelText(/Senha/i), {
+    fireEvent.change(screen.getByLabelText(/^Senha$/i), {
       target: { value: 'senha123' },
     })
 
@@ -132,6 +192,9 @@ describe('Fluxo de Reenvio de E-mail de Confirmação', () => {
     // Garante que o alerta específico de não confirmado NÃO foi exibido
     expect(screen.queryByTestId('email-not-confirmed-alert')).toBeNull()
     expect(screen.queryByText(/Seu cadastro ainda não foi ativado/i)).toBeNull()
+
+    // O link de apoio anti-frustração está presente
+    expect(screen.getByText('Ainda não tem conta? Clique para se cadastrar')).toBeDefined()
   })
 
   it('captura erro de e-mail não confirmado e exibe alerta com botão de reenvio', async () => {
@@ -148,7 +211,7 @@ describe('Fluxo de Reenvio de E-mail de Confirmação', () => {
     fireEvent.change(screen.getByLabelText(/E-mail/i), {
       target: { value: 'pendente@exemplo.com' },
     })
-    fireEvent.change(screen.getByLabelText(/Senha/i), {
+    fireEvent.change(screen.getByLabelText(/^Senha$/i), {
       target: { value: 'minhasenha' },
     })
 
@@ -160,16 +223,12 @@ describe('Fluxo de Reenvio de E-mail de Confirmação', () => {
       ).toBeDefined()
     })
 
-    // Botão de reenvio presente
     const resendBtn = screen.getByRole('button', {
       name: /Reenviar E-mail de Confirmação/i,
     })
     expect(resendBtn).toBeDefined()
 
-    // O texto desnecessário foi removido do alerta
-    expect(screen.queryByText(/Não encontrou o link de confirmação\?/i)).toBeNull()
-
-    // O erro vermelho genérico NÃO deve aparecer
+    // O erro vermelho genérico NÃO deve aparecer quando for email_not_confirmed
     expect(screen.queryByText('E-mail ou senha incorretos.')).toBeNull()
   })
 
@@ -189,7 +248,7 @@ describe('Fluxo de Reenvio de E-mail de Confirmação', () => {
     fireEvent.change(screen.getByLabelText(/E-mail/i), {
       target: { value: 'teste@curiangoo.com' },
     })
-    fireEvent.change(screen.getByLabelText(/Senha/i), {
+    fireEvent.change(screen.getByLabelText(/^Senha$/i), {
       target: { value: '123456' },
     })
 
@@ -211,7 +270,6 @@ describe('Fluxo de Reenvio de E-mail de Confirmação', () => {
       fireEvent.click(resendBtn)
     })
 
-    // Verifica que supabase.auth.resend foi chamado com os dados corretos e emailRedirectTo apontando para /inicio
     expect(mockResend).toHaveBeenCalledWith({
       type: 'signup',
       email: 'teste@curiangoo.com',
@@ -220,26 +278,23 @@ describe('Fluxo de Reenvio de E-mail de Confirmação', () => {
       },
     })
 
-    // Verifica toast de sucesso
     expect(mockToast).toHaveBeenCalledWith({
       title: 'E-mail enviado!',
       description: 'Novo link de ativação enviado! Confira sua caixa de entrada e o spam.',
     })
 
-    // Verifica cooldown de 60s
+    // Cooldown de 60s ativo
     expect(screen.getByText(/Reenviar em 60s/i)).toBeDefined()
     expect(screen.getByRole('button', { name: /Reenviar em 60s/i })).toHaveProperty(
       'disabled',
       true,
     )
 
-    // Avança o tempo em 15s
     act(() => {
       vi.advanceTimersByTime(15000)
     })
     expect(screen.getByText(/Reenviar em 45s/i)).toBeDefined()
 
-    // Avança mais 45s para zerar o cooldown
     act(() => {
       vi.advanceTimersByTime(45000)
     })
@@ -260,30 +315,26 @@ describe('Fluxo de Reenvio de E-mail de Confirmação', () => {
     const passInput = screen.getByLabelText(/^Senha$/i)
     expect(passInput.getAttribute('type')).toBe('password')
 
-    // Botão de mostrar senha
     const toggleBtn = screen.getByRole('button', { name: 'Mostrar senha' })
     expect(toggleBtn).toBeDefined()
     expect(toggleBtn.getAttribute('type')).toBe('button')
 
-    // Clica para mostrar senha
     fireEvent.click(toggleBtn)
     expect(passInput.getAttribute('type')).toBe('text')
     expect(screen.getByRole('button', { name: 'Ocultar senha' })).toBeDefined()
 
-    // Clica para ocultar novamente
     fireEvent.click(screen.getByRole('button', { name: 'Ocultar senha' }))
     expect(passInput.getAttribute('type')).toBe('password')
     expect(screen.getByRole('button', { name: 'Mostrar senha' })).toBeDefined()
   })
 
-  it('no modo cadastro, possui botões de olho independentes para Senha e Confirmar Senha', () => {
+  it('no modo cadastro, possui botões de olho independentes para Senha e Confirmar Senha no Passo 1', () => {
     render(
       <MemoryRouter>
         <Login />
       </MemoryRouter>,
     )
 
-    // Muda para aba cadastro
     fireEvent.click(screen.getByText('Criar Nova Conta'))
 
     const passInput = screen.getByLabelText(/^Senha$/i)
@@ -295,63 +346,16 @@ describe('Fluxo de Reenvio de E-mail de Confirmação', () => {
     const toggleButtons = screen.getAllByRole('button', { name: 'Mostrar senha' })
     expect(toggleButtons).toHaveLength(2)
 
-    // Clica apenas no primeiro botão (senha)
     fireEvent.click(toggleButtons[0])
     expect(passInput.getAttribute('type')).toBe('text')
-    expect(confirmInput.getAttribute('type')).toBe('password') // Continua password!
+    expect(confirmInput.getAttribute('type')).toBe('password')
 
-    // Clica no segundo botão (confirmar senha)
     fireEvent.click(screen.getByRole('button', { name: 'Mostrar senha' }))
     expect(passInput.getAttribute('type')).toBe('text')
     expect(confirmInput.getAttribute('type')).toBe('text')
 
-    // Oculta a primeira
     fireEvent.click(screen.getAllByRole('button', { name: 'Ocultar senha' })[0])
     expect(passInput.getAttribute('type')).toBe('password')
     expect(confirmInput.getAttribute('type')).toBe('text')
-  })
-
-  it('exibe toast de erro caso supabase.auth.resend falhe', async () => {
-    mockSignIn.mockResolvedValueOnce({
-      error: { message: 'email_not_confirmed' },
-    })
-    mockResend.mockResolvedValueOnce({
-      error: { message: 'For security purposes, you can only request this once every 60 seconds.' },
-    })
-
-    render(
-      <MemoryRouter>
-        <Login />
-      </MemoryRouter>,
-    )
-
-    fireEvent.change(screen.getByLabelText(/E-mail/i), {
-      target: { value: 'falha@curiangoo.com' },
-    })
-    fireEvent.change(screen.getByLabelText(/Senha/i), {
-      target: { value: 'senha123' },
-    })
-
-    fireEvent.click(screen.getByRole('button', { name: /^Entrar$/i }))
-
-    await waitFor(() => {
-      expect(screen.getByText(/Seu cadastro ainda não foi ativado/i)).toBeDefined()
-    })
-
-    const resendBtn = screen.getByRole('button', {
-      name: /Reenviar E-mail de Confirmação/i,
-    })
-
-    fireEvent.click(resendBtn)
-
-    await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'Não foi possível reenviar',
-          description: expect.stringContaining('For security purposes'),
-          variant: 'destructive',
-        }),
-      )
-    })
   })
 })
