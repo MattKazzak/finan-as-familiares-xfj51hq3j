@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, MessageSquare } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 
@@ -7,41 +7,38 @@ interface CuriangoFloatingButtonProps {
   onClick?: () => void
 }
 
-const COPILOT_FAB_HINT_DISMISSED_KEY = 'curiangoo_copilot_fab_hint_dismissed_v1'
+const COPILOT_FAB_SPEECH_BUBBLE_DISMISSED_KEY = 'curiangoo_copilot_fab_bubble_dismissed_v2'
 
 /**
- * Botão Flutuante do Curiangoo Copilot (v0.0.309 - R52)
+ * Botão Flutuante do Curiangoo Copilot (v0.0.319 - R54)
  *
  * Características:
- * - FAB compacto e silencioso: círculo com o ícone oficial do Curiango (CuriangoLogo)
- * - SEM rótulo permanente
- * - Cor da marca (#14213D) com sombra suave shadow-curiango-dock e borda sutil em rgba(20,33,61,0.08)
- * - Tamanho reduzido (w-12 h-12 / sm:w-14 sm:h-14), não obstrui o conteúdo
- * - Canto inferior direito acima da barra de navegação:
- *   * Mobile (< md): bottom: calc(5rem + env(safe-area-inset-bottom, 0px)) right-4 (z-40)
- *   * Desktop (>= md): bottom-6 right-6
- * - Na primeira visita à Home, uma dica discreta em balão ("Fale com o Curiangoo") aparece 1x e some (persistência via localStorage)
- * - Ao tocar, navega para /copilot (ou executa onClick)
- * - Zero overflow horizontal em telas móveis (360–412px)
+ * - FAB com respiração/pulso sutil (animate-fab-breathe): presença discreta e viva sem virar carnaval.
+ * - Balão de fala 1x (speech bubble) saindo do FAB com texto curto e caloroso:
+ *   "Oi! Sou o Curiangoo — lanço, consulto e analiso pra você"
+ * - Some ao toque ou após 6 segundos e fica lembrado no localStorage (nunca repete).
+ * - Ponta triangular simulando balão saindo em direção ao FAB.
+ * - Não compete com o card do saldo (tamanho compacto e posicionamento lateral na margem segura).
+ * - Ao tocar, navega para /copilot (ou dispara onClick).
+ * - Zero overflow horizontal em telas móveis (360–412px).
  */
 export const CuriangoFloatingButton: React.FC<CuriangoFloatingButtonProps> = ({ onClick }) => {
   const navigate = useNavigate()
-  const [showHint, setShowHint] = useState(false)
+  const [showBubble, setShowBubble] = useState(false)
 
   useEffect(() => {
     try {
-      const dismissed = localStorage.getItem(COPILOT_FAB_HINT_DISMISSED_KEY)
+      const dismissed = localStorage.getItem(COPILOT_FAB_SPEECH_BUBBLE_DISMISSED_KEY)
       if (!dismissed) {
-        // Exibe a dica 1x por alguns segundos
-        setShowHint(true)
+        setShowBubble(true)
         const timer = setTimeout(() => {
-          setShowHint(false)
+          setShowBubble(false)
           try {
-            localStorage.setItem(COPILOT_FAB_HINT_DISMISSED_KEY, 'true')
+            localStorage.setItem(COPILOT_FAB_SPEECH_BUBBLE_DISMISSED_KEY, 'true')
           } catch {
             // Silencioso em caso de cookies desabilitados
           }
-        }, 5000)
+        }, 6500)
         return () => clearTimeout(timer)
       }
     } catch {
@@ -49,17 +46,17 @@ export const CuriangoFloatingButton: React.FC<CuriangoFloatingButtonProps> = ({ 
     }
   }, [])
 
-  const dismissHint = () => {
-    setShowHint(false)
+  const dismissBubble = () => {
+    setShowBubble(false)
     try {
-      localStorage.setItem(COPILOT_FAB_HINT_DISMISSED_KEY, 'true')
+      localStorage.setItem(COPILOT_FAB_SPEECH_BUBBLE_DISMISSED_KEY, 'true')
     } catch {
       // Silencioso
     }
   }
 
   const handleClick = () => {
-    dismissHint()
+    dismissBubble()
     if (onClick) {
       onClick()
     } else {
@@ -69,28 +66,53 @@ export const CuriangoFloatingButton: React.FC<CuriangoFloatingButtonProps> = ({ 
 
   return (
     <div
-      style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}
-      className="fixed z-40 bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:!bottom-6 md:bottom-6 right-4 md:right-6 flex flex-col items-end pointer-events-none"
+      style={{ bottom: 'calc(5.2rem + env(safe-area-inset-bottom, 0px))' }}
+      className="fixed z-40 bottom-[calc(5.2rem+env(safe-area-inset-bottom,0px))] md:!bottom-6 md:bottom-6 right-3.5 sm:right-5 md:right-6 flex flex-col items-end pointer-events-none"
     >
-      {/* Balão de Dica Discreta da 1ª Visita (Aparece 1x e some) */}
-      {showHint && (
+      {/* Balão de Fala (Speech Bubble) 1x: sai do FAB com texto curto e caloroso */}
+      {showBubble && (
         <div
           role="status"
           aria-live="polite"
-          onClick={dismissHint}
-          className="pointer-events-auto mb-2 mr-1 px-3 py-1.5 rounded-2xl bg-white text-[#14213D] shadow-curiango border border-slate-200/90 text-xs font-semibold flex items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300 cursor-pointer select-none max-w-[200px]"
+          data-testid="copilot-speech-bubble"
+          onClick={dismissBubble}
+          className="pointer-events-auto mb-2 mr-0 sm:mr-1 max-w-[240px] sm:max-w-[270px] bg-white text-[#14213D] shadow-xl shadow-[#14213D]/10 border border-slate-200/90 rounded-2xl p-2.5 text-xs animate-in fade-in slide-in-from-bottom-2 duration-300 cursor-pointer select-none relative"
         >
-          <Sparkles className="w-3.5 h-3.5 text-[#FCA311] shrink-0" strokeWidth={1.5} />
-          <span className="truncate">Fale com o Curiangoo</span>
-          <span className="text-[10px] text-slate-400 font-normal ml-0.5">✕</span>
+          <div className="flex items-start gap-2">
+            <div className="w-5 h-5 rounded-full bg-[#14213D] text-[#FCA311] flex items-center justify-center shrink-0 mt-0.5">
+              <MessageSquare className="w-3 h-3 fill-[#FCA311]" />
+            </div>
+            <div className="flex-1 leading-snug">
+              <p className="font-semibold text-[11.5px] sm:text-xs text-[#14213D]">
+                Oi! Sou o Curiangoo
+              </p>
+              <p className="text-[10.5px] sm:text-[11px] text-slate-600 font-normal mt-0.5">
+                lanço, consulto e analiso pra você
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                dismissBubble()
+              }}
+              className="text-slate-400 hover:text-slate-700 text-xs px-1 -mr-0.5 -mt-0.5"
+              aria-label="Fechar dica"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Ponta do balão (speech bubble pointer direcionada ao FAB) */}
+          <div className="absolute -bottom-1.5 right-6 w-3 h-3 bg-white border-r border-b border-slate-200/90 transform rotate-45 pointer-events-none" />
         </div>
       )}
 
-      {/* FAB Compacto e Silencioso (Círculo da Marca #14213D com Ícone do Curiango) */}
+      {/* FAB do Copilot: Círculo da Marca #14213D com Ícone do Curiango + Pulso Sutil */}
       <button
         type="button"
         onClick={handleClick}
-        className="pointer-events-auto w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#14213D] text-white shadow-curiango-dock border border-white/10 hover:border-[#FCA311]/50 hover:scale-105 active:scale-95 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311] focus-visible:ring-offset-2 touch-manipulation cursor-pointer flex items-center justify-center relative group select-none"
+        className="pointer-events-auto w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#14213D] text-white shadow-curiango-dock border border-white/10 hover:border-[#FCA311]/50 hover:scale-105 active:scale-95 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311] focus-visible:ring-offset-2 touch-manipulation cursor-pointer flex items-center justify-center relative group select-none animate-fab-breathe"
         aria-label="Falar com o Curiangoo"
         title="Falar com o Curiangoo — Copilot Inteligente"
       >

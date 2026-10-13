@@ -611,32 +611,49 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
       ) : null}
 
       {/* ========================================================
-          1. CABEÇALHO & SELETOR DE TIPO (Tabs modernas em pílula fluida)
+          1. CABEÇALHO & SELETOR DE TIPO (Tabs modernas em pílula fluida - PROTAGONISTA NO TOPO)
           ======================================================== */}
-      <div className="relative p-1 bg-slate-100/90 rounded-full flex items-center border border-slate-200/60 shadow-inner">
+      <div
+        data-testid="transaction-type-toggle"
+        className="relative p-1.5 bg-slate-100 rounded-2xl flex items-center gap-1.5 border border-slate-200/80 shadow-inner"
+      >
         <button
           type="button"
           onClick={() => handleTypeChange('expense')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+          aria-pressed={type === 'expense'}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none ${
             type === 'expense'
-              ? 'bg-finance-expense text-white shadow-md shadow-finance-expense/25 scale-[1.01]'
-              : 'text-slate-600 hover:text-slate-900'
+              ? 'bg-finance-expense text-white shadow-md shadow-finance-expense/30 scale-[1.01]'
+              : 'bg-white/60 text-slate-600 hover:text-slate-900 hover:bg-white'
           }`}
         >
-          <ArrowDownRight className="w-4 h-4" strokeWidth={1.5} />
-          <span>Despesa</span>
+          <div
+            className={`w-5 h-5 rounded-lg flex items-center justify-center ${
+              type === 'expense' ? 'bg-white/20 text-white' : 'bg-rose-100 text-finance-expense'
+            }`}
+          >
+            <ArrowDownRight className="w-3.5 h-3.5 stroke-[2.5]" />
+          </div>
+          <span className="tracking-tight">Despesa</span>
         </button>
         <button
           type="button"
           onClick={() => handleTypeChange('income')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+          aria-pressed={type === 'income'}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none ${
             type === 'income'
-              ? 'bg-finance-income text-white shadow-md shadow-finance-income/25 scale-[1.01]'
-              : 'text-slate-600 hover:text-slate-900'
+              ? 'bg-finance-income text-white shadow-md shadow-finance-income/30 scale-[1.01]'
+              : 'bg-white/60 text-slate-600 hover:text-slate-900 hover:bg-white'
           }`}
         >
-          <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
-          <span>Receita</span>
+          <div
+            className={`w-5 h-5 rounded-lg flex items-center justify-center ${
+              type === 'income' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-finance-income'
+            }`}
+          >
+            <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+          </div>
+          <span className="tracking-tight">Receita</span>
         </button>
       </div>
 

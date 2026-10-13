@@ -100,11 +100,11 @@ describe('NewTransactionDialog - Modal Unificado de Nova Transação', () => {
 
     // Toggle Despesa ativo por padrão
     const expenseBtn = screen.getByRole('button', { name: /Despesa/i })
-    expect(expenseBtn.className).toContain('bg-rose-500')
+    expect(expenseBtn.className).toContain('bg-finance-expense')
 
     // Toggle Receita disponível
     const incomeBtn = screen.getByRole('button', { name: /Receita/i })
-    expect(incomeBtn.className).not.toContain('bg-emerald-600')
+    expect(incomeBtn.className).not.toContain('bg-finance-income')
 
     // Toggle "Repetir todo mês" existe na tela
     expect(screen.getByText(/Repetir todo mês/i)).toBeDefined()
@@ -148,10 +148,10 @@ describe('NewTransactionDialog - Modal Unificado de Nova Transação', () => {
 
     const incomeBtn = screen.getByRole('button', { name: /Receita/i })
     fireEvent.click(incomeBtn)
-    expect(incomeBtn.className).toContain('bg-emerald-600')
+    expect(incomeBtn.className).toContain('bg-finance-income')
 
     const expenseBtn = screen.getByRole('button', { name: /Despesa/i })
-    expect(expenseBtn.className).not.toContain('bg-rose-500')
+    expect(expenseBtn.className).not.toContain('bg-finance-expense')
   })
 
   it('popula formulário diretamente via props initialType, initialAmountCents, initialDescription e initialCategoryId', () => {
@@ -174,7 +174,7 @@ describe('NewTransactionDialog - Modal Unificado de Nova Transação', () => {
     expect(descInput.value).toBe('Salário mensal')
 
     const incomeBtn = screen.getByRole('button', { name: /Receita/i })
-    expect(incomeBtn.className).toContain('bg-emerald-600')
+    expect(incomeBtn.className).toContain('bg-finance-income')
   })
 
   it('popula formulário a partir de newTransactionPrefill do contexto', () => {

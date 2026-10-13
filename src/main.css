@@ -8,6 +8,12 @@
 @tailwind utilities;
 
 @layer base {
+  :root,
+  html,
+  body {
+    color-scheme: light only;
+  }
+
   :root {
     /* Curiangoo Design System (CDS v1.0) Tokens:
        Fundo Light: #F8F9FB (220 20% 98% / off-white acetinado)
@@ -132,9 +138,23 @@
     --chart-5: 221 30% 75%;
   }
 
-  /* Garantia estrutural GLOBAL: impede rolagem horizontal em qualquer tela do app */
-  html,
+  /* Garantia estrutural GLOBAL: impede rolagem horizontal em qualquer tela do app e fixa visual claro */
+  html {
+    background-color: #f8f9fb;
+    color: #14213d;
+    color-scheme: light only;
+  }
+
   body {
+    background-color: #f8f9fb;
+    color: #14213d;
+    color-scheme: light only;
+    overflow-x: clip !important;
+    max-width: 100vw !important;
+    box-sizing: border-box;
+  }
+
+  html {
     overflow-x: clip !important;
     max-width: 100vw !important;
     box-sizing: border-box;
@@ -152,6 +172,9 @@
     overflow-x: clip;
     max-width: 100%;
     min-height: 100vh;
+    background-color: #f8f9fb;
+    color: #14213d;
+    color-scheme: light only;
   }
 
   @supports not (overflow-x: clip) {

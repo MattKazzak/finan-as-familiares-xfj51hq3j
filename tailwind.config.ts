@@ -27,6 +27,21 @@ export default {
       },
     },
     extend: {
+      keyframes: {
+        'fab-breathe': {
+          '0%, 100%': {
+            transform: 'scale(1)',
+            boxShadow: '0 10px 30px -10px rgba(20, 33, 61, 0.25), 0 0 0 0 rgba(252, 163, 17, 0.35)',
+          },
+          '50%': {
+            transform: 'scale(1.04)',
+            boxShadow: '0 14px 34px -8px rgba(20, 33, 61, 0.32), 0 0 0 6px rgba(252, 163, 17, 0)',
+          },
+        },
+      },
+      animation: {
+        'fab-breathe': 'fab-breathe 3.5s ease-in-out infinite',
+      },
       fontFamily: {
         sans: ['Inter var', 'SF Pro Display', 'system-ui', 'sans-serif'],
         display: ['SF Pro Display', 'Inter var', 'system-ui', 'sans-serif'],

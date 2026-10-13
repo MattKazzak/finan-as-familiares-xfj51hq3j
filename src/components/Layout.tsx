@@ -307,7 +307,7 @@ export default function Layout() {
           aria-label="Navegação Principal"
           className="md:hidden fixed bottom-3 sm:bottom-4 inset-x-0 z-40 px-3 sm:px-4 max-w-md mx-auto pointer-events-none"
         >
-          <div className="pointer-events-auto w-full bg-white/90 dark:bg-brand/90 backdrop-blur-md border border-border/40 shadow-curiango-dock rounded-full px-2 py-1.5 flex items-center justify-between transition-all">
+          <div className="pointer-events-auto w-full bg-white/95 backdrop-blur-md border border-border/40 shadow-curiango-dock rounded-full px-2 py-1.5 flex items-center justify-between transition-all">
             {/* 1. Início */}
             <NavLink
               to="/inicio"
@@ -354,17 +354,20 @@ export default function Layout() {
               )}
             </NavLink>
 
-            {/* 3. BOTÃO CENTRAL "+" (ABERTURA DIRETA DO NEW TRANSACTION DIALOG — 100% CONTIDO NA PÍLULA) */}
-            <div className="flex-1 flex items-center justify-center py-0.5">
+            {/* 3. BOTÃO CENTRAL "Nova" (AÇÃO ERGUIDA COM RÓTULO + ÍCONE — PADRÃO OURO) */}
+            <div className="flex-1 flex flex-col items-center justify-center py-0.5 -mt-3.5">
               <button
                 type="button"
                 onClick={() => openNewTransaction('expense')}
-                className="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-amber via-[#fba825] to-[#ffb845] text-brand flex items-center justify-center shadow-sm shadow-brand-amber/30 border border-white/80 active:scale-90 hover:scale-105 transition-all duration-200 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-amber"
+                className="w-11 h-11 rounded-full bg-gradient-to-tr from-brand-amber via-[#fba825] to-[#ffb845] text-brand flex items-center justify-center shadow-lg shadow-brand-amber/40 border-2 border-white active:scale-90 hover:scale-105 transition-all duration-200 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-amber"
                 aria-label="Nova Transação"
                 title="Nova Transação"
               >
                 <Plus className="w-5 h-5 stroke-[2.5]" />
               </button>
+              <span className="text-[10px] font-semibold text-brand tracking-tight mt-0.5 leading-none">
+                Nova
+              </span>
             </div>
 
             {/* 4. Metas */}
