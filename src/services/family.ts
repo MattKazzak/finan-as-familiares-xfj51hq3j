@@ -172,8 +172,9 @@ export async function triggerLazyAbandonedFamiliesCleanup(userId?: string): Prom
 }
 
 /**
- * Exclui manualmente uma família incompleta sob demanda pelo usuário (ex: página de Perfil).
- * Ordem segura de deleção em cascata via client.
+ * Exclui manualmente uma família sob demanda pelo usuário (ex: página de Perfil).
+ * Deleção transacional no servidor via RPC delete_family_workspace (SECURITY DEFINER):
+ * atômica, valida propriedade e elimina risco de órfãos em falha parcial no cliente.
  */
 export async function deleteFamilyWorkspaceManually(familyId: string): Promise<void> {
   const {
@@ -181,22 +182,9 @@ export async function deleteFamilyWorkspaceManually(familyId: string): Promise<v
   } = await supabase.auth.getUser()
   if (!user) throw new Error('Usuário não autenticado.')
 
-  // Ordem segura de FKs
-  await (supabase as any).from('recurring_income_overrides').delete().eq('family_id', familyId)
-  await (supabase as any).from('budgets').delete().eq('family_id', familyId)
-  await (supabase as any).from('default_budgets').delete().eq('family_id', familyId)
-  await (supabase as any).from('transactions').delete().eq('family_id', familyId)
-  await (supabase as any).from('recurring_incomes').delete().eq('family_id', familyId)
-  await (supabase as any).from('goals').delete().eq('family_id', familyId)
-  await (supabase as any).from('investments').delete().eq('family_id', familyId)
-  await (supabase as any).from('copilot_messages').delete().eq('family_id', familyId)
-  await (supabase as any).from('categorization_rules').delete().eq('family_id', familyId)
-  await (supabase as any).from('transaction_subcategories').delete().eq('family_id', familyId)
-  await (supabase as any).from('transaction_categories').delete().eq('family_id', familyId)
-  await (supabase as any).from('family_invites').delete().eq('family_id', familyId)
-  await (supabase as any).from('family_members').delete().eq('family_id', familyId)
-
-  const { error } = await (supabase as any).from('families').delete().eq('id', familyId)
+  const { error } = await (supabase as any).rpc('delete_family_workspace', {
+    p_family_id: familyId,
+  })
   if (error) throw error
 }
 
@@ -301,21 +289,26 @@ export async function fetchFamilyData() {
 
   if (families && families.length > 0) {
     // Avalia a completude das famílias para selecionar adequadamente
-    let chosenFamily: Family = families[0] as Family
+    // Critério alinhado ao R50: completa = tem categorias E tem regras de IA
+    // (a comparação hardcoded com 19 categorias quebrava com catálogo customizado)
+    let chosenFamily: Family | null = null
     for (const cand of families) {
-      const [{ count: cCount }] = await Promise.all([
+      const [{ count: cCount }, { count: rCount }] = await Promise.all([
         (supabase as any)
           .from('transaction_categories')
           .select('id', { count: 'exact', head: true })
           .eq('family_id', cand.id),
+        (supabase as any)
+          .from('categorization_rules')
+          .select('id', { count: 'exact', head: true })
+          .eq('family_id', cand.id),
       ])
-      // Se encontrar uma família com categorias (completa), ela assume a prioridade
-      if ((cCount ?? 0) === 19) {
+      if ((cCount ?? 0) > 0 && (rCount ?? 0) > 0) {
         chosenFamily = cand as Family
         break
       }
     }
-    family = chosenFamily
+    family = chosenFamily ?? (families[0] as Family)
   }
 
   // Se o usuário não possui uma família criada ainda, verifica se há convite pendente para aplicar

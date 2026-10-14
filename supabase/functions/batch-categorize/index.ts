@@ -212,28 +212,17 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // Identificar família do usuário caso não venha no body
-    let targetFamilyId = body.familyId
-    if (!targetFamilyId) {
-      const { data: memberRecord } = await supabase
-        .from('family_members')
-        .select('family_id')
-        .limit(1)
-        .maybeSingle()
+    // SEGURANÇA (tenant isolation): o family_id vem SEMPRE do vínculo autenticado
+    // do usuário (family_members), sob RLS. O valor enviado pelo cliente é ignorado —
+    // nunca consultar 'families' global, que vazaria o catálogo de outra família.
+    const { data: memberRecord } = await supabase
+      .from('family_members')
+      .select('family_id')
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle()
 
-      if (memberRecord?.family_id) {
-        targetFamilyId = memberRecord.family_id
-      } else {
-        const { data: familyRecord } = await supabase
-          .from('families')
-          .select('id')
-          .limit(1)
-          .maybeSingle()
-        if (familyRecord?.id) {
-          targetFamilyId = familyRecord.id
-        }
-      }
-    }
+    const targetFamilyId = memberRecord?.family_id ?? null
 
     // Buscar categorias e subcategorias ativas da família no Supabase
     let categoriesQuery = supabase

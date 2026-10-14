@@ -1,7 +1,7 @@
 {
   "_versions": {
-    "voice-parse": 368,
-    "batch-categorize": 295,
+    "voice-parse": 369,
+    "batch-categorize": 296,
     "voice-transcribe": 84
   }
 }

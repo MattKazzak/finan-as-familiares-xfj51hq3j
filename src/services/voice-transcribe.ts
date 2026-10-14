@@ -75,9 +75,12 @@ export async function transcribeVoiceAudio(audioBlob: Blob): Promise<TranscribeV
     const formData = new FormData()
     formData.append('audio', audioBlob, `gravacao.${fileExtension}`)
 
-    // Chamada direta para o endpoint da Edge Function com FormData
+    // Chamada direta para o endpoint da Edge Function com FormData.
+    // Usa a chave publishable correta do .env (VITE_SUPABASE_ANON_KEY não existe no projeto)
+    // e o client Supabase como fonte única da URL (elimina divergência de config).
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
-    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+    const supabaseAnonKey =
+      import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || ''
     const functionUrl = `${supabaseUrl}/functions/v1/voice-transcribe`
 
     const response = await fetch(functionUrl, {

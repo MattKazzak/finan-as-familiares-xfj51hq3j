@@ -114,10 +114,10 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
 
-    if (!supabaseUrl || !supabaseServiceKey) {
+    if (!supabaseUrl || !supabaseAnonKey) {
       console.error('Missing Supabase configuration')
       return new Response(
         JSON.stringify({
@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json()
-    const { texto, family_id, contexto_anterior, historico_mensagens, active_month } = body
+    const { texto, contexto_anterior, historico_mensagens, active_month } = body
 
     const textoNormalizadoPtBr =
       typeof texto === 'string' ? normalizeBrazilianCurrencyString(texto) : texto
@@ -179,31 +179,64 @@ Deno.serve(async (req) => {
       )
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
-    // Obter family_id do token se não fornecido
-    let targetFamilyId = family_id
-    if (!targetFamilyId) {
-      const authHeader = req.headers.get('Authorization')
-      if (authHeader) {
-        const token = authHeader.replace('Bearer ', '')
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser(token)
-        if (!authError && user) {
-          const { data: memberData } = await supabase
-            .from('family_members')
-            .select('family_id')
-            .eq('user_id', user.id)
-            .limit(1)
-            .single()
-          if (memberData?.family_id) {
-            targetFamilyId = memberData.family_id
-          }
-        }
-      }
+    // SEGURANÇA: autenticação obrigatória via JWT do usuário.
+    // O cliente anon + Authorization do usuário garante RLS em todas as queries abaixo.
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({
+          status: 'invalido',
+          error: 'UNAUTHORIZED',
+          error_detail: 'Sessão não autenticada.',
+          transacao: null,
+          pergunta_clarificacao: null,
+          opcoes_sugestao: null,
+          mensagem_amigavel: 'Sessão expirada. Faça login novamente.',
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
     }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    })
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({
+          status: 'invalido',
+          error: 'UNAUTHORIZED',
+          error_detail: 'Sessão expirada ou inválida.',
+          transacao: null,
+          pergunta_clarificacao: null,
+          opcoes_sugestao: null,
+          mensagem_amigavel: 'Sessão expirada. Faça login novamente.',
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
+    }
+
+    // SEGURANÇA (tenant isolation): o family_id vem SEMPRE do servidor —
+    // o valor enviado pelo cliente é ignorado. Um membro autenticado só acessa a própria família.
+    const { data: memberData } = await supabase
+      .from('family_members')
+      .select('family_id')
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle()
+
+    const targetFamilyId = memberData?.family_id ?? null
 
     // Carregar catálogo da família
     let categoriesList: any[] = []
@@ -217,14 +250,16 @@ Deno.serve(async (req) => {
           .select('id, name, type, budget_bucket, transaction_subcategories(id, name)')
           .eq('family_id', targetFamilyId)
           .order('name'),
-        supabase.from('family_members').select('id, name, role').eq('family_id', targetFamilyId),
+        supabase
+          .from('family_members')
+          .select('id, name, is_admin')
+          .eq('family_id', targetFamilyId),
         supabase
           .from('families')
-          .select('id, name, monthly_net_income, budget_model')
+          .select('id, name, monthly_net_income_cents, budget_model')
           .eq('id', targetFamilyId)
           .single(),
       ])
-
       categoriesList = catRes.data || []
       membersData = membersRes.data || []
       familyData = famRes.data || null
@@ -271,10 +306,12 @@ Deno.serve(async (req) => {
         const [txRes, goalsRes, recurringRes, invRes] = await Promise.all([
           supabase
             .from('transactions')
-            .select('amount, type, date, transaction_categories(name, budget_bucket)')
+            .select(
+              'amount_cents, type, transaction_date, transaction_categories(name, budget_bucket)',
+            )
             .eq('family_id', targetFamilyId)
-            .gte('date', startOfMonth.split('T')[0])
-            .lte('date', endOfMonth.split('T')[0]),
+            .gte('transaction_date', startOfMonth.split('T')[0])
+            .lte('transaction_date', endOfMonth.split('T')[0]),
           supabase
             .from('goals')
             .select('title, target_amount, current_amount, deadline')
@@ -301,20 +338,20 @@ Deno.serve(async (req) => {
         let goalsSpentCents = 0
 
         for (const t of txs) {
-          const amt = Number(t.amount) || 0
+          const amt = Number(t.amount_cents) || 0
           if (t.type === 'income') {
             totalReceitasCents += amt
           } else {
             totalDespesasCents += amt
             const bucket = (t as any).transaction_categories?.budget_bucket
-            if (bucket === 'essential') essentialSpentCents += amt
+            if (bucket === 'essentials') essentialSpentCents += amt
             else if (bucket === 'lifestyle') lifestyleSpentCents += amt
-            else if (bucket === 'goals') goalsSpentCents += amt
+            else if (bucket === 'future') goalsSpentCents += amt
           }
         }
 
         const saldoRealCents = totalReceitasCents - totalDespesasCents
-        const tetoPlanejadoCents = familyData?.monthly_net_income || 0
+        const tetoPlanejadoCents = familyData?.monthly_net_income_cents || 0
 
         const goalsSummary =
           (goalsRes.data || [])
