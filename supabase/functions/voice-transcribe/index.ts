@@ -69,6 +69,29 @@ Deno.serve(async (req: Request) => {
       )
     }
 
+    // CUSTO: rate limit por usuário (20 transcrições / 10 min) contra abuso do Whisper
+    const { data: rateLimit, error: rateErr } = await supabase.rpc('check_ai_rate_limit', {
+      p_function_name: 'voice-transcribe',
+      p_max_requests: 20,
+      p_window_minutes: 10,
+    })
+    if (rateErr) {
+      console.warn('[voice-transcribe] Rate limit check falhou (fail-open):', rateErr)
+    } else if (rateLimit && rateLimit.allowed === false) {
+      return new Response(
+        JSON.stringify({
+          error: 'RATE_LIMITED',
+          text: '',
+          message:
+            'Limite de transcrições por agora atingido. Aguarde alguns minutos e tente de novo.',
+        }),
+        {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
+    }
+
     const contentType = req.headers.get('content-type') || ''
     if (!contentType.includes('multipart/form-data')) {
       return new Response(

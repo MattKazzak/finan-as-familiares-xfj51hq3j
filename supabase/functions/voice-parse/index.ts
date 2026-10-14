@@ -227,6 +227,33 @@ Deno.serve(async (req) => {
       )
     }
 
+    // CUSTO: rate limit por usuário (30 chamadas / 10 min) contra abuso da OpenAI
+    const { data: rateLimit, error: rateErr } = await supabase.rpc('check_ai_rate_limit', {
+      p_function_name: 'voice-parse',
+      p_max_requests: 30,
+      p_window_minutes: 10,
+    })
+    if (rateErr) {
+      console.warn('[voice-parse] Rate limit check falhou (fail-open):', rateErr)
+    } else if (rateLimit && rateLimit.allowed === false) {
+      return new Response(
+        JSON.stringify({
+          status: 'invalido',
+          error: 'RATE_LIMITED',
+          error_detail: `Limite de ${rateLimit.limit} mensagens a cada 10 minutos atingido.`,
+          transacao: null,
+          pergunta_clarificacao: null,
+          opcoes_sugestao: null,
+          mensagem_amigavel:
+            'Você atingiu o limite de mensagens por agora. Aguarde alguns minutinhos e tente de novo! 💛',
+        }),
+        {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
+    }
+
     // SEGURANÇA (tenant isolation): o family_id vem SEMPRE do servidor —
     // o valor enviado pelo cliente é ignorado. Um membro autenticado só acessa a própria família.
     const { data: memberData } = await supabase

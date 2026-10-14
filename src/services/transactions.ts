@@ -424,23 +424,3 @@ export async function deleteDefaultBudget(id: string) {
 
   if (error) throw error
 }
-
-// Compatibilidade legada mantida para evitar quebras
-export async function fetchBudgets(familyId: string, monthStr: string) {
-  return fetchMonthBudgetOverrides(familyId, monthStr)
-}
-
-export async function upsertBudget(
-  familyId: string,
-  categoryId: string,
-  monthStr: string,
-  amountCents: number,
-  subcategoryId?: string | null,
-) {
-  return upsertMonthBudgetOverride(familyId, categoryId, monthStr, amountCents, subcategoryId)
-}
-
-export async function deleteBudget(id: string) {
-  const { error } = await (supabase as any).from('budgets').delete().eq('id', id)
-  if (error) throw error
-}

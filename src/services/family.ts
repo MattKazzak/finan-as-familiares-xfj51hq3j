@@ -821,32 +821,18 @@ export async function deleteSubcategory(id: string, clearTxs: boolean = true) {
 
 export async function reorderCategories(orderedIds: string[]): Promise<void> {
   if (!orderedIds || orderedIds.length === 0) return
-
-  const updates = orderedIds.map((id, index) =>
-    (supabase as any)
-      .from('transaction_categories')
-      .update({ sort_order: index + 1 })
-      .eq('id', id),
-  )
-
-  const results = await Promise.all(updates)
-  for (const res of results) {
-    if (res.error) throw res.error
-  }
+  // RPC única transacional (sort_order = posição no array) — substitui N updates paralelos
+  const { error } = await (supabase as any).rpc('reorder_family_categories', {
+    p_ids: orderedIds,
+  })
+  if (error) throw error
 }
 
 export async function reorderSubcategories(orderedIds: string[]): Promise<void> {
   if (!orderedIds || orderedIds.length === 0) return
-
-  const updates = orderedIds.map((id, index) =>
-    (supabase as any)
-      .from('transaction_subcategories')
-      .update({ sort_order: index + 1 })
-      .eq('id', id),
-  )
-
-  const results = await Promise.all(updates)
-  for (const res of results) {
-    if (res.error) throw res.error
-  }
+  // RPC única transacional — substitui N updates paralelos
+  const { error } = await (supabase as any).rpc('reorder_family_subcategories', {
+    p_ids: orderedIds,
+  })
+  if (error) throw error
 }

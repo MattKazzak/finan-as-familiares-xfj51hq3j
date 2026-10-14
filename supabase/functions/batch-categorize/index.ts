@@ -212,6 +212,30 @@ Deno.serve(async (req: Request) => {
       )
     }
 
+    // CUSTO: rate limit por usuário (20 chamadas / 10 min) contra abuso da OpenAI
+    const { data: rateLimit, error: rateErr } = await supabase.rpc('check_ai_rate_limit', {
+      p_function_name: 'batch-categorize',
+      p_max_requests: 20,
+      p_window_minutes: 10,
+    })
+    if (rateErr) {
+      console.warn('[batch-categorize] Rate limit check falhou (fail-open):', rateErr)
+    } else if (rateLimit && rateLimit.allowed === false) {
+      return new Response(
+        JSON.stringify({
+          error: 'RATE_LIMITED',
+          message:
+            'Limite de processamentos por agora atingido. Aguarde alguns minutos e tente de novo.',
+          suggestions: [],
+          transactions: [],
+        }),
+        {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
+    }
+
     // SEGURANÇA (tenant isolation): o family_id vem SEMPRE do vínculo autenticado
     // do usuário (family_members), sob RLS. O valor enviado pelo cliente é ignorado —
     // nunca consultar 'families' global, que vazaria o catálogo de outra família.
