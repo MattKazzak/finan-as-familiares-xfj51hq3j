@@ -11,6 +11,11 @@ export interface MonthSelectorProps {
    */
   variant?: 'default' | 'chip' | 'compact'
   /**
+   * 'dark': estilo com fundo translúcido escuro e texto claro (para herói marinho sangrado)
+   * 'light': estilo claro padrão
+   */
+  theme?: 'light' | 'dark'
+  /**
    * Elemento adicional opcional à direita ou abaixo (ex.: botão de importação na Carteira)
    */
   children?: React.ReactNode
@@ -29,17 +34,23 @@ export interface MonthSelectorProps {
 export function MonthSelector({
   className = '',
   variant = 'default',
+  theme = 'light',
   children,
 }: MonthSelectorProps) {
   const { activeDate, prevMonth, nextMonth, isNextMonthDisabled } = useActiveMonth()
 
   const formattedMonth = formatMonthYear(activeDate)
+  const isDark = theme === 'dark'
 
   if (variant === 'chip') {
     return (
       <div className={`inline-flex items-center gap-1.5 max-w-full ${className}`}>
         <div
-          className="inline-flex items-center gap-1 bg-white px-2 py-1 rounded-2xl border border-slate-200/80 shadow-2xs touch-manipulation max-w-full"
+          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-2xl touch-manipulation max-w-full transition-colors ${
+            isDark
+              ? 'bg-white/10 border border-white/15 text-white shadow-sm'
+              : 'bg-white border border-slate-200/80 text-[#14213D] shadow-2xs'
+          }`}
           role="group"
           aria-label="Seletor de mês"
         >
@@ -47,7 +58,11 @@ export function MonthSelector({
           <button
             type="button"
             onClick={prevMonth}
-            className="p-1 hover:bg-slate-100 active:scale-95 rounded-xl text-slate-500 hover:text-[#14213D] transition-all cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
+            className={`p-1 active:scale-95 rounded-xl transition-all cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311] ${
+              isDark
+                ? 'text-white/80 hover:text-white hover:bg-white/15'
+                : 'text-slate-500 hover:text-[#14213D] hover:bg-slate-100'
+            }`}
             title="Mês anterior"
             aria-label="Mês anterior"
           >
@@ -55,7 +70,11 @@ export function MonthSelector({
           </button>
 
           {/* Mês em texto compacto */}
-          <span className="font-semibold text-xs sm:text-sm text-[#14213D] tracking-tight px-1 select-none whitespace-nowrap">
+          <span
+            className={`font-semibold text-xs sm:text-sm tracking-tight px-1 select-none whitespace-nowrap ${
+              isDark ? 'text-white' : 'text-[#14213D]'
+            }`}
+          >
             {formattedMonth}
           </span>
 
@@ -66,8 +85,12 @@ export function MonthSelector({
             disabled={isNextMonthDisabled}
             className={`p-1 rounded-xl transition-all touch-manipulation ${
               isNextMonthDisabled
-                ? 'text-slate-300 cursor-not-allowed opacity-40'
-                : 'text-slate-500 hover:text-[#14213D] hover:bg-slate-100 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]'
+                ? isDark
+                  ? 'text-white/20 cursor-not-allowed opacity-40'
+                  : 'text-slate-300 cursor-not-allowed opacity-40'
+                : isDark
+                  ? 'text-white/80 hover:text-white hover:bg-white/15 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]'
+                  : 'text-slate-500 hover:text-[#14213D] hover:bg-slate-100 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]'
             }`}
             title={isNextMonthDisabled ? 'Limite atingido (mês atual)' : 'Próximo mês'}
             aria-label="Próximo mês"

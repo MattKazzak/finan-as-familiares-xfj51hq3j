@@ -36,8 +36,8 @@ vi.mock('@/contexts/ActiveMonthContext', () => ({
   }),
 }))
 
-describe('Layout - Bottom Navigation R54', () => {
-  it('exibe rótulo "Nova" e botão central erguido com sombra e destaque', () => {
+describe('Layout - Bottom Navigation R54/R58', () => {
+  it('exibe dock com fundo azul-marinho #14213D, rótulo "Nova" e botão central erguido com sombra e destaque', () => {
     render(
       <MemoryRouter initialEntries={['/inicio']}>
         <Layout />
@@ -47,6 +47,7 @@ describe('Layout - Bottom Navigation R54', () => {
     // Rótulo "Nova" abaixo do +
     const newTxLabel = screen.getByText('Nova')
     expect(newTxLabel).toBeDefined()
+    expect(newTxLabel.className).toContain('text-white')
 
     // Botão central com aria-label "Nova Transação" e elevação (-mt-3.5)
     const centralBtn = screen.getByRole('button', { name: /Nova Transação/i })
@@ -57,6 +58,11 @@ describe('Layout - Bottom Navigation R54', () => {
     // Container erguido
     const centralContainer = centralBtn.closest('div')
     expect(centralContainer?.className).toContain('-mt-3.5')
+
+    // Dock inferior tem fundo marinho #14213D
+    const navBar = screen.getByRole('navigation', { name: /Navegação Principal/i })
+    const navContainer = navBar.querySelector('.bg-\\[\\#14213D\\]')
+    expect(navContainer).not.toBeNull()
 
     // Rótulos consistentes dos outros itens
     expect(screen.getByText('Início')).toBeDefined()

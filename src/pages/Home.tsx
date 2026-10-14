@@ -12,19 +12,17 @@ import { processAutoRecurringIncomes } from '@/services/recurring-incomes'
 import {
   formatBRL,
   formatFamilyDisplayName,
-  formatFullDate,
   formatMonthYear,
   formatRelativeDate,
 } from '@/lib/formatters'
 import { CountUp } from '@/components/common/CountUp'
-import { CategoryIcon, CategoryIconBox } from '@/components/common/CategoryIcon'
+import { CategoryIconBox } from '@/components/common/CategoryIcon'
 import { TransactionDetailDialog } from '@/components/transactions/TransactionDetailDialog'
 import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
 import { formatTransactionTitle, groupInstallmentTransactions } from '@/services/installments'
 import { deleteTransaction } from '@/services/transactions'
 import { useToast } from '@/hooks/use-toast'
 import { useValuePrivacy, getTimeGreeting } from '@/hooks/use-value-privacy'
-import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import type { Transaction, DefaultBudget, Budget } from '@/types/finance'
 import { BUDGET_PRESET_ITEMS } from '@/types/budget-presets'
@@ -32,7 +30,6 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Plus,
-  RefreshCw,
   WalletCards,
   ChevronRight,
   Users,
@@ -48,6 +45,9 @@ import {
   Shield,
   Palmtree,
   Target,
+  BarChart3,
+  Receipt,
+  PiggyBank,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -63,7 +63,6 @@ export default function Home() {
     selectedMemberId,
     setSelectedMemberId,
     openNewTransaction,
-    openVoiceDialog,
     openOnboarding,
     refreshTrigger,
     triggerRefresh,
@@ -73,10 +72,6 @@ export default function Home() {
   const { hideValues, toggleHideValues, maskValue } = useValuePrivacy()
 
   const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  // Decisão de Produto (Tarefa 2.2):
-  // A Home NUNCA deve ser exibida sobre uma família incompleta — nem em skeleton infinito.
-  // Estado parcial = wizard, sempre.
   const isFamilyIncomplete = useMemo(() => {
     if (!family) return false
     if (completeness?.isIncomplete) return true
@@ -101,10 +96,9 @@ export default function Home() {
   const [editingTx, setEditingTx] = useState<Transaction | null>(null)
   const [isEditOpen, setIsEditOpen] = useState(false)
 
-  // Carregamento prolongado (> ~2s): substitui o skeleton de carga por mensagem honesta
+  // Carregamento prolongado (> ~2s): substitui o skeleton por mensagem amigável
   const [isLongLoading, setIsLongLoading] = useState(false)
   const isFamilyResolved = Boolean(family?.id)
-  const isMemberResolved = Boolean(currentMember?.id || currentMember?.name)
   const isInitialDataLoading = loading || !isFamilyResolved
 
   useEffect(() => {
@@ -130,7 +124,7 @@ export default function Home() {
     }
   }, [currentMember?.name])
 
-  // Mês visto global pelo usuário — sincronizado entre Home, Transações e Orçamentos
+  // Mês ativo global
   const { activeMonth, activeDate } = useActiveMonth()
   const [isBalanceDetailsExpanded, setIsBalanceDetailsExpanded] = useState(false)
   const currentMonthStr = activeMonth
@@ -139,8 +133,6 @@ export default function Home() {
     if (!family) return
     try {
       setLoading(true)
-
-      // Auto-lançamento de receitas fixas do mês corrente ao abrir o app
       try {
         await processAutoRecurringIncomes({
           familyId: family.id,
@@ -170,7 +162,6 @@ export default function Home() {
       })
     } finally {
       setLoading(false)
-      setRefreshing(false)
     }
   }, [family, selectedMemberId, currentMonthStr, toast])
 
@@ -178,15 +169,10 @@ export default function Home() {
     loadData()
   }, [loadData, refreshTrigger])
 
-  const handlePullToRefresh = () => {
-    setRefreshing(true)
-    loadData()
-  }
-
   // Renda líquida prevista da família
   const plannedIncomeCents = family?.monthly_net_income_cents || 0
 
-  // Cálculos de saldo total acumulado e métricas do mês ativo e do mês imediatamente anterior
+  // Totais de saldo e mês
   const {
     totalBalanceCents,
     monthIncomeCents,
@@ -202,11 +188,9 @@ export default function Home() {
     let prevMIncome = 0
     let prevMExpense = 0
 
-    // Mês anterior relativo estritamente ao activeMonth (ex: out/2026 -> set/2026)
     const prevDate = new Date(activeDate.getFullYear(), activeDate.getMonth() - 1, 1)
     const prevMonthStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`
 
-    // Apenas transações confirmadas/efetivadas (não projetadas) contam para saldo e totais do mês
     const effectiveTransactions = transactions.filter((tx) => tx.status !== 'projected')
 
     effectiveTransactions.forEach((tx) => {
@@ -222,10 +206,8 @@ export default function Home() {
       }
     })
 
-    const totalBalance = incomeTotal - expenseTotal
-
     return {
-      totalBalanceCents: totalBalance,
+      totalBalanceCents: incomeTotal - expenseTotal,
       monthIncomeCents: mIncome,
       monthExpenseCents: mExpense,
       prevMonthIncomeCents: prevMIncome,
@@ -234,7 +216,7 @@ export default function Home() {
     }
   }, [transactions, currentMonthStr, activeDate])
 
-  // Mapa de baldes para as categorias (respeita budget_bucket da categoria com fallback por palavras-chave)
+  // Mapa de baldes para categorias
   const categoryBucketMap = useMemo(() => {
     const map = new Map<string, 'essentials' | 'lifestyle' | 'future'>()
     categories.forEach((cat) => {
@@ -270,7 +252,6 @@ export default function Home() {
     return map
   }, [categories])
 
-  // Rótulo amigável do modelo de orçamento (lido de family.budget_model com fallback)
   const budgetModelLabel = useMemo(() => {
     const modelId = family?.budget_model
     if (modelId) {
@@ -278,7 +259,6 @@ export default function Home() {
       if (found) {
         return found.name
       }
-      // Variações conhecidas adicionais (ex.: 60_25_15)
       if (modelId === '60_25_15') {
         return 'Modelo 60 / 25 / 15'
       }
@@ -286,11 +266,10 @@ export default function Home() {
     return 'Modelo 50 / 30 / 20'
   }, [family?.budget_model])
 
-  // Agregação dos 3 Baldes com TETOS REAIS (mesma fonte e cálculo da aba Orçamentos / Wallet.tsx)
+  // Agregação dos 3 Baldes
   const bucketsData = useMemo(() => {
     const netIncomeCents = family?.monthly_net_income_cents || 0
 
-    // 1. Mapeamento de orçamentos padrão e overrides por categoria e subcategoria
     const defCatBudgetMap: Record<string, DefaultBudget> = {}
     const defSubBudgetMap: Record<string, DefaultBudget> = {}
     defaultBudgets.forEach((b) => {
@@ -311,7 +290,6 @@ export default function Home() {
       }
     })
 
-    // 2. Gastos por categoria das despesas no mês corrente (apenas não projetadas)
     const catSpentMap: Record<string, number> = {}
     transactions.forEach((tx) => {
       if (
@@ -325,7 +303,6 @@ export default function Home() {
       }
     })
 
-    // 3. Totais por balde (budgetCents e spentCents)
     const bucketsSummary = {
       essentials: { budgetCents: 0, spentCents: 0 },
       lifestyle: { budgetCents: 0, spentCents: 0 },
@@ -335,7 +312,6 @@ export default function Home() {
     const expenseCategories = categories.filter((c) => c.type === 'expense')
 
     expenseCategories.forEach((cat) => {
-      // Subcategorias
       const subcats = cat.subcategories || []
       const subcatsLimitSum = subcats.reduce((acc, sub) => {
         const subOverride = overrideSubBudgetMap[sub.id]
@@ -356,7 +332,6 @@ export default function Home() {
           ? catDefault.amount_cents
           : 0
 
-      // Quando a categoria possui tetos definidos nas subcategorias, usa a soma delas; senão, o pai
       const limitCents = subcatsLimitSum > 0 ? subcatsLimitSum : explicitLimitCents
       const spentCents = catSpentMap[cat.id] || 0
 
@@ -365,7 +340,6 @@ export default function Home() {
       bucketsSummary[bucket].spentCents += spentCents
     })
 
-    // Também inclui despesas sem categoria no balde lifestyle (apenas não projetadas)
     transactions.forEach((tx) => {
       if (
         tx.type === 'expense' &&
@@ -377,8 +351,6 @@ export default function Home() {
       }
     })
 
-    // Percentuais DINÂMICOS sobre a renda líquida: Math.round((tetoDoBalde / rendaLiquidaTotal) * 100)
-    // Se renda líquida for 0/ausente, percentModel fica null ou omitido graciosamente (sem NaN/Infinity)
     const essentialsIncomePct =
       netIncomeCents > 0
         ? Math.round((bucketsSummary.essentials.budgetCents / netIncomeCents) * 100)
@@ -392,7 +364,6 @@ export default function Home() {
         ? Math.round((bucketsSummary.future.budgetCents / netIncomeCents) * 100)
         : null
 
-    // Percentuais de consumo (spent / limit)
     const essentialsConsumptionPct =
       bucketsSummary.essentials.budgetCents > 0
         ? Math.round(
@@ -451,23 +422,62 @@ export default function Home() {
     monthOverrides,
   ])
 
-  // Transações recentes agrupadas estilo banco (compras parceladas agrupadas em linha única)
+  // R58 Tarefa 4: Gastos por Categoria no mês ativo (top 5-6 categorias, decrescente)
+  const categoryExpenses = useMemo(() => {
+    const map = new Map<
+      string,
+      { id: string; name: string; amountCents: number; icon?: string | null; color?: string | null }
+    >()
+    let totalExpensesInMonth = 0
+
+    transactions.forEach((tx) => {
+      if (
+        tx.type === 'expense' &&
+        tx.status !== 'projected' &&
+        tx.transaction_date.slice(0, 7) === currentMonthStr
+      ) {
+        totalExpensesInMonth += tx.amount_cents
+        const catId = tx.category_id || 'sem-categoria'
+        const catName = tx.category?.name || 'Outros'
+        const current = map.get(catId)
+        if (current) {
+          current.amountCents += tx.amount_cents
+        } else {
+          map.set(catId, {
+            id: catId,
+            name: catName,
+            amountCents: tx.amount_cents,
+            icon: tx.category?.icon || null,
+            color: tx.category?.color || null,
+          })
+        }
+      }
+    })
+
+    const list = Array.from(map.values())
+      .filter((item) => item.amountCents > 0)
+      .sort((a, b) => b.amountCents - a.amountCents)
+      .slice(0, 6)
+
+    const maxAmount = list.length > 0 ? list[0].amountCents : 0
+
+    return {
+      list,
+      totalExpensesInMonth,
+      maxAmount,
+    }
+  }, [transactions, currentMonthStr])
+
+  // Transações recentes
   const recentItems = useMemo(() => {
-    // Para a lista de "Últimos lançamentos", passamos todas as transações (incluindo grupos de parcelamento)
-    // para groupInstallmentTransactions com a data de referência hoje. A função consolida o grupo todo
-    // (inclusive sabendo o total de parcelas 10/10) e seleciona como representante a parcela
-    // já atingida/confirmada mais recente (ex: 1/10 em 01/09/2026), sem que parcelas futuras de 2027
-    // empurrem o parcelamento para o topo.
     const now = new Date()
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     const grouped = groupInstallmentTransactions(transactions, { referenceDate: todayStr })
 
-    // Filtra para garantir que apenas itens com data <= todayStr ou confirmados apareçam na Home
     const reachedItems = grouped.filter(
       (item) => item.representativeTx?.status !== 'projected' || item.transactionDate <= todayStr,
     )
 
-    // Mostra as primeiras 7 linhas consolidadas na Home ordenadas por data decrescente (com desempate por created_at)
     return reachedItems
       .slice()
       .sort((a, b) => {
@@ -496,9 +506,16 @@ export default function Home() {
 
   const memberInitial = currentMember?.name?.charAt(0).toUpperCase() || 'F'
 
-  // Decisão de Produto (Tarefa 2.2):
-  // Se a família estiver incompleta, bloqueia a renderização da Home completa
-  // e exibe tela de transição acolhedora convidando a retomar o wizard imediatamente.
+  // Anel do previsto: cálculos
+  const incomeProgressPercent = useMemo(() => {
+    if (!plannedIncomeCents || plannedIncomeCents <= 0) return 0
+    return Math.round((monthIncomeCents / plannedIncomeCents) * 100)
+  }, [monthIncomeCents, plannedIncomeCents])
+
+  const cappedIncomeProgress = Math.min(100, Math.max(0, incomeProgressPercent))
+  const isIncomeOverPlanned = plannedIncomeCents > 0 && monthIncomeCents > plannedIncomeCents
+  const isIncomeAtPlanned = plannedIncomeCents > 0 && monthIncomeCents === plannedIncomeCents
+
   if (isFamilyIncomplete) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center max-w-md mx-auto">
@@ -524,498 +541,588 @@ export default function Home() {
   }
 
   return (
-    <div className="space-y-6 sm:space-y-7 max-w-5xl mx-auto w-full min-w-0 overflow-x-hidden">
-      {/* 1. CABEÇALHO REORGANIZADO (R62: Linha 1 = Identidade + Ações | Linha 2 = Navegação de Tempo) */}
-      <header className="pt-1 pb-1 space-y-3 sm:space-y-3.5">
-        {/* Linha 1: Identidade (Avatar + Saudação + Família) + Ações à Direita (👁 Privacidade + 🔔 Notificações) */}
-        <div
-          data-testid="header-greeting-row"
-          className="flex items-center justify-between gap-2 sm:gap-3 min-w-0"
-        >
-          {/* Lado Esquerdo: Avatar arredondado do membro ativo + Saudação por horário + Subtítulo Família */}
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-            <button
-              type="button"
-              onClick={openWhoIsUsing}
-              className="relative shrink-0 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311] rounded-2xl active:scale-95 transition-transform cursor-pointer"
-              aria-label="Trocar membro ativo ou abrir perfil"
-              title={members.length > 1 ? 'Trocar perfil / membro' : 'Perfil do membro'}
-            >
-              <Avatar className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl border-2 border-[#14213D] shadow-sm transition-all group-hover:border-[#FCA311] overflow-hidden">
-                {family?.avatar_url && (
-                  <AvatarImage
-                    src={family.avatar_url}
-                    alt={family.name ? `Foto da Família ${family.name}` : 'Foto da Família'}
-                    className="w-full h-full object-cover"
-                  />
-                )}
-                <AvatarFallback className="bg-gradient-to-tr from-[#14213D] to-[#1f3159] text-white font-semibold text-xs sm:text-sm rounded-2xl">
-                  {memberInitial}
-                </AvatarFallback>
-              </Avatar>
-              {members.length > 1 && (
-                <span
-                  className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-[#FCA311] text-[#14213D] text-[8px] font-semibold rounded-full flex items-center justify-center border-2 border-white shadow-2xs"
-                  title="Mais membros disponíveis"
-                >
-                  ▾
-                </span>
-              )}
-            </button>
+    <div className="w-full min-w-0 overflow-x-hidden bg-[#F8F9FB]">
+      {/* 1. FUNDO MARINHO SANGRADO NO TOPO (#14213D) */}
+      <div
+        data-testid="hero-bleeding-top"
+        className="w-full bg-[#14213D] text-white pt-5 sm:pt-7 pb-10 sm:pb-12 px-4 sm:px-6 relative overflow-hidden"
+      >
+        {/* Efeitos de luz sutis */}
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+        <div className="absolute -top-16 -right-16 w-64 h-64 bg-[#FCA311]/10 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <h1
-                  className="text-base sm:text-lg font-bold text-[#14213D] tracking-tight leading-tight truncate flex items-center gap-1.5"
-                  title={timeGreeting.fullGreetingWithName || `${timeGreeting.rawGreeting}!`}
-                >
-                  {timeGreeting.fullGreetingWithName ? (
-                    <span className="truncate">{timeGreeting.fullGreetingWithName}</span>
-                  ) : isLongLoading ? (
-                    <span className="text-sm font-medium text-slate-500 animate-pulse">
+        <div className="max-w-5xl mx-auto space-y-5">
+          {/* Linha 1 do cabeçalho (Saudação + Membro + Ações 👁 e 🔔) */}
+          <div
+            data-testid="header-greeting-row"
+            className="flex items-center justify-between gap-2 sm:gap-3 min-w-0"
+          >
+            {/* Lado Esquerdo: Avatar + Saudação + Família */}
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+              <button
+                type="button"
+                onClick={openWhoIsUsing}
+                className="relative shrink-0 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311] rounded-2xl active:scale-95 transition-transform cursor-pointer"
+                aria-label="Trocar membro ativo ou abrir perfil"
+                title={members.length > 1 ? 'Trocar perfil / membro' : 'Perfil do membro'}
+              >
+                <Avatar className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl border-2 border-white/20 shadow-sm transition-all group-hover:border-[#FCA311] overflow-hidden">
+                  {family?.avatar_url && (
+                    <AvatarImage
+                      src={family.avatar_url}
+                      alt={family.name ? `Foto da Família ${family.name}` : 'Foto da Família'}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                  <AvatarFallback className="bg-gradient-to-tr from-white/10 to-white/20 text-white font-semibold text-xs sm:text-sm rounded-2xl">
+                    {memberInitial}
+                  </AvatarFallback>
+                </Avatar>
+                {members.length > 1 && (
+                  <span
+                    className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-[#FCA311] text-[#14213D] text-[8px] font-semibold rounded-full flex items-center justify-center border-2 border-[#14213D] shadow-2xs"
+                    title="Mais membros disponíveis"
+                  >
+                    ▾
+                  </span>
+                )}
+              </button>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <h1
+                    className="text-base sm:text-lg font-bold text-white tracking-tight leading-tight truncate flex items-center gap-1.5"
+                    title={timeGreeting.fullGreetingWithName || `${timeGreeting.rawGreeting}!`}
+                  >
+                    {timeGreeting.fullGreetingWithName ? (
+                      <span className="truncate">{timeGreeting.fullGreetingWithName}</span>
+                    ) : isLongLoading ? (
+                      <span className="text-sm font-medium text-slate-300 animate-pulse">
+                        Carregando seus dados...
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-2 truncate">
+                        <span>{timeGreeting.rawGreeting}!</span>
+                        <span className="inline-block h-5 w-24 bg-white/20 rounded-md animate-pulse align-middle shrink-0" />
+                      </span>
+                    )}
+                    {timeGreeting.period === 'morning' ? (
+                      <Coffee className="w-4 h-4 text-slate-300 shrink-0" strokeWidth={1.5} />
+                    ) : timeGreeting.period === 'afternoon' ? (
+                      <SunMedium className="w-4 h-4 text-slate-300 shrink-0" strokeWidth={1.5} />
+                    ) : (
+                      <Moon className="w-4 h-4 text-slate-300 shrink-0" strokeWidth={1.5} />
+                    )}
+                  </h1>
+                </div>
+                {family?.name?.trim() ? (
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <p className="text-[11px] sm:text-xs text-slate-300/80 font-medium leading-none truncate">
+                      {formatFamilyDisplayName(family.name)}
+                    </p>
+                  </div>
+                ) : isLongLoading ? (
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-[10px] text-slate-400 italic leading-none truncate">
                       Carregando seus dados...
                     </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-2 truncate">
-                      <span>{timeGreeting.rawGreeting}!</span>
-                      <span className="inline-block h-5 w-24 bg-slate-200/90 rounded-md animate-pulse align-middle shrink-0" />
-                    </span>
-                  )}
-                  {timeGreeting.period === 'morning' ? (
-                    <Coffee className="w-4 h-4 text-muted-foreground shrink-0" strokeWidth={1.5} />
-                  ) : timeGreeting.period === 'afternoon' ? (
-                    <SunMedium
-                      className="w-4 h-4 text-muted-foreground shrink-0"
-                      strokeWidth={1.5}
-                    />
-                  ) : (
-                    <Moon className="w-4 h-4 text-muted-foreground shrink-0" strokeWidth={1.5} />
-                  )}
-                </h1>
+                  </div>
+                ) : null}
               </div>
-              {family?.name?.trim() ? (
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <p className="text-[11px] sm:text-xs text-slate-500 font-medium leading-none truncate">
-                    {formatFamilyDisplayName(family.name)}
-                  </p>
-                </div>
-              ) : isLongLoading ? (
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="text-[10px] text-slate-400 italic leading-none truncate">
-                    Carregando seus dados...
-                  </span>
-                </div>
-              ) : null}
+            </div>
+
+            {/* Lado Direito: Ações (👁 e 🔔 adaptadas ao fundo marinho) */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={toggleHideValues}
+                className="p-1.5 sm:p-2 rounded-2xl text-slate-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
+                aria-label={hideValues ? 'Mostrar valores' : 'Ocultar valores'}
+                title={
+                  hideValues
+                    ? 'Mostrar valores monetários'
+                    : 'Ocultar valores monetários (modo privacidade)'
+                }
+              >
+                {hideValues ? (
+                  <EyeOff className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2] text-[#FCA311]" />
+                ) : (
+                  <Eye className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2]" />
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  toast({
+                    title: 'Notificações do Curiangoo',
+                    description: 'Você está em dia com todas as finanças e alertas da família!',
+                  })
+                }}
+                className="relative p-1.5 sm:p-2 rounded-2xl text-slate-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
+                aria-label="Notificações"
+                title="Notificações da família"
+              >
+                <Bell className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2]" />
+                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#FCA311] ring-2 ring-[#14213D]" />
+              </button>
             </div>
           </div>
 
-          {/* Lado Direito da Linha 1: Ações de Tela (👁 Privacidade + 🔔 Notificações) */}
-          <div className="flex items-center gap-1 shrink-0">
-            {/* Botão de Privacidade: Alternar visibilidade de valores */}
-            <button
-              type="button"
-              onClick={toggleHideValues}
-              className="p-1.5 sm:p-2 rounded-2xl text-slate-600 hover:text-[#14213D] hover:bg-[#E5E5E5]/60 border border-transparent hover:border-[#E5E5E5] transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
-              aria-label={hideValues ? 'Mostrar valores' : 'Ocultar valores'}
-              title={
-                hideValues
-                  ? 'Mostrar valores monetários'
-                  : 'Ocultar valores monetários (modo privacidade)'
-              }
-            >
-              {hideValues ? (
-                <EyeOff className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2] text-[#FCA311]" />
-              ) : (
-                <Eye className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2]" />
-              )}
-            </button>
-
-            {/* Sininho de Notificações Discreto */}
-            <button
-              type="button"
-              onClick={() => {
-                toast({
-                  title: 'Notificações do Curiangoo',
-                  description: 'Você está em dia com todas as finanças e alertas da família!',
-                })
-              }}
-              className="relative p-1.5 sm:p-2 rounded-2xl text-slate-600 hover:text-[#14213D] hover:bg-[#E5E5E5]/60 border border-transparent hover:border-[#E5E5E5] transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
-              aria-label="Notificações"
-              title="Notificações da família"
-            >
-              <Bell className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2]" />
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#FCA311] ring-2 ring-white" />
-            </button>
+          {/* Linha 2 do cabeçalho: Seletor de mês com tema escuro */}
+          <div data-testid="header-month-row" className="flex items-center justify-start min-w-0">
+            <MonthSelector variant="chip" theme="dark" />
           </div>
-        </div>
 
-        {/* Linha 2: Navegação do Tempo — Seletor de Mês Compacto SOZINHO e alinhado */}
-        <div data-testid="header-month-row" className="flex items-center justify-start min-w-0">
-          {/* Seletor Compacto de Mês integrado ao cabeçalho (Chip + Estação com ícone pastel) */}
-          <MonthSelector variant="chip" />
-        </div>
-      </header>
-
-      {/* 2. Filtro Horizontal de Membros (Chips Padronizados — CDS v1.0, acabamento sutil sem contraste escuro/claro agressivo) */}
-      <div
-        className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none max-w-full"
-        role="group"
-        aria-label="Filtro de membros"
-      >
-        <button
-          type="button"
-          onClick={() => setSelectedMemberId(null)}
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer border touch-manipulation ${
-            selectedMemberId === null
-              ? 'bg-[#14213D]/10 text-[#14213D] border-[#14213D]/30 shadow-2xs'
-              : 'bg-white/90 text-slate-600 border-[rgba(20,33,61,0.06)] hover:bg-slate-100 hover:text-slate-900 shadow-2xs'
-          }`}
-        >
-          <Users
-            className={`w-3.5 h-3.5 shrink-0 ${
-              selectedMemberId === null ? 'text-[#14213D]' : 'text-slate-500'
-            }`}
-          />
-          <span>Todos</span>
-        </button>
-        {members.map((m) => {
-          const isSelected = selectedMemberId === m.id
-          return (
+          {/* Filtro horizontal de membros adaptado ao fundo escuro */}
+          <div
+            className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none max-w-full"
+            role="group"
+            aria-label="Filtro de membros"
+          >
             <button
-              key={m.id}
               type="button"
-              onClick={() => setSelectedMemberId(m.id)}
+              onClick={() => setSelectedMemberId(null)}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer border touch-manipulation ${
-                isSelected
-                  ? 'bg-[#14213D]/10 text-[#14213D] border-[#14213D]/30 shadow-2xs'
-                  : 'bg-white/90 text-slate-600 border-[rgba(20,33,61,0.06)] hover:bg-slate-100 hover:text-slate-900 shadow-2xs'
+                selectedMemberId === null
+                  ? 'bg-[#FCA311] text-[#14213D] border-[#FCA311] shadow-sm'
+                  : 'bg-white/10 text-white/80 border-white/10 hover:bg-white/15 hover:text-white'
               }`}
-              title={m.name}
             >
-              <span
-                className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${
-                  isSelected ? 'bg-[#14213D] text-white' : 'bg-slate-200 text-slate-700'
+              <Users
+                className={`w-3.5 h-3.5 shrink-0 ${
+                  selectedMemberId === null ? 'text-[#14213D]' : 'text-slate-300'
                 }`}
-              >
-                {m.name.charAt(0).toUpperCase()}
-              </span>
-              <span>{m.name}</span>
+              />
+              <span>Todos</span>
             </button>
-          )
-        })}
-      </div>
+            {members.map((m) => {
+              const isSelected = selectedMemberId === m.id
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setSelectedMemberId(m.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer border touch-manipulation ${
+                    isSelected
+                      ? 'bg-[#FCA311] text-[#14213D] border-[#FCA311] shadow-sm'
+                      : 'bg-white/10 text-white/80 border-white/10 hover:bg-white/15 hover:text-white'
+                  }`}
+                  title={m.name}
+                >
+                  <span
+                    className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${
+                      isSelected ? 'bg-[#14213D] text-white' : 'bg-white/20 text-white'
+                    }`}
+                  >
+                    {m.name.charAt(0).toUpperCase()}
+                  </span>
+                  <span>{m.name}</span>
+                </button>
+              )
+            })}
+          </div>
 
-      {/* 3. Grid Principal (Card Hero de Saldo + Card Orçamento) */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-5 sm:gap-6">
-        {/* CARD HERO SALDO TOTAL (Desktop 8 col) — Identidade Nubank/Revolut: 1 herói, zero matrioska, progressive disclosure */}
-        <div
-          onClick={() => setIsBalanceDetailsExpanded((prev) => !prev)}
-          className="md:col-span-8 bg-gradient-to-br from-[#14213D] via-[#1a2d52] to-[#0e172a] rounded-3xl p-6 sm:p-8 text-white shadow-elevation-2 relative overflow-hidden transition-all hover:shadow-elevation-3 border border-white/10 cursor-pointer select-none group"
-          role="region"
-          aria-label="Card de Saldo da Família"
-        >
-          {/* Efeito de luz sutil no topo (acento orgânico) */}
-          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent pointer-events-none" />
-          {/* Efeito de luz decorativo âmbar sutil */}
-          <div className="absolute -top-12 -right-12 w-52 h-52 bg-[#FCA311]/15 rounded-full blur-3xl pointer-events-none" />
-
-          {/* Rótulo e Contexto em peso leve — NENHUM percentual solto no card fechado */}
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <span className="text-xs uppercase font-medium tracking-wider text-slate-300/90">
-              Saldo Total da Família
-            </span>
-            <div className="flex items-center gap-1.5">
-              <span
-                className="text-[11px] text-white/60 group-hover:text-white/90 transition-colors"
-                title="Toque para ver detalhes"
-              >
+          {/* O NOVO HERÓI: Saldo Total mora dentro do bloco sangrado marinho */}
+          <div
+            onClick={() => setIsBalanceDetailsExpanded((prev) => !prev)}
+            role="region"
+            aria-label="Card de Saldo da Família"
+            className="pt-2 sm:pt-4 cursor-pointer select-none group"
+          >
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <span className="text-xs uppercase font-medium tracking-wider text-slate-300">
+                Saldo Total da Família
+              </span>
+              <span className="text-[11px] text-white/70 group-hover:text-white transition-colors">
                 {isBalanceDetailsExpanded ? '▾ Recolher' : '▸ Ver detalhes'}
               </span>
             </div>
-          </div>
 
-          {/* O SALDO É O HERÓI — Número grande em negrito, com respiro calmo */}
-          {loading ? (
-            <Skeleton className="h-12 w-52 bg-white/20 rounded-lg my-2" />
-          ) : (
-            <div className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight tabular-nums my-2 sm:my-3 break-words text-white leading-tight">
-              {hideValues ? (
-                <span>R$ ••••••</span>
-              ) : (
-                <CountUp end={totalBalanceCents} formatter={(v) => formatBRL(v)} />
-              )}
-            </div>
-          )}
-
-          <p className="text-[11px] sm:text-xs text-slate-300/80 mb-6">
-            {selectedMemberId
-              ? `Filtrado por: ${members.find((m) => m.id === selectedMemberId)?.name}`
-              : 'Consolidado de todos os membros'}
-          </p>
-
-          {/* RECEITAS E DESPESAS EM LINHA LIMPA — ZERO CARD DENTRO DE CARD */}
-          <div className="pt-4 border-t border-white/10 flex items-center justify-between gap-3 sm:gap-6">
-            {/* Bloco Receitas em Linha Limpa */}
-            <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <div className="w-7 h-7 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-300 shrink-0">
-                <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
+            {loading ? (
+              <Skeleton className="h-12 w-52 bg-white/20 rounded-lg my-2" />
+            ) : (
+              <div className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight tabular-nums my-1 sm:my-2 break-words text-white leading-tight">
+                {hideValues ? (
+                  <span>R$ ••••••</span>
+                ) : (
+                  <CountUp end={totalBalanceCents} formatter={(v) => formatBRL(v)} />
+                )}
               </div>
-              <div className="min-w-0 flex-1">
-                <span className="text-[11px] text-slate-300/80 font-normal block leading-tight">
-                  Receitas
-                </span>
-                <span className="text-sm sm:text-base font-semibold text-white tabular-nums block leading-tight mt-0.5 truncate">
-                  {maskValue(formatBRL(monthIncomeCents))}
-                </span>
-              </div>
-            </div>
+            )}
 
-            {/* Divisor sutil e limpo */}
-            <div className="w-px h-8 bg-white/15 shrink-0" aria-hidden="true" />
+            <p className="text-[11px] sm:text-xs text-slate-300/80 mb-5">
+              {selectedMemberId
+                ? `Filtrado por: ${members.find((m) => m.id === selectedMemberId)?.name}`
+                : 'Consolidado de todos os membros'}
+            </p>
 
-            {/* Bloco Despesas em Linha Limpa */}
-            <div className="flex items-center gap-2.5 min-w-0 flex-1 justify-end sm:justify-start">
-              <div className="w-7 h-7 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-300 shrink-0">
-                <ArrowDownRight className="w-4 h-4" strokeWidth={1.5} />
+            {/* Linha de Receitas e Despesas do Mês */}
+            <div className="pt-3 border-t border-white/15 flex items-center justify-between gap-3 sm:gap-6">
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div className="w-7 h-7 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-300 shrink-0">
+                  <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-[11px] text-slate-300 font-normal block leading-tight">
+                    Receitas
+                  </span>
+                  <span className="text-sm sm:text-base font-semibold text-white tabular-nums block leading-tight mt-0.5 truncate">
+                    {maskValue(formatBRL(monthIncomeCents))}
+                  </span>
+                </div>
               </div>
-              <div className="min-w-0 flex-1 text-right sm:text-left">
-                <span className="text-[11px] text-slate-300/80 font-normal block leading-tight">
-                  Despesas
-                </span>
-                <span className="text-sm sm:text-base font-semibold text-white tabular-nums block leading-tight mt-0.5 truncate">
-                  {maskValue(formatBRL(monthExpenseCents))}
-                </span>
+
+              <div className="w-px h-8 bg-white/15 shrink-0" aria-hidden="true" />
+
+              <div className="flex items-center gap-2.5 min-w-0 flex-1 justify-end sm:justify-start">
+                <div className="w-7 h-7 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-300 shrink-0">
+                  <ArrowDownRight className="w-4 h-4" strokeWidth={1.5} />
+                </div>
+                <div className="min-w-0 flex-1 text-right sm:text-left">
+                  <span className="text-[11px] text-slate-300 font-normal block leading-tight">
+                    Despesas
+                  </span>
+                  <span className="text-sm sm:text-base font-semibold text-white tabular-nums block leading-tight mt-0.5 truncate">
+                    {maskValue(formatBRL(monthExpenseCents))}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* PROGRESSIVE DISCLOSURE — Detalhes (Receitas x Previsto, Despesas x Orçamento e Comparação em Linguagem Natural) */}
-          {isBalanceDetailsExpanded && (
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="mt-4 pt-3.5 border-t border-white/10 space-y-3.5 text-xs text-slate-200/90 animate-in fade-in slide-in-from-top-1 duration-200"
-            >
-              {/* (a) RECEITAS DO MÊS: "R$ X de R$ Y previstos" + barra fina (2-4px) com cap em 100% */}
-              <div className="space-y-1.5">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="text-slate-300 font-medium">Receitas do mês:</span>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {plannedIncomeCents > 0 ? (
-                      <span className="font-semibold text-white">
-                        {maskValue(formatBRL(monthIncomeCents))} de{' '}
-                        {maskValue(formatBRL(plannedIncomeCents))} previstos
-                      </span>
-                    ) : (
-                      <span className="font-semibold text-white">
-                        {maskValue(formatBRL(monthIncomeCents))}
-                      </span>
-                    )}
-
-                    {plannedIncomeCents > 0 && monthIncomeCents > plannedIncomeCents && (
-                      <span className="text-[11px] font-medium text-emerald-300">
-                        (acima do previsto)
-                      </span>
-                    )}
-                    {plannedIncomeCents > 0 && monthIncomeCents === plannedIncomeCents && (
-                      <span className="text-[11px] font-medium text-emerald-300">
-                        (previsto atingido)
-                      </span>
-                    )}
+            {/* Progressive disclosure dos detalhes (preservando R50 e anel integrado) */}
+            {isBalanceDetailsExpanded && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="mt-4 pt-3.5 border-t border-white/15 space-y-3.5 text-xs text-slate-200 animate-in fade-in slide-in-from-top-1 duration-200"
+              >
+                {/* Comparativo de receitas */}
+                <div className="space-y-1.5">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span className="text-slate-300 font-medium">Receitas do mês:</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {plannedIncomeCents > 0 ? (
+                        <span className="font-semibold text-white">
+                          {maskValue(formatBRL(monthIncomeCents))} de{' '}
+                          {maskValue(formatBRL(plannedIncomeCents))} previstos
+                        </span>
+                      ) : (
+                        <span className="font-semibold text-white">
+                          {maskValue(formatBRL(monthIncomeCents))}
+                        </span>
+                      )}
+                      {isIncomeOverPlanned && (
+                        <span className="text-[11px] font-medium text-emerald-300">
+                          (acima do previsto)
+                        </span>
+                      )}
+                      {isIncomeAtPlanned && (
+                        <span className="text-[11px] font-medium text-emerald-300">
+                          (previsto atingido)
+                        </span>
+                      )}
+                    </div>
                   </div>
+
+                  {plannedIncomeCents > 0 && (
+                    <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className="bg-emerald-400 h-full rounded-full transition-all duration-500"
+                        style={{ width: `${cappedIncomeProgress}%` }}
+                        role="progressbar"
+                        aria-label="Progresso das receitas em relação ao previsto"
+                        aria-valuenow={cappedIncomeProgress}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                      />
+                    </div>
+                  )}
                 </div>
 
-                {/* Barra de progresso FINA e discreta (h-1 = 4px) com cap em 100% */}
-                {plannedIncomeCents > 0 && (
-                  <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden">
-                    <div
-                      className="bg-emerald-400 h-full rounded-full transition-all duration-500"
-                      style={{
-                        width: `${Math.min(
-                          100,
-                          Math.max(0, Math.round((monthIncomeCents / plannedIncomeCents) * 100)),
-                        )}%`,
-                      }}
-                      role="progressbar"
-                      aria-label="Progresso das receitas em relação ao previsto"
-                      aria-valuenow={Math.min(
-                        100,
-                        Math.max(0, Math.round((monthIncomeCents / plannedIncomeCents) * 100)),
-                      )}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                    />
-                  </div>
-                )}
+                {/* Comparativo de despesas */}
+                {(() => {
+                  const totalExpenseBudget =
+                    bucketsData.essentials.limitCents +
+                    bucketsData.lifestyle.limitCents +
+                    bucketsData.future.limitCents
 
-                {/* Micro-ação quando zero entradas e há previsão cadastrada */}
-                {monthIncomeCents === 0 && plannedIncomeCents > 0 && (
-                  <div className="pt-0.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-300">
-                    <span>Aguardando entradas do mês</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const salaryCategory = categories.find((c) => {
-                          const nameLower = (c.name || '').toLowerCase()
-                          return (
-                            c.type === 'income' &&
-                            (nameLower.includes('salário') ||
-                              nameLower.includes('salario') ||
-                              nameLower.includes('remunera') ||
-                              nameLower.includes('renda'))
-                          )
-                        })
-                        openNewTransaction({
-                          initialType: 'income',
-                          initialCategoryId: salaryCategory?.id,
-                          initialAmountCents: plannedIncomeCents,
-                          initialDescription: 'Salário mensal',
-                        })
-                      }}
-                      className="font-semibold underline underline-offset-4 hover:text-[#FCA311] transition-colors cursor-pointer text-[#FCA311] active:scale-95 py-0.5"
-                    >
-                      [Registrar salário]
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* (b) DESPESAS DO MÊS: "R$ X de R$ Y previstos" quando houver orçamento/balde definido; senão só o gasto */}
-              {(() => {
-                const totalExpenseBudget =
-                  bucketsData.essentials.limitCents +
-                  bucketsData.lifestyle.limitCents +
-                  bucketsData.future.limitCents
-
-                return (
-                  <div className="space-y-1.5 pt-1 border-t border-white/5">
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <span className="text-slate-300 font-medium">Despesas do mês:</span>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {totalExpenseBudget > 0 ? (
-                          <span className="font-semibold text-white">
-                            {maskValue(formatBRL(monthExpenseCents))} de{' '}
-                            {maskValue(formatBRL(totalExpenseBudget))} orçados
-                          </span>
-                        ) : (
-                          <span className="font-semibold text-white">
-                            {maskValue(formatBRL(monthExpenseCents))}
-                          </span>
-                        )}
-
-                        {totalExpenseBudget > 0 && monthExpenseCents > totalExpenseBudget && (
-                          <span className="text-[11px] font-medium text-rose-300">
-                            (acima do orçamento)
-                          </span>
-                        )}
+                  return (
+                    <div className="space-y-1.5 pt-1 border-t border-white/10">
+                      <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <span className="text-slate-300 font-medium">Despesas do mês:</span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {totalExpenseBudget > 0 ? (
+                            <span className="font-semibold text-white">
+                              {maskValue(formatBRL(monthExpenseCents))} de{' '}
+                              {maskValue(formatBRL(totalExpenseBudget))} orçados
+                            </span>
+                          ) : (
+                            <span className="font-semibold text-white">
+                              {maskValue(formatBRL(monthExpenseCents))}
+                            </span>
+                          )}
+                          {totalExpenseBudget > 0 && monthExpenseCents > totalExpenseBudget && (
+                            <span className="text-[11px] font-medium text-rose-300">
+                              (acima do orçamento)
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    {totalExpenseBudget > 0 && (
-                      <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            monthExpenseCents > totalExpenseBudget ? 'bg-rose-400' : 'bg-slate-300'
-                          }`}
-                          style={{
-                            width: `${Math.min(
+                      {totalExpenseBudget > 0 && (
+                        <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              monthExpenseCents > totalExpenseBudget
+                                ? 'bg-rose-400'
+                                : 'bg-slate-300'
+                            }`}
+                            style={{
+                              width: `${Math.min(
+                                100,
+                                Math.max(
+                                  0,
+                                  Math.round((monthExpenseCents / totalExpenseBudget) * 100),
+                                ),
+                              )}%`,
+                            }}
+                            role="progressbar"
+                            aria-label="Progresso das despesas em relação ao orçamento"
+                            aria-valuenow={Math.min(
                               100,
                               Math.max(
                                 0,
                                 Math.round((monthExpenseCents / totalExpenseBudget) * 100),
                               ),
-                            )}%`,
-                          }}
-                          role="progressbar"
-                          aria-label="Progresso das despesas em relação ao orçamento"
-                          aria-valuenow={Math.min(
-                            100,
-                            Math.max(0, Math.round((monthExpenseCents / totalExpenseBudget) * 100)),
-                          )}
-                          aria-valuemin={0}
-                          aria-valuemax={100}
-                        />
+                            )}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
+
+                {/* Comparação em linguagem natural */}
+                {(() => {
+                  const activeMonthLabel = formatMonthYear(activeDate)
+                  const prevMonthLabel = formatMonthYear(prevMonthDate)
+
+                  const hasAnyActivity =
+                    monthIncomeCents > 0 ||
+                    monthExpenseCents > 0 ||
+                    prevMonthIncomeCents > 0 ||
+                    prevMonthExpenseCents > 0
+
+                  if (!hasAnyActivity) return null
+
+                  return (
+                    <div className="pt-2 border-t border-white/10 text-[11px] text-slate-300 space-y-1">
+                      <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-400 block">
+                        Comparação ({prevMonthLabel.split(' ')[0]} vs{' '}
+                        {activeMonthLabel.split(' ')[0]}
+                        ):
+                      </span>
+                      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                        <span>
+                          Receitas: {prevMonthLabel.split(' ')[0]}:{' '}
+                          <strong className="text-white font-medium">
+                            {maskValue(formatBRL(prevMonthIncomeCents))}
+                          </strong>{' '}
+                          · {activeMonthLabel.split(' ')[0]}:{' '}
+                          <strong className="text-white font-medium">
+                            {maskValue(formatBRL(monthIncomeCents))}
+                          </strong>
+                        </span>
                       </div>
-                    )}
-                  </div>
-                )
-              })()}
-
-              {/* (c) COMPARAÇÃO COM MÊS ANTERIOR EM LINGUAGEM NATURAL — NUNCA percentual solto, segue activeMonth */}
-              {(() => {
-                const activeMonthLabel = formatMonthYear(activeDate)
-                const prevMonthLabel = formatMonthYear(prevMonthDate)
-
-                const hasAnyActivity =
-                  monthIncomeCents > 0 ||
-                  monthExpenseCents > 0 ||
-                  prevMonthIncomeCents > 0 ||
-                  prevMonthExpenseCents > 0
-
-                if (!hasAnyActivity) return null
-
-                return (
-                  <div className="pt-2 border-t border-white/10 text-[11px] text-slate-300/90 space-y-1">
-                    <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-400 block">
-                      Comparação ({prevMonthLabel.split(' ')[0]} vs {activeMonthLabel.split(' ')[0]}
-                      ):
-                    </span>
-                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                      <span>
-                        Receitas: {prevMonthLabel.split(' ')[0]}:{' '}
-                        <strong className="text-white font-medium">
-                          {maskValue(formatBRL(prevMonthIncomeCents))}
-                        </strong>{' '}
-                        · {activeMonthLabel.split(' ')[0]}:{' '}
-                        <strong className="text-white font-medium">
-                          {maskValue(formatBRL(monthIncomeCents))}
-                        </strong>
-                      </span>
+                      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                        <span>
+                          Despesas: {prevMonthLabel.split(' ')[0]}:{' '}
+                          <strong className="text-white font-medium">
+                            {maskValue(formatBRL(prevMonthExpenseCents))}
+                          </strong>{' '}
+                          · {activeMonthLabel.split(' ')[0]}:{' '}
+                          <strong className="text-white font-medium">
+                            {maskValue(formatBRL(monthExpenseCents))}
+                          </strong>
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                      <span>
-                        Despesas: {prevMonthLabel.split(' ')[0]}:{' '}
-                        <strong className="text-white font-medium">
-                          {maskValue(formatBRL(prevMonthExpenseCents))}
-                        </strong>{' '}
-                        · {activeMonthLabel.split(' ')[0]}:{' '}
-                        <strong className="text-white font-medium">
-                          {maskValue(formatBRL(monthExpenseCents))}
-                        </strong>
-                      </span>
-                    </div>
-                  </div>
-                )
-              })()}
-            </div>
-          )}
+                  )
+                })()}
+              </div>
+            )}
+          </div>
+
+          {/* Atalhos Rápidos no Fundo Marinho (Chips consistentes) */}
+          <div className="pt-2 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            <button
+              type="button"
+              onClick={() => openNewTransaction('expense')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/15 active:scale-95 transition-all shrink-0 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5 text-[#FCA311]" />
+              <span>Nova despesa</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => openNewTransaction('income')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/15 active:scale-95 transition-all shrink-0 cursor-pointer"
+            >
+              <ArrowUpRight className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Nova receita</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/carteira')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/15 active:scale-95 transition-all shrink-0 cursor-pointer"
+            >
+              <Receipt className="w-3.5 h-3.5 text-slate-300" />
+              <span>Extrato</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/metas')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/15 active:scale-95 transition-all shrink-0 cursor-pointer"
+            >
+              <PiggyBank className="w-3.5 h-3.5 text-[#FCA311]" />
+              <span>Metas</span>
+            </button>
+          </div>
         </div>
+      </div>
 
-        {/* CARD ORÇAMENTO EM 3 BALDES (Desktop 4 col) */}
-        <div className="md:col-span-4 bg-white/95 backdrop-blur-sm rounded-3xl p-5 sm:p-6 border border-[rgba(20,33,61,0.06)] shadow-elevation-1 flex flex-col justify-between">
-          <div>
-            {/* Header do Card (ícone Scale neutro + título + subtítulo com mês de referência discreto) */}
-            <div className="flex items-center justify-between gap-2 mb-4 min-w-0">
-              <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <div className="w-10 h-10 rounded-xl bg-slate-100/90 text-[#14213D] flex items-center justify-center shrink-0 shadow-2xs border border-[rgba(20,33,61,0.04)]">
-                  <Scale className="w-4 h-4" strokeWidth={1.5} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-sm text-[#14213D] leading-tight break-words">
-                    Orçamento em 3 Baldes
-                  </h3>
-                  {budgetModelLabel ? (
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[10px] text-slate-400 font-medium block">
-                        {budgetModelLabel}
-                      </span>
-                    </div>
-                  ) : null}
-                </div>
+      {/* 2. ÁREA CLARA (#F8F9FB) COM CARDS FLUTUANTES SOBREPONDO O FUNDO MARINHO */}
+      <div className="relative -mt-6 sm:-mt-8 px-4 sm:px-6 pb-12 max-w-5xl mx-auto space-y-6">
+        {/* PRIMEIRO CARD CLARO: Sobrepõe o marinho com rounded-3xl generoso e sombra R56 */}
+        <div
+          data-testid="first-floating-card"
+          className="bg-white/95 backdrop-blur-sm rounded-3xl p-5 sm:p-7 border border-[rgba(20,33,61,0.06)] shadow-elevation-2 space-y-6"
+        >
+          {/* Seção A: Progresso das Receitas com ANEL DO PREVISTO (R58 Tarefa 3) */}
+          <div className="flex flex-col sm:flex-row items-center gap-5 sm:gap-6 pb-6 border-b border-slate-100">
+            {/* O Anel / Donut de Progresso */}
+            <div className="relative w-28 h-28 sm:w-32 sm:h-32 shrink-0 flex items-center justify-center">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                {/* Trilha do anel */}
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  className="text-slate-100 stroke-current"
+                  strokeWidth="8"
+                  fill="transparent"
+                />
+                {/* Progresso do anel (cap em 100% de preenchimento, circunferência = 2 * PI * 40 = 251.32) */}
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  className="text-emerald-500 stroke-current transition-all duration-700 ease-out"
+                  strokeWidth="8"
+                  strokeDasharray="251.32"
+                  strokeDashoffset={251.32 - (251.32 * cappedIncomeProgress) / 100}
+                  strokeLinecap="round"
+                  fill="transparent"
+                  role="progressbar"
+                  aria-label="Anel de progresso da renda recebida"
+                  aria-valuenow={cappedIncomeProgress}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                />
+              </svg>
+
+              {/* Centro do anel */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center select-none">
+                <span className="text-xl sm:text-2xl font-bold text-[#14213D] tabular-nums leading-none">
+                  {incomeProgressPercent}%
+                </span>
+                <span className="text-[10px] text-slate-500 font-medium mt-1">da renda</span>
               </div>
             </div>
 
-            {/* As 3 Barras de Balde Simplificadas */}
-            <div className="space-y-3">
+            {/* Informações textuais do Anel da Renda Prevista */}
+            <div className="flex-1 min-w-0 text-center sm:text-left space-y-1.5">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                <h3 className="font-semibold text-base text-[#14213D] tracking-tight">
+                  Receitas Previstas do Mês
+                </h3>
+                {isIncomeOverPlanned && (
+                  <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
+                    acima do previsto
+                  </span>
+                )}
+                {isIncomeAtPlanned && (
+                  <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
+                    previsto atingido
+                  </span>
+                )}
+              </div>
+
+              <p className="text-xs sm:text-sm text-slate-600">
+                {plannedIncomeCents > 0 ? (
+                  <span>
+                    Recebido{' '}
+                    <strong className="text-[#14213D] font-semibold">
+                      {maskValue(formatBRL(monthIncomeCents))}
+                    </strong>{' '}
+                    do total previsto de{' '}
+                    <strong className="text-[#14213D] font-semibold">
+                      {maskValue(formatBRL(plannedIncomeCents))}
+                    </strong>
+                  </span>
+                ) : (
+                  <span>
+                    Total recebido:{' '}
+                    <strong className="text-[#14213D] font-semibold">
+                      {maskValue(formatBRL(monthIncomeCents))}
+                    </strong>
+                  </span>
+                )}
+              </p>
+
+              {/* Comparativo em linguagem natural simplificada */}
+              {prevMonthIncomeCents > 0 && (
+                <p className="text-[11px] text-slate-400">
+                  Mês anterior ({formatMonthYear(prevMonthDate).split(' ')[0]}):{' '}
+                  {maskValue(formatBRL(prevMonthIncomeCents))}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Seção B: Orçamento em 3 Baldes */}
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-4 min-w-0">
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div className="w-9 h-9 rounded-xl bg-slate-100 text-[#14213D] flex items-center justify-center shrink-0 border border-[rgba(20,33,61,0.04)]">
+                  <Scale className="w-4 h-4" strokeWidth={1.5} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-semibold text-sm text-[#14213D] leading-tight">
+                    Orçamento em 3 Baldes
+                  </h3>
+                  {budgetModelLabel && (
+                    <span className="text-[10px] text-slate-400 font-medium block">
+                      {budgetModelLabel}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => navigate('/orcamentos')}
+                className="text-xs font-semibold text-[#14213D] hover:text-[#14213D] flex items-center gap-1 cursor-pointer"
+              >
+                <span>Ajustar</span>
+                <ChevronRight className="w-3.5 h-3.5 text-[#FCA311]" />
+              </button>
+            </div>
+
+            {/* As 3 Barras */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
                 {
                   key: 'essentials',
@@ -1057,8 +1164,10 @@ export default function Home() {
                 const BucketIcon = bucket.Icon
 
                 return (
-                  <div key={bucket.key} className="space-y-1.5">
-                    {/* Linha topo do balde: Nome completo + % dinâmico do modelo à esquerda | Valor restante à direita */}
+                  <div
+                    key={bucket.key}
+                    className="p-3.5 rounded-2xl bg-slate-50/70 border border-slate-100 space-y-1.5"
+                  >
                     <div className="flex items-baseline justify-between gap-2 min-w-0">
                       <span className="font-semibold text-slate-800 text-xs flex items-center gap-1.5 min-w-0">
                         <BucketIcon
@@ -1072,45 +1181,41 @@ export default function Home() {
                           </span>
                         )}
                       </span>
+                    </div>
 
-                      {/* Figura única de saldo restante / estourado / intacto */}
-                      <span className="text-right shrink-0 tabular-nums">
+                    <div className="flex items-baseline justify-between text-right tabular-nums">
+                      <span className="text-[11px] text-slate-500">
                         {bucket.limit > 0 ? (
                           isOver ? (
-                            <span className="text-[11px] font-bold text-rose-600 break-words">
+                            <span className="font-bold text-rose-600">
                               estourou {maskValue(formatBRL(Math.abs(remaining)))}
                             </span>
                           ) : !hasSpent ? (
-                            <span className="text-[11px] font-semibold text-slate-700 break-words">
+                            <span className="font-semibold text-slate-700">
                               resta {maskValue(formatBRL(remaining))}{' '}
                               <span className="text-[10px] text-slate-400 font-normal">
                                 (intacto)
                               </span>
                             </span>
                           ) : (
-                            <span className="text-[11px] font-bold text-slate-700 break-words">
+                            <span className="font-bold text-slate-700">
                               resta {maskValue(formatBRL(remaining))}
                             </span>
                           )
                         ) : (
-                          <span className="text-[11px] text-slate-400 font-medium">
-                            {maskValue(formatBRL(bucket.spent))}
-                          </span>
+                          <span>{maskValue(formatBRL(bucket.spent))}</span>
                         )}
                       </span>
                     </div>
 
-                    {/* Barra de progresso com gradiente sutil e tom de estourou refinado (#E11D48 com fade suave) */}
-                    <div className="w-full bg-slate-100/90 h-2 rounded-full overflow-hidden shadow-inner">
+                    <div className="w-full bg-slate-200/70 h-2 rounded-full overflow-hidden shadow-inner">
                       <div
                         className={`h-full rounded-full transition-all duration-700 ${
                           isOver
                             ? 'bg-gradient-to-r from-[#E11D48] to-[#f43f5e]'
                             : bucket.barGradient
                         }`}
-                        style={{
-                          width: `${Math.min(bucket.percent, 100)}%`,
-                        }}
+                        style={{ width: `${Math.min(bucket.percent, 100)}%` }}
                       />
                     </div>
                   </div>
@@ -1118,201 +1223,273 @@ export default function Home() {
               })}
             </div>
 
-            {/* Linha discreta de rodapé unificada com os exemplos das categorias */}
-            <p className="mt-3.5 pt-2 border-t border-slate-100 text-[10px] text-slate-400 font-medium break-words leading-relaxed text-center sm:text-left">
+            <p className="mt-3 text-[10px] text-slate-400 font-medium leading-relaxed text-center sm:text-left">
               Necessidades: moradia e mercado · Estilo: lazer e refeições · Futuro: reserva e metas
             </p>
           </div>
-
-          {/* Link sutil para Carteira */}
-          <button
-            type="button"
-            onClick={() => navigate('/orcamentos')}
-            className="w-full mt-4 pt-3 border-t border-slate-100 text-xs font-semibold text-[#14213D] hover:text-[#14213D] hover:bg-[#E5E5E5]/50 py-2 px-2.5 rounded-xl transition-colors flex items-center justify-between cursor-pointer group"
-          >
-            <span className="group-hover:underline">Ver detalhes na Carteira →</span>
-            <ChevronRight className="w-4 h-4 text-[#FCA311] group-hover:translate-x-0.5 transition-transform" />
-          </button>
-        </div>
-      </div>
-
-      {/* 4. Seção Últimas Transações */}
-      <div className="bg-white/95 backdrop-blur-sm rounded-3xl border border-[rgba(20,33,61,0.06)] p-5 sm:p-7 shadow-elevation-1">
-        <div className="flex items-center justify-between mb-4 gap-2">
-          <div className="min-w-0">
-            <h3 className="font-semibold text-base text-[#14213D] break-words">
-              Últimas Transações
-            </h3>
-            <p className="text-xs text-muted-foreground break-words mt-0.5">
-              Histórico recente de receitas e despesas
-            </p>
-          </div>
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/carteira')}
-            className="text-xs font-semibold text-[#14213D] hover:text-[#14213D] hover:bg-slate-100 rounded-xl px-2.5 py-1.5 shrink-0 h-auto"
-          >
-            <span>Ver todas</span>
-            <ChevronRight className="w-4 h-4 ml-1 text-[#FCA311]" />
-          </Button>
         </div>
 
-        {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex items-center justify-between p-3">
-                <div className="flex items-center gap-3">
-                  <Skeleton className="w-10 h-10 rounded-xl" />
-                  <div className="space-y-1">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-3 w-20" />
-                  </div>
-                </div>
-                <Skeleton className="h-5 w-20" />
+        {/* 3. NOVO CARD: GRÁFICO DE BARRAS POR CATEGORIA (R58 Tarefa 4) */}
+        <div
+          data-testid="category-expenses-card"
+          className="bg-white/95 backdrop-blur-sm rounded-3xl p-5 sm:p-7 border border-[rgba(20,33,61,0.06)] shadow-elevation-1 space-y-4"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-slate-100 text-[#14213D] flex items-center justify-center shrink-0 border border-[rgba(20,33,61,0.04)]">
+                <BarChart3 className="w-4 h-4" strokeWidth={1.5} />
               </div>
-            ))}
-          </div>
-        ) : recentItems.length === 0 ? (
-          /* Empty State com ilustração line-art */
-          <div className="py-12 flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded-3xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 mb-3">
-              <WalletCards className="w-8 h-8 stroke-[1.5]" />
+              <div>
+                <h3 className="font-semibold text-sm sm:text-base text-[#14213D] leading-tight">
+                  Gastos por Categoria
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Principais despesas realizadas no mês
+                </p>
+              </div>
             </div>
-            <h4 className="font-semibold text-slate-800 dark:text-slate-100 text-sm">
-              Nenhuma transação ainda
-            </h4>
-            <p className="text-xs text-muted-foreground mt-1 max-w-xs mb-4">
-              Comece adicionando receitas ou despesas compartilhadas pela família.
-            </p>
-            <Button
-              onClick={() => openNewTransaction('expense')}
-              className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-semibold text-xs rounded-xl shadow-curiango"
-            >
-              <Plus className="w-4 h-4 mr-1.5 stroke-[1.5]" />
-              Adicionar primeira transação
-            </Button>
+
+            {categoryExpenses.totalExpensesInMonth > 0 && (
+              <span className="text-xs font-semibold text-slate-700 tabular-nums">
+                Total: {maskValue(formatBRL(categoryExpenses.totalExpensesInMonth))}
+              </span>
+            )}
           </div>
-        ) : (
-          <div className="divide-y divide-border/40">
-            {recentItems.map((item) => {
-              const tx = item.representativeTx
-              const isIncome = tx.type === 'income'
-              // Se for grupo de parcelamento, exibe a descrição base completa sem abreviar
-              // Se for transação normal, usa formatTransactionTitle
-              const displayTitle = item.isGroup ? item.baseDescription : formatTransactionTitle(tx)
 
-              return (
-                <div
-                  key={item.id}
-                  onClick={() => {
-                    setSelectedTx(tx)
-                    setIsDetailOpen(true)
-                  }}
-                  className="flex items-start sm:items-center justify-between gap-3 py-3 px-2 sm:px-2.5 hover:bg-slate-50/90 dark:hover:bg-slate-800/50 rounded-2xl cursor-pointer transition-colors group"
-                >
-                  {/* Bloco Esquerda: Ícone + Textos */}
-                  <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-                    {/* Ícone de Categoria - Container tingido suave CDS v1.0 */}
-                    <CategoryIconBox
-                      icon={tx.category?.icon}
-                      color={tx.category?.color}
-                      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 sm:mt-0"
-                      iconClassName="w-4 h-4"
-                      strokeWidth={1.5}
-                    />
+          {loading ? (
+            <div className="space-y-3 pt-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="space-y-1.5">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-full rounded-full" />
+                </div>
+              ))}
+            </div>
+          ) : categoryExpenses.list.length === 0 ? (
+            <div className="py-8 flex flex-col items-center justify-center text-center">
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-2">
+                <BarChart3 className="w-6 h-6 stroke-[1.5]" />
+              </div>
+              <p className="text-xs font-semibold text-slate-700">
+                Nenhum gasto registrado neste mês
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Suas despesas aparecerão organizadas por categorias aqui.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3 pt-1">
+              {categoryExpenses.list.map((item) => {
+                const percentOfTotal =
+                  categoryExpenses.totalExpensesInMonth > 0
+                    ? Math.round((item.amountCents / categoryExpenses.totalExpensesInMonth) * 100)
+                    : 0
+                const barWidth =
+                  categoryExpenses.maxAmount > 0
+                    ? Math.round((item.amountCents / categoryExpenses.maxAmount) * 100)
+                    : 0
 
-                    {/* Bloco de Textos (Título + Metadados) */}
-                    <div className="min-w-0 flex-1">
-                      {/* Linha 1: Título completo + Badges de status/tipo (Parcelado estilo banco / Fixa) */}
-                      <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-                        <p
-                          className="font-medium text-xs sm:text-sm text-[#14213D] dark:text-white group-hover:text-[#14213D] transition-colors break-words leading-tight"
-                          title={displayTitle}
-                        >
-                          {displayTitle}
-                        </p>
-                        {item.isGroup ? (
-                          <span
-                            className="inline-flex items-center text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200/70 px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap"
-                            title={`Compra parcelada: parcela ${item.currentInstallment} de ${item.totalInstallments}`}
-                          >
-                            Parcelado • {item.currentInstallment}/{item.totalInstallments}
-                          </span>
-                        ) : null}
-                        {tx.is_recurring ? (
-                          <span className="inline-flex items-center text-[9px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300/60 px-1.5 py-0.2 rounded-md shrink-0">
-                            Fixa
-                          </span>
-                        ) : null}
-                      </div>
-
-                      {/* Linha 2: Metadados responsivos (Wrap amigável no mobile para não esmagar nada) */}
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 min-w-0 text-xs text-muted-foreground">
-                        {/* DATA com ícone de calendário explícito */}
-                        <span
-                          className="inline-flex items-center gap-1 font-normal text-muted-foreground bg-slate-100/80 dark:bg-slate-800/80 px-1.5 py-0.5 rounded-md shrink-0 text-xs capitalize"
-                          title={`Data: ${item.transactionDate}`}
-                        >
-                          <Calendar
-                            className="w-3 h-3 text-muted-foreground shrink-0"
-                            strokeWidth={1.5}
-                          />
-                          <span>{formatRelativeDate(item.transactionDate)}</span>
+                return (
+                  <div key={item.id} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-[#14213D] truncate max-w-[200px] sm:max-w-none">
+                        {item.name}
+                      </span>
+                      <div className="flex items-center gap-2 shrink-0 tabular-nums">
+                        <span className="font-semibold text-slate-700">
+                          {maskValue(formatBRL(item.amountCents))}
                         </span>
-
-                        <span className="text-slate-300 shrink-0 hidden xs:inline">•</span>
-
-                        {/* Chip do membro */}
-                        <span className="inline-flex items-center gap-1 font-normal text-muted-foreground bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md shrink-0 text-xs">
-                          <span className="w-2.5 h-2.5 rounded-full bg-[#14213D] text-white flex items-center justify-center text-[7px] font-bold shrink-0">
-                            {tx.member?.name?.charAt(0).toUpperCase() || 'M'}
-                          </span>
-                          <span className="break-words">{tx.member?.name || 'Membro'}</span>
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          ({percentOfTotal}%)
                         </span>
-
-                        <span className="text-slate-300 shrink-0 hidden xs:inline">•</span>
-
-                        {/* Categoria / Subcategoria ou Pendente */}
-                        {tx.category ? (
-                          <span className="font-normal text-muted-foreground text-xs break-words">
-                            <span>{tx.category.name}</span>
-                            {tx.subcategory && (
-                              <span className="text-[#14213D] dark:text-slate-200 font-medium ml-1">
-                                · {tx.subcategory.name}
-                              </span>
-                            )}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200/80 px-1.5 py-0.2 rounded shrink-0">
-                            Pendente
-                          </span>
-                        )}
                       </div>
                     </div>
-                  </div>
 
-                  {/* Bloco Direita: Valor alinhado e estável */}
-                  <div className="text-right shrink-0 pl-1 pt-0.5 sm:pt-0">
-                    <span
-                      className={`font-semibold tracking-tight text-xs sm:text-sm md:text-base tabular-nums whitespace-nowrap ${
-                        isIncome ? 'text-[#059669]' : 'text-[#E11D48]'
-                      }`}
-                    >
-                      {hideValues
-                        ? 'R$ ••••••'
-                        : `${isIncome ? '+' : '−'} ${formatBRL(item.amountCents)}`}
-                    </span>
-                    {item.isGroup && (
-                      <span className="block text-[9px] text-muted-foreground tabular-nums">
-                        /parcela
-                      </span>
-                    )}
+                    {/* Barra de progresso CDS: azul-marinho #14213D com cantos suaves */}
+                    <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                      <div
+                        className="bg-[#14213D] h-full rounded-full transition-all duration-500 ease-out"
+                        style={{ width: `${barWidth}%` }}
+                        role="progressbar"
+                        aria-label={`Gastos na categoria ${item.name}`}
+                        aria-valuenow={barWidth}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                      />
+                    </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* 4. SEÇÃO ÚLTIMAS TRANSAÇÕES */}
+        <div className="bg-white/95 backdrop-blur-sm rounded-3xl border border-[rgba(20,33,61,0.06)] p-5 sm:p-7 shadow-elevation-1">
+          <div className="flex items-center justify-between mb-4 gap-2">
+            <div className="min-w-0">
+              <h3 className="font-semibold text-base text-[#14213D] break-words">
+                Últimas Transações
+              </h3>
+              <p className="text-xs text-muted-foreground break-words mt-0.5">
+                Histórico recente de receitas e despesas
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/carteira')}
+              className="text-xs font-semibold text-[#14213D] hover:text-[#14213D] hover:bg-slate-100 rounded-xl px-2.5 py-1.5 shrink-0 h-auto"
+            >
+              <span>Ver todas</span>
+              <ChevronRight className="w-4 h-4 ml-1 text-[#FCA311]" />
+            </Button>
           </div>
-        )}
+
+          {loading ? (
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex items-center justify-between p-3">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="w-10 h-10 rounded-xl" />
+                    <div className="space-y-1">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-5 w-20" />
+                </div>
+              ))}
+            </div>
+          ) : recentItems.length === 0 ? (
+            <div className="py-12 flex flex-col items-center text-center">
+              <div className="w-16 h-16 rounded-3xl bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+                <WalletCards className="w-8 h-8 stroke-[1.5]" />
+              </div>
+              <h4 className="font-semibold text-slate-800 text-sm">Nenhuma transação ainda</h4>
+              <p className="text-xs text-muted-foreground mt-1 max-w-xs mb-4">
+                Comece adicionando receitas ou despesas compartilhadas pela família.
+              </p>
+              <Button
+                onClick={() => openNewTransaction('expense')}
+                className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-semibold text-xs rounded-xl shadow-curiango"
+              >
+                <Plus className="w-4 h-4 mr-1.5 stroke-[1.5]" />
+                Adicionar primeira transação
+              </Button>
+            </div>
+          ) : (
+            <div className="divide-y divide-border/40">
+              {recentItems.map((item) => {
+                const tx = item.representativeTx
+                const isIncome = tx.type === 'income'
+                const displayTitle = item.isGroup
+                  ? item.baseDescription
+                  : formatTransactionTitle(tx)
+
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => {
+                      setSelectedTx(tx)
+                      setIsDetailOpen(true)
+                    }}
+                    className="flex items-start sm:items-center justify-between gap-3 py-3 px-2 sm:px-2.5 hover:bg-slate-50/90 rounded-2xl cursor-pointer transition-colors group"
+                  >
+                    <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                      <CategoryIconBox
+                        icon={tx.category?.icon}
+                        color={tx.category?.color}
+                        className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 sm:mt-0"
+                        iconClassName="w-4 h-4"
+                        strokeWidth={1.5}
+                      />
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                          <p
+                            className="font-medium text-xs sm:text-sm text-[#14213D] group-hover:text-[#14213D] transition-colors break-words leading-tight"
+                            title={displayTitle}
+                          >
+                            {displayTitle}
+                          </p>
+                          {item.isGroup ? (
+                            <span
+                              className="inline-flex items-center text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200/70 px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap"
+                              title={`Compra parcelada: parcela ${item.currentInstallment} de ${item.totalInstallments}`}
+                            >
+                              Parcelado • {item.currentInstallment}/{item.totalInstallments}
+                            </span>
+                          ) : null}
+                          {tx.is_recurring ? (
+                            <span className="inline-flex items-center text-[9px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300/60 px-1.5 py-0.2 rounded-md shrink-0">
+                              Fixa
+                            </span>
+                          ) : null}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 min-w-0 text-xs text-muted-foreground">
+                          <span
+                            className="inline-flex items-center gap-1 font-normal text-muted-foreground bg-slate-100/80 px-1.5 py-0.5 rounded-md shrink-0 text-xs capitalize"
+                            title={`Data: ${item.transactionDate}`}
+                          >
+                            <Calendar
+                              className="w-3 h-3 text-muted-foreground shrink-0"
+                              strokeWidth={1.5}
+                            />
+                            <span>{formatRelativeDate(item.transactionDate)}</span>
+                          </span>
+
+                          <span className="text-slate-300 shrink-0 hidden xs:inline">•</span>
+
+                          <span className="inline-flex items-center gap-1 font-normal text-muted-foreground bg-slate-100 px-1.5 py-0.5 rounded-md shrink-0 text-xs">
+                            <span className="w-2.5 h-2.5 rounded-full bg-[#14213D] text-white flex items-center justify-center text-[7px] font-bold shrink-0">
+                              {tx.member?.name?.charAt(0).toUpperCase() || 'M'}
+                            </span>
+                            <span className="break-words">{tx.member?.name || 'Membro'}</span>
+                          </span>
+
+                          <span className="text-slate-300 shrink-0 hidden xs:inline">•</span>
+
+                          {tx.category ? (
+                            <span className="font-normal text-muted-foreground text-xs break-words">
+                              <span>{tx.category.name}</span>
+                              {tx.subcategory && (
+                                <span className="text-[#14213D] font-medium ml-1">
+                                  · {tx.subcategory.name}
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200/80 px-1.5 py-0.2 rounded shrink-0">
+                              Pendente
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0 pl-1 pt-0.5 sm:pt-0">
+                      <span
+                        className={`font-semibold tracking-tight text-xs sm:text-sm md:text-base tabular-nums whitespace-nowrap ${
+                          isIncome ? 'text-[#059669]' : 'text-[#E11D48]'
+                        }`}
+                      >
+                        {hideValues
+                          ? 'R$ ••••••'
+                          : `${isIncome ? '+' : '−'} ${formatBRL(item.amountCents)}`}
+                      </span>
+                      {item.isGroup && (
+                        <span className="block text-[9px] text-muted-foreground tabular-nums">
+                          /parcela
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* DIÁLOGO DETALHE DA TRANSAÇÃO */}

@@ -291,8 +291,14 @@ export default function Layout() {
           </header>
         )}
 
-        {/* CONTEÚDO PRINCIPAL (max-width 1200px centralizado) */}
-        <main className="flex-1 w-full max-w-[1200px] mx-auto p-4 sm:p-6 pb-32 md:pb-8 overflow-x-hidden min-w-0">
+        {/* CONTEÚDO PRINCIPAL: Na Home (/inicio), o topo sangra sem padding superior e lateral para encostar nas bordas, e o miolo fica responsivo */}
+        <main
+          className={`flex-1 w-full overflow-x-hidden min-w-0 ${
+            location.pathname === '/inicio'
+              ? 'p-0 pb-32 md:pb-8'
+              : 'max-w-[1200px] mx-auto p-4 sm:p-6 pb-32 md:pb-8'
+          }`}
+        >
           <Outlet />
         </main>
 
@@ -302,18 +308,18 @@ export default function Layout() {
         {/* BANNER EDUCATIVO DE INSTALAÇÃO PWA (POSICIONADO ACIMA DO DOCK FLUTUANTE) */}
         <InstallPwaBanner variant="bottom-nav" />
 
-        {/* DOCK FLUTUANTE EM PÍLULA (MOBILE APENAS < 768px, 360–412px SAFE) */}
+        {/* DOCK FLUTUANTE EM PÍLULA (MOBILE APENAS < 768px, 360–412px SAFE) — R58: Fundo Azul-Marinho #14213D espelhando o herói sangrado do topo */}
         <nav
           aria-label="Navegação Principal"
           className="md:hidden fixed bottom-3 sm:bottom-4 inset-x-0 z-40 px-3 sm:px-4 max-w-md mx-auto pointer-events-none"
         >
-          <div className="pointer-events-auto w-full bg-white/95 backdrop-blur-md border border-[rgba(20,33,61,0.06)] shadow-elevation-3 rounded-full px-2 py-1.5 flex items-center justify-between transition-all">
+          <div className="pointer-events-auto w-full bg-[#14213D] border border-white/10 shadow-elevation-3 rounded-full px-2 py-1.5 flex items-center justify-between transition-all">
             {/* 1. Início */}
             <NavLink
               to="/inicio"
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-brand-amber font-semibold' : 'text-brand/60 hover:text-brand'
+                  isActive ? 'text-[#FCA311] font-semibold' : 'text-white/70 hover:text-white'
                 }`
               }
             >
@@ -321,7 +327,7 @@ export default function Layout() {
                 <>
                   <div
                     className={`p-1 rounded-full transition-all duration-200 ${
-                      isActive ? 'bg-brand-amber/15 scale-105' : ''
+                      isActive ? 'bg-[#FCA311]/20 scale-105 text-[#FCA311]' : ''
                     }`}
                   >
                     <Home className="w-5 h-5" strokeWidth={1.5} />
@@ -336,7 +342,7 @@ export default function Layout() {
               to="/carteira"
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-brand-amber font-semibold' : 'text-brand/60 hover:text-brand'
+                  isActive ? 'text-[#FCA311] font-semibold' : 'text-white/70 hover:text-white'
                 }`
               }
             >
@@ -344,7 +350,7 @@ export default function Layout() {
                 <>
                   <div
                     className={`p-1 rounded-full transition-all duration-200 ${
-                      isActive ? 'bg-brand-amber/15 scale-105' : ''
+                      isActive ? 'bg-[#FCA311]/20 scale-105 text-[#FCA311]' : ''
                     }`}
                   >
                     <Wallet className="w-5 h-5" strokeWidth={1.5} />
@@ -354,18 +360,18 @@ export default function Layout() {
               )}
             </NavLink>
 
-            {/* 3. BOTÃO CENTRAL "Nova" (AÇÃO ERGUIDA COM RÓTULO + ÍCONE — PADRÃO OURO) */}
+            {/* 3. BOTÃO CENTRAL "Nova" (AÇÃO ERGUIDA COM RÓTULO + ÍCONE — PADRÃO OURO R54/R55/R58) */}
             <div className="flex-1 flex flex-col items-center justify-center py-0.5 -mt-3.5">
               <button
                 type="button"
                 onClick={() => openNewTransaction('expense')}
-                className="w-11 h-11 rounded-full bg-gradient-to-tr from-brand-amber via-[#fba825] to-[#ffb845] text-brand flex items-center justify-center shadow-lg shadow-brand-amber/40 border-2 border-white active:scale-90 hover:scale-105 transition-all duration-200 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-amber"
+                className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#FCA311] via-[#fba825] to-[#ffb845] text-[#14213D] flex items-center justify-center shadow-lg shadow-[#FCA311]/30 border-2 border-[#14213D] active:scale-90 hover:scale-105 transition-all duration-200 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
                 aria-label="Nova Transação"
                 title="Nova Transação"
               >
                 <Plus className="w-5 h-5 stroke-[2.5]" />
               </button>
-              <span className="text-[10px] font-semibold text-brand tracking-tight mt-0.5 leading-none">
+              <span className="text-[10px] font-semibold text-white tracking-tight mt-0.5 leading-none">
                 Nova
               </span>
             </div>
@@ -375,7 +381,7 @@ export default function Layout() {
               to="/metas"
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-brand-amber font-semibold' : 'text-brand/60 hover:text-brand'
+                  isActive ? 'text-[#FCA311] font-semibold' : 'text-white/70 hover:text-white'
                 }`
               }
             >
@@ -383,7 +389,7 @@ export default function Layout() {
                 <>
                   <div
                     className={`p-1 rounded-full transition-all duration-200 ${
-                      isActive ? 'bg-brand-amber/15 scale-105' : ''
+                      isActive ? 'bg-[#FCA311]/20 scale-105 text-[#FCA311]' : ''
                     }`}
                   >
                     <Target className="w-5 h-5" strokeWidth={1.5} />
@@ -398,7 +404,7 @@ export default function Layout() {
               to="/perfil"
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-brand-amber font-semibold' : 'text-brand/60 hover:text-brand'
+                  isActive ? 'text-[#FCA311] font-semibold' : 'text-white/70 hover:text-white'
                 }`
               }
             >
@@ -406,7 +412,7 @@ export default function Layout() {
                 <>
                   <div
                     className={`p-1 rounded-full transition-all duration-200 ${
-                      isActive ? 'bg-brand-amber/15 scale-105' : ''
+                      isActive ? 'bg-[#FCA311]/20 scale-105 text-[#FCA311]' : ''
                     }`}
                   >
                     <User className="w-5 h-5" strokeWidth={1.5} />
