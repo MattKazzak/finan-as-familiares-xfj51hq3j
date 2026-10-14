@@ -279,23 +279,23 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-[#F8F9FB] flex flex-col justify-between items-center px-4 py-8 sm:py-12 selection:bg-[#FCA311]/20">
       <div className="w-full max-w-[420px] mx-auto my-auto flex flex-col items-center">
-        {/* Marca e Símbolo do Curiangoo */}
-        <div className="flex flex-col items-center text-center mb-8 sm:mb-10 w-full">
+        {/* Marca e Símbolo do Curiangoo — Layout vertical centralizado e respiro generoso */}
+        <header className="flex flex-col items-center text-center mb-8 sm:mb-10 w-full">
           <div
             data-testid="brand-logo-container"
             aria-label="Curiangoo"
-            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#14213D] shadow-elevation-1 mb-4 flex items-center justify-center p-2.5 transition-transform hover:scale-105"
+            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#14213D] shadow-elevation-1 mb-5 flex items-center justify-center p-2.5 transition-transform hover:scale-105"
           >
             <CuriangoLogo size={36} color="#FCA311" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-semibold text-[#14213D] tracking-tight">
             Curiangoo
           </h1>
-          <p className="text-xs sm:text-sm font-semibold text-[#FCA311] mt-1 tracking-wide">
+          <p className="text-xs sm:text-sm font-medium text-[#FCA311] mt-1.5 tracking-wide">
             Finanças Familiares no Prumo
           </p>
 
-          <p className="text-xs sm:text-sm text-slate-600 font-normal mt-3 max-w-xs leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-600 font-light mt-3 max-w-xs leading-relaxed">
             {mode === 'login' &&
               'Acesse sua conta familiar para acompanhar despesas, receitas e investimentos.'}
             {mode === 'signup' &&
@@ -307,13 +307,13 @@ export default function Login() {
             {mode === 'forgot_password' &&
               'Informe seu e-mail para receber as instruções de redefinição de senha.'}
           </p>
-        </div>
+        </header>
 
-        {/* Card Principal — Elegância Minimalista Fintech em Tema Claro */}
-        <div className="w-full bg-white rounded-3xl p-6 sm:p-8 shadow-elevation-2 border border-[#14213D]/[0.06] backdrop-blur-sm">
+        {/* Card Principal — Elegância Minimalista Fintech em Tema Claro com Sombra Suave */}
+        <main className="w-full bg-white rounded-3xl p-6 sm:p-9 shadow-elevation-2 border border-[#14213D]/[0.06] backdrop-blur-sm">
           {/* Alternador de Modo Minimalista (Login / Criar Conta) */}
           {mode !== 'forgot_password' && (
-            <div className="flex p-1 bg-[#F8F9FB] rounded-2xl mb-6 border border-[#14213D]/[0.05]">
+            <div className="flex p-1 bg-[#F8F9FB] rounded-2xl mb-7 border border-[#14213D]/[0.05]">
               <button
                 type="button"
                 onClick={() => switchMode('login')}
@@ -341,7 +341,7 @@ export default function Login() {
 
           {/* Indicador de Passos no Cadastro */}
           {mode === 'signup' && (
-            <div className="mb-6 flex items-center justify-between px-1">
+            <div className="mb-7 flex items-center justify-between px-1">
               <div className="flex items-center gap-2">
                 <span
                   className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-semibold tabular-nums transition-colors ${
@@ -356,7 +356,7 @@ export default function Login() {
                   className={`text-xs ${
                     signupStep === 'credentials'
                       ? 'font-semibold text-[#14213D]'
-                      : 'text-slate-600 font-medium'
+                      : 'text-slate-600 font-light'
                   }`}
                 >
                   Credenciais
@@ -377,36 +377,11 @@ export default function Login() {
                   className={`text-xs ${
                     signupStep === 'profile'
                       ? 'font-semibold text-[#14213D]'
-                      : 'text-slate-500 font-normal'
+                      : 'text-slate-500 font-light'
                   }`}
                 >
                   Seu Nome
                 </span>
-              </div>
-            </div>
-          )}
-
-          {/* Mensagem de Erro com Contraste WCAG AAA (bordeaux #991B1B sobre fundo sutil) */}
-          {errorMessage && (
-            <div
-              data-testid="login-error-message"
-              role="alert"
-              className="mb-5 p-3.5 text-xs bg-rose-50 border border-rose-200 text-rose-900 rounded-2xl font-medium animate-fade-in flex items-start gap-2.5 leading-relaxed"
-            >
-              <AlertCircle className="w-4 h-4 text-rose-700 shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <span>{errorMessage}</span>
-                {mode === 'login' && errorMessage.includes('E-mail ou senha incorretos') && (
-                  <div className="mt-1.5 pt-1.5 border-t border-rose-200/60">
-                    <button
-                      type="button"
-                      onClick={() => switchMode('signup')}
-                      className="font-semibold text-rose-950 underline hover:text-rose-800 transition-colors"
-                    >
-                      Ainda não tem conta? Clique para se cadastrar
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -416,7 +391,7 @@ export default function Login() {
             <div
               data-testid="email-not-confirmed-alert"
               role="alert"
-              className="mb-5 p-4 text-xs bg-amber-50/90 border border-amber-300 text-amber-950 rounded-2xl font-medium animate-fade-in leading-relaxed space-y-3 shadow-elevation-1"
+              className="mb-6 p-4 text-xs bg-amber-50/90 border border-amber-300 text-amber-950 rounded-2xl font-medium animate-fade-in leading-relaxed space-y-3 shadow-elevation-1"
             >
               <div className="flex items-start gap-2.5">
                 <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
@@ -456,35 +431,35 @@ export default function Login() {
             <div
               data-testid="login-success-message"
               role="status"
-              className="mb-5 p-3.5 text-xs bg-emerald-50 border border-emerald-200 text-emerald-950 rounded-2xl font-medium animate-fade-in flex items-start gap-2.5 leading-relaxed"
+              className="mb-6 p-3.5 text-xs bg-emerald-50 border border-emerald-200 text-emerald-950 rounded-2xl font-medium animate-fade-in flex items-start gap-2.5 leading-relaxed"
             >
               <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
               <span>{successMessage}</span>
             </div>
           )}
 
-          {/* Formulário Interativo com Amplo Respiro Vertical */}
+          {/* Formulário Interativo com Amplo Respiro Vertical (space-y-6) */}
           <form
             onSubmit={
               mode === 'signup' && signupStep === 'credentials'
                 ? handleNextSignupStep
                 : handleSubmit
             }
-            className="space-y-5"
+            className="space-y-6"
           >
             {/* ETAPA DE CADASTRO 2: NOME */}
             {mode === 'signup' && signupStep === 'profile' && (
-              <div className="space-y-4 animate-fade-in">
+              <div className="space-y-5 animate-fade-in">
                 <div>
                   <Label
                     htmlFor="signup-name"
-                    className="text-xs font-normal text-slate-700 mb-1.5 block"
+                    className="text-xs font-light text-slate-600 mb-1 block tracking-wide"
                   >
                     Seu Nome
                   </Label>
-                  <div className="relative">
+                  <div className="relative group border-b border-slate-300 focus-within:border-[#FCA311] focus-within:ring-1 focus-within:ring-[#FCA311] transition-all bg-transparent">
                     <UserIcon
-                      className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                      className="w-4 h-4 text-slate-400 group-focus-within:text-[#FCA311] absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
                       strokeWidth={1.5}
                     />
                     <Input
@@ -493,12 +468,12 @@ export default function Login() {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Ex: Matheus"
-                      className="pl-11 h-12 rounded-xl bg-white border-slate-300 placeholder:text-slate-500 text-slate-900 focus-visible:ring-[#FCA311] focus-visible:border-[#FCA311] text-sm"
+                      className="pl-8 pr-2 h-11 border-0 rounded-none bg-transparent placeholder:text-slate-400 placeholder:font-light text-slate-900 font-normal focus-visible:ring-0 focus-visible:ring-offset-0 text-sm shadow-none"
                       required
                       autoFocus
                     />
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-1.5">
+                  <p className="text-[11px] text-slate-500 font-light mt-1.5 leading-normal">
                     Seu nome será exibido para identificar quem registrou os lançamentos. O nome da
                     família será definido no próximo passo.
                   </p>
@@ -509,17 +484,17 @@ export default function Login() {
             {/* ETAPA DE CREDENCIAIS (LOGIN OU SIGNUP PASSO 1 OU RECUPERAÇÃO) */}
             {(mode !== 'signup' || signupStep === 'credentials') && (
               <>
-                {/* E-mail */}
+                {/* E-mail (Estilo Underline com Ícone Linear e Destaque Âmbar #FCA311 no Campo Ativo) */}
                 <div>
                   <Label
                     htmlFor="auth-email"
-                    className="text-xs font-normal text-slate-700 mb-1.5 block"
+                    className="text-xs font-light text-slate-600 mb-1 block tracking-wide"
                   >
                     E-mail
                   </Label>
-                  <div className="relative">
+                  <div className="relative group border-b border-slate-300 focus-within:border-[#FCA311] focus-within:ring-1 focus-within:ring-[#FCA311] transition-all bg-transparent">
                     <Mail
-                      className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                      className="w-4 h-4 text-slate-400 group-focus-within:text-[#FCA311] absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
                       strokeWidth={1.5}
                     />
                     <Input
@@ -528,7 +503,7 @@ export default function Login() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="seu.email@exemplo.com"
-                      className="pl-11 h-12 rounded-xl bg-white border-slate-300 placeholder:text-slate-500 text-slate-900 focus-visible:ring-[#FCA311] focus-visible:border-[#FCA311] text-sm"
+                      className="pl-8 pr-2 h-11 border-0 rounded-none bg-transparent placeholder:text-slate-400 placeholder:font-light text-slate-900 font-normal focus-visible:ring-0 focus-visible:ring-offset-0 text-sm shadow-none"
                       required
                       autoFocus={mode !== 'signup'}
                     />
@@ -538,23 +513,26 @@ export default function Login() {
                 {/* Senha */}
                 {mode !== 'forgot_password' && (
                   <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <Label htmlFor="auth-pass" className="text-xs font-normal text-slate-700">
+                    <div className="flex items-center justify-between mb-1">
+                      <Label
+                        htmlFor="auth-pass"
+                        className="text-xs font-light text-slate-600 tracking-wide"
+                      >
                         Senha
                       </Label>
                       {mode === 'login' && (
                         <button
                           type="button"
                           onClick={() => switchMode('forgot_password')}
-                          className="text-xs text-[#14213D] hover:text-[#0e172a] font-medium hover:underline transition-colors focus:outline-none"
+                          className="text-xs text-[#14213D] hover:text-[#0e172a] font-normal hover:underline transition-colors focus:outline-none"
                         >
                           Esqueci minha senha
                         </button>
                       )}
                     </div>
-                    <div className="relative">
+                    <div className="relative group border-b border-slate-300 focus-within:border-[#FCA311] focus-within:ring-1 focus-within:ring-[#FCA311] transition-all bg-transparent">
                       <Lock
-                        className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                        className="w-4 h-4 text-slate-400 group-focus-within:text-[#FCA311] absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
                         strokeWidth={1.5}
                       />
                       <Input
@@ -563,13 +541,13 @@ export default function Login() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="pl-11 pr-11 h-12 rounded-xl bg-white border-slate-300 placeholder:text-slate-500 text-slate-900 focus-visible:ring-[#FCA311] focus-visible:border-[#FCA311] text-sm"
+                        className="pl-8 pr-9 h-11 border-0 rounded-none bg-transparent placeholder:text-slate-400 placeholder:font-light text-slate-900 font-normal focus-visible:ring-0 focus-visible:ring-offset-0 text-sm shadow-none"
                         required
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword((prev) => !prev)}
-                        className="absolute right-0 top-0 h-12 w-11 flex items-center justify-center text-slate-500 hover:text-slate-700 transition-colors focus:outline-none rounded-r-xl"
+                        className="absolute right-0 top-0 h-11 w-8 flex items-center justify-end text-slate-400 hover:text-slate-700 transition-colors focus:outline-none"
                         aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                       >
                         {showPassword ? (
@@ -587,13 +565,13 @@ export default function Login() {
                   <div className="animate-fade-in">
                     <Label
                       htmlFor="auth-pass-confirm"
-                      className="text-xs font-normal text-slate-700 mb-1.5 block"
+                      className="text-xs font-light text-slate-600 mb-1 block tracking-wide"
                     >
                       Confirmar Senha
                     </Label>
-                    <div className="relative">
+                    <div className="relative group border-b border-slate-300 focus-within:border-[#FCA311] focus-within:ring-1 focus-within:ring-[#FCA311] transition-all bg-transparent">
                       <Lock
-                        className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                        className="w-4 h-4 text-slate-400 group-focus-within:text-[#FCA311] absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
                         strokeWidth={1.5}
                       />
                       <Input
@@ -602,13 +580,13 @@ export default function Login() {
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="pl-11 pr-11 h-12 rounded-xl bg-white border-slate-300 placeholder:text-slate-500 text-slate-900 focus-visible:ring-[#FCA311] focus-visible:border-[#FCA311] text-sm"
+                        className="pl-8 pr-9 h-11 border-0 rounded-none bg-transparent placeholder:text-slate-400 placeholder:font-light text-slate-900 font-normal focus-visible:ring-0 focus-visible:ring-offset-0 text-sm shadow-none"
                         required
                       />
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword((prev) => !prev)}
-                        className="absolute right-0 top-0 h-12 w-11 flex items-center justify-center text-slate-500 hover:text-slate-700 transition-colors focus:outline-none rounded-r-xl"
+                        className="absolute right-0 top-0 h-11 w-8 flex items-center justify-end text-slate-400 hover:text-slate-700 transition-colors focus:outline-none"
                         aria-label={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
                       >
                         {showConfirmPassword ? (
@@ -623,8 +601,33 @@ export default function Login() {
               </>
             )}
 
+            {/* Mensagem de Erro Discreta Abaixo do Campo com Alto Contraste WCAG */}
+            {errorMessage && (
+              <div
+                data-testid="login-error-message"
+                role="alert"
+                className="pt-1 text-xs text-rose-700 font-medium animate-fade-in flex items-start gap-2 leading-relaxed"
+              >
+                <AlertCircle className="w-4 h-4 text-rose-700 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <span>{errorMessage}</span>
+                  {mode === 'login' && errorMessage.includes('E-mail ou senha incorretos') && (
+                    <div className="mt-1 pt-1 border-t border-rose-200/60">
+                      <button
+                        type="button"
+                        onClick={() => switchMode('signup')}
+                        className="font-medium text-rose-900 underline hover:text-rose-950 transition-colors"
+                      >
+                        Ainda não tem conta? Clique para se cadastrar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Botões de Ação Principal com Elevação Tokenizada R56 */}
-            <div className="pt-2">
+            <div className="pt-3">
               {mode === 'signup' && signupStep === 'profile' ? (
                 <div className="flex items-center gap-3">
                   <Button
@@ -640,7 +643,7 @@ export default function Login() {
                   <Button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 h-12 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-xl shadow-elevation-2 active:scale-[0.99] transition-all border-0 text-sm"
+                    className="flex-1 h-12 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-xl shadow-elevation-1 hover:shadow-elevation-2 active:scale-[0.99] transition-all border-0 text-sm"
                   >
                     {loading ? (
                       <span className="flex items-center justify-center gap-2">
@@ -656,7 +659,7 @@ export default function Login() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-12 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-xl shadow-elevation-2 active:scale-[0.99] transition-all border-0 text-sm"
+                  className="w-full h-12 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-xl shadow-elevation-1 hover:shadow-elevation-2 active:scale-[0.99] transition-all border-0 text-sm"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
@@ -695,7 +698,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => switchMode(mode === 'login' ? 'signup' : 'login')}
-                  className="text-xs font-medium text-slate-600 hover:text-[#14213D] transition-colors"
+                  className="text-xs font-normal text-slate-600 hover:text-[#14213D] transition-colors"
                 >
                   {mode === 'login' ? (
                     <span>
@@ -716,13 +719,13 @@ export default function Login() {
               )}
             </div>
           </form>
-        </div>
+        </main>
 
         {/* Rodapé de Segurança e Confiança Fintech */}
-        <div className="mt-8 flex items-center justify-center gap-2 text-slate-500 text-xs text-center max-w-xs">
+        <footer className="mt-8 flex items-center justify-center gap-2 text-slate-500 text-xs text-center max-w-xs font-light">
           <ShieldCheck className="w-4 h-4 text-slate-500 shrink-0" strokeWidth={1.5} />
           <span>Isolamento individual por família e criptografia de ponta a ponta.</span>
-        </div>
+        </footer>
       </div>
 
       {/* Banner de Instalação PWA */}

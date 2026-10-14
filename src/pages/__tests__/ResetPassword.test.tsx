@@ -22,7 +22,7 @@ describe('ResetPassword Page (R57 Refined UI & WCAG Contrast)', () => {
     vi.clearAllMocks()
   })
 
-  it('renders brand header, inputs with high contrast placeholders and tokens', () => {
+  it('renders brand header, inputs with underline style, linear icon and amber focus #FCA311 (R58)', () => {
     render(
       <MemoryRouter>
         <ResetPassword />
@@ -36,8 +36,19 @@ describe('ResetPassword Page (R57 Refined UI & WCAG Contrast)', () => {
     const newPassInput = screen.getByLabelText(/^Nova Senha$/i)
     const confirmPassInput = screen.getByLabelText(/^Confirmar Nova Senha$/i)
 
-    expect(newPassInput.className).toContain('placeholder:text-slate-500')
-    expect(confirmPassInput.className).toContain('placeholder:text-slate-500')
+    expect(newPassInput.className).toContain('placeholder:text-slate-400')
+    expect(confirmPassInput.className).toContain('placeholder:text-slate-400')
+
+    const newPassContainer = newPassInput.closest('div.border-b')
+    expect(newPassContainer).not.toBeNull()
+    expect(newPassContainer?.className).toContain('focus-within:border-[#FCA311]')
+
+    const confirmPassContainer = confirmPassInput.closest('div.border-b')
+    expect(confirmPassContainer).not.toBeNull()
+    expect(confirmPassContainer?.className).toContain('focus-within:border-[#FCA311]')
+
+    const submitBtn = screen.getByRole('button', { name: /Salvar Nova Senha/i })
+    expect(submitBtn.className).toContain('shadow-elevation-1')
   })
 
   it('validates password minimum length and matching confirmation with human messages', async () => {

@@ -149,36 +149,26 @@ export default function ResetPassword() {
   return (
     <div className="min-h-screen bg-[#F8F9FB] flex flex-col justify-between items-center px-4 py-8 sm:py-12 selection:bg-[#FCA311]/20">
       <div className="w-full max-w-[420px] mx-auto my-auto flex flex-col items-center">
-        {/* Cabeçalho */}
-        <div className="flex flex-col items-center text-center mb-8 sm:mb-10 w-full">
+        {/* Cabeçalho — Layout vertical centralizado e respiro generoso */}
+        <header className="flex flex-col items-center text-center mb-8 sm:mb-10 w-full">
           <div
             data-testid="brand-logo-container"
             aria-label="Curiangoo"
-            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#14213D] shadow-elevation-1 mb-4 flex items-center justify-center p-2.5"
+            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#14213D] shadow-elevation-1 mb-5 flex items-center justify-center p-2.5 transition-transform hover:scale-105"
           >
             <CuriangoLogo size={36} color="#FCA311" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-semibold text-[#14213D] tracking-tight">
             Criar Nova Senha — Curiangoo
           </h1>
-          <p className="text-xs sm:text-sm text-slate-600 font-normal mt-2 max-w-xs leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-600 font-light mt-2 max-w-xs leading-relaxed">
             Escolha uma nova senha forte para proteger sua conta e as finanças da sua família.
           </p>
-        </div>
+        </header>
 
-        {/* Card Principal */}
-        <div className="w-full bg-white rounded-3xl p-6 sm:p-8 shadow-elevation-2 border border-[#14213D]/[0.06] backdrop-blur-sm">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {errorMessage && (
-              <div
-                role="alert"
-                className="p-3.5 text-xs bg-rose-50 border border-rose-200 text-rose-900 rounded-2xl font-medium animate-fade-in flex items-start gap-2.5 leading-relaxed"
-              >
-                <AlertCircle className="w-4 h-4 text-rose-700 shrink-0 mt-0.5" />
-                <span>{errorMessage}</span>
-              </div>
-            )}
-
+        {/* Card Principal com sombra suave */}
+        <main className="w-full bg-white rounded-3xl p-6 sm:p-9 shadow-elevation-2 border border-[#14213D]/[0.06] backdrop-blur-sm">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {successMessage && (
               <div
                 role="status"
@@ -189,17 +179,17 @@ export default function ResetPassword() {
               </div>
             )}
 
-            {/* Campo Nova Senha */}
+            {/* Campo Nova Senha (Estilo Underline com Ícone Linear e Destaque Âmbar #FCA311 no Campo Ativo) */}
             <div>
               <Label
                 htmlFor="new-password"
-                className="text-xs font-normal text-slate-700 mb-1.5 block"
+                className="text-xs font-light text-slate-600 mb-1 block tracking-wide"
               >
                 Nova Senha
               </Label>
-              <div className="relative">
+              <div className="relative group border-b border-slate-300 focus-within:border-[#FCA311] focus-within:ring-1 focus-within:ring-[#FCA311] transition-all bg-transparent">
                 <Lock
-                  className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                  className="w-4 h-4 text-slate-400 group-focus-within:text-[#FCA311] absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
                   strokeWidth={1.5}
                 />
                 <Input
@@ -208,7 +198,7 @@ export default function ResetPassword() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="No mínimo 6 caracteres"
-                  className="pl-11 pr-11 h-12 rounded-xl bg-white border-slate-300 placeholder:text-slate-500 text-slate-900 focus-visible:ring-[#FCA311] focus-visible:border-[#FCA311] text-sm"
+                  className="pl-8 pr-9 h-11 border-0 rounded-none bg-transparent placeholder:text-slate-400 placeholder:font-light text-slate-900 font-normal focus-visible:ring-0 focus-visible:ring-offset-0 text-sm shadow-none"
                   required
                   autoFocus
                   disabled={submitting || Boolean(successMessage)}
@@ -216,7 +206,7 @@ export default function ResetPassword() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-0 top-0 h-12 w-11 flex items-center justify-center text-slate-500 hover:text-slate-700 transition-colors focus:outline-none rounded-r-xl"
+                  className="absolute right-0 top-0 h-11 w-8 flex items-center justify-end text-slate-400 hover:text-slate-700 transition-colors focus:outline-none"
                   aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                 >
                   {showPassword ? (
@@ -232,13 +222,13 @@ export default function ResetPassword() {
             <div>
               <Label
                 htmlFor="confirm-new-password"
-                className="text-xs font-normal text-slate-700 mb-1.5 block"
+                className="text-xs font-light text-slate-600 mb-1 block tracking-wide"
               >
                 Confirmar Nova Senha
               </Label>
-              <div className="relative">
+              <div className="relative group border-b border-slate-300 focus-within:border-[#FCA311] focus-within:ring-1 focus-within:ring-[#FCA311] transition-all bg-transparent">
                 <Lock
-                  className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                  className="w-4 h-4 text-slate-400 group-focus-within:text-[#FCA311] absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
                   strokeWidth={1.5}
                 />
                 <Input
@@ -247,14 +237,14 @@ export default function ResetPassword() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Repita a nova senha"
-                  className="pl-11 pr-11 h-12 rounded-xl bg-white border-slate-300 placeholder:text-slate-500 text-slate-900 focus-visible:ring-[#FCA311] focus-visible:border-[#FCA311] text-sm"
+                  className="pl-8 pr-9 h-11 border-0 rounded-none bg-transparent placeholder:text-slate-400 placeholder:font-light text-slate-900 font-normal focus-visible:ring-0 focus-visible:ring-offset-0 text-sm shadow-none"
                   required
                   disabled={submitting || Boolean(successMessage)}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-0 top-0 h-12 w-11 flex items-center justify-center text-slate-500 hover:text-slate-700 transition-colors focus:outline-none rounded-r-xl"
+                  className="absolute right-0 top-0 h-11 w-8 flex items-center justify-end text-slate-400 hover:text-slate-700 transition-colors focus:outline-none"
                   aria-label={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
                 >
                   {showConfirmPassword ? (
@@ -266,12 +256,23 @@ export default function ResetPassword() {
               </div>
             </div>
 
-            {/* Botão Salvar Nova Senha */}
-            <div className="pt-2">
+            {/* Mensagem de Erro Discreta Abaixo do Campo com Alto Contraste WCAG */}
+            {errorMessage && (
+              <div
+                role="alert"
+                className="pt-1 text-xs text-rose-700 font-medium animate-fade-in flex items-start gap-2 leading-relaxed"
+              >
+                <AlertCircle className="w-4 h-4 text-rose-700 shrink-0 mt-0.5" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
+            {/* Botão Salvar Nova Senha com Elevação Sutil */}
+            <div className="pt-3">
               <Button
                 type="submit"
                 disabled={submitting || Boolean(successMessage)}
-                className="w-full h-12 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-xl shadow-elevation-2 active:scale-[0.99] transition-all border-0 text-sm"
+                className="w-full h-12 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-xl shadow-elevation-1 hover:shadow-elevation-2 active:scale-[0.99] transition-all border-0 text-sm"
               >
                 {submitting ? (
                   <span className="flex items-center justify-center gap-2">
@@ -292,13 +293,13 @@ export default function ResetPassword() {
               </Button>
             </div>
           </form>
-        </div>
+        </main>
 
         {/* Rodapé de Segurança */}
-        <div className="mt-8 flex items-center justify-center gap-2 text-slate-500 text-xs text-center max-w-xs">
+        <footer className="mt-8 flex items-center justify-center gap-2 text-slate-500 text-xs text-center max-w-xs font-light">
           <ShieldCheck className="w-4 h-4 text-slate-500 shrink-0" strokeWidth={1.5} />
           <span>Curiangoo &bull; Gestão Financeira Familiar com isolamento e segurança.</span>
-        </div>
+        </footer>
       </div>
     </div>
   )
