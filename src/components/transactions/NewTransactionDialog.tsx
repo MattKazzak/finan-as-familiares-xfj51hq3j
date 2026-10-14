@@ -145,8 +145,9 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [rememberRule, setRememberRule] = useState<boolean>(true)
 
-  // Expandir mais categorias além das 8 primeiras
-  const [showAllCategories, setShowAllCategories] = useState(false)
+  // Controle de expansão do seletor de membros e categorias
+  const [isMemberExpanded, setIsMemberExpanded] = useState(false)
+  const [isCategoryExpanded, setIsCategoryExpanded] = useState(false)
 
   // Feedback de auto-sugestão de categoria
   const [suggestedCategoryInfo, setSuggestedCategoryInfo] = useState<string | null>(null)
@@ -183,7 +184,8 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
 
     userManuallyChangedCategoryRef.current = false
     setSuggestedCategoryInfo(null)
-    setShowAllCategories(false)
+    setIsMemberExpanded(false)
+    setIsCategoryExpanded(false)
 
     if (editingRecurringRule) {
       setType((editingRecurringRule.type || 'income') as 'income' | 'expense')
@@ -301,6 +303,13 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
     setCategoryId(newCatId)
     setSubcategoryId('none')
     setSuggestedCategoryInfo(null)
+    setIsCategoryExpanded(false)
+  }
+
+  // Ao selecionar um membro manualmente
+  const handleMemberSelect = (selectedId: string) => {
+    setMemberId(selectedId)
+    setIsMemberExpanded(false)
   }
 
   // Sugestão automática de categoria baseada nas regras do banco e regras padrão
@@ -335,9 +344,9 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
 
   const filteredCategories = categories.filter((c) => c.type === type)
 
-  // Subdivisão para exibição de chips (com botão Ver mais se muitas)
-  const visibleCategories = showAllCategories ? filteredCategories : filteredCategories.slice(0, 8)
-  const hasMoreCategories = filteredCategories.length > 8
+  // Membro atualmente selecionado
+  const selectedMemberObj = members.find((m) => m.id === memberId)
+  const isSelectedMemberYou = selectedMemberObj?.id === activeMemberId
 
   // Verifica se a transação sendo editada estava sem categoria
   const isEditingUncategorized = Boolean(editingTransaction && !editingTransaction.category_id)
@@ -719,81 +728,223 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
       </div>
 
       {/* ========================================================
-          4. SELEÇÃO DE CATEGORIAS (Chips / pílulas modernas e tocáveis)
+          4. SELETOR DE MEMBRO DISCRETO (EXPANSÍVEL)
+          - Escondido quando a família tem 1 membro (auto-atribuído em silêncio)
+          - Linha discreta quando recolhido com avatar, nome e chevron
+          - Revela chips ao expandir; recolhe ao selecionar
           ======================================================== */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between px-1">
-          <Label className="text-xs font-semibold text-slate-700">Categoria</Label>
-          {categoryId !== 'none' && (
+      {members.length > 1 && (
+        <div
+          data-testid="transaction-member-block"
+          className="rounded-2xl border border-[rgba(20,33,61,0.06)] bg-[#F8F9FB]/90 p-2.5 sm:p-3 transition-all space-y-2 shadow-curiango"
+        >
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <span className="text-xs font-medium text-[#64748B] shrink-0">
+              {type === 'expense' ? 'Quem pagou:' : 'Quem recebeu:'}
+            </span>
+
             <button
               type="button"
-              onClick={() => {
-                setCategoryId('none')
-                setSubcategoryId('none')
-              }}
-              className="text-[11px] text-slate-400 hover:text-slate-600 cursor-pointer"
+              data-testid="member-summary-trigger"
+              onClick={() => setIsMemberExpanded((prev) => !prev)}
+              aria-expanded={isMemberExpanded}
+              className="inline-flex items-center gap-1.5 min-w-0 max-w-[70%] py-1 px-2.5 rounded-full bg-white border border-[rgba(20,33,61,0.08)] hover:border-slate-300 hover:bg-slate-50 text-xs text-[#14213D] font-medium transition-all cursor-pointer shadow-2xs group"
             >
-              Limpar
-            </button>
-          )}
-        </div>
-
-        {/* Grade/flex de chips de categoria com ícones e cores suaves */}
-        <div className="flex flex-wrap gap-1.5">
-          {/* Chip "Sem categoria" */}
-          <button
-            type="button"
-            onClick={() => handleCategorySelect('none')}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5 cursor-pointer ${
-              categoryId === 'none'
-                ? 'bg-slate-800 text-white border-slate-800 shadow-xs'
-                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-            }`}
-          >
-            <span>Sem categoria</span>
-            {categoryId === 'none' && <Check className="w-3 h-3" />}
-          </button>
-
-          {/* Chips das categorias */}
-          {visibleCategories.map((c) => {
-            const isSelected = categoryId === c.id
-            return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => handleCategorySelect(c.id)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5 cursor-pointer ${
-                  isSelected
-                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/20 scale-[1.02]'
-                    : 'bg-white text-slate-700 border-slate-200/90 hover:border-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                <CategoryIcon
-                  name={c.icon}
-                  className={`w-3.5 h-3.5 ${isSelected ? 'text-white' : 'text-slate-500'}`}
-                />
-                <span className="truncate max-w-[130px]">{c.name}</span>
-                {isSelected && <Check className="w-3 h-3 ml-0.5 shrink-0" />}
-              </button>
-            )
-          })}
-
-          {/* Botão Ver mais / Ver menos categorias se houver mais de 8 */}
-          {hasMoreCategories && (
-            <button
-              type="button"
-              onClick={() => setShowAllCategories((prev) => !prev)}
-              className="px-2.5 py-1.5 rounded-full text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100/70 border border-emerald-200/70 transition-all flex items-center gap-1 cursor-pointer"
-            >
-              <span>
-                {showAllCategories ? 'Ver menos' : `+${filteredCategories.length - 8} mais`}
+              <span className="w-4 h-4 rounded-full bg-slate-200 text-[10px] font-bold text-[#14213D] flex items-center justify-center shrink-0">
+                {selectedMemberObj?.name?.charAt(0).toUpperCase() || '?'}
               </span>
+              <span className="truncate">
+                {selectedMemberObj?.name || 'Selecionar'}
+                {isSelectedMemberYou ? ' (Você)' : ''}
+              </span>
+              <Check className="w-3 h-3 text-emerald-600 shrink-0" />
               <ChevronDown
-                className={`w-3 h-3 transition-transform ${showAllCategories ? 'rotate-180' : ''}`}
+                className={`w-3.5 h-3.5 text-[#64748B] transition-transform duration-200 shrink-0 ${
+                  isMemberExpanded ? 'rotate-180' : ''
+                }`}
               />
             </button>
+          </div>
+
+          {/* Chips expandidos de membros */}
+          {isMemberExpanded && (
+            <div
+              data-testid="member-chips-container"
+              className="pt-2 border-t border-[rgba(20,33,61,0.06)] flex flex-wrap gap-1.5 animate-in fade-in-50 duration-150"
+            >
+              {members.map((m) => {
+                const isSelected = memberId === m.id
+                const isYou = m.id === activeMemberId
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => handleMemberSelect(m.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5 cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#14213D] text-white border-[#14213D] shadow-xs scale-[1.01]'
+                        : 'bg-white text-[#14213D] border-[rgba(20,33,61,0.1)] hover:border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span
+                      className={`w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 ${
+                        isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-[#14213D]'
+                      }`}
+                    >
+                      {m.name.charAt(0).toUpperCase()}
+                    </span>
+                    <span>{m.name}</span>
+                    {isYou && (
+                      <span
+                        className={`text-[10px] font-normal ${
+                          isSelected ? 'text-slate-300' : 'text-[#64748B]'
+                        }`}
+                      >
+                        (Você)
+                      </span>
+                    )}
+                    {isSelected && <Check className="w-3 h-3 shrink-0 ml-0.5 text-white" />}
+                  </button>
+                )
+              })}
+            </div>
           )}
         </div>
+      )}
+
+      {/* ========================================================
+          5. SELETOR DE CATEGORIA RECOLHIDO E ORGANIZADO
+          - Linha discreta inicial coerente com o seletor de membro
+          - Mostra ícone + nome selecionado (ou "Selecionar categoria")
+          - Destaque sutil com âmbar #FCA311 apenas no detalhe ativo
+          - Expande em grade ordenada de 2 colunas no mobile
+          - Opção "Sem categoria" dentro do bloco expandido
+          ======================================================== */}
+      <div
+        data-testid="transaction-category-block"
+        className="rounded-2xl border border-[rgba(20,33,61,0.06)] bg-[#F8F9FB]/90 p-2.5 sm:p-3 transition-all space-y-2 shadow-curiango"
+      >
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <span className="text-xs font-medium text-[#64748B] shrink-0">Categoria:</span>
+
+          <div className="flex items-center gap-1.5 min-w-0 max-w-[70%]">
+            <button
+              type="button"
+              data-testid="category-summary-trigger"
+              onClick={() => setIsCategoryExpanded((prev) => !prev)}
+              aria-expanded={isCategoryExpanded}
+              className={`inline-flex items-center gap-1.5 min-w-0 py-1 px-2.5 rounded-full bg-white border text-xs font-medium transition-all cursor-pointer shadow-2xs group ${
+                selectedCategoryObj
+                  ? 'border-[#FCA311]/50 text-[#14213D]'
+                  : 'border-[rgba(20,33,61,0.08)] text-[#64748B] hover:text-[#14213D] hover:border-slate-300 hover:bg-slate-50'
+              }`}
+            >
+              {selectedCategoryObj ? (
+                <>
+                  <span className="w-4 h-4 rounded-md bg-[#FCA311]/15 text-[#14213D] flex items-center justify-center shrink-0">
+                    <CategoryIcon
+                      name={selectedCategoryObj.icon}
+                      className="w-3 h-3 text-[#14213D]"
+                    />
+                  </span>
+                  <span className="truncate text-[#14213D] font-semibold">
+                    {selectedCategoryObj.name}
+                  </span>
+                </>
+              ) : (
+                <span className="truncate">
+                  {categoryId === 'none' ? 'Sem categoria' : 'Selecionar'}
+                </span>
+              )}
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-[#64748B] transition-transform duration-200 shrink-0 ${
+                  isCategoryExpanded ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+
+            {categoryId !== 'none' && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCategoryId('none')
+                  setSubcategoryId('none')
+                }}
+                className="text-[11px] text-[#64748B] hover:text-rose-600 px-1 cursor-pointer transition-colors shrink-0"
+                title="Limpar categoria"
+              >
+                Limpar
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Bloco expandido: grade organizada de categorias */}
+        {isCategoryExpanded && (
+          <div
+            data-testid="category-expanded-grid"
+            className="pt-2 border-t border-[rgba(20,33,61,0.06)] space-y-2 animate-in fade-in-50 duration-150"
+          >
+            {/* Opção "Sem categoria" */}
+            <div className="flex items-center justify-between pb-1">
+              <button
+                type="button"
+                onClick={() => handleCategorySelect('none')}
+                className={`w-full py-2 px-3 rounded-xl text-xs font-medium border transition-all flex items-center justify-between cursor-pointer ${
+                  categoryId === 'none'
+                    ? 'bg-slate-100 text-[#14213D] border-[#14213D]/30 font-semibold shadow-2xs'
+                    : 'bg-white text-[#64748B] border-[rgba(20,33,61,0.08)] hover:bg-slate-50 hover:text-[#14213D]'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-lg bg-slate-200/80 flex items-center justify-center shrink-0 text-slate-500">
+                    <Minus className="w-3 h-3" />
+                  </div>
+                  <span>Sem categoria</span>
+                </div>
+                {categoryId === 'none' && <Check className="w-3.5 h-3.5 text-[#14213D]" />}
+              </button>
+            </div>
+
+            {/* Grade de 2 colunas para mobile e sm (zero overflow horizontal) */}
+            <div className="grid grid-cols-2 gap-1.5 max-h-56 overflow-y-auto pr-0.5">
+              {filteredCategories.map((c) => {
+                const isSelected = categoryId === c.id
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => handleCategorySelect(c.id)}
+                    className={`py-2 px-2.5 rounded-xl text-xs font-medium border transition-all flex items-center gap-2 min-w-0 cursor-pointer text-left ${
+                      isSelected
+                        ? 'bg-white text-[#14213D] border-[#FCA311] shadow-xs ring-1 ring-[#FCA311]/40'
+                        : 'bg-white text-[#14213D] border-[rgba(20,33,61,0.08)] hover:border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div
+                      className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                        isSelected
+                          ? 'bg-[#FCA311]/20 text-[#14213D]'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      <CategoryIcon
+                        name={c.icon}
+                        className={`w-3.5 h-3.5 ${isSelected ? 'text-[#14213D]' : 'text-slate-600'}`}
+                      />
+                    </div>
+                    <span className="truncate flex-1 font-medium text-[11px] sm:text-xs">
+                      {c.name}
+                    </span>
+                    {isSelected && (
+                      <Check className="w-3.5 h-3.5 text-[#FCA311] shrink-0" strokeWidth={2.5} />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Subcategorias: Seletor Contextual Progressivo com 3-4 sugestões, busca e Ver todas */}
@@ -832,46 +983,6 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           />
         </div>
       ) : null}
-
-      {/* ========================================================
-          5. MEMBROS DA FAMÍLIA (Pílulas/chips tocáveis e arredondadas)
-          ======================================================== */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold text-slate-700 px-1">Quem pagou / recebeu?</Label>
-        <div className="flex flex-wrap gap-1.5">
-          {members.map((m) => {
-            const isSelected = memberId === m.id
-            const isYou = m.id === activeMemberId
-            return (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => setMemberId(m.id)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5 cursor-pointer ${
-                  isSelected
-                    ? 'bg-slate-900 text-white border-slate-900 shadow-xs scale-[1.01]'
-                    : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                <span className="w-4 h-4 rounded-full bg-slate-200 text-[10px] font-bold text-slate-700 flex items-center justify-center shrink-0">
-                  {m.name.charAt(0).toUpperCase()}
-                </span>
-                <span>{m.name}</span>
-                {isYou && (
-                  <span
-                    className={`text-[10px] font-normal ${
-                      isSelected ? 'text-slate-300' : 'text-slate-400'
-                    }`}
-                  >
-                    (Você)
-                  </span>
-                )}
-                {isSelected && <Check className="w-3 h-3 shrink-0 ml-0.5" />}
-              </button>
-            )
-          })}
-        </div>
-      </div>
 
       {/* ========================================================
           6. DATA DA TRANSAÇÃO & MEIO DE PAGAMENTO

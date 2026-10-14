@@ -1,5 +1,5 @@
 /**
- * Service Worker Oficial do Curiangoo v0.0.328
+ * Service Worker Oficial do Curiangoo v0.0.329
  *
  * Princípios fundamentais:
  * 1. skipWaiting no install: assume imediatamente o controle assim que baixado.
@@ -9,7 +9,7 @@
  * 5. Notificação via broadcast/postMessage para as abas quando houver nova versão instalada.
  */
 
-const SW_VERSION = 'curiangoo-v0.0.328'
+const SW_VERSION = 'curiangoo-v0.0.329'
 const STATIC_CACHE_NAME = `static-${SW_VERSION}`
 
 // Recursos estáticos mínimos para pré-cache imediato

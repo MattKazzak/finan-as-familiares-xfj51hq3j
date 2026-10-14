@@ -33,11 +33,12 @@ const mockCategories = [
 
 let mockContextPrefill: any = null
 let mockActiveMemberId: string | null = 'm-1'
+let currentMembers = [...mockMembers]
 
 vi.mock('@/hooks/use-family', () => ({
   useFamily: () => ({
     family: mockFamily,
-    members: mockMembers,
+    members: currentMembers,
     categories: mockCategories,
     activeMemberId: mockActiveMemberId,
     newTransactionDefaultType: 'expense',
@@ -89,6 +90,7 @@ describe('NewTransactionDialog - Modal Unificado de Nova Transação', () => {
     vi.clearAllMocks()
     mockContextPrefill = null
     mockActiveMemberId = 'm-1'
+    currentMembers = [...mockMembers]
   })
 
   it('abre como modal unificado com toggle Despesa selecionado por padrão e campos vazios', () => {
@@ -216,5 +218,106 @@ describe('NewTransactionDialog - Modal Unificado de Nova Transação', () => {
       expect(screen.getByText('Dia do mês')).toBeDefined()
       expect(screen.getByText(/Contas & Rendas Recorrentes/i)).toBeDefined()
     })
+  })
+
+  it('(a) esconde completamente o bloco "Quem pagou / recebeu?" quando a família tem apenas 1 membro', () => {
+    currentMembers = [mockMembers[0]] // Apenas Lucas (admin)
+    render(<NewTransactionDialog open={true} onOpenChange={vi.fn()} />)
+
+    // O bloco de membro não deve estar no DOM
+    expect(screen.queryByTestId('transaction-member-block')).toBeNull()
+    expect(screen.queryByText(/Quem pagou:/i)).toBeNull()
+    expect(screen.queryByText(/Quem recebeu:/i)).toBeNull()
+  })
+
+  it('(b) família com 2+ membros mostra linha discreta e expande ao toque, recolhendo na seleção', () => {
+    render(<NewTransactionDialog open={true} onOpenChange={vi.fn()} />)
+
+    // Bloco presente com a linha discreta
+    const memberBlock = screen.getByTestId('transaction-member-block')
+    expect(memberBlock).toBeDefined()
+    expect(screen.getByText(/Quem pagou:/i)).toBeDefined()
+
+    // Inicialmente recolhido (sem container de chips expandidos)
+    expect(screen.queryByTestId('member-chips-container')).toBeNull()
+    const summaryTrigger = screen.getByTestId('member-summary-trigger')
+    expect(summaryTrigger.textContent).toContain('Lucas')
+    expect(summaryTrigger.textContent).toContain('(Você)')
+
+    // Clica para expandir
+    fireEvent.click(summaryTrigger)
+    expect(screen.getByTestId('member-chips-container')).toBeDefined()
+
+    // Mostra chips de Lucas e Ana
+    const anaBtn = screen.getByRole('button', { name: /Ana/i })
+    expect(anaBtn).toBeDefined()
+
+    // Seleciona Ana -> deve recolher o bloco e atualizar a linha
+    fireEvent.click(anaBtn)
+    expect(screen.queryByTestId('member-chips-container')).toBeNull()
+    expect(screen.getByTestId('member-summary-trigger').textContent).toContain('Ana')
+  })
+
+  it('(c) linha de categoria recolhida mostra a categoria selecionada na edição e na criação', () => {
+    const mockEditingTx = {
+      id: 'tx-existing',
+      family_id: 'fam-1',
+      member_id: 'm-2',
+      category_id: 'cat-alimentacao',
+      subcategory_id: null,
+      type: 'expense' as const,
+      amount_cents: 4500,
+      description: 'Padaria da esquina',
+      transaction_date: '2025-05-10',
+      payment_method: 'pix',
+      is_recurring: false,
+      status: 'confirmed',
+      created_at: '2025-05-10T10:00:00Z',
+    } as any
+
+    render(
+      <NewTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        editingTransaction={mockEditingTx}
+      />,
+    )
+
+    // O trigger da categoria mostra Alimentação
+    const categoryTrigger = screen.getByTestId('category-summary-trigger')
+    expect(categoryTrigger.textContent).toContain('Alimentação')
+
+    // O trigger do membro mostra Ana (m-2 da transação)
+    const memberTrigger = screen.getByTestId('member-summary-trigger')
+    expect(memberTrigger.textContent).toContain('Ana')
+  })
+
+  it('(d) "Sem categoria" acessível no bloco expandido e recolhe após clique', () => {
+    render(
+      <NewTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        initialCategoryId="cat-alimentacao"
+      />,
+    )
+
+    const categoryTrigger = screen.getByTestId('category-summary-trigger')
+    expect(categoryTrigger.textContent).toContain('Alimentação')
+
+    // Inicialmente recolhido
+    expect(screen.queryByTestId('category-expanded-grid')).toBeNull()
+
+    // Expande
+    fireEvent.click(categoryTrigger)
+    const expandedGrid = screen.getByTestId('category-expanded-grid')
+    expect(expandedGrid).toBeDefined()
+
+    // Clica em "Sem categoria"
+    const uncategorizedBtn = screen.getByRole('button', { name: /Sem categoria/i })
+    fireEvent.click(uncategorizedBtn)
+
+    // Recolhe de volta
+    expect(screen.queryByTestId('category-expanded-grid')).toBeNull()
+    expect(screen.getByTestId('category-summary-trigger').textContent).toContain('Sem categoria')
   })
 })
