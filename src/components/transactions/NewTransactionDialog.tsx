@@ -619,25 +619,6 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
       >
         <button
           type="button"
-          onClick={() => handleTypeChange('expense')}
-          aria-pressed={type === 'expense'}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none ${
-            type === 'expense'
-              ? 'bg-finance-expense text-white shadow-md shadow-finance-expense/30 scale-[1.01]'
-              : 'bg-white/60 text-slate-600 hover:text-slate-900 hover:bg-white'
-          }`}
-        >
-          <div
-            className={`w-5 h-5 rounded-lg flex items-center justify-center ${
-              type === 'expense' ? 'bg-white/20 text-white' : 'bg-rose-100 text-finance-expense'
-            }`}
-          >
-            <ArrowDownRight className="w-3.5 h-3.5 stroke-[2.5]" />
-          </div>
-          <span className="tracking-tight">Despesa</span>
-        </button>
-        <button
-          type="button"
           onClick={() => handleTypeChange('income')}
           aria-pressed={type === 'income'}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none ${
@@ -654,6 +635,25 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
             <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
           </div>
           <span className="tracking-tight">Receita</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => handleTypeChange('expense')}
+          aria-pressed={type === 'expense'}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none ${
+            type === 'expense'
+              ? 'bg-finance-expense text-white shadow-md shadow-finance-expense/30 scale-[1.01]'
+              : 'bg-white/60 text-slate-600 hover:text-slate-900 hover:bg-white'
+          }`}
+        >
+          <div
+            className={`w-5 h-5 rounded-lg flex items-center justify-center ${
+              type === 'expense' ? 'bg-white/20 text-white' : 'bg-rose-100 text-finance-expense'
+            }`}
+          >
+            <ArrowDownRight className="w-3.5 h-3.5 stroke-[2.5]" />
+          </div>
+          <span className="tracking-tight">Despesa</span>
         </button>
       </div>
 

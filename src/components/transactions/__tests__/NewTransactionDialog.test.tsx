@@ -98,7 +98,13 @@ describe('NewTransactionDialog - Modal Unificado de Nova Transação', () => {
     const amountInput = screen.getByPlaceholderText('0,00') as HTMLInputElement
     expect(amountInput.value).toBe('')
 
-    // Toggle Despesa ativo por padrão
+    // Toggle com ordem invertida: Receita à esquerda (1º), Despesa à direita (2º)
+    const toggleButtons = screen.getByTestId('transaction-type-toggle').querySelectorAll('button')
+    expect(toggleButtons).toHaveLength(2)
+    expect(toggleButtons[0].textContent).toContain('Receita')
+    expect(toggleButtons[1].textContent).toContain('Despesa')
+
+    // Toggle Despesa ativo por padrão seguindo newTransactionDefaultType: 'expense'
     const expenseBtn = screen.getByRole('button', { name: /Despesa/i })
     expect(expenseBtn.className).toContain('bg-finance-expense')
 
