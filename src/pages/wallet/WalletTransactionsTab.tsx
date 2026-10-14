@@ -361,15 +361,6 @@ export function WalletTransactionsTab() {
             >
               <span>Recorrentes 🔁</span>
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => openNewTransaction('income')}
-              className="text-xs rounded-xl h-8 bg-[#059669] hover:bg-[#047857] text-white font-semibold gap-1 shadow-2xs"
-            >
-              <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
-              <span>Adicionar receita</span>
-            </Button>
           </div>
         </div>
 
