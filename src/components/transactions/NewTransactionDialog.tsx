@@ -116,7 +116,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
   const [dbRules, setDbRules] = useState<CategorizationRule[]>([])
 
   const [type, setType] = useState<'income' | 'expense'>(
-    initialType || newTransactionPrefill?.initialType || newTransactionDefaultType || 'expense',
+    initialType || newTransactionPrefill?.initialType || newTransactionDefaultType || 'income',
   )
   const [description, setDescription] = useState(
     initialDescription || newTransactionPrefill?.initialDescription || '',
@@ -216,7 +216,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
       setDayOfMonth(Number.isNaN(txDay) ? 1 : Math.max(1, Math.min(31, txDay)))
     } else {
       const effectiveType =
-        initialType ?? newTransactionPrefill?.initialType ?? newTransactionDefaultType ?? 'expense'
+        initialType ?? newTransactionPrefill?.initialType ?? newTransactionDefaultType ?? 'income'
       const effectiveDesc = initialDescription ?? newTransactionPrefill?.initialDescription ?? ''
       const effectiveAmountCents = initialAmountCents ?? newTransactionPrefill?.initialAmountCents
 

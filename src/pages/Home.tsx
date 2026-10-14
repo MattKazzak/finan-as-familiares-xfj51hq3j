@@ -1336,7 +1336,7 @@ export default function Home() {
                 Comece adicionando receitas ou despesas compartilhadas pela família.
               </p>
               <Button
-                onClick={() => openNewTransaction('expense')}
+                onClick={() => openNewTransaction('income')}
                 className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-semibold text-xs rounded-xl shadow-curiango"
               >
                 <Plus className="w-4 h-4 mr-1.5 stroke-[1.5]" />

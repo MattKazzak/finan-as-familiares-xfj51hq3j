@@ -1,8 +1,10 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
 import React from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import Layout from '../Layout'
+
+const mockOpenNewTransaction = vi.fn()
 
 vi.mock('@/hooks/use-auth', () => ({
   useAuth: () => ({
@@ -18,7 +20,7 @@ vi.mock('@/hooks/use-family', () => ({
     members: [{ id: 'm-1', name: 'Lucas', is_admin: true }],
     currentMember: { id: 'm-1', name: 'Lucas', is_admin: true },
     categories: [],
-    openNewTransaction: vi.fn(),
+    openNewTransaction: mockOpenNewTransaction,
     openVoiceDialog: vi.fn(),
     refreshTrigger: 0,
     triggerRefresh: vi.fn(),
@@ -69,5 +71,21 @@ describe('Layout - Bottom Navigation R54/R58', () => {
     expect(screen.getByText('Carteira')).toBeDefined()
     expect(screen.getByText('Metas')).toBeDefined()
     expect(screen.getByText('Perfil')).toBeDefined()
+  })
+
+  it('aciona openNewTransaction("income") ao clicar no FAB central "Nova Transação" (R67)', () => {
+    mockOpenNewTransaction.mockClear()
+
+    render(
+      <MemoryRouter initialEntries={['/inicio']}>
+        <Layout />
+      </MemoryRouter>,
+    )
+
+    const centralBtn = screen.getByRole('button', { name: /Nova Transação/i })
+    fireEvent.click(centralBtn)
+
+    expect(mockOpenNewTransaction).toHaveBeenCalledTimes(1)
+    expect(mockOpenNewTransaction).toHaveBeenCalledWith('income')
   })
 })

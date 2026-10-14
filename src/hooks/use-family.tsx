@@ -191,7 +191,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false)
   const [isVoiceDialogOpen, setIsVoiceDialogOpen] = useState(false)
   const [newTransactionDefaultType, setNewTransactionDefaultType] = useState<'income' | 'expense'>(
-    'expense',
+    'income',
   )
   const [newTransactionPrefill, setNewTransactionPrefill] = useState<{
     initialType?: 'income' | 'expense'
@@ -595,7 +595,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     setIsActionSheetOpen(false)
     if (typeof typeOrPrefill === 'object' && typeOrPrefill !== null) {
       const targetType: 'income' | 'expense' =
-        typeOrPrefill.initialType || typeOrPrefill.type || 'expense'
+        typeOrPrefill.initialType || typeOrPrefill.type || 'income'
       setNewTransactionDefaultType(targetType)
       setNewTransactionPrefill({
         initialType: targetType,
@@ -611,7 +611,8 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         setEditingRecurringRule(null)
       }
     } else {
-      const targetType: 'income' | 'expense' = typeOrPrefill === 'income' ? 'income' : 'expense'
+      // Se não passar tipo explícito, o padrão de criação é 'income' (Receita)
+      const targetType: 'income' | 'expense' = typeOrPrefill === 'expense' ? 'expense' : 'income'
       setNewTransactionDefaultType(targetType)
       setNewTransactionPrefill(null)
       setEditingRecurringRule(null)

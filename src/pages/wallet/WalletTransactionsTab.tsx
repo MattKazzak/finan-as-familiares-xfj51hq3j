@@ -458,7 +458,7 @@ export function WalletTransactionsTab() {
               Importar Extrato (OFX)
             </Button>
             <Button
-              onClick={() => openNewTransaction('expense')}
+              onClick={() => openNewTransaction('income')}
               className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] text-xs rounded-xl font-semibold border-0"
             >
               <Plus className="w-4 h-4 mr-1.5 stroke-[2]" />

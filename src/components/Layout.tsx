@@ -144,7 +144,7 @@ export default function Layout() {
         {/* Botão Nova Transação Desktop - Primary de ação #FCA311 */}
         <div className="p-4">
           <Button
-            onClick={() => openNewTransaction('expense')}
+            onClick={() => openNewTransaction('income')}
             className="w-full bg-brand-amber hover:bg-[#e08e08] text-brand font-bold py-2.5 shadow-md shadow-black/20 rounded-xl flex items-center justify-center gap-2 transition-all transform active:scale-95 cursor-pointer border-0"
           >
             <Plus className="w-5 h-5 stroke-[2.5]" />
@@ -364,7 +364,7 @@ export default function Layout() {
             <div className="flex-1 flex flex-col items-center justify-center py-0.5 -mt-3.5">
               <button
                 type="button"
-                onClick={() => openNewTransaction('expense')}
+                onClick={() => openNewTransaction('income')}
                 className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#FCA311] via-[#fba825] to-[#ffb845] text-[#14213D] flex items-center justify-center shadow-lg shadow-[#FCA311]/30 border-2 border-[#14213D] active:scale-90 hover:scale-105 transition-all duration-200 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
                 aria-label="Nova Transação"
                 title="Nova Transação"

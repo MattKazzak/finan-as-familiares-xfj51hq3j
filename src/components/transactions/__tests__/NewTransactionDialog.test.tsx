@@ -41,7 +41,7 @@ vi.mock('@/hooks/use-family', () => ({
     members: currentMembers,
     categories: mockCategories,
     activeMemberId: mockActiveMemberId,
-    newTransactionDefaultType: 'expense',
+    newTransactionDefaultType: 'income',
     newTransactionPrefill: mockContextPrefill,
     triggerRefresh: vi.fn(),
     openImportStatement: vi.fn(),
@@ -93,26 +93,26 @@ describe('NewTransactionDialog - Modal Unificado de Nova Transação', () => {
     currentMembers = [...mockMembers]
   })
 
-  it('abre como modal unificado com toggle Despesa selecionado por padrão e campos vazios', () => {
+  it('abre como modal unificado com toggle Receita selecionado por padrão (R67) e campos vazios', () => {
     render(<NewTransactionDialog open={true} onOpenChange={vi.fn()} />)
 
     expect(screen.getByText('Nova Transação')).toBeDefined()
     const amountInput = screen.getByPlaceholderText('0,00') as HTMLInputElement
     expect(amountInput.value).toBe('')
 
-    // Toggle com ordem invertida: Receita à esquerda (1º), Despesa à direita (2º)
+    // Toggle com ordem visual preservada: Receita à esquerda (1º), Despesa à direita (2º)
     const toggleButtons = screen.getByTestId('transaction-type-toggle').querySelectorAll('button')
     expect(toggleButtons).toHaveLength(2)
     expect(toggleButtons[0].textContent).toContain('Receita')
     expect(toggleButtons[1].textContent).toContain('Despesa')
 
-    // Toggle Despesa ativo por padrão seguindo newTransactionDefaultType: 'expense'
-    const expenseBtn = screen.getByRole('button', { name: /Despesa/i })
-    expect(expenseBtn.className).toContain('bg-finance-expense')
-
-    // Toggle Receita disponível
+    // Toggle Receita ativo por padrão (R67) seguindo newTransactionDefaultType: 'income'
     const incomeBtn = screen.getByRole('button', { name: /Receita/i })
-    expect(incomeBtn.className).not.toContain('bg-finance-income')
+    expect(incomeBtn.className).toContain('bg-finance-income')
+
+    // Toggle Despesa inativo por padrão
+    const expenseBtn = screen.getByRole('button', { name: /Despesa/i })
+    expect(expenseBtn.className).not.toContain('bg-finance-expense')
 
     // Toggle "Repetir todo mês" existe na tela
     expect(screen.getByText(/Repetir todo mês/i)).toBeDefined()
@@ -151,14 +151,22 @@ describe('NewTransactionDialog - Modal Unificado de Nova Transação', () => {
     expect(screen.getByRole('button', { name: /Salvar Regra Fixa/i })).toBeDefined()
   })
 
-  it('permite alternar entre Despesa e Receita pelo toggle segmentado', () => {
+  it('permite alternar entre Receita e Despesa pelo toggle segmentado', () => {
     render(<NewTransactionDialog open={true} onOpenChange={vi.fn()} />)
 
+    // Inicia em Receita (R67)
     const incomeBtn = screen.getByRole('button', { name: /Receita/i })
-    fireEvent.click(incomeBtn)
     expect(incomeBtn.className).toContain('bg-finance-income')
 
+    // Alterna para Despesa
     const expenseBtn = screen.getByRole('button', { name: /Despesa/i })
+    fireEvent.click(expenseBtn)
+    expect(expenseBtn.className).toContain('bg-finance-expense')
+    expect(incomeBtn.className).not.toContain('bg-finance-income')
+
+    // Alterna de volta para Receita
+    fireEvent.click(incomeBtn)
+    expect(incomeBtn.className).toContain('bg-finance-income')
     expect(expenseBtn.className).not.toContain('bg-finance-expense')
   })
 
@@ -258,9 +266,9 @@ describe('NewTransactionDialog - Modal Unificado de Nova Transação', () => {
     expect(screen.getByTestId('member-summary-trigger').textContent).toContain('Ana')
   })
 
-  it('(c) linha de categoria recolhida mostra a categoria selecionada na edição e na criação', () => {
-    const mockEditingTx = {
-      id: 'tx-existing',
+  it('(c) linha de categoria recolhida mostra a categoria selecionada na edição e na criação, e edição preserva o tipo da transação (despesa ou receita)', () => {
+    const mockEditingExpenseTx = {
+      id: 'tx-existing-expense',
       family_id: 'fam-1',
       member_id: 'm-2',
       category_id: 'cat-alimentacao',
@@ -275,11 +283,11 @@ describe('NewTransactionDialog - Modal Unificado de Nova Transação', () => {
       created_at: '2025-05-10T10:00:00Z',
     } as any
 
-    render(
+    const { unmount } = render(
       <NewTransactionDialog
         open={true}
         onOpenChange={vi.fn()}
-        editingTransaction={mockEditingTx}
+        editingTransaction={mockEditingExpenseTx}
       />,
     )
 
@@ -290,6 +298,40 @@ describe('NewTransactionDialog - Modal Unificado de Nova Transação', () => {
     // O trigger do membro mostra Ana (m-2 da transação)
     const memberTrigger = screen.getByTestId('member-summary-trigger')
     expect(memberTrigger.textContent).toContain('Ana')
+
+    // Tipo na edição é mantido como Despesa (não é forçado para Receita)
+    const expenseBtn = screen.getByRole('button', { name: /Despesa/i })
+    expect(expenseBtn.className).toContain('bg-finance-expense')
+
+    unmount()
+
+    // Testar edição de transação do tipo Receita
+    const mockEditingIncomeTx = {
+      id: 'tx-existing-income',
+      family_id: 'fam-1',
+      member_id: 'm-1',
+      category_id: 'cat-salario',
+      subcategory_id: null,
+      type: 'income' as const,
+      amount_cents: 800000,
+      description: 'Salário Trabalho',
+      transaction_date: '2025-05-05',
+      payment_method: 'pix',
+      is_recurring: false,
+      status: 'confirmed',
+      created_at: '2025-05-05T10:00:00Z',
+    } as any
+
+    render(
+      <NewTransactionDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        editingTransaction={mockEditingIncomeTx}
+      />,
+    )
+
+    const incomeBtn = screen.getByRole('button', { name: /Receita/i })
+    expect(incomeBtn.className).toContain('bg-finance-income')
   })
 
   it('(d) "Sem categoria" acessível no bloco expandido e recolhe após clique', () => {

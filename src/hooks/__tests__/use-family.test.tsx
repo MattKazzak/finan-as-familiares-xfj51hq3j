@@ -144,6 +144,74 @@ describe('useFamily - Comportamento de Membro Ativo e "Quem está usando?"', () 
     expect(result.current.isWhoIsUsingOpen).toBe(true)
   })
 
+  it('openNewTransaction inicia com "income" por padrão quando nenhum tipo é passado (R67)', async () => {
+    vi.spyOn(familyService, 'fetchFamilyData').mockResolvedValue({
+      family: {
+        id: 'fam-1',
+        name: 'Família Matheus',
+        monthly_net_income_cents: 600000,
+        avatar_url: null,
+        created_at: new Date().toISOString(),
+      } as any,
+      members: [{ id: 'm-1', name: 'Matheus', is_admin: true, family_id: 'fam-1' }] as any,
+      categories: [],
+      subcategories: [],
+      completeness: {
+        isIncomplete: false,
+        categoryCount: 19,
+        subcategoryCount: 117,
+        ruleCount: 41,
+        transactionCount: 5,
+        hasAnyTransactions: true,
+      },
+      hasAnyTransactions: true,
+      transactionCount: 5,
+    })
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <FamilyProvider>{children}</FamilyProvider>
+    )
+    const { result } = renderHook(() => useFamily(), { wrapper })
+
+    await vi.waitFor(() => {
+      expect(result.current.loading).toBe(false)
+    })
+
+    // Default inicial é 'income'
+    expect(result.current.newTransactionDefaultType).toBe('income')
+
+    // Chamada sem argumentos (ex: FAB central sem tipo ou criação genérica)
+    act(() => {
+      result.current.openNewTransaction()
+    })
+
+    expect(result.current.isNewTransactionOpen).toBe(true)
+    expect(result.current.newTransactionDefaultType).toBe('income')
+    expect(result.current.newTransactionPrefill).toBeNull()
+
+    // Fechar modal
+    act(() => {
+      result.current.setIsNewTransactionOpen(false)
+    })
+
+    // Chamada explícita com 'expense' preserva 'expense'
+    act(() => {
+      result.current.openNewTransaction('expense')
+    })
+
+    expect(result.current.isNewTransactionOpen).toBe(true)
+    expect(result.current.newTransactionDefaultType).toBe('expense')
+
+    // Chamada explícita com objeto sem tipo definido faz fallback para 'income'
+    act(() => {
+      result.current.openNewTransaction({ description: 'Entrada avulsa' })
+    })
+
+    expect(result.current.isNewTransactionOpen).toBe(true)
+    expect(result.current.newTransactionDefaultType).toBe('income')
+    expect(result.current.newTransactionPrefill?.initialType).toBe('income')
+  })
+
   it('controla a abertura do VoiceTransactionDialog via openVoiceDialog e setIsVoiceDialogOpen', async () => {
     vi.spyOn(familyService, 'fetchFamilyData').mockResolvedValue({
       family: {
