@@ -956,40 +956,6 @@ export default function Home() {
           </div>
 
           {/* Atalhos Rápidos no Fundo Marinho (Chips consistentes) */}
-          <div className="pt-2 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-            <button
-              type="button"
-              onClick={() => openNewTransaction('expense')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/15 active:scale-95 transition-all shrink-0 cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5 text-[#FCA311]" />
-              <span>Nova despesa</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => openNewTransaction('income')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/15 active:scale-95 transition-all shrink-0 cursor-pointer"
-            >
-              <ArrowUpRight className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Nova receita</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/carteira')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/15 active:scale-95 transition-all shrink-0 cursor-pointer"
-            >
-              <Receipt className="w-3.5 h-3.5 text-slate-300" />
-              <span>Extrato</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/metas')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/15 active:scale-95 transition-all shrink-0 cursor-pointer"
-            >
-              <PiggyBank className="w-3.5 h-3.5 text-[#FCA311]" />
-              <span>Metas</span>
-            </button>
-          </div>
         </div>
       </div>
 
