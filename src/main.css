@@ -140,13 +140,13 @@
 
   /* Garantia estrutural GLOBAL: impede rolagem horizontal em qualquer tela do app e fixa visual claro */
   html {
-    background-color: #f8f9fb;
+    background-color: #f8f9fb !important;
     color: #14213d;
     color-scheme: light only;
   }
 
   body {
-    background-color: #f8f9fb;
+    background-color: #f8f9fb !important;
     color: #14213d;
     color-scheme: light only;
     overflow-x: clip !important;
@@ -172,7 +172,7 @@
     overflow-x: clip;
     max-width: 100%;
     min-height: 100vh;
-    background-color: #f8f9fb;
+    background-color: #f8f9fb !important;
     color: #14213d;
     color-scheme: light only;
   }

@@ -7,6 +7,7 @@ import { FamilyProvider } from '@/hooks/use-family'
 import { ImportSessionProvider } from '@/contexts/ImportSessionContext'
 import { ActiveMonthProvider } from '@/contexts/ActiveMonthContext'
 import Layout from '@/components/Layout'
+import { PwaUpdateBanner } from '@/components/common/PwaUpdateBanner'
 import Login from '@/pages/Login'
 import ResetPassword from '@/pages/ResetPassword'
 import Home from '@/pages/Home'
@@ -118,6 +119,7 @@ const App = () => (
   <BrowserRouter>
     <AuthProvider>
       <TooltipProvider>
+        <PwaUpdateBanner />
         <Toaster />
         <Sonner />
         <Routes>
