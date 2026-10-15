@@ -177,16 +177,43 @@ Deno.serve(async (req: Request) => {
     openaiFormData.append('response_format', 'json')
     openaiFormData.append(
       'prompt',
-      'Transcreva gastos, receitas e compras em português do Brasil: reais, centavos, pix, cartão, débito, crédito, supermercado, farmácia.',
+      // Prompt de domínio: viesa o Whisper para o vocabulário financeiro pt-BR do app
+      // (marcas, métodos de pagamento, estabelecimentos). Máx ~60 tokens, sem transcrever literalmente.
+      'Registro de gastos por voz em português do Brasil. Vocabulário: reais, centavos, pix, débito, crédito, dinheiro, cartão, supermercado, atacado, hortifruti, padaria, farmácia, posto, gasolina, etanol, uber, 99, ifood, mercado, aluguel, condomínio, luz, água, internet, boleto, parcelado, à vista, churrasco, salário, receita, gastei, paguei, lancei.',
     )
 
-    const openAiResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${openaiApiKey}`,
-      },
-      body: openaiFormData,
-    })
+    // Timeout de 20s: falha rápido em vez de deixar o usuário esperando indefinidamente
+    const openaiController = new AbortController()
+    const openaiTimeout = setTimeout(() => openaiController.abort(), 20000)
+
+    let openAiResponse: Response
+    try {
+      openAiResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${openaiApiKey}`,
+        },
+        body: openaiFormData,
+        signal: openaiController.signal,
+      })
+    } catch (fetchErr: any) {
+      clearTimeout(openaiTimeout)
+      const isTimeout = fetchErr?.name === 'AbortError'
+      return new Response(
+        JSON.stringify({
+          error: isTimeout ? 'WHISPER_TIMEOUT' : 'OPENAI_WHISPER_NETWORK',
+          text: '',
+          message: isTimeout
+            ? 'A transcrição demorou demais e foi cancelada. Toque no microfone e fale de novo — frases mais curtas ajudam.'
+            : 'Falha de conexão com o serviço de transcrição. Verifique a internet e tente de novo.',
+        }),
+        {
+          status: 502,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
+    }
+    clearTimeout(openaiTimeout)
 
     if (!openAiResponse.ok) {
       const errorText = await openAiResponse.text()

@@ -447,13 +447,15 @@ export function useVoiceCapture(options: UseVoiceCaptureOptions = {}): UseVoiceC
           console.warn('[AudioCapture] Erro ao criar AudioContext:', ctxErr)
         }
 
-        // MediaRecorder com formato preferido
+        // MediaRecorder com formato preferido + bitrate otimizado para voz.
+        // 32 kbps: qualidade de sobra para fala (Whisper reamostra p/ 16kHz mono) e
+        // arquivo ~8x menor que o default (~256 kbps) -> upload e transcrição muito mais rápidos.
         const preferredMime = getSupportedAudioMimeType()
         let recorder: MediaRecorder
         try {
           recorder = preferredMime
-            ? new MediaRecorder(stream, { mimeType: preferredMime })
-            : new MediaRecorder(stream)
+            ? new MediaRecorder(stream, { mimeType: preferredMime, audioBitsPerSecond: 32000 })
+            : new MediaRecorder(stream, { audioBitsPerSecond: 32000 })
         } catch {
           recorder = new MediaRecorder(stream)
         }
