@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { useFamily } from '@/hooks/use-family'
 import { useToast } from '@/hooks/use-toast'
@@ -94,6 +94,8 @@ export default function ProfilePage() {
   // Estado do modal de instruções PWA (iOS / Outros sem prompt nativo)
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false)
   const [isInstalling, setIsInstalling] = useState(false)
+  const [isSignOutConfirmOpen, setIsSignOutConfirmOpen] = useState(false)
+  const [isSigningOut, setIsSigningOut] = useState(false)
   const [isCategoryManagementOpen, setIsCategoryManagementOpen] = useState(false)
 
   // Diálogo Editar Família (Nome e Avatar/Logo)
@@ -434,6 +436,12 @@ export default function ProfilePage() {
 
   const handleSignOut = async () => {
     await signOut()
+    // Logout completo: limpa o membro ativo do dispositivo (evita herdar seleção em outro login)
+    try {
+      localStorage.removeItem('financas_familiares_active_member_id')
+    } catch {
+      // localStorage indisponível
+    }
     navigate('/')
   }
 
@@ -966,17 +974,42 @@ export default function ProfilePage() {
           </span>
         </div>
 
-        {/* Botão Sair com visual limpo */}
+        {/* Botão Sair com confirmação */}
         <div className="pt-1">
           <button
             type="button"
-            onClick={handleSignOut}
+            onClick={() => setIsSignOutConfirmOpen(true)}
             className="flex items-center gap-2 text-xs font-semibold text-red-600 hover:text-red-700 p-2.5 rounded-xl hover:bg-red-50 transition-colors w-full sm:w-auto"
           >
             <LogOut className="w-4 h-4 shrink-0" />
             <span>Sair da conta compartilhada</span>
           </button>
         </div>
+
+        {/* Links legais e institucionais */}
+        <nav
+          className="pt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400"
+          aria-label="Links legais"
+        >
+          <Link
+            to="/privacidade"
+            className="hover:text-slate-600 underline-offset-2 hover:underline"
+          >
+            Privacidade
+          </Link>
+          <span aria-hidden="true">·</span>
+          <Link to="/termos" className="hover:text-slate-600 underline-offset-2 hover:underline">
+            Termos de Uso
+          </Link>
+          <span aria-hidden="true">·</span>
+          <Link to="/faq" className="hover:text-slate-600 underline-offset-2 hover:underline">
+            FAQ
+          </Link>
+          <span aria-hidden="true">·</span>
+          <Link to="/contato" className="hover:text-slate-600 underline-offset-2 hover:underline">
+            Fale conosco
+          </Link>
+        </nav>
       </div>
 
       {/* DIÁLOGO EDITAR FAMÍLIA (NOME E FOTO) */}
@@ -1428,6 +1461,39 @@ export default function ProfilePage() {
               className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl h-9"
             >
               Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* CONFIRMAÇÃO DE SAIR DA CONTA (LOGOUT) */}
+      <AlertDialog
+        open={isSignOutConfirmOpen}
+        onOpenChange={(open) => !open && setIsSignOutConfirmOpen(false)}
+      >
+        <AlertDialogContent className="rounded-3xl max-w-sm w-[92vw] p-6">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-bold text-slate-900">
+              Sair da conta?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-slate-500">
+              Você precisará entrar com e-mail e senha novamente para acessar as finanças da
+              família.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0 pt-2">
+            <AlertDialogCancel className="text-xs rounded-xl h-9">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                setIsSigningOut(true)
+                await handleSignOut()
+                setIsSigningOut(false)
+              }}
+              disabled={isSigningOut}
+              className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl h-9"
+            >
+              {isSigningOut && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+              Sair da conta
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -16,6 +16,7 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
+import { evaluatePasswordStrength, isPasswordStrongEnough } from '@/pages/Login'
 
 export default function ResetPassword() {
   const { user, loading, isPasswordRecovery, updatePassword, clearPasswordRecovery } = useAuth()
@@ -23,6 +24,7 @@ export default function ResetPassword() {
 
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const passwordStrength = React.useMemo(() => evaluatePasswordStrength(password), [password])
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -83,8 +85,8 @@ export default function ResetPassword() {
       return
     }
 
-    if (password.length < 6) {
-      setErrorMessage('A nova senha deve ter no mínimo 6 caracteres.')
+    if (!isPasswordStrongEnough(password)) {
+      setErrorMessage('Use uma senha forte: no mínimo 8 caracteres, com letra maiúscula e número.')
       return
     }
 
@@ -197,7 +199,7 @@ export default function ResetPassword() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="No mínimo 6 caracteres"
+                  placeholder="8+ caracteres, maiúscula e número"
                   className="pl-8 pr-9 h-11 border-0 rounded-none bg-transparent placeholder:text-slate-400 placeholder:font-light text-slate-900 font-normal focus-visible:ring-0 focus-visible:ring-offset-0 text-sm shadow-none"
                   required
                   autoFocus
@@ -217,6 +219,33 @@ export default function ResetPassword() {
                 </button>
               </div>
             </div>
+
+            {/* Medidor de força da senha */}
+            {password.length > 0 && (
+              <div className="animate-fade-in space-y-1.5" aria-live="polite">
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div
+                      key={i}
+                      className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
+                        i <= passwordStrength.score
+                          ? passwordStrength.score <= 1
+                            ? 'bg-red-500'
+                            : passwordStrength.score === 2
+                              ? 'bg-amber-500'
+                              : 'bg-emerald-500'
+                          : 'bg-slate-200'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <p className="text-[11px] font-medium text-slate-500">
+                  {passwordStrength.label}
+                  {passwordStrength.score < 3 &&
+                    ' — use 8+ caracteres, com letra maiúscula, número e símbolo.'}
+                </p>
+              </div>
+            )}
 
             {/* Campo Confirmar Nova Senha */}
             <div>

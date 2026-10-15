@@ -15,6 +15,12 @@
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#F8F9FB" />
     <meta name="color-scheme" content="light" />
+    <!-- ANTI-DARK: sempre claro, mesmo com o navegador em modo escuro -->
+    <meta name="supported-color-schemes" content="light" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!-- iOS: impede zoom acidental em inputs e cortes de borda -->
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="apple-touch-icon" href="/icon-maskable.svg" />
 
     <!-- Apple iOS Safari PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -32,6 +38,13 @@
 
   <body>
     <div id="root"></div>
+    <script>
+      // Anti-flash: aplica light antes do React montar (evita fundo escuro em 1 frame)
+      try {
+        document.documentElement.classList.remove('dark')
+        document.documentElement.style.colorScheme = 'light'
+      } catch (e) {}
+    </script>
     <!-- @skip-protected: Do not remove. Required for app features. -->
     <script src="https://goskip.dev/skip.js"></script>
     <!-- @skip-protected: Do not remove. App entrypoint. -->

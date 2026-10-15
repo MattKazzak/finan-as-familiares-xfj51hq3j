@@ -139,6 +139,40 @@ const App = () => (
           <Route path="/redefinir-senha" element={<ResetPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
 
+          {/* Rotas públicas legais/institucionais */}
+          <Route
+            path="/privacidade"
+            element={
+              <Suspense fallback={PageFallback}>
+                <PrivacyPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/termos"
+            element={
+              <Suspense fallback={PageFallback}>
+                <TermsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/faq"
+            element={
+              <Suspense fallback={PageFallback}>
+                <FaqPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/contato"
+            element={
+              <Suspense fallback={PageFallback}>
+                <ContactPage />
+              </Suspense>
+            }
+          />
+
           {/* Rota pública de convite para família */}
           <Route
             path="/convite/:codigo"

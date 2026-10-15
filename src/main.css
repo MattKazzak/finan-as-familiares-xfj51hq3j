@@ -14,6 +14,38 @@
     color-scheme: light only;
   }
 
+  /* BLINDAGEM ANTI-DARK-MODE: o app é light-only por decisão de produto.
+     Mesmo com o navegador em dark, todas as superfícies ficam claras. */
+  html,
+  body,
+  #root {
+    background-color: #f8f9fb !important;
+    color: #14213d !important;
+  }
+
+  /* Neutraliza a classe .dark se algo a aplicar (Radix, extensão, next-themes) */
+  html.dark,
+  html.dark body,
+  html.dark #root {
+    background-color: #f8f9fb !important;
+    color: #14213d !important;
+  }
+
+  /* Inputs e campos de formulário sempre claros (evita autofill escuro do Chrome) */
+  input,
+  textarea,
+  select {
+    color-scheme: light !important;
+  }
+
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #14213d;
+    -webkit-box-shadow: 0 0 0 1000px #ffffff inset;
+    transition: background-color 9999s ease-out 0s;
+  }
+
   :root {
     /* Curiangoo Design System (CDS v1.0) Tokens:
        Fundo Light: #F8F9FB (220 20% 98% / off-white acetinado)

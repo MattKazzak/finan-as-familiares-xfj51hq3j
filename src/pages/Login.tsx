@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect, useMemo } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
@@ -40,6 +40,36 @@ export function isEmailNotConfirmedError(error: any): boolean {
   )
 }
 
+/**
+ * Política de senha (padrão ouro): mínimo 8 caracteres + letra maiúscula + número.
+ * Score 0-4 para o medidor visual. Símbolo e comprimento ≥12 elevam a nota.
+ */
+export function evaluatePasswordStrength(pw: string): {
+  score: number
+  label: string
+} {
+  if (!pw) return { score: 0, label: '' }
+  const hasUpper = /[A-Z]/.test(pw)
+  const hasLower = /[a-z]/.test(pw)
+  const hasNumber = /[0-9]/.test(pw)
+  const hasSymbol = /[^A-Za-z0-9]/.test(pw)
+  const len = pw.length
+
+  let score = 0
+  if (len >= 8) score++
+  if (hasUpper && hasLower) score++
+  if (hasNumber) score++
+  if (hasSymbol || len >= 12) score++
+
+  const labels = ['Muito fraca', 'Fraca', 'Razoável', 'Forte', 'Excelente']
+  return { score, label: labels[score] }
+}
+
+/** Senha aceita no cadastro: score mínimo 3 (8+ chars, maiúscula+minúscula, número). */
+export function isPasswordStrongEnough(pw: string): boolean {
+  return evaluatePasswordStrength(pw).score >= 3
+}
+
 export default function Login() {
   const { signIn, signUp, resetPasswordForEmail } = useAuth()
   const { toast } = useToast()
@@ -52,6 +82,7 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const passwordStrength = useMemo(() => evaluatePasswordStrength(password), [password])
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -132,8 +163,10 @@ export default function Login() {
       return
     }
 
-    if (password.length < 6) {
-      setErrorMessage('A senha deve ter no mínimo 6 caracteres.')
+    if (!isPasswordStrongEnough(password)) {
+      setErrorMessage(
+        'Use uma senha mais forte: no mínimo 8 caracteres, com letra maiúscula e número.',
+      )
       return
     }
 
@@ -184,8 +217,10 @@ export default function Login() {
         setErrorMessage('Preencha todos os campos obrigatórios.')
         return
       }
-      if (password.length < 6) {
-        setErrorMessage('A senha deve ter no mínimo 6 caracteres.')
+      if (!isPasswordStrongEnough(password)) {
+        setErrorMessage(
+          'Use uma senha mais forte: no mínimo 8 caracteres, com letra maiúscula e número.',
+        )
         return
       }
       if (password !== confirmPassword) {
@@ -560,6 +595,35 @@ export default function Login() {
                   </div>
                 )}
 
+                {/* Medidor de força da senha (apenas no Cadastro Passo 1) */}
+                {mode === 'signup' && signupStep === 'credentials' && password.length > 0 && (
+                  <div className="animate-fade-in space-y-1.5" aria-live="polite">
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4].map((i) => (
+                        <div
+                          key={i}
+                          className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
+                            i <= passwordStrength.score
+                              ? passwordStrength.score <= 1
+                                ? 'bg-red-500'
+                                : passwordStrength.score === 2
+                                  ? 'bg-amber-500'
+                                  : passwordStrength.score === 3
+                                    ? 'bg-emerald-500'
+                                    : 'bg-emerald-600'
+                              : 'bg-slate-200'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-[11px] font-medium text-slate-500">
+                      {passwordStrength.label}
+                      {passwordStrength.score < 3 &&
+                        ' — use 8+ caracteres, com letra maiúscula, número e símbolo.'}
+                    </p>
+                  </div>
+                )}
+
                 {/* Confirmar Senha (apenas no Cadastro Passo 1) */}
                 {mode === 'signup' && signupStep === 'credentials' && (
                   <div className="animate-fade-in">
@@ -722,9 +786,34 @@ export default function Login() {
         </main>
 
         {/* Rodapé de Segurança e Confiança Fintech */}
-        <footer className="mt-8 flex items-center justify-center gap-2 text-slate-500 text-xs text-center max-w-xs font-light">
-          <ShieldCheck className="w-4 h-4 text-slate-500 shrink-0" strokeWidth={1.5} />
-          <span>Isolamento individual por família e criptografia de ponta a ponta.</span>
+        <footer className="mt-8 flex flex-col items-center gap-2 text-slate-500 text-xs text-center max-w-xs font-light">
+          <div className="flex items-center justify-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-slate-500 shrink-0" strokeWidth={1.5} />
+            <span>Isolamento individual por família e criptografia de ponta a ponta.</span>
+          </div>
+          <nav
+            className="flex items-center justify-center gap-3 text-[11px] text-slate-400"
+            aria-label="Links legais"
+          >
+            <Link
+              to="/privacidade"
+              className="hover:text-slate-600 underline-offset-2 hover:underline"
+            >
+              Privacidade
+            </Link>
+            <span aria-hidden="true">·</span>
+            <Link to="/termos" className="hover:text-slate-600 underline-offset-2 hover:underline">
+              Termos
+            </Link>
+            <span aria-hidden="true">·</span>
+            <Link to="/faq" className="hover:text-slate-600 underline-offset-2 hover:underline">
+              FAQ
+            </Link>
+            <span aria-hidden="true">·</span>
+            <Link to="/contato" className="hover:text-slate-600 underline-offset-2 hover:underline">
+              Fale conosco
+            </Link>
+          </nav>
         </footer>
       </div>
 
