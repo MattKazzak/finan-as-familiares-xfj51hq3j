@@ -108,7 +108,15 @@ function checkExpectations(expect, json) {
     failures.push(`status esperado "${expect.status}", veio "${json?.status}"`)
   }
   const classe = json?.router?.classe ?? json?.classe_intencao ?? null
-  if (expect.classe && classe !== expect.classe) {
+  // "1_ou_4": lançamento de mercado grava idêntico em Classe 1 (simples) ou Classe 4 (lista de
+  // mercado) — rótulo interno do router, UX igual (status sucesso, sem pergunta). Aceita os dois.
+  const classeOk =
+    expect.classe === '1_ou_4'
+      ? classe === 1 || classe === 4
+      : expect.classe && classe !== expect.classe
+        ? false
+        : true
+  if (!classeOk) {
     failures.push(`classe esperada ${expect.classe}, veio ${classe}`)
   }
   if (expect.acao && json?.acao !== expect.acao) {

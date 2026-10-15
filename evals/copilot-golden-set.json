@@ -6,7 +6,10 @@
       "id": "c01",
       "nome": "Classe 1: lançamento completo simples",
       "turns": [
-        { "text": "gastei 80 reais no mercado", "expect": { "status": "sucesso", "classe": 1 } }
+        {
+          "text": "gastei 80 reais no mercado",
+          "expect": { "status": "sucesso", "classe": "1_ou_4" }
+        }
       ]
     },
     {
