@@ -16,7 +16,14 @@ import {
   buildSettlementSummary,
   type SettlementRow,
 } from '@/services/splits'
-import { Scale } from 'lucide-react'
+import { Scale, CreditCard, ExternalLink } from 'lucide-react'
+import {
+  fetchMySubscription,
+  requestCancelSubscription,
+  isSubscriptionActive,
+  CHECKOUT_URLS,
+  type MySubscription,
+} from '@/services/subscription'
 import { deleteUserAccount, updateUserName, uploadUserAvatar } from '@/services/user-account'
 import { evaluatePasswordStrength, isPasswordStrongEnough } from '@/pages/Login'
 import { supabase } from '@/lib/supabase/client'
@@ -306,6 +313,54 @@ export default function ProfilePage() {
   // Gestão de outras famílias incompletas (Tarefa 2.3)
   const [incompleteFamilies, setIncompleteFamilies] = useState<Array<any>>([])
   const [deletingIncompleteFamId, setDeletingIncompleteFamId] = useState<string | null>(null)
+
+  // ===== Minha Assinatura (billing) =====
+  const [subscription, setSubscription] = useState<MySubscription | null>(null)
+  const [subscriptionLoading, setSubscriptionLoading] = useState(true)
+  const [isCancellingSub, setIsCancellingSub] = useState(false)
+
+  const loadSubscription = useCallback(async () => {
+    try {
+      setSubscriptionLoading(true)
+      const sub = await fetchMySubscription()
+      setSubscription(sub)
+    } catch (err) {
+      console.warn('Erro ao carregar assinatura:', err)
+      setSubscription(null)
+    } finally {
+      setSubscriptionLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadSubscription()
+  }, [loadSubscription])
+
+  const handleCancelSubscription = async () => {
+    if (!subscription) return
+    const confirmed = window.confirm(
+      'Cancelar a assinatura? Você continua com acesso até o fim do período já pago.',
+    )
+    if (!confirmed) return
+    try {
+      setIsCancellingSub(true)
+      await requestCancelSubscription(subscription.id)
+      await loadSubscription()
+      toast({
+        title: 'Assinatura cancelada',
+        description: 'Seu acesso continua até o fim do período já pago.',
+      })
+    } catch (err) {
+      console.error('Erro ao cancelar assinatura:', err)
+      toast({
+        title: 'Não foi possível cancelar',
+        description: 'Tente novamente ou fale com o suporte em suporte@curiangoo.com.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsCancellingSub(false)
+    }
+  }
 
   // ===== Acerto de contas do mês (rateio) =====
   const [settlementRows, setSettlementRows] = useState<SettlementRow[]>([])
@@ -1173,6 +1228,108 @@ export default function ProfilePage() {
                 </div>
               </details>
             )}
+          </div>
+        )}
+      </div>
+
+      {/* 5.45 MINHA ASSINATURA (billing) */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm space-y-4">
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+            <CreditCard className="w-5 h-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h4 className="font-bold text-base text-slate-900 leading-tight">Minha assinatura</h4>
+            <p className="text-xs text-slate-500 mt-1">Plano, renovação e cancelamento</p>
+          </div>
+        </div>
+
+        {subscriptionLoading ? (
+          <div className="py-4 flex items-center justify-center gap-2 text-xs text-slate-500">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Carregando assinatura...
+          </div>
+        ) : !subscription ||
+          subscription.status === 'canceled' ||
+          subscription.status === 'expired' ? (
+          <div className="space-y-3">
+            <p className="text-xs text-slate-600">
+              Você ainda não tem assinatura ativa. Escolha um plano para desbloquear tudo:
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <a
+                href={CHECKOUT_URLS.monthly}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between gap-2 py-3 px-4 rounded-2xl border-2 border-[#059669] text-[#059669] font-semibold text-sm hover:bg-[#059669] hover:text-white transition-all"
+              >
+                <span>R$ 9,99/mês</span>
+                <ExternalLink className="w-4 h-4" />
+              </a>
+              <a
+                href={CHECKOUT_URLS.yearly}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between gap-2 py-3 px-4 rounded-2xl bg-gradient-to-r from-[#059669] to-[#047857] text-white font-semibold text-sm shadow-lg shadow-[#059669]/30 hover:shadow-xl transition-all"
+              >
+                <span>R$ 99,90/ano</span>
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              Pagamento processado pelo Mercado Pago. Após assinar, o acesso é liberado
+              automaticamente no e-mail da sua conta.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-semibold text-slate-900">
+                Plano {subscription.plan === 'yearly' ? 'Anual' : 'Mensal'}
+              </span>
+              <span
+                className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
+                  isSubscriptionActive(subscription)
+                    ? 'bg-emerald-50 text-emerald-700'
+                    : 'bg-amber-50 text-amber-700'
+                }`}
+              >
+                {subscription.status === 'active'
+                  ? 'Ativa'
+                  : subscription.status === 'trial'
+                    ? 'Em teste'
+                    : subscription.status === 'past_due'
+                      ? 'Pagamento pendente'
+                      : 'Pendente'}
+              </span>
+            </div>
+            {subscription.current_period_end && (
+              <p className="text-xs text-slate-600">
+                {isSubscriptionActive(subscription)
+                  ? `Próxima renovação em ${new Date(subscription.current_period_end).toLocaleDateString('pt-BR')}`
+                  : `Acesso válido até ${new Date(subscription.current_period_end).toLocaleDateString('pt-BR')}`}
+              </p>
+            )}
+            <p className="text-[11px] text-slate-500">
+              O cartão é cobrado automaticamente pelo Mercado Pago. Você pode cancelar quando quiser
+              — sem multa, sem burocracia.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isCancellingSub}
+              onClick={handleCancelSubscription}
+              className="w-full rounded-2xl border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+            >
+              {isCancellingSub ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Cancelando...
+                </>
+              ) : (
+                'Cancelar assinatura'
+              )}
+            </Button>
           </div>
         )}
       </div>
