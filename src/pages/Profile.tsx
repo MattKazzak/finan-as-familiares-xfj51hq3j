@@ -17,6 +17,13 @@ import {
   type SettlementRow,
 } from '@/services/splits'
 import { Scale, CreditCard, ExternalLink, ChevronRight } from 'lucide-react'
+import {
+  fetchMySubscription,
+  requestCancelSubscription,
+  isSubscriptionActive,
+  CHECKOUT_URLS,
+  type MySubscription,
+} from '@/services/subscription'
 import { deleteUserAccount, updateUserName, uploadUserAvatar } from '@/services/user-account'
 import { evaluatePasswordStrength, isPasswordStrongEnough } from '@/pages/Login'
 import { supabase } from '@/lib/supabase/client'
@@ -59,22 +66,24 @@ import {
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
 import { InstallInstructionsModal } from '@/components/common/InstallInstructionsModal'
 import { CategoryManagementDialog } from '@/components/categories/CategoryManagementDialog'
+import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import { Sparkles, Landmark, AlertCircle } from 'lucide-react'
 import packageJson from '../../package.json'
-import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { Switch } from '@/components/ui/switch'
 import {
-  fetchMySubscription,
-  requestCancelSubscription,
-  isSubscriptionActive,
-  CHECKOUT_URLS,
-  type MySubscription,
-} from '@/services/subscription'
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
