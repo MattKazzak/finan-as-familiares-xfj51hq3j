@@ -41,7 +41,7 @@ import {
 } from '@/services/import/categorization'
 import { parseBRLToCents, formatNumberBRL, formatBRL } from '@/lib/formatters'
 import { createTransactionWithSplits, splitEqually, validateSplits } from '@/services/splits'
-import { Users, DivideSquare } from 'lucide-react'
+import { UsersRound, DivideSquare } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { ContextualSubcategorySelector } from '@/components/categories/ContextualSubcategorySelector'
 import { CategoryIcon } from '@/components/common/CategoryIcon'
@@ -854,7 +854,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
         >
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 min-w-0">
-              <DivideSquare className="w-3.5 h-3.5 text-[#64748B] shrink-0" />
+              <UsersRound className="w-3.5 h-3.5 text-[#64748B] shrink-0" />
               <span className="text-xs font-medium text-[#64748B]">Dividir com alguém</span>
             </div>
             <Switch
