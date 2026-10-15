@@ -15,7 +15,7 @@ export interface TransactionFilter {
 }
 
 export async function fetchTransactions(filter: TransactionFilter) {
-  let query = (supabase as any)
+  let query = supabase
     .from('transactions')
     .select(`
       *,
@@ -85,7 +85,7 @@ export async function fetchMonthAggregates(
   const end = nextMonthDate.toISOString().slice(0, 10)
 
   // Consulta leve sem joins pesados
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('transactions')
     .select('type, amount_cents, category_id, subcategory_id')
     .eq('family_id', familyId)
@@ -148,7 +148,7 @@ export async function createTransaction(payload: {
   status?: 'confirmed' | 'projected'
   bank_transaction_id?: string | null
 }) {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('transactions')
     .insert(payload)
     .select(`
@@ -188,7 +188,7 @@ export async function createTransactionsBatch(
   }>,
 ) {
   if (payloads.length === 0) return []
-  const { data, error } = await (supabase as any).from('transactions').insert(payloads).select(`
+  const { data, error } = await supabase.from('transactions').insert(payloads).select(`
       *,
       member:family_members(*),
       category:transaction_categories(*),
@@ -223,7 +223,7 @@ export async function updateTransaction(
     bank_transaction_id: string | null
   }>,
 ) {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('transactions')
     .update(payload)
     .eq('id', id)
@@ -241,7 +241,7 @@ export async function updateTransaction(
 }
 
 export async function deleteTransaction(id: string) {
-  const { error } = await (supabase as any).from('transactions').delete().eq('id', id)
+  const { error } = await supabase.from('transactions').delete().eq('id', id)
 
   if (error) throw error
 }
@@ -250,7 +250,7 @@ export async function deleteTransaction(id: string) {
 
 // 1. Buscar Orçamentos Padrão Recorrentes (válidos para todos os meses)
 export async function fetchDefaultBudgets(familyId: string) {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('default_budgets')
     .select(`
       *,
@@ -266,7 +266,7 @@ export async function fetchDefaultBudgets(familyId: string) {
 // 2. Buscar Ajustes/Overrides de um mês específico
 export async function fetchMonthBudgetOverrides(familyId: string, monthStr: string) {
   const monthDate = `${monthStr}-01`
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('budgets')
     .select(`
       *,
@@ -288,7 +288,7 @@ export async function upsertDefaultBudget(
   subcategoryId?: string | null,
 ) {
   // Como subcategory_id pode ser null, primeiro verificamos se já existe registro
-  let query = (supabase as any)
+  let query = supabase
     .from('default_budgets')
     .select('id')
     .eq('family_id', familyId)
@@ -303,7 +303,7 @@ export async function upsertDefaultBudget(
   const { data: existing } = await query.maybeSingle()
 
   if (existing?.id) {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('default_budgets')
       .update({ amount_cents: amountCents })
       .eq('id', existing.id)
@@ -316,7 +316,7 @@ export async function upsertDefaultBudget(
     if (error) throw error
     return data as DefaultBudget
   } else {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('default_budgets')
       .insert({
         family_id: familyId,
@@ -344,7 +344,7 @@ export async function upsertMonthBudgetOverride(
   subcategoryId?: string | null,
 ) {
   const monthDate = `${monthStr}-01`
-  let query = (supabase as any)
+  let query = supabase
     .from('budgets')
     .select('id')
     .eq('family_id', familyId)
@@ -360,7 +360,7 @@ export async function upsertMonthBudgetOverride(
   const { data: existing } = await query.maybeSingle()
 
   if (existing?.id) {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('budgets')
       .update({ amount_cents: amountCents })
       .eq('id', existing.id)
@@ -373,7 +373,7 @@ export async function upsertMonthBudgetOverride(
     if (error) throw error
     return data as Budget
   } else {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('budgets')
       .insert({
         family_id: familyId,
@@ -401,7 +401,7 @@ export async function resetMonthBudgetToDefault(
   subcategoryId?: string | null,
 ) {
   const monthDate = `${monthStr}-01`
-  let query = (supabase as any)
+  let query = supabase
     .from('budgets')
     .delete()
     .eq('family_id', familyId)
@@ -420,7 +420,7 @@ export async function resetMonthBudgetToDefault(
 
 // 6. Remover completamente o orçamento padrão recorrente
 export async function deleteDefaultBudget(id: string) {
-  const { error } = await (supabase as any).from('default_budgets').delete().eq('id', id)
+  const { error } = await supabase.from('default_budgets').delete().eq('id', id)
 
   if (error) throw error
 }

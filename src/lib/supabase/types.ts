@@ -1395,12 +1395,18 @@ export type Database = {
         Args: { p_family_id: string; p_name: string }
         Returns: Json
       }
+      check_ai_rate_limit: {
+        Args: { p_function_name: string; p_max_requests: number; p_window_minutes: number }
+        Returns: Json
+      }
       cleanup_abandoned_families: { Args: { p_user_id: string }; Returns: Json }
       create_new_family_workspace: {
         Args: { p_family_name: string; p_member_name: string }
         Returns: string
       }
+      delete_family_workspace: { Args: { p_family_id: string }; Returns: Json }
       generate_family_invite: { Args: { p_family_id: string }; Returns: Json }
+      get_family_totals: { Args: { p_family_id: string }; Returns: Json }
       get_invite_preview: { Args: { p_code: string }; Returns: Json }
       leave_family: { Args: { p_family_id: string }; Returns: Json }
       remove_family_member: { Args: { p_member_id: string }; Returns: Json }
@@ -1408,6 +1414,8 @@ export type Database = {
         Args: { p_member_id: string; p_new_name: string }
         Returns: Json
       }
+      reorder_family_categories: { Args: { p_ids: string[] }; Returns: undefined }
+      reorder_family_subcategories: { Args: { p_ids: string[] }; Returns: undefined }
       user_belongs_to_family: { Args: { f_id: string }; Returns: boolean }
     }
     Enums: {

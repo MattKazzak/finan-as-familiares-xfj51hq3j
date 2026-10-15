@@ -33,7 +33,7 @@ export async function ensureSingleFamilyWorkspace(user: {
   const creationPromise = (async () => {
     try {
       // 1. Consulta preventiva: verifica se já existe família criada pelo usuário ou vinculada a ele
-      const { data: existingFamilies } = await (supabase as any)
+      const { data: existingFamilies } = await supabase
         .from('families')
         .select('*')
         .eq('created_by', userId)
@@ -45,14 +45,14 @@ export async function ensureSingleFamilyWorkspace(user: {
       }
 
       // Consulta se o usuário já é membro de alguma família via family_members
-      const { data: memberRecords } = await (supabase as any)
+      const { data: memberRecords } = await supabase
         .from('family_members')
         .select('family_id')
         .eq('user_id', userId)
         .limit(1)
 
       if (memberRecords && memberRecords.length > 0 && memberRecords[0].family_id) {
-        const { data: linkedFam } = await (supabase as any)
+        const { data: linkedFam } = await supabase
           .from('families')
           .select('*')
           .eq('id', memberRecords[0].family_id)
@@ -69,7 +69,7 @@ export async function ensureSingleFamilyWorkspace(user: {
 
       await createNewFamilyWorkspace(fallbackFamilyName, fallbackMemberName)
 
-      const { data: refetched } = await (supabase as any)
+      const { data: refetched } = await supabase
         .from('families')
         .select('*')
         .order('created_at', { ascending: true })

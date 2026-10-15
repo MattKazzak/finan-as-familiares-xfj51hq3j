@@ -49,6 +49,7 @@ import {
   BarChart3,
   Receipt,
   PiggyBank,
+  AlertTriangle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -92,6 +93,7 @@ export default function Home() {
     total_income_cents: number
     total_expense_cents: number
   } | null>(null)
+  const [loadError, setLoadError] = useState(false)
   const [defaultBudgets, setDefaultBudgets] = useState<DefaultBudget[]>([])
   const [monthOverrides, setMonthOverrides] = useState<Budget[]>([])
 
@@ -167,11 +169,13 @@ export default function Home() {
       }
       setDefaultBudgets(defBgs)
       setMonthOverrides(overrides)
+      setLoadError(false)
     } catch (err: any) {
       console.error('Erro ao carregar dados do início:', err)
+      setLoadError(true)
       toast({
         title: 'Não foi possível carregar os dados',
-        description: 'Verifique sua conexão ou tente novamente.',
+        description: 'Verifique sua conexão. Toque em Tentar novamente para recarregar.',
         variant: 'destructive',
       })
     } finally {
@@ -745,6 +749,27 @@ export default function Home() {
               )
             })}
           </div>
+
+          {/* UX: erro de carregamento com retry — nunca deixa a tela morta sem explicação */}
+          {loadError && !loading && (
+            <div className="mx-4 mt-4 flex items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-amber-900">
+                    Falha ao atualizar os dados
+                  </p>
+                  <p className="text-xs text-amber-700">Verifique sua conexão e tente de novo.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => loadData()}
+                className="shrink-0 rounded-xl bg-[#14213D] px-3.5 py-2 text-xs font-semibold text-white active:scale-95 transition-transform"
+              >
+                Tentar novamente
+              </button>
+            </div>
+          )}
 
           {/* O NOVO HERÓI: Saldo Total mora dentro do bloco sangrado marinho */}
           <div

@@ -297,14 +297,14 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
       return
     }
 
-    // Com 2 ou mais membros: se não há seleção válida salva e a família já tem renda (onboarding feito),
-    // abre o diálogo para escolha de perfil no dispositivo.
-    if (!hasValidStored) {
-      if (family?.monthly_net_income_cents && family.monthly_net_income_cents > 0) {
-        setIsWhoIsUsingOpen(true)
-      }
+    // Com 2 ou mais membros: se não há seleção válida salva, abre o diálogo para escolha
+    // de perfil no dispositivo. CORREÇÃO UX: exige APENAS que o onboarding tenha terminado
+    // (família não-incompleta) — antes exigia renda cadastrada, e famílias 2+ membros sem
+    // renda ficavam sem saber quem estava usando logo no primeiro acesso.
+    if (!hasValidStored && !completeness?.isIncomplete) {
+      setIsWhoIsUsingOpen(true)
     }
-  }, [loading, members, family?.monthly_net_income_cents, setActiveMemberId])
+  }, [loading, members, completeness?.isIncomplete, setActiveMemberId])
 
   // Iniciar automaticamente o fluxo de Onboarding (OnboardingWizardDialog)
   // BLINDAGEM DE ROTEAMENTO (R50):
