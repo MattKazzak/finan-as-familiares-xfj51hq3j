@@ -1,6 +1,6 @@
 {
   "_versions": {
-    "voice-parse": 379,
+    "voice-parse": 380,
     "batch-categorize": 301,
     "voice-transcribe": 91,
     "webhook-mercadopago": 1,

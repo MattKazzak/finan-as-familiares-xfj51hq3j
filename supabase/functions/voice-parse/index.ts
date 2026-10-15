@@ -530,8 +530,8 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
       - Retorne OBRIGATORIAMENTE status "falta_valor" com a pergunta: "Agora os valores: quanto foi cada item?"
     * Mantenha os itens propostos com valor: null.
   - Se a mensagem atual traz VALOR POR ITEM NOMEADO (ex: "chupeta 27, sachês 19, copo 100, doação 10", "carne 60 e carvão 20"):
-    * Isso responde a pergunta de valores! Grave UMA TRANSAÇÃO POR ITEM com os valores informados, usando os pares categoria › subcategoria JÁ PROPOSTOS (status: "sucesso").
-    * NUNCA re-classifique a resposta como cesta nova, NUNCA pergunte de novo, NUNCA sugira criar gaveta para itens que já têm par proposto!
+    * Isso responde a pergunta de valores! Grave UMA TRANSAÇÃO POR ITEM com os valores informados, usando os pares categoria › subcategoria JÁ PROPOSTOS no 1º turno (status: "sucesso").
+    * PRIORIDADE ABSOLUTA DESTA REGRA SOBRE A DOUTRINA (e) DE CRIAR GAVETA: no turno de valores, os pares do 1º turno estão CONFIRMADOS e VALEM MESMO se a subcategoria não existir no catálogo (ex: "Doação → Outros › Doações" proposta e confirmada = grava em Outros › Doações). NUNCA re-propor criação de gaveta aqui, NUNCA re-classificar como cesta nova, NUNCA perguntar de novo!
     * Mensagem amigável: resumo item por item ("Lançamentos realizados: • R$ 27,00 em **Compras** › **Bebês & Crianças** • ...").
     * Se sobrar item SEM valor informado: grave os precificados e pergunte SÓ o faltante (status: "falta_valor").
   - Se a mensagem atual for CORREÇÃO PARCIAL (SEMÂNTICA — COM OU SEM "NÃO"):
