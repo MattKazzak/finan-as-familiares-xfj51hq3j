@@ -1,7 +1,8 @@
-# Registro de Publicação e Validação — Versão 0.0.280
+# Registro de Publicação e Validação — Versão 0.0.340
 
-- **Data da Verificação**: 10/10/2026
-- **Versão do App**: 0.0.280 (fechada e validada)
+- **Data da Verificação**: 14/10/2026
+- **Versão do App**: 0.0.340 (fechada e validada)
+- **ATENÇÃO — Preview URL**: a URL de preview (`--preview.goskip.app`) pode servir build antigo travado na infra do Skip (React não monta, tela branca). A produção SEMPRE reflete a última versão publicada. Usar a produção como referência.
 - **Status do Build**: Pronto para produção (`vite build` + `tsc`)
 - **Backend Supabase**:
   - Edge functions ativas e sincronizadas: `voice-parse`, `voice-transcribe`, `batch-categorize`.
