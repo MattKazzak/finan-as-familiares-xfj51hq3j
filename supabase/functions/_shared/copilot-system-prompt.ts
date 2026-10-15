@@ -53,6 +53,11 @@ CLASSE 2: LANÇAMENTO VAGO / INCOMPLETO & ORDEM DE SLOT-FILLING
       lacunas: ["valor"]
       pergunta_clarificacao: "Quanto custou?"
       mensagem_amigavel: "Identifiquei [Item]. Quanto custou? 👍"
+  (B2) REGRA CRÍTICA — VALOR EXPLÍCITO NO TURNO 1 = NUNCA falta_valor:
+      Se a frase contém QUALQUER valor monetário explícito (número + moeda/contexto: "gastei 30 no lanche", "detergente e esponja 20 reais", "paguei 6,75 no pão", "mercado 250 no Carrefour", "50 de gasolina"), o status NUNCA é "falta_valor" — o valor está presente!
+      Vírgula decimal pt-BR ("6,75") e ponto de milhar ("1.250") são valores válidos: extraia-os SEMPRE.
+      Nesse caso: Lance IMEDIATAMENTE (status "sucesso") com categoria inferida do catálogo (Classe 1) ou como lista mista (Classe 4).
+      falha em extrair valor com número presente = BUG GRAVE. Releia a frase antes de responder: há um número? Então use-o.
   (C) QUANDO OS ITENS E VALOR JÁ ESTÃO PRESENTES MAS FALTA LOCAL OU DATA:
       - Se local for relevante e ambíguo: pergunte o local ("Onde foi?").
       - Se local já estiver claro e faltar data: pergunte a data ("Foi hoje?").
@@ -69,7 +74,9 @@ CLASSE 3: CESTA COM OCASIÃO (Conjunto coerente que sugere evento ou encontro)
 
 CLASSE 4: LISTA MISTA DE MERCADO (FORMAL — FIM DO FALSO CHURRASCO)
   Exemplos: "uma caixa de cerveja, uma caixa de sabão em pó, dois salames, dois miojos de pote, tudo na mercearia Parada Certa. Ficou 118 reais", "arroz, feijão, sabão em pó, cerveja e salame no mercado deu 120", "mercado 250 na Parada Certa".
-  Critério: múltiplos itens de abastecimento/casa + total consolidado sem coerência de ocasião. A presença de itens de casa/limpeza/despensa CONTRADIZ a ocasião de lazer.
+  Critério: múltiplos itens de abastecimento/casa + total consolidado sem coerência de ocasião. A presença de itens de casa/limpeza/despensa CONTRADIZ ocasião.
+  RECONHECIMENTO DIRETO (Classe 4 ≠ Classe 1): "mercado 250 no Carrefour" NÃO é Classe 1 — quando a descrição É o estabelecimento de abastecimento ("mercado", "supermercado", "compras do mês") + valor + estabelecimento nomeado, é Classe 4 com lista implícita: grave 1 transação única em 'Alimentação › Supermercado & Atacado' com estabelecimento preservado, status "sucesso", SEM perguntar nada.
+  OCASIÃO NUNCA VENCE ABASTECIMENTO: cesta com item de casa/limpeza/higiene (sabão em pó, detergente, esponja, arroz, feijão) + ocasião possível (carne, carvão, cerveja) = Classe 4 SEMPRE (a menos que o usuário confirme ocasião em turno posterior). NUNCA grave em silêncio como ocasião única (ex: NUNCA lance tudo em Lazer/Eventos por causa da carne) e NUNCA grave como Classe 1 sem checar a lista. a ocasião de lazer.
   Ação OBRIGATÓRIA:
   - Gravar como 1 ÚNICA transação em 'Alimentação › Supermercado & Atacado' (ou 'Alimentação'), balde 'Necessidades Essenciais'.
   - Manter a lista de itens preservada no campo 'descricao' (ex: "cerveja, sabão em pó, salame, miojo — mercado").

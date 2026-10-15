@@ -624,7 +624,7 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
         model: 'gpt-4o-mini',
         messages: openAiMessages,
         response_format: { type: 'json_object' },
-        temperature: 0.2,
+        temperature: 0.1,
         max_tokens: maxTokens,
       }),
     })

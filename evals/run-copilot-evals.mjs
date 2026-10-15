@@ -45,17 +45,38 @@ if (authErr || !authData?.session) {
 const token = authData.session.access_token
 
 async function callVoiceParse(payload) {
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/voice-parse`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      apikey: SUPABASE_ANON_KEY,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  })
-  const json = await res.json().catch(() => null)
-  return { httpStatus: res.status, json }
+  // Backoff automático p/ 429 (rate limit 30/10min da voice-parse): espera e tenta de novo
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/voice-parse`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+    if (res.status === 429) {
+      console.log(`  ...429 rate limit, aguardando 120s (tentativa ${attempt + 1}/8)...`)
+      await new Promise((r) => setTimeout(r, 120000))
+      continue
+    }
+    const json = await res.json().catch(() => null)
+    return { httpStatus: res.status, json }
+  }
+  return { httpStatus: 429, json: null }
+}
+
+// Pacing: voice-parse tem rate limit de 30/10min. 1 chamada a cada 25s = 24/10min,
+// dentro do limite sem nunca bater no 429 (retry após 429 também conta na janela!).
+const PACING_MS = 25000
+let lastCallAt = 0
+async function pacedCall(payload) {
+  const now = Date.now()
+  const wait = lastCallAt + PACING_MS - now
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait))
+  lastCallAt = Date.now()
+  return callVoiceParse(payload)
 }
 
 function buildContextoAnterior(prevResponse) {
@@ -123,7 +144,7 @@ for (const testCase of golden.cases) {
       historico_mensagens: null,
       active_month: null,
     }
-    const { httpStatus, json } = await callVoiceParse(payload)
+    const { httpStatus, json } = await pacedCall(payload)
 
     if (httpStatus !== 200 || !json) {
       caseFailures.push(`turn ${turnIdx + 1}: HTTP ${httpStatus} sem JSON válido`)
