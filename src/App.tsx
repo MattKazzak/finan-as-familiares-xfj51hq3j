@@ -26,6 +26,10 @@ const InviteAcceptPage = lazy(() =>
   import('@/pages/InviteAcceptPage').then((m) => ({ default: m.InviteAcceptPage })),
 )
 const CopilotPage = lazy(() => import('@/pages/Copilot').then((m) => ({ default: m.CopilotPage })))
+const PrivacyPage = lazy(() => import('@/pages/Legal').then((m) => ({ default: m.PrivacyPage })))
+const TermsPage = lazy(() => import('@/pages/Legal').then((m) => ({ default: m.TermsPage })))
+const FaqPage = lazy(() => import('@/pages/Legal').then((m) => ({ default: m.FaqPage })))
+const ContactPage = lazy(() => import('@/pages/Legal').then((m) => ({ default: m.ContactPage })))
 
 const PageFallback = (
   <div className="min-h-screen bg-white flex items-center justify-center">
