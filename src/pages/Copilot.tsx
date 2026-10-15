@@ -672,40 +672,6 @@ export function CopilotPage() {
         return
       }
 
-      if (isClass5ProposalPending && effectivePendingTx && isAffirmativeConfirmation) {
-        const askValuesMsg = 'Agora os valores: quanto foi cada item?'
-        const updatedPending: ParsedVoiceTransaction = {
-          ...effectivePendingTx,
-          aiStatus: 'falta_valor',
-          clarificationQuestion: askValuesMsg,
-          friendlyMessage: askValuesMsg,
-        }
-        setPendingTx(updatedPending)
-
-        if (family?.id) {
-          saveCopilotMessage({
-            familyId: family.id,
-            role: 'assistant',
-            content: askValuesMsg,
-            cardType: 'falta_valor',
-          }).catch(() => {})
-        }
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `asst-${Date.now()}`,
-            sender: 'assistant',
-            text: askValuesMsg,
-            timestamp: new Date(),
-            cardType: 'falta_valor',
-            cardData: updatedPending,
-          },
-        ])
-        setIsProcessing(false)
-        return
-      }
-
       // PONTO 3: Gravação da Classe 5 pós-pergunta de valores:
       // Se a proposta da Classe 5 já está confirmada e aguardando valores (aiStatus === 'falta_valor')
       if (
@@ -1412,11 +1378,10 @@ export function CopilotPage() {
 
             if (updated && updated.amount_cents === newAmountCents) {
               triggerRefresh()
-              const oldFmt = formatBRL(
-                previousAmountCents || (newAmountCents > 1000 ? 15000 : 10000),
-              )
               const newFmt = formatBRL(newAmountCents)
-              const confirmMsg = `Ajustado: de ${oldFmt} para ${newFmt} ✅`
+              const confirmMsg = previousAmountCents
+                ? `Ajustado: de ${formatBRL(previousAmountCents)} para ${newFmt} ✅`
+                : `Ajustado: valor agora é ${newFmt} ✅`
 
               saveCopilotMessage({
                 familyId: family.id,

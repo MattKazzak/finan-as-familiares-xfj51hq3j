@@ -254,16 +254,22 @@ Deno.serve(async (req) => {
       )
     }
 
-    // SEGURANÇA (tenant isolation): o family_id vem SEMPRE do servidor —
-    // o valor enviado pelo cliente é ignorado. Um membro autenticado só acessa a própria família.
+    // SEGURANÇA (tenant isolation): o family_id do cliente SÓ é aceito se o usuário
+    // for membro dele (RLS garante o vínculo). Sem vínculo, cai para a 1ª família do usuário.
+    const requestedFamilyId = typeof body.family_id === 'string' ? body.family_id : null
     const { data: memberData } = await supabase
       .from('family_members')
       .select('family_id')
       .eq('user_id', user.id)
-      .limit(1)
-      .maybeSingle()
+      .order('created_at', { ascending: true })
 
-    const targetFamilyId = memberData?.family_id ?? null
+    const memberFamilyIds = (memberData || []).map((m: { family_id: string }) => m.family_id)
+    const targetFamilyId =
+      (requestedFamilyId && memberFamilyIds.includes(requestedFamilyId)
+        ? requestedFamilyId
+        : null) ??
+      memberFamilyIds[0] ??
+      null
 
     // Carregar catálogo da família
     let categoriesList: any[] = []
@@ -871,7 +877,8 @@ Você DEVE responder EXCLUSIVAMENTE um objeto JSON válido no formato:
       { role: 'user', content: textoNormalizadoPtBr || texto },
     ]
 
-    const maxTokens = 1000
+    // Classe 5 (cesta multi-item) com schema JSON grande pode truncar em 1000 tokens -> JSON_PARSE_ERROR
+    const maxTokens = 1500
 
     // Chamada à API da OpenAI
     const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
