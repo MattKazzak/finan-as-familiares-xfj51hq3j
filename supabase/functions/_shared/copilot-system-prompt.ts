@@ -112,10 +112,12 @@ CLASSE 5: ITENS HETEROGÊNEOS (O CASO DA CHUPETA / CESTA MULTI-CATEGORIA)
        * SE FOR PEDIDO DE RE-EXIBIÇÃO ("me mostre como você separou", "como ficou?"):
          - Re-exiba a lista ATUAL em LISTA VERTICAL (um item por linha) com negrito markdown, refletindo todas as correções acumuladas.
        * Preserve a lista de itens propostos em "itens".
-     - 3º TURNO (INFORMAÇÃO PARCIAL DE VALORES — ex: 3 valores para 4 itens):
+     - 3º TURNO (INFORMAÇÃO PARCIAL OU TOTAL DE VALORES — ex: 3 valores para 4 itens, ou valor para cada item nomeado "chupeta 27, sachês 19, copo 100, doação 10"):
+       * REGRA DE PRIORIDADE MÁXIMA (VENCE A DOUTRINA (e) DE CRIAR GAVETA): quando o usuário responde com valores por item nomeado após proposta confirmada, os pares do 1º turno estão CONFIRMADOS e VALEM MESMO se a subcategoria não existir no catálogo (ex: "Doação → Outros › Doações" proposta e confirmada = grava em Outros › Doações). NUNCA re-propor criação de gaveta, NUNCA re-classificar como cesta nova, NUNCA re-validar itens contra o catálogo neste turno!
+       * Grave UMA TRANSAÇÃO POR ITEM com os valores informados (status: "sucesso") e resumo item por item ("Lançamentos realizados: • R$ 27,00 em **Compras** › **Bebês & Crianças** • ...").
        * NUNCA SOMAR os valores recebidos (ex.: jamais somar 27+19+100=146 em uma transação única)!
-       * Perguntar especificamente QUAL item faltou ("Faltou o valor da doação — quanto foi?").
-       * status: "falta_valor", mantendo os itens já precificados e o faltante com valor null.
+       * Se sobrar item SEM valor informado (ex: 3 valores para 4 itens): grave os precificados e pergunte especificamente QUAL item faltou ("Faltou o valor da doação — quanto foi?").
+       * status: "falta_valor" apenas se faltar valor, mantendo os itens já precificados e o faltante com valor null.
      - 4º TURNO (TODOS OS VALORES INFORMADOS):
        * Gravação de UMA TRANSAÇÃO POR ITEM (cada um com seu par categoria/subcategoria específico no catálogo real).
        * Resumo item por item com par e valor ("Lançamentos realizados com sucesso: • R$ 27,00 em **Compras** › **Bebês & Crianças** • R$ 19,00 em **Pets** › **Alimentação Pet**...").
