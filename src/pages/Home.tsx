@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useFamily } from '@/hooks/use-family'
 import { useActiveMonth } from '@/contexts/ActiveMonthContext'
 import { MonthSelector } from '@/components/common/MonthSelector'
+import { supabase } from '@/lib/supabase/client'
 import {
   fetchTransactions,
   fetchDefaultBudgets,
@@ -87,6 +88,10 @@ export default function Home() {
   }, [isFamilyIncomplete, openOnboarding])
 
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [totalsFromRpc, setTotalsFromRpc] = useState<{
+    total_income_cents: number
+    total_expense_cents: number
+  } | null>(null)
   const [defaultBudgets, setDefaultBudgets] = useState<DefaultBudget[]>([])
   const [monthOverrides, setMonthOverrides] = useState<Budget[]>([])
 
@@ -142,15 +147,24 @@ export default function Home() {
         console.warn('Erro ao auto-lançar receitas fixas no Início:', autoErr)
       }
 
-      const [allTx, defBgs, overrides] = await Promise.all([
-        fetchTransactions({
-          familyId: family.id,
-          memberId: selectedMemberId,
-        }),
+      // PERFORMANCE: totais globais (saldo, receita, despesa desde o início) são
+      // agregados no servidor via RPC — sem baixar todas as transações da família.
+      // Com filtro de membro ativo, mantém o fetch completo (dataset do membro é pequeno).
+      const [totalsRes, defBgs, overrides] = await Promise.all([
+        selectedMemberId
+          ? fetchTransactions({ familyId: family.id, memberId: selectedMemberId })
+          : (supabase as any).rpc('get_family_totals', { p_family_id: family.id }),
         fetchDefaultBudgets(family.id),
         fetchMonthBudgetOverrides(family.id, currentMonthStr),
       ])
-      setTransactions(allTx)
+
+      if (selectedMemberId) {
+        setTransactions(totalsRes as Transaction[])
+      } else {
+        setTotalsFromRpc(
+          totalsRes as { total_income_cents: number; total_expense_cents: number } | null,
+        )
+      }
       setDefaultBudgets(defBgs)
       setMonthOverrides(overrides)
     } catch (err: any) {
@@ -191,7 +205,16 @@ export default function Home() {
     const prevDate = new Date(activeDate.getFullYear(), activeDate.getMonth() - 1, 1)
     const prevMonthStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`
 
-    const effectiveTransactions = transactions.filter((tx) => tx.status !== 'projected')
+    // Sem filtro de membro: totais globais vêm da RPC (agregação no servidor).
+    // Com filtro: calcula localmente sobre as transações do membro.
+    if (totalsFromRpc) {
+      incomeTotal = Number(totalsFromRpc.total_income_cents) || 0
+      expenseTotal = Number(totalsFromRpc.total_expense_cents) || 0
+    }
+
+    const effectiveTransactions = totalsFromRpc
+      ? []
+      : transactions.filter((tx) => tx.status !== 'projected')
 
     effectiveTransactions.forEach((tx) => {
       const txMonth = tx.transaction_date.slice(0, 7)
@@ -214,7 +237,7 @@ export default function Home() {
       prevMonthExpenseCents: prevMExpense,
       prevMonthDate: prevDate,
     }
-  }, [transactions, currentMonthStr, activeDate])
+  }, [transactions, totalsFromRpc, currentMonthStr, activeDate])
 
   // Mapa de baldes para categorias
   const categoryBucketMap = useMemo(() => {

@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
@@ -10,16 +11,27 @@ import Layout from '@/components/Layout'
 import { PwaUpdateBanner } from '@/components/common/PwaUpdateBanner'
 import Login from '@/pages/Login'
 import ResetPassword from '@/pages/ResetPassword'
-import Home from '@/pages/Home'
-import Wallet from '@/pages/Wallet'
-import Goals from '@/pages/Goals'
-import Investments from '@/pages/Investments'
-import Profile from '@/pages/Profile'
-import ImportReviewPage from '@/pages/ImportReviewPage'
-import NotFound from '@/pages/NotFound'
-import { InviteAcceptPage } from '@/pages/InviteAcceptPage'
-import { CopilotPage } from '@/pages/Copilot'
 import { Coins, Loader2 } from 'lucide-react'
+
+// PERFORMANCE: code splitting — cada página vira um chunk carregado sob demanda.
+// Login fica no bundle principal (primeira tela).
+const Home = lazy(() => import('@/pages/Home'))
+const Wallet = lazy(() => import('@/pages/Wallet'))
+const Goals = lazy(() => import('@/pages/Goals'))
+const Investments = lazy(() => import('@/pages/Investments'))
+const Profile = lazy(() => import('@/pages/Profile'))
+const ImportReviewPage = lazy(() => import('@/pages/ImportReviewPage'))
+const NotFound = lazy(() => import('@/pages/NotFound'))
+const InviteAcceptPage = lazy(() =>
+  import('@/pages/InviteAcceptPage').then((m) => ({ default: m.InviteAcceptPage })),
+)
+const CopilotPage = lazy(() => import('@/pages/Copilot').then((m) => ({ default: m.CopilotPage })))
+
+const PageFallback = (
+  <div className="min-h-screen bg-white flex items-center justify-center">
+    <Loader2 className="w-6 h-6 animate-spin text-[#FCA311]" />
+  </div>
+)
 
 // Verifica síncronamente na URL se há indício de recuperação de senha (distinguindo estritamente de signup)
 function checkIsRecoveryUrl(): boolean {
@@ -142,18 +154,81 @@ const App = () => (
 
           {/* Rotas protegidas envolvidas pelo Layout */}
           <Route element={<ProtectedLayout />}>
-            <Route path="/inicio" element={<Home />} />
-            <Route path="/carteira" element={<Wallet />} />
-            <Route path="/orcamentos" element={<Wallet />} />
-            <Route path="/metas" element={<Goals />} />
-            <Route path="/investimentos" element={<Investments />} />
-            <Route path="/perfil" element={<Profile />} />
-            <Route path="/importar" element={<ImportReviewPage />} />
-            <Route path="/copilot" element={<CopilotPage />} />
+            <Route
+              path="/inicio"
+              element={
+                <Suspense fallback={PageFallback}>
+                  <Home />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/carteira"
+              element={
+                <Suspense fallback={PageFallback}>
+                  <Wallet />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/orcamentos"
+              element={
+                <Suspense fallback={PageFallback}>
+                  <Wallet />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/metas"
+              element={
+                <Suspense fallback={PageFallback}>
+                  <Goals />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/investimentos"
+              element={
+                <Suspense fallback={PageFallback}>
+                  <Investments />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/perfil"
+              element={
+                <Suspense fallback={PageFallback}>
+                  <Profile />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/importar"
+              element={
+                <Suspense fallback={PageFallback}>
+                  <ImportReviewPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/copilot"
+              element={
+                <Suspense fallback={PageFallback}>
+                  <CopilotPage />
+                </Suspense>
+              }
+            />
           </Route>
 
           {/* Rota de erro 404 */}
-          <Route path="*" element={<NotFound />} />
+          <Route
+            path="*"
+            element={
+              <Suspense fallback={PageFallback}>
+                <NotFound />
+              </Suspense>
+            }
+          />
         </Routes>
       </TooltipProvider>
     </AuthProvider>
