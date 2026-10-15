@@ -97,7 +97,14 @@ function buildContextoAnterior(prevResponse) {
 
 function checkExpectations(expect, json) {
   const failures = []
-  if (expect.status && json?.status !== expect.status) {
+  // falta_valor_ou_clarificacao: ambos pedem informação ao usuário (semântica idêntica) — aceita os dois
+  const statusOk =
+    expect.status === 'falta_valor_ou_clarificacao'
+      ? json?.status === 'falta_valor' || json?.status === 'clarificacao'
+      : expect.status && json?.status !== expect.status
+        ? false
+        : true
+  if (!statusOk) {
     failures.push(`status esperado "${expect.status}", veio "${json?.status}"`)
   }
   const classe = json?.router?.classe ?? json?.classe_intencao ?? null

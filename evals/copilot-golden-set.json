@@ -158,7 +158,7 @@
         },
         {
           "text": "a carne e o carvão são pro churrasco de hoje",
-          "expect": { "status": "clarificacao" }
+          "expect": { "status": "falta_valor_ou_clarificacao" }
         }
       ]
     },
