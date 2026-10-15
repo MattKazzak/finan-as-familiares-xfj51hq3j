@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { useFamily } from '@/hooks/use-family'
@@ -11,6 +11,9 @@ import {
   fetchUserIncompleteFamilies,
   deleteFamilyWorkspaceManually,
 } from '@/services/family'
+import { deleteUserAccount, updateUserName, uploadUserAvatar } from '@/services/user-account'
+import { evaluatePasswordStrength, isPasswordStrongEnough } from '@/pages/Login'
+import { supabase } from '@/lib/supabase/client'
 import {
   Users,
   Plus,
@@ -32,6 +35,9 @@ import {
   Shield,
   ArrowRight,
   ShieldAlert,
+  User as UserIcon,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -96,6 +102,148 @@ export default function ProfilePage() {
   const [isInstalling, setIsInstalling] = useState(false)
   const [isSignOutConfirmOpen, setIsSignOutConfirmOpen] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
+
+  // ===== Minha Conta: avatar, nome, senha e exclusão (LGPD) =====
+  const [isAccountNameOpen, setIsAccountNameOpen] = useState(false)
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false)
+  const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
+  const [userNameInput, setUserNameInput] = useState('')
+  const [savingUserName, setSavingUserName] = useState(false)
+  const [uploadingUserAvatar, setUploadingUserAvatar] = useState(false)
+  const userAvatarInputRef = useRef<HTMLInputElement | null>(null)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmNewPassword, setConfirmNewPassword] = useState('')
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [savingPassword, setSavingPassword] = useState(false)
+  const newPasswordStrength = useMemo(() => evaluatePasswordStrength(newPassword), [newPassword])
+
+  const userAvatarUrl = (user?.user_metadata?.avatar_url as string) || null
+  const userDisplayName =
+    (user?.user_metadata?.name as string) || user?.email?.split('@')[0] || 'Usuário'
+
+  const handleSaveUserName = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const trimmed = userNameInput.trim()
+    if (!trimmed) return
+    try {
+      setSavingUserName(true)
+      await updateUserName(trimmed)
+      setIsAccountNameOpen(false)
+      toast({ title: 'Nome atualizado!', description: 'Seu nome foi salvo com sucesso.' })
+    } catch {
+      toast({
+        title: 'Erro ao salvar nome',
+        description: 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSavingUserName(false)
+    }
+  }
+
+  const handleUserAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !user) return
+    try {
+      setUploadingUserAvatar(true)
+      await uploadUserAvatar(user.id, file)
+      toast({ title: 'Foto atualizada!', description: 'Sua nova foto foi salva.' })
+    } catch {
+      toast({
+        title: 'Erro no upload',
+        description: 'Não foi possível enviar a imagem.',
+        variant: 'destructive',
+      })
+    } finally {
+      setUploadingUserAvatar(false)
+      if (userAvatarInputRef.current) userAvatarInputRef.current.value = ''
+    }
+  }
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!isPasswordStrongEnough(newPassword)) {
+      toast({
+        title: 'Senha muito fraca',
+        description: 'Use no mínimo 8 caracteres, uma letra maiúscula e um número.',
+        variant: 'destructive',
+      })
+      return
+    }
+    if (newPassword !== confirmNewPassword) {
+      toast({
+        title: 'As senhas não coincidem',
+        description: 'Verifique a confirmação da nova senha.',
+        variant: 'destructive',
+      })
+      return
+    }
+    try {
+      setSavingPassword(true)
+      // Reautenticação: confirma a senha atual antes de trocar (padrão de segurança)
+      const email = user?.email
+      if (!email) throw new Error('Sessão inválida.')
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password: currentPassword,
+      })
+      if (signInError) {
+        toast({
+          title: 'Senha atual incorreta',
+          description: 'Confirme sua senha atual para prosseguir.',
+          variant: 'destructive',
+        })
+        return
+      }
+      const { error } = await supabase.auth.updateUser({ password: newPassword })
+      if (error) throw error
+      setIsPasswordDialogOpen(false)
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmNewPassword('')
+      toast({ title: 'Senha alterada!', description: 'Use a nova senha no próximo login.' })
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao alterar senha',
+        description: err?.message || 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSavingPassword(false)
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText.trim().toUpperCase() !== 'EXCLUIR') return
+    try {
+      setIsDeletingAccount(true)
+      await deleteUserAccount()
+      // Limpa o estado local e sai (a sessão já não existe no servidor)
+      try {
+        localStorage.removeItem('financas_familiares_active_member_id')
+      } catch {
+        // localStorage indisponível
+      }
+      try {
+        await signOut()
+      } catch {
+        // Sessão já invalidada no servidor
+      }
+      toast({ title: 'Conta excluída', description: 'Seus dados foram removidos. Até logo! 💛' })
+      navigate('/', { replace: true })
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao excluir conta',
+        description: err?.message || 'Tente novamente ou fale com o suporte.',
+        variant: 'destructive',
+      })
+      setIsDeletingAccount(false)
+      setIsDeleteAccountOpen(false)
+    }
+  }
   const [isCategoryManagementOpen, setIsCategoryManagementOpen] = useState(false)
 
   // Diálogo Editar Família (Nome e Avatar/Logo)
@@ -934,6 +1082,100 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* 5.5 MINHA CONTA (avatar, nome, senha, exclusão) */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm space-y-4">
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-[#FCA311]/10 text-[#B45309] flex items-center justify-center font-bold shrink-0">
+            <UserIcon className="w-5 h-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h4 className="font-bold text-base text-slate-900 leading-tight">Minha Conta</h4>
+            <p className="text-xs text-slate-500 mt-1 truncate">{user?.email}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 py-3 border-t border-b border-slate-100">
+          <div className="relative shrink-0">
+            <Avatar className="w-12 h-12 border border-[#FCA311]/40">
+              {userAvatarUrl && (
+                <AvatarImage src={userAvatarUrl} alt={userDisplayName} className="object-cover" />
+              )}
+              <AvatarFallback className="bg-gradient-to-tr from-[#14213D] to-[#1f3159] text-[#FCA311] font-bold">
+                {userDisplayName.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <button
+              type="button"
+              onClick={() => userAvatarInputRef.current?.click()}
+              disabled={uploadingUserAvatar}
+              className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#FCA311] text-[#14213D] flex items-center justify-center shadow border-2 border-white"
+              aria-label="Alterar minha foto"
+            >
+              {uploadingUserAvatar ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Camera className="w-3 h-3" />
+              )}
+            </button>
+            <input
+              ref={userAvatarInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleUserAvatarChange}
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-slate-900 truncate">{userDisplayName}</p>
+            <button
+              type="button"
+              onClick={() => {
+                setUserNameInput(userDisplayName)
+                setIsAccountNameOpen(true)
+              }}
+              className="text-[11px] font-semibold text-[#FCA311] hover:underline"
+            >
+              Editar meu nome
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between py-2 gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-slate-800">Alterar senha</p>
+            <p className="text-[11px] text-slate-500">Troque sem sair do aplicativo</p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIsPasswordDialogOpen(true)}
+            className="text-xs rounded-xl h-8 border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold shrink-0"
+          >
+            Trocar senha
+          </Button>
+        </div>
+
+        <div className="flex items-center justify-between py-2 gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-red-700">Excluir minha conta</p>
+            <p className="text-[11px] text-slate-500">Apaga seus dados para sempre (LGPD)</p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setDeleteConfirmText('')
+              setIsDeleteAccountOpen(true)
+            }}
+            className="text-xs rounded-xl h-8 border-red-200 text-red-600 hover:bg-red-50 font-semibold shrink-0"
+          >
+            Excluir conta
+          </Button>
+        </div>
+      </div>
+
       {/* 6. Configurações do Sistema e Preferências */}
       <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm space-y-4">
         <div className="flex items-start sm:items-center gap-3">
@@ -1498,6 +1740,215 @@ export default function ProfilePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* CONFIRMAÇÃO DE EXCLUSÃO DE CONTA (LGPD) */}
+      <AlertDialog
+        open={isDeleteAccountOpen}
+        onOpenChange={(open) => !open && !isDeletingAccount && setIsDeleteAccountOpen(false)}
+      >
+        <AlertDialogContent className="rounded-3xl max-w-sm w-[92vw] p-6">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-bold text-red-900 flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5 text-red-600" />
+              <span>Excluir minha conta?</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-slate-600 space-y-2">
+              <p>
+                Esta ação é <strong>permanente</strong>: suas famílias exclusivas, lançamentos,
+                metas e o histórico do Copilot serão apagados para sempre.
+              </p>
+              <p>
+                Famílias com outros membros conectados continuarão existindo — você apenas sai
+                delas.
+              </p>
+              <p className="pt-1 font-semibold">
+                Digite <span className="text-red-700">EXCLUIR</span> para confirmar:
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            placeholder="EXCLUIR"
+            className="h-10 text-sm"
+            autoComplete="off"
+          />
+          <AlertDialogFooter className="gap-2 sm:gap-0 pt-2">
+            <AlertDialogCancel className="text-xs rounded-xl h-9" disabled={isDeletingAccount}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                handleDeleteAccount()
+              }}
+              disabled={isDeletingAccount || deleteConfirmText.trim().toUpperCase() !== 'EXCLUIR'}
+              className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl h-9"
+            >
+              {isDeletingAccount && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+              Excluir para sempre
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ALTERAR SENHA (com medidor de força) */}
+      <Dialog
+        open={isPasswordDialogOpen}
+        onOpenChange={(open) => !savingPassword && setIsPasswordDialogOpen(open)}
+      >
+        <DialogContent className="max-w-sm w-[92vw] rounded-3xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <KeyRound className="w-5 h-5 text-emerald-700" />
+              <span>Alterar minha senha</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Confirme sua senha atual e escolha uma nova (mín. 8 caracteres, 1 maiúscula, 1
+              número).
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleChangePassword} className="space-y-3 pt-1">
+            <div>
+              <Label htmlFor="cur-pass" className="text-xs font-semibold text-slate-700">
+                Senha atual
+              </Label>
+              <Input
+                id="cur-pass"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="mt-1"
+                autoComplete="current-password"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-pass" className="text-xs font-semibold text-slate-700">
+                Nova senha
+              </Label>
+              <div className="relative mt-1">
+                <Input
+                  id="new-pass"
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="pr-10"
+                  autoComplete="new-password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  aria-label={showNewPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {newPassword && (
+                <div className="mt-1.5">
+                  <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${
+                        [
+                          'bg-red-500',
+                          'bg-red-500',
+                          'bg-amber-500',
+                          'bg-emerald-500',
+                          'bg-emerald-600',
+                        ][newPasswordStrength.score]
+                      }`}
+                      style={{ width: `${(newPasswordStrength.score / 4) * 100}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-0.5">{newPasswordStrength.label}</p>
+                </div>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="conf-pass" className="text-xs font-semibold text-slate-700">
+                Confirmar nova senha
+              </Label>
+              <Input
+                id="conf-pass"
+                type="password"
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                className="mt-1"
+                autoComplete="new-password"
+                required
+              />
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsPasswordDialogOpen(false)}
+                disabled={savingPassword}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={savingPassword}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+              >
+                {savingPassword && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
+                Salvar nova senha
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* EDITAR MEU NOME */}
+      <Dialog open={isAccountNameOpen} onOpenChange={setIsAccountNameOpen}>
+        <DialogContent className="max-w-xs w-[90vw] rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900">
+              Editar meu nome
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSaveUserName} className="space-y-4">
+            <div>
+              <Label htmlFor="acct-name" className="text-xs font-semibold text-slate-700">
+                Meu nome
+              </Label>
+              <Input
+                id="acct-name"
+                value={userNameInput}
+                onChange={(e) => setUserNameInput(e.target.value)}
+                className="mt-1"
+                autoFocus
+                required
+              />
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsAccountNameOpen(false)}
+                disabled={savingUserName}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={savingUserName}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+              >
+                {savingUserName && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
+                Salvar
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
