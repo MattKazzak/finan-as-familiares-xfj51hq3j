@@ -134,6 +134,7 @@ for (const testCase of golden.cases) {
   if (ONLY_CASE && testCase.id !== ONLY_CASE) continue
 
   let prevResponse = null
+  const history = []
   let caseFailed = false
   const caseFailures = []
 
@@ -141,7 +142,9 @@ for (const testCase of golden.cases) {
     const payload = {
       texto: turn.text,
       contexto_anterior: buildContextoAnterior(prevResponse),
-      historico_mensagens: null,
+      // O app real envia o histórico da conversa — o runner espelha isso (sem isso o modelo
+      // perde o turno 1 e re-pergunta itens; bug do c10/c16 nas rodadas 3-4).
+      historico_mensagens: history.slice(-6),
       active_month: null,
     }
     const { httpStatus, json } = await pacedCall(payload)

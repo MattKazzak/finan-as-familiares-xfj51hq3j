@@ -1,8 +1,8 @@
 {
   "_versions": {
-    "voice-parse": 382,
-    "batch-categorize": 303,
-    "voice-transcribe": 93,
+    "voice-parse": 383,
+    "batch-categorize": 304,
+    "voice-transcribe": 94,
     "webhook-mercadopago": 1,
     "webhook-asaas": 1,
     "whatsapp-webhook": 1
