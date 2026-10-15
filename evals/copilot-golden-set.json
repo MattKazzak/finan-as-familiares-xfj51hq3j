@@ -1,0 +1,313 @@
+{
+  "version": 1,
+  "description": "Golden set de evals do Curiangoo Copilot — 40 casos cobrindo as 9 classes do router. Rodar: node evals/run-copilot-evals.mjs (requer SUPABASE_URL, SUPABASE_ANON_KEY, TEST_EMAIL, TEST_PASSWORD). Cada caso roda em conversa nova; turns são encadeados com contexto_anterior.",
+  "cases": [
+    {
+      "id": "c01",
+      "nome": "Classe 1: lançamento completo simples",
+      "turns": [
+        { "text": "gastei 80 reais no mercado", "expect": { "status": "sucesso", "classe": 1 } }
+      ]
+    },
+    {
+      "id": "c02",
+      "nome": "Classe 1: débito + valor decimal",
+      "turns": [
+        { "text": "almoço de 45,50 no débito", "expect": { "status": "sucesso", "classe": 1 } }
+      ]
+    },
+    {
+      "id": "c03",
+      "nome": "Classe 1: receita (salário)",
+      "turns": [
+        {
+          "text": "salário de 5000 caiu",
+          "expect": { "status": "sucesso", "classe": 1, "tipo": "receita" }
+        }
+      ]
+    },
+    {
+      "id": "c04",
+      "nome": "Classe 1: posto com estabelecimento",
+      "turns": [
+        {
+          "text": "50 reais de gasolina no posto Shell",
+          "expect": { "status": "sucesso", "classe": 1 }
+        }
+      ]
+    },
+    {
+      "id": "c05",
+      "nome": "Classe 1: valor com centavos",
+      "turns": [
+        { "text": "uber 12,50 pro trabalho", "expect": { "status": "sucesso", "classe": 1 } }
+      ]
+    },
+    {
+      "id": "c06",
+      "nome": "Classe 2A: vago sem valor — pergunta ITENS primeiro",
+      "turns": [
+        { "text": "comprei algumas coisas", "expect": { "status": "falta_valor", "classe": 2 } }
+      ]
+    },
+    {
+      "id": "c07",
+      "nome": "Classe 2A: valor dito mas itens vêm primeiro",
+      "turns": [
+        {
+          "text": "comprei umas coisas por 50 reais",
+          "expect": { "status": "falta_valor", "classe": 2 }
+        }
+      ]
+    },
+    {
+      "id": "c08",
+      "nome": "Classe 2B: específico sem valor",
+      "turns": [{ "text": "paguei o mercado", "expect": { "status": "falta_valor", "classe": 2 } }]
+    },
+    {
+      "id": "c09",
+      "nome": "Classe 2B: coxinha na padaria",
+      "turns": [
+        { "text": "coxinha na padaria", "expect": { "status": "falta_valor", "classe": 2 } }
+      ]
+    },
+    {
+      "id": "c10",
+      "nome": "Classe 2: slot-filling em 2 turnos",
+      "turns": [
+        { "text": "paguei o mercado", "expect": { "status": "falta_valor" } },
+        { "text": "35 reais", "expect": { "status": "sucesso" } }
+      ]
+    },
+    {
+      "id": "c11",
+      "nome": "Classe 3: cesta com ocasião pergunta antes",
+      "turns": [
+        {
+          "text": "carne, carvão e cerveja, tudo 100",
+          "expect": { "status": "clarificacao", "classe": 3 }
+        }
+      ]
+    },
+    {
+      "id": "c12",
+      "nome": "Classe 3: confirmação de churrasco grava",
+      "turns": [
+        { "text": "carne, carvão e cerveja, tudo 100", "expect": { "status": "clarificacao" } },
+        { "text": "foi churrasco sim", "expect": { "status": "sucesso" } }
+      ]
+    },
+    {
+      "id": "c13",
+      "nome": "Classe 4: lista mista de mercado NÃO pergunta ocasião",
+      "turns": [
+        {
+          "text": "arroz, feijão, sabão em pó, cerveja e salame no mercado deu 120",
+          "expect": { "status": "sucesso", "classe": 4 }
+        }
+      ]
+    },
+    {
+      "id": "c14",
+      "nome": "Classe 4: mercado com estabelecimento",
+      "turns": [
+        { "text": "mercado 250 no Carrefour", "expect": { "status": "sucesso", "classe": 4 } }
+      ]
+    },
+    {
+      "id": "c15",
+      "nome": "Classe 5: itens heterogêneos propõe separação",
+      "turns": [
+        {
+          "text": "chupeta pro meu filho, sachês pro cachorro, jogo de copo e doação pro catador",
+          "expect": { "status": "clarificacao", "classe": 5 }
+        }
+      ]
+    },
+    {
+      "id": "c16",
+      "nome": "Classe 5: confirmação pede valores (nunca reaproveita)",
+      "turns": [
+        {
+          "text": "chupeta pro meu filho, sachês pro cachorro, jogo de copo e doação pro catador",
+          "expect": { "status": "clarificacao" }
+        },
+        { "text": "sim, está certo", "expect": { "status": "falta_valor" } }
+      ]
+    },
+    {
+      "id": "c17",
+      "nome": "Classe 5: valores por item gravam 1 transação por item",
+      "turns": [
+        {
+          "text": "chupeta pro meu filho, sachês pro cachorro, jogo de copo e doação pro catador",
+          "expect": { "status": "clarificacao" }
+        },
+        { "text": "sim está certo", "expect": { "status": "falta_valor" } },
+        { "text": "chupeta 27, sachês 19, copo 100, doação 10", "expect": { "status": "sucesso" } }
+      ]
+    },
+    {
+      "id": "c18",
+      "nome": "Classe 5: correção parcial semântica",
+      "turns": [
+        {
+          "text": "carne, carvão, refrigerante e sabão em pó, tudo 80",
+          "expect": { "status": "clarificacao" }
+        },
+        {
+          "text": "a carne e o carvão são pro churrasco de hoje",
+          "expect": { "status": "clarificacao" }
+        }
+      ]
+    },
+    {
+      "id": "c19",
+      "nome": "Classe 6: consulta gasto do mês",
+      "turns": [
+        { "text": "quanto gastei este mês?", "expect": { "status": "consulta", "classe": 6 } }
+      ]
+    },
+    {
+      "id": "c20",
+      "nome": "Classe 6: consulta saldo",
+      "turns": [{ "text": "quanto sobrou?", "expect": { "status": "consulta", "classe": 6 } }]
+    },
+    {
+      "id": "c21",
+      "nome": "Classe 6: consulta por categoria",
+      "turns": [
+        {
+          "text": "quanto gastei em restaurantes?",
+          "expect": { "status": "consulta", "classe": 6 }
+        }
+      ]
+    },
+    {
+      "id": "c22",
+      "nome": "Classe 6: pergunta sobre catálogo é in-scope",
+      "turns": [
+        { "text": "quais são as subcategorias de alimentação?", "expect": { "status": "consulta" } }
+      ]
+    },
+    {
+      "id": "c23",
+      "nome": "Classe 7: saudação não extrai transação",
+      "turns": [{ "text": "bom dia", "expect": { "status": "consulta", "classe": 7 } }]
+    },
+    {
+      "id": "c24",
+      "nome": "Classe 7: social com marca",
+      "turns": [{ "text": "e aí curiangoo", "expect": { "status": "consulta", "classe": 7 } }]
+    },
+    {
+      "id": "c25",
+      "nome": "Classe 7: tudo bem?",
+      "turns": [{ "text": "tudo bem?", "expect": { "status": "consulta", "classe": 7 } }]
+    },
+    {
+      "id": "c26",
+      "nome": "Classe 8A: correção de valor retorna ação",
+      "turns": [
+        { "text": "gastei 150 no mercado", "expect": { "status": "sucesso" } },
+        {
+          "text": "na verdade foi 250",
+          "expect": { "status": "acao_executada", "acao": "ajustar_valor" }
+        }
+      ]
+    },
+    {
+      "id": "c27",
+      "nome": "Classe 8E: troca de mês",
+      "turns": [
+        {
+          "text": "me mostra janeiro",
+          "expect": { "status": "acao_executada", "acao": "mudar_mes" }
+        }
+      ]
+    },
+    {
+      "id": "c28",
+      "nome": "Classe 8C: comando não suportado é honesto",
+      "turns": [{ "text": "apaga aquela transação do mercado", "expect": { "status": "consulta" } }]
+    },
+    {
+      "id": "c29",
+      "nome": "Classe 8D: desfazer",
+      "turns": [
+        { "text": "gastei 30 no lanche", "expect": { "status": "sucesso" } },
+        { "text": "desfaz", "expect": { "status": "acao_executada" } }
+      ]
+    },
+    {
+      "id": "c30",
+      "nome": "Classe 9: fora de escopo redireciona",
+      "turns": [{ "text": "quem vai ganhar a eleição?", "expect": { "classe": 9 } }]
+    },
+    {
+      "id": "c31",
+      "nome": "Classe 9: ruído ininteligível",
+      "turns": [{ "text": "asdfghjk", "expect": { "classe": 9 } }]
+    },
+    {
+      "id": "c32",
+      "nome": "Classe 9: previsão do tempo",
+      "turns": [{ "text": "qual a previsão do tempo pra amanhã?", "expect": { "classe": 9 } }]
+    },
+    {
+      "id": "c33",
+      "nome": "pt-BR: ponto de milhar",
+      "turns": [
+        { "text": "gastei 1.250 no notebook", "expect": { "status": "sucesso", "valor": 1250 } }
+      ]
+    },
+    {
+      "id": "c34",
+      "nome": "pt-BR: vírgula decimal",
+      "turns": [{ "text": "paguei 6,75 no pão", "expect": { "status": "sucesso", "valor": 6.75 } }]
+    },
+    {
+      "id": "c35",
+      "nome": "pt-BR: valor por extenso",
+      "turns": [
+        { "text": "doze reais de estacionamento", "expect": { "status": "sucesso", "valor": 12 } }
+      ]
+    },
+    {
+      "id": "c36",
+      "nome": "Semântica: remédio vai pra Saúde",
+      "turns": [
+        {
+          "text": "remédio da farmácia 45 reais",
+          "expect": { "status": "sucesso", "categoria_contem": "aúde" }
+        }
+      ]
+    },
+    {
+      "id": "c37",
+      "nome": "Semântica: ração vai pra Pets",
+      "turns": [
+        {
+          "text": "ração pro cachorro 80 reais",
+          "expect": { "status": "sucesso", "categoria_contem": "et" }
+        }
+      ]
+    },
+    {
+      "id": "c38",
+      "nome": "Semântica: cigarro NÃO é alimentação",
+      "turns": [{ "text": "cigarro 15 reais", "expect": { "status": "sucesso" } }]
+    },
+    {
+      "id": "c39",
+      "nome": "Semântica: limpeza NÃO é alimentação",
+      "turns": [{ "text": "detergente e esponja 20 reais", "expect": { "status": "sucesso" } }]
+    },
+    {
+      "id": "c40",
+      "nome": "PIX com destinatário",
+      "turns": [{ "text": "pix de 200 pro João", "expect": { "status": "sucesso" } }]
+    }
+  ]
+}
