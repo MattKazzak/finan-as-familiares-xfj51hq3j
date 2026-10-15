@@ -555,6 +555,7 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
   - Ao iniciar ou avançar um novo fluxo de lançamento, valores de turnos passados JAMAIS devem preencher lacunas sem confirmação explícita ("os valores são os mesmos de antes?").
   - NUNCA reaproveite valores ou categorias de transações já salvas para responder a confirmações de novos fluxos!
 `
+    }
 
     // System prompt montado a partir do contrato versionado em _shared/copilot-system-prompt.ts
     const systemPrompt = buildSystemPrompt({
