@@ -529,6 +529,11 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
     * Se não havia valor total prévio:
       - Retorne OBRIGATORIAMENTE status "falta_valor" com a pergunta: "Agora os valores: quanto foi cada item?"
     * Mantenha os itens propostos com valor: null.
+  - Se a mensagem atual traz VALOR POR ITEM NOMEADO (ex: "chupeta 27, sachês 19, copo 100, doação 10", "carne 60 e carvão 20"):
+    * Isso responde a pergunta de valores! Grave UMA TRANSAÇÃO POR ITEM com os valores informados, usando os pares categoria › subcategoria JÁ PROPOSTOS (status: "sucesso").
+    * NUNCA re-classifique a resposta como cesta nova, NUNCA pergunte de novo, NUNCA sugira criar gaveta para itens que já têm par proposto!
+    * Mensagem amigável: resumo item por item ("Lançamentos realizados: • R$ 27,00 em **Compras** › **Bebês & Crianças** • ...").
+    * Se sobrar item SEM valor informado: grave os precificados e pergunte SÓ o faltante (status: "falta_valor").
   - Se a mensagem atual for CORREÇÃO PARCIAL (SEMÂNTICA — COM OU SEM "NÃO"):
     * A detecção é SEMÂNTICA, NÃO lexical: qualquer formulação que atribua/vincule itens a uma ocasião ou destino diferente ("Essa carne também é para um churrasco", "A carne e o carvão são para o churrasco de hoje", "o carvão também é pro churrasco", "não, a carne é para churrasco", "carne pro churrasco") ativa a CORREÇÃO PARCIAL SEMÂNTICA!
     * Aplica-se EXCLUSIVAMENTE aos itens expressamente nomeados ou referenciados; todos os demais itens mantêm suas gavetas e categorias propostas intactas!
