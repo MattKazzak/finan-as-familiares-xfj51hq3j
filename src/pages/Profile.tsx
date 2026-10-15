@@ -11,6 +11,12 @@ import {
   fetchUserIncompleteFamilies,
   deleteFamilyWorkspaceManually,
 } from '@/services/family'
+import {
+  fetchFamilySettlement,
+  buildSettlementSummary,
+  type SettlementRow,
+} from '@/services/splits'
+import { Scale } from 'lucide-react'
 import { deleteUserAccount, updateUserName, uploadUserAvatar } from '@/services/user-account'
 import { evaluatePasswordStrength, isPasswordStrongEnough } from '@/pages/Login'
 import { supabase } from '@/lib/supabase/client'
@@ -300,6 +306,31 @@ export default function ProfilePage() {
   // Gestão de outras famílias incompletas (Tarefa 2.3)
   const [incompleteFamilies, setIncompleteFamilies] = useState<Array<any>>([])
   const [deletingIncompleteFamId, setDeletingIncompleteFamId] = useState<string | null>(null)
+
+  // ===== Acerto de contas do mês (rateio) =====
+  const [settlementRows, setSettlementRows] = useState<SettlementRow[]>([])
+  const [settlementLoading, setSettlementLoading] = useState(false)
+  const [settlementError, setSettlementError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const loadSettlement = async () => {
+      if (!family?.id) return
+      try {
+        setSettlementLoading(true)
+        setSettlementError(null)
+        const now = new Date()
+        const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+        const rows = await fetchFamilySettlement(family.id, month)
+        setSettlementRows(rows)
+      } catch (err) {
+        console.warn('Erro ao carregar acerto de contas:', err)
+        setSettlementError('Não foi possível carregar o acerto de contas.')
+      } finally {
+        setSettlementLoading(false)
+      }
+    }
+    loadSettlement()
+  }, [family?.id, triggerRefresh])
 
   const loadIncompleteFamilies = useCallback(async () => {
     try {
@@ -1081,6 +1112,70 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+
+      {/* 5.4 ACERTO DE CONTAS DO MÊS (rateio) */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm space-y-4">
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold shrink-0">
+            <Scale className="w-5 h-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h4 className="font-bold text-base text-slate-900 leading-tight">
+              Acerto de contas do mês
+            </h4>
+            <p className="text-xs text-slate-500 mt-1">
+              Quem pagou mais do que consumiu nas despesas divididas
+            </p>
+          </div>
+        </div>
+
+        {settlementLoading ? (
+          <div className="py-4 flex items-center justify-center gap-2 text-xs text-slate-500">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Calculando...
+          </div>
+        ) : settlementError ? (
+          <p className="text-xs text-rose-700">{settlementError}</p>
+        ) : (
+          <div className="space-y-2">
+            {buildSettlementSummary([...settlementRows]).map((msg, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-2 py-2 px-3 rounded-xl bg-slate-50 text-xs text-slate-700 font-medium"
+              >
+                <Scale className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span>{msg}</span>
+              </div>
+            ))}
+            {settlementRows.length > 0 && (
+              <details className="pt-1">
+                <summary className="text-[11px] font-semibold text-slate-500 cursor-pointer hover:text-slate-700">
+                  Ver detalhes por membro
+                </summary>
+                <div className="mt-2 space-y-1.5">
+                  {settlementRows.map((r) => (
+                    <div
+                      key={r.member_id}
+                      className="flex items-center justify-between gap-2 py-1.5 px-3 rounded-lg bg-slate-50/60 text-[11px]"
+                    >
+                      <span className="font-semibold text-slate-700 truncate">{r.member_name}</span>
+                      <span className="text-slate-500 shrink-0">
+                        pagou {formatBRL(r.paid_cents)} · consumiu {formatBRL(r.consumed_cents)}{' '}
+                        <strong
+                          className={r.balance_cents >= 0 ? 'text-emerald-700' : 'text-rose-700'}
+                        >
+                          ({r.balance_cents >= 0 ? '+' : ''}
+                          {formatBRL(r.balance_cents)})
+                        </strong>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* 5.5 MINHA CONTA (avatar, nome, senha, exclusão) */}
       <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm space-y-4">

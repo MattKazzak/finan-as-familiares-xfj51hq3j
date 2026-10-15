@@ -40,6 +40,8 @@ import {
   extractPatternFromDescription,
 } from '@/services/import/categorization'
 import { parseBRLToCents, formatNumberBRL, formatBRL } from '@/lib/formatters'
+import { createTransactionWithSplits, splitEqually, validateSplits } from '@/services/splits'
+import { Users, DivideSquare } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { ContextualSubcategorySelector } from '@/components/categories/ContextualSubcategorySelector'
 import { CategoryIcon } from '@/components/common/CategoryIcon'
@@ -131,6 +133,12 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
   const [memberId, setMemberId] = useState(
     initialMemberId || newTransactionPrefill?.initialMemberId || '',
   )
+
+  // ===== Rateio (dividir gasto com membros) =====
+  const [isSplitEnabled, setIsSplitEnabled] = useState(false)
+  const [splitMemberIds, setSplitMemberIds] = useState<string[]>([])
+  const [splitManualMode, setSplitManualMode] = useState(false)
+  const [splitAmounts, setSplitAmounts] = useState<Record<string, string>>({})
   const [categoryId, setCategoryId] = useState<string>(
     initialCategoryId || newTransactionPrefill?.initialCategoryId || 'none',
   )
@@ -554,6 +562,30 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           title: 'Compra parcelada registrada! 🎉',
           description: `1ª parcela confirmada neste mês e ${installmentsCount - 1} parcelas projetadas para os próximos meses.`,
         })
+      } else if (isSplitEnabled && splitMemberIds.length > 0 && type === 'expense') {
+        // Lançamento com RATEIO entre membros (RPC transacional no servidor)
+        const splits = splitEqually(cents, splitMemberIds)
+        const validation = validateSplits(splits, cents)
+        if (!validation.ok) {
+          setErrorMsg('Erro ao calcular as partes do rateio. Tente novamente.')
+          return
+        }
+        await createTransactionWithSplits({
+          familyId: family.id,
+          payerMemberId: memberId,
+          categoryId: categoryId === 'none' ? '' : categoryId,
+          type,
+          amountCents: cents,
+          description: description.trim(),
+          transactionDate,
+          splits,
+          subcategoryId: subcategoryId === 'none' ? null : subcategoryId,
+          paymentMethod,
+        })
+        toast({
+          title: 'Gasto dividido! 🤝',
+          description: `Rateio registrado entre ${splitMemberIds.length + 1} membros da família.`,
+        })
       } else {
         // Lançamento manual avulso
         await createTransaction({
@@ -807,6 +839,88 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                   </button>
                 )
               })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================
+          4.5 RATEIO — DIVIDIR GASTO COM OUTROS MEMBROS
+          ======================================================== */}
+      {type === 'expense' && members.length > 1 && (
+        <div
+          data-testid="transaction-split-block"
+          className="rounded-2xl border border-[rgba(20,33,61,0.06)] bg-[#F8F9FB]/90 p-2.5 sm:p-3 transition-all space-y-2 shadow-curiango"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <DivideSquare className="w-3.5 h-3.5 text-[#64748B] shrink-0" />
+              <span className="text-xs font-medium text-[#64748B]">Dividir com alguém</span>
+            </div>
+            <Switch
+              checked={isSplitEnabled}
+              onCheckedChange={(v) => {
+                setIsSplitEnabled(v)
+                if (!v) {
+                  setSplitMemberIds([])
+                  setSplitAmounts({})
+                  setSplitManualMode(false)
+                }
+              }}
+              aria-label="Dividir gasto com outros membros"
+            />
+          </div>
+
+          {isSplitEnabled && (
+            <div className="pt-1 space-y-2 animate-in fade-in-50 duration-150">
+              <p className="text-[11px] text-slate-500">
+                Toque nos membros que dividem este gasto. O valor é dividido igualmente entre todos
+                (você incluso).
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {members.map((m) => {
+                  const isSelected = splitMemberIds.includes(m.id)
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => {
+                        setSplitMemberIds((prev) =>
+                          prev.includes(m.id) ? prev.filter((id) => id !== m.id) : [...prev, m.id],
+                        )
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5 cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#FCA311] text-[#14213D] border-[#FCA311] shadow-xs scale-[1.01]'
+                          : 'bg-white text-[#14213D] border-[rgba(20,33,61,0.1)] hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span
+                        className={`w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 ${
+                          isSelected ? 'bg-[#14213D] text-[#FCA311]' : 'bg-slate-200 text-[#14213D]'
+                        }`}
+                      >
+                        {m.name.charAt(0).toUpperCase()}
+                      </span>
+                      <span className="truncate max-w-[80px]">{m.name}</span>
+                      {isSelected && <Check className="w-3 h-3 shrink-0" />}
+                    </button>
+                  )
+                })}
+              </div>
+              {splitMemberIds.length > 0 && (
+                <div className="pt-1 flex items-center gap-2">
+                  <Users className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <p className="text-[11px] font-medium text-slate-600">
+                    {splitEqually(cents || 0, splitMemberIds)
+                      .map((s) => {
+                        const m = members.find((mm) => mm.id === s.member_id)
+                        return `${m?.name?.split(' ')[0]}: ${formatBRL(s.share_cents)}`
+                      })
+                      .join(' · ')}
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
