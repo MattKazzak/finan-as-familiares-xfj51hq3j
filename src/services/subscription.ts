@@ -30,16 +30,43 @@ export async function fetchMySubscription(): Promise<MySubscription | null> {
 
 /**
  * Cancela a assinatura do usuário logado (17/10).
- * Usa a RPC cancel_my_subscription (security definer) — o UPDATE direto pelo
- * cliente SEMPRE falhava: RLS da subscriptions só permite SELECT (subs_select_own).
+ * Caminho principal: edge cancel-asaas-subscription (verify_jwt) — cancela
+ * no banco E remove a recorrência no Asaas (DELETE /v3/subscriptions/{id},
+ * que também remove cobranças pendentes). Fallback: RPC cancel_my_subscription
+ * (só banco) se a edge estiver indisponível.
  * O Premium continua válido até o fim do período já pago (current_period_end).
- * PENDENTE: cancelar também no Asaas (edge c/ ASAAS_API_KEY) — hoje o link
- * recorrente do Asaas continuaria cobrando no próximo ciclo.
  */
 export async function requestCancelSubscription(_subscriptionId?: string): Promise<void> {
-  const { data, error } = await (supabase as any).rpc('cancel_my_subscription')
+  const { data: sessionData } = await supabase.auth.getSession()
+  const token = sessionData.session?.access_token
+  if (token) {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cancel-asaas-subscription`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: '{}',
+        },
+      )
+      if (res.ok) return
+      // 404 = sem assinatura ativa (nada a fazer); outros erros caem no fallback
+      if (res.status !== 404) {
+        console.warn('[subscription] edge de cancelamento falhou:', res.status)
+      } else {
+        return
+      }
+    } catch (err) {
+      console.warn('[subscription] edge de cancelamento indisponível:', err)
+    }
+  }
+  // Fallback: cancela só no banco (Premium vale até o fim do período pago)
+  const { error } = await (supabase as any).rpc('cancel_my_subscription')
   if (error) throw error
-  return data
 }
 
 /** URL de checkout de assinatura no Asaas (links de pagamento recorrentes, 17/10). */
