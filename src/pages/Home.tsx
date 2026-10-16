@@ -10,12 +10,7 @@ import {
   fetchMonthBudgetOverrides,
 } from '@/services/transactions'
 import { processAutoRecurringIncomes } from '@/services/recurring-incomes'
-import {
-  formatBRL,
-  formatFamilyDisplayName,
-  formatMonthYear,
-  formatRelativeDate,
-} from '@/lib/formatters'
+import { formatBRL, formatFamilyDisplayName, formatRelativeDate } from '@/lib/formatters'
 import { CountUp } from '@/components/common/CountUp'
 import { CategoryIconBox } from '@/components/common/CategoryIcon'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
@@ -141,7 +136,7 @@ export default function Home() {
 
   // Mês ativo global
   const { activeMonth, activeDate } = useActiveMonth()
-  const [isBalanceDetailsExpanded, setIsBalanceDetailsExpanded] = useState(false)
+
   const currentMonthStr = activeMonth
 
   const loadData = useCallback(async () => {
@@ -230,23 +225,11 @@ export default function Home() {
   const plannedIncomeCents = family?.monthly_net_income_cents || 0
 
   // Totais de saldo e mês
-  const {
-    totalBalanceCents,
-    monthIncomeCents,
-    monthExpenseCents,
-    prevMonthIncomeCents,
-    prevMonthExpenseCents,
-    prevMonthDate,
-  } = useMemo(() => {
+  const { totalBalanceCents, monthIncomeCents, monthExpenseCents } = useMemo(() => {
     let incomeTotal = 0
     let expenseTotal = 0
     let mIncome = 0
     let mExpense = 0
-    let prevMIncome = 0
-    let prevMExpense = 0
-
-    const prevDate = new Date(activeDate.getFullYear(), activeDate.getMonth() - 1, 1)
-    const prevMonthStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`
 
     // Sem filtro de membro: totais globais vêm da RPC (agregação no servidor).
     // Com filtro: calcula localmente sobre as transações do membro.
@@ -269,11 +252,9 @@ export default function Home() {
       if (tx.type === 'income') {
         if (!isGlobalFromRpc) incomeTotal += tx.amount_cents
         if (txMonth === currentMonthStr) mIncome += tx.amount_cents
-        if (txMonth === prevMonthStr) prevMIncome += tx.amount_cents
       } else {
         if (!isGlobalFromRpc) expenseTotal += tx.amount_cents
         if (txMonth === currentMonthStr) mExpense += tx.amount_cents
-        if (txMonth === prevMonthStr) prevMExpense += tx.amount_cents
       }
     })
 
@@ -281,9 +262,6 @@ export default function Home() {
       totalBalanceCents: incomeTotal - expenseTotal,
       monthIncomeCents: mIncome,
       monthExpenseCents: mExpense,
-      prevMonthIncomeCents: prevMIncome,
-      prevMonthExpenseCents: prevMExpense,
-      prevMonthDate: prevDate,
     }
   }, [transactions, totalsFromRpc, currentMonthStr, activeDate])
 
@@ -577,16 +555,6 @@ export default function Home() {
 
   const memberInitial = currentMember?.name?.charAt(0).toUpperCase() || 'F'
 
-  // Anel do previsto: cálculos
-  const incomeProgressPercent = useMemo(() => {
-    if (!plannedIncomeCents || plannedIncomeCents <= 0) return 0
-    return Math.round((monthIncomeCents / plannedIncomeCents) * 100)
-  }, [monthIncomeCents, plannedIncomeCents])
-
-  const cappedIncomeProgress = Math.min(100, Math.max(0, incomeProgressPercent))
-  const isIncomeOverPlanned = plannedIncomeCents > 0 && monthIncomeCents > plannedIncomeCents
-  const isIncomeAtPlanned = plannedIncomeCents > 0 && monthIncomeCents === plannedIncomeCents
-
   if (isFamilyIncomplete) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center max-w-md mx-auto">
@@ -808,19 +776,17 @@ export default function Home() {
             </div>
           )}
 
-          {/* O NOVO HERÓI: Saldo Total mora dentro do bloco sangrado marinho */}
-          <div
-            onClick={() => setIsBalanceDetailsExpanded((prev) => !prev)}
-            role="region"
-            aria-label="Card de Saldo da Família"
-            className="pt-2 sm:pt-4 cursor-pointer select-none group"
-          >
+          {/* O HERÓI: Saldo mora dentro do bloco sangrado marinho. AFINAÇÃO 16/10:
+              label acompanha o filtro (Todos = da Família; membro = nome dele) e o
+              expandível 'Ver detalhes' foi REMOVIDO — receitas/despesas do mês já
+              estão no próprio herói, progressos vivem em Orçamentos e a tendência
+              virou o gráfico 'Evolução do saldo'. Menos informação, mais clareza. */}
+          <div role="region" aria-label="Card de Saldo" className="pt-2 sm:pt-4">
             <div className="flex items-center justify-between gap-2 mb-1.5">
               <span className="text-xs uppercase font-medium tracking-wider text-slate-300">
-                Saldo Total da Família
-              </span>
-              <span className="text-[11px] text-white/70 group-hover:text-white transition-colors">
-                {isBalanceDetailsExpanded ? '▾ Recolher' : '▸ Ver detalhes'}
+                {selectedMemberId
+                  ? `Saldo de ${members.find((m) => m.id === selectedMemberId)?.name || 'membro'}`
+                  : 'Saldo Total da Família'}
               </span>
             </div>
 
@@ -874,170 +840,6 @@ export default function Home() {
                 </div>
               </div>
             </div>
-
-            {/* Progressive disclosure dos detalhes (preservando R50 e anel integrado) */}
-            {isBalanceDetailsExpanded && (
-              <div
-                onClick={(e) => e.stopPropagation()}
-                className="mt-4 pt-3.5 border-t border-white/15 space-y-3.5 text-xs text-slate-200 animate-in fade-in slide-in-from-top-1 duration-200"
-              >
-                {/* Comparativo de receitas */}
-                <div className="space-y-1.5">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="text-slate-300 font-medium">Receitas do mês:</span>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {plannedIncomeCents > 0 ? (
-                        <span className="font-semibold text-white">
-                          {maskValue(formatBRL(monthIncomeCents))} de{' '}
-                          {maskValue(formatBRL(plannedIncomeCents))} previstos
-                        </span>
-                      ) : (
-                        <span className="font-semibold text-white">
-                          {maskValue(formatBRL(monthIncomeCents))}
-                        </span>
-                      )}
-                      {isIncomeOverPlanned && (
-                        <span className="text-[11px] font-medium text-emerald-300">
-                          (acima do previsto)
-                        </span>
-                      )}
-                      {isIncomeAtPlanned && (
-                        <span className="text-[11px] font-medium text-emerald-300">
-                          (previsto atingido)
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {plannedIncomeCents > 0 && (
-                    <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
-                      <div
-                        className="bg-emerald-400 h-full rounded-full transition-all duration-500"
-                        style={{ width: `${cappedIncomeProgress}%` }}
-                        role="progressbar"
-                        aria-label="Progresso das receitas em relação ao previsto"
-                        aria-valuenow={cappedIncomeProgress}
-                        aria-valuemin={0}
-                        aria-valuemax={100}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Comparativo de despesas */}
-                {(() => {
-                  const totalExpenseBudget =
-                    bucketsData.essentials.limitCents +
-                    bucketsData.lifestyle.limitCents +
-                    bucketsData.future.limitCents
-
-                  return (
-                    <div className="space-y-1.5 pt-1 border-t border-white/10">
-                      <div className="flex flex-wrap items-baseline justify-between gap-2">
-                        <span className="text-slate-300 font-medium">Despesas do mês:</span>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {totalExpenseBudget > 0 ? (
-                            <span className="font-semibold text-white">
-                              {maskValue(formatBRL(monthExpenseCents))} de{' '}
-                              {maskValue(formatBRL(totalExpenseBudget))} orçados
-                            </span>
-                          ) : (
-                            <span className="font-semibold text-white">
-                              {maskValue(formatBRL(monthExpenseCents))}
-                            </span>
-                          )}
-                          {totalExpenseBudget > 0 && monthExpenseCents > totalExpenseBudget && (
-                            <span className="text-[11px] font-medium text-rose-300">
-                              (acima do orçamento)
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {totalExpenseBudget > 0 && (
-                        <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all duration-500 ${
-                              monthExpenseCents > totalExpenseBudget
-                                ? 'bg-rose-400'
-                                : 'bg-slate-300'
-                            }`}
-                            style={{
-                              width: `${Math.min(
-                                100,
-                                Math.max(
-                                  0,
-                                  Math.round((monthExpenseCents / totalExpenseBudget) * 100),
-                                ),
-                              )}%`,
-                            }}
-                            role="progressbar"
-                            aria-label="Progresso das despesas em relação ao orçamento"
-                            aria-valuenow={Math.min(
-                              100,
-                              Math.max(
-                                0,
-                                Math.round((monthExpenseCents / totalExpenseBudget) * 100),
-                              ),
-                            )}
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )
-                })()}
-
-                {/* Comparação em linguagem natural */}
-                {(() => {
-                  const activeMonthLabel = formatMonthYear(activeDate)
-                  const prevMonthLabel = formatMonthYear(prevMonthDate)
-
-                  const hasAnyActivity =
-                    monthIncomeCents > 0 ||
-                    monthExpenseCents > 0 ||
-                    prevMonthIncomeCents > 0 ||
-                    prevMonthExpenseCents > 0
-
-                  if (!hasAnyActivity) return null
-
-                  return (
-                    <div className="pt-2 border-t border-white/10 text-[11px] text-slate-300 space-y-1">
-                      <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-400 block">
-                        Comparação ({prevMonthLabel.split(' ')[0]} vs{' '}
-                        {activeMonthLabel.split(' ')[0]}
-                        ):
-                      </span>
-                      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                        <span>
-                          Receitas: {prevMonthLabel.split(' ')[0]}:{' '}
-                          <strong className="text-white font-medium">
-                            {maskValue(formatBRL(prevMonthIncomeCents))}
-                          </strong>{' '}
-                          · {activeMonthLabel.split(' ')[0]}:{' '}
-                          <strong className="text-white font-medium">
-                            {maskValue(formatBRL(monthIncomeCents))}
-                          </strong>
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                        <span>
-                          Despesas: {prevMonthLabel.split(' ')[0]}:{' '}
-                          <strong className="text-white font-medium">
-                            {maskValue(formatBRL(prevMonthExpenseCents))}
-                          </strong>{' '}
-                          · {activeMonthLabel.split(' ')[0]}:{' '}
-                          <strong className="text-white font-medium">
-                            {maskValue(formatBRL(monthExpenseCents))}
-                          </strong>
-                        </span>
-                      </div>
-                    </div>
-                  )
-                })()}
-              </div>
-            )}
           </div>
 
           {/* Atalhos Rápidos no Fundo Marinho (Chips consistentes) */}
