@@ -29,16 +29,17 @@ export async function fetchMySubscription(): Promise<MySubscription | null> {
 }
 
 /**
- * Pede o cancelamento da assinatura.
- * O app grava o pedido; a edge function admin-cancel-subscription
- * chama a API do Mercado Pago e o webhook confirma o status final.
+ * Cancela a assinatura do usuário logado (17/10).
+ * Usa a RPC cancel_my_subscription (security definer) — o UPDATE direto pelo
+ * cliente SEMPRE falhava: RLS da subscriptions só permite SELECT (subs_select_own).
+ * O Premium continua válido até o fim do período já pago (current_period_end).
+ * PENDENTE: cancelar também no Asaas (edge c/ ASAAS_API_KEY) — hoje o link
+ * recorrente do Asaas continuaria cobrando no próximo ciclo.
  */
-export async function requestCancelSubscription(subscriptionId: string): Promise<void> {
-  const { error } = await (supabase as any)
-    .from('subscriptions')
-    .update({ status: 'canceled', canceled_at: new Date().toISOString() })
-    .eq('id', subscriptionId)
+export async function requestCancelSubscription(_subscriptionId?: string): Promise<void> {
+  const { data, error } = await (supabase as any).rpc('cancel_my_subscription')
   if (error) throw error
+  return data
 }
 
 /** URL de checkout de assinatura no Asaas (links de pagamento recorrentes, 17/10). */
