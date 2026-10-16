@@ -246,7 +246,8 @@ export default function Home() {
                 total_expense_cents: Number(histRow.total_expense_cents) || 0,
               }
             : null,
-        )        setTransactions((monthTxRes as Transaction[]) || [])
+        )
+        setTransactions((monthTxRes as Transaction[]) || [])
         setInsights(Array.isArray(insightsRes) ? insightsRes : [])
         setBalanceSeries(Array.isArray(seriesRes) ? seriesRes : [])
       }
