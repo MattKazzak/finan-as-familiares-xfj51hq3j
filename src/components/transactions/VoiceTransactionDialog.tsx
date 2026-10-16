@@ -25,6 +25,8 @@ import {
   Volume2,
 } from 'lucide-react'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
+import { PremiumGate } from '@/components/billing/PremiumGate'
+import { PremiumGate } from '@/components/billing/PremiumGate'
 import { CopilotTypingBubble } from '@/components/brand/CopilotTypingBubble'
 import { CategoryHighlightChip } from '@/components/categories/CategoryHighlightChip'
 import {
@@ -3110,389 +3112,404 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="rounded-3xl border border-slate-200/90 bg-white p-3.5 sm:p-5 sm:max-w-md md:max-w-lg shadow-2xl flex flex-col max-h-[92vh] h-[640px] w-[calc(100vw-1.5rem)] max-w-[calc(100vw-1.5rem)] sm:w-full overflow-hidden">
-        {/* Header Elegante do Copilot estilo Apple Intelligence */}
-        <DialogHeader className="text-left space-y-0.5 pb-2 border-b border-slate-100 shrink-0">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5 min-w-0">
-              {/* Avatar do Curiango com status verde ativo */}
-              <div className="relative shrink-0">
-                <div className="w-9 h-9 rounded-2xl bg-brand text-white flex items-center justify-center font-semibold shadow-sm p-1 border border-brand">
-                  <CuriangoLogo size={22} color="#FCA311" />
+        {/* PAYWALL (17/10): o Copilot de voz é Premium — free vê o teaser do gate
+            dentro do diálogo (o diálogo continua abrindo, sem quebra de fluxo). */}
+        <PremiumGate
+          title="Copilot de voz"
+          description="Fale com o Curiango para lançar e consultar suas finanças — Premium."
+        >
+          {/* Header Elegante do Copilot estilo Apple Intelligence */}
+          <DialogHeader className="text-left space-y-0.5 pb-2 border-b border-slate-100 shrink-0">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                {/* Avatar do Curiango com status verde ativo */}
+                <div className="relative shrink-0">
+                  <div className="w-9 h-9 rounded-2xl bg-brand text-white flex items-center justify-center font-semibold shadow-sm p-1 border border-brand">
+                    <CuriangoLogo size={22} color="#FCA311" />
+                  </div>
+                  <span
+                    className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"
+                    title="Copilot Online"
+                  />
                 </div>
-                <span
-                  className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"
-                  title="Copilot Online"
-                />
+
+                <div className="min-w-0">
+                  <DialogTitle className="text-sm sm:text-base font-semibold text-slate-900 tracking-tight flex items-center gap-1.5">
+                    <span>Curiango Copilot</span>
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
+                      IA Ativa
+                    </span>
+                  </DialogTitle>
+                  <DialogDescription className="text-[11px] sm:text-xs text-slate-500 break-words">
+                    Assistente financeiro da família
+                  </DialogDescription>
+                </div>
               </div>
 
-              <div className="min-w-0">
-                <DialogTitle className="text-sm sm:text-base font-semibold text-slate-900 tracking-tight flex items-center gap-1.5">
-                  <span>Curiango Copilot</span>
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
-                    IA Ativa
-                  </span>
-                </DialogTitle>
-                <DialogDescription className="text-[11px] sm:text-xs text-slate-500 break-words">
-                  Assistente financeiro da família
-                </DialogDescription>
+              {/* Seletor de Membro */}
+              <div className="flex items-center gap-1 text-xs shrink-0">
+                <select
+                  value={selectedMemberId}
+                  onChange={(e) => setSelectedMemberId(e.target.value)}
+                  className="text-[11px] font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg px-2 py-1 cursor-pointer transition-colors max-w-[110px]"
+                  title="Membro responsável"
+                >
+                  {members.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
-            {/* Seletor de Membro */}
-            <div className="flex items-center gap-1 text-xs shrink-0">
-              <select
-                value={selectedMemberId}
-                onChange={(e) => setSelectedMemberId(e.target.value)}
-                className="text-[11px] font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg px-2 py-1 cursor-pointer transition-colors max-w-[110px]"
-                title="Membro responsável"
+            {/* Banner transitório de escuta contínua (ex: no-speech) */}
+            {infoMessage && (
+              <div
+                data-testid="alert-audio-info"
+                className="mt-2 text-xs px-3 py-2 rounded-2xl border border-amber-200 bg-amber-50/95 text-amber-900 flex items-center gap-2 text-left animate-in fade-in max-w-full"
               >
-                {members.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Banner transitório de escuta contínua (ex: no-speech) */}
-          {infoMessage && (
-            <div
-              data-testid="alert-audio-info"
-              className="mt-2 text-xs px-3 py-2 rounded-2xl border border-amber-200 bg-amber-50/95 text-amber-900 flex items-center gap-2 text-left animate-in fade-in max-w-full"
-            >
-              <span className="relative flex h-2 w-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
-              </span>
-              <p className="text-[11px] leading-tight font-medium text-amber-800">{infoMessage}</p>
-            </div>
-          )}
-
-          {/* FIX 3: Banner de ativação de áudio caso o AudioContext esteja suspenso */}
-          {needsAudioResume && (
-            <button
-              type="button"
-              data-testid="banner-audio-resume"
-              onClick={resumeAudioContextOnTouch}
-              className="mt-2 w-full text-xs px-3 py-2 rounded-2xl border border-sky-300 bg-sky-50 text-sky-950 flex items-center justify-between gap-2 text-left cursor-pointer hover:bg-sky-100/80 transition-colors animate-in fade-in"
-            >
-              <div className="flex items-center gap-1.5 min-w-0">
-                <Volume2 className="w-4 h-4 text-sky-600 shrink-0" />
-                <span className="text-[11px] font-semibold truncate">
-                  Toque na tela para ativar o áudio
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
                 </span>
-              </div>
-              <span className="text-[10px] uppercase font-bold text-sky-700 shrink-0">Ativar</span>
-            </button>
-          )}
-
-          {/* Alerta de erro com botão Tentar de novo */}
-          {errorMessage && (
-            <div
-              role="alert"
-              data-testid="alert-ai-error"
-              className="mt-2 text-xs px-3 py-2 rounded-2xl border border-rose-200 bg-rose-50/90 text-rose-900 flex items-center justify-between gap-2 text-left animate-in fade-in max-w-full"
-            >
-              <div className="flex items-start gap-1.5 min-w-0">
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                <p className="text-[11px] leading-tight font-medium break-words text-rose-800">
-                  {errorMessage}
+                <p className="text-[11px] leading-tight font-medium text-amber-800">
+                  {infoMessage}
                 </p>
               </div>
+            )}
+
+            {/* FIX 3: Banner de ativação de áudio caso o AudioContext esteja suspenso */}
+            {needsAudioResume && (
               <button
                 type="button"
-                onClick={() => {
-                  clearError()
-                  retryListening()
-                }}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white border border-rose-300 hover:bg-rose-100/70 text-rose-900 text-[11px] font-semibold shrink-0 cursor-pointer transition-colors shadow-2xs"
+                data-testid="banner-audio-resume"
+                onClick={resumeAudioContextOnTouch}
+                className="mt-2 w-full text-xs px-3 py-2 rounded-2xl border border-sky-300 bg-sky-50 text-sky-950 flex items-center justify-between gap-2 text-left cursor-pointer hover:bg-sky-100/80 transition-colors animate-in fade-in"
               >
-                <RotateCcw className="w-3 h-3 text-rose-600" />
-                <span>Tentar de novo</span>
-              </button>
-            </div>
-          )}
-        </DialogHeader>
-
-        {/* ================= CORPO DO MINI-CHAT: HISTÓRICO DE MENSAGENS ================= */}
-        <div
-          ref={chatScrollRef}
-          className="flex-1 overflow-y-auto px-1 py-3 space-y-3 scroll-smooth text-xs"
-        >
-          {messages.map((msg, index) => {
-            const isUser = msg.sender === 'user'
-
-            return (
-              <div
-                key={msg.id}
-                className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} animate-in fade-in-50 duration-150`}
-              >
-                {/* Balão de Mensagem Estilo iMessage / WhatsApp */}
-                <div
-                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 shadow-xs ${
-                    isUser
-                      ? 'bg-[#064E3B] text-white rounded-br-xs'
-                      : 'bg-slate-100 text-slate-900 rounded-bl-xs border border-slate-200/80'
-                  }`}
-                >
-                  <p className="text-xs sm:text-[13px] leading-relaxed whitespace-pre-wrap">
-                    {renderMarkdownText(msg.text)}
-                  </p>
-
-                  {/* Chip de categoria CDS com seletor contextual integrado no balão de sucesso */}
-                  {!isUser && (msg.confirmedTxId || msg.cardType === 'sucesso') && msg.cardData && (
-                    <div className="mt-2 pt-2 border-t border-slate-200/70">
-                      <CategoryHighlightChip
-                        categoryName={
-                          msg.cardData.categoryNameSuggestion ||
-                          categories.find((c) => c.id === (msg.cardData as any)?.categoryId)
-                            ?.name ||
-                          categories.find((c) => c.type === msg.cardData?.type)?.name ||
-                          'Outro'
-                        }
-                        subcategoryName={msg.cardData.subcategoryNameSuggestion}
-                        confidence={msg.cardData.confidence}
-                        allCategories={categories}
-                        onSelectSubcategory={(subId, catId) => {
-                          const chosenCat = categories.find((c) => c.id === catId)
-                          const chosenSub = chosenCat?.subcategories?.find((s) => s.id === subId)
-                          handleUpdateLastTransaction({
-                            categoryName: chosenCat?.name || null,
-                            subcategoryName: chosenSub?.name || null,
-                          })
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  {/* Micro-link discreto [Desfazer] para reverter lançamento estilo WhatsApp */}
-                  {!isUser &&
-                    (msg.confirmedTxId || msg.cardType === 'sucesso') &&
-                    renderConfirmationMicroLinks(msg)}
-
-                  {/* Card clarificacao_categoria e clarificacao com pílulas de categorização se necessário */}
-                  {!isUser &&
-                    (msg.cardType === 'clarificacao' ||
-                      msg.cardType === 'clarificacao_categoria') &&
-                    msg.cardData &&
-                    renderClarificationCategoryCard(msg.cardData)}
-                </div>
-
-                {/* Chips de Sugestão Rápida tocáveis logo abaixo da saudação inicial */}
-                {index === 0 && msg.id === 'welcome-1' && (
-                  <div className="flex flex-wrap gap-1.5 mt-2.5 max-w-full">
-                    {quickPrompts.map((prompt, pIdx) => (
-                      <button
-                        key={pIdx}
-                        type="button"
-                        onClick={() => handleStopAndProcess(prompt.text)}
-                        className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-900 border border-slate-200 text-slate-700 transition-all active:scale-95 shadow-2xs"
-                      >
-                        {prompt.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-
-          {/* Indicador de carregamento / IA digitando via componente oficial CopilotTypingBubble */}
-          {(isProcessingAi || isTranscribingAudio) && (
-            <CopilotTypingBubble
-              label={
-                isTranscribingAudio
-                  ? 'Curiangoo transcrevendo áudio...'
-                  : 'Curiangoo processando...'
-              }
-            />
-          )}
-
-          {/* Transcrição em tempo real do microfone dentro do chat com animação suave de onda */}
-          {isListening && textoFalado.trim() && (
-            <div className="flex items-end justify-end animate-in fade-in duration-100">
-              <div className="bg-emerald-900/90 text-emerald-100 rounded-2xl rounded-br-xs px-3.5 py-2 italic text-xs max-w-[85%] border border-emerald-700 shadow-xs">
-                &ldquo;{textoFalado.trim()}&rdquo;
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ================= MODAL / OVERLAY DE CONSENTIMENTO LGPD (IA) ================= */}
-        {showConsentPrompt && (
-          <div
-            data-testid="ai-consent-modal"
-            className="absolute inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3.5 sm:p-4 rounded-3xl animate-in fade-in duration-150"
-          >
-            <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-2xl border border-slate-200/90 max-w-sm w-full space-y-3.5 text-left">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 flex items-center justify-center shrink-0">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <h3 className="text-sm font-bold text-slate-900 leading-snug">
-                  Permitir processamento por IA?
-                </h3>
-              </div>
-
-              <p className="text-xs text-slate-600 leading-relaxed">
-                O Curiangoo Copilot utiliza inteligência artificial para transcrever sua gravação de
-                voz, interpretar falas ou textos e sugerir categorias e valores automaticamente. O
-                áudio é processado exclusivamente para transcrição e nenhum dado é compartilhado
-                para fins externos. Deseja permitir o processamento por IA?
-              </p>
-
-              <div className="flex items-center justify-end gap-2 pt-1">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleDeclineAiConsent}
-                  className="h-9 px-3 text-xs font-semibold rounded-xl text-slate-700 border-slate-300 hover:bg-slate-100"
-                >
-                  Agora não
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handleAllowAiConsent}
-                  className="h-9 px-4 text-xs font-bold rounded-xl bg-[#064E3B] hover:bg-emerald-900 text-white shadow-xs"
-                >
-                  Permitir
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ================= RODAPÉ FIXO: CONTROLES DE ENTRADA (CALMA VISUAL CDS v1.0) ================= */}
-        <div className="pt-2 border-t border-slate-100 shrink-0 max-w-full">
-          {/* Linha de status de transição quando transcrevendo ou processando com IA */}
-          {(isTranscribingAudio || isProcessingAi) && !isListening && (
-            <div className="mb-2 flex items-center gap-2 text-xs text-slate-600 px-1">
-              <span className="w-2 h-2 rounded-full bg-brand-amber animate-pulse shrink-0" />
-              <span className="font-medium text-[11px] text-[#14213D]">
-                {isTranscribingAudio ? 'Transcrevendo áudio' : 'Processando com IA'}
-              </span>
-            </div>
-          )}
-
-          {/* TAREFA 1 & 2 & 3: Linha coesa de gravação (Waveform livre + Parar harmônico circular) OU Barra de input com microfone integrado */}
-          {isListening ? (
-            /* LINHA DE GRAVAÇÃO COESA CDS: Cronômetro discreto + Waveform livre flutuante no centro + Cancelar discreto + Parar circular harmônico */
-            <div
-              data-testid="voice-recording-line"
-              className="flex items-center justify-between gap-2.5 min-h-[48px] px-2.5 sm:px-3.5 py-1 w-full min-w-0"
-            >
-              {/* Lado esquerdo: Cronômetro discreto + Badge sutil apenas se em fallback web_speech */}
-              <div className="flex items-center gap-2 shrink-0">
-                <span
-                  data-testid="recording-elapsed-time"
-                  className="font-mono text-xs font-semibold text-[#14213D] tracking-tight tabular-nums"
-                >
-                  {Math.floor(recordingElapsedSeconds / 60)
-                    .toString()
-                    .padStart(2, '0')}
-                  :{(recordingElapsedSeconds % 60).toString().padStart(2, '0')}
-                </span>
-
-                {activeAudioCaptureMode === 'web_speech' && (
-                  <span
-                    data-testid="audio-capture-mode-badge"
-                    data-mode={activeAudioCaptureMode}
-                    className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium tracking-tight shrink-0 bg-amber-50 text-amber-800 border border-amber-200/80"
-                    title="Captação do navegador ativa (Web Speech API)"
-                  >
-                    Navegador
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Volume2 className="w-4 h-4 text-sky-600 shrink-0" />
+                  <span className="text-[11px] font-semibold truncate">
+                    Toque na tela para ativar o áudio
                   </span>
-                )}
-              </div>
+                </div>
+                <span className="text-[10px] uppercase font-bold text-sky-700 shrink-0">
+                  Ativar
+                </span>
+              </button>
+            )}
 
-              {/* Centro: Waveform LIVRE — flutuando diretamente sobre o fundo, sem caixa/fundo azul/borda */}
+            {/* Alerta de erro com botão Tentar de novo */}
+            {errorMessage && (
               <div
-                data-testid="recording-waveform"
-                data-audiocapture-mode={activeAudioCaptureMode || 'idle'}
-                className="flex-1 flex items-center justify-center gap-1.5 h-7 px-2 min-w-0"
-                aria-label="Gravando áudio"
+                role="alert"
+                data-testid="alert-ai-error"
+                className="mt-2 text-xs px-3 py-2 rounded-2xl border border-rose-200 bg-rose-50/90 text-rose-900 flex items-center justify-between gap-2 text-left animate-in fade-in max-w-full"
               >
-                {realAudioLevels.map((lvl, bIdx) => {
-                  const barHeightPx = Math.max(4, Math.round(lvl * 24))
-                  return (
-                    <span
-                      key={bIdx}
-                      className="w-1 bg-[#FCA311] rounded-full transition-[height] duration-150 ease-out"
-                      style={{ height: `${barHeightPx}px` }}
-                    />
-                  )
-                })}
-              </div>
-
-              {/* Lado direito: Cancelar (texto discreto) + Botão Parar circular harmônico CDS (≥44px de toque) */}
-              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={handleCancelRecording}
-                  className="px-2 py-1.5 text-xs font-medium text-[#64748B] hover:text-[#14213D] transition-colors cursor-pointer"
-                  aria-label="Cancelar gravação"
-                >
-                  Cancelar
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleStopRecordingAndProcess}
-                  className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-[#14213D] flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 group"
-                  aria-label="Parar gravação e processar"
-                  title="Parar gravação"
-                >
-                  <Square className="w-4 h-4 fill-[#14213D] text-[#14213D] rounded-xs group-hover:scale-105 transition-transform" />
-                </button>
-              </div>
-            </div>
-          ) : (
-            /* TAREFA 2: BARRA DE ENTRADA UNIFICADA (Microfone DENTRO do campo à direita, padrão WhatsApp/ChatGPT) */
-            <form
-              onSubmit={handleChatTextSubmit}
-              className="relative flex items-center w-full min-w-0"
-            >
-              <Input
-                value={inputVal}
-                onChange={(e) => setInputVal(e.target.value)}
-                placeholder="Mensagem ou fale..."
-                disabled={isProcessingAi || isTranscribingAudio}
-                className="w-full rounded-2xl h-11 text-xs sm:text-sm bg-slate-50 border-border/60 text-[#14213D] placeholder:text-muted-foreground focus:bg-white focus:border-brand-amber focus:ring-1 focus:ring-brand-amber transition-colors min-w-0 pr-20"
-              />
-
-              <div className="absolute right-1.5 flex items-center gap-1">
-                {/* Microfone integrado dentro do input */}
+                <div className="flex items-start gap-1.5 min-w-0">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <p className="text-[11px] leading-tight font-medium break-words text-rose-800">
+                    {errorMessage}
+                  </p>
+                </div>
                 <button
                   type="button"
                   onClick={() => {
-                    if (!hasAiConsent && !getAiConsent()) {
-                      setShowConsentPrompt(true)
-                    } else {
-                      startRecording()
-                    }
+                    clearError()
+                    retryListening()
                   }}
-                  disabled={isProcessingAi || isTranscribingAudio}
-                  aria-label="Falar comando por voz"
-                  title="Falar comando por voz"
-                  className="w-8 h-8 rounded-xl text-slate-600 hover:text-brand hover:bg-slate-200/60 flex items-center justify-center transition-all cursor-pointer disabled:opacity-40"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white border border-rose-300 hover:bg-rose-100/70 text-rose-900 text-[11px] font-semibold shrink-0 cursor-pointer transition-colors shadow-2xs"
                 >
-                  <Mic className="w-4 h-4 text-[#14213D]" strokeWidth={1.5} />
-                </button>
-
-                {/* Botão Enviar com ícone Send */}
-                <button
-                  type="submit"
-                  disabled={!inputVal.trim() || isProcessingAi || isTranscribingAudio}
-                  aria-label="Enviar mensagem"
-                  className="w-8 h-8 rounded-xl bg-brand text-white hover:bg-brand-light disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all cursor-pointer shrink-0"
-                >
-                  <Send className="w-3.5 h-3.5 text-[#FCA311]" strokeWidth={1.5} />
+                  <RotateCcw className="w-3 h-3 text-rose-600" />
+                  <span>Tentar de novo</span>
                 </button>
               </div>
-            </form>
+            )}
+          </DialogHeader>
+
+          {/* ================= CORPO DO MINI-CHAT: HISTÓRICO DE MENSAGENS ================= */}
+          <div
+            ref={chatScrollRef}
+            className="flex-1 overflow-y-auto px-1 py-3 space-y-3 scroll-smooth text-xs"
+          >
+            {messages.map((msg, index) => {
+              const isUser = msg.sender === 'user'
+
+              return (
+                <div
+                  key={msg.id}
+                  className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} animate-in fade-in-50 duration-150`}
+                >
+                  {/* Balão de Mensagem Estilo iMessage / WhatsApp */}
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 shadow-xs ${
+                      isUser
+                        ? 'bg-[#064E3B] text-white rounded-br-xs'
+                        : 'bg-slate-100 text-slate-900 rounded-bl-xs border border-slate-200/80'
+                    }`}
+                  >
+                    <p className="text-xs sm:text-[13px] leading-relaxed whitespace-pre-wrap">
+                      {renderMarkdownText(msg.text)}
+                    </p>
+
+                    {/* Chip de categoria CDS com seletor contextual integrado no balão de sucesso */}
+                    {!isUser &&
+                      (msg.confirmedTxId || msg.cardType === 'sucesso') &&
+                      msg.cardData && (
+                        <div className="mt-2 pt-2 border-t border-slate-200/70">
+                          <CategoryHighlightChip
+                            categoryName={
+                              msg.cardData.categoryNameSuggestion ||
+                              categories.find((c) => c.id === (msg.cardData as any)?.categoryId)
+                                ?.name ||
+                              categories.find((c) => c.type === msg.cardData?.type)?.name ||
+                              'Outro'
+                            }
+                            subcategoryName={msg.cardData.subcategoryNameSuggestion}
+                            confidence={msg.cardData.confidence}
+                            allCategories={categories}
+                            onSelectSubcategory={(subId, catId) => {
+                              const chosenCat = categories.find((c) => c.id === catId)
+                              const chosenSub = chosenCat?.subcategories?.find(
+                                (s) => s.id === subId,
+                              )
+                              handleUpdateLastTransaction({
+                                categoryName: chosenCat?.name || null,
+                                subcategoryName: chosenSub?.name || null,
+                              })
+                            }}
+                          />
+                        </div>
+                      )}
+
+                    {/* Micro-link discreto [Desfazer] para reverter lançamento estilo WhatsApp */}
+                    {!isUser &&
+                      (msg.confirmedTxId || msg.cardType === 'sucesso') &&
+                      renderConfirmationMicroLinks(msg)}
+
+                    {/* Card clarificacao_categoria e clarificacao com pílulas de categorização se necessário */}
+                    {!isUser &&
+                      (msg.cardType === 'clarificacao' ||
+                        msg.cardType === 'clarificacao_categoria') &&
+                      msg.cardData &&
+                      renderClarificationCategoryCard(msg.cardData)}
+                  </div>
+
+                  {/* Chips de Sugestão Rápida tocáveis logo abaixo da saudação inicial */}
+                  {index === 0 && msg.id === 'welcome-1' && (
+                    <div className="flex flex-wrap gap-1.5 mt-2.5 max-w-full">
+                      {quickPrompts.map((prompt, pIdx) => (
+                        <button
+                          key={pIdx}
+                          type="button"
+                          onClick={() => handleStopAndProcess(prompt.text)}
+                          className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-900 border border-slate-200 text-slate-700 transition-all active:scale-95 shadow-2xs"
+                        >
+                          {prompt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+
+            {/* Indicador de carregamento / IA digitando via componente oficial CopilotTypingBubble */}
+            {(isProcessingAi || isTranscribingAudio) && (
+              <CopilotTypingBubble
+                label={
+                  isTranscribingAudio
+                    ? 'Curiangoo transcrevendo áudio...'
+                    : 'Curiangoo processando...'
+                }
+              />
+            )}
+
+            {/* Transcrição em tempo real do microfone dentro do chat com animação suave de onda */}
+            {isListening && textoFalado.trim() && (
+              <div className="flex items-end justify-end animate-in fade-in duration-100">
+                <div className="bg-emerald-900/90 text-emerald-100 rounded-2xl rounded-br-xs px-3.5 py-2 italic text-xs max-w-[85%] border border-emerald-700 shadow-xs">
+                  &ldquo;{textoFalado.trim()}&rdquo;
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ================= MODAL / OVERLAY DE CONSENTIMENTO LGPD (IA) ================= */}
+          {showConsentPrompt && (
+            <div
+              data-testid="ai-consent-modal"
+              className="absolute inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3.5 sm:p-4 rounded-3xl animate-in fade-in duration-150"
+            >
+              <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-2xl border border-slate-200/90 max-w-sm w-full space-y-3.5 text-left">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-900 leading-snug">
+                    Permitir processamento por IA?
+                  </h3>
+                </div>
+
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  O Curiangoo Copilot utiliza inteligência artificial para transcrever sua gravação
+                  de voz, interpretar falas ou textos e sugerir categorias e valores
+                  automaticamente. O áudio é processado exclusivamente para transcrição e nenhum
+                  dado é compartilhado para fins externos. Deseja permitir o processamento por IA?
+                </p>
+
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleDeclineAiConsent}
+                    className="h-9 px-3 text-xs font-semibold rounded-xl text-slate-700 border-slate-300 hover:bg-slate-100"
+                  >
+                    Agora não
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleAllowAiConsent}
+                    className="h-9 px-4 text-xs font-bold rounded-xl bg-[#064E3B] hover:bg-emerald-900 text-white shadow-xs"
+                  >
+                    Permitir
+                  </Button>
+                </div>
+              </div>
+            </div>
           )}
-        </div>
+
+          {/* ================= RODAPÉ FIXO: CONTROLES DE ENTRADA (CALMA VISUAL CDS v1.0) ================= */}
+          <div className="pt-2 border-t border-slate-100 shrink-0 max-w-full">
+            {/* Linha de status de transição quando transcrevendo ou processando com IA */}
+            {(isTranscribingAudio || isProcessingAi) && !isListening && (
+              <div className="mb-2 flex items-center gap-2 text-xs text-slate-600 px-1">
+                <span className="w-2 h-2 rounded-full bg-brand-amber animate-pulse shrink-0" />
+                <span className="font-medium text-[11px] text-[#14213D]">
+                  {isTranscribingAudio ? 'Transcrevendo áudio' : 'Processando com IA'}
+                </span>
+              </div>
+            )}
+
+            {/* TAREFA 1 & 2 & 3: Linha coesa de gravação (Waveform livre + Parar harmônico circular) OU Barra de input com microfone integrado */}
+            {isListening ? (
+              /* LINHA DE GRAVAÇÃO COESA CDS: Cronômetro discreto + Waveform livre flutuante no centro + Cancelar discreto + Parar circular harmônico */
+              <div
+                data-testid="voice-recording-line"
+                className="flex items-center justify-between gap-2.5 min-h-[48px] px-2.5 sm:px-3.5 py-1 w-full min-w-0"
+              >
+                {/* Lado esquerdo: Cronômetro discreto + Badge sutil apenas se em fallback web_speech */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <span
+                    data-testid="recording-elapsed-time"
+                    className="font-mono text-xs font-semibold text-[#14213D] tracking-tight tabular-nums"
+                  >
+                    {Math.floor(recordingElapsedSeconds / 60)
+                      .toString()
+                      .padStart(2, '0')}
+                    :{(recordingElapsedSeconds % 60).toString().padStart(2, '0')}
+                  </span>
+
+                  {activeAudioCaptureMode === 'web_speech' && (
+                    <span
+                      data-testid="audio-capture-mode-badge"
+                      data-mode={activeAudioCaptureMode}
+                      className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium tracking-tight shrink-0 bg-amber-50 text-amber-800 border border-amber-200/80"
+                      title="Captação do navegador ativa (Web Speech API)"
+                    >
+                      Navegador
+                    </span>
+                  )}
+                </div>
+
+                {/* Centro: Waveform LIVRE — flutuando diretamente sobre o fundo, sem caixa/fundo azul/borda */}
+                <div
+                  data-testid="recording-waveform"
+                  data-audiocapture-mode={activeAudioCaptureMode || 'idle'}
+                  className="flex-1 flex items-center justify-center gap-1.5 h-7 px-2 min-w-0"
+                  aria-label="Gravando áudio"
+                >
+                  {realAudioLevels.map((lvl, bIdx) => {
+                    const barHeightPx = Math.max(4, Math.round(lvl * 24))
+                    return (
+                      <span
+                        key={bIdx}
+                        className="w-1 bg-[#FCA311] rounded-full transition-[height] duration-150 ease-out"
+                        style={{ height: `${barHeightPx}px` }}
+                      />
+                    )
+                  })}
+                </div>
+
+                {/* Lado direito: Cancelar (texto discreto) + Botão Parar circular harmônico CDS (≥44px de toque) */}
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleCancelRecording}
+                    className="px-2 py-1.5 text-xs font-medium text-[#64748B] hover:text-[#14213D] transition-colors cursor-pointer"
+                    aria-label="Cancelar gravação"
+                  >
+                    Cancelar
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleStopRecordingAndProcess}
+                    className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-[#14213D] flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 group"
+                    aria-label="Parar gravação e processar"
+                    title="Parar gravação"
+                  >
+                    <Square className="w-4 h-4 fill-[#14213D] text-[#14213D] rounded-xs group-hover:scale-105 transition-transform" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* TAREFA 2: BARRA DE ENTRADA UNIFICADA (Microfone DENTRO do campo à direita, padrão WhatsApp/ChatGPT) */
+              <form
+                onSubmit={handleChatTextSubmit}
+                className="relative flex items-center w-full min-w-0"
+              >
+                <Input
+                  value={inputVal}
+                  onChange={(e) => setInputVal(e.target.value)}
+                  placeholder="Mensagem ou fale..."
+                  disabled={isProcessingAi || isTranscribingAudio}
+                  className="w-full rounded-2xl h-11 text-xs sm:text-sm bg-slate-50 border-border/60 text-[#14213D] placeholder:text-muted-foreground focus:bg-white focus:border-brand-amber focus:ring-1 focus:ring-brand-amber transition-colors min-w-0 pr-20"
+                />
+
+                <div className="absolute right-1.5 flex items-center gap-1">
+                  {/* Microfone integrado dentro do input */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!hasAiConsent && !getAiConsent()) {
+                        setShowConsentPrompt(true)
+                      } else {
+                        startRecording()
+                      }
+                    }}
+                    disabled={isProcessingAi || isTranscribingAudio}
+                    aria-label="Falar comando por voz"
+                    title="Falar comando por voz"
+                    className="w-8 h-8 rounded-xl text-slate-600 hover:text-brand hover:bg-slate-200/60 flex items-center justify-center transition-all cursor-pointer disabled:opacity-40"
+                  >
+                    <Mic className="w-4 h-4 text-[#14213D]" strokeWidth={1.5} />
+                  </button>
+
+                  {/* Botão Enviar com ícone Send */}
+                  <button
+                    type="submit"
+                    disabled={!inputVal.trim() || isProcessingAi || isTranscribingAudio}
+                    aria-label="Enviar mensagem"
+                    className="w-8 h-8 rounded-xl bg-brand text-white hover:bg-brand-light disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all cursor-pointer shrink-0"
+                  >
+                    <Send className="w-3.5 h-3.5 text-[#FCA311]" strokeWidth={1.5} />
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </PremiumGate>
       </DialogContent>
     </Dialog>
   )

@@ -14,6 +14,8 @@ import { formatBRL, formatFamilyDisplayName, formatRelativeDate } from '@/lib/fo
 import { CountUp } from '@/components/common/CountUp'
 import { CategoryIconBox } from '@/components/common/CategoryIcon'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
+import { PremiumGate } from '@/components/billing/PremiumGate'
+import { useAccessStatus } from '@/services/access-status'
 import { TransactionDetailDialog } from '@/components/transactions/TransactionDetailDialog'
 import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
 import { formatTransactionTitle, groupInstallmentTransactions } from '@/services/installments'
@@ -67,6 +69,8 @@ export default function Home() {
   const { toast } = useToast()
   const navigate = useNavigate()
   const { hideValues, toggleHideValues, maskValue } = useValuePrivacy()
+  // Acesso (modelo C2): premium/trial vs free — controla paywall do Copilot e gráfico
+  const access = useAccessStatus()
 
   const [loading, setLoading] = useState(true)
   // BLINDAGEM R50 (alinhada ao use-family): a Home NÃO REABRE o onboarding sozinha
@@ -858,47 +862,86 @@ export default function Home() {
             Padrão-ouro de personagem conversando (Copilot Money/Monzo chat): o
             pássaro É o remetente (avatar à esquerda, como foto de perfil) e fala
             em 1 frase natural — sem título/subtítulo de notificação. Severidade
-            vira hairline colorido discreto à esquerda do balão, não um ponto. */}
-        <button
-          type="button"
-          onClick={() => navigate('/copilot')}
-          className={`w-full text-left flex items-start gap-3 rounded-2xl border border-[rgba(20,33,61,0.08)] bg-white/95 px-4 py-3.5 shadow-sm transition-all active:scale-[0.98] border-l-[3px] ${
-            insights.length > 0
-              ? {
-                  danger: 'border-l-rose-400',
-                  warning: 'border-l-amber-400',
-                  success: 'border-l-emerald-400',
-                  info: 'border-l-slate-300',
-                }[insights[0].severity]
-              : 'border-l-emerald-400'
-          }`}
-        >
-          {/* Avatar do remetente: o próprio Curiango */}
-          <span className="shrink-0 relative mt-0.5" aria-hidden="true">
-            <CuriangoLogo
-              size={40}
-              color="#FCA311"
-              eyeColor="#14213D"
-              eyeRadius={3.4}
-              eyeHighlight
-              className="animate-copilot-bird"
-            />
-            <span className="absolute -top-1 -right-1 w-2 h-2 animate-copilot-sparkle" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[13px] leading-snug text-[#14213D]">
-              {insights.length > 0
-                ? insights[0].detail
-                : 'Tudo em ordem por aqui! Toque pra conversar comigo.'}
+            vira hairline colorido discreto à esquerda do balão, não um ponto.
+            PAYWALL (17/10): em trial/premium a fala navega pro Copilot; em free
+            o card vira teaser do Premium (mesma estética, CTA Assinar). */}
+        {access.isPremium ? (
+          <button
+            type="button"
+            onClick={() => navigate('/copilot')}
+            className={`w-full text-left flex items-start gap-3 rounded-2xl border border-[rgba(20,33,61,0.08)] bg-wh
+              insights.length > 0
+                ? {
+                    danger: 'border-l-rose-400',
+                    warning: 'border-l-amber-400',
+                    success: 'border-l-emerald-400',
+                    info: 'border-l-slate-300',
+                  }[insights[0].severity]
+                : 'border-l-emerald-400'
+            }`}
+          >
+            {/* Avatar do remetente: o próprio Curiango */}
+            <span className="shrink-0 relative mt-0.5" aria-hidden="true">
+              <CuriangoLogo
+                size={40}
+                color="#FCA311"
+                eyeColor="#14213D"
+                eyeRadius={3.4}
+                eyeHighlight
+                className="animate-copilot-bird"
+              />
+              <span className="absolute -top-1 -right-1 w-2 h-2 animate-copilot-sparkle" />
             </span>
-          </span>
-          <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 self-center" />
-        </button>{' '}
+            <span className="min-w-0 flex-1">
+              <span className="block text-[13px] leading-snug text-[#14213D]">
+                {insights.length > 0
+                  ? insights[0].detail
+                  : 'Tudo em ordem por aqui! Toque pra conversar comigo.'}
+              </span>
+            </span>
+            <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 self-center" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => navigate('/perfil')}
+            className="w-full text-left flex items-start gap-3 rounded-2xl border border-[rgba(20,33,61,0.08)] bg-white/95 px-4 py-3.5 shadow-sm transition-all active:scale-[0.98] border-l-[3px] border-l-[#FCA311]"
+          >
+            <span className="shrink-0 relative mt-0.5" aria-hidden="true">
+              <CuriangoLogo
+                size={40}
+                color="#FCA311"
+                eyeColor="#14213D"
+                eyeRadius={3.4}
+                eyeHighlight
+                className="animate-copilot-bird"
+              />
+              <span className="absolute -top-1 -right-1 w-2 h-2 animate-copilot-sparkle" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[13px] font-semibold leading-snug text-[#14213D]">
+                O Curiango analisa suas finanças e fala com você
+              </span>
+              <span className="block text-[11px] text-slate-500 mt-0.5">
+                Desbloqueie o Copilot com o Premium — toque pra ver os planos
+              </span>
+            </span>
+            <span className="shrink-0 self-center text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#FCA311] text-[#14213D]">
+              Premium
+            </span>
+          </button>
+        )}{' '}
         {/* GRÁFICO DE EVOLUÇÃO DO SALDO (gap 1 da auditoria 16/10 — todos os líderes
             têm linha do saldo no tempo: Maybe, Actual, Copilot, Nubank, Monzo).
-            Sparkline SVG pura (sem lib), 30 dias, sóbria. Falha silenciosa. */}
+            Sparkline SVG pura (sem lib), 30 dias, sóbria. Falha silenciosa.
+            PAYWALL (17/10): feature Premium — free vê teaser no lugar do gráfico. */}
         {balanceSeries.length > 1 && (
-          <BalanceTrendCard series={balanceSeries} hideValues={hideValues} />
+          <PremiumGate
+            title="Evolução do saldo"
+            description="Veja a linha do tempo do seu saldo dos últimos 30 dias — Premium."
+          >
+            <BalanceTrendCard series={balanceSeries} hideValues={hideValues} />
+          </PremiumGate>
         )}
         {/* PRIMEIRO CARD CLARO: Sobrepõe o marinho com rounded-3xl generoso e sombra R56 */}
         <div
