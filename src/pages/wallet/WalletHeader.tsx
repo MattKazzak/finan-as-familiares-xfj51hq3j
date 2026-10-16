@@ -44,19 +44,22 @@ export function WalletHeader() {
           </div>
         </div>
 
-        {/* Coluna Central: Seletor ÚNICO de Mês Reutilizável & Botão de Importação */}
+        {/* Coluna Central: Seletor ÚNICO de Mês Reutilizável */}
         <div className="flex flex-col items-center gap-1.5 w-full justify-center">
           <MonthSelector>
-            {/* Botão de importação sempre visível logo abaixo da pílula de mês */}
-            <button
-              type="button"
-              onClick={openImportStatement}
-              className="inline-flex items-center justify-center gap-1.5 text-xs font-medium text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 px-3 py-1 rounded-xl transition-colors border border-emerald-200/60 bg-white/80 shadow-2xs active:scale-95 touch-manipulation"
-              title="Importar extrato bancário (OFX ou PDF)"
-            >
-              <UploadCloud className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>Importar OFX ou PDF</span>
-            </button>
+            {/* Importar é ação de TRANSAÇÕES — na aba Orçamentos não faz sentido
+                (feedback real do dono 16/10). O botão só aparece na aba certa. */}
+            {activeTab === 'transacoes' && (
+              <button
+                type="button"
+                onClick={openImportStatement}
+                className="inline-flex items-center justify-center gap-1.5 text-xs font-medium text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 px-3 py-1 rounded-xl transition-colors border border-emerald-200/60 bg-white/80 shadow-2xs active:scale-95 touch-manipulation"
+                title="Importar extrato bancário (OFX ou PDF)"
+              >
+                <UploadCloud className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>Importar OFX ou PDF</span>
+              </button>
+            )}
           </MonthSelector>
         </div>
 
