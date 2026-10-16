@@ -1397,7 +1397,6 @@ export default function Home() {
                 Comece adicionando receitas ou despesas compartilhadas pela família.
               </p>
               <Button
-                {/* P2: sem tipo explícito = abre em Despesa (padrão da auditoria 16/10) */}
                 onClick={() => openNewTransaction()}
                 className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-semibold text-xs rounded-xl shadow-curiango"
               >
