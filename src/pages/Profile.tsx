@@ -12,7 +12,7 @@ import {
   deleteFamilyWorkspaceManually,
 } from '@/services/family'
 // Auditoria 16/10: imports do settlement removidos (migraram pra Carteira/Orçamentos)
-import { CreditCard, ExternalLink, ChevronRight } from 'lucide-react'
+import { CreditCard, ExternalLink, ChevronRight, Settings } from 'lucide-react'
 import {
   fetchMySubscription,
   requestCancelSubscription,
@@ -267,6 +267,11 @@ export default function ProfilePage() {
   // Auditoria 16/10: estados da renda líquida removidos junto do bloco duplicado
   // (a renda agora vive só na aba Orçamentos)
   const [isApplyModelOpen, setIsApplyModelOpen] = useState(false)
+
+  // Redesign estilo Pleo (16/10): hub com acordeão — cada seção é uma LINHA GRANDE
+  // (ícone + título + subtítulo + chevron) que expande ao toque. Só 1 aberta por vez.
+  const [openSection, setOpenSection] = useState<string | null>(null)
+  const toggleSection = (key: string) => setOpenSection((prev) => (prev === key ? null : key))
 
   // Carregamento prolongado (> ~2s): substitui skeleton por estado textual honesto
   const [isLongLoading, setIsLongLoading] = useState(false)
@@ -690,7 +695,7 @@ export default function ProfilePage() {
       <div className="bg-gradient-to-br from-[#14213D] via-[#1a2d52] to-[#0e172a] rounded-3xl p-5 sm:p-6 text-white shadow-elevation-2 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent pointer-events-none" />
         <div className="flex items-center gap-3.5 min-w-0 flex-1">
-          <Avatar className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/10 backdrop-blur-sm border-2 border-[#FCA311]/50 text-white font-semibold text-xl sm:text-2xl shadow-lg overflow-hidden shrink-0">
+          <Avatar className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/10 backdrop-blur-sm border-2 border-[#FCA311]/50 text-white font-semibold text-xl sm:text-2xl shadow-lg overflow-hidden shrink-0">
             {family?.avatar_url && (
               <AvatarImage
                 src={family.avatar_url}
@@ -756,529 +761,621 @@ export default function ProfilePage() {
       </div>
 
       {/* ================================================
-          GRUPO: FAMÍLIA
+          GRUPO: FAMÍLIA (linha Pleo — expande ao toque)
           ================================================ */}
       <section
         className="bg-white/95 rounded-3xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 overflow-hidden"
         aria-label="Família"
       >
-        <div className="px-5 pt-4 pb-2 flex items-center gap-2">
-          <Users className="w-4 h-4 text-emerald-700" />
-          <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Família</h3>
-        </div>
-        {/* Auditoria 16/10: "Renda líquida mensal" REMOVIDA do Perfil — duplicava o
+        <button
+          type="button"
+          onClick={() => toggleSection('familia')}
+          className="w-full flex items-center gap-3.5 px-5 py-4 text-left hover:bg-slate-50/60 transition-colors"
+          aria-expanded={openSection === 'familia'}
+        >
+          <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+            <Users className="w-5 h-5" strokeWidth={1.75} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-slate-900 leading-tight">Família</p>
+            <p className="text-[11px] text-slate-500 truncate">
+              Membros, convites e quem está usando
+            </p>
+          </div>
+          <ChevronRight
+            className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${openSection === 'familia' ? 'rotate-90' : ''}`}
+          />
+        </button>
+        {openSection === 'familia' && (
+          <div>
+            {/* Auditoria 16/10: "Renda líquida mensal" REMOVIDA do Perfil — duplicava o
             card de Orçamentos (mesmo diálogo setIsApplyModelOpen em 2 lugares). A renda
             vive exclusivamente na aba Orçamentos, onde tem contexto de baldes. */}
-        {/* Quem está usando (2+ membros) */}{' '}
-        {members.length > 1 && (
-          <div className="px-5 py-3.5 border-t border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
-                <Smartphone className="w-4 h-4" />
+            {members.length > 1 && (
+              <div className="px-5 py-3.5 border-t border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                    <Smartphone className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-900">
+                      Quem está usando este aparelho?
+                    </p>
+                    <p className="text-[11px] text-slate-500 truncate">
+                      Alterne para personalizar a saudação "Olá, {currentMember?.name || 'Nome'}!"
+                      neste dispositivo.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-2.5 flex flex-wrap gap-1.5">
+                  {members.map((member) => {
+                    const isSelected = (activeMemberId || currentMember?.id) === member.id
+                    return (
+                      <button
+                        key={member.id}
+                        type="button"
+                        onClick={() => {
+                          setActiveMemberId(member.id)
+                          toast({
+                            title: `Olá, ${member.name}!`,
+                            description: 'Perfil ativo atualizado neste dispositivo.',
+                          })
+                        }}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5 ${
+                          isSelected
+                            ? 'border-[#FCA311] bg-[#FCA311]/10 text-[#14213D] ring-2 ring-[#FCA311]/25'
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span
+                          className={`w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center ${isSelected ? 'bg-[#FCA311] text-[#14213D]' : 'bg-slate-200 text-slate-600'}`}
+                        >
+                          {member.name.charAt(0).toUpperCase()}
+                        </span>
+                        {member.name}
+                        {isSelected && <Check className="w-3 h-3 text-[#FCA311]" />}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-slate-900">
-                  Quem está usando este aparelho?
-                </p>
-                <p className="text-[11px] text-slate-500 truncate">
-                  Alterne para personalizar a saudação "Olá, {currentMember?.name || 'Nome'}!" neste
-                  dispositivo.
-                </p>
-              </div>
-            </div>
-            <div className="mt-2.5 flex flex-wrap gap-1.5">
-              {members.map((member) => {
-                const isSelected = (activeMemberId || currentMember?.id) === member.id
-                return (
-                  <button
-                    key={member.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveMemberId(member.id)
-                      toast({
-                        title: `Olá, ${member.name}!`,
-                        description: 'Perfil ativo atualizado neste dispositivo.',
-                      })
-                    }}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5 ${
-                      isSelected
-                        ? 'border-[#FCA311] bg-[#FCA311]/10 text-[#14213D] ring-2 ring-[#FCA311]/25'
-                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span
-                      className={`w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center ${isSelected ? 'bg-[#FCA311] text-[#14213D]' : 'bg-slate-200 text-slate-600'}`}
+            )}
+            {/* Auditoria 16/10: "Acerto de contas do mês" MIGROU pra aba Orçamentos da
+            Carteira — é operação do dia a dia (rateio), não configuração de conta. */}
+            {/* Membros da família */}{' '}
+            <div className="px-5 py-3.5 border-t border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-sm font-semibold text-slate-900">Membros da família</span>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 shrink-0">
+                    {members.length}/5 membros
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isFamilyAdmin ? (
+                    <Button
+                      onClick={handleOpenInviteModal}
+                      className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold text-xs rounded-xl shadow-sm gap-1.5 h-8 px-3 border-0"
                     >
-                      {member.name.charAt(0).toUpperCase()}
-                    </span>
-                    {member.name}
-                    {isSelected && <Check className="w-3 h-3 text-[#FCA311]" />}
-                  </button>
-                )
-              })}
+                      <UserPlus className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>Convidar membro</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => setIsLeaveDialogOpen(true)}
+                      variant="outline"
+                      className="text-xs font-semibold text-red-600 border-red-200 hover:bg-red-50 rounded-xl h-8 gap-1 px-3"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Sair da família</span>
+                    </Button>
+                  )}
+                  <Button
+                    onClick={() => setIsJoinDialogOpen(true)}
+                    variant="outline"
+                    className="text-xs font-semibold text-slate-700 border-slate-200 hover:bg-slate-50 rounded-xl h-8 gap-1 px-3"
+                  >
+                    <KeyRound className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Entrar com código</span>
+                  </Button>
+                </div>
+              </div>
+              <div className="divide-y divide-slate-100 mt-1">
+                {members.map((member) => (
+                  <div key={member.id} className="py-2.5 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <Avatar className="w-8 h-8 border border-emerald-100 shrink-0">
+                        <AvatarFallback className="bg-emerald-100 text-emerald-800 font-bold text-xs">
+                          {member.name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-xs text-slate-900 truncate">
+                            {member.name}
+                          </span>
+                          <span
+                            className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${member.is_admin ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}
+                          >
+                            {member.is_admin ? 'Admin' : 'Membro'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      {isFamilyAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => openEditMemberDialog(member)}
+                          className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                          title="Renomear membro"
+                          aria-label={`Renomear ${member.name}`}
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {isFamilyAdmin && !member.is_admin && (
+                        <button
+                          type="button"
+                          onClick={() => setMemberToDelete(member)}
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Remover membro"
+                          aria-label={`Remover ${member.name}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
-        {/* Auditoria 16/10: "Acerto de contas do mês" MIGROU pra aba Orçamentos da
-            Carteira — é operação do dia a dia (rateio), não configuração de conta. */}
-        {/* Membros da família */}{' '}
-        <div className="px-5 py-3.5 border-t border-slate-100">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-sm font-semibold text-slate-900">Membros da família</span>
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 shrink-0">
-                {members.length}/5 membros
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              {isFamilyAdmin ? (
-                <Button
-                  onClick={handleOpenInviteModal}
-                  className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold text-xs rounded-xl shadow-sm gap-1.5 h-8 px-3 border-0"
-                >
-                  <UserPlus className="w-3.5 h-3.5 stroke-[2.5]" />
-                  <span>Convidar membro</span>
-                </Button>
-              ) : (
-                <Button
-                  onClick={() => setIsLeaveDialogOpen(true)}
-                  variant="outline"
-                  className="text-xs font-semibold text-red-600 border-red-200 hover:bg-red-50 rounded-xl h-8 gap-1 px-3"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>Sair da família</span>
-                </Button>
-              )}
-              <Button
-                onClick={() => setIsJoinDialogOpen(true)}
-                variant="outline"
-                className="text-xs font-semibold text-slate-700 border-slate-200 hover:bg-slate-50 rounded-xl h-8 gap-1 px-3"
-              >
-                <KeyRound className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Entrar com código</span>
-              </Button>
-            </div>
-          </div>
-          <div className="divide-y divide-slate-100 mt-1">
-            {members.map((member) => (
-              <div key={member.id} className="py-2.5 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <Avatar className="w-8 h-8 border border-emerald-100 shrink-0">
-                    <AvatarFallback className="bg-emerald-100 text-emerald-800 font-bold text-xs">
-                      {member.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-bold text-xs text-slate-900 truncate">
-                        {member.name}
-                      </span>
-                      <span
-                        className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${member.is_admin ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}
-                      >
-                        {member.is_admin ? 'Admin' : 'Membro'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-0.5 shrink-0">
-                  {isFamilyAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => openEditMemberDialog(member)}
-                      className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
-                      title="Renomear membro"
-                      aria-label={`Renomear ${member.name}`}
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                  {isFamilyAdmin && !member.is_admin && (
-                    <button
-                      type="button"
-                      onClick={() => setMemberToDelete(member)}
-                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Remover membro"
-                      aria-label={`Remover ${member.name}`}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </section>
 
       {/* ================================================
-          GRUPO: ASSINATURA
-          ================================================ */}
+         GRUPO: ASSINATURA (linha Pleo — expande ao toque)
+         ================================================ */}
       <section
         id="sec-assinatura"
         className="bg-white/95 rounded-3xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 overflow-hidden"
         aria-label="Assinatura"
       >
-        <div className="px-5 pt-4 pb-2 flex items-center gap-2">
-          <CreditCard className="w-4 h-4 text-emerald-700" />
-          <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-            Assinatura
-          </h3>
-        </div>
-        <div className="px-5 py-3.5 border-t border-slate-100">
-          {subscriptionLoading ? (
-            <div className="py-3 flex items-center justify-center gap-2 text-xs text-slate-500">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Carregando assinatura...
-            </div>
-          ) : !subscription ||
-            subscription.status === 'canceled' ||
-            subscription.status === 'expired' ? (
-            <div className="space-y-3">
-              <p className="text-xs text-slate-600">
-                Você ainda não tem assinatura ativa. Escolha um plano para desbloquear tudo:
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <a
-                  href={CHECKOUT_URLS.monthly}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between gap-2 py-3 px-4 rounded-2xl border-2 border-[#059669] text-[#059669] font-semibold text-sm hover:bg-[#059669] hover:text-white transition-all"
-                >
-                  <span>R$ 9,99/mês</span>
-                  <ExternalLink className="w-4 h-4" />
-                </a>
-                <a
-                  href={CHECKOUT_URLS.yearly}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between gap-2 py-3 px-4 rounded-2xl bg-gradient-to-r from-[#059669] to-[#047857] text-white font-semibold text-sm shadow-lg shadow-[#059669]/30 hover:shadow-xl transition-all"
-                >
-                  <span>R$ 99,90/ano</span>
-                  <ExternalLink className="w-4 h-4" />
-                </a>
+        <button
+          type="button"
+          onClick={() => toggleSection('assinatura')}
+          className="w-full flex items-center gap-3.5 px-5 py-4 text-left hover:bg-slate-50/60 transition-colors"
+          aria-expanded={openSection === 'assinatura'}
+        >
+          <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
+            <CreditCard className="w-5 h-5" strokeWidth={1.75} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-slate-900 leading-tight">Assinatura</p>
+            <p className="text-[11px] text-slate-500 truncate">Plano, cobrança e cancelamento</p>
+          </div>
+          <span
+            className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+              subscriptionLoading
+                ? 'bg-slate-100 text-slate-400'
+                : isSubscriptionActive(subscription)
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : 'bg-[#FCA311]/15 text-[#B45309]'
+            }`}
+          >
+            {subscriptionLoading ? '…' : isSubscriptionActive(subscription) ? 'Premium' : 'Inativo'}
+          </span>
+          <ChevronRight
+            className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${openSection === 'assinatura' ? 'rotate-90' : ''}`}
+          />
+        </button>
+        {openSection === 'assinatura' && (
+          <div className="px-5 py-3.5 border-t border-slate-100">
+            {subscriptionLoading ? (
+              <div className="py-3 flex items-center justify-center gap-2 text-xs text-slate-500">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Carregando assinatura...
               </div>
-              <p className="text-[11px] text-slate-500">
-                Pagamento processado com segurança. Após assinar, o acesso é liberado
-                automaticamente no e-mail da sua conta.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-semibold text-slate-900">
-                  Plano {subscription.plan === 'yearly' ? 'Anual' : 'Mensal'}
-                </span>
-                <span
-                  className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${isSubscriptionActive(subscription) ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}
-                >
-                  {subscription.status === 'active'
-                    ? 'Ativa'
-                    : subscription.status === 'trial'
-                      ? 'Em teste'
-                      : subscription.status === 'past_due'
-                        ? 'Pagamento pendente'
-                        : 'Pendente'}
-                </span>
-              </div>
-              {subscription.current_period_end && (
+            ) : !subscription ||
+              subscription.status === 'canceled' ||
+              subscription.status === 'expired' ? (
+              <div className="space-y-3">
                 <p className="text-xs text-slate-600">
-                  {isSubscriptionActive(subscription)
-                    ? `Próxima renovação em ${new Date(subscription.current_period_end).toLocaleDateString('pt-BR')}`
-                    : `Acesso válido até ${new Date(subscription.current_period_end).toLocaleDateString('pt-BR')}`}
+                  Você ainda não tem assinatura ativa. Escolha um plano para desbloquear tudo:
                 </p>
-              )}
-              <p className="text-[11px] text-slate-500">
-                O cartão é cobrado automaticamente. Você pode cancelar quando quiser — sem multa,
-                sem burocracia.
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={isCancellingSub}
-                onClick={handleCancelSubscription}
-                className="w-full rounded-2xl border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
-              >
-                {isCancellingSub ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Cancelando...
-                  </>
-                ) : (
-                  'Cancelar assinatura'
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <a
+                    href={CHECKOUT_URLS.monthly}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between gap-2 py-3 px-4 rounded-2xl border-2 border-[#059669] text-[#059669] font-semibold text-sm hover:bg-[#059669] hover:text-white transition-all"
+                  >
+                    <span>R$ 9,99/mês</span>
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                  <a
+                    href={CHECKOUT_URLS.yearly}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between gap-2 py-3 px-4 rounded-2xl bg-gradient-to-r from-[#059669] to-[#047857] text-white font-semibold text-sm shadow-lg shadow-[#059669]/30 hover:shadow-xl transition-all"
+                  >
+                    <span>R$ 99,90/ano</span>
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Pagamento processado com segurança. Após assinar, o acesso é liberado
+                  automaticamente no e-mail da sua conta.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-semibold text-slate-900">
+                    Plano {subscription.plan === 'yearly' ? 'Anual' : 'Mensal'}
+                  </span>
+                  <span
+                    className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${isSubscriptionActive(subscription) ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}
+                  >
+                    {subscription.status === 'active'
+                      ? 'Ativa'
+                      : subscription.status === 'trial'
+                        ? 'Em teste'
+                        : subscription.status === 'past_due'
+                          ? 'Pagamento pendente'
+                          : 'Pendente'}
+                  </span>
+                </div>
+                {subscription.current_period_end && (
+                  <p className="text-xs text-slate-600">
+                    {isSubscriptionActive(subscription)
+                      ? `Próxima renovação em ${new Date(subscription.current_period_end).toLocaleDateString('pt-BR')}`
+                      : `Acesso válido até ${new Date(subscription.current_period_end).toLocaleDateString('pt-BR')}`}
+                  </p>
                 )}
-              </Button>
-            </div>
-          )}
-        </div>
+                <p className="text-[11px] text-slate-500">
+                  O cartão é cobrado automaticamente. Você pode cancelar quando quiser — sem multa,
+                  sem burocracia.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isCancellingSub}
+                  onClick={handleCancelSubscription}
+                  className="w-full rounded-2xl border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                >
+                  {isCancellingSub ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Cancelando...
+                    </>
+                  ) : (
+                    'Cancelar assinatura'
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       {/* ================================================
-          GRUPO: MINHA CONTA
-          ================================================ */}
+         GRUPO: MINHA CONTA (linha Pleo — expande ao toque)
+         ================================================ */}
       <section
         className="bg-white/95 rounded-3xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 overflow-hidden"
         aria-label="Minha conta"
       >
-        <div className="px-5 pt-4 pb-2 flex items-center gap-2">
-          <UserIcon className="w-4 h-4 text-[#B45309]" />
-          <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-            Minha conta
-          </h3>
-        </div>
-
-        {/* Identidade: avatar + nome */}
-        <div className="px-5 py-3.5 border-t border-slate-100 flex items-center gap-3">
-          <div className="relative shrink-0">
-            <Avatar className="w-11 h-11 border border-[#FCA311]/40">
-              {userAvatarUrl && (
-                <AvatarImage src={userAvatarUrl} alt={userDisplayName} className="object-cover" />
-              )}
-              <AvatarFallback className="bg-gradient-to-tr from-[#14213D] to-[#1f3159] text-[#FCA311] font-bold text-sm">
-                {userDisplayName.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <button
-              type="button"
-              onClick={() => userAvatarInputRef.current?.click()}
-              disabled={uploadingUserAvatar}
-              className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#FCA311] text-[#14213D] flex items-center justify-center shadow border-2 border-white"
-              aria-label="Alterar minha foto"
-            >
-              {uploadingUserAvatar ? (
-                <Loader2 className="w-2.5 h-2.5 animate-spin" />
-              ) : (
-                <Camera className="w-2.5 h-2.5" />
-              )}
-            </button>
-            <input
-              ref={userAvatarInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleUserAvatarChange}
-            />
+        {' '}
+        <button
+          type="button"
+          onClick={() => toggleSection('conta')}
+          className="w-full flex items-center gap-3.5 px-5 py-4 text-left hover:bg-slate-50/60 transition-colors"
+          aria-expanded={openSection === 'conta'}
+        >
+          <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
+            <UserIcon className="w-5 h-5" strokeWidth={1.75} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-slate-900 truncate">{userDisplayName}</p>
-            <p className="text-[11px] text-slate-500 truncate">{user?.email}</p>
+            <p className="text-sm font-semibold text-slate-900 leading-tight">Minha conta</p>
+            <p className="text-[11px] text-slate-500 truncate">Nome, senha, sair e excluir</p>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setUserNameInput(userDisplayName)
-              setIsAccountNameOpen(true)
-            }}
-            className="text-[11px] font-semibold text-[#FCA311] hover:bg-[#FCA311]/10 rounded-xl h-8 shrink-0"
-          >
-            Editar meu nome
-          </Button>
-        </div>
-
-        {/* Trocar senha */}
-        <button
-          type="button"
-          onClick={() => setIsPasswordDialogOpen(true)}
-          className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors text-left"
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
-              <KeyRound className="w-4 h-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-slate-900">Alterar senha</p>
-              <p className="text-[11px] text-slate-500">Troque sem sair do aplicativo</p>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+          <ChevronRight
+            className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${openSection === 'conta' ? 'rotate-90' : ''}`}
+          />
         </button>
+        {openSection === 'conta' && (
+          <div>
+            {/* Identidade: avatar + nome */}
+            <div className="px-5 py-3.5 border-t border-slate-100 flex items-center gap-3">
+              {' '}
+              <div className="relative shrink-0">
+                <Avatar className="w-11 h-11 border border-[#FCA311]/40">
+                  {userAvatarUrl && (
+                    <AvatarImage
+                      src={userAvatarUrl}
+                      alt={userDisplayName}
+                      className="object-cover"
+                    />
+                  )}
+                  <AvatarFallback className="bg-gradient-to-tr from-[#14213D] to-[#1f3159] text-[#FCA311] font-bold text-sm">
+                    {userDisplayName.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <button
+                  type="button"
+                  onClick={() => userAvatarInputRef.current?.click()}
+                  disabled={uploadingUserAvatar}
+                  className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#FCA311] text-[#14213D] flex items-center justify-center shadow border-2 border-white"
+                  aria-label="Alterar minha foto"
+                >
+                  {uploadingUserAvatar ? (
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                  ) : (
+                    <Camera className="w-2.5 h-2.5" />
+                  )}
+                </button>
+                <input
+                  ref={userAvatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleUserAvatarChange}
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-slate-900 truncate">{userDisplayName}</p>
+                <p className="text-[11px] text-slate-500 truncate">{user?.email}</p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setUserNameInput(userDisplayName)
+                  setIsAccountNameOpen(true)
+                }}
+                className="text-[11px] font-semibold text-[#FCA311] hover:bg-[#FCA311]/10 rounded-xl h-8 shrink-0"
+              >
+                Editar meu nome
+              </Button>
+            </div>
 
-        {/* Sair da conta */}
-        <button
-          type="button"
-          onClick={() => setIsSignOutConfirmOpen(true)}
-          className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors text-left"
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
-              <LogOut className="w-4 h-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-slate-900">Sair da conta</p>
-              <p className="text-[11px] text-slate-500">No dispositivo, sem apagar dados</p>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-        </button>
+            {/* Trocar senha */}
+            <button
+              type="button"
+              onClick={() => setIsPasswordDialogOpen(true)}
+              className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors text-left"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                  <KeyRound className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-900">Alterar senha</p>
+                  <p className="text-[11px] text-slate-500">Troque sem sair do aplicativo</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+            </button>
 
-        {/* Excluir conta (LGPD) */}
-        <button
-          type="button"
-          onClick={() => {
-            setDeleteConfirmText('')
-            setIsDeleteAccountOpen(true)
-          }}
-          className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-red-50/50 transition-colors text-left"
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0">
-              <ShieldAlert className="w-4 h-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-red-700">Excluir minha conta</p>
-              <p className="text-[11px] text-slate-500">Apaga seus dados para sempre (LGPD)</p>
-            </div>
+            {/* Sair da conta */}
+            <button
+              type="button"
+              onClick={() => setIsSignOutConfirmOpen(true)}
+              className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors text-left"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                  <LogOut className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-900">Sair da conta</p>
+                  <p className="text-[11px] text-slate-500">No dispositivo, sem apagar dados</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+            </button>
+
+            {/* Excluir conta (LGPD) */}
+            <button
+              type="button"
+              onClick={() => {
+                setDeleteConfirmText('')
+                setIsDeleteAccountOpen(true)
+              }}
+              className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-red-50/50 transition-colors text-left"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+                  <ShieldAlert className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-red-700">Excluir minha conta</p>
+                  <p className="text-[11px] text-slate-500">Apaga seus dados para sempre (LGPD)</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+            </button>
           </div>
-          <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
-        </button>
+        )}
       </section>
 
       {/* ================================================
-          GRUPO: PREFERÊNCIAS
+          GRUPO: PREFERÊNCIAS (linha Pleo — expande ao toque)
           ================================================ */}
       <section
         className="bg-white/95 rounded-3xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 overflow-hidden"
         aria-label="Preferências"
       >
-        <div className="px-5 pt-4 pb-2 flex items-center gap-2">
-          <DollarSign className="w-4 h-4 text-emerald-700" />
-          <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-            Preferências
-          </h3>
-        </div>
-
-        {/* Instalar app — só quando o banner flutuante foi dispensado (auditoria 16/10:
-            banner + linha na mesma tela era redundância; agora um complementa o outro) */}
-        {!isStandalone && isPwaBannerDismissed && (
-          <button
-            type="button"
-            onClick={handleInstallShortcutClick}
-            disabled={isInstalling}
-            className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors text-left"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div
-                data-testid="profile-install-logo"
-                aria-label="Curiangoo"
-                className="w-9 h-9 rounded-xl bg-[#14213D] flex items-center justify-center shrink-0"
-              >
-                <CuriangoLogo size={20} color="#FCA311" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-slate-900">
-                  📲 Instalar aplicativo no celular
-                </p>
-                <p className="text-[11px] text-slate-500">
-                  Tenha acesso rápido direto da sua tela inicial
-                </p>
-              </div>
-            </div>
-            <span className="text-[11px] font-bold text-[#FCA311] shrink-0 flex items-center gap-1">
-              {isInstalling ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Instalando...
-                </>
-              ) : hasNativePrompt ? (
-                <>
-                  Instalar Agora
-                  <Download className="w-3.5 h-3.5" />
-                </>
-              ) : isIos ? (
-                <>
-                  Como Instalar
-                  <Share className="w-3.5 h-3.5" />
-                </>
-              ) : (
-                <>
-                  Instalar Aplicativo
-                  <Download className="w-3.5 h-3.5" />
-                </>
-              )}
-            </span>
-          </button>
-        )}
-
-        {/* Catálogo de categorias */}
         <button
           type="button"
-          onClick={() => setIsCategoryManagementOpen(true)}
-          className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors text-left"
+          onClick={() => toggleSection('preferencias')}
+          className="w-full flex items-center gap-3.5 px-5 py-4 text-left hover:bg-slate-50/60 transition-colors"
+          aria-expanded={openSection === 'preferencias'}
         >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
-              <Edit3 className="w-4 h-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-slate-900">Catálogo de Categorias</p>
-              <p className="text-[11px] text-slate-500">
-                Gerencie gavetas ou restaure o catálogo padrão canônico
-              </p>
-            </div>
+          <div className="w-10 h-10 rounded-2xl bg-violet-50 text-violet-700 flex items-center justify-center shrink-0">
+            <Settings className="w-5 h-5" strokeWidth={1.75} />
           </div>
-          <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-slate-900 leading-tight">Preferências</p>
+            <p className="text-[11px] text-slate-500 truncate">Catálogo, moeda e instalar app</p>
+          </div>
+          <ChevronRight
+            className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${openSection === 'preferencias' ? 'rotate-90' : ''}`}
+          />
         </button>
+        {openSection === 'preferencias' && (
+          <div>
+            {/* Instalar app — só quando o banner flutuante foi dispensado (auditoria 16/10:
+            banner + linha na mesma tela era redundância; agora um complementa o outro) */}
+            {!isStandalone && isPwaBannerDismissed && (
+              <button
+                type="button"
+                onClick={handleInstallShortcutClick}
+                disabled={isInstalling}
+                className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors text-left"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    data-testid="profile-install-logo"
+                    aria-label="Curiangoo"
+                    className="w-9 h-9 rounded-xl bg-[#14213D] flex items-center justify-center shrink-0"
+                  >
+                    <CuriangoLogo size={20} color="#FCA311" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-900">
+                      📲 Instalar aplicativo no celular
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      Tenha acesso rápido direto da sua tela inicial
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[11px] font-bold text-[#FCA311] shrink-0 flex items-center gap-1">
+                  {isInstalling ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Instalando...
+                    </>
+                  ) : hasNativePrompt ? (
+                    <>
+                      Instalar Agora
+                      <Download className="w-3.5 h-3.5" />
+                    </>
+                  ) : isIos ? (
+                    <>
+                      Como Instalar
+                      <Share className="w-3.5 h-3.5" />
+                    </>
+                  ) : (
+                    <>
+                      Instalar Aplicativo
+                      <Download className="w-3.5 h-3.5" />
+                    </>
+                  )}
+                </span>
+              </button>
+            )}
 
-        {/* Moeda */}
-        <div className="px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
-              <DollarSign className="w-4 h-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-slate-900">Formato de Moeda</p>
-              <p className="text-[11px] text-slate-500">Padrão nacional do sistema</p>
+            {/* Catálogo de categorias */}
+            <button
+              type="button"
+              onClick={() => setIsCategoryManagementOpen(true)}
+              className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors text-left"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                  <Edit3 className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-900">Catálogo de Categorias</p>
+                  <p className="text-[11px] text-slate-500">
+                    Gerencie gavetas ou restaure o catálogo padrão canônico
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+            </button>
+
+            {/* Moeda */}
+            <div className="px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                  <DollarSign className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-900">Formato de Moeda</p>
+                  <p className="text-[11px] text-slate-500">Padrão nacional do sistema</p>
+                </div>
+              </div>
+              <span className="text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-full shrink-0">
+                BRL (R$)
+              </span>
             </div>
           </div>
-          <span className="text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-full shrink-0">
-            BRL (R$)
-          </span>
-        </div>
+        )}
       </section>
 
       {/* ================================================
-          GRUPO: SOBRE
+          GRUPO: SOBRE (linha Pleo — expande ao toque)
           ================================================ */}
       <section
         className="bg-white/95 rounded-3xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 overflow-hidden"
         aria-label="Sobre o Curiangoo"
       >
-        <div className="px-5 pt-4 pb-2 flex items-center gap-2">
-          <Shield className="w-4 h-4 text-slate-400" />
-          <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-            Sobre o Curiangoo
-          </h3>
-        </div>
-        <Link
-          to="/privacidade"
-          className="px-5 py-3 border-t border-slate-100 flex items-center justify-between hover:bg-slate-50/70 transition-colors"
+        <button
+          type="button"
+          onClick={() => toggleSection('sobre')}
+          className="w-full flex items-center gap-3.5 px-5 py-4 text-left hover:bg-slate-50/60 transition-colors"
+          aria-expanded={openSection === 'sobre'}
         >
-          <span className="text-sm font-medium text-slate-800">Privacidade</span>
-          <ChevronRight className="w-4 h-4 text-slate-300" />
-        </Link>
-        <Link
-          to="/termos"
-          className="px-5 py-3 border-t border-slate-100 flex items-center justify-between hover:bg-slate-50/70 transition-colors"
-        >
-          <span className="text-sm font-medium text-slate-800">Termos de Uso</span>
-          <ChevronRight className="w-4 h-4 text-slate-300" />
-        </Link>
-        <Link
-          to="/faq"
-          className="px-5 py-3 border-t border-slate-100 flex items-center justify-between hover:bg-slate-50/70 transition-colors"
-        >
-          <span className="text-sm font-medium text-slate-800">Perguntas frequentes</span>
-          <ChevronRight className="w-4 h-4 text-slate-300" />
-        </Link>
-        <Link
-          to="/contato"
-          className="px-5 py-3 border-t border-slate-100 flex items-center justify-between hover:bg-slate-50/70 transition-colors"
-        >
-          <span className="text-sm font-medium text-slate-800">Fale conosco</span>
-          <ChevronRight className="w-4 h-4 text-slate-300" />
-        </Link>
+          <div className="w-10 h-10 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+            <Shield className="w-5 h-5" strokeWidth={1.75} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-slate-900 leading-tight">Sobre o Curiangoo</p>
+            <p className="text-[11px] text-slate-500 truncate">Privacidade, termos e FAQ</p>
+          </div>
+          <ChevronRight
+            className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${openSection === 'sobre' ? 'rotate-90' : ''}`}
+          />
+        </button>
+        {openSection === 'sobre' && (
+          <div>
+            <Link
+              to="/privacidade"
+              className="px-5 py-3 border-t border-slate-100 flex items-center justify-between hover:bg-slate-50/70"
+            >
+              {' '}
+              <span className="text-sm font-medium text-slate-800">Privacidade</span>
+              <ChevronRight className="w-4 h-4 text-slate-300" />
+            </Link>
+            <Link
+              to="/termos"
+              className="px-5 py-3 border-t border-slate-100 flex items-center justify-between hover:bg-slate-50/70 transition-colors"
+            >
+              <span className="text-sm font-medium text-slate-800">Termos de Uso</span>
+              <ChevronRight className="w-4 h-4 text-slate-300" />
+            </Link>
+            <Link
+              to="/faq"
+              className="px-5 py-3 border-t border-slate-100 flex items-center justify-between hover:bg-slate-50/70 transition-colors"
+            >
+              <span className="text-sm font-medium text-slate-800">Perguntas frequentes</span>
+              <ChevronRight className="w-4 h-4 text-slate-300" />
+            </Link>
+            <Link
+              to="/contato"
+              className="px-5 py-3 border-t border-slate-100 flex items-center justify-between hover:bg-slate-50/70 transition-colors"
+            >
+              <span className="text-sm font-medium text-slate-800">Fale conosco</span>
+              <ChevronRight className="w-4 h-4 text-slate-300" />
+            </Link>
+          </div>
+        )}
       </section>
 
       {/* Rodapé de Versão com versão dinâmica sincronizada */}
