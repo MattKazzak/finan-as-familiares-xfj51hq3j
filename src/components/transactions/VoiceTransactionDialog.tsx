@@ -26,7 +26,6 @@ import {
 } from 'lucide-react'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import { PremiumGate } from '@/components/billing/PremiumGate'
-import { PremiumGate } from '@/components/billing/PremiumGate'
 import { CopilotTypingBubble } from '@/components/brand/CopilotTypingBubble'
 import { CategoryHighlightChip } from '@/components/categories/CategoryHighlightChip'
 import {
