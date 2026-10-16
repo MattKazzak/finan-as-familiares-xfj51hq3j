@@ -8,6 +8,12 @@ export interface CuriangoLogoProps extends React.SVGProps<SVGSVGElement> {
    * Mantido por retrocompatibilidade: a nova silhueta agora é nativamente sólida/preenchida.
    */
   filled?: boolean
+  /** Cor do olho — padrão #FFFFFF (retrocompatível). Use #14213D p/ olho azul-marinho. */
+  eyeColor?: string
+  /** Raio do olho — padrão 2.25 (retrocompatível). Use 3.4 p/ olho expressivo. */
+  eyeRadius?: number
+  /** Brilho branco no olho (padrão false) — deixa o pássaro "vivo". */
+  eyeHighlight?: boolean
 }
 
 /**
@@ -23,6 +29,9 @@ export const CuriangoLogo: React.FC<CuriangoLogoProps> = ({
   className = '',
   // filled é mantido na assinatura para compatibilidade retroativa
   filled: _filled,
+  eyeColor = '#FFFFFF',
+  eyeRadius = 2.25,
+  eyeHighlight = false,
   ...props
 }) => {
   return (
@@ -41,8 +50,11 @@ export const CuriangoLogo: React.FC<CuriangoLogoProps> = ({
         d="M 11.6 22.3 C 12.8 22.8 14.6 23.6 16.4 22.8 C 19.8 21.4 24.6 21.6 29.6 24.8 C 36.8 29.8 44.8 40.2 53.2 49.8 C 61.2 58.8 70.8 67.8 82.8 76.6 C 86.8 79.5 88.6 80.6 88.2 79.6 C 87.2 78.2 83.4 74.2 78.2 69.5 C 69.8 62.4 61.4 56.6 52.8 53.6 C 47.4 51.8 44.5 52.2 41.2 53.2 C 45.4 60.2 47.8 65.4 47.8 67.2 C 47.8 68.4 45.6 69.2 42.8 69.4 C 36.4 69.6 28.6 67.2 22.8 61.4 C 18.2 56.8 16.8 50.8 17.2 41.5 C 17.5 34.2 16.8 29.8 14.8 26.2 C 13.6 24.2 12.2 23.2 11.6 22.3 Z"
         fill={color}
       />
-      {/* Olho redondo branco na cabeça */}
-      <circle cx="22.2" cy="27.2" r="2.25" fill="#FFFFFF" />
+      {/* Olho redondo na cabeça (cor/raio configuráveis) */}
+      <circle cx="22.2" cy="27.2" r={eyeRadius} fill={eyeColor} />
+      {eyeHighlight && (
+        <circle cx="23.2" cy="26.2" r={eyeRadius * 0.3} fill="#FFFFFF" opacity="0.9" />
+      )}
       {/* Linha curva branca suave sugerindo a asa / dobra elegante */}
       <path
         d="M 28.2 42.8 C 28.5 46.8 29.8 52.4 33.8 57 C 37 60.8 41 63.8 45.4 65.6"

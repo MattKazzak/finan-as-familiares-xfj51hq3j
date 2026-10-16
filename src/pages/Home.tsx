@@ -18,7 +18,7 @@ import {
 } from '@/lib/formatters'
 import { CountUp } from '@/components/common/CountUp'
 import { CategoryIconBox } from '@/components/common/CategoryIcon'
-import { CuriangoHeadLogo } from '@/components/brand/CuriangoLogo'
+import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import { TransactionDetailDialog } from '@/components/transactions/TransactionDetailDialog'
 import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
 import { formatTransactionTitle, groupInstallmentTransactions } from '@/services/installments'
@@ -1054,17 +1054,17 @@ export default function Home() {
 
       {/* 2. ÁREA CLARA (#F8F9FB) COM CARDS FLUTUANTES SOBREPONDO O FUNDO MARINHO */}
       <div className="relative -mt-6 sm:-mt-8 px-4 sm:px-6 pb-12 max-w-5xl mx-auto space-y-6">
-        {/* INSIGHTS DO COPILOT (estilo Pierre, versão sóbria — auditoria 16/10): a
-            inteligência deve ser QUIETA — sem emoji, sem fundo colorido. Ponto colorido
-            discreto por severidade + texto sóbrio. Máx. 1 insight por vez (o mais
-            relevante — a RPC já ordena danger > warning > success > info). */}
-        {insights.length > 0 && (
-          <button
-            key={`${insights[0].title}-0`}
-            type="button"
-            onClick={() => navigate('/copilot')}
-            className="w-full text-left flex items-start gap-3 rounded-2xl border border-[rgba(20,33,61,0.08)] bg-white/95 px-4 py-3 shadow-sm transition-all active:scale-[0.98]"
-          >
+        {/* COPILOT NA HOME (16/10): card SEMPRE presente — é o acesso à IA.
+    Com insight: ponto de severidade + texto sóbrio. Sem insight (família
+    em dia): convite neutro. Assinatura = pássaro inteiro (decisão do
+    Matheus: cabeça sozinha ficou estranha) com olho azul-marinho grande
+    + sparkle âmbar pulsando ("clica aqui"). Respeita reduced-motion. */}
+        <button
+          type="button"
+          onClick={() => navigate('/copilot')}
+          className="w-full text-left flex items-start gap-3 rounded-2xl border border-[rgba(20,33,61,0.08)] bg-white/95 px-4 py-3 shadow-sm transition-all active:scale-[0.98]"
+        >
+          {insights.length > 0 ? (
             <span
               aria-hidden="true"
               className={`mt-[7px] w-2 h-2 rounded-full shrink-0 ${
@@ -1076,28 +1076,36 @@ export default function Home() {
                 }[insights[0].severity]
               }`}
             />
-            <span className="min-w-0 flex-1">
-              <span className="block text-xs font-semibold text-[#14213D] leading-tight">
-                {insights[0].title}
-              </span>
-              <span className="block text-[11px] leading-snug mt-0.5 text-slate-500">
-                {insights[0].detail}
-              </span>
+          ) : (
+            <span
+              aria-hidden="true"
+              className="mt-[7px] w-2 h-2 rounded-full shrink-0 bg-emerald-500"
+            />
+          )}
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs font-semibold text-[#14213D] leading-tight">
+              {insights.length > 0 ? insights[0].title : 'Tudo em ordem por aqui'}
             </span>
-            {/* Assinatura do Copilot: cabecinha do pássaro com animação sutil
-                (ideia do Matheus 16/10) — indica IA conversacional viva no lugar
-                do texto morto "Copilot ›". CuriangoHeadLogo = recorte da cabeça
-                com olho azul-marinho grande (legível em 30px). Respeita reduced-motion. */}
-            <span className="shrink-0 self-center ml-1" aria-hidden="true">
-              <CuriangoHeadLogo
-                size={30}
-                color="#FCA311"
-                eyeColor="#14213D"
-                className="animate-copilot-bird"
-              />
+            <span className="block text-[11px] leading-snug mt-0.5 text-slate-500">
+              {insights.length > 0
+                ? insights[0].detail
+                : 'Toque e converse com seu Copilot sobre as finanças da família'}
             </span>
-          </button>
-        )}
+          </span>
+          {/* Pássaro inteiro (olho azul + brilho) com sparkle pulsante no topo —
+      presença viva que convida ao toque sem carnaval. */}
+          <span className="shrink-0 self-center ml-1 relative" aria-hidden="true">
+            <CuriangoLogo
+              size={34}
+              color="#FCA311"
+              eyeColor="#14213D"
+              eyeRadius={3.4}
+              eyeHighlight
+              className="animate-copilot-bird"
+            />
+            <span className="absolute -top-1 -right-0.5 w-2 h-2 animate-copilot-sparkle" />
+          </span>
+        </button>
         {/* GRÁFICO DE EVOLUÇÃO DO SALDO (gap 1 da auditoria 16/10 — todos os líderes
             têm linha do saldo no tempo: Maybe, Actual, Copilot, Nubank, Monzo).
             Sparkline SVG pura (sem lib), 30 dias, sóbria. Falha silenciosa. */}
