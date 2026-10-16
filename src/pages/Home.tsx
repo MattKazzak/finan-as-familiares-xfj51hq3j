@@ -74,19 +74,11 @@ export default function Home() {
   const { hideValues, toggleHideValues, maskValue } = useValuePrivacy()
 
   const [loading, setLoading] = useState(true)
-  const isFamilyIncomplete = useMemo(() => {
-    if (!family) return false
-    if (completeness?.isIncomplete) return true
-    const hasZeroIncome = !family.monthly_net_income_cents || family.monthly_net_income_cents <= 0
-    const hasIncompleteCats = !categories || categories.length === 0 || categories.length !== 19
-    return hasZeroIncome || hasIncompleteCats
-  }, [family, completeness, categories])
-
-  useEffect(() => {
-    if (isFamilyIncomplete) {
-      openOnboarding()
-    }
-  }, [isFamilyIncomplete, openOnboarding])
+  // BLINDAGEM R50 (alinhada ao use-family): a Home NÃO reabre o onboarding sozinha.
+  // O auto-open do onboarding é responsabilidade exclusiva do use-family (que checa
+  // transações no banco antes de abrir). Aqui, critério hardcoded (categorias !== 19,
+  // renda zero) reabria o modal mesmo após a conclusão — bug do modal fantasma 16/10.
+  // A família em uso real NUNCA vê o wizard de novo; abertura manual fica no Perfil.
 
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [totalsFromRpc, setTotalsFromRpc] = useState<{
@@ -152,20 +144,31 @@ export default function Home() {
       // PERFORMANCE: totais globais (saldo, receita, despesa desde o início) são
       // agregados no servidor via RPC — sem baixar todas as transações da família.
       // Com filtro de membro ativo, mantém o fetch completo (dataset do membro é pequeno).
-      const [totalsRes, defBgs, overrides] = await Promise.all([
+      const [totalsPromise, monthTxRes, defBgs, overrides] = await Promise.all([
         selectedMemberId
           ? fetchTransactions({ familyId: family.id, memberId: selectedMemberId })
           : (supabase as any).rpc('get_family_totals', { p_family_id: family.id }),
+        // Transações do mês ativo: alimenta Receitas/Despesas do mês e o anel de progresso
+        // (o RPC get_family_totals só retorna totais GLOBAIS — sem isso, o card do mês
+        // ficava eternamente em R$ 0,00 quando sem filtro de membro)
+        fetchTransactions({ familyId: family.id, month: currentMonthStr }),
         fetchDefaultBudgets(family.id),
         fetchMonthBudgetOverrides(family.id, currentMonthStr),
       ])
 
       if (selectedMemberId) {
-        setTransactions(totalsRes as Transaction[])
+        setTransactions(totalsPromise as Transaction[])
       } else {
-        setTotalsFromRpc(
-          totalsRes as { total_income_cents: number; total_expense_cents: number } | null,
-        )
+        // supabase.rpc() retorna {data, error} — extrair o data (bug do saldo eterno R$ 0,00:
+        // o objeto inteiro era setado e total_income_cents ficava undefined → || 0)
+        const { data: rpcData, error: rpcError } =
+          (totalsPromise as {
+            data: { total_income_cents: number; total_expense_cents: number } | null
+            error: any
+          }) || {}
+        if (rpcError) throw rpcError
+        setTotalsFromRpc(rpcData)
+        setTransactions((monthTxRes as Transaction[]) || [])
       }
       setDefaultBudgets(defBgs)
       setMonthOverrides(overrides)
@@ -216,9 +219,10 @@ export default function Home() {
       expenseTotal = Number(totalsFromRpc.total_expense_cents) || 0
     }
 
-    const effectiveTransactions = totalsFromRpc
-      ? []
-      : transactions.filter((tx) => tx.status !== 'projected')
+    // Com RPC: transactions contém SÓ o mês ativo (fetch dedicado no loadData) — alimenta
+    // Receitas/Despesas do mês e anel de progresso. Sem RPC (filtro de membro): transações
+    // completas do membro, e o mês é filtrado pelas datas abaixo.
+    const effectiveTransactions = transactions.filter((tx) => tx.status !== 'projected')
 
     effectiveTransactions.forEach((tx) => {
       const txMonth = tx.transaction_date.slice(0, 7)
