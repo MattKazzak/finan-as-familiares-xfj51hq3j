@@ -1054,48 +1054,27 @@ export default function Home() {
 
       {/* 2. ÁREA CLARA (#F8F9FB) COM CARDS FLUTUANTES SOBREPONDO O FUNDO MARINHO */}
       <div className="relative -mt-6 sm:-mt-8 px-4 sm:px-6 pb-12 max-w-5xl mx-auto space-y-6">
-        {/* COPILOT NA HOME (16/10): card SEMPRE presente — é o acesso à IA.
-    Com insight: ponto de severidade + texto sóbrio. Sem insight (família
-    em dia): convite neutro. Assinatura = pássaro inteiro (decisão do
-    Matheus: cabeça sozinha ficou estranha) com olho azul-marinho grande
-    + sparkle âmbar pulsando ("clica aqui"). Respeita reduced-motion. */}
+        {/* COPILOT NA HOME (16/10, v2 — fala do Curiango): card SEMPRE presente.
+            Padrão-ouro de personagem conversando (Copilot Money/Monzo chat): o
+            pássaro É o remetente (avatar à esquerda, como foto de perfil) e fala
+            em 1 frase natural — sem título/subtítulo de notificação. Severidade
+            vira hairline colorido discreto à esquerda do balão, não um ponto. */}
         <button
           type="button"
           onClick={() => navigate('/copilot')}
-          className="w-full text-left flex items-start gap-3 rounded-2xl border border-[rgba(20,33,61,0.08)] bg-white/95 px-4 py-3 shadow-sm transition-all active:scale-[0.98]"
-        >
-          {insights.length > 0 ? (
-            <span
-              aria-hidden="true"
-              className={`mt-[7px] w-2 h-2 rounded-full shrink-0 ${
-                {
-                  danger: 'bg-rose-500',
-                  warning: 'bg-amber-500',
-                  success: 'bg-emerald-500',
-                  info: 'bg-slate-400',
+          className={`w-full text-left flex items-start gap-3 rounded-2xl border border-[rgba(20,33,61,0.08)] bg-white/95 px-4 py-3.5 shadow-sm transition-all active:scale-[0.98] border-l-[3px] ${
+            insights.length > 0
+              ? {
+                  danger: 'border-l-rose-400',
+                  warning: 'border-l-amber-400',
+                  success: 'border-l-emerald-400',
+                  info: 'border-l-slate-300',
                 }[insights[0].severity]
-              }`}
-            />
-          ) : (
-            <span
-              aria-hidden="true"
-              className="mt-[7px] w-2 h-2 rounded-full shrink-0 bg-emerald-500"
-            />
-          )}
-          <span className="min-w-0 flex-1">
-            <span className="block text-xs font-semibold text-[#14213D] leading-tight">
-              {insights.length > 0 ? insights[0].title : 'Tudo em ordem por aqui'}
-            </span>
-            <span className="block text-[11px] leading-snug mt-0.5 text-slate-500">
-              {insights.length > 0
-                ? insights[0].detail
-                : 'Toque e converse com seu Copilot sobre as finanças da família'}
-            </span>
-          </span>
-          {/* Pássaro inteiro (olho azul + brilho) com sparkle pulsante no topo +
-              seta › (affordance universal de navegação, mesmo padrão das linhas
-              do Perfil — o '+' aqui conflitaria com Nova Transação). */}
-          <span className="shrink-0 self-center ml-1 relative" aria-hidden="true">
+              : 'border-l-emerald-400'
+          }`}
+        >
+          {/* Avatar do remetente: o próprio Curiango */}
+          <span className="shrink-0 relative mt-0.5" aria-hidden="true">
             <CuriangoLogo
               size={40}
               color="#FCA311"
@@ -1105,6 +1084,13 @@ export default function Home() {
               className="animate-copilot-bird"
             />
             <span className="absolute -top-1 -right-1 w-2 h-2 animate-copilot-sparkle" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] leading-snug text-[#14213D]">
+              {insights.length > 0
+                ? insights[0].detail
+                : 'Tudo em ordem por aqui! Toque pra conversar comigo.'}
+            </span>
           </span>
           <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 self-center" />
         </button>{' '}
