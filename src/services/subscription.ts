@@ -41,10 +41,10 @@ export async function requestCancelSubscription(subscriptionId: string): Promise
   if (error) throw error
 }
 
-/** URL de checkout de assinatura no Mercado Pago (links de plano de assinatura). */
+/** URL de checkout de assinatura no Asaas (links de pagamento recorrentes, 17/10). */
 export const CHECKOUT_URLS: Record<'monthly' | 'yearly', string> = {
-  monthly: 'https://mpago.la/1D8u6Vq',
-  yearly: 'https://mpago.la/1nwoqUR',
+  monthly: 'https://www.asaas.com/000/c/9t23dmfks249y6lv',
+  yearly: 'https://www.asaas.com/000/c/9fczz56fzrpu11ro',
 }
 
 /** O usuário tem acesso premium neste momento? */
