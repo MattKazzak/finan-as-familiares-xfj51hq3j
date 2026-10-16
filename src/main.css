@@ -439,6 +439,60 @@
     }
   }
 
+  /* Copilot (16/10): respiração do FAB — ciclo lento com pausa serena.
+     BUG corrigido: o @keyframes fab-breathe nunca existiu no CSS (só a media-query
+     de reduced-motion), então a classe animate-fab-breathe não fazia nada. */
+  @keyframes fab-breathe {
+    0%,
+    72%,
+    100% {
+      transform: scale(1);
+      box-shadow:
+        0 8px 24px -4px rgba(20, 33, 61, 0.08),
+        0 24px 48px -12px rgba(20, 33, 61, 0.14);
+    }
+    82% {
+      transform: scale(1.03);
+      box-shadow:
+        0 10px 28px -4px rgba(20, 33, 61, 0.1),
+        0 28px 56px -12px rgba(20, 33, 61, 0.18);
+    }
+    92% {
+      transform: scale(1.015);
+      box-shadow:
+        0 9px 26px -4px rgba(20, 33, 61, 0.09),
+        0 26px 52px -12px rgba(20, 33, 61, 0.16);
+    }
+  }
+
+  .animate-fab-breathe {
+    animation: fab-breathe 4.5s ease-in-out infinite;
+  }
+
+  /* Pássaro do Copilot no card de insight: flutuação suave + brilho no olho.
+     Presença viva e discreta — indica IA conversacional sem carnaval. */
+  @keyframes copilot-bird-float {
+    0%,
+    100% {
+      transform: translateY(0) rotate(0deg);
+    }
+    50% {
+      transform: translateY(-2.5px) rotate(-3deg);
+    }
+  }
+
+  .animate-copilot-bird {
+    animation: copilot-bird-float 3.2s ease-in-out infinite;
+    transform-origin: 30% 30%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-copilot-bird {
+      animation: none !important;
+      transform: none !important;
+    }
+  }
+
   /* CDS v1.0 - Classes utilitárias de elevação para profundidade tátil refinada */
   .shadow-elevation-1 {
     box-shadow:

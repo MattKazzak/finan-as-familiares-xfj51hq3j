@@ -9,6 +9,14 @@ interface CuriangoFloatingButtonProps {
 
 export const COPILOT_FAB_SPEECH_BUBBLE_DISMISSED_KEY = 'curiangoo_copilot_fab_bubble_dismissed_v2'
 export const COPILOT_FAB_PULSE_STOPPED_KEY = 'curiangoo_copilot_fab_pulse_stopped_v1'
+/**
+ * Balão de fala do FAB: volta a aparecer 1x por semana (16/10).
+ * Antes era 1x na vida (dismissed_v2 gravava 'true' para sempre) — o usuário
+ * dispensava e nunca mais via a dica. Agora guarda a data da última exibição
+ * e só repete após 7 dias: relevância sem spam.
+ */
+export const COPILOT_FAB_BUBBLE_LAST_SHOWN_KEY = 'curiangoo_copilot_fab_bubble_last_shown_v3'
+const BUBBLE_REPEAT_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000
 
 /**
  * Hook para detectar prefers-reduced-motion do usuário.
@@ -74,16 +82,17 @@ export const CuriangoFloatingButton: React.FC<CuriangoFloatingButtonProps> = ({ 
         setIsPulseActive(true)
       }
 
-      const dismissed = localStorage.getItem(COPILOT_FAB_SPEECH_BUBBLE_DISMISSED_KEY)
-      if (!dismissed) {
+      const lastShown = Number(localStorage.getItem(COPILOT_FAB_BUBBLE_LAST_SHOWN_KEY) || 0)
+      const weekPassed = Date.now() - lastShown > BUBBLE_REPEAT_INTERVAL_MS
+      if (!lastShown || weekPassed) {
         setShowBubble(true)
+        try {
+          localStorage.setItem(COPILOT_FAB_BUBBLE_LAST_SHOWN_KEY, String(Date.now()))
+        } catch {
+          // Silencioso em caso de cookies desabilitados
+        }
         const timer = setTimeout(() => {
           setShowBubble(false)
-          try {
-            localStorage.setItem(COPILOT_FAB_SPEECH_BUBBLE_DISMISSED_KEY, 'true')
-          } catch {
-            // Silencioso em caso de cookies desabilitados
-          }
         }, 6500)
         return () => clearTimeout(timer)
       }
@@ -94,11 +103,8 @@ export const CuriangoFloatingButton: React.FC<CuriangoFloatingButtonProps> = ({ 
 
   const dismissBubble = () => {
     setShowBubble(false)
-    try {
-      localStorage.setItem(COPILOT_FAB_SPEECH_BUBBLE_DISMISSED_KEY, 'true')
-    } catch {
-      // Silencioso
-    }
+    // 16/10: dispensar não apaga pra sempre — só encerra a exibição atual.
+    // A data de última exibição já foi gravada na montagem; o balão volta em 7 dias.
   }
 
   const markPulseStopped = () => {
