@@ -351,17 +351,9 @@ export function WalletTransactionsTab() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={openRecurringIncomes}
-              className="text-xs rounded-xl h-8 text-slate-700 border-slate-200 hover:bg-slate-50 gap-1.5"
-            >
-              <span>Recorrentes 🔁</span>
-            </Button>
-          </div>
+          {/* P4 (auditoria 16/10): botão "Recorrentes" duplicado — o chip do topo já
+              dá acesso à gestão de recorrentes; aqui era um segundo caminho pro mesmo lugar. */}
+          <div className="flex items-center gap-2 shrink-0" />
         </div>
 
         {/* Mini lista de itens de receita do mês atual */}

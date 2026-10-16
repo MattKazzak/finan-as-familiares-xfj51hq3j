@@ -190,8 +190,10 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   const [isWhoIsUsingOpen, setIsWhoIsUsingOpen] = useState(false)
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false)
   const [isVoiceDialogOpen, setIsVoiceDialogOpen] = useState(false)
+  // P2 (auditoria 16/10): 80%+ dos lançamentos do dia a dia são DESPESAS — o formulário
+  // abre em Despesa por padrão; Receita continua acessível com 1 toque.
   const [newTransactionDefaultType, setNewTransactionDefaultType] = useState<'income' | 'expense'>(
-    'income',
+    'expense',
   )
   const [newTransactionPrefill, setNewTransactionPrefill] = useState<{
     initialType?: 'income' | 'expense'
