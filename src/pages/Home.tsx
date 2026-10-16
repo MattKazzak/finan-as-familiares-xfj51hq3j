@@ -18,7 +18,7 @@ import {
 } from '@/lib/formatters'
 import { CountUp } from '@/components/common/CountUp'
 import { CategoryIconBox } from '@/components/common/CategoryIcon'
-import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
+import { CuriangoHeadLogo } from '@/components/brand/CuriangoLogo'
 import { TransactionDetailDialog } from '@/components/transactions/TransactionDetailDialog'
 import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
 import { formatTransactionTitle, groupInstallmentTransactions } from '@/services/installments'
@@ -1086,9 +1086,15 @@ export default function Home() {
             </span>
             {/* Assinatura do Copilot: cabecinha do pássaro com animação sutil
                 (ideia do Matheus 16/10) — indica IA conversacional viva no lugar
-                do texto morto "Copilot ›". Respeita prefers-reduced-motion. */}
+                do texto morto "Copilot ›". CuriangoHeadLogo = recorte da cabeça
+                com olho azul-marinho grande (legível em 30px). Respeita reduced-motion. */}
             <span className="shrink-0 self-center ml-1" aria-hidden="true">
-              <CuriangoLogo size={26} color="#FCA311" className="animate-copilot-bird" />
+              <CuriangoHeadLogo
+                size={30}
+                color="#FCA311"
+                eyeColor="#14213D"
+                className="animate-copilot-bird"
+              />
             </span>
           </button>
         )}

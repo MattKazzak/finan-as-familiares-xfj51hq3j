@@ -12,7 +12,8 @@ import { WhoIsUsingDialog } from '@/components/common/WhoIsUsingDialog'
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
 import { OnboardingWizardDialog } from '@/components/wallet/OnboardingWizardDialog'
 import { InstallPwaBanner } from '@/components/common/InstallPwaBanner'
-import { CuriangoFloatingButton } from '@/components/layout/CuriangoFloatingButton'
+// 16/10: FAB do Copilot removido do Layout (insight da Home cobre o acesso à IA).
+// O componente e o teste continuam no código para a futura captura de voz global.
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { formatFamilyDisplayName } from '@/lib/formatters'
@@ -302,8 +303,11 @@ export default function Layout() {
           <Outlet />
         </main>
 
-        {/* BOTÃO FLUTUANTE DO COPILOT (ACESSO RÁPIDO PARA /copilot — SOMENTE NA HOME) */}
-        {location.pathname === '/inicio' && <CuriangoFloatingButton />}
+        {/* COPILOT (16/10): FAB REMOVIDO — o card de insight da Home (com a cabecinha
+            animada do Curiango) já é o acesso vivo à IA na Home; 2 caminhos pro mesmo
+            destino na mesma tela era redundância e poluição visual. Benchmarks:
+            Nubank/Maybe/Monzo não usam FAB de IA — a inteligência mora no conteúdo.
+            O FAB volta com função real quando existir captura de voz global. */}
 
         {/* BANNER EDUCATIVO DE INSTALAÇÃO PWA (POSICIONADO ACIMA DO DOCK FLUTUANTE) */}
         <InstallPwaBanner variant="bottom-nav" />

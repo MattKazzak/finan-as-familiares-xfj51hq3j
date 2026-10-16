@@ -55,4 +55,49 @@ export const CuriangoLogo: React.FC<CuriangoLogoProps> = ({
   )
 }
 
+export interface CuriangoHeadLogoProps extends React.SVGProps<SVGSVGElement> {
+  size?: number | string
+  color?: string
+  /** Cor do olho — padrão #14213D (azul-marinho CDS) para destacar sobre o âmbar */
+  eyeColor?: string
+  className?: string
+}
+
+/**
+ * CuriangoHeadLogo — Retrato da cabecinha do Curiango (16/10, pedido do Matheus):
+ * recorte da cabeça do pássaro (bico + olho grande) para assinaturas compactas
+ * onde o pássaro inteiro ficaria ilegível (ex.: card de insight da Home).
+ * Olho grande em #14213D (azul-marinho) sobre o corpo âmbar — expressivo e legível.
+ */
+export const CuriangoHeadLogo: React.FC<CuriangoHeadLogoProps> = ({
+  size = 28,
+  color = '#FCA311',
+  eyeColor = '#14213D',
+  className = '',
+  ...props
+}) => {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="4 12 52 52"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden="true"
+      {...props}
+    >
+      {/* Cabeça + início do corpo (recorte do path oficial, mantém a curva do bico) */}
+      <path
+        d="M 11.6 22.3 C 12.8 22.8 14.6 23.6 16.4 22.8 C 19.8 21.4 24.6 21.6 29.6 24.8 C 36.8 29.8 44.8 40.2 53.2 49.8 C 53.8 50.6 54.2 51.2 54.4 51.8 C 49.4 49.4 44.8 47.6 41.2 53.2 C 45.4 60.2 47.8 65.4 47.8 67.2 C 47.8 68.4 45.6 69.2 42.8 69.4 C 36.4 69.6 28.6 67.2 22.8 61.4 C 18.2 56.8 16.8 50.8 17.2 41.5 C 17.5 34.2 16.8 29.8 14.8 26.2 C 13.6 24.2 12.2 23.2 11.6 22.3 Z"
+        fill={color}
+      />
+      {/* Olho grande azul-marinho (assinatura expressiva da cabeça) */}
+      <circle cx="22.2" cy="27.2" r="3.4" fill={eyeColor} />
+      {/* Brilho no olho */}
+      <circle cx="23.2" cy="26.2" r="1" fill="#FFFFFF" opacity="0.9" />
+    </svg>
+  )
+}
+
 export default CuriangoLogo
