@@ -20,6 +20,7 @@ import {
   CHECKOUT_URLS,
   type MySubscription,
 } from '@/services/subscription'
+import { fetchMyAccessStatus, type AccessStatusInfo } from '@/services/access-status'
 import { deleteUserAccount, updateUserName, uploadUserAvatar } from '@/services/user-account'
 import { evaluatePasswordStrength, isPasswordStrongEnough } from '@/pages/Login'
 import { supabase } from '@/lib/supabase/client'
@@ -319,6 +320,26 @@ export default function ProfilePage() {
   const [subscription, setSubscription] = useState<MySubscription | null>(null)
   const [subscriptionLoading, setSubscriptionLoading] = useState(true)
   const [isCancellingSub, setIsCancellingSub] = useState(false)
+  // Acesso (modelo C2, 17/10): trial 7d por família → gratuito essencial
+  const [accessStatus, setAccessStatus] = useState<AccessStatusInfo>({
+    status: 'free',
+    days_left: 0,
+    trial_end: null,
+    plan: null,
+    period_end: null,
+  })
+  const [accessLoading, setAccessLoading] = useState(true)
+
+  const loadAccess = useCallback(async () => {
+    try {
+      setAccessLoading(true)
+      setAccessStatus(await fetchMyAccessStatus())
+    } catch (err) {
+      console.warn('Erro ao carregar status de acesso:', err)
+    } finally {
+      setAccessLoading(false)
+    }
+  }, [])
 
   const loadSubscription = useCallback(async () => {
     try {
@@ -336,6 +357,10 @@ export default function ProfilePage() {
   useEffect(() => {
     loadSubscription()
   }, [loadSubscription])
+
+  useEffect(() => {
+    loadAccess()
+  }, [loadAccess])
 
   const handleCancelSubscription = async () => {
     if (!subscription) return
@@ -724,11 +749,19 @@ export default function ProfilePage() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {subscriptionLoading ? null : isSubscriptionActive(subscription) ? (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-              Premium
-            </span>
-          ) : null}
+          {subscriptionLoading || accessLoading ? null : (
+            <>
+              {isSubscriptionActive(subscription) ? (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                  Premium
+                </span>
+              ) : accessStatus.status === 'trial' ? (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                  Trial: {accessStatus.days_left}d
+                </span>
+              ) : null}
+            </>
+          )}
           <button
             type="button"
             onClick={openEditFamilyDialog}
@@ -937,14 +970,22 @@ export default function ProfilePage() {
           </div>
           <span
             className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-              subscriptionLoading
+              subscriptionLoading || accessLoading
                 ? 'bg-slate-100 text-slate-400'
                 : isSubscriptionActive(subscription)
                   ? 'bg-emerald-100 text-emerald-700'
-                  : 'bg-[#FCA311]/15 text-[#B45309]'
+                  : accessStatus.status === 'trial'
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-[#FCA311]/15 text-[#B45309]'
             }`}
           >
-            {subscriptionLoading ? '…' : isSubscriptionActive(subscription) ? 'Premium' : 'Inativo'}
+            {subscriptionLoading || accessLoading
+              ? '…'
+              : isSubscriptionActive(subscription)
+                ? 'Premium'
+                : accessStatus.status === 'trial'
+                  ? `Trial ${accessStatus.days_left}d`
+                  : 'Inativo'}
           </span>
           <ChevronRight
             className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${openSection === 'assinatura' ? 'rotate-90' : ''}`}
@@ -969,20 +1010,25 @@ export default function ProfilePage() {
                     href={CHECKOUT_URLS.monthly}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-between gap-2 py-3 px-4 rounded-2xl border-2 border-[#059669] text-[#059669] font-semibold text-sm hover:bg-[#059669] hover:text-white transition-all"
+                    className="flex items-center justify-between gap-2 py-3 px-4 rounded-2xl border-2 border-[#059669] text-[#14213D] hover:bg-emerald-50 transition-colors"
                   >
-                    <span>R$ 9,99/mês</span>
-                    <ExternalLink className="w-4 h-4" />
+                    <span className="font-semibold">R$ 19,90/mês</span>
+                    <ExternalLink className="w-4 h-4 text-slate-400" />
                   </a>
                   <a
                     href={CHECKOUT_URLS.yearly}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-between gap-2 py-3 px-4 rounded-2xl bg-gradient-to-r from-[#059669] to-[#047857] text-white font-semibold text-sm shadow-lg shadow-[#059669]/30 hover:shadow-xl transition-all"
+                    className="flex items-center justify-between gap-2 py-3 px-4 rounded-2xl bg-gradient-to-r from-[#059669] to-[#0aa278] text-white hover:opacity-95 transition-opacity"
                   >
-                    <span>R$ 99,90/ano</span>
+                    <span className="flex flex-col leading-tight">
+                      <span className="font-semibold">R$ 149,90/ano</span>
+                      <span className="text-[10px] font-medium text-emerald-100">
+                        economize R$ 89,90
+                      </span>
+                    </span>
                     <ExternalLink className="w-4 h-4" />
-                  </a>
+                  </a>{' '}
                 </div>
                 <p className="text-[11px] text-slate-500">
                   Pagamento processado com segurança. Após assinar, o acesso é liberado

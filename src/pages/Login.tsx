@@ -344,6 +344,42 @@ export default function Login() {
           </p>
         </header>
 
+        {/* LANDING: Planos (modelo C2, 17/10) — trial 7 dias grátis, depois R$ 19,90/mês
+            ou R$ 149,90/ano. Só no modo login (mantém o cadastro enxuto). */}
+        {mode === 'login' && (
+          <section aria-label="Planos e preços" className="w-full mb-6 space-y-3">
+            <div className="w-full rounded-3xl bg-[#14213D] text-white p-5 shadow-elevation-2">
+              <p className="text-sm font-semibold leading-tight">
+                Suas finanças em família, com um Curiango que fala com você.
+              </p>
+              <p className="text-xs text-white/70 mt-1.5 leading-relaxed">
+                Comece com <span className="font-bold text-[#FCA311]">7 dias grátis</span>, sem
+                cartão de crédito. Depois, escolha seu plano:
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-2xl border border-[rgba(20,33,61,0.1)] bg-white p-3.5 text-left">
+                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                  Mensal
+                </p>
+                <p className="text-lg font-bold text-[#14213D] mt-0.5">
+                  R$ 19,90<span className="text-xs font-medium text-slate-400">/mês</span>
+                </p>
+                <p className="text-[10px] text-slate-400 mt-0.5">Cancele quando quiser</p>
+              </div>
+              <div className="rounded-2xl border-2 border-[#FCA311]/60 bg-white p-3.5 text-left">
+                <p className="text-[11px] font-semibold text-[#B45309] uppercase tracking-wide">
+                  Anual
+                </p>
+                <p className="text-lg font-bold text-[#14213D] mt-0.5">
+                  R$ 149,90<span className="text-xs font-medium text-slate-400">/ano</span>
+                </p>
+                <p className="text-[10px] font-bold text-emerald-700 mt-0.5">Economize R$ 89,90</p>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Card Principal — Elegância Minimalista Fintech em Tema Claro com Sombra Suave */}
         <main className="w-full bg-white rounded-3xl p-6 sm:p-9 shadow-elevation-2 border border-[#14213D]/[0.06] backdrop-blur-sm">
           {/* Alternador de Modo Minimalista (Login / Criar Conta) */}
