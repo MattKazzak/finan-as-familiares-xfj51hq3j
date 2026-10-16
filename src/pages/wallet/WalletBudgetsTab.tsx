@@ -75,13 +75,16 @@ export function WalletBudgetsTab() {
     setIsMenuSubcatEditorOpen,
     setMountedAddingSubcatCategory,
     setAddingSubcatForCategory: _setAddingSubcatForCategory,
+    monthIncomeCents,
   } = useWallet()
 
   const { toast } = useToast()
 
   return (
     <div className="space-y-6 sm:space-y-7 mt-0 animate-in fade-in-50 duration-200 min-w-0">
-      {/* Cabeçalho da Aba Orçamentos: Ações Rápidas (Receitas Fixas & Modelo Sugerido) */}
+      {/* Cabeçalho enxuto (auditoria 16/10): 1 linha de propósito + 1 ação. A explicação
+          de metodologia (50/30/20, Elizabeth Warren) virou tooltip no botão ℹ️ — quem
+          quiser a "aula" pede; quem não quer, não lê parágrafo no celular. */}
       <div className="flex items-center justify-between gap-2 flex-wrap bg-white/95 backdrop-blur-sm p-4 sm:p-5 rounded-2xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1">
         <div className="flex items-center gap-2.5">
           <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-buckets-goals flex items-center justify-center shrink-0">
@@ -89,19 +92,29 @@ export function WalletBudgetsTab() {
           </div>
           <div>
             <h3 className="font-semibold text-sm text-foreground dark:text-white leading-tight">
-              Planejamento & Orçamentos
+              Orçamentos
             </h3>
             <p className="text-[11px] text-muted-foreground">
-              Tetos baseados em percentuais da renda líquida familiar com liberdade total
-            </p>
-            <p className="text-[10px] text-muted-foreground italic flex items-center gap-1 mt-0.5">
-              <GraduationCap className="w-3 h-3 text-muted-foreground shrink-0 not-italic" />
-              <span>
-                Modelos baseados em metodologias consagradas: 50/30/20 (Elizabeth Warren) e
-                variações para perfis de família.
-              </span>
+              Tetos por balde, baseados na sua renda
             </p>
           </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="ml-1 text-slate-400 hover:text-slate-600 p-1 rounded-md transition-colors"
+                aria-label="Sobre a metodologia de orçamento"
+                title="Sobre a metodologia"
+              >
+                <Info className="w-4 h-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="max-w-xs p-3 text-xs leading-relaxed">
+              Tetos baseados em percentuais da renda líquida familiar. Os modelos seguem
+              metodologias consagradas como a 50/30/20 (Elizabeth Warren) e variações para perfis de
+              família — com liberdade total de personalização.
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
@@ -109,14 +122,13 @@ export function WalletBudgetsTab() {
             variant="outline"
             size="sm"
             onClick={() => setIsApplyModelOpen(true)}
-            className="rounded-xl text-xs font-semibold gap-1.5 border-border text-foreground bg-slate-100/60 hover:bg-brand-amber/20 h-8 shadow-xs"
+            className="rounded-xl text-xs font-semibold gap-1.5 border-border text-foreground bg-slate-100/60 hover:bg-slate-100"
           >
             <Sparkles className="w-3.5 h-3.5 text-brand-amber" />
-            <span>Aplicar modelo sugerido</span>
+            <span>Ajustar modelo</span>
           </Button>
         </div>
       </div>
-
       {/* CARD DE ONBOARDING LEVE (QUANDO A RENDA LÍQUIDA AINDA NÃO FOI DEFINIDA) */}
       {(!family?.monthly_net_income_cents || family.monthly_net_income_cents <= 0) && (
         <div className="bg-gradient-to-br from-brand via-[#192a4f] to-brand-dark text-white rounded-3xl p-5 shadow-sm border border-brand flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in-50 duration-200">
@@ -158,6 +170,7 @@ export function WalletBudgetsTab() {
           monthKey={monthKey}
           categoryList={categoryBudgetData.list}
           onOpenModelDialog={() => setIsApplyModelOpen(true)}
+          monthIncomeCents={monthIncomeCents}
         />
       ) : null}
 

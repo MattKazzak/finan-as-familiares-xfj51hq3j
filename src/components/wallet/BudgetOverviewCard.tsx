@@ -18,6 +18,8 @@ export interface BucketsSummaryData {
 }
 
 export interface BudgetOverviewCardProps {
+  /** Receita já recebida no mês ativo (alimenta o anel de previsto vs realizado) */
+  monthIncomeCents?: number
   family: Family | null
   bucketsSummary: BucketsSummaryData
   totalBudget: number
@@ -122,12 +124,21 @@ export function BudgetOverviewCard({
   monthKey,
   categoryList: _categoryList,
   onOpenModelDialog,
+  monthIncomeCents = 0,
 }: BudgetOverviewCardProps) {
   const [selectedBucket, setSelectedBucket] = useState<
     'all' | 'essentials' | 'lifestyle' | 'future'
   >('all')
 
   const netIncomeCents = family?.monthly_net_income_cents || 0
+
+  // Anel de Receitas Previstas (migrado da Home em 16/10 — aqui tem contexto de renda):
+  // % da renda líquida já recebida no mês ativo.
+  const incomeProgressPercent =
+    netIncomeCents > 0
+      ? Math.min(100, Math.max(0, Math.round((monthIncomeCents / netIncomeCents) * 100)))
+      : 0
+  const incomeRingOffset = 251.32 - (251.32 * incomeProgressPercent) / 100
 
   // Cálculo proporcional para a barra única segmentada
   const sumBudgets =
@@ -154,41 +165,78 @@ export function BudgetOverviewCard({
       {/* Sutil detalhe superior fluido com a paleta oficial */}
       <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#14213D] via-[#FCA311] to-[#10B981]" />
 
-      {/* CABEÇALHO DO PAINEL FLUÍDO: Renda Líquida no topo com hierarquia clara e chamada de ação */}
+      {/* CABEÇALHO DO PAINEL FLUÍDO: Renda Líquida + anel de previsto (migrado da Home 16/10) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-              Matriz Orçamentária
-            </span>
-            <span className="text-slate-300">·</span>
-            <span className="text-[11px] font-medium text-muted-foreground">
-              3 Baldes Financeiros
-            </span>
-            {isOverIncome ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-[#E11D48] border border-rose-200/60">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#E11D48] animate-pulse" />
-                Tetos acima da renda
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-[#059669] border border-emerald-200/60">
-                <CheckCircle2 className="w-3 h-3 text-[#059669]" />
-                Tetos saudáveis
-              </span>
-            )}
-          </div>
+        <div className="flex items-center gap-4 min-w-0">
+          {/* Anel: % da renda líquida já recebida no mês (Receitas Previstas) */}
+          {netIncomeCents > 0 && (
+            <div
+              className="relative w-16 h-16 sm:w-20 sm:h-20 shrink-0"
+              aria-label={`Recebido ${incomeProgressPercent}% da renda prevista`}
+              role="progressbar"
+              aria-valuenow={incomeProgressPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  className="text-slate-100 stroke-current"
+                  strokeWidth="10"
+                  fill="transparent"
+                />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  className="text-emerald-500 stroke-current transition-all duration-700 ease-out"
+                  strokeWidth="10"
+                  strokeDasharray="251.32"
+                  strokeDashoffset={incomeRingOffset}
+                  strokeLinecap="round"
+                  fill="transparent"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-sm sm:text-base font-bold text-[#14213D] dark:text-white tabular-nums leading-none">
+                  {incomeProgressPercent}%
+                </span>
+                <span className="text-[8px] text-slate-400 font-medium mt-0.5">da renda</span>
+              </div>
+            </div>
+          )}
 
-          <div className="flex items-baseline gap-2 flex-wrap pt-0.5">
-            <span className="text-xs text-muted-foreground font-medium">
-              Renda Líquida Familiar:
-            </span>
-            <span className="text-xl sm:text-2xl font-semibold text-[#14213D] dark:text-white tracking-tight tabular-nums">
-              {formatBRL(netIncomeCents)}
-            </span>
-            <span className="text-xs text-muted-foreground font-normal">/ mês</span>
+          <div className="space-y-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Receitas Previstas
+              </span>
+              {isOverIncome ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-[#E11D48] border border-rose-200/60">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#E11D48] animate-pulse" />
+                  Tetos acima da renda
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-[#059669] border border-emerald-200/60">
+                  <CheckCircle2 className="w-3 h-3 text-[#059669]" />
+                  Tetos saudáveis
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-baseline gap-2 flex-wrap pt-0.5">
+              <span className="text-xs text-muted-foreground font-medium">Recebido:</span>
+              <span className="text-xl sm:text-2xl font-semibold text-[#14213D] dark:text-white tracking-tight tabular-nums">
+                {formatBRL(monthIncomeCents)}
+              </span>
+              <span className="text-xs text-muted-foreground font-normal">
+                de {formatBRL(netIncomeCents)} previstos
+              </span>
+            </div>
           </div>
         </div>
-
         {/* Botão de ajuste de perfil / renda */}
         <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
