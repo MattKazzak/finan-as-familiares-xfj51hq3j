@@ -227,16 +227,20 @@ export default function Home() {
     // Com RPC: transactions contém SÓ o mês ativo (fetch dedicado no loadData) — alimenta
     // Receitas/Despesas do mês e anel de progresso. Sem RPC (filtro de membro): transações
     // completas do membro, e o mês é filtrado pelas datas abaixo.
+    // IMPORTANTE: quando o RPC alimenta o saldo global, o forEach NÃO pode somar em
+    // incomeTotal/expenseTotal de novo (o mês já está incluído nos totais globais) —
+    // somar 2x dobrava o saldo exibido (bug do -R$ 1.120,00).
     const effectiveTransactions = transactions.filter((tx) => tx.status !== 'projected')
 
     effectiveTransactions.forEach((tx) => {
       const txMonth = tx.transaction_date.slice(0, 7)
+      const isGlobalFromRpc = !!totalsFromRpc
       if (tx.type === 'income') {
-        incomeTotal += tx.amount_cents
+        if (!isGlobalFromRpc) incomeTotal += tx.amount_cents
         if (txMonth === currentMonthStr) mIncome += tx.amount_cents
         if (txMonth === prevMonthStr) prevMIncome += tx.amount_cents
       } else {
-        expenseTotal += tx.amount_cents
+        if (!isGlobalFromRpc) expenseTotal += tx.amount_cents
         if (txMonth === currentMonthStr) mExpense += tx.amount_cents
         if (txMonth === prevMonthStr) prevMExpense += tx.amount_cents
       }
