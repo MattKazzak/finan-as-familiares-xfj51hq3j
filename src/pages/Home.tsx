@@ -186,6 +186,12 @@ export default function Home() {
         ])
 
       if (selectedMemberId) {
+        // FIX (16/10, saldo igual pra todos os membros): ao filtrar por um membro,
+        // os totais GLOBAIS da família (RPC) precisam ser DESCARTADOS — se ficarem
+        // no estado, o useMemo do saldo continua usando o total da família e o
+        // saldo "do membro" saía igual ao da família. O saldo do membro é calculado
+        // localmente sobre as transações dele (dataset pequeno, correto).
+        setTotalsFromRpc(null)
         setTransactions(totalsPromise as Transaction[])
       } else {
         // supabase.rpc() retorna {data, error} — extrair o data (bug do saldo eterno R$ 0,00:
