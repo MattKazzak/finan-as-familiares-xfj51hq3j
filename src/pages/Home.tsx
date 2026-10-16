@@ -96,6 +96,12 @@ export default function Home() {
   const [insights, setInsights] = useState<
     Array<{ severity: 'danger' | 'warning' | 'success' | 'info'; title: string; detail: string }>
   >([])
+  // Evolução do saldo (gap 1 da auditoria 16/10): série diária dos últimos 30 dias
+  // via RPC get_family_balance_series (agregação no servidor, ~1 query). Falha
+  // silenciosa: gráfico é enhancement, nunca bloqueia a Home.
+  const [balanceSeries, setBalanceSeries] = useState<Array<{ day: string; balance_cents: number }>>(
+    [],
+  )
   const [defaultBudgets, setDefaultBudgets] = useState<DefaultBudget[]>([])
   const [monthOverrides, setMonthOverrides] = useState<Budget[]>([])
 
@@ -154,26 +160,35 @@ export default function Home() {
       // PERFORMANCE: totais globais (saldo, receita, despesa desde o início) são
       // agregados no servidor via RPC — sem baixar todas as transações da família.
       // Com filtro de membro ativo, mantém o fetch completo (dataset do membro é pequeno).
-      const [totalsPromise, monthTxRes, defBgs, overrides, insightsRes] = await Promise.all([
-        selectedMemberId
-          ? fetchTransactions({ familyId: family.id, memberId: selectedMemberId })
-          : (supabase as any).rpc('get_family_totals', { p_family_id: family.id }),
-        // Transações do mês ativo: alimenta Receitas/Despesas do mês e o anel de progresso
-        // (o RPC get_family_totals só retorna totais GLOBAIS — sem isso, o card do mês
-        // ficava eternamente em R$ 0,00 quando sem filtro de membro)
-        fetchTransactions({ familyId: family.id, month: currentMonthStr }),
-        fetchDefaultBudgets(family.id),
-        fetchMonthBudgetOverrides(family.id, currentMonthStr),
-        // Insights do Copilot (determinísticos, ~10ms, RLS nativo). Falha silenciosa:
-        // insights são enhancement, nunca bloqueiam a Home.
-        (supabase as any)
-          .rpc('get_family_insights', {
-            p_family_id: family.id,
-            p_month: `${currentMonthStr}-01`,
-          })
-          .then((r: any) => r.data)
-          .catch(() => []),
-      ])
+      const [totalsPromise, monthTxRes, defBgs, overrides, insightsRes, seriesRes] =
+        await Promise.all([
+          selectedMemberId
+            ? fetchTransactions({ familyId: family.id, memberId: selectedMemberId })
+            : (supabase as any).rpc('get_family_totals', { p_family_id: family.id }),
+          // Transações do mês ativo: alimenta Receitas/Despesas do mês e o anel de progresso
+          // (o RPC get_family_totals só retorna totais GLOBAIS — sem isso, o card do mês
+          // ficava eternamente em R$ 0,00 quando sem filtro de membro)
+          fetchTransactions({ familyId: family.id, month: currentMonthStr }),
+          fetchDefaultBudgets(family.id),
+          fetchMonthBudgetOverrides(family.id, currentMonthStr),
+          // Insights do Copilot (determinísticos, ~10ms, RLS nativo). Falha silenciosa:
+          // insights são enhancement, nunca bloqueiam a Home.
+          (supabase as any)
+            .rpc('get_family_insights', {
+              p_family_id: family.id,
+              p_month: `${currentMonthStr}-01`,
+            })
+            .then((r: any) => r.data)
+            .catch(() => []),
+          // Série de saldo dos últimos 30 dias (gráfico de evolução). Sem filtro de
+          // membro (a série é da família consolidada).
+          selectedMemberId
+            ? Promise.resolve([])
+            : (supabase as any)
+                .rpc('get_family_balance_series', { p_family_id: family.id, p_days: 30 })
+                .then((r: any) => r.data || [])
+                .catch(() => []),
+        ])
 
       if (selectedMemberId) {
         setTransactions(totalsPromise as Transaction[])
@@ -189,6 +204,7 @@ export default function Home() {
         setTotalsFromRpc(rpcData)
         setTransactions((monthTxRes as Transaction[]) || [])
         setInsights(Array.isArray(insightsRes) ? insightsRes : [])
+        setBalanceSeries(Array.isArray(seriesRes) ? seriesRes : [])
       }
       setDefaultBudgets(defBgs)
       setMonthOverrides(overrides)
@@ -1072,6 +1088,13 @@ export default function Home() {
             </span>
           </button>
         )}
+        {/* GRÁFICO DE EVOLUÇÃO DO SALDO (gap 1 da auditoria 16/10 — todos os líderes
+            têm linha do saldo no tempo: Maybe, Actual, Copilot, Nubank, Monzo).
+            Sparkline SVG pura (sem lib), 30 dias, sóbria. Falha silenciosa. */}
+        {balanceSeries.length > 1 && (
+          <BalanceTrendCard series={balanceSeries} hideValues={hideValues} />
+        )}
+
         {/* PRIMEIRO CARD CLARO: Sobrepõe o marinho com rounded-3xl generoso e sombra R56 */}
         <div
           data-testid="first-floating-card"
@@ -1497,6 +1520,102 @@ export default function Home() {
         onOpenChange={setIsEditOpen}
         editingTransaction={editingTx}
       />
+    </div>
+  )
+}
+
+/* ============================================================
+   GRÁFICO DE EVOLUÇÃO DO SALDO (auditoria 16/10, gap 1)
+   Sparkline SVG pura — sem dependência. Card branco sóbrio,
+   coerente com o resto da área clara. Mostra valor atual,
+   variação no período e a linha dos últimos 30 dias.
+   ============================================================ */
+function BalanceTrendCard({
+  series,
+  hideValues,
+}: {
+  series: Array<{ day: string; balance_cents: number }>
+  hideValues: boolean
+}) {
+  const W = 320
+  const H = 64
+  const PAD = 4
+
+  const values = series.map((p) => p.balance_cents)
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const range = max - min || 1
+  const first = values[0]
+  const last = values[values.length - 1]
+  const delta = last - first
+  const isUp = delta >= 0
+
+  // Pontos da linha (x: 0..W, y: invertido — maior valor no topo)
+  const points = values.map((v, i) => {
+    const x = series.length > 1 ? (i / (series.length - 1)) * (W - PAD * 2) + PAD : W / 2
+    const y = H - PAD - ((v - min) / range) * (H - PAD * 2)
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  })
+  const linePath = `M ${points.join(' L ')}`
+  const areaPath = `${linePath} L ${(W - PAD).toFixed(1)},${H} L ${PAD},${H} Z`
+
+  // Cor: verde quando subiu, vermelho quando caiu, cinza quando flat
+  const stroke = delta === 0 ? '#94a3b8' : isUp ? '#059669' : '#e11d48'
+
+  // Label do primeiro dia (ex.: "16 set")
+  const firstDay = new Date(series[0].day + 'T12:00:00')
+  const firstLabel = firstDay.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })
+
+  return (
+    <div className="bg-white/95 backdrop-blur-sm rounded-3xl p-5 border border-[rgba(20,33,61,0.06)] shadow-elevation-2">
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="min-w-0">
+          <h3 className="font-semibold text-sm text-[#14213D] leading-tight">Evolução do saldo</h3>
+          <p className="text-[10px] text-slate-400 font-medium">
+            Últimos 30 dias · desde {firstLabel}
+          </p>
+        </div>
+        <span
+          className={`text-xs font-bold tabular-nums px-2 py-1 rounded-full ${
+            delta === 0
+              ? 'bg-slate-100 text-slate-500'
+              : isUp
+                ? 'bg-emerald-50 text-emerald-700'
+                : 'bg-rose-50 text-rose-700'
+          }`}
+        >
+          {hideValues
+            ? isUp
+              ? '↑'
+              : delta === 0
+                ? '→'
+                : '↓'
+            : `${isUp ? '+' : delta === 0 ? '' : '−'}${formatBRL(Math.abs(delta))}`}
+        </span>
+      </div>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="w-full h-16"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <path d={areaPath} fill={stroke} opacity="0.08" />
+        <path
+          d={linePath}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        {/* Ponto final */}
+        <circle
+          cx={W - PAD}
+          cy={H - PAD - ((last - min) / range) * (H - PAD * 2)}
+          r="3"
+          fill={stroke}
+        />
+      </svg>
     </div>
   )
 }
