@@ -8,7 +8,7 @@ import { RecurringIncomesDialog } from '@/components/wallet/RecurringIncomesDial
 import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
 import { VoiceTransactionDialog } from '@/components/transactions/VoiceTransactionDialog'
 import { ImportStatementDialog } from '@/components/transactions/ImportStatementDialog'
-import { WhoIsUsingDialog } from '@/components/common/WhoIsUsingDialog'
+
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
 import { OnboardingWizardDialog } from '@/components/wallet/OnboardingWizardDialog'
 import { InstallPwaBanner } from '@/components/common/InstallPwaBanner'
@@ -28,9 +28,6 @@ export default function Layout() {
     currentMember,
     refreshTrigger,
     triggerRefresh,
-    openWhoIsUsing,
-    isWhoIsUsingOpen,
-    setIsWhoIsUsingOpen,
     isNewTransactionOpen,
     setIsNewTransactionOpen,
     openNewTransaction,
@@ -180,13 +177,14 @@ export default function Layout() {
           })}
         </nav>
 
-        {/* Rodapé do Perfil Desktop */}
+        {/* Rodapé do Perfil Desktop (AFINAÇÃO 16/10: identidade vem do login —
+            o clique vai pro Perfil; nada de "trocar quem está usando") */}
         <div className="p-4 border-t border-white/10 flex items-center justify-between">
           {members.length > 1 ? (
             <button
               type="button"
-              onClick={openWhoIsUsing}
-              title="Trocar quem está usando"
+              onClick={() => navigate('/perfil')}
+              title="Abrir meu perfil"
               className="flex items-center gap-2.5 text-left hover:bg-white/10 p-1.5 rounded-xl transition-colors overflow-hidden flex-1 mr-1 cursor-pointer"
             >
               <Avatar className="w-8 h-8 border border-brand-amber/50 shrink-0">
@@ -254,8 +252,8 @@ export default function Layout() {
             <div className="flex items-center gap-3">
               {members.length > 1 ? (
                 <div
-                  onClick={openWhoIsUsing}
-                  title="Toque para trocar quem está usando"
+                  onClick={() => navigate('/perfil')}
+                  title="Abrir meu perfil"
                   className="flex items-center gap-2 cursor-pointer group bg-brand-gray/40 hover:bg-brand-amber/15 px-2.5 py-1 rounded-full border border-brand-gray transition-all"
                 >
                   <Avatar className="w-7 h-7 border border-brand-amber/60 shadow-sm group-hover:ring-2 group-hover:ring-brand-amber transition-all">
@@ -487,8 +485,9 @@ export default function Layout() {
       {/* DIÁLOGO GLOBAL DE IMPORTAÇÃO DE EXTRATO */}
       <ImportStatementDialog open={isImportStatementOpen} onOpenChange={setIsImportStatementOpen} />
 
-      {/* DIÁLOGO GLOBAL QUEM ESTÁ USANDO */}
-      <WhoIsUsingDialog open={isWhoIsUsingOpen} onOpenChange={setIsWhoIsUsingOpen} />
+      {/* AFINAÇÃO 16/10: diálogo "Quem está usando" removido — a identidade é o
+          login (family_members.user_id === auth.uid). O filtro de membros continua
+          nos chips da Home como visualização. */}
 
       {/* DIÁLOGO GLOBAL DE ONBOARDING AUTOMÁTICO (OnboardingWizardDialog: Renda Mensal Familiar -> Seu Orçamento em 3 Caixas) */}
       <OnboardingWizardDialog
@@ -500,12 +499,8 @@ export default function Layout() {
         }}
         family={family}
         onSuccess={async () => {
-          // Se a família possui apenas 1 membro, garante que ele esteja imediatamente
-          // definido como membro ativo no localStorage e fecha qualquer diálogo "Quem está usando?"
-          if (members.length === 1) {
-            localStorage.setItem('financas_familiares_active_member_id', members[0].id)
-            setIsWhoIsUsingOpen(false)
-          }
+          // AFINAÇÃO 16/10: identidade vem do login — sem localStorage legado
+          // nem diálogo "Quem está usando?".
           await reloadFamily()
           triggerRefresh()
         }}

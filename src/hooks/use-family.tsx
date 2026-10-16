@@ -223,24 +223,22 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     }
   })
 
-  const setActiveMemberId = useCallback((id: string) => {
-    setActiveMemberIdState(id)
+  // AFINAÇÃO 16/10: sem identidade por localStorage — o login define quem está
+  // usando. Mantido como no-op por retrocompatibilidade (joinFamilyWithCode etc.).
+  const setActiveMemberId = useCallback((_id: string) => {
     try {
-      localStorage.setItem('financas_familiares_active_member_id', id)
+      localStorage.removeItem('financas_familiares_active_member_id')
     } catch {
-      // Ignora erro de local storage desativado
+      // Ignora
     }
   }, [])
 
+  // AFINAÇÃO 16/10: o diálogo "Quem está usando?" foi aposentado — a identidade
+  // é o login (family_members.user_id === auth.uid). Mantido como no-op por
+  // retrocompatibilidade de interface (nenhum chamador deve restar).
   const openWhoIsUsing = useCallback(() => {
-    // Diálogo só deve abrir quando a família tiver 2 ou mais membros
-    if (members.length > 1) {
-      setIsWhoIsUsingOpen(true)
-    } else if (members.length === 1) {
-      setActiveMemberId(members[0].id)
-      setIsWhoIsUsingOpen(false)
-    }
-  }, [members, setActiveMemberId])
+    setIsWhoIsUsingOpen(false)
+  }, [])
 
   const triggerRefresh = useCallback(() => {
     setRefreshTrigger((prev) => prev + 1)
