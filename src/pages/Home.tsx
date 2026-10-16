@@ -1037,47 +1037,40 @@ export default function Home() {
 
       {/* 2. ÁREA CLARA (#F8F9FB) COM CARDS FLUTUANTES SOBREPONDO O FUNDO MARINHO */}
       <div className="relative -mt-6 sm:-mt-8 px-4 sm:px-6 pb-12 max-w-5xl mx-auto space-y-6">
-        {/* INSIGHTS DO COPILOT (diferencial estilo Pierre): "o que merece sua atenção" —
-            gerados deterministicamente pela RPC get_family_insights (sem custo IA).
-            Só renderiza quando há insight; nunca card vazio. */}
+        {/* INSIGHTS DO COPILOT (estilo Pierre, versão sóbria — auditoria 16/10): a
+            inteligência deve ser QUIETA — sem emoji, sem fundo colorido. Ponto colorido
+            discreto por severidade + texto sóbrio. Máx. 1 insight por vez (o mais
+            relevante — a RPC já ordena danger > warning > success > info). */}
         {insights.length > 0 && (
-          <div className="space-y-2.5 -mt-2 sm:-mt-3">
-            {insights.map((ins, idx) => {
-              const styles = {
-                danger: 'bg-rose-50/95 border-rose-200/70 text-rose-900',
-                warning: 'bg-amber-50/95 border-amber-200/70 text-amber-900',
-                success: 'bg-emerald-50/95 border-emerald-200/70 text-emerald-900',
-                info: 'bg-slate-50/95 border-slate-200/70 text-slate-700',
-              }[ins.severity]
-              const icon = {
-                danger: '🚨',
-                warning: '⚠️',
-                success: '🎉',
-                info: '💡',
-              }[ins.severity]
-              return (
-                <button
-                  key={`${ins.title}-${idx}`}
-                  type="button"
-                  onClick={() => navigate('/copilot')}
-                  className={`w-full text-left flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-sm transition-all active:scale-[0.98] ${styles}`}
-                >
-                  <span className="text-base leading-none mt-0.5 shrink-0" aria-hidden="true">
-                    {icon}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-xs font-bold leading-tight">{ins.title}</span>
-                    <span className="block text-[11px] leading-snug mt-0.5 opacity-90">
-                      {ins.detail}
-                    </span>
-                  </span>
-                  <span className="text-[10px] font-semibold opacity-60 shrink-0 mt-0.5">
-                    Copilot ›
-                  </span>
-                </button>
-              )
-            })}
-          </div>
+          <button
+            key={`${insights[0].title}-0`}
+            type="button"
+            onClick={() => navigate('/copilot')}
+            className="w-full text-left flex items-start gap-3 rounded-2xl border border-[rgba(20,33,61,0.08)] bg-white/95 px-4 py-3 shadow-sm transition-all active:scale-[0.98]"
+          >
+            <span
+              aria-hidden="true"
+              className={`mt-[7px] w-2 h-2 rounded-full shrink-0 ${
+                {
+                  danger: 'bg-rose-500',
+                  warning: 'bg-amber-500',
+                  success: 'bg-emerald-500',
+                  info: 'bg-slate-400',
+                }[insights[0].severity]
+              }`}
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs font-semibold text-[#14213D] leading-tight">
+                {insights[0].title}
+              </span>
+              <span className="block text-[11px] leading-snug mt-0.5 text-slate-500">
+                {insights[0].detail}
+              </span>
+            </span>
+            <span className="text-[10px] font-semibold text-slate-400 shrink-0 mt-0.5">
+              Copilot ›
+            </span>
+          </button>
         )}
         {/* PRIMEIRO CARD CLARO: Sobrepõe o marinho com rounded-3xl generoso e sombra R56 */}
         <div
