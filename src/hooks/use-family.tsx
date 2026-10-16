@@ -282,31 +282,22 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     reloadFamily()
   }, [reloadFamily])
 
-  // Regra de produto: "Quem está usando?" só aparece com 2 ou mais membros.
-  // Com exatamente 1 membro, seleciona-o automaticamente e NUNCA abre o diálogo.
+  // AFINAÇÃO MEMBROS (16/10, decisão com o Matheus): quem está usando o app É quem
+  // está LOGADO — o login define a identidade, não uma pergunta no aparelho.
+  // O antigo diálogo "Quem está usando?" (era single-login de família) foi removido
+  // do fluxo: cada membro tem login próprio e family_members.user_id vincula
+  // membro ↔ conta. O FILTRO de chips na Home (Todos/Matheus/Karine) continua —
+  // ver os dados de cada um é feature de app familiar, não identidade.
   useEffect(() => {
     if (loading || members.length === 0) return
-
-    const stored = localStorage.getItem('financas_familiares_active_member_id')
-    const hasValidStored = stored && members.some((m) => m.id === stored)
-
-    if (members.length === 1) {
-      const singleMemberId = members[0].id
-      if (stored !== singleMemberId) {
-        setActiveMemberId(singleMemberId)
-      }
-      setIsWhoIsUsingOpen(false)
-      return
+    // Limpa o legado do single-login: o localStorage não define mais identidade.
+    try {
+      localStorage.removeItem('financas_familiares_active_member_id')
+    } catch {
+      // Ignora
     }
-
-    // Com 2 ou mais membros: se não há seleção válida salva, abre o diálogo para escolha
-    // de perfil no dispositivo. CORREÇÃO UX: exige APENAS que o onboarding tenha terminado
-    // (família não-incompleta) — antes exigia renda cadastrada, e famílias 2+ membros sem
-    // renda ficavam sem saber quem estava usando logo no primeiro acesso.
-    if (!hasValidStored && !completeness?.isIncomplete) {
-      setIsWhoIsUsingOpen(true)
-    }
-  }, [loading, members, completeness?.isIncomplete, setActiveMemberId])
+    setIsWhoIsUsingOpen(false)
+  }, [loading, members])
 
   // Iniciar automaticamente o fluxo de Onboarding (OnboardingWizardDialog)
   // BLINDAGEM DE ROTEAMENTO (R50):
@@ -646,10 +637,11 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     setIsVoiceDialogOpen(true)
   }, [])
 
-  // Se o activeMemberId apontar para um membro existente, ele é o currentMember do dispositivo;
-  // senão faz fallback para o admin ou primeiro membro
+  // AFINAÇÃO MEMBROS (16/10): o currentMember É o usuário LOGADO (member.user_id
+  // === auth user.id). Fallback para admin/members[0] cobre membros antigos sem
+  // login vinculado (legado). O localStorage não define mais identidade.
   const currentMember =
-    (activeMemberId ? members.find((m) => m.id === activeMemberId) : null) ||
+    (user?.id ? members.find((m) => (m as any).user_id === user.id) : null) ||
     members.find((m) => m.is_admin) ||
     members[0] ||
     null

@@ -62,7 +62,6 @@ export default function Home() {
     categories,
     completeness,
     currentMember,
-    openWhoIsUsing,
     selectedMemberId,
     setSelectedMemberId,
     openNewTransaction,
@@ -629,14 +628,16 @@ export default function Home() {
             data-testid="header-greeting-row"
             className="flex items-center justify-between gap-2 sm:gap-3 min-w-0"
           >
-            {/* Lado Esquerdo: Avatar + Saudação + Família */}
+            {/* Lado Esquerdo: Avatar + Saudação + Família (AFINAÇÃO 16/10: o avatar
+                navega pro Perfil — a identidade vem do login, não de uma pergunta.
+                O filtro de membros vive nos chips logo abaixo.) */}
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
               <button
                 type="button"
-                onClick={openWhoIsUsing}
+                onClick={() => navigate('/perfil')}
                 className="relative shrink-0 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311] rounded-2xl active:scale-95 transition-transform cursor-pointer"
-                aria-label="Trocar membro ativo ou abrir perfil"
-                title={members.length > 1 ? 'Trocar perfil / membro' : 'Perfil do membro'}
+                aria-label="Abrir meu perfil"
+                title="Meu perfil"
               >
                 <Avatar className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl border-2 border-white/20 shadow-sm transition-all group-hover:border-[#FCA311] overflow-hidden">
                   {family?.avatar_url && (
@@ -650,16 +651,7 @@ export default function Home() {
                     {memberInitial}
                   </AvatarFallback>
                 </Avatar>
-                {members.length > 1 && (
-                  <span
-                    className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-[#FCA311] text-[#14213D] text-[8px] font-semibold rounded-full flex items-center justify-center border-2 border-[#14213D] shadow-2xs"
-                    title="Mais membros disponíveis"
-                  >
-                    ▾
-                  </span>
-                )}
               </button>
-
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <h1
