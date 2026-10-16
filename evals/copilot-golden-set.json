@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Golden set de evals do Curiangoo Copilot — 40 casos cobrindo as 9 classes do router. Rodar: node evals/run-copilot-evals.mjs (requer SUPABASE_URL, SUPABASE_ANON_KEY, TEST_EMAIL, TEST_PASSWORD). Cada caso roda em conversa nova; turns são encadeados com contexto_anterior.",
+  "description": "Golden set de evals do Curiangoo Copilot — 42 casos cobrindo as 9 classes do router (c41/c42 derivados de bug real 16/10). Rodar: node evals/run-copilot-evals.mjs (requer SUPABASE_URL, SUPABASE_ANON_KEY, TEST_EMAIL, TEST_PASSWORD). Cada caso roda em conversa nova; turns são encadeados com contexto_anterior.",
   "cases": [
     {
       "id": "c01",
@@ -164,6 +164,25 @@
           "expect": { "status": "falta_valor_ou_clarificacao" }
         }
       ]
+    },
+    {
+      "id": "c41",
+      "nome": "Pós-gravação: correção de categoria NÃO re-grava (bug real 16/10 — triplicação R$300)",
+      "turns": [
+        {
+          "text": "leite, ovos, trigo e óleo, 300 reais no supermercado",
+          "expect": { "status": "sucesso", "classe": "1_ou_4" }
+        },
+        {
+          "text": "mas foi no supermercado, não é pra lançar de novo",
+          "expect": { "status": "falta_valor_ou_clarificacao" }
+        }
+      ]
+    },
+    {
+      "id": "c42",
+      "nome": "Data/hora é consulta in-scope (bug real 16/10 — 'Prefiro não opinar')",
+      "turns": [{ "text": "que dia é hoje?", "expect": { "status": "consulta" } }]
     },
     {
       "id": "c19",
