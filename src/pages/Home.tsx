@@ -236,16 +236,17 @@ export default function Home() {
           }) || {}
         if (rpcError) throw rpcError
         setTotalsFromRpc(rpcData)
-        // Mês passado: saldo histórico (até o fim do mês ativo) substitui o global
+        // Mês passado: saldo histórico (até o fim do mês ativo) substitui o global.
+        // RPC RETURNS TABLE retorna ARRAY no supabase-js — pegar a 1ª linha.
+        const histRow = Array.isArray(historicalRes) ? historicalRes[0] : historicalRes
         setHistoricalTotals(
-          historicalRes && typeof historicalRes === 'object'
+          histRow && typeof histRow === 'object'
             ? {
-                total_income_cents: Number(historicalRes.total_income_cents) || 0,
-                total_expense_cents: Number(historicalRes.total_expense_cents) || 0,
+                total_income_cents: Number(histRow.total_income_cents) || 0,
+                total_expense_cents: Number(histRow.total_expense_cents) || 0,
               }
             : null,
-        )
-        setTransactions((monthTxRes as Transaction[]) || [])
+        )        setTransactions((monthTxRes as Transaction[]) || [])
         setInsights(Array.isArray(insightsRes) ? insightsRes : [])
         setBalanceSeries(Array.isArray(seriesRes) ? seriesRes : [])
       }
