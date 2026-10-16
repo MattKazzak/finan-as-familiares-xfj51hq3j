@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Share, Download, X, Check, Smartphone, HelpCircle } from 'lucide-react'
 import { usePwaInstall } from '@/hooks/use-pwa-install'
 import { Button } from '@/components/ui/button'
