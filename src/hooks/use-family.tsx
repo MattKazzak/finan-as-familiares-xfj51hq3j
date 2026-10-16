@@ -613,8 +613,9 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         setEditingRecurringRule(null)
       }
     } else {
-      // Se não passar tipo explícito, o padrão de criação é 'income' (Receita)
-      const targetType: 'income' | 'expense' = typeOrPrefill === 'expense' ? 'expense' : 'income'
+      // P2 (auditoria 16/10): padrão de criação é 'expense' (Despesa) — 80%+ dos
+      // lançamentos do dia a dia são despesas; Receita fica a 1 toque de distância.
+      const targetType: 'income' | 'expense' = typeOrPrefill === 'income' ? 'income' : 'expense'
       setNewTransactionDefaultType(targetType)
       setNewTransactionPrefill(null)
       setEditingRecurringRule(null)
