@@ -1092,27 +1092,28 @@ export default function Home() {
                 : 'Toque e converse com seu Copilot sobre as finanças da família'}
             </span>
           </span>
-          {/* Pássaro inteiro (olho azul + brilho) com sparkle pulsante no topo —
-      presença viva que convida ao toque sem carnaval. */}
+          {/* Pássaro inteiro (olho azul + brilho) com sparkle pulsante no topo +
+              seta › (affordance universal de navegação, mesmo padrão das linhas
+              do Perfil — o '+' aqui conflitaria com Nova Transação). */}
           <span className="shrink-0 self-center ml-1 relative" aria-hidden="true">
             <CuriangoLogo
-              size={34}
+              size={40}
               color="#FCA311"
               eyeColor="#14213D"
               eyeRadius={3.4}
               eyeHighlight
               className="animate-copilot-bird"
             />
-            <span className="absolute -top-1 -right-0.5 w-2 h-2 animate-copilot-sparkle" />
+            <span className="absolute -top-1 -right-1 w-2 h-2 animate-copilot-sparkle" />
           </span>
-        </button>
+          <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 self-center" />
+        </button>{' '}
         {/* GRÁFICO DE EVOLUÇÃO DO SALDO (gap 1 da auditoria 16/10 — todos os líderes
             têm linha do saldo no tempo: Maybe, Actual, Copilot, Nubank, Monzo).
             Sparkline SVG pura (sem lib), 30 dias, sóbria. Falha silenciosa. */}
         {balanceSeries.length > 1 && (
           <BalanceTrendCard series={balanceSeries} hideValues={hideValues} />
         )}
-
         {/* PRIMEIRO CARD CLARO: Sobrepõe o marinho com rounded-3xl generoso e sombra R56 */}
         <div
           data-testid="first-floating-card"
@@ -1256,7 +1257,6 @@ export default function Home() {
             </p>
           </div>
         </div>
-
         {/* 3. NOVO CARD: GRÁFICO DE BARRAS POR CATEGORIA (R58 Tarefa 4) */}
         <div
           data-testid="category-expenses-card"
@@ -1351,7 +1351,6 @@ export default function Home() {
             </div>
           )}
         </div>
-
         {/* 4. SEÇÃO ÚLTIMAS TRANSAÇÕES */}
         <div className="bg-white/95 backdrop-blur-sm rounded-3xl border border-[rgba(20,33,61,0.06)] p-5 sm:p-7 shadow-elevation-1">
           <div className="flex items-center justify-between mb-4 gap-2">
