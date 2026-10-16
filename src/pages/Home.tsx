@@ -74,11 +74,16 @@ export default function Home() {
   const { hideValues, toggleHideValues, maskValue } = useValuePrivacy()
 
   const [loading, setLoading] = useState(true)
-  // BLINDAGEM R50 (alinhada ao use-family): a Home NÃO reabre o onboarding sozinha.
-  // O auto-open do onboarding é responsabilidade exclusiva do use-family (que checa
-  // transações no banco antes de abrir). Aqui, critério hardcoded (categorias !== 19,
-  // renda zero) reabria o modal mesmo após a conclusão — bug do modal fantasma 16/10.
-  // A família em uso real NUNCA vê o wizard de novo; abertura manual fica no Perfil.
+  // BLINDAGEM R50 (alinhada ao use-family): a Home NÃO REABRE o onboarding sozinha
+  // (o auto-open é responsabilidade exclusiva do use-family, que checa transações no
+  // banco antes de abrir). Aqui, isFamilyIncomplete só controla a TELA DE FALLBACK
+  // local: critério alinhado ao use-family (catálogo vazio OU sem regras de IA), SEM
+  // contagens hardcoded — o antigo "categorias !== 19" marcava famílias com subcategorias
+  // custom como incompletas e reabria o wizard concluído (bug do modal fantasma 16/10).
+  const isFamilyIncomplete = useMemo(() => {
+    if (!family) return false
+    return completeness?.isIncomplete ?? false
+  }, [family, completeness])
 
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [totalsFromRpc, setTotalsFromRpc] = useState<{
