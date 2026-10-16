@@ -101,9 +101,16 @@ export default function Home() {
   const [balanceSeries, setBalanceSeries] = useState<Array<{ day: string; balance_cents: number }>>(
     [],
   )
+  // BUG "valores fantasmas" (17/10): ao navegar pra um mês passado, o card do saldo
+  // mostrava o saldo GLOBAL de hoje (constante em qualquer mês). Agora: saldo
+  // acumulado ATÉ O FIM do mês ativo (RPC get_family_balance_until). Null = mês
+  // atual (usa a RPC global normal).
+  const [historicalTotals, setHistoricalTotals] = useState<{
+    total_income_cents: number
+    total_expense_cents: number
+  } | null>(null)
   const [defaultBudgets, setDefaultBudgets] = useState<DefaultBudget[]>([])
   const [monthOverrides, setMonthOverrides] = useState<Budget[]>([])
-
   // Diálogo de detalhe e edição
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
@@ -143,6 +150,17 @@ export default function Home() {
 
   const currentMonthStr = activeMonth
 
+  // BUG "valores fantasmas" (17/10): mês do SISTEMA (hoje) e último dia do mês ATIVO.
+  // Quando o mês ativo é passado, o saldo vem da RPC get_family_balance_until (acumulado
+  // até o fim daquele mês) em vez do saldo global de hoje.
+  const now = new Date()
+  const systemMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const endOfMonthStr = `${activeMonth}-${new Date(
+    activeDate.getFullYear(),
+    activeDate.getMonth() + 1,
+    0,
+  ).getDate()}`
+
   const loadData = useCallback(async () => {
     if (!family) return
     try {
@@ -159,7 +177,7 @@ export default function Home() {
       // PERFORMANCE: totais globais (saldo, receita, despesa desde o início) são
       // agregados no servidor via RPC — sem baixar todas as transações da família.
       // Com filtro de membro ativo, mantém o fetch completo (dataset do membro é pequeno).
-      const [totalsPromise, monthTxRes, defBgs, overrides, insightsRes, seriesRes] =
+      const [totalsPromise, monthTxRes, defBgs, overrides, insightsRes, seriesRes, historicalRes] =
         await Promise.all([
           selectedMemberId
             ? fetchTransactions({ familyId: family.id, memberId: selectedMemberId })
@@ -187,8 +205,18 @@ export default function Home() {
                 .rpc('get_family_balance_series', { p_family_id: family.id, p_days: 30 })
                 .then((r: any) => r.data || [])
                 .catch(() => []),
+          // BUG "valores fantasmas" (17/10): mês passado → saldo acumulado até o fim
+          // desse mês (RPC nova). Mês atual → null (usa a RPC global normal).
+          currentMonthStr === systemMonthStr
+            ? Promise.resolve(null)
+            : (supabase as any)
+                .rpc('get_family_balance_until', {
+                  p_family_id: family.id,
+                  p_until_date: endOfMonthStr,
+                })
+                .then((r: any) => r.data)
+                .catch(() => null),
         ])
-
       if (selectedMemberId) {
         // FIX (16/10, saldo igual pra todos os membros): ao filtrar por um membro,
         // os totais GLOBAIS da família (RPC) precisam ser DESCARTADOS — se ficarem
@@ -196,6 +224,7 @@ export default function Home() {
         // saldo "do membro" saía igual ao da família. O saldo do membro é calculado
         // localmente sobre as transações dele (dataset pequeno, correto).
         setTotalsFromRpc(null)
+        setHistoricalTotals(null)
         setTransactions(totalsPromise as Transaction[])
       } else {
         // supabase.rpc() retorna {data, error} — extrair o data (bug do saldo eterno R$ 0,00:
@@ -207,6 +236,15 @@ export default function Home() {
           }) || {}
         if (rpcError) throw rpcError
         setTotalsFromRpc(rpcData)
+        // Mês passado: saldo histórico (até o fim do mês ativo) substitui o global
+        setHistoricalTotals(
+          historicalRes && typeof historicalRes === 'object'
+            ? {
+                total_income_cents: Number(historicalRes.total_income_cents) || 0,
+                total_expense_cents: Number(historicalRes.total_expense_cents) || 0,
+              }
+            : null,
+        )
         setTransactions((monthTxRes as Transaction[]) || [])
         setInsights(Array.isArray(insightsRes) ? insightsRes : [])
         setBalanceSeries(Array.isArray(seriesRes) ? seriesRes : [])
@@ -242,12 +280,14 @@ export default function Home() {
     let mExpense = 0
 
     // Sem filtro de membro: totais globais vêm da RPC (agregação no servidor).
+    // Mês passado (bug dos "valores fantasmas"): usa o saldo ACUMULADO até o fim
+    // do mês ativo (historicalTotals) em vez do global de hoje.
     // Com filtro: calcula localmente sobre as transações do membro.
-    if (totalsFromRpc) {
-      incomeTotal = Number(totalsFromRpc.total_income_cents) || 0
-      expenseTotal = Number(totalsFromRpc.total_expense_cents) || 0
+    const rpcSource = historicalTotals ?? totalsFromRpc
+    if (rpcSource) {
+      incomeTotal = Number(rpcSource.total_income_cents) || 0
+      expenseTotal = Number(rpcSource.total_expense_cents) || 0
     }
-
     // Com RPC: transactions contém SÓ o mês ativo (fetch dedicado no loadData) — alimenta
     // Receitas/Despesas do mês e anel de progresso. Sem RPC (filtro de membro): transações
     // completas do membro, e o mês é filtrado pelas datas abaixo.
@@ -273,7 +313,7 @@ export default function Home() {
       monthIncomeCents: mIncome,
       monthExpenseCents: mExpense,
     }
-  }, [transactions, totalsFromRpc, currentMonthStr, activeDate])
+  }, [transactions, totalsFromRpc, historicalTotals, currentMonthStr, activeDate])
 
   // Mapa de baldes para categorias
   const categoryBucketMap = useMemo(() => {
@@ -869,7 +909,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => navigate('/copilot')}
-            className={`w-full text-left flex items-start gap-3 rounded-2xl border border-[rgba(20,33,61,0.08)] bg-wh
+            className={`w-full text-left flex items-start gap-3 rounded-2xl border border-[rgba(20,33,61,0.08)] bg-white/95 px-4 py-3.5 shadow-sm transition-all active:scale-[0.98] border-l-[3px] ${
               insights.length > 0
                 ? {
                     danger: 'border-l-rose-400',

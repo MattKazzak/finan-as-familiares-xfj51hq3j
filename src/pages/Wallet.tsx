@@ -74,6 +74,9 @@ export function WalletPage() {
     reorderSubcategoriesList,
     openNewTransaction,
     openImportStatement,
+    // Identidade do chip da Home (Todos/Matheus/Karine): a Carteira HERDA esse filtro
+    // — o Matheus espera que "selecionei só o meu nome" valha em todo o app (bug 17/10).
+    selectedMemberId,
   } = useFamily()
   const { toast } = useToast()
 
@@ -330,6 +333,10 @@ export function WalletPage() {
   const filteredTransactions = useMemo(() => {
     return transactions.filter((tx) => {
       if (filterOnlyPending && tx.category_id) return false
+      // Filtro herdado do chip da Home (selectedMemberId): quando um membro está
+      // selecionado na Home, a Carteira mostra só as transações dele. Transações
+      // sem member_id (legado) aparecem em "Todos" apenas.
+      if (selectedMemberId && tx.member_id !== selectedMemberId) return false
       if (
         filterMemberIds.length > 0 &&
         (!tx.member_id || !filterMemberIds.includes(tx.member_id))
@@ -358,6 +365,7 @@ export function WalletPage() {
     filterCategoryIds,
     filterSubcategoryIds,
     filterType,
+    selectedMemberId,
   ])
 
   // Agrupamento de parcelas e por dia
@@ -405,11 +413,22 @@ export function WalletPage() {
     return map
   }, [pendingTransactionsList])
 
-  // Totais do Mês — preservados do mês inteiro via agregação leve
-  const monthIncomeCents = monthAggregates.incomeCents
-  const monthExpenseCents = monthAggregates.expenseCents
-  const monthNetCents = monthAggregates.netCents
-
+  // Totais do Mês — preservados do mês inteiro via agregação leve.
+  // Com chip de membro ativo (bug 17/10): derivar dos filteredTransactions
+  // (que respeitam o chip) em vez da RPC global da família.
+  const memberTotals = useMemo(() => {
+    if (!selectedMemberId) return null
+    let income = 0
+    let expense = 0
+    for (const tx of filteredTransactions) {
+      if (tx.type === 'income') income += tx.amount_cents
+      else expense += tx.amount_cents
+    }
+    return { income, expense, net: income - expense }
+  }, [filteredTransactions, selectedMemberId])
+  const monthIncomeCents = memberTotals ? memberTotals.income : monthAggregates.incomeCents
+  const monthExpenseCents = memberTotals ? memberTotals.expense : monthAggregates.expenseCents
+  const monthNetCents = memberTotals ? memberTotals.net : monthAggregates.netCents
   const activeFiltersCount =
     (filterOnlyPending ? 1 : 0) +
     filterMemberIds.length +
