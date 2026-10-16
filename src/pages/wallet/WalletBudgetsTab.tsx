@@ -11,8 +11,16 @@ import {
   Tag,
   MoreVertical,
   Target,
+  Scale,
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Loader2 } from 'lucide-react'
+import {
+  fetchFamilySettlement,
+  buildSettlementSummary,
+  type SettlementRow,
+} from '@/services/splits'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -79,6 +87,31 @@ export function WalletBudgetsTab() {
   } = useWallet()
 
   const { toast } = useToast()
+
+  // Acerto de contas do mês (migrado do Perfil em 16/10): carrega com o mês ativo
+  const [settlementRows, setSettlementRows] = useState<SettlementRow[]>([])
+  const [settlementLoading, setSettlementLoading] = useState(false)
+  const [settlementError, setSettlementError] = useState<string | null>(null)
+  useEffect(() => {
+    let isSubscribed = true
+    const loadSettlement = async () => {
+      if (!family) return
+      try {
+        setSettlementLoading(true)
+        setSettlementError(null)
+        const rows = await fetchFamilySettlement(family.id, monthKey)
+        if (isSubscribed) setSettlementRows(rows)
+      } catch {
+        if (isSubscribed) setSettlementError('Não foi possível carregar o acerto de contas.')
+      } finally {
+        if (isSubscribed) setSettlementLoading(false)
+      }
+    }
+    loadSettlement()
+    return () => {
+      isSubscribed = false
+    }
+  }, [family, monthKey])
 
   return (
     <div className="space-y-6 sm:space-y-7 mt-0 animate-in fade-in-50 duration-200 min-w-0">
@@ -157,7 +190,6 @@ export function WalletBudgetsTab() {
           </Button>
         </div>
       )}
-
       {/* PAINEL FLUÍDO E ORGÂNICO DOS 3 BALDES, RENDA LÍQUIDA E FAROL PREVENTIVO */}
       {family?.monthly_net_income_cents && family.monthly_net_income_cents > 0 ? (
         <BudgetOverviewCard
@@ -173,7 +205,6 @@ export function WalletBudgetsTab() {
           monthIncomeCents={monthIncomeCents}
         />
       ) : null}
-
       {/* Card Geral de Orçamento Recorrente / Projeção */}
       {(() => {
         const now = new Date()
@@ -261,7 +292,6 @@ export function WalletBudgetsTab() {
           </div>
         )
       })()}
-
       {/* FAROL & ALERTAS PREVENTIVOS — Posicionado logo abaixo do card de orçamento e acima da lista de categorias */}
       <BudgetAlertsFarol
         family={family}
@@ -274,7 +304,6 @@ export function WalletBudgetsTab() {
         onOpenCategoryEditor={(cat) => setActiveAlertEditCategory(cat)}
         onOpenModelDialog={() => setIsApplyModelOpen(true)}
       />
-
       {/* Lista de Orçamentos com Hierarquia Categoria Pai -> Subcategorias e Gestão Inline com Ícones */}
       <div className="bg-white/95 backdrop-blur-sm rounded-3xl border border-[rgba(20,33,61,0.06)] p-6 sm:p-7 shadow-elevation-1 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -1307,8 +1336,75 @@ export function WalletBudgetsTab() {
           </div>
         </div>
       </div>
-
-      {/* Editor de categoria controlado aberto via clique em item de alerta do Farol */}
+      {/* ACERTO DE CONTAS DO MÊS (migrado do Perfil em 16/10 — auditoria de arquitetura:
+         rateio é operação do dia a dia, pertence à Carteira junto do orçamento) */}
+      {family && (
+        <div
+          className="bg-white/95 backdrop-blur-sm rounded-3xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 p-5 sm:p-6"
+          aria-label="Acerto de contas do mês"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
+              <Scale className="w-4 h-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-slate-900">Acerto de contas do mês</p>
+              <p className="text-[11px] text-slate-500">
+                Quem pagou mais do que consumiu nas despesas divididas
+              </p>
+            </div>
+          </div>
+          {settlementLoading ? (
+            <div className="py-3 flex items-center justify-center gap-2 text-xs text-slate-500">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Calculando...
+            </div>
+          ) : settlementError ? (
+            <p className="mt-2 text-xs text-rose-700">{settlementError}</p>
+          ) : (
+            <div className="mt-2 space-y-1.5">
+              {buildSettlementSummary([...settlementRows]).map((msg, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-2 py-1.5 px-3 rounded-xl bg-slate-50 text-xs text-slate-700"
+                >
+                  <Scale className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  <span>{msg}</span>
+                </div>
+              ))}
+              {settlementRows.length > 0 && (
+                <details className="pt-0.5">
+                  <summary className="text-[11px] font-semibold text-slate-500 cursor-pointer hover:text-slate-700">
+                    Ver detalhes por membro
+                  </summary>
+                  <div className="mt-2 space-y-1.5">
+                    {settlementRows.map((r) => (
+                      <div
+                        key={r.member_id}
+                        className="flex items-center justify-between gap-2 py-1.5 px-3 rounded-lg bg-slate-50/70"
+                      >
+                        <span className="font-semibold text-slate-700 truncate">
+                          {r.member_name}
+                        </span>
+                        <span className="text-slate-500 shrink-0">
+                          pagou {formatBRL(r.paid_cents)} · consumiu {formatBRL(r.consumed_cents)}{' '}
+                          <strong
+                            className={r.balance_cents >= 0 ? 'text-emerald-700' : 'text-rose-700'}
+                          >
+                            ({r.balance_cents >= 0 ? '+' : ''}
+                            {formatBRL(r.balance_cents)})
+                          </strong>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+      {/* Editor de categoria controlado aberto via clique em item de alerta do Farol */}{' '}
       {mountedAlertEditCategory &&
         (() => {
           const item = categoryBudgetData.list.find(
@@ -1408,7 +1504,6 @@ export function WalletBudgetsTab() {
             />
           )
         })()}
-
       {/* Editor de categoria aberto a partir do menu mobile (⋯) */}
       {mountedCategoryFromMenu &&
         (() => {
@@ -1511,7 +1606,6 @@ export function WalletBudgetsTab() {
             />
           )
         })()}
-
       {/* Editor de nova subcategoria aberto a partir do menu mobile (⋯) */}
       {mountedAddingSubcatCategory && (
         <SubcategoryEditorPopover

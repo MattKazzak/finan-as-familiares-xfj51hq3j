@@ -11,12 +11,8 @@ import {
   fetchUserIncompleteFamilies,
   deleteFamilyWorkspaceManually,
 } from '@/services/family'
-import {
-  fetchFamilySettlement,
-  buildSettlementSummary,
-  type SettlementRow,
-} from '@/services/splits'
-import { Scale, CreditCard, ExternalLink, ChevronRight } from 'lucide-react'
+// Auditoria 16/10: imports do settlement removidos (migraram pra Carteira/Orçamentos)
+import { CreditCard, ExternalLink, ChevronRight } from 'lucide-react'
 import {
   fetchMySubscription,
   requestCancelSubscription,
@@ -56,18 +52,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import {
-  formatBRL,
-  formatFamilyDisplayName,
-  formatNumberBRL,
-  parseBRLToCents,
-  normalizeFamilyName,
-} from '@/lib/formatters'
+import { formatBRL, formatFamilyDisplayName, normalizeFamilyName } from '@/lib/formatters'
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
 import { InstallInstructionsModal } from '@/components/common/InstallInstructionsModal'
 import { CategoryManagementDialog } from '@/components/categories/CategoryManagementDialog'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
-import { Sparkles, Landmark, AlertCircle } from 'lucide-react'
+import { Sparkles, AlertCircle } from 'lucide-react'
 import packageJson from '../../package.json'
 import {
   Dialog,
@@ -108,7 +98,14 @@ export default function ProfilePage() {
   } = useFamily()
   const { toast } = useToast()
   const navigate = useNavigate()
-  const { isStandalone, isIos, hasNativePrompt, deferredPrompt, triggerInstall } = usePwaInstall()
+  const {
+    isStandalone,
+    isIos,
+    hasNativePrompt,
+    deferredPrompt,
+    triggerInstall,
+    isDismissed: isPwaBannerDismissed,
+  } = usePwaInstall()
 
   // Estado do modal de instruções PWA (iOS / Outros sem prompt nativo)
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false)
@@ -267,9 +264,8 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   // Renda Líquida Mensal da Família
-  const [isEditingIncome, setIsEditingIncome] = useState(false)
-  const [incomeInputStr, setIncomeInputStr] = useState('')
-  const [savingIncome, setSavingIncome] = useState(false)
+  // Auditoria 16/10: estados da renda líquida removidos junto do bloco duplicado
+  // (a renda agora vive só na aba Orçamentos)
   const [isApplyModelOpen, setIsApplyModelOpen] = useState(false)
 
   // Carregamento prolongado (> ~2s): substitui skeleton por estado textual honesto
@@ -363,29 +359,10 @@ export default function ProfilePage() {
   }
 
   // ===== Acerto de contas do mês (rateio) =====
-  const [settlementRows, setSettlementRows] = useState<SettlementRow[]>([])
-  const [settlementLoading, setSettlementLoading] = useState(false)
-  const [settlementError, setSettlementError] = useState<string | null>(null)
+  // Auditoria 16/10: estados do settlement removidos (migraram pra Carteira/Orçamentos)
 
-  useEffect(() => {
-    const loadSettlement = async () => {
-      if (!family?.id) return
-      try {
-        setSettlementLoading(true)
-        setSettlementError(null)
-        const now = new Date()
-        const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-        const rows = await fetchFamilySettlement(family.id, month)
-        setSettlementRows(rows)
-      } catch (err) {
-        console.warn('Erro ao carregar acerto de contas:', err)
-        setSettlementError('Não foi possível carregar o acerto de contas.')
-      } finally {
-        setSettlementLoading(false)
-      }
-    }
-    loadSettlement()
-  }, [family?.id, triggerRefresh])
+  // Auditoria 16/10: settlement (acerto de contas) migrou pra aba Orçamentos da Carteira —
+  // estado e fetch removidos daqui junto com o card.
 
   const loadIncompleteFamilies = useCallback(async () => {
     try {
@@ -789,113 +766,10 @@ export default function ProfilePage() {
           <Users className="w-4 h-4 text-emerald-700" />
           <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Família</h3>
         </div>
-
-        {/* Renda líquida mensal */}
-        <div className="px-5 py-3.5 border-t border-slate-100">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="w-9 h-9 rounded-xl bg-slate-100 text-[#14213D] flex items-center justify-center shrink-0">
-                <Landmark className="w-4 h-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-slate-900">Renda líquida mensal</p>
-                <p className="text-[11px] text-slate-500">Base dos cálculos dos baldes</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-sm font-bold text-slate-900 tabular-nums hidden sm:block">
-                {family?.monthly_net_income_cents && family.monthly_net_income_cents > 0
-                  ? formatBRL(family.monthly_net_income_cents)
-                  : 'Não definida'}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsApplyModelOpen(true)}
-                className="text-[11px] font-semibold rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 gap-1 h-8"
-              >
-                <Sparkles className="w-3 h-3 text-[#FCA311]" />
-                <span className="hidden sm:inline">Modelo sugerido</span>
-                <span className="sm:hidden">Modelo</span>
-              </Button>
-            </div>
-          </div>
-          {isEditingIncome ? (
-            <div className="mt-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <div className="relative flex-1 min-w-0">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                  R$
-                </span>
-                <Input
-                  type="text"
-                  placeholder="0,00"
-                  value={incomeInputStr}
-                  onChange={(e) => setIncomeInputStr(e.target.value)}
-                  className="pl-9 text-sm font-bold rounded-xl h-9 w-full"
-                  autoFocus
-                />
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <Button
-                  size="sm"
-                  onClick={async () => {
-                    try {
-                      setSavingIncome(true)
-                      const cents = parseBRLToCents(incomeInputStr)
-                      await updateFamily({ monthly_net_income_cents: cents })
-                      setIsEditingIncome(false)
-                      triggerRefresh()
-                    } catch {
-                      toast({
-                        title: 'Erro ao salvar renda',
-                        description: 'Tente novamente.',
-                        variant: 'destructive',
-                      })
-                    } finally {
-                      setSavingIncome(false)
-                    }
-                  }}
-                  disabled={savingIncome}
-                  className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] text-xs rounded-xl h-9 font-bold px-4"
-                >
-                  Salvar
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsEditingIncome(false)}
-                  disabled={savingIncome}
-                  className="text-xs rounded-xl h-9 text-slate-500 px-3"
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                const curr = family?.monthly_net_income_cents || 0
-                setIncomeInputStr(curr > 0 ? formatNumberBRL(curr) : '')
-                setIsEditingIncome(true)
-              }}
-              className="mt-2 w-full flex items-center justify-between gap-2 text-[11px] font-semibold text-[#FCA311] hover:underline sm:hidden"
-            >
-              <span className="text-slate-500 font-normal">
-                {family?.monthly_net_income_cents && family.monthly_net_income_cents > 0
-                  ? formatBRL(family.monthly_net_income_cents)
-                  : 'Toque para definir'}
-              </span>
-              <span>
-                {family?.monthly_net_income_cents && family.monthly_net_income_cents > 0
-                  ? 'Alterar valor'
-                  : 'Definir agora'}
-              </span>
-            </button>
-          )}
-        </div>
-
-        {/* Quem está usando (2+ membros) */}
+        {/* Auditoria 16/10: "Renda líquida mensal" REMOVIDA do Perfil — duplicava o
+            card de Orçamentos (mesmo diálogo setIsApplyModelOpen em 2 lugares). A renda
+            vive exclusivamente na aba Orçamentos, onde tem contexto de baldes. */}
+        {/* Quem está usando (2+ membros) */}{' '}
         {members.length > 1 && (
           <div className="px-5 py-3.5 border-t border-slate-100">
             <div className="flex items-center gap-3">
@@ -945,71 +819,9 @@ export default function ProfilePage() {
             </div>
           </div>
         )}
-
-        {/* Acerto de contas do mês */}
-        <div className="px-5 py-3.5 border-t border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
-              <Scale className="w-4 h-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-slate-900">Acerto de contas do mês</p>
-              <p className="text-[11px] text-slate-500">
-                Quem pagou mais do que consumiu nas despesas divididas
-              </p>
-            </div>
-          </div>
-          {settlementLoading ? (
-            <div className="py-3 flex items-center justify-center gap-2 text-xs text-slate-500">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Calculando...
-            </div>
-          ) : settlementError ? (
-            <p className="mt-2 text-xs text-rose-700">{settlementError}</p>
-          ) : (
-            <div className="mt-2 space-y-1.5">
-              {buildSettlementSummary([...settlementRows]).map((msg, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2 py-1.5 px-3 rounded-xl bg-slate-50 text-xs text-slate-700 font-medium"
-                >
-                  <Scale className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                  <span>{msg}</span>
-                </div>
-              ))}
-              {settlementRows.length > 0 && (
-                <details className="pt-0.5">
-                  <summary className="text-[11px] font-semibold text-slate-500 cursor-pointer hover:text-slate-700">
-                    Ver detalhes por membro
-                  </summary>
-                  <div className="mt-2 space-y-1.5">
-                    {settlementRows.map((r) => (
-                      <div
-                        key={r.member_id}
-                        className="flex items-center justify-between gap-2 py-1.5 px-3 rounded-lg bg-slate-50/60 text-[11px]"
-                      >
-                        <span className="font-semibold text-slate-700 truncate">
-                          {r.member_name}
-                        </span>
-                        <span className="text-slate-500 shrink-0">
-                          pagou {formatBRL(r.paid_cents)} · consumiu {formatBRL(r.consumed_cents)}{' '}
-                          <strong
-                            className={r.balance_cents >= 0 ? 'text-emerald-700' : 'text-rose-700'}
-                          >
-                            ({r.balance_cents >= 0 ? '+' : ''}
-                            {formatBRL(r.balance_cents)})
-                          </strong>
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </details>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Membros da família */}
+        {/* Auditoria 16/10: "Acerto de contas do mês" MIGROU pra aba Orçamentos da
+            Carteira — é operação do dia a dia (rateio), não configuração de conta. */}
+        {/* Membros da família */}{' '}
         <div className="px-5 py-3.5 border-t border-slate-100">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div className="flex items-center gap-2 min-w-0">
@@ -1337,8 +1149,9 @@ export default function ProfilePage() {
           </h3>
         </div>
 
-        {/* Instalar app (quando não standalone) */}
-        {!isStandalone && (
+        {/* Instalar app — só quando o banner flutuante foi dispensado (auditoria 16/10:
+            banner + linha na mesma tela era redundância; agora um complementa o outro) */}
+        {!isStandalone && isPwaBannerDismissed && (
           <button
             type="button"
             onClick={handleInstallShortcutClick}
