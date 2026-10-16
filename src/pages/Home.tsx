@@ -91,6 +91,11 @@ export default function Home() {
     total_expense_cents: number
   } | null>(null)
   const [loadError, setLoadError] = useState(false)
+  // Insights do Copilot (determinísticos via RPC get_family_insights — estilo Pierre:
+  // "o que merece sua atenção" no topo da Home, sem custo de IA)
+  const [insights, setInsights] = useState<
+    Array<{ severity: 'danger' | 'warning' | 'success' | 'info'; title: string; detail: string }>
+  >([])
   const [defaultBudgets, setDefaultBudgets] = useState<DefaultBudget[]>([])
   const [monthOverrides, setMonthOverrides] = useState<Budget[]>([])
 
@@ -149,7 +154,7 @@ export default function Home() {
       // PERFORMANCE: totais globais (saldo, receita, despesa desde o início) são
       // agregados no servidor via RPC — sem baixar todas as transações da família.
       // Com filtro de membro ativo, mantém o fetch completo (dataset do membro é pequeno).
-      const [totalsPromise, monthTxRes, defBgs, overrides] = await Promise.all([
+      const [totalsPromise, monthTxRes, defBgs, overrides, insightsRes] = await Promise.all([
         selectedMemberId
           ? fetchTransactions({ familyId: family.id, memberId: selectedMemberId })
           : (supabase as any).rpc('get_family_totals', { p_family_id: family.id }),
@@ -159,6 +164,15 @@ export default function Home() {
         fetchTransactions({ familyId: family.id, month: currentMonthStr }),
         fetchDefaultBudgets(family.id),
         fetchMonthBudgetOverrides(family.id, currentMonthStr),
+        // Insights do Copilot (determinísticos, ~10ms, RLS nativo). Falha silenciosa:
+        // insights são enhancement, nunca bloqueiam a Home.
+        (supabase as any)
+          .rpc('get_family_insights', {
+            p_family_id: family.id,
+            p_month: `${currentMonthStr}-01`,
+          })
+          .then((r: any) => r.data)
+          .catch(() => []),
       ])
 
       if (selectedMemberId) {
@@ -174,6 +188,7 @@ export default function Home() {
         if (rpcError) throw rpcError
         setTotalsFromRpc(rpcData)
         setTransactions((monthTxRes as Transaction[]) || [])
+        setInsights(Array.isArray(insightsRes) ? insightsRes : [])
       }
       setDefaultBudgets(defBgs)
       setMonthOverrides(overrides)
@@ -1022,6 +1037,48 @@ export default function Home() {
 
       {/* 2. ÁREA CLARA (#F8F9FB) COM CARDS FLUTUANTES SOBREPONDO O FUNDO MARINHO */}
       <div className="relative -mt-6 sm:-mt-8 px-4 sm:px-6 pb-12 max-w-5xl mx-auto space-y-6">
+        {/* INSIGHTS DO COPILOT (diferencial estilo Pierre): "o que merece sua atenção" —
+            gerados deterministicamente pela RPC get_family_insights (sem custo IA).
+            Só renderiza quando há insight; nunca card vazio. */}
+        {insights.length > 0 && (
+          <div className="space-y-2.5 -mt-2 sm:-mt-3">
+            {insights.map((ins, idx) => {
+              const styles = {
+                danger: 'bg-rose-50/95 border-rose-200/70 text-rose-900',
+                warning: 'bg-amber-50/95 border-amber-200/70 text-amber-900',
+                success: 'bg-emerald-50/95 border-emerald-200/70 text-emerald-900',
+                info: 'bg-slate-50/95 border-slate-200/70 text-slate-700',
+              }[ins.severity]
+              const icon = {
+                danger: '🚨',
+                warning: '⚠️',
+                success: '🎉',
+                info: '💡',
+              }[ins.severity]
+              return (
+                <button
+                  key={`${ins.title}-${idx}`}
+                  type="button"
+                  onClick={() => navigate('/copilot')}
+                  className={`w-full text-left flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-sm transition-all active:scale-[0.98] ${styles}`}
+                >
+                  <span className="text-base leading-none mt-0.5 shrink-0" aria-hidden="true">
+                    {icon}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs font-bold leading-tight">{ins.title}</span>
+                    <span className="block text-[11px] leading-snug mt-0.5 opacity-90">
+                      {ins.detail}
+                    </span>
+                  </span>
+                  <span className="text-[10px] font-semibold opacity-60 shrink-0 mt-0.5">
+                    Copilot ›
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        )}
         {/* PRIMEIRO CARD CLARO: Sobrepõe o marinho com rounded-3xl generoso e sombra R56 */}
         <div
           data-testid="first-floating-card"
