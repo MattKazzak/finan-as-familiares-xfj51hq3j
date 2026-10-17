@@ -22,6 +22,7 @@ import { formatTransactionTitle, groupInstallmentTransactions } from '@/services
 import { deleteTransaction } from '@/services/transactions'
 import { useToast } from '@/hooks/use-toast'
 import { useValuePrivacy, getTimeGreeting } from '@/hooks/use-value-privacy'
+import NotificationsPanel from '@/components/notifications/NotificationsPanel'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import type { Transaction, DefaultBudget, Budget } from '@/types/finance'
 import { BUDGET_PRESET_ITEMS } from '@/types/budget-presets'
@@ -118,7 +119,8 @@ export default function Home() {
   const [isEditOpen, setIsEditOpen] = useState(false)
 
   // Carregamento prolongado (> ~2s): substitui o skeleton por mensagem amigável
-  const [isLongLoading, setIsLongLoading] = useState(false)
+  const [isLongLoading, setIsLongLoading] = useState
+  const [showNotifications, setShowNotifications] = useState(false)(false)
   const isFamilyResolved = Boolean(family?.id)
   const isInitialDataLoading = loading || !isFamilyResolved
 
@@ -746,12 +748,7 @@ export default function Home() {
 
               <button
                 type="button"
-                onClick={() => {
-                  toast({
-                    title: 'Notificações do Curiangoo',
-                    description: 'Você está em dia com todas as finanças e alertas da família!',
-                  })
-                }}
+                onClick={() => setShowNotifications(true)}
                 className="relative p-1.5 sm:p-2 rounded-2xl text-slate-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
                 aria-label="Notificações"
                 title="Notificações da família"
@@ -1417,6 +1414,9 @@ export default function Home() {
         onOpenChange={setIsEditOpen}
         editingTransaction={editingTx}
       />
+
+      {/* PAINEL NOTIFICAÇÕES */}
+      {showNotifications && <NotificationsPanel onClose={() => setShowNotifications(false)} />}
     </div>
   )
 }

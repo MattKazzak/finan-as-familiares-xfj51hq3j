@@ -75,6 +75,57 @@ self.addEventListener('message', (event) => {
   }
 })
 
+// ===== WEB PUSH (Curiangoo — notificações da família) =====
+// Mostra a notificação do sistema quando o app está em background/fechado.
+self.addEventListener('push', (event) => {
+  let payload = { title: 'Curiangoo', body: 'Nova atividade da família', data: { url: '/inicio' } }
+  try {
+    if (event.data) {
+      const raw = event.data.json()
+      payload = {
+        title: raw.title || payload.title,
+        body: raw.body || payload.body,
+        tag: raw.tag,
+        data: { url: raw.data?.url || '/inicio', ...(raw.data || {}) },
+      }
+    }
+  } catch (e) {
+    console.warn('[SW] push payload inválido:', e)
+  }
+
+  const title = payload.title
+  const options = {
+    body: payload.body,
+    icon: '/icon.svg',
+    badge: '/icon-maskable.svg',
+    tag: payload.tag,
+    data: payload.data,
+    vibrate: [80, 40, 80],
+    renotify: !!payload.tag,
+    requireInteraction: false,
+  }
+
+  event.waitUntil(self.registration.showNotification(title, options))
+})
+
+// Clique na notificação: foca o app aberto ou abre /inicio
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const targetUrl = event.notification.data?.url || '/inicio'
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) {
+          client.focus()
+          if ('navigate' in client) client.navigate(targetUrl)
+          return
+        }
+      }
+      return self.clients.openWindow(targetUrl)
+    }),
+  )
+})
+
 // Estratégia de Fetch:
 // - Para navegações (HTML) e chamadas de API: NETWORK-FIRST com fallback de cache
 // - Para arquivos estáticos hashados (/assets/*, imagens): STALE-WHILE-REVALIDATE ou Cache-First
