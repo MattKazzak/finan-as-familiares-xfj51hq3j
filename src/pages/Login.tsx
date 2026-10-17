@@ -76,6 +76,8 @@ export default function Login() {
   const navigate = useNavigate()
 
   const [mode, setMode] = useState<AuthMode>('login')
+  // Plano preferido (login): define o checkout depois do trial (mensal padrão)
+  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('monthly')
   const [signupStep, setSignupStep] = useState<SignupStep>('credentials')
 
   const [name, setName] = useState('')
@@ -314,23 +316,24 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-[#F8F9FB] flex flex-col justify-between items-center px-4 py-8 sm:py-12 selection:bg-[#FCA311]/20">
       <div className="w-full max-w-[420px] mx-auto my-auto flex flex-col items-center">
-        {/* Marca e Símbolo do Curiangoo — Layout vertical centralizado e respiro generoso */}
+        {/* Marca: pássaro GRANDE solto (sem quadrado) + wordmark — padrão Nubank/Monzo */}
         <header className="flex flex-col items-center text-center mb-8 sm:mb-10 w-full">
           <div
             data-testid="brand-logo-container"
             aria-label="Curiangoo"
-            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white border border-[rgba(20,33,61,0.08)] shadow-elevation-1 mb-5 flex items-center justify-center p-2.5 transition-transform hover:scale-105"
+            className="mb-4 flex items-center justify-center"
           >
             <CuriangoLogo
-              size={36}
+              size={72}
               color="#FCA311"
               eyeColor="#14213D"
               eyeRadius={3.4}
               eyeHighlight
+              className="drop-shadow-sm"
             />
-          </div>{' '}
-          <h1 className="text-2xl sm:text-3xl font-semibold text-[#14213D] tracking-tight">
-            Curiangoo
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-[#14213D] tracking-tight">
+            Curiangoo{' '}
           </h1>
           <p className="text-xs sm:text-sm font-medium text-[#FCA311] mt-1.5 tracking-wide">
             Finanças Familiares no Prumo
@@ -355,15 +358,26 @@ export default function Login() {
           <section aria-label="Planos e preços" className="w-full mb-6 space-y-3">
             <div className="w-full rounded-3xl bg-[#14213D] text-white p-5 shadow-elevation-2">
               <p className="text-sm font-semibold leading-tight">
-                Suas finanças em família, com um Curiango que fala com você.
+                A plataforma de finanças da sua família, com assistente inteligente de voz.
               </p>
               <p className="text-xs text-white/70 mt-1.5 leading-relaxed">
-                Comece com <span className="font-bold text-[#FCA311]">7 dias grátis</span>, sem
-                cartão de crédito. Depois, escolha seu plano:
+                Comece com <span className="font-bold text-[#FCA311]">7 dias grátis</span> — sem
+                cartão de crédito, sem compromisso. Ao final, escolha o plano ideal:
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-2xl border border-[rgba(20,33,61,0.1)] bg-white p-3.5 text-left">
+            {/* Planos selecionáveis: a escolha define o checkout após o trial */}
+            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Plano preferido">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={selectedPlan === 'monthly'}
+                onClick={() => setSelectedPlan('monthly')}
+                className={`rounded-2xl p-3.5 text-left transition-all active:scale-[0.98] ${
+                  selectedPlan === 'monthly'
+                    ? 'border-2 border-[#14213D] bg-white shadow-elevation-1'
+                    : 'border border-[rgba(20,33,61,0.1)] bg-white hover:border-[#14213D]/40'
+                }`}
+              >
                 <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
                   Mensal
                 </p>
@@ -371,8 +385,18 @@ export default function Login() {
                   R$ 19,90<span className="text-xs font-medium text-slate-400">/mês</span>
                 </p>
                 <p className="text-[10px] text-slate-400 mt-0.5">Cancele quando quiser</p>
-              </div>
-              <div className="rounded-2xl border-2 border-[#FCA311]/60 bg-white p-3.5 text-left">
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={selectedPlan === 'yearly'}
+                onClick={() => setSelectedPlan('yearly')}
+                className={`rounded-2xl p-3.5 text-left transition-all active:scale-[0.98] ${
+                  selectedPlan === 'yearly'
+                    ? 'border-2 border-[#FCA311] bg-white shadow-elevation-1'
+                    : 'border-2 border-[#FCA311]/40 bg-white hover:border-[#FCA311]/70'
+                }`}
+              >
                 <p className="text-[11px] font-semibold text-[#B45309] uppercase tracking-wide">
                   Anual
                 </p>
@@ -380,11 +404,10 @@ export default function Login() {
                   R$ 149,90<span className="text-xs font-medium text-slate-400">/ano</span>
                 </p>
                 <p className="text-[10px] font-bold text-emerald-700 mt-0.5">Economize R$ 89,90</p>
-              </div>
+              </button>
             </div>
           </section>
         )}
-
         {/* Card Principal — Elegância Minimalista Fintech em Tema Claro com Sombra Suave */}
         <main className="w-full bg-white rounded-3xl p-6 sm:p-9 shadow-elevation-2 border border-[#14213D]/[0.06] backdrop-blur-sm">
           {/* Alternador de Modo Minimalista (Login / Criar Conta) */}
@@ -782,8 +805,11 @@ export default function Login() {
                       <span>Enviar Link de Recuperação</span>
                     </span>
                   ) : (
-                    'Entrar'
-                  )}
+                    <span className="flex items-center justify-center gap-2">
+                      <span>Entrar na minha conta</span>
+                      <ArrowRight className="w-4 h-4" strokeWidth={2} />
+                    </span>
+                  )}{' '}
                 </Button>
               )}
             </div>
@@ -830,7 +856,7 @@ export default function Login() {
         <footer className="mt-8 flex flex-col items-center gap-2 text-slate-500 text-xs text-center max-w-xs font-light">
           <div className="flex items-center justify-center gap-2">
             <ShieldCheck className="w-4 h-4 text-slate-500 shrink-0" strokeWidth={1.5} />
-            <span>Isolamento individual por família e criptografia de ponta a ponta.</span>
+            <span>Seus dados protegidos com criptografia e isolamento por família.</span>
           </div>
           <nav
             className="flex items-center justify-center gap-3 text-[11px] text-slate-400"
