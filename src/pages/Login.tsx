@@ -324,7 +324,7 @@ export default function Login() {
             className="mb-4 flex items-center justify-center"
           >
             <CuriangoLogo
-              size={72}
+              size={96}
               color="#FCA311"
               eyeColor="#14213D"
               eyeRadius={3.4}

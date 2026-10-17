@@ -934,7 +934,7 @@ export default function Home() {
             {/* Avatar do remetente: o próprio Curiango */}
             <span className="shrink-0 relative mt-0.5" aria-hidden="true">
               <CuriangoLogo
-                size={40}
+                size={48}
                 color="#FCA311"
                 eyeColor="#14213D"
                 eyeRadius={3.4}

@@ -126,7 +126,7 @@ export default function Layout() {
         {/* Logo & Marca Oficial Curiangoo */}
         <div className="p-5 border-b border-white/10 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-brand-amber shadow-md shadow-black/20 shrink-0">
-            <CuriangoLogo size={24} color="#FCA311" />
+            <CuriangoLogo size={28} color="#FCA311" />
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="font-semibold text-sm text-white tracking-tight truncate">Curiangoo</h1>
