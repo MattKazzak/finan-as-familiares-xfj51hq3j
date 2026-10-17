@@ -84,11 +84,15 @@ export async function fetchMonthAggregates(
   nextMonthDate.setUTCMonth(nextMonthDate.getUTCMonth() + 1)
   const end = nextMonthDate.toISOString().slice(0, 10)
 
-  // Consulta leve sem joins pesados
+  // Consulta leve sem joins pesados.
+  // SINCRONIA (17/10): exclui 'projected' — os cards de Receitas/Despesas do mês
+  // e os gastos por categoria (Orçamentos) devem bater com a Home, que só conta
+  // transações realizadas. Projetadas aparecem na lista c/ badge 'Previsto'.
   const { data, error } = await supabase
     .from('transactions')
     .select('type, amount_cents, category_id, subcategory_id')
     .eq('family_id', familyId)
+    .neq('status', 'projected')
     .gte('transaction_date', start)
     .lt('transaction_date', end)
 

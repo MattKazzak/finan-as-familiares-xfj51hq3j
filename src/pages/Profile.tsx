@@ -34,7 +34,6 @@ import {
   DollarSign,
   Camera,
   Check,
-  Smartphone,
   Pencil,
   Download,
   Share,
@@ -85,8 +84,6 @@ export default function ProfilePage() {
     members,
     categories,
     currentMember,
-    activeMemberId,
-    setActiveMemberId,
     openWhoIsUsing,
     addMember,
     editMember,
@@ -792,7 +789,7 @@ export default function ProfilePage() {
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-slate-900 leading-tight">Família</p>
             <p className="text-[11px] text-slate-500 truncate">
-              Membros, convites e quem está usando
+              Membros, convites e acerto de contas
             </p>
           </div>
           <ChevronRight
@@ -802,57 +799,12 @@ export default function ProfilePage() {
         {openSection === 'familia' && (
           <div>
             {/* Auditoria 16/10: "Renda líquida mensal" REMOVIDA do Perfil — duplicava o
-            card de Orçamentos (mesmo diálogo setIsApplyModelOpen em 2 lugares). A renda
-            vive exclusivamente na aba Orçamentos, onde tem contexto de baldes. */}
-            {members.length > 1 && (
-              <div className="px-5 py-3.5 border-t border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
-                    <Smartphone className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-900">
-                      Quem está usando este aparelho?
-                    </p>
-                    <p className="text-[11px] text-slate-500 truncate">
-                      Alterne para personalizar a saudação "Olá, {currentMember?.name || 'Nome'}!"
-                      neste dispositivo.
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-2.5 flex flex-wrap gap-1.5">
-                  {members.map((member) => {
-                    const isSelected = (activeMemberId || currentMember?.id) === member.id
-                    return (
-                      <button
-                        key={member.id}
-                        type="button"
-                        onClick={() => {
-                          setActiveMemberId(member.id)
-                          toast({
-                            title: `Olá, ${member.name}!`,
-                            description: 'Perfil ativo atualizado neste dispositivo.',
-                          })
-                        }}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5 ${
-                          isSelected
-                            ? 'border-[#FCA311] bg-[#FCA311]/10 text-[#14213D] ring-2 ring-[#FCA311]/25'
-                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <span
-                          className={`w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center ${isSelected ? 'bg-[#FCA311] text-[#14213D]' : 'bg-slate-200 text-slate-600'}`}
-                        >
-                          {member.name.charAt(0).toUpperCase()}
-                        </span>
-                        {member.name}
-                        {isSelected && <Check className="w-3 h-3 text-[#FCA311]" />}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
+        card de Orçamentos (mesmo diálogo setIsApplyModelOpen em 2 lugares). A renda
+        vive exclusivamente na aba Orçamentos, onde tem contexto de baldes. */}
+            {/* Resquício removido (17/10): o bloco "Quem está usando este aparelho?" usava
+        activeMemberId do localStorage (identidade por APARELHO) — contraria a decisão
+        v0.0.386/389: identidade = LOGIN (family_members.user_id). O chip da Home e a
+        saudação derivam do login; nada aqui deve trocar "quem está usando". */}{' '}
             {/* Auditoria 16/10: "Acerto de contas do mês" MIGROU pra aba Orçamentos da
             Carteira — é operação do dia a dia (rateio), não configuração de conta. */}
             {/* Membros da família */}{' '}

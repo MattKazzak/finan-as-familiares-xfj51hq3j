@@ -421,12 +421,13 @@ export function WalletPage() {
     let income = 0
     let expense = 0
     for (const tx of filteredTransactions) {
+      // SINCRONIA (17/10): projected não entra nos totais (bate com a Home)
+      if (tx.status === 'projected') continue
       if (tx.type === 'income') income += tx.amount_cents
       else expense += tx.amount_cents
     }
     return { income, expense, net: income - expense }
-  }, [filteredTransactions, selectedMemberId])
-  const monthIncomeCents = memberTotals ? memberTotals.income : monthAggregates.incomeCents
+  }, [filteredTransactions, selectedMemberId])  const monthIncomeCents = memberTotals ? memberTotals.income : monthAggregates.incomeCents
   const monthExpenseCents = memberTotals ? memberTotals.expense : monthAggregates.expenseCents
   const monthNetCents = memberTotals ? memberTotals.net : monthAggregates.netCents
   const activeFiltersCount =
