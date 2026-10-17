@@ -377,7 +377,7 @@ export default function ProfilePage() {
       console.error('Erro ao cancelar assinatura:', err)
       toast({
         title: 'Não foi possível cancelar',
-        description: 'Tente novamente ou fale com o suporte em suporte@curiangoo.com.',
+        description: 'Tente novamente ou fale com o suporte em contato@curiangoo.com.',
         variant: 'destructive',
       })
     } finally {

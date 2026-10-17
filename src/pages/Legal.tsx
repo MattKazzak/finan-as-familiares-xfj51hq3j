@@ -107,7 +107,7 @@ export function PrivacyPage() {
           está no Perfil, e a exclusão da conta pode ser solicitada em Fale Conosco.
         </p>
         <p>
-          Dúvidas de privacidade: <strong>privacidade@curiangoo.com</strong>
+          Dúvidas de privacidade: <strong>contato@curiangoo.com</strong>
         </p>
       </Section>
       <Section title="Retenção de dados">
@@ -250,7 +250,7 @@ export function ContactPage() {
       <Section title="Canais de atendimento">
         <p className="flex items-center gap-2">
           <Mail className="w-4 h-4 text-[#FCA311]" />
-          <strong>suporte@curiangoo.com</strong>
+          <strong>contato@curiangoo.com</strong>
         </p>
         <p className="text-[11px] text-slate-500">
           Para questões de privacidade e LGPD: privacidade@curiangoo.com
@@ -283,7 +283,7 @@ export function ContactPage() {
             const nome = (form.elements.namedItem('nome') as HTMLInputElement)?.value || ''
             const assunto = (form.elements.namedItem('assunto') as HTMLInputElement)?.value || ''
             const msg = (form.elements.namedItem('mensagem') as HTMLTextAreaElement)?.value || ''
-            window.location.href = `mailto:suporte@curiangoo.com?subject=${encodeURIComponent(
+            window.location.href = `mailto:contato@curiangoo.com?subject=${encodeURIComponent(
               `[Curiangoo] ${assunto} — ${nome}`,
             )}&body=${encodeURIComponent(msg)}`
             setSent(true)

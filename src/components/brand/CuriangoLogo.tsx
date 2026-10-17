@@ -63,6 +63,23 @@ export const CuriangoLogo: React.FC<CuriangoLogoProps> = ({
         strokeLinecap="round"
         fill="none"
       />
+      {/* Pálpebra — o Curiango pisca a cada 4,8s (SMIL nativo, à prova de bundler) */}
+      <ellipse
+        cx="22.2"
+        cy="27.2"
+        rx={eyeRadius + 1.4}
+        ry={eyeRadius + 1.4}
+        fill={color}
+        opacity="0"
+      >
+        <animate
+          attributeName="opacity"
+          values="0;0;1;1;0;0"
+          keyTimes="0;0.94;0.95;0.97;0.98;1"
+          dur="4.8s"
+          repeatCount="indefinite"
+        />
+      </ellipse>
     </svg>
   )
 }
