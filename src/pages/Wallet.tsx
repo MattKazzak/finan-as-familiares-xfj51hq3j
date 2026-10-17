@@ -427,7 +427,8 @@ export function WalletPage() {
       else expense += tx.amount_cents
     }
     return { income, expense, net: income - expense }
-  }, [filteredTransactions, selectedMemberId])  const monthIncomeCents = memberTotals ? memberTotals.income : monthAggregates.incomeCents
+  }, [filteredTransactions, selectedMemberId])
+  const monthIncomeCents = memberTotals ? memberTotals.income : monthAggregates.incomeCents
   const monthExpenseCents = memberTotals ? memberTotals.expense : monthAggregates.expenseCents
   const monthNetCents = memberTotals ? memberTotals.net : monthAggregates.netCents
   const activeFiltersCount =
