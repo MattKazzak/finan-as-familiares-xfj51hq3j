@@ -271,6 +271,15 @@ export async function processAutoRecurringIncomes(params: {
       continue
     }
 
+    // BUG "dados em meses que nunca foram alimentados" (17/10): uma receita/despesa
+    // fixa NÃO gera transações retroativas — só a partir do mês em que a regra foi
+    // criada. Gerar para meses anteriores criava histórico fictício (salários em
+    // meses antes de a receita existir) e saldos passados irreais.
+    const createdMonth = typeof income.created_at === 'string' ? income.created_at.slice(0, 7) : ''
+    if (createdMonth && currentMonthStr < createdMonth) {
+      continue
+    }
+
     // Regra de timing e projeção:
     // Para despesas e receitas fixas no calendário orçamentário:
     // - Mês passado: se ainda não gerou, gera como 'confirmed'

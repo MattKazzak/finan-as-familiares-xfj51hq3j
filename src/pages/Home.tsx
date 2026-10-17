@@ -281,6 +281,13 @@ export default function Home() {
     let mIncome = 0
     let mExpense = 0
 
+    // BUG 17/10 (saldo do membro não mudava com o mês): com chip de membro ativo,
+    // o saldo era SEMPRE global (todas as transações do membro) — navegar de mês
+    // não mudava nada. Agora o saldo do membro também é ACUMULADO ATÉ O FIM do
+    // mês ativo (só transações até a última data do mês ativo).
+    const endOfMonthDay = new Date(activeDate.getFullYear(), activeDate.getMonth() + 1, 0).getDate()
+    const endOfMonthDate = `${currentMonthStr}-${String(endOfMonthDay).padStart(2, '0')}`
+
     // Sem filtro de membro: totais globais vêm da RPC (agregação no servidor).
     // Mês passado (bug dos "valores fantasmas"): usa o saldo ACUMULADO até o fim
     // do mês ativo (historicalTotals) em vez do global de hoje.
@@ -301,11 +308,14 @@ export default function Home() {
     effectiveTransactions.forEach((tx) => {
       const txMonth = tx.transaction_date.slice(0, 7)
       const isGlobalFromRpc = !!totalsFromRpc
+      // Saldo acumulado até o fim do mês ativo: transações futuras ao mês ativo
+      // não entram no saldo (mesmo no fetch completo do membro).
+      const countsTowardBalance = tx.transaction_date <= endOfMonthDate
       if (tx.type === 'income') {
-        if (!isGlobalFromRpc) incomeTotal += tx.amount_cents
+        if (!isGlobalFromRpc && countsTowardBalance) incomeTotal += tx.amount_cents
         if (txMonth === currentMonthStr) mIncome += tx.amount_cents
       } else {
-        if (!isGlobalFromRpc) expenseTotal += tx.amount_cents
+        if (!isGlobalFromRpc && countsTowardBalance) expenseTotal += tx.amount_cents
         if (txMonth === currentMonthStr) mExpense += tx.amount_cents
       }
     })
@@ -316,7 +326,6 @@ export default function Home() {
       monthExpenseCents: mExpense,
     }
   }, [transactions, totalsFromRpc, historicalTotals, currentMonthStr, activeDate])
-
   // Mapa de baldes para categorias
   const categoryBucketMap = useMemo(() => {
     const map = new Map<string, 'essentials' | 'lifestyle' | 'future'>()
