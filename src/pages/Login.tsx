@@ -319,17 +319,22 @@ export default function Login() {
           <div
             data-testid="brand-logo-container"
             aria-label="Curiangoo"
-            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#14213D] shadow-elevation-1 mb-5 flex items-center justify-center p-2.5 transition-transform hover:scale-105"
+            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white border border-[rgba(20,33,61,0.08)] shadow-elevation-1 mb-5 flex items-center justify-center p-2.5 transition-transform hover:scale-105"
           >
-            <CuriangoLogo size={36} color="#FCA311" />
-          </div>
+            <CuriangoLogo
+              size={36}
+              color="#FCA311"
+              eyeColor="#14213D"
+              eyeRadius={3.4}
+              eyeHighlight
+            />
+          </div>{' '}
           <h1 className="text-2xl sm:text-3xl font-semibold text-[#14213D] tracking-tight">
             Curiangoo
           </h1>
           <p className="text-xs sm:text-sm font-medium text-[#FCA311] mt-1.5 tracking-wide">
             Finanças Familiares no Prumo
           </p>
-
           <p className="text-xs sm:text-sm text-slate-600 font-light mt-3 max-w-xs leading-relaxed">
             {mode === 'login' &&
               'Acesse sua conta familiar para acompanhar despesas, receitas e investimentos.'}

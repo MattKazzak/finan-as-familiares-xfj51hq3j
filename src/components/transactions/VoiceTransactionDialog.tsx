@@ -3124,7 +3124,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 {/* Avatar do Curiango com status verde ativo */}
                 <div className="relative shrink-0">
                   <div className="w-9 h-9 rounded-2xl bg-brand text-white flex items-center justify-center font-semibold shadow-sm p-1 border border-brand">
-                    <CuriangoLogo size={22} color="#FCA311" />
+                    <CuriangoLogo size={22} color="#FCA311" eyeRadius={3.4} />
                   </div>
                   <span
                     className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"

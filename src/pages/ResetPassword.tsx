@@ -156,9 +156,15 @@ export default function ResetPassword() {
           <div
             data-testid="brand-logo-container"
             aria-label="Curiangoo"
-            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#14213D] shadow-elevation-1 mb-5 flex items-center justify-center p-2.5 transition-transform hover:scale-105"
+            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white border border-[rgba(20,33,61,0.08)] shadow-elevation-1 mb-5 flex items-center justify-center p-2.5 transition-transform hover:scale-105"
           >
-            <CuriangoLogo size={36} color="#FCA311" />
+            <CuriangoLogo
+              size={36}
+              color="#FCA311"
+              eyeColor="#14213D"
+              eyeRadius={3.4}
+              eyeHighlight
+            />
           </div>
           <h1 className="text-2xl sm:text-3xl font-semibold text-[#14213D] tracking-tight">
             Criar Nova Senha — Curiangoo
