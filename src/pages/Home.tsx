@@ -119,7 +119,7 @@ export default function Home() {
   const [isEditOpen, setIsEditOpen] = useState(false)
 
   // Carregamento prolongado (> ~2s): substitui o skeleton por mensagem amigável
-  const [isLongLoading, setIsLongLoading] = useState
+  const [isLongLoading, setIsLongLoading] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const isFamilyResolved = Boolean(family?.id)
   const isInitialDataLoading = loading || !isFamilyResolved
