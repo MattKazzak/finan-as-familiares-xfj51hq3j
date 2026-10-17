@@ -964,9 +964,12 @@ export default function ProfilePage() {
                     rel="noopener noreferrer"
                     className="flex items-center justify-between gap-2 py-3 px-4 rounded-2xl border-2 border-[#059669] text-[#14213D] hover:bg-emerald-50 transition-colors"
                   >
-                    <span className="font-semibold">R$ 19,90/mês</span>
+                    <span className="flex flex-col leading-tight">
+                      <span className="font-semibold">R$ 19,90/mês</span>
+                      <span className="text-[10px] font-medium text-slate-500">Pix ou cartão</span>
+                    </span>
                     <ExternalLink className="w-4 h-4 text-slate-400" />
-                  </a>
+                  </a>{' '}
                   <a
                     href={CHECKOUT_URLS.yearly}
                     target="_blank"
@@ -976,7 +979,7 @@ export default function ProfilePage() {
                     <span className="flex flex-col leading-tight">
                       <span className="font-semibold">R$ 149,90/ano</span>
                       <span className="text-[10px] font-medium text-emerald-100">
-                        economize R$ 89,90
+                        Pix ou cartão · economize R$ 89,90
                       </span>
                     </span>
                     <ExternalLink className="w-4 h-4" />
