@@ -96,8 +96,9 @@ self.addEventListener('push', (event) => {
   const title = payload.title
   const options = {
     body: payload.body,
-    icon: '/icon.svg',
-    badge: '/icon-maskable.svg',
+    icon: 'https://evcxjxuakiyjerujntli.supabase.co/storage/v1/object/public/branding/push-icon-192.png',
+    badge:
+      'https://evcxjxuakiyjerujntli.supabase.co/storage/v1/object/public/branding/push-badge-96.png',
     tag: payload.tag,
     data: payload.data,
     vibrate: [80, 40, 80],
