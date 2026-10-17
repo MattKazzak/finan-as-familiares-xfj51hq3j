@@ -335,9 +335,6 @@ export default function Login() {
           <h1 className="text-3xl sm:text-4xl font-bold text-[#14213D] tracking-tight">
             Curiangoo{' '}
           </h1>
-          <p className="text-xs sm:text-sm font-medium text-[#FCA311] mt-1.5 tracking-wide">
-            Finanças Familiares no Prumo
-          </p>
           <p className="text-xs sm:text-sm text-slate-600 font-light mt-3 max-w-xs leading-relaxed">
             {mode === 'login' &&
               'Acesse sua conta familiar para acompanhar despesas, receitas e investimentos.'}
@@ -354,7 +351,7 @@ export default function Login() {
 
         {/* LANDING: Planos (modelo C2, 17/10) — trial 7 dias grátis, depois R$ 19,90/mês
             ou R$ 149,90/ano. Só no modo login (mantém o cadastro enxuto). */}
-        {mode === 'login' && (
+        {mode === 'signup' && (
           <section aria-label="Planos e preços" className="w-full mb-6 space-y-3">
             <div className="w-full rounded-3xl bg-[#14213D] text-white p-5 shadow-elevation-2">
               <p className="text-sm font-semibold leading-tight">
@@ -556,7 +553,7 @@ export default function Login() {
                   >
                     Seu Nome
                   </Label>
-                  <div className="relative group border-b border-slate-300 focus-within:border-[#FCA311] focus-within:ring-1 focus-within:ring-[#FCA311] transition-all bg-transparent">
+                  <div className="relative group border-b border-slate-300 focus-within:border-[#FCA311] transition-all bg-transparent">
                     <UserIcon
                       className="w-4 h-4 text-slate-400 group-focus-within:text-[#FCA311] absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
                       strokeWidth={1.5}
@@ -591,7 +588,7 @@ export default function Login() {
                   >
                     E-mail
                   </Label>
-                  <div className="relative group border-b border-slate-300 focus-within:border-[#FCA311] focus-within:ring-1 focus-within:ring-[#FCA311] transition-all bg-transparent">
+                  <div className="relative group border-b border-slate-300 focus-within:border-[#FCA311] transition-all bg-transparent">
                     <Mail
                       className="w-4 h-4 text-slate-400 group-focus-within:text-[#FCA311] absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
                       strokeWidth={1.5}
@@ -629,7 +626,7 @@ export default function Login() {
                         </button>
                       )}
                     </div>
-                    <div className="relative group border-b border-slate-300 focus-within:border-[#FCA311] focus-within:ring-1 focus-within:ring-[#FCA311] transition-all bg-transparent">
+                    <div className="relative group border-b border-slate-300 focus-within:border-[#FCA311] transition-all bg-transparent">
                       <Lock
                         className="w-4 h-4 text-slate-400 group-focus-within:text-[#FCA311] absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
                         strokeWidth={1.5}
@@ -697,7 +694,7 @@ export default function Login() {
                     >
                       Confirmar Senha
                     </Label>
-                    <div className="relative group border-b border-slate-300 focus-within:border-[#FCA311] focus-within:ring-1 focus-within:ring-[#FCA311] transition-all bg-transparent">
+                    <div className="relative group border-b border-slate-300 focus-within:border-[#FCA311] transition-all bg-transparent">
                       <Lock
                         className="w-4 h-4 text-slate-400 group-focus-within:text-[#FCA311] absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
                         strokeWidth={1.5}
