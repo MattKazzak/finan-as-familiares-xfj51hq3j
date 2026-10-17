@@ -120,7 +120,7 @@ export default function Home() {
 
   // Carregamento prolongado (> ~2s): substitui o skeleton por mensagem amigável
   const [isLongLoading, setIsLongLoading] = useState
-  const [showNotifications, setShowNotifications] = useState(false)(false)
+  const [showNotifications, setShowNotifications] = useState(false)
   const isFamilyResolved = Boolean(family?.id)
   const isInitialDataLoading = loading || !isFamilyResolved
 
