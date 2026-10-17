@@ -55,14 +55,22 @@ export const CuriangoLogo: React.FC<CuriangoLogoProps> = ({
       {eyeHighlight && (
         <circle cx="23.2" cy="26.2" r={eyeRadius * 0.3} fill="#FFFFFF" opacity="0.9" />
       )}
-      {/* Linha curva branca suave sugerindo a asa / dobra elegante */}
+      {/* Asa — batida sutil a cada 9,6s: levanta e assenta em ~380ms (ajuste de penas, não flap; SMIL nativo) */}
       <path
         d="M 28.2 42.8 C 28.5 46.8 29.8 52.4 33.8 57 C 37 60.8 41 63.8 45.4 65.6"
         stroke="#FFFFFF"
         strokeWidth="2.2"
         strokeLinecap="round"
         fill="none"
-      />
+      >
+        <animate
+          attributeName="d"
+          values="M 28.2 42.8 C 28.5 46.8 29.8 52.4 33.8 57 C 37 60.8 41 63.8 45.4 65.6;M 28.2 42.8 C 28.5 46.8 29.8 52.4 33.8 57 C 37 60.8 41 63.8 45.4 65.6;M 28.2 42.8 C 28.5 44.6 29.8 48.2 33.8 52.2 C 37 55.6 41 58.4 45.4 60.4;M 28.2 42.8 C 28.5 46.8 29.8 52.4 33.8 57 C 37 60.8 41 63.8 45.4 65.6;M 28.2 42.8 C 28.5 46.8 29.8 52.4 33.8 57 C 37 60.8 41 63.8 45.4 65.6"
+          keyTimes="0;0.92;0.94;0.96;1"
+          dur="9.6s"
+          repeatCount="indefinite"
+        />
+      </path>
       {/* Pálpebra — piscar DUPLO a cada 4,8s (como pássaros reais; SMIL nativo, à prova de bundler) */}
       <ellipse
         cx="22.2"
