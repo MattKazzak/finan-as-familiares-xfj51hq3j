@@ -253,8 +253,10 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
     const idx = STEPS.findIndex((s) => s.id === step.id)
     const next = STEPS.slice(idx + 1).find((s) => !stepsDone.includes(s.id))
     if (!next) {
-      // Último passo: marca 'tour' pra encerrar o walkthrough
+      // Último passo: marca 'tour' e FECHA NA HORA (Matheus 19/10: o tour deve
+      // fechar sozinho no último passo — não esperar o refresh do banco chegar).
       onCompleteStep('tour')
+      setCurrentId(null)
     } else {
       setCurrentId(next.id)
     }
@@ -263,6 +265,8 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
   const skipAll = () => {
     onCompleteStep(step.id)
     onSkip()
+    // X no canto fecha NA HORA (Matheus: "não fecha quando clico no X")
+    setCurrentId(null)
   }
 
   // PASSO COPILOT com ação real (Matheus: "não abre o copilot nem vai pra outra tela")
@@ -276,10 +280,12 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
   const containerLeft = rect ? Math.max(16, Math.min(rect.left, window.innerWidth - 336)) : 0
   const balloonStyle: React.CSSProperties = isCenter
     ? {
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        maxWidth: 320,
+        // Boas-vindas ENQUADRADA (Matheus 19/10: "não enquadra exatamente dentro
+        // da janela clara"): inset horizontal fixo, sem transform — o card
+        // respeita a largura da tela com margem simétrica.
+        left: 16,
+        right: 16,
+        maxWidth: 360,
       }
     : effectivePos === 'bottom'
       ? {
@@ -345,8 +351,10 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
         style={balloonStyle}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Balão acima do alvo / centralizado → pássaro EM CIMA do balão */}
-        {(effectivePos === 'top' || isCenter) && (
+        {/* Pássaro: EM CIMA quando o balão sobe; AO LADO quando desce OU no modo
+            centralizado (boas-vindas) — o Matheus não gostou do pássaro em cima
+            no modo centralizado ("não enquadra exatamente dentro da janela"). */}
+        {effectivePos === 'top' && (
           <CuriangoLogo
             size={64}
             color="#FCA311"
@@ -359,8 +367,8 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
         )}
 
         <div className="flex items-end gap-2">
-          {/* Balão abaixo do alvo → pássaro À ESQUERDA do balão, olhando pro texto */}
-          {effectivePos === 'bottom' && !isCenter && (
+          {/* Balão abaixo do alvo OU centralizado → pássaro À ESQUERDA do balão */}
+          {(effectivePos === 'bottom' || isCenter) && (
             <CuriangoLogo
               size={64}
               color="#FCA311"
@@ -377,37 +385,27 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
               <p className="text-[14px] font-bold text-[#14213D] leading-tight">{step.title}</p>
               <p className="text-[12.5px] text-slate-600 leading-relaxed mt-1">{step.text}</p>
 
-              {/* Rodapé: progresso + avançar SÓLIDO (+ ação real no passo Copilot) */}
-              <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100">
-                <div className="flex gap-1">
-                  {STEPS.map((s) => (
-                    <span
-                      key={s.id}
-                      className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                        s.id === step.id ? 'bg-[#FCA311]' : 'bg-slate-200'
-                      }`}
-                    />
-                  ))}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  {step.id === 'copilot' && (
-                    <button
-                      type="button"
-                      onClick={openCopilot}
-                      className="text-[11.5px] font-bold text-white bg-[#14213D] hover:bg-[#1d2f52] px-3.5 py-1.5 rounded-full transition-colors shadow-sm"
-                    >
-                      Abrir o Copilot
-                    </button>
-                  )}
+              {/* Rodapé: avançar MINIMALISTA (Matheus 19/10: Continuar ocupava
+                  espaço demais, pontinhos desnecessários). Só a flechinha âmbar;
+                  no passo Copilot, o botão de ação real. */}
+              <div className="flex items-center justify-end gap-1.5 mt-2.5">
+                {step.id === 'copilot' && (
                   <button
                     type="button"
-                    onClick={advance}
-                    className="text-[11.5px] font-bold text-white bg-[#FCA311] hover:bg-[#E08A00] px-4 py-1.5 rounded-full transition-colors inline-flex items-center gap-1.5 shadow-sm"
+                    onClick={openCopilot}
+                    className="text-[11.5px] font-bold text-white bg-[#14213D] hover:bg-[#1d2f52] px-3.5 py-1.5 rounded-full transition-colors shadow-sm"
                   >
-                    {isFirstStep ? 'Vamos começar' : 'Continuar'}
-                    <ArrowDown className="w-3.5 h-3.5" />
+                    Abrir o Copilot
                   </button>
-                </div>
+                )}
+                <button
+                  type="button"
+                  onClick={advance}
+                  aria-label={isFirstStep ? 'Começar tour' : 'Próximo passo'}
+                  className="w-8 h-8 rounded-full bg-[#FCA311] hover:bg-[#E08A00] text-white flex items-center justify-center transition-colors shadow-sm"
+                >
+                  <ArrowDown className="w-4 h-4" />
+                </button>
               </div>
             </div>
 
