@@ -276,43 +276,32 @@ export default function Layout() {
         {/* BANNER EDUCATIVO DE INSTALAÇÃO PWA (POSICIONADO ACIMA DO DOCK FLUTUANTE) */}
         <InstallPwaBanner variant="bottom-nav" />
 
-        {/* DOCK EDGE-TO-EDGE v3 (18/10, Matheus): barra CHEIA que encosta na borda de baixo
-            (padrão Instagram/Nubank) + SÓ ÍCONES sem rótulos + botão "+" erguido ACIMA da
-            barra (FAB clássico do Instagram — ação primária destacada, nunca na linha). */}
+        {/* DOCK FLUTUANTE EM PÍLULA (MOBILE APENAS < 768px, 360–412px SAFE) — R58: Fundo Azul-Marinho #14213D espelhando o herói sangrado do topo. REVERTIDO 18/10 (decisão do Matheus: barra cheia sem rótulos ficou estranho — a pílula é a identidade do Curiangoo) */}
         <nav
           aria-label="Navegação Principal"
-          className="md:hidden fixed bottom-0 inset-x-0 z-40 pointer-events-none"
+          className="md:hidden fixed bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] inset-x-0 z-40 px-3 sm:px-4 max-w-md mx-auto pointer-events-none"
         >
-          {/* Botão Nova erguido: sobressai ACIMA da barra (metade fora, metade dentro) */}
-          <div className="pointer-events-auto absolute inset-x-0 -top-6 flex justify-center z-10">
-            <button
-              type="button"
-              onClick={() => openNewTransaction()}
-              className="w-14 h-14 rounded-full bg-gradient-to-tr from-[#FCA311] via-[#fba825] to-[#ffb845] text-[#14213D] flex items-center justify-center shadow-lg shadow-[#FCA311]/40 border-4 border-[#14213D] active:scale-90 hover:scale-105 transition-all duration-200 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
-              aria-label="Nova Transação"
-              title="Nova Transação"
-            >
-              <Plus className="w-6 h-6 stroke-[2.5]" />
-            </button>
-          </div>
-          <div className="pointer-events-auto w-full bg-[#14213D] pt-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] px-1 flex items-center justify-between border-t border-white/10 shadow-[0_-4px_20px_rgba(20,33,61,0.25)]">
+          <div className="pointer-events-auto w-full bg-[#14213D] border border-white/10 shadow-elevation-3 rounded-full px-2 py-1.5 flex items-center justify-between transition-all">
             {/* 1. Início */}
             <NavLink
               to="/inicio"
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center flex-1 py-2 transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-[#FCA311]' : 'text-white/70 hover:text-white'
+                `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
+                  isActive ? 'text-[#FCA311] font-semibold' : 'text-white/70 hover:text-white'
                 }`
               }
             >
               {({ isActive }) => (
-                <div
-                  className={`p-2 rounded-full transition-all duration-200 ${
-                    isActive ? 'bg-[#FCA311]/15 scale-105' : ''
-                  }`}
-                >
-                  <Home className="w-6 h-6" strokeWidth={isActive ? 2.2 : 1.5} />
-                </div>
+                <>
+                  <div
+                    className={`p-1 rounded-full transition-all duration-200 ${
+                      isActive ? 'bg-[#FCA311]/20 scale-105 text-[#FCA311]' : ''
+                    }`}
+                  >
+                    <Home className="w-5 h-5" strokeWidth={1.5} />
+                  </div>
+                  <span className="text-[10px] tracking-tight mt-0.5 leading-none">Início</span>
+                </>
               )}
             </NavLink>
 
@@ -320,42 +309,61 @@ export default function Layout() {
             <NavLink
               to="/carteira"
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center flex-1 py-2 transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-[#FCA311]' : 'text-white/70 hover:text-white'
+                `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
+                  isActive ? 'text-[#FCA311] font-semibold' : 'text-white/70 hover:text-white'
                 }`
               }
             >
               {({ isActive }) => (
-                <div
-                  className={`p-2 rounded-full transition-all duration-200 ${
-                    isActive ? 'bg-[#FCA311]/15 scale-105' : ''
-                  }`}
-                >
-                  <Wallet className="w-6 h-6" strokeWidth={isActive ? 2.2 : 1.5} />
-                </div>
+                <>
+                  <div
+                    className={`p-1 rounded-full transition-all duration-200 ${
+                      isActive ? 'bg-[#FCA311]/20 scale-105 text-[#FCA311]' : ''
+                    }`}
+                  >
+                    <Wallet className="w-5 h-5" strokeWidth={1.5} />
+                  </div>
+                  <span className="text-[10px] tracking-tight mt-0.5 leading-none">Carteira</span>
+                </>
               )}
             </NavLink>
 
-            {/* 3. Espaço reservado do botão Nova (o botão real vive erguido acima da barra) */}
-            <div className="flex-1" aria-hidden="true" />
+            {/* 3. BOTÃO CENTRAL "Nova" (AÇÃO ERGUIDA COM RÓTULO + ÍCONE — PADRÃO OURO R54/R55/R58) */}
+            <div className="flex-1 flex flex-col items-center justify-center py-0.5 -mt-3.5">
+              <button
+                type="button"
+                onClick={() => openNewTransaction()}
+                className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#FCA311] via-[#fba825] to-[#ffb845] text-[#14213D] flex items-center justify-center shadow-lg shadow-[#FCA311]/30 border-2 border-[#14213D] active:scale-90 hover:scale-105 transition-all duration-200 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
+                aria-label="Nova Transação"
+                title="Nova Transação"
+              >
+                <Plus className="w-5 h-5 stroke-[2.5]" />
+              </button>
+              <span className="text-[10px] font-semibold text-white tracking-tight mt-0.5 leading-none">
+                Nova
+              </span>
+            </div>
 
             {/* 4. Metas */}
             <NavLink
               to="/metas"
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center flex-1 py-2 transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-[#FCA311]' : 'text-white/70 hover:text-white'
+                `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
+                  isActive ? 'text-[#FCA311] font-semibold' : 'text-white/70 hover:text-white'
                 }`
               }
             >
               {({ isActive }) => (
-                <div
-                  className={`p-2 rounded-full transition-all duration-200 ${
-                    isActive ? 'bg-[#FCA311]/15 scale-105' : ''
-                  }`}
-                >
-                  <Target className="w-6 h-6" strokeWidth={isActive ? 2.2 : 1.5} />
-                </div>
+                <>
+                  <div
+                    className={`p-1 rounded-full transition-all duration-200 ${
+                      isActive ? 'bg-[#FCA311]/20 scale-105 text-[#FCA311]' : ''
+                    }`}
+                  >
+                    <Target className="w-5 h-5" strokeWidth={1.5} />
+                  </div>
+                  <span className="text-[10px] tracking-tight mt-0.5 leading-none">Metas</span>
+                </>
               )}
             </NavLink>
 
@@ -363,30 +371,33 @@ export default function Layout() {
             <NavLink
               to="/perfil"
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center flex-1 py-2 transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-[#FCA311]' : 'text-white/70 hover:text-white'
+                `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
+                  isActive ? 'text-[#FCA311] font-semibold' : 'text-white/70 hover:text-white'
                 }`
               }
             >
               {({ isActive }) => (
-                <div
-                  className={`p-1.5 rounded-full transition-all duration-200 ${
-                    isActive ? 'bg-[#FCA311]/15 scale-105 ring-2 ring-[#FCA311]' : ''
-                  }`}
-                >
-                  {/* Foto do usuário no lugar do ícone (estilo Pinterest — 18/10, Matheus) */}
-                  <span className="block w-6 h-6 rounded-full overflow-hidden">
-                    {userAvatarUrl ? (
-                      <img
-                        src={userAvatarUrl}
-                        alt="Meu perfil"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <User className="w-6 h-6" strokeWidth={isActive ? 2.2 : 1.5} />
-                    )}
-                  </span>
-                </div>
+                <>
+                  <div
+                    className={`p-0.5 rounded-full transition-all duration-200 ${
+                      isActive ? 'bg-[#FCA311]/20 scale-105' : ''
+                    }`}
+                  >
+                    {/* Foto do usuário no lugar do ícone (estilo Pinterest — 18/10, Matheus) */}
+                    <span className="block w-6 h-6 rounded-full overflow-hidden ring-1 ring-white/30">
+                      {userAvatarUrl ? (
+                        <img
+                          src={userAvatarUrl}
+                          alt="Meu perfil"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <User className="w-6 h-6" strokeWidth={1.5} />
+                      )}
+                    </span>
+                  </div>
+                  <span className="text-[10px] tracking-tight mt-0.5 leading-none">Perfil</span>
+                </>
               )}
             </NavLink>
           </div>
