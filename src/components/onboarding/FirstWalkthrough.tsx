@@ -64,7 +64,7 @@ const STEPS: WalkthroughStep[] = [
     targetSelector: null,
     position: 'bottom',
     title: 'Oi! Eu sou o Curiango 🪶',
-    text: 'A maioria das pessoas vive no escuro sobre o próprio dinheiro — e só descobre o furo quando já caiu nele. Você acabou de ganhar visão noturna: daqui pra frente, você vê cada real entrar, sair e parar antes de virar problema. Isso não é planilha — é o mapa do seu ninho. E eu vou te guiar por ele, passo a passo. Sem enrolação, sem julgamento.',
+    text: 'Você acabou de descobrir o que a maioria não tem: visão total do próprio dinheiro. Enquanto a maioria só percebe que estourou lá no fim do mês, você já sabe — hoje. Está na frente. E é pra te manter na frente que eu existo.',
   },
   {
     id: 'saldo',
