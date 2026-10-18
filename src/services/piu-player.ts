@@ -3,7 +3,7 @@
 // Estratégia: no PRIMEIRO toque em qualquer lugar do app, destravamos e pré-carregamos o áudio —
 // daí em diante o piu toca em qualquer push da sessão. App fechado = som do sistema (canal).
 const PIU_URL =
-  'https://evcxjxuakiyjerujntli.supabase.co/storage/v1/object/public/branding/curiango-piu-real.mp3?v=1'
+  'https://evcxjxuakiyjerujntli.supabase.co/storage/v1/object/public/branding/curiango-piu-final.mp3?v=1'
 
 let ctx: AudioContext | null = null
 let audioEl: HTMLAudioElement | null = null
