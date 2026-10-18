@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { useFamily } from '@/hooks/use-family'
@@ -53,8 +53,16 @@ export function FirstTour({ stepsDone }: FirstTourProps) {
   const { toast } = useToast()
   const navigate = useNavigate()
   const [completing, setCompleting] = useState<string | null>(null)
+  // Atualização otimista (18/10, E2E): triggerRefresh recarrega transações, mas o
+  // objeto family (tour_steps_done) só chega no próximo load — sem estado local o
+  // card continuava mostrando o passo como pendente até o reload (achado no E2E).
+  const [localDone, setLocalDone] = useState<string[]>([])
+  const allDone = useMemo(
+    () => Array.from(new Set([...(stepsDone || []), ...localDone])),
+    [stepsDone, localDone],
+  )
 
-  const pending = STEPS.filter((s) => !stepsDone.includes(s.id))
+  const pending = STEPS.filter((s) => !allDone.includes(s.id))
 
   // Todos os 3 concluídos (ou marcados) → tour não renderiza
   if (pending.length === 0) return null
@@ -66,6 +74,7 @@ export function FirstTour({ stepsDone }: FirstTourProps) {
         p_step: stepId,
       })
       if (error) throw error
+      setLocalDone((prev) => (prev.includes(stepId) ? prev : [...prev, stepId]))
       triggerRefresh()
       const done = Array.isArray(data) ? data[0] : data
       if (Array.isArray(done) && done.length >= 3) {
@@ -114,7 +123,7 @@ export function FirstTour({ stepsDone }: FirstTourProps) {
         </div>
         {/* Progresso */}
         <span className="text-[10px] font-bold text-slate-400 tabular-nums shrink-0 mt-1">
-          {stepsDone.length}/3
+          {allDone.length}/3
         </span>
       </div>
 
@@ -153,9 +162,9 @@ export function FirstTour({ stepsDone }: FirstTourProps) {
       </div>
 
       {/* Passos já feitos (linha discreta de ✓) */}
-      {stepsDone.length > 0 && (
+      {allDone.length > 0 && (
         <div className="flex items-center gap-1.5 mt-2.5 pt-2.5 border-t border-slate-100">
-          {STEPS.filter((s) => stepsDone.includes(s.id)).map((s) => (
+          {STEPS.filter((s) => allDone.includes(s.id)).map((s) => (
             <span
               key={s.id}
               className="inline-flex items-center gap-1 text-[10px] text-emerald-600 font-medium"
