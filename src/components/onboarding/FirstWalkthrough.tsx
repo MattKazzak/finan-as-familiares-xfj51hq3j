@@ -1,25 +1,27 @@
 import { useState, useEffect, useCallback } from 'react'
-import { CuriangoChatBust } from '@/components/brand/CuriangoLogo'
+import { useNavigate } from 'react-router-dom'
+import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import { ArrowDown, X } from 'lucide-react'
 
 /**
- * FirstWalkthrough — Tour de primeiro acesso v3.3 (19/10, print do Matheus).
+ * FirstWalkthrough — Tour de primeiro acesso v3.4 (19/10, prints do Matheus).
  *
  * MISSÃO EDUCATIVA (18/10): o tour É a primeira aula do Curiango — cada balão
  * ensina um conceito em linguagem de amador, nunca jargão.
  *
- * Erros do print 20:07 corrigidos aqui (v3.3):
- *  - MASCOTE FORA do balão (padrão Duolingo): balão abaixo do alvo → mascote à
- *    esquerda; balão acima → mascote em cima do balão. Antes ele ficava
- *    "enterrado" dentro do card, na base da tela.
- *  - MASCOTE redesenhado de frente (kawaii, rindo, piscando 2 olhos) — a v1
- *    (silhueta de perfil espelhada) parecia falsa.
- *  - BALÃO retangular e uniforme (rounded-xl, padding constante) — antes parecia
- *    "janela branca".
- *  - CONTINUAR sólido âmbar (antes era fantasma 15% e parecia desabilitado).
- *  - X de pular no canto da TELA (não dentro do balão).
- *  - Seta no centro real do alvo; scroll automático; balão auto-inverte de lado.
- *  - Navegação por ID na ordem FIXA (v3 navegava por índice → passos pulados).
+ * v3.4 (print 20:16):
+ *  - MASCOTE = o PÁSSARO OFICIAL da marca (CuriangoLogo), INVERTIDO pra olhar
+ *    pra conversa. O "gatinho" kawaii da v3.3 perdeu a identidade — o Matheus:
+ *    "você já tem o pássaro, é só colocar ele lá, pode ser inteiro, inverte-o".
+ *  - ESPERA INTELIGENTE: o tour não nasce mais sobre um app que ainda não
+ *    renderizou. Enquanto houver outro dialog aberto (wizard de configuração)
+ *    ou o alvo ainda não existir no DOM, ele ESPERA e re-tenta — os balões
+ *    pousam nos elementos reais (saldo, copilot, baldes, dock).
+ *  - Alvo que NUNCA aparece (gated/free): balão vira centralizado, nunca quebrado.
+ *  - PASSO COPILOT com ação real: botão "Abrir o Copilot" navega pra /copilot
+ *    e encerra o tour (o Matheus: "não abre o copilot nem vai pra outra tela").
+ *  - Mantém: seta no centro do alvo, scroll automático, balão auto-inverte,
+ *    Continuar sólido, X no canto da tela, navegação por ID em ordem fixa.
  *
  * Roteiro (7 passos): boas-vindas → saldo → primeira-receita → copilot →
  * baldes → dock → perfil
@@ -109,10 +111,12 @@ export interface FirstWalkthroughProps {
 }
 
 export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWalkthroughProps) {
+  const navigate = useNavigate()
   // Navegação por ID na ordem FIXA de STEPS (a lista não encolhe — bug v3)
   const firstPending = STEPS.find((s) => !stepsDone.includes(s.id))?.id ?? null
   const [currentId, setCurrentId] = useState<WalkthroughStepId | null>(firstPending)
   const [rect, setRect] = useState<DOMRect | null>(null)
+  const [measuring, setMeasuring] = useState(true)
   /** Lado EFETIVO do balão (pode inverter do preferido se não couber) */
   const [effectivePos, setEffectivePos] = useState<'top' | 'bottom'>('bottom')
 
@@ -142,6 +146,7 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
       }
       setEffectivePos(pos)
       setRect(r)
+      setMeasuring(false)
     },
     [step],
   )
@@ -150,26 +155,52 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
     if (!step) return
     if (!step.targetSelector) {
       setRect(null)
+      setMeasuring(false)
       return
     }
-    const el = document.querySelector(step.targetSelector)
-    if (!el) {
-      // Alvo ausente (ex.: card gated em modo free): PULA o passo — nunca trava
-      setRect(null)
-      return
+    let attempts = 0
+    const tryFind = () => {
+      // ESPERA INTELIGENTE: outro dialog aberto (wizard de configuração da
+      // família)? O tour não nasce por cima dele — espera fechar.
+      const otherDialog = document.querySelector(
+        '[role="dialog"]:not([aria-label="Tour de primeiro acesso"])',
+      )
+      if (otherDialog) {
+        window.setTimeout(tryFind, 700)
+        return
+      }
+      const el = document.querySelector(step.targetSelector!)
+      if (el) {
+        const r0 = el.getBoundingClientRect()
+        const viewH = window.innerHeight
+        if (r0.top < 60 || r0.bottom > viewH - 90) {
+          // Alvo fora da vista → rola pra centro ANTES de medir
+          el.scrollIntoView({ block: 'center', behavior: 'auto' })
+          window.setTimeout(() => {
+            const el2 = document.querySelector(step.targetSelector!)
+            if (el2) applyPlacement(el2.getBoundingClientRect())
+          }, 120)
+        } else {
+          applyPlacement(r0)
+        }
+        return
+      }
+      // Alvo ainda não renderizou → re-tenta (categorias/RPCs chegam async)
+      attempts++
+      if (attempts < 14) {
+        window.setTimeout(tryFind, 180)
+      } else {
+        // Alvo NUNCA apareceu (gated/free): balão centralizado, nunca quebrado
+        setRect(null)
+        setMeasuring(false)
+      }
     }
-    // Alvo fora da vista → rola pra centro ANTES de medir (bug "passos quebrados")
-    const r0 = el.getBoundingClientRect()
-    const viewH = window.innerHeight
-    if (r0.top < 60 || r0.bottom > viewH - 90) {
-      el.scrollIntoView({ block: 'center', behavior: 'auto' })
-      window.setTimeout(() => applyPlacement(el.getBoundingClientRect()), 80)
-      return
-    }
-    applyPlacement(r0)
+    tryFind()
   }, [step, applyPlacement])
 
   useEffect(() => {
+    setMeasuring(true)
+    setRect(null)
     const raf = requestAnimationFrame(() => measure())
     window.addEventListener('resize', measure)
     return () => {
@@ -178,7 +209,7 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
     }
   }, [measure])
 
-  if (!step) return null
+  if (!step || measuring) return null
 
   const isCenter = !step.targetSelector || !rect
 
@@ -198,6 +229,13 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
   const skipAll = () => {
     onCompleteStep(step.id)
     onSkip()
+  }
+
+  // PASSO COPILOT com ação real (Matheus: "não abre o copilot nem vai pra outra tela")
+  const openCopilot = () => {
+    onCompleteStep('copilot')
+    onCompleteStep('tour')
+    navigate('/copilot')
   }
 
   // Container do balão: ancorado no alvo (lado efetivo) ou centralizado
@@ -264,21 +302,37 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
         <X className="w-4 h-4" />
       </button>
 
-      {/* Mascote FORA do balão + balão retangular uniforme */}
+      {/* Mascote = PÁSSARO OFICIAL invertido (olha pra conversa) + balão uniforme */}
       <div
         className="absolute z-10 animate-in fade-in slide-in-from-bottom-2 duration-300"
         style={balloonStyle}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Balão acima do alvo → mascote EM CIMA do balão */}
+        {/* Balão acima do alvo / centralizado → pássaro EM CIMA do balão */}
         {(effectivePos === 'top' || isCenter) && (
-          <CuriangoChatBust size={56} className="block mx-auto -mb-2 relative z-10" />
+          <CuriangoLogo
+            size={64}
+            color="#FCA311"
+            eyeColor="#14213D"
+            eyeRadius={3.4}
+            eyeHighlight
+            className="block mx-auto -mb-2 relative z-10"
+            style={{ transform: 'scaleX(-1)' }}
+          />
         )}
 
         <div className="flex items-end gap-2">
-          {/* Balão abaixo do alvo → mascote À ESQUERDA do balão */}
+          {/* Balão abaixo do alvo → pássaro À ESQUERDA do balão, olhando pro texto */}
           {effectivePos === 'bottom' && !isCenter && (
-            <CuriangoChatBust size={56} className="shrink-0 -mb-1" />
+            <CuriangoLogo
+              size={64}
+              color="#FCA311"
+              eyeColor="#14213D"
+              eyeRadius={3.4}
+              eyeHighlight
+              className="shrink-0 -mb-1"
+              style={{ transform: 'scaleX(-1)' }}
+            />
           )}
 
           <div className="flex-1 min-w-0 relative">
@@ -286,7 +340,7 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
               <p className="text-[14px] font-bold text-[#14213D] leading-tight">{step.title}</p>
               <p className="text-[12.5px] text-slate-600 leading-relaxed mt-1">{step.text}</p>
 
-              {/* Rodapé: progresso + avançar SÓLIDO */}
+              {/* Rodapé: progresso + avançar SÓLIDO (+ ação real no passo Copilot) */}
               <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100">
                 <div className="flex gap-1">
                   {STEPS.map((s) => (
@@ -298,14 +352,25 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
                     />
                   ))}
                 </div>
-                <button
-                  type="button"
-                  onClick={advance}
-                  className="text-[11.5px] font-bold text-white bg-[#FCA311] hover:bg-[#E08A00] px-4 py-1.5 rounded-full transition-colors inline-flex items-center gap-1.5 shadow-sm"
-                >
-                  {isFirstStep ? 'Vamos começar' : 'Continuar'}
-                  <ArrowDown className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-1.5">
+                  {step.id === 'copilot' && (
+                    <button
+                      type="button"
+                      onClick={openCopilot}
+                      className="text-[11.5px] font-bold text-white bg-[#14213D] hover:bg-[#1d2f52] px-3.5 py-1.5 rounded-full transition-colors shadow-sm"
+                    >
+                      Abrir o Copilot
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={advance}
+                    className="text-[11.5px] font-bold text-white bg-[#FCA311] hover:bg-[#E08A00] px-4 py-1.5 rounded-full transition-colors inline-flex items-center gap-1.5 shadow-sm"
+                  >
+                    {isFirstStep ? 'Vamos começar' : 'Continuar'}
+                    <ArrowDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
 
