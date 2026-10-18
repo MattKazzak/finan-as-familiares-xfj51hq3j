@@ -121,52 +121,6 @@ export function WalletBudgetsTab() {
       {/* BLOCO SUPERIOR REMOVIDO (18/10, decisão do Matheus): redundante com o card
           "Receitas previstas" logo abaixo (que já tem "Ajustar modelo / Renda").
           A metodologia (50/30/20, Elizabeth Warren) agora vive no ℹ️ do card de Receitas. */}
-      {false && (
-        <div className="flex items-center justify-between gap-2 flex-wrap bg-white/95 backdrop-blur-sm p-4 sm:p-5 rounded-2xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-buckets-goals flex items-center justify-center shrink-0">
-              <Target className="w-5 h-5 select-none" strokeWidth={1.5} />
-            </div>
-            <div>
-              <h3 className="font-semibold text-sm text-foreground dark:text-white leading-tight">
-                Orçamentos
-              </h3>
-              <p className="text-[11px] text-muted-foreground">
-                Tetos por balde, baseados na sua renda
-              </p>
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="ml-1 text-slate-400 hover:text-slate-600 p-1 rounded-md transition-colors"
-                  aria-label="Sobre a metodologia de orçamento"
-                  title="Sobre a metodologia"
-                >
-                  <Info className="w-4 h-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="max-w-xs p-3 text-xs leading-relaxed">
-                Tetos baseados em percentuais da renda líquida familiar. Os modelos seguem
-                metodologias consagradas como a 50/30/20 (Elizabeth Warren) e variações para perfis
-                de família — com liberdade total de personalização.
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsApplyModelOpen(true)}
-              className="rounded-xl text-xs font-semibold gap-1.5 border-border text-foreground bg-slate-100/60 hover:bg-slate-100"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-brand-amber" />
-              <span>Ajustar modelo</span>
-            </Button>
-          </div>
-        </div>
-      )}
       {/* CARD DE ONBOARDING LEVE (QUANDO A RENDA LÍQUIDA AINDA NÃO FOI DEFINIDA) */}
       {(!family?.monthly_net_income_cents || family.monthly_net_income_cents <= 0) && (
         <div className="bg-gradient-to-br from-brand via-[#192a4f] to-brand-dark text-white rounded-3xl p-5 shadow-sm border border-brand flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in-50 duration-200">
@@ -1349,7 +1303,10 @@ export function WalletBudgetsTab() {
          acerto de contas depende do FEATURE rateio entre membros, que ainda não
          existe. Sem rateio, o card é ruído (zero transações divididas). Volta
          junto do rateio (design pronto em artifacts/feature-rateio-entre-membros.md). */}
-      {false && family && (
+      {/* Só renderiza quando existem despesas divididas (rateio) — hoje é invisível
+          (decisão do Matheus 18/10: era ruído sem o rateio). Quando o rateio lançar,
+          este card volta a aparecer sozinho. */}
+      {family && settlementRows.length > 0 && (
         <div
           className="bg-white/95 backdrop-blur-sm rounded-3xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 p-5 sm:p-6"
           aria-label="Acerto de contas do mês"
