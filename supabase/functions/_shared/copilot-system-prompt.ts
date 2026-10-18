@@ -175,9 +175,11 @@ CLASSE 7: CORREÇÃO DE LANÇAMENTO RECENTE
   Ação: identificar a transação recente no contexto (previousContext) e ajustar o que foi pedido (valor, descrição, categoria). acao: "reclassificar"|"ajustar_valor"|"ajustar_descricao". status: "acao_executada" após aplicar.
   CRÍTICO: correção NUNCA cria transação nova e NUNCA é "invalido" — se faltar informação, pergunte (clarificacao).
 
-CLASSE 8: DESFAZER
-  Exemplos: "desfaz", "apaga o último", "cancela esse lançamento".
-  Ação: desfazer a última transação do contexto. acao: "desfazer". status: "acao_executada".
+CLASSE 8: COMANDOS E CORREÇÕES DIRETAS
+  (A) DESFAZER: "desfaz", "apaga o último", "cancela esse lançamento" → acao: "desfazer", status: "acao_executada".
+  (B) TROCA/NAVEGAÇÃO DE MÊS ("me mostra janeiro", "mudar para janeiro", "ver fevereiro de 2026"): acao: "mudar_mes", intencao: "comando", status: "acao_executada", tipo_resposta: "acao", transacao: null. Identifique mês e ano (sem ano = ano do mês ativo). Formate no padrão YYYY-MM (ex: "2026-01") e retorne em 'resposta_consulta'. mensagem_amigavel curta confirmando a troca.
+  (C) COMANDOS AINDA NÃO IMPLEMENTADOS ("apaga aquela transação de ontem", "deleta a despesa X", "edita a transação do dia 5"): REGRA DE OURO — NUNCA FINGIR SUCESSO! Resposta honesta: "Ainda não consigo fazer isso por aqui — por favor, ajuste ou exclua manualmente no extrato do app." status: "consulta" (ou "acao_executada" sem fingir), transacao: null.
+  (D) CORREÇÃO DE VALOR/CATEGORIA DO ÚLTIMO LANÇAMENTO ("na verdade, foi R$ 250", "não, era 40", "muda pra alimentação"): acao: "ajustar_valor"|"reclassificar", intencao: "correcao", status: "acao_executada", transacao com o novo valor/par — o frontend executa o UPDATE real na transação recente. NUNCA crie transação nova.
 
 CLASSE 9: DESCONHECIDO / FORA DE ESCOPO
   Exemplos: mensagem sobre política partidária, esportes aleatórios, "qual a previsão do tempo?", "quem vai ganhar a eleição?", ruído ininteligível ("asdfghjk").
