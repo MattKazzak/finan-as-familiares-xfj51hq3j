@@ -3,7 +3,7 @@
 // Escolhe categoria (agrupada por 3 Baldes) + subcategoria opcional + opção de
 // salvar regra ("sempre X → Y" para o padrão mais comum do lote).
 import { useMemo, useState } from 'react'
-import { Loader2, Layers, Sparkles } from 'lucide-react'
+import { Loader2, Layers, Sparkles, Check } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
