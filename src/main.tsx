@@ -27,7 +27,7 @@ import { registerAppServiceWorker } from './hooks/use-service-worker'
 registerAppServiceWorker()
 
 // Som do Curiango: no push, o SW pergunta via PIU_QUERY e a página TOCA O PIU DE VERDADE
-// (prova real) — responde canPlay:true só com o som já tocando. Destravamento: 1º toque/tecla.
+// (prova real) — responde canPlay:true só com o som já tocando. PLAY_PIU = notificationclick.
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', (event) => {
     if (event.data?.type === 'PLAY_PIU') playPiu()
@@ -36,6 +36,8 @@ if ('serviceWorker' in navigator) {
     }
   })
 }
+// Destravamento do áudio: o 1º toque/tecla da sessão (regra de autoplay do Chrome —
+// renova a cada abertura do app; sem isso o piu falha e o som do sistema cobre).
 window.addEventListener('pointerdown', initPiuUnlock, { once: true, capture: true })
 window.addEventListener('keydown', initPiuUnlock, { once: true, capture: true })
 

@@ -146,8 +146,9 @@ self.addEventListener('push', (event) => {
         })
         const visivel = clientList.find((c) => c.visibilityState === 'visible')
         if (visivel) {
+          // A prova real JÁ TOCA o piu durante o handshake — não mandar PLAY_PIU de novo
+          // (seria o piu 2x, sobreposto). PLAY_PIU fica só para o notificationclick (gesto).
           piuReliable = await queryPiuCapability(visivel)
-          visivel.postMessage({ type: 'PLAY_PIU' })
         }
       } catch (e) {
         /* silencioso */
