@@ -1,9 +1,10 @@
-// Player do "piu" do Curiango — toca quando chega push com o app aberto (SW manda PLAY_PIU).
-// ARQUITETURA À PROVA DE FALHAS (v0.0.425):
-// 1. SWs são efêmeros — NADA de estado em memória do SW. No push, o SW PERGUNTA à página
-//    via MessageChannel ("consegue tocar áudio AGORA?") com timeout de 350ms.
-// 2. A página responde canPlay só se: visível + áudio destravado + AudioContext running.
-// 3. Fail-safe: sem resposta/qualquer erro → som do sistema (nunca notificação muda).
+// Player do "piu" do Curiango — toca quando chega push com o app aberto.
+// ARQUITETURA À PROVA DE FALHAS (v0.0.426 — "prova real"):
+// 1. SWs são efêmeros: no push, o SW PERGUNTA à página via MessageChannel.
+// 2. A página TENTA TOCAR o piu de verdade NA HORA da pergunta e responde o RESULTADO:
+//    som tocando de fato → { canPlay: true } → SW mostra notificação silenciosa.
+//    Qualquer falha → { canPlay: false } → SW mostra notificação com som do sistema.
+// 3. Nunca há notificação muda: canPlay: true só é respondido COM O SOM JÁ TOCANDO.
 // 4. Autoplay policy: o 1º toque na sessão destrava e pré-carrega (initPiuUnlock).
 const PIU_URL =
   'https://evcxjxuakiyjerujntli.supabase.co/storage/v1/object/public/branding/curiango-piu-final.mp3?v=1'
@@ -35,27 +36,63 @@ export function initPiuUnlock(): void {
   }
 }
 
-/**
- * Responde ao handshake do SW: a página consegue tocar o piu NESTE instante?
- * Critérios: página visível + sessão destravada + (AudioContext running OU elemento pronto).
- * Tenta resume rápido do AudioContext (150ms) antes de responder.
- */
-export async function canPlayPiuNow(): Promise<boolean> {
+/** Toca via AudioContext (WebAudio). Retorna true se src.start() executou (som tocando). */
+async function playViaContext(): Promise<boolean> {
   try {
-    if (document.hidden || !unlocked) return false
-    if (ctx && ctx.state === 'suspended') {
-      await Promise.race([ctx.resume().catch(() => {}), new Promise((r) => setTimeout(r, 150))])
-    }
-    return (ctx !== null && ctx.state === 'running') || audioEl !== null
+    if (!ctx) return false
+    if (ctx.state === 'suspended') await ctx.resume().catch(() => {})
+    if (ctx.state !== 'running') return false
+    const res = await fetch(PIU_URL)
+    const buf = await res.arrayBuffer()
+    const audio = await ctx.decodeAudioData(buf)
+    const src = ctx.createBufferSource()
+    src.buffer = audio
+    src.connect(ctx.destination)
+    src.start() // síncrono — se não lançou, está tocando
+    return true
   } catch {
     return false
   }
 }
 
-/** Responde o PIU_QUERY do SW via MessagePort (o SW espera até 350ms). */
+/** Toca via elemento <audio>. Retorna true se play() resolveu (som tocando). */
+async function playViaElement(): Promise<boolean> {
+  try {
+    if (!audioEl) return false
+    audioEl.currentTime = 0
+    await audioEl.play() // resolve só quando o áudio começou de fato
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * PROVA REAL: tenta tocar o piu AGORA e retorna se o som está de fato tocando.
+ * Usada no handshake do SW — canPlay: true = som já audível no dispositivo.
+ */
+export async function attemptPiuPlay(): Promise<boolean> {
+  try {
+    if (document.hidden || !unlocked) return false
+    const viaCtx = await Promise.race([
+      playViaContext(),
+      new Promise<boolean>((r) => setTimeout(() => r(false), 400)),
+    ])
+    if (viaCtx) return true
+    const viaEl = await Promise.race([
+      playViaElement(),
+      new Promise<boolean>((r) => setTimeout(() => r(false), 400)),
+    ])
+    return viaEl
+  } catch {
+    return false
+  }
+}
+
+/** Responde o PIU_QUERY do SW: toca o piu e responde o resultado REAL via MessagePort. */
 export function handlePiuQuery(port: MessagePort): void {
   if (!port) return
-  void canPlayPiuNow()
+  void attemptPiuPlay()
     .then((canPlay) => {
       try {
         port.postMessage({ canPlay })
@@ -72,36 +109,7 @@ export function handlePiuQuery(port: MessagePort): void {
     })
 }
 
-async function playViaContext(): Promise<boolean> {
-  try {
-    if (!ctx) return false
-    if (ctx.state === 'suspended') await ctx.resume().catch(() => {})
-    if (ctx.state !== 'running') return false
-    const res = await fetch(PIU_URL)
-    const buf = await res.arrayBuffer()
-    const audio = await ctx.decodeAudioData(buf)
-    const src = ctx.createBufferSource()
-    src.buffer = audio
-    src.connect(ctx.destination)
-    src.start()
-    return true
-  } catch {
-    return false
-  }
-}
-
-function playViaElement(): void {
-  try {
-    if (!audioEl) return
-    audioEl.currentTime = 0
-    void audioEl.play().catch(() => {
-      /* autoplay bloqueado — som do sistema cobre */
-    })
-  } catch {
-    /* silencioso */
-  }
-}
-
+/** Toca o piu (usado no PLAY_PIU do notificationclick — gesto garantido). */
 export function playPiu(): void {
   void playViaContext().then((ok) => {
     if (!ok) playViaElement()

@@ -90,7 +90,7 @@ async function queryPiuCapability(client) {
           settled = true
           resolve(false)
         }
-      }, 350)
+      }, 1500)
       channel.port1.onmessage = (ev) => {
         if (!settled) {
           settled = true

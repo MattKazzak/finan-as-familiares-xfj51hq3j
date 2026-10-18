@@ -26,8 +26,8 @@ import { registerAppServiceWorker } from './hooks/use-service-worker'
 // Registra o Service Worker oficial do Curiangoo com atualização forçada e skipWaiting
 registerAppServiceWorker()
 
-// Som do Curiango: o SW pergunta via PIU_QUERY se a página pode tocar (handshake ao vivo),
-// e manda PLAY_PIU quando a resposta é sim. Destravamento: 1º toque/tecla da sessão.
+// Som do Curiango: no push, o SW pergunta via PIU_QUERY e a página TOCA O PIU DE VERDADE
+// (prova real) — responde canPlay:true só com o som já tocando. Destravamento: 1º toque/tecla.
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', (event) => {
     if (event.data?.type === 'PLAY_PIU') playPiu()
