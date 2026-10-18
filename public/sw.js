@@ -108,17 +108,23 @@ self.addEventListener('push', (event) => {
 
   event.waitUntil(
     (async () => {
-      // Som do Curiango: se o app estiver ABERTO, manda a página tocar o piu
+      // App ABERTO: suprime o som do sistema (silent) e toca SÓ o piu do Curiango na página.
+      // App FECHADO: notificação normal — som vem do canal do Android (configurável pelo usuário).
+      let appOpen = false
       try {
         const clientList = await self.clients.matchAll({
           type: 'window',
           includeUncontrolled: true,
         })
-        if (clientList.length > 0) clientList[0].postMessage({ type: 'PLAY_PIU' })
+        appOpen = clientList.length > 0
+        if (appOpen) clientList[0].postMessage({ type: 'PLAY_PIU' })
       } catch (e) {
         /* silencioso */
       }
-      await self.registration.showNotification(title, options)
+      await self.registration.showNotification(
+        title,
+        appOpen ? { ...options, silent: true } : options,
+      )
     })(),
   )
 })
