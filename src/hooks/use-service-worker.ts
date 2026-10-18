@@ -27,9 +27,9 @@ export function registerAppServiceWorker() {
   }
   window.__CURIANGOO_SW_REGISTERED__ = true
 
-  // CACHE-BUSTER: o Chrome pode servir o sw.js do cache HTTP por até 24h (causa clássica
-  // de PWA desatualizado). URL única por abertura força a checagem da versão real.
-  const swUrl = `/sw.js?v=${Date.now()}`
+  // URL ESTÁVEL: nunca usar timestamp no sw.js — o Chrome trata cada URL nova como
+  // outro worker → instala → ativa → controllerchange → reload → loop infinito.
+  const swUrl = '/sw.js'
 
   window.addEventListener('load', () => {
     navigator.serviceWorker
@@ -37,8 +37,7 @@ export function registerAppServiceWorker() {
       .then((registration) => {
         registrationInstance = registration
 
-        // Se já existe um waiting worker pronto, ativa IMEDIATAMENTE (sem banner):
-        // skipWaiting + o controllerchange abaixo recarrega a página com os assets novos.
+        // Waiting worker: ativa IMEDIATAMENTE (skipWaiting) — o controllerchange recarrega 1x.
         if (registration.waiting) {
           registration.waiting.postMessage({ type: 'SKIP_WAITING' })
           notifyUpdateListeners(true)
@@ -76,12 +75,12 @@ export function registerAppServiceWorker() {
         console.warn('[SW Registration] Não foi possível registrar service worker:', err)
       })
 
-    // Se o controller mudar (skipWaiting ativado), recarrega na próxima oportunidade se não recarregou
+    // Se o controller mudar (skipWaiting ativado), recarrega UMA vez por sessão.
+    // Proteção anti-loop: nunca recarregar 2x (update + controllerchange + update...).
     let refreshing = false
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (refreshing) return
       refreshing = true
-      // Recarrega automaticamente a página para aplicar os novos assets
       window.location.reload()
     })
   })
