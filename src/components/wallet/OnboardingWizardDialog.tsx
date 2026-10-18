@@ -410,7 +410,7 @@ export function OnboardingWizardDialog({
           <DialogTitle className="text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight break-words min-w-0">
             {step === 1 && 'Vamos criar o espaço da sua família'}
             {step === 2 && 'Renda Mensal Familiar'}
-            {step === 3 && 'O que faz parte da sua rotina?'}
+            {step === 3 && 'Você tem...?'}
             {step === 4 && 'Seu Orçamento em 3 Caixas'}
           </DialogTitle>
 
@@ -418,7 +418,7 @@ export function OnboardingWizardDialog({
             {step === 1 && 'Dê um nome afetuoso ou sobrenome para o workspace de vocês.'}
             {step === 2 && 'Quanto entra líquido na conta da família por mês?'}
             {step === 3 &&
-              'Personalizamos seu catálogo — ocultamos o que não se aplica, nada é apagado.'}
+              'Toque no que sua família tem — assim suas despesas caem nas categorias certas.'}
             {step === 4 &&
               'Separamos seu dinheiro em 3 caixas inteligentes para equilibrar o mês sem esforço.'}
           </DialogDescription>
@@ -571,6 +571,8 @@ export function OnboardingWizardDialog({
             (não formulário): toque alterna Sim/Não, tudo opcional, nada bloqueia. */}
         {step === 3 && (
           <div className="space-y-4 py-1 w-full min-w-0">
+            {/* MISSÃO EDUCATIVA (19/10): copy de amador — "Você tem...?" ensina o que
+            cada resposta faz, sem jargão de catálogo. */}{' '}
             <div className="flex flex-col gap-2.5 w-full min-w-0">
               {[
                 {
@@ -643,12 +645,10 @@ export function OnboardingWizardDialog({
                 )
               })}
             </div>
-
             <p className="text-[11px] text-slate-400 text-center leading-relaxed px-2">
               Não se aplica? Toque de novo — ocultamos do seu catálogo sem apagar nada. Você reativa
               quando quiser, na gestão de categorias.
             </p>
-
             {/* Ações da Etapa 3 */}
             <div className="pt-2 flex flex-col sm:flex-row items-center gap-2 w-full min-w-0">
               <Button

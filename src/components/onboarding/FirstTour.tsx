@@ -107,7 +107,10 @@ export function FirstTour({ stepsDone }: FirstTourProps) {
   const soOpcional = obrigatóriosPendentes.length === 0
 
   return (
-    <div className="rounded-2xl border border-[rgba(20,33,61,0.08)] bg-white/95 px-4 py-4 shadow-sm">
+    <div
+      data-testid="first-tour-card"
+      className="rounded-2xl border border-[rgba(20,33,61,0.08)] bg-white/95 px-4 py-4 shadow-sm"
+    >
       {/* Cabeçalho com o Curiango guiando */}
       <div className="flex items-start gap-3 mb-3">
         <CuriangoLogo size={36} color="#FCA311" eyeColor="#14213D" eyeRadius={3.4} eyeHighlight />

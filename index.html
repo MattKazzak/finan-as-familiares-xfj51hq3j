@@ -37,6 +37,42 @@
   </head>
 
   <body>
+    <!-- SPLASH DO CURIANGO (19/10, Matheus): pássaro surge suave + nome enquanto o
+         React carrega. Puro HTML/CSS inline (zero JS): some quando o app monta
+         (main.tsx remove #splash). Fundo navy = mesma cor da barra de status. -->
+    <div id="splash" style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:#14213D;transition:opacity .45s ease;">
+      <svg id="splash-bird" width="96" height="96" viewBox="0 0 100 100" style="opacity:0;transform:scale(.85);animation:splash-bird-in .7s cubic-bezier(.2,.7,.3,1) .15s forwards;">
+        <defs>
+          <radialGradient id="splash-eye-shine" cx="35%" cy="30%" r="60%">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity=".9"/>
+            <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="56" rx="30" ry="26" fill="#FCA311"/>
+        <ellipse cx="50" cy="58" rx="21" ry="17" fill="#FDB744"/>
+        <path d="M 50 30 Q 36 34 34 48 Q 40 40 50 38 Z" fill="#FCA311"/>
+        <path d="M 50 30 Q 64 34 66 48 Q 60 40 50 38 Z" fill="#FCA311"/>
+        <circle cx="41" cy="52" r="7.5" fill="#14213D"/>
+        <circle cx="43.5" cy="49.5" r="2.4" fill="url(#splash-eye-shine)"/>
+        <path d="M 70 52 Q 84 50 88 56 Q 80 62 70 58 Z" fill="#FCA311"/>
+        <path d="M 70 54 Q 80 54 84 57 Q 78 60 70 58 Z" fill="#E08E08"/>
+        <path d="M 34 80 Q 44 86 58 84 L 56 88 Q 44 90 34 84 Z" fill="#E08E08"/>
+      </svg>
+      <div style="font-family:system-ui,-apple-system,sans-serif;font-size:22px;font-weight:800;letter-spacing:-0.5px;color:#ffffff;opacity:0;animation:splash-name-in .5s ease .55s forwards;">
+        Curiangoo
+      </div>
+    </div>
+    <style>
+      @keyframes splash-bird-in {
+        0%   { opacity: 0; transform: scale(.85) translateY(8px); }
+        60%  { opacity: 1; transform: scale(1.04) translateY(0); }
+        100% { opacity: 1; transform: scale(1) translateY(0); }
+      }
+      @keyframes splash-name-in {
+        from { opacity: 0; transform: translateY(6px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+    </style>
     <div id="root"></div>
     <script>
       // Anti-flash: aplica light antes do React montar (evita fundo escuro em 1 frame)

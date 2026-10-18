@@ -26,6 +26,24 @@ import { registerAppServiceWorker } from './hooks/use-service-worker'
 // Registra o Service Worker (curiangoo-sw.js — nome novo, nunca cacheado)
 registerAppServiceWorker()
 
+// SPLASH DO CURIANGO (19/10): o HTML estático (#splash) cobre o tempo de carregamento
+// do JS; quando o React monta, esvanece suave e remove do DOM. Se algo falhar, o
+// splash some mesmo assim (fallback 4s) — nunca prende o usuário numa tela morta.
+;(function dismissSplash() {
+  const remove = () => {
+    const el = document.getElementById('splash')
+    if (!el) return
+    el.style.opacity = '0'
+    setTimeout(() => el.remove(), 500)
+  }
+  if (document.readyState === 'complete') {
+    setTimeout(remove, 350)
+  } else {
+    window.addEventListener('load', () => setTimeout(remove, 350), { once: true })
+  }
+  setTimeout(remove, 4000) // fallback: nunca prender
+})()
+
 // PIU DO CURIANGO (padrão Discord/Slack): a página escuta INSERTs via Supabase Realtime
 // e toca o piu na hora — determinístico, sem SW, sem handshake, sem timeout.
 startRealtimePiu()

@@ -333,6 +333,7 @@ export default function Layout() {
               <button
                 type="button"
                 onClick={() => openNewTransaction()}
+                data-testid="dock-new-transaction"
                 className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#FCA311] via-[#fba825] to-[#ffb845] text-[#14213D] flex items-center justify-center shadow-lg shadow-[#FCA311]/30 border-2 border-[#14213D] active:scale-90 hover:scale-105 transition-all duration-200 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
                 aria-label="Nova Transação"
                 title="Nova Transação"
@@ -383,7 +384,9 @@ export default function Layout() {
                       isActive ? 'bg-[#FCA311]/20 scale-105' : ''
                     }`}
                   >
-                    {/* Foto do usuário no lugar do ícone (estilo Pinterest — 18/10, Matheus) */}
+                    {/* Foto do usuário no lugar do ícone (estilo Pinterest — 18/10, Matheus).
+                        FALLBACK PROFISSIONAL (19/10): sem foto = INICIAL do membro sobre
+                        âmbar (padrão WhatsApp/Notion) — nunca um ícone genérico vazio. */}
                     <span className="block w-6 h-6 rounded-full overflow-hidden ring-1 ring-white/30">
                       {userAvatarUrl ? (
                         <img
@@ -392,7 +395,9 @@ export default function Layout() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <User className="w-6 h-6" strokeWidth={1.5} />
+                        <span className="w-full h-full bg-[#FCA311] text-[#14213D] flex items-center justify-center text-[11px] font-bold">
+                          {userInitial}
+                        </span>
                       )}
                     </span>
                   </div>

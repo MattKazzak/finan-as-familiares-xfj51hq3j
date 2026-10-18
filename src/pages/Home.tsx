@@ -16,6 +16,7 @@ import { CategoryIconBox } from '@/components/common/CategoryIcon'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import { PremiumGate } from '@/components/billing/PremiumGate'
 import { FirstTour } from '@/components/onboarding/FirstTour'
+import { FirstWalkthrough } from '@/components/onboarding/FirstWalkthrough'
 import { useAccessStatus } from '@/services/access-status'
 import { TransactionDetailDialog } from '@/components/transactions/TransactionDetailDialog'
 import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
@@ -840,7 +841,12 @@ export default function Home() {
               expandível 'Ver detalhes' foi REMOVIDO — receitas/despesas do mês já
               estão no próprio herói, progressos vivem em Orçamentos e a tendência
               virou o gráfico 'Evolução do saldo'. Menos informação, mais clareza. */}
-          <div role="region" aria-label="Card de Saldo" className="pt-2 sm:pt-4">
+          <div
+            role="region"
+            aria-label="Card de Saldo"
+            data-testid="balance-block"
+            className="pt-2 sm:pt-4"
+          >
             <div className="flex items-center justify-between gap-2 mb-1.5">
               <span className="text-xs uppercase font-medium tracking-wider text-slate-300">
                 {selectedMemberId
@@ -908,12 +914,28 @@ export default function Home() {
       {/* 2. ÁREA CLARA (#F8F9FB) COM CARDS FLUTUANTES SOBREPONDO O FUNDO MARINHO */}
       <div className="relative -mt-6 sm:-mt-8 px-4 sm:px-6 pb-12 max-w-5xl mx-auto space-y-6">
         {/* TOUR DE PRIMEIRO ACESSO (18/10, Matheus): checklist progressivo — ensina
-            fazendo, não bloqueia. Some sozinho quando os 3 passos estão concluídos. */}
-        {family && (
-          <FirstTour
-            stepsDone={Array.isArray(family.tour_steps_done) ? family.tour_steps_done : []}
-          />
-        )}
+            fazendo, não bloqueia. Some sozinho quando os 3 passos estão concluídos.
+            WALKTHROUGH v2 (19/10, visão do Matheus: fundo escuro + balõezinhos):
+            na PRIMEIRA visita (passo 'tour' pendente) mostra o coach-marks overlay;
+            concluído/pulado, o checklist continua como guia permanente. */}
+        {family &&
+          (Array.isArray(family.tour_steps_done) && !family.tour_steps_done.includes('tour') ? (
+            <FirstWalkthrough
+              stepsDone={Array.isArray(family.tour_steps_done) ? family.tour_steps_done : []}
+              onCompleteStep={(id) =>
+                (supabase as any).rpc('mark_tour_step', { p_step: id }).then(() => triggerRefresh())
+              }
+              onSkip={() =>
+                (supabase as any)
+                  .rpc('mark_tour_step', { p_step: 'tour' })
+                  .then(() => triggerRefresh())
+              }
+            />
+          ) : (
+            <FirstTour
+              stepsDone={Array.isArray(family.tour_steps_done) ? family.tour_steps_done : []}
+            />
+          ))}
         {/* COPILOT NA HOME (16/10, v2 — fala do Curiango): card SEMPRE presente.
             Padrão-ouro de personagem conversando (Copilot Money/Monzo chat): o
             pássaro É o remetente (avatar à esquerda, como foto de perfil) e fala
