@@ -498,6 +498,7 @@ export interface Transaction {
   bank_transaction_id?: string | null
   payment_method?: PaymentMethod | null
   ai_confidence?: number | null
+  ai_reasoning?: string | null
   // Relações resolvidas
   member?: FamilyMember
   category?: TransactionCategory

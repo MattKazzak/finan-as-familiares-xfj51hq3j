@@ -491,6 +491,9 @@ export function WalletPage() {
               // grava a confiança pra transação auto-aplicada ser auditável e o UI
               // poder exibir o chip "✨ IA" (transação manual = ai_confidence null/1.0).
               ai_confidence: item.confidence ?? 0.7,
+              // P2 (padrão Monarch "Explain this transaction"): o reasoning da IA
+              // fica gravado — o Curiango usa pra explicar a categoria no detail.
+              ai_reasoning: item.reasoning || null,
             })
             appliedCount++
           } catch (updateErr) {

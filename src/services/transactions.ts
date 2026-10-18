@@ -188,7 +188,8 @@ export async function createTransactionsBatch(
     installment_total?: number | null
     installment_group_id?: string | null
     status?: 'confirmed' | 'projected'
-    bank_transaction_id?: string | null
+    bank_transaction_id: string | null
+    ai_reasoning?: string | null
   }>,
 ) {
   if (payloads.length === 0) return []

@@ -30,6 +30,7 @@ interface FamilyRule {
   pattern: string
   category_id: string
   subcategory_id: string | null
+  max_amount_cents?: number | null
 }
 
 async function fetchFamilyRules(supabase: any, familyId: string | null): Promise<FamilyRule[]> {
@@ -37,7 +38,7 @@ async function fetchFamilyRules(supabase: any, familyId: string | null): Promise
   try {
     const { data, error } = await supabase
       .from('categorization_rules')
-      .select('pattern, category_id, subcategory_id')
+      .select('pattern, category_id, subcategory_id, max_amount_cents')
       .eq('family_id', familyId)
       .limit(200)
     if (error) {
@@ -58,6 +59,7 @@ function matchFamilyRule(
   description: string,
   rules: FamilyRule[],
   validCategoryIds: Set<string>,
+  amountCents?: number,
 ): {
   categoryId: string
   subcategoryId: string | null
@@ -69,13 +71,26 @@ function matchFamilyRule(
   for (const rule of rules) {
     const normPattern = normalizeText(rule.pattern || '')
     if (!normPattern || normPattern.length < 2) continue
+    // Condição por valor (padrão Simplifi, P2): regra com max_amount_cents só
+    // vale até aquele valor — "posto até R$ 10 = café" não pega tanque cheio.
+    if (
+      rule.max_amount_cents != null &&
+      amountCents != null &&
+      amountCents > rule.max_amount_cents
+    ) {
+      continue
+    }
     if (norm.includes(normPattern) && validCategoryIds.has(rule.category_id)) {
       return {
         categoryId: rule.category_id,
         subcategoryId:
           rule.subcategory_id && validCategoryIds.size > 0 ? rule.subcategory_id : null,
         confidence: 0.99,
-        reasoning: `Regra da família: "${rule.pattern}"`,
+        reasoning: `Regra da família: "${rule.pattern}"${
+          rule.max_amount_cents != null
+            ? ` (até R$ ${(rule.max_amount_cents / 100).toFixed(2).replace('.', ',')})`
+            : ''
+        }`,
       }
     }
   }
@@ -723,7 +738,12 @@ Retorne estritamente um objeto JSON válido completo com "declaredTotalCents" e 
     const pendingForAi: BatchTransactionItem[] = []
 
     for (const t of transactions) {
-      const ruleResolution = matchFamilyRule(t.description, familyRules, validCategoryIds)
+      const ruleResolution = matchFamilyRule(
+        t.description,
+        familyRules,
+        validCategoryIds,
+        t.amountCents,
+      )
       if (ruleResolution) {
         finalSuggestions.push({
           tempId: t.tempId,

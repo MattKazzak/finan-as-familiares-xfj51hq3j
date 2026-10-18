@@ -18,6 +18,7 @@ import { formatBRL, formatDayGroupHeader } from '@/lib/formatters'
 import { formatTransactionTitle } from '@/services/installments'
 import { CategoryIcon, CategoryIconBox } from '@/components/common/CategoryIcon'
 import { TransactionInlineRow } from '@/components/transactions/TransactionInlineRow'
+import { SwipeReviewDeck } from '@/components/wallet/SwipeReviewDeck'
 import { extractPatternFromDescription, normalizeText } from '@/services/import/categorization'
 import { useFamily } from '@/hooks/use-family'
 import { useWallet } from './WalletContext'
@@ -250,6 +251,9 @@ export function WalletTransactionsTab() {
           </Button>
         </div>
       ) : null}
+
+      {/* ===== Deck de revisão em swipe (P2 — padrão Rocket Money) ===== */}
+      {!selectionMode && pendingTransactionsCount > 0 ? <SwipeReviewDeck /> : null}
 
       {/* ===== Barra de seleção (bulk edit P1 — padrão Monarch) ===== */}
       {selectionMode ? (

@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { formatBRL, formatRelativeDate } from '@/lib/formatters'
 import { CategoryIcon, CategoryIconBox } from '@/components/common/CategoryIcon'
+import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import { formatTransactionTitle } from '@/services/installments'
 import type { Transaction } from '@/types/finance'
 import { ArrowDownRight, ArrowUpRight, Calendar, User, Edit3, Trash2, Sparkles } from 'lucide-react'
@@ -132,6 +133,27 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
             </span>
           </div>
         </div>
+
+        {/* P2 — Curiango explica a categoria (padrão Monarch "Explain this transaction"):
+            quando a categoria veio da IA (ai_confidence < 1.0), o pássaro explica o
+            porquê com o reasoning gravado pela edge. Fallback: frase genérica. */}
+        {transaction.category &&
+        transaction.ai_confidence != null &&
+        transaction.ai_confidence < 1.0 ? (
+          <div className="mt-3 flex items-start gap-2.5 rounded-2xl border border-[rgba(20,33,61,0.08)] bg-slate-50/80 p-3">
+            <div className="shrink-0 pt-0.5">
+              <CuriangoLogo size={28} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold text-[#14213D] leading-snug">
+                {transaction.ai_reasoning || `Categorizei como ${transaction.category.name}.`}
+              </p>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                Curiango · toque em Editar se eu errei
+              </p>
+            </div>
+          </div>
+        ) : null}
 
         <DialogFooter className="mt-4 flex-row gap-2">
           <Button
