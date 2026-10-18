@@ -300,10 +300,11 @@ export function CopilotPage() {
               c.name.toLowerCase().includes(txData.categoryNameSuggestion?.toLowerCase() || '')),
         )
 
-        if (!cat) {
-          cat = categories.find((c) => c.type === txData.type)
-        }
-
+        // Anti-chute (18/10, varredura de portas de entrada): se o nome sugerido
+        // pela edge não casar com o catálogo real da família, a transação nasce
+        // SEM categoria e cai no deck de revisão — igual ao resto do app.
+        // O fallback antigo (primeira categoria do tipo) era o único chute cego
+        // restante do sistema e contrariava a edge que já pergunta honestamente.
         const categoryId = cat?.id || null
         let subcategoryId: string | null = null
 

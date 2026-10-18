@@ -512,7 +512,7 @@ export function WalletPage() {
       } else {
         toast({
           title: 'Sugestões da IA carregadas',
-          description: 'Clique nas transações pendentes para conferir e aprovar as sugestões.',
+          description: 'Confira no deck de revisão: deslize pra aceitar ou trocar.',
         })
       }
     } catch (err: any) {

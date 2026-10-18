@@ -2,8 +2,12 @@
 // fila de transações pendentes uma por vez em cards. Swipe right = aceitar a
 // sugestão da IA; swipe left = trocar a categoria (abre o picker inline).
 // No fim: "Fila zerada" + piu curto. Acessível também por teclado (setas).
+// UX 18/10 (feedback do Matheus): estado "IA pensando" visível em qualquer
+// ponto do deck, categoria › subcategoria legíveis (reasoning em linha própria,
+// nunca cortando a gaveta escolhida) e botão Trocar com ícone de troca (não X,
+// que parecia "fechar").
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { Loader2, Sparkles, ChevronLeft, ChevronRight, X, Check } from 'lucide-react'
+import { Loader2, Sparkles, ArrowLeftRight, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CategoryIcon } from '@/components/common/CategoryIcon'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
@@ -55,6 +59,11 @@ export function SwipeReviewDeck() {
     if (!suggestion?.categoryId) return null
     return categories.find((c) => c.id === suggestion.categoryId) || null
   }, [suggestion, categories])
+
+  const suggestedSubcategory = useMemo(() => {
+    if (!suggestion?.subcategoryId || !suggestedCategory?.subcategories) return null
+    return suggestedCategory.subcategories.find((s) => s.id === suggestion.subcategoryId) || null
+  }, [suggestion, suggestedCategory])
 
   const filteredCategories = useMemo(
     () => categories.filter((c) => c.type === (current?.type || 'expense')),
@@ -191,31 +200,36 @@ export function SwipeReviewDeck() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            size="sm"
-            onClick={handleCategorizePendingWithAi}
-            disabled={isCategorizingPendingWithAi}
-            className="rounded-xl text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white h-9 flex-1 gap-1.5 border-0"
-          >
-            {isCategorizingPendingWithAi ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
+        {isCategorizingPendingWithAi ? (
+          <div className="flex items-center justify-center gap-2 rounded-xl bg-violet-100/70 px-3 py-2.5">
+            <Loader2 className="w-4 h-4 animate-spin text-violet-700" />
+            <p className="text-xs font-semibold text-violet-800">
+              Curiango pensando nas sugestões…
+            </p>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleCategorizePendingWithAi}
+              disabled={isCategorizingPendingWithAi}
+              className="rounded-xl text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white h-9 flex-1 gap-1.5 border-0"
+            >
               <Sparkles className="w-3.5 h-3.5" />
-            )}
-            <span>✨ Categorizar com IA</span>
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setIndex(0)}
-            className="rounded-xl text-xs font-semibold h-9 border-violet-300 text-violet-800 hover:bg-violet-100"
-          >
-            Começar revisão
-          </Button>
-        </div>
+              <span>✨ Categorizar com IA</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIndex(0)}
+              className="rounded-xl text-xs font-semibold h-9 border-violet-300 text-violet-800 hover:bg-violet-100"
+            >
+              Começar revisão
+            </Button>
+          </div>
+        )}
       </div>
     )
   }
@@ -269,17 +283,26 @@ export function SwipeReviewDeck() {
                 <p className="font-bold text-sm text-slate-900 truncate">
                   {current.description || 'Transação'}
                 </p>
-                <p className="text-[11px] text-slate-500 truncate">
-                  {suggestedCategory ? (
-                    <>
-                      <span className="text-violet-700 font-semibold">✨ IA:</span>{' '}
-                      {suggestedCategory.name}
-                      {suggestion.reasoning ? ` · ${suggestion.reasoning}` : ''}
-                    </>
-                  ) : (
-                    'Sem sugestão da IA — escolha a categoria'
-                  )}
-                </p>
+                {suggestedCategory ? (
+                  <>
+                    {/* Gaveta escolhida em linha própria — NUNCA cortada (feedback 18/10) */}
+                    <p className="text-xs font-bold text-slate-800 leading-snug">
+                      <span className="text-violet-700">✨ IA:</span> {suggestedCategory.name}
+                      {suggestedSubcategory ? (
+                        <span className="text-slate-600"> › {suggestedSubcategory.name}</span>
+                      ) : null}
+                    </p>
+                    {suggestion.reasoning ? (
+                      <p className="text-[11px] text-slate-500 leading-snug line-clamp-2">
+                        {suggestion.reasoning}
+                      </p>
+                    ) : null}
+                  </>
+                ) : (
+                  <p className="text-[11px] text-slate-500 truncate">
+                    Sem sugestão da IA — escolha a categoria
+                  </p>
+                )}
               </div>
             </div>
             <span
@@ -406,7 +429,7 @@ export function SwipeReviewDeck() {
             disabled={saving}
             className="rounded-xl text-xs font-bold h-9 flex-1 gap-1.5 border-[#E11D48]/30 text-[#E11D48] hover:bg-rose-50"
           >
-            <X className="w-3.5 h-3.5" />
+            <ArrowLeftRight className="w-3.5 h-3.5" />
             <span>Trocar</span>
           </Button>
           <Button
@@ -426,8 +449,13 @@ export function SwipeReviewDeck() {
         </div>
       )}
 
-      {/* Botão de carregar sugestões da IA se a fila não tem sugestões ainda */}
-      {!suggestion && !isCategorizingPendingWithAi ? (
+      {/* Estado da IA: pensando (spinner SEMPRE visível) ou convite pra pedir sugestões */}
+      {isCategorizingPendingWithAi ? (
+        <div className="flex items-center justify-center gap-2 rounded-xl bg-violet-100/70 px-3 py-2.5">
+          <Loader2 className="w-4 h-4 animate-spin text-violet-700" />
+          <p className="text-xs font-semibold text-violet-800">Curiango pensando nas sugestões…</p>
+        </div>
+      ) : !suggestion ? (
         <Button
           type="button"
           variant="ghost"
