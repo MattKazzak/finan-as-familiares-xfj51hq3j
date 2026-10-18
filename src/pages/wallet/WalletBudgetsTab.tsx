@@ -11,16 +11,10 @@ import {
   Tag,
   MoreVertical,
   Target,
-  Scale,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Loader2 } from 'lucide-react'
-import {
-  fetchFamilySettlement,
-  buildSettlementSummary,
-  type SettlementRow,
-} from '@/services/splits'
+import { Loader2 } from 'lucide-react'its'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -88,30 +82,8 @@ export function WalletBudgetsTab() {
 
   const { toast } = useToast()
 
-  // Acerto de contas do mês (migrado do Perfil em 16/10): carrega com o mês ativo
-  const [settlementRows, setSettlementRows] = useState<SettlementRow[]>([])
-  const [settlementLoading, setSettlementLoading] = useState(false)
-  const [settlementError, setSettlementError] = useState<string | null>(null)
-  useEffect(() => {
-    let isSubscribed = true
-    const loadSettlement = async () => {
-      if (!family) return
-      try {
-        setSettlementLoading(true)
-        setSettlementError(null)
-        const rows = await fetchFamilySettlement(family.id, monthKey)
-        if (isSubscribed) setSettlementRows(rows)
-      } catch {
-        if (isSubscribed) setSettlementError('Não foi possível carregar o acerto de contas.')
-      } finally {
-        if (isSubscribed) setSettlementLoading(false)
-      }
-    }
-    loadSettlement()
-    return () => {
-      isSubscribed = false
-    }
-  }, [family, monthKey])
+  // Acerto de contas do mês REMOVIDO (18/10, decisão do Matheus): dependia do rateio
+  // entre membros (ainda não lançado) e aparecia sempre = ruído. Volta junto do rateio.
 
   return (
     <div className="space-y-6 sm:space-y-7 mt-0 animate-in fade-in-50 duration-200 min-w-0">
@@ -1299,79 +1271,7 @@ export function WalletBudgetsTab() {
           </div>
         </div>
       </div>
-      {/* ACERTO DE CONTAS DO MÊS — REMOVIDO (18/10, decisão do Matheus): o rateio/
-         acerto de contas depende do FEATURE rateio entre membros, que ainda não
-         existe. Sem rateio, o card é ruído (zero transações divididas). Volta
-         junto do rateio (design pronto em artifacts/feature-rateio-entre-membros.md). */}
-      {/* Só renderiza quando existem despesas divididas (rateio) — hoje é invisível
-          (decisão do Matheus 18/10: era ruído sem o rateio). Quando o rateio lançar,
-          este card volta a aparecer sozinho. */}
-      {family && settlementRows.length > 0 && (
-        <div
-          className="bg-white/95 backdrop-blur-sm rounded-3xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 p-5 sm:p-6"
-          aria-label="Acerto de contas do mês"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
-              <Scale className="w-4 h-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-slate-900">Acerto de contas do mês</p>
-              <p className="text-[11px] text-slate-500">
-                Quem pagou mais do que consumiu nas despesas divididas
-              </p>
-            </div>
-          </div>
-          {settlementLoading ? (
-            <div className="py-3 flex items-center justify-center gap-2 text-xs text-slate-500">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Calculando...
-            </div>
-          ) : settlementError ? (
-            <p className="mt-2 text-xs text-rose-700">{settlementError}</p>
-          ) : (
-            <div className="mt-2 space-y-1.5">
-              {buildSettlementSummary([...settlementRows]).map((msg, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2 py-1.5 px-3 rounded-xl bg-slate-50 text-xs text-slate-700"
-                >
-                  <Scale className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                  <span>{msg}</span>
-                </div>
-              ))}
-              {settlementRows.length > 0 && (
-                <details className="pt-0.5">
-                  <summary className="text-[11px] font-semibold text-slate-500 cursor-pointer hover:text-slate-700">
-                    Ver detalhes por membro
-                  </summary>
-                  <div className="mt-2 space-y-1.5">
-                    {settlementRows.map((r) => (
-                      <div
-                        key={r.member_id}
-                        className="flex items-center justify-between gap-2 py-1.5 px-3 rounded-lg bg-slate-50/70"
-                      >
-                        <span className="font-semibold text-slate-700 truncate">
-                          {r.member_name}
-                        </span>
-                        <span className="text-slate-500 shrink-0">
-                          pagou {formatBRL(r.paid_cents)} · consumiu {formatBRL(r.consumed_cents)}{' '}
-                          <strong
-                            className={r.balance_cents >= 0 ? 'text-emerald-700' : 'text-rose-700'}
-                          >
-                            ({r.balance_cents >= 0 ? '+' : ''}
-                            {formatBRL(r.balance_cents)})
-                          </strong>
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </details>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+      {/* Editor de categoria controlado aberto via clique em item de alerta do Farol */}
       {/* Editor de categoria controlado aberto via clique em item de alerta do Farol */}{' '}
       {mountedAlertEditCategory &&
         (() => {

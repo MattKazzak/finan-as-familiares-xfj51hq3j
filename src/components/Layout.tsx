@@ -191,10 +191,11 @@ export default function Layout() {
               className="flex items-center gap-2.5 text-left hover:bg-white/10 p-1.5 rounded-xl transition-colors overflow-hidden flex-1 mr-1 cursor-pointer"
             >
               <Avatar className="w-8 h-8 border border-brand-amber/50 shrink-0">
+                {userAvatarUrl ? <AvatarImage src={userAvatarUrl} alt="Meu perfil" /> : null}
                 <AvatarFallback className="bg-brand-amber text-brand font-bold text-xs">
                   {userInitial}
                 </AvatarFallback>
-              </Avatar>
+              </Avatar>{' '}
               <div className="overflow-hidden">
                 <p className="text-xs font-semibold text-white truncate">
                   {currentMember?.name ? (
@@ -213,10 +214,11 @@ export default function Layout() {
           ) : (
             <div className="flex items-center gap-2.5 text-left p-1.5 rounded-xl overflow-hidden flex-1 mr-1">
               <Avatar className="w-8 h-8 border border-brand-amber/50 shrink-0">
+                {userAvatarUrl ? <AvatarImage src={userAvatarUrl} alt="Meu perfil" /> : null}
                 <AvatarFallback className="bg-brand-amber text-brand font-bold text-xs">
                   {userInitial}
                 </AvatarFallback>
-              </Avatar>
+              </Avatar>{' '}
               <div className="overflow-hidden">
                 <p className="text-xs font-semibold text-white truncate">
                   {currentMember?.name ? (
@@ -247,56 +249,14 @@ export default function Layout() {
         {location.pathname !== '/inicio' && (
           <header className="sticky top-0 z-30 bg-[#14213D] text-white px-4 py-3 sm:px-6 flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0">
-              <CuriangoLogo size={26} eyeColor="#FFFFFF" eyeHighlight />
+              <CuriangoLogo size={26} color="#FCA311" eyeColor="#FFFFFF" eyeHighlight />
               <h2 className="text-base sm:text-lg font-bold text-white tracking-tight truncate">
                 {getHeaderTitle()}
               </h2>
             </div>
 
-            <div className="flex items-center gap-3">
-              {members.length > 1 ? (
-                <div
-                  onClick={() => navigate('/perfil')}
-                  title="Abrir meu perfil"
-                  className="flex items-center gap-2 cursor-pointer group bg-brand-gray/40 hover:bg-brand-amber/15 px-2.5 py-1 rounded-full border border-brand-gray transition-all"
-                >
-                  <Avatar className="w-7 h-7 border border-brand-amber/60 shadow-sm group-hover:ring-2 group-hover:ring-brand-amber transition-all">
-                    {userAvatarUrl ? (
-                      <AvatarImage src={userAvatarUrl} alt={currentMember?.name || 'Perfil'} />
-                    ) : null}
-                    <AvatarFallback className="bg-gradient-to-tr from-brand to-brand-light text-white font-bold text-xs">
-                      {userInitial}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-xs font-medium text-white group-hover:text-brand-amber transition-colors flex items-center gap-1">
-                    {currentMember?.name ? (
-                      <span>{currentMember.name}</span>
-                    ) : loading ? (
-                      <span className="inline-block h-3 w-14 bg-white/20 rounded animate-pulse align-middle" />
-                    ) : null}
-                    <span className="text-[10px] text-white/50">▾</span>
-                  </span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 bg-white/10 px-2.5 py-1 rounded-full border border-white/15">
-                  <Avatar className="w-7 h-7 border border-white/25 shadow-sm">
-                    {userAvatarUrl ? (
-                      <AvatarImage src={userAvatarUrl} alt={currentMember?.name || 'Perfil'} />
-                    ) : null}
-                    <AvatarFallback className="bg-gradient-to-tr from-brand to-brand-light text-white font-bold text-xs">
-                      {userInitial}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-xs font-medium text-white">
-                    {currentMember?.name ? (
-                      <span>{currentMember.name}</span>
-                    ) : loading ? (
-                      <span className="inline-block h-3 w-14 bg-white/20 rounded animate-pulse align-middle" />
-                    ) : null}
-                  </span>
-                </div>
-              )}
-            </div>
+            {/* Lado direito vazio (18/10, Matheus): identidade limpa — a foto do
+                usuário vive no bottom nav (estilo Pinterest), não aqui. */}
           </header>
         )}
 
@@ -423,11 +383,22 @@ export default function Layout() {
               {({ isActive }) => (
                 <>
                   <div
-                    className={`p-1 rounded-full transition-all duration-200 ${
-                      isActive ? 'bg-[#FCA311]/20 scale-105 text-[#FCA311]' : ''
+                    className={`p-0.5 rounded-full transition-all duration-200 ${
+                      isActive ? 'bg-[#FCA311]/20 scale-105' : ''
                     }`}
                   >
-                    <User className="w-5 h-5" strokeWidth={1.5} />
+                    {/* Foto do usuário no lugar do ícone (estilo Pinterest — 18/10, Matheus) */}
+                    <span className="block w-6 h-6 rounded-full overflow-hidden ring-1 ring-white/30">
+                      {userAvatarUrl ? (
+                        <img
+                          src={userAvatarUrl}
+                          alt="Meu perfil"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <User className="w-6 h-6" strokeWidth={1.5} />
+                      )}
+                    </span>
                   </div>
                   <span className="text-[10px] tracking-tight mt-0.5 leading-none">Perfil</span>
                 </>
