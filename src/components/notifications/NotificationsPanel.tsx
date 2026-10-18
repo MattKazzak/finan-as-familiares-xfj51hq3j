@@ -156,18 +156,45 @@ export default function NotificationsPanel({ onClose }: { onClose: () => void })
                     Ative o som e a faixa na tela
                   </p>
                   {/iPhone|iPad|iPod/i.test(navigator.userAgent) ? (
-                    <p className="text-xs text-[#4B5563] leading-relaxed">
-                      No iPhone: <strong>Ajustes</strong> → <strong>Notificações</strong> →{' '}
-                      <strong>Safari</strong> (ou Curiangoo, se instalado) → ative{' '}
-                      <strong>Sons</strong> e <strong>Banners</strong>.
-                    </p>
+                    <div className="text-xs text-[#4B5563] leading-relaxed space-y-2">
+                      <p>
+                        <strong className="text-[#14213D]">1. PWA instalado?</strong> As
+                        notificações no iPhone só funcionam com o Curiangoo instalado (iOS 16.4+):
+                        Safari → botão Compartilhar → "Adicionar à Tela de Início". Abra pelo ícone.
+                      </p>
+                      <p>
+                        <strong className="text-[#14213D]">2. Permitir notificações:</strong>{' '}
+                        Ajustes → Notificações → Curiangoo → ative "Permitir Notificações",{' '}
+                        <strong>Sons</strong> e <strong>Banners</strong> (estilo temporário mostra a
+                        faixa no topo).
+                      </p>
+                      <p>
+                        <strong className="text-[#14213D]">3. Não perturbe:</strong> Ajustes → Não
+                        Perturbe / Modos de Foco → verifique se o Curiangoo não está silenciado.
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        No iOS o som do Curiango toca com o app aberto; com o app fechado, o som é o
+                        configurado no Ajustes (o iOS não permite som custom de app web fechado).
+                      </p>
+                    </div>
                   ) : (
-                    <p className="text-xs text-[#4B5563] leading-relaxed">
-                      No Android: segure uma notificação do Curiangoo →{' '}
-                      <strong>Todas as categorias</strong> → toque em <strong>curiangoo.com</strong>{' '}
-                      (ou Chrome) → ative <strong>Som</strong> e <strong>Flutuante</strong>. Feito
-                      isso, as notificações aparecem como faixa no topo, com som — igual WhatsApp.
-                    </p>
+                    <div className="text-xs text-[#4B5563] leading-relaxed space-y-2">
+                      <p>
+                        <strong className="text-[#14213D]">1. Som e faixa no topo:</strong> segure
+                        uma notificação do Curiangoo na bandeja → "Todas as categorias" → toque em{' '}
+                        <strong>curiangoo.com</strong> (ou Chrome) → ative <strong>Som</strong> e{' '}
+                        <strong>Flutuante</strong>. Igual WhatsApp.
+                      </p>
+                      <p>
+                        <strong className="text-[#14213D]">2. App aberto:</strong> o piu do Curiango
+                        toca automaticamente (só o piu, sem som do sistema).
+                      </p>
+                      <p>
+                        <strong className="text-[#14213D]">3. Não perturbe:</strong> se estiver com
+                        "Não perturbe" ativo, notificações chegam sem som — desative ou adicione o
+                        Chrome como exceção.
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>

@@ -60,6 +60,13 @@ export function registerAppServiceWorker() {
           },
           1000 * 60 * 30,
         )
+
+        // Força a checagem de update logo após abrir o app (PWA demora a pegar versão nova)
+        registration.update().catch(() => {})
+        // E de novo aos 10s (o SW novo baixa em background; garante a troca na 1ª sessão)
+        setTimeout(() => {
+          registration.update().catch(() => {})
+        }, 10000)
       })
       .catch((err) => {
         console.warn('[SW Registration] Não foi possível registrar service worker:', err)
