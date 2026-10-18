@@ -9,7 +9,7 @@ import { CategoryIcon } from '@/components/common/CategoryIcon'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import { formatBRL } from '@/lib/formatters'
 import { useWallet } from '@/pages/wallet/WalletContext'
-import type { Transaction, BudgetBucket } from '@/types/finance'
+import type { BudgetBucket } from '@/types/finance'
 
 const BUCKET_GROUPS: { bucket: BudgetBucket; label: string }[] = [
   { bucket: 'essentials', label: 'Essenciais' },
@@ -20,6 +20,7 @@ const BUCKET_GROUPS: { bucket: BudgetBucket; label: string }[] = [
 export function SwipeReviewDeck() {
   const {
     pendingTransactionsList,
+    pendingTotalCents,
     aiPendingSuggestions,
     categories,
     handleSaveInlineCategory,
@@ -166,6 +167,55 @@ export function SwipeReviewDeck() {
           Você revisou {resolvedCount} {resolvedCount === 1 ? 'transação' : 'transações'}.
         </p>
         <CuriangoLogo size={24} eyeColor="#14213D" eyeHighlight />
+      </div>
+    )
+  }
+
+  // ===== Estado vazio (fila nunca abriu): o deck é o ÚNICO bloco de revisão =====
+  // (banner antigo "Lançamentos Pendentes" removido — era redundância, 2 caminhos
+  // pro mesmo destino. Tudo vive aqui: contagem, total, IA e filtro.)
+  if (!current) {
+    return (
+      <div className="rounded-3xl border border-violet-200/80 bg-violet-50/40 p-4 space-y-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-10 h-10 rounded-xl bg-violet-600 text-white flex items-center justify-center shrink-0">
+            <Sparkles className="w-4 h-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-violet-900">
+              {queue.length} {queue.length === 1 ? 'transação pendente' : 'transações pendentes'} ·{' '}
+              {formatBRL(pendingTotalCents)}
+            </p>
+            <p className="text-[11px] text-violet-700">
+              Sem categoria neste mês. Revise uma por vez ou use a IA.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleCategorizePendingWithAi}
+            disabled={isCategorizingPendingWithAi}
+            className="rounded-xl text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white h-9 flex-1 gap-1.5 border-0"
+          >
+            {isCategorizingPendingWithAi ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="w-3.5 h-3.5" />
+            )}
+            <span>✨ Categorizar com IA</span>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIndex(0)}
+            className="rounded-xl text-xs font-semibold h-9 border-violet-300 text-violet-800 hover:bg-violet-100"
+          >
+            Começar revisão
+          </Button>
+        </div>
       </div>
     )
   }

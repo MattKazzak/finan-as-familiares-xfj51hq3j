@@ -31,9 +31,6 @@ export function WalletTransactionsTab() {
     pendingTransactionsCount,
     filterOnlyPending,
     setFilterOnlyPending,
-    isCategorizingPendingWithAi,
-    handleCategorizePendingWithAi,
-    pendingTotalCents,
     monthIncomeCents,
     monthExpenseCents,
     monthNetCents,
@@ -164,67 +161,6 @@ export function WalletTransactionsTab() {
               </div>
             </div>
           )}
-        </div>
-      ) : pendingTransactionsCount > 0 ? (
-        /* Banner complementar quando há pendentes sem o lastImportSummary ativo */
-        <div className="rounded-3xl border border-amber-200/80 bg-card/90 backdrop-blur-sm p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-curiango">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0">
-              <Sparkles className="w-4 h-4 text-[#FCA311]" strokeWidth={1.5} />
-            </div>
-            <div className="min-w-0 space-y-0.5">
-              <h4 className="font-semibold text-xs sm:text-sm text-[#14213D] dark:text-white">
-                Lançamentos Pendentes ({pendingTransactionsCount})
-              </h4>
-              <span className="text-[11px] text-muted-foreground block">
-                {pendingTransactionsCount}{' '}
-                {pendingTransactionsCount === 1 ? 'transação pendente' : 'transações pendentes'} de
-                categorização neste mês ·{' '}
-                <span className="font-semibold text-amber-900 tabular-nums">
-                  {formatBRL(pendingTotalCents)}
-                </span>{' '}
-                sem categoria. Toque na linha para categorizar ou utilize a IA.
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleCategorizePendingWithAi}
-              disabled={isCategorizingPendingWithAi}
-              className="text-xs font-semibold rounded-xl shrink-0 bg-violet-600 hover:bg-violet-700 text-white shadow-2xs gap-1.5 h-8 px-3"
-            >
-              {isCategorizingPendingWithAi ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Categorizando...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-                  <span>✨ Categorizar pendentes com IA</span>
-                </>
-              )}
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setFilterOnlyPending((prev) => !prev)}
-              className={`text-xs font-semibold rounded-xl shrink-0 h-8 ${
-                filterOnlyPending
-                  ? 'bg-amber-600 text-white border-amber-600 hover:bg-amber-700'
-                  : 'border-amber-300 text-amber-900 hover:bg-amber-100/70 bg-white'
-              }`}
-            >
-              {filterOnlyPending
-                ? 'Ver todas as transações'
-                : `Ver apenas pendentes (${pendingTransactionsCount})`}
-            </Button>
-          </div>
         </div>
       ) : filterOnlyPending && pendingTransactionsCount === 0 ? (
         /* Estado de Sucesso quando o usuário estava filtrando pendentes e terminou todas */
