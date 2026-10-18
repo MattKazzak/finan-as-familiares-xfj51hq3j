@@ -418,6 +418,8 @@ export interface TransactionCategory {
   percent_alert?: number | null
   budget_bucket?: BudgetBucket | null
   created_at: string
+  /** Regra de fronteira escrita (catálogo v3): tooltip educativo do seletor */
+  intent_tag?: string | null
   subcategories?: TransactionSubcategory[]
 }
 
@@ -430,6 +432,8 @@ export interface TransactionSubcategory {
   color: string | null
   sort_order: number
   created_at: string
+  /** Regra de fronteira escrita (catálogo v3): "o que cai | o que NÃO cai → destino" */
+  intent_tag?: string | null
 }
 
 export interface RecurringIncome {

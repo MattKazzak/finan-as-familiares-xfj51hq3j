@@ -366,6 +366,13 @@ export function SwipeReviewDeck() {
                             <CategoryIcon name={c.icon} className="w-3 h-3" />
                           </div>
                           <span className="font-semibold">{c.name}</span>
+                          {/* Regra curta (catálogo v3): a intenção visível — o usuário
+                              entende a fronteira sem precisar de manual */}
+                          {c.intent_tag ? (
+                            <span className="text-[10px] text-slate-400 leading-tight line-clamp-1">
+                              {c.intent_tag}
+                            </span>
+                          ) : null}
                         </button>
                       ))}
                     </div>
@@ -389,9 +396,14 @@ export function SwipeReviewDeck() {
                       <CategoryIcon name={c.icon} className="w-3 h-3" />
                     </div>
                     <span className="font-semibold">{c.name}</span>
+                    {c.intent_tag ? (
+                      <span className="text-[10px] text-slate-400 leading-tight line-clamp-1">
+                        {c.intent_tag}
+                      </span>
+                    ) : null}
                   </button>
                 ))}
-          </div>
+          </div>{' '}
           <div className="flex items-center gap-2 pt-1">
             <Button
               type="button"
