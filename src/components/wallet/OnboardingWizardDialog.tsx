@@ -21,12 +21,16 @@ import {
   ChevronRight,
   ChevronLeft,
   CheckCircle2,
+  Check,
   SlidersHorizontal,
   Shield,
   SunMedium,
   Target,
   ArrowRight,
   Home,
+  Car,
+  PawPrint,
+  Baby,
 } from 'lucide-react'
 
 export type BudgetModelId = '50_30_20' | '60_25_15' | '70_20_10'
@@ -97,11 +101,12 @@ export function OnboardingWizardDialog({
   const { user } = useAuth()
   const { members, triggerRefresh, updateFamily } = useFamily()
 
-  // 3 Etapas Limpas:
+  // 4 Etapas Limpas (18/10: perfil ganhou etapa própria — uma decisão por tela):
   // 1: Vamos criar o espaço da sua família (Nome da família pré-preenchido com "Família {primeiro nome}", editável)
   // 2: Renda Mensal Familiar (Renda Líquida Total dos Membros)
-  // 3: Seu Orçamento em 3 Caixas (Resumo 50/30/20 + alternativo + Concluir e Ativar meu Plano)
-  const [step, setStep] = useState<1 | 2 | 3>(1)
+  // 3: O que faz parte da sua rotina? (perfil: veículo/pets/filhos — cards selecionáveis)
+  // 4: Seu Orçamento em 3 Caixas (Resumo 50/30/20 + alternativo + Concluir e Ativar meu Plano)
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
   const [familyNameInput, setFamilyNameInput] = useState<string>('')
   const [incomeInput, setIncomeInput] = useState<string>('')
   const [selectedModelId, setSelectedModelId] = useState<BudgetModelId>(() => {
@@ -227,6 +232,11 @@ export function OnboardingWizardDialog({
     setStep(3)
   }
 
+  // Perfil da família (etapa 3): sem bloqueio — tudo é opcional, padrão = "tem tudo"
+  const handleNextFromStep3 = () => {
+    setStep(4)
+  }
+
   // Aplica o perfil: oculta categorias sem apagar (is_hidden — reativa com 1 toque
   // na gestão de categorias; o catálogo base continua idêntico pra toda família).
   const applyFamilyProfile = async (familyId: string) => {
@@ -267,6 +277,11 @@ export function OnboardingWizardDialog({
         variant: 'destructive',
       })
       setStep(2)
+      return
+    }
+    if (step < 4) {
+      // Não chegou na última etapa: avançar em vez de ativar
+      setStep(step === 2 ? 3 : 4)
       return
     }
 
@@ -395,13 +410,16 @@ export function OnboardingWizardDialog({
           <DialogTitle className="text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight break-words min-w-0">
             {step === 1 && 'Vamos criar o espaço da sua família'}
             {step === 2 && 'Renda Mensal Familiar'}
-            {step === 3 && 'Seu Orçamento em 3 Caixas'}
+            {step === 3 && 'O que faz parte da sua rotina?'}
+            {step === 4 && 'Seu Orçamento em 3 Caixas'}
           </DialogTitle>
 
           <DialogDescription className="text-xs sm:text-sm text-slate-500 leading-relaxed break-words min-w-0">
             {step === 1 && 'Dê um nome afetuoso ou sobrenome para o workspace de vocês.'}
             {step === 2 && 'Quanto entra líquido na conta da família por mês?'}
             {step === 3 &&
+              'Personalizamos seu catálogo — ocultamos o que não se aplica, nada é apagado.'}
+            {step === 4 &&
               'Separamos seu dinheiro em 3 caixas inteligentes para equilibrar o mês sem esforço.'}
           </DialogDescription>
         </DialogHeader>
@@ -421,6 +439,11 @@ export function OnboardingWizardDialog({
           <div
             className={`h-1.5 flex-1 rounded-full transition-colors ${
               step >= 3 ? 'bg-brand-amber' : 'bg-brand-gray'
+            }`}
+          />
+          <div
+            className={`h-1.5 flex-1 rounded-full transition-colors ${
+              step >= 4 ? 'bg-brand-amber' : 'bg-brand-gray'
             }`}
           />{' '}
         </div>
@@ -543,8 +566,120 @@ export function OnboardingWizardDialog({
           </div>
         )}
 
-        {/* ETAPA 3: SEU ORÇAMENTO EM 3 CAIXAS */}
+        {/* ETAPA 3: O QUE FAZ PARTE DA SUA ROTINA (perfil do catálogo v3).
+            Uma decisão por tela — padrão Duolingo/Nubank. Cards grandes selecionáveis
+            (não formulário): toque alterna Sim/Não, tudo opcional, nada bloqueia. */}
         {step === 3 && (
+          <div className="space-y-4 py-1 w-full min-w-0">
+            <div className="flex flex-col gap-2.5 w-full min-w-0">
+              {[
+                {
+                  key: 'veiculo',
+                  icon: 'Car',
+                  title: 'Veículo',
+                  desc: 'Carro ou moto — combustível, manutenção, IPVA',
+                  value: hasVehicle,
+                  setter: setHasVehicle,
+                },
+                {
+                  key: 'pets',
+                  icon: 'PawPrint',
+                  title: 'Pets',
+                  desc: 'Ração, veterinário, banho e tosa',
+                  value: hasPets,
+                  setter: setHasPets,
+                },
+                {
+                  key: 'filhos',
+                  icon: 'Baby',
+                  title: 'Filhos',
+                  desc: 'Escola, material escolar, atividades',
+                  value: hasChildren,
+                  setter: setHasChildren,
+                },
+              ].map((q) => {
+                const ativo = q.value
+                return (
+                  <button
+                    key={q.key}
+                    type="button"
+                    onClick={() => q.setter(!q.value)}
+                    aria-pressed={ativo}
+                    className={`w-full flex items-center gap-3.5 p-4 rounded-2xl border text-left transition-all active:scale-[0.99] cursor-pointer ${
+                      ativo
+                        ? 'bg-white border-brand-amber/60 shadow-sm ring-1 ring-brand-amber/30'
+                        : 'bg-slate-50/60 border-slate-200'
+                    }`}
+                  >
+                    <span
+                      className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                        ativo ? 'bg-brand-amber/15 text-brand' : 'bg-slate-100 text-slate-400'
+                      }`}
+                    >
+                      {q.icon === 'Car' && <Car className="w-5 h-5" strokeWidth={1.5} />}
+                      {q.icon === 'PawPrint' && <PawPrint className="w-5 h-5" strokeWidth={1.5} />}
+                      {q.icon === 'Baby' && <Baby className="w-5 h-5" strokeWidth={1.5} />}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className={`block text-sm font-bold leading-tight ${
+                          ativo ? 'text-slate-900' : 'text-slate-500'
+                        }`}
+                      >
+                        {q.title}
+                      </span>
+                      <span className="block text-[11px] text-slate-500 leading-snug mt-0.5 break-words">
+                        {q.desc}
+                      </span>
+                    </span>
+                    <span
+                      className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center border-2 transition-colors ${
+                        ativo ? 'bg-brand-amber border-brand-amber' : 'bg-white border-slate-300'
+                      }`}
+                    >
+                      {ativo && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+
+            <p className="text-[11px] text-slate-400 text-center leading-relaxed px-2">
+              Não se aplica? Toque de novo — ocultamos do seu catálogo sem apagar nada. Você reativa
+              quando quiser, na gestão de categorias.
+            </p>
+
+            {/* Ações da Etapa 3 */}
+            <div className="pt-2 flex flex-col sm:flex-row items-center gap-2 w-full min-w-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setStep(2)}
+                disabled={isActivating}
+                className="w-full sm:w-auto rounded-2xl text-xs gap-1.5 h-11 text-slate-600 border-slate-200 hover:bg-slate-50 shrink-0"
+              >
+                <ChevronLeft className="w-4 h-4 shrink-0" />
+                <span>Alterar Renda</span>
+              </Button>
+
+              <Button
+                type="button"
+                onClick={handleNextFromStep3}
+                disabled={isActivating}
+                className="w-full flex-1 h-12 bg-brand-amber hover:bg-[#e08e08] text-brand font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-black/10 flex items-center justify-center gap-2 transition-all cursor-pointer min-w-0 px-4 disabled:opacity-75 disabled:cursor-not-allowed border-0"
+              >
+                <span className="flex items-center justify-center gap-2 break-words text-center">
+                  <span>Continuar</span>
+                  <ChevronRight className="w-4 h-4 shrink-0" />
+                </span>
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* ETAPA 4: SEU ORÇAMENTO EM 3 CAIXAS — o clímax limpo: só o plano,
+            sem formulário no meio. */}
+        {step === 4 && (
           <div className="space-y-4 py-1 w-full min-w-0">
             <div className="text-center px-1 min-w-0">
               <p className="text-xs text-slate-500 break-words">
@@ -555,44 +690,6 @@ export function OnboardingWizardDialog({
                 , seu plano de referência é o{' '}
                 <strong className="text-emerald-700">{currentModel.name}</strong>:
               </p>
-            </div>
-
-            {/* Perfil da família (catálogo v3): 3 perguntas rápidas — oculta o que
-                não se aplica, sem apagar. Leve: 1 toque por resposta. */}
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-2.5 min-w-0">
-              <p className="text-xs font-bold text-slate-700">
-                Sua família tem...{' '}
-                <span className="font-normal text-slate-400">
-                  (ocultamos o que não se aplica — nada é apagado)
-                </span>
-              </p>
-              <div className="flex flex-col gap-1.5">
-                {[
-                  { label: 'Veículo (carro ou moto)', value: hasVehicle, setter: setHasVehicle },
-                  { label: 'Pets', value: hasPets, setter: setHasPets },
-                  {
-                    label: 'Filhos (escola e material escolar)',
-                    value: hasChildren,
-                    setter: setHasChildren,
-                  },
-                ].map((q) => (
-                  <button
-                    key={q.label}
-                    type="button"
-                    onClick={() => q.setter(!q.value)}
-                    className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition-colors text-left"
-                  >
-                    <span className="text-xs font-semibold text-slate-700">{q.label}</span>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                        q.value ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'
-                      }`}
-                    >
-                      {q.value ? 'Sim' : 'Não'}
-                    </span>
-                  </button>
-                ))}
-              </div>
             </div>
 
             {/* As 3 Caixas Visuais em Destaque */}
@@ -754,12 +851,12 @@ export function OnboardingWizardDialog({
               )}
             </div>
 
-            {/* Ações da Etapa 3 */}
+            {/* Ações da Etapa 4 */}
             <div className="pt-2 flex flex-col sm:flex-row items-center gap-2 w-full min-w-0">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setStep(2)}
+                onClick={() => setStep(3)}
                 disabled={isActivating}
                 className="w-full sm:w-auto rounded-2xl text-xs gap-1.5 h-11 text-slate-600 border-slate-200 hover:bg-slate-50 shrink-0"
               >
