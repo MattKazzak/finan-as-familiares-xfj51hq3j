@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import { ArrowDown, X } from 'lucide-react'
@@ -151,6 +151,11 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
     [step],
   )
 
+  // Geração: cada measure() novo cancela a cadeia anterior (o listener de
+  // scroll dispara measure a cada frame de scroll — sem guarda, as cadeias
+  // de retry se acumulam).
+  const measureGen = useRef(0)
+
   const measure = useCallback(() => {
     if (!step) return
     if (!step.targetSelector) {
@@ -158,8 +163,10 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
       setMeasuring(false)
       return
     }
+    const gen = ++measureGen.current
     let attempts = 0
     const tryFind = () => {
+      if (gen !== measureGen.current) return
       // ESPERA INTELIGENTE: outro dialog aberto (wizard de configuração da
       // família)? O tour não nasce por cima dele — espera fechar.
       const otherDialog = document.querySelector(
@@ -176,10 +183,16 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
         if (r0.top < 60 || r0.bottom > viewH - 90) {
           // Alvo fora da vista → rola pra centro ANTES de medir
           el.scrollIntoView({ block: 'center', behavior: 'auto' })
-          window.setTimeout(() => {
+          // Âncora velha = bug do print (balão 515px abaixo do alvo): re-mede
+          // no duplo rAF (layout pós-scroll) E como fallback em 300ms — e o
+          // listener de scroll re-medir se o scroll chegar depois.
+          const remeasure = () => {
+            if (gen !== measureGen.current) return
             const el2 = document.querySelector(step.targetSelector!)
             if (el2) applyPlacement(el2.getBoundingClientRect())
-          }, 120)
+          }
+          requestAnimationFrame(() => requestAnimationFrame(remeasure))
+          window.setTimeout(remeasure, 300)
         } else {
           applyPlacement(r0)
         }
@@ -203,12 +216,15 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
     setRect(null)
     const raf = requestAnimationFrame(() => measure())
     window.addEventListener('resize', measure)
+    // capture:true pega scroll de QUALQUER elemento (o main tem overflow
+    // próprio — scroll de container não dispara listener em window sem capture)
+    document.addEventListener('scroll', measure, { passive: true, capture: true })
     return () => {
       cancelAnimationFrame(raf)
       window.removeEventListener('resize', measure)
+      document.removeEventListener('scroll', measure, { capture: true })
     }
   }, [measure])
-
   if (!step || measuring) return null
 
   const isCenter = !step.targetSelector || !rect
