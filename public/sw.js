@@ -77,11 +77,11 @@ self.addEventListener('message', (event) => {
 
 // ===== WEB PUSH (Curiangoo — notificações da família) =====
 // Mostra a notificação do sistema quando o app está em background/fechado.
-// Sessões de áudio: páginas destravadas avisam via PIU_SESSION (piu confiável = som próprio).
-const piuSessions = new Map()
+// Sessões de áudio: páginas destravadas avisam via PIU_SESSION (flag global — client.id não existe em todos os browsers).
+let piuSessionActive = false
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'PIU_SESSION') {
-    if (event.source?.id) piuSessions.set(event.source.id, !!event.data.active)
+    piuSessionActive = !!event.data.active
   }
 })
 self.addEventListener('push', (event) => {
@@ -125,7 +125,7 @@ self.addEventListener('push', (event) => {
         })
         const visivel = clientList.find((c) => c.visibilityState === 'visible')
         if (visivel) {
-          piuReliable = piuSessions.get(visivel.id) === true
+          piuReliable = piuSessionActive
           visivel.postMessage({ type: 'PLAY_PIU' })
         }
       } catch (e) {
