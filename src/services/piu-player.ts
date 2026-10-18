@@ -1,89 +1,42 @@
 // Player do "piu" do Curiango — toca quando chega push com o app aberto.
-// ARQUITETURA À PROVA DE FALHAS (v0.0.426 — "prova real"):
-// 1. SWs são efêmeros: no push, o SW PERGUNTA à página via MessageChannel.
-// 2. A página TENTA TOCAR o piu de verdade NA HORA da pergunta e responde o RESULTADO:
-//    som tocando de fato → { canPlay: true } → SW mostra notificação silenciosa.
-//    Qualquer falha → { canPlay: false } → SW mostra notificação com som do sistema.
-// 3. Nunca há notificação muda: canPlay: true só é respondido COM O SOM JÁ TOCANDO.
-// 4. Autoplay policy: o 1º toque na sessão destrava e pré-carrega (initPiuUnlock).
+// ARQUITETURA FINAL (v0.0.432 — "áudio pré-carregado"):
+// 1. No 1º toque da sessão, o mp3 é baixado e fica PRÉ-CARREGADO no elemento <audio>.
+// 2. No push, o SW pergunta via MessageChannel; a página chama play() no elemento
+//    pré-carregado — INSTANTÂNEO (sem fetch, sem decode) — e responde o resultado real.
+// 3. canPlay: true só é respondido COM O SOM JÁ TOCANDO. Falha → som do sistema. Nunca mudo.
+// 4. O AudioContext (WebAudio) ficou como fallback — o elemento é mais confiável no Android.
 const PIU_URL =
   'https://evcxjxuakiyjerujntli.supabase.co/storage/v1/object/public/branding/curiango-piu-final.mp3?v=1'
 
-let ctx: AudioContext | null = null
 let audioEl: HTMLAudioElement | null = null
 let unlocked = false
 
-/** Chamado no primeiro pointerdown/keydown do app: destrava o áudio da sessão e pré-carrega o piu. */
+/** Chamado no 1º pointerdown/keydown da sessão: baixa e pré-carrega o piu (play() fica instantâneo). */
 export function initPiuUnlock(): void {
   if (unlocked) return
   unlocked = true
   try {
-    const AC =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-    if (AC) {
-      if (!ctx) ctx = new AC()
-      void ctx.resume().catch(() => {})
-    }
     if (!audioEl) {
       audioEl = new Audio(PIU_URL)
       audioEl.preload = 'auto'
       audioEl.volume = 0.9
-      audioEl.load()
+      audioEl.load() // baixa AGORA, com gesto — fica pronto pro push
     }
   } catch {
     /* silencioso */
   }
 }
 
-/** Toca via AudioContext (WebAudio). Retorna true se src.start() executou (som tocando). */
-async function playViaContext(): Promise<boolean> {
-  try {
-    if (!ctx) return false
-    if (ctx.state === 'suspended') await ctx.resume().catch(() => {})
-    if (ctx.state !== 'running') return false
-    const res = await fetch(PIU_URL)
-    const buf = await res.arrayBuffer()
-    const audio = await ctx.decodeAudioData(buf)
-    const src = ctx.createBufferSource()
-    src.buffer = audio
-    src.connect(ctx.destination)
-    src.start() // síncrono — se não lançou, está tocando
-    return true
-  } catch {
-    return false
-  }
-}
-
-/** Toca via elemento <audio>. Retorna true se play() resolveu (som tocando). */
-async function playViaElement(): Promise<boolean> {
-  try {
-    if (!audioEl) return false
-    audioEl.currentTime = 0
-    await audioEl.play() // resolve só quando o áudio começou de fato
-    return true
-  } catch {
-    return false
-  }
-}
-
 /**
- * PROVA REAL: tenta tocar o piu AGORA e retorna se o som está de fato tocando.
- * Usada no handshake do SW — canPlay: true = som já audível no dispositivo.
+ * PROVA REAL: play() no elemento pré-carregado (instantâneo — sem rede).
+ * Retorna true SOMENTE se o som começou a tocar de fato.
  */
 export async function attemptPiuPlay(): Promise<boolean> {
   try {
-    if (document.hidden || !unlocked) return false
-    const viaCtx = await Promise.race([
-      playViaContext(),
-      new Promise<boolean>((r) => setTimeout(() => r(false), 400)),
-    ])
-    if (viaCtx) return true
-    const viaEl = await Promise.race([
-      playViaElement(),
-      new Promise<boolean>((r) => setTimeout(() => r(false), 400)),
-    ])
-    return viaEl
+    if (document.hidden || !unlocked || !audioEl) return false
+    audioEl.currentTime = 0
+    await audioEl.play() // resolve quando o áudio começou de fato
+    return true
   } catch {
     return false
   }
@@ -111,7 +64,17 @@ export function handlePiuQuery(port: MessagePort): void {
 
 /** Toca o piu (usado no PLAY_PIU do notificationclick — gesto garantido). */
 export function playPiu(): void {
-  void playViaContext().then((ok) => {
-    if (!ok) playViaElement()
-  })
+  try {
+    if (!audioEl) {
+      initPiuUnlock()
+    }
+    if (audioEl) {
+      audioEl.currentTime = 0
+      void audioEl.play().catch(() => {
+        /* autoplay bloqueado — som do sistema cobre */
+      })
+    }
+  } catch {
+    /* silencioso */
+  }
 }
