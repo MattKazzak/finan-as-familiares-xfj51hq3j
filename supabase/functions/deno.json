@@ -1,10 +1,14 @@
 {
   "_versions": {
-    "voice-parse": 394,
-    "batch-categorize": 315,
-    "voice-transcribe": 105,
-    "webhook-mercadopago": 2,
-    "webhook-asaas": 2,
-    "whatsapp-webhook": 2
+    "voice-parse": 399,
+    "batch-categorize": 320,
+    "voice-transcribe": 110,
+    "webhook-mercadopago": 7,
+    "webhook-asaas": 8,
+    "whatsapp-webhook": 10,
+    "cancel-asaas-subscription": 4,
+    "create-asaas-checkout": 4,
+    "push-dispatcher": 7,
+    "push-cron-trigger": 3
   }
 }
