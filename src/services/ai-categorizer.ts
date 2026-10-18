@@ -15,6 +15,7 @@ export interface AiCategorizationSuggestion {
   confidence: number
   reasoning: string
   needsReview?: boolean
+  alternativeCategoryId?: string | null
 }
 
 export interface AiPdfTransactionItem {
@@ -410,6 +411,7 @@ export async function categorizeBatchWithAI(
           confidence: typeof itemSug.confidence === 'number' ? itemSug.confidence : 0.55,
           reasoning: itemSug.reasoning || '',
           needsReview: needsReview || !catId,
+          alternativeCategoryId: itemSug.alternativeCategoryId || null,
         })
       }
     } catch (chunkErr) {

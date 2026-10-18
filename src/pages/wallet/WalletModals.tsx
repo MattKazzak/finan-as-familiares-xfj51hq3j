@@ -29,6 +29,7 @@ import { CategoryTransactionsDrawer } from '@/components/wallet/CategoryTransact
 import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDialog'
 import { TransactionDetailDialog } from '@/components/transactions/TransactionDetailDialog'
 import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
+import { BulkCategoryDialog } from '@/components/wallet/BulkCategoryDialog'
 import { useWallet } from './WalletContext'
 
 export function WalletModals() {
@@ -641,6 +642,9 @@ export function WalletModals() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk edit por seleção (P1 — padrão Monarch/Actual) */}
+      <BulkCategoryDialog />
     </>
   )
 }

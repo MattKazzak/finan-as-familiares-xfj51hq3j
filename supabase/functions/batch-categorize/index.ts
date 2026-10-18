@@ -104,6 +104,7 @@ interface AiCategorizationResultItem {
   confidence: number
   reasoning: string
   needsReview?: boolean
+  alternativeCategoryId?: string | null
 }
 
 interface CategoryWithSubcategories {
@@ -791,10 +792,14 @@ REGRAS DE CLASSIFICAÇÃO:
          "categoryId": "UUID_VALIDO",
          "subcategoryId": "UUID_VALIDO_OU_NULL",
          "confidence": 0.95,
-         "reasoning": "Motivo conciso"
+         "reasoning": "Motivo conciso",
+         "alternativeCategoryId": "UUID_VALIDO_OU_NULL"
        }
      ]
    }
+   O campo "alternativeCategoryId" é a SEGUNDA melhor hipótese (padrão Copilot Money):
+   quando a primeira estiver errada, a segunda provavelmente é a certa — o app mostra
+   as duas no topo do seletor. Use null se não houver segunda hipótese plausível.
 2. Use EXCLUSIVAMENTE as categorias fornecidas no catálogo da família acima (use APENAS IDs "categoryId" e "subcategoryId" que EXISTEM no catálogo).
 3. REGRAS DE APRENDIZADO DA FAMÍLIA (prioridade máxima — vencem qualquer outra pista):
 ${
@@ -957,6 +962,14 @@ ${JSON.stringify(
         }
       }
 
+      // Top-2 chutes (padrão Copilot): segunda hipótese validada contra o catálogo
+      let altCatId: string | null = item.alternativeCategoryId
+        ? String(item.alternativeCategoryId)
+        : null
+      if (altCatId && (!validCategoryIds.has(altCatId) || altCatId === catId)) {
+        altCatId = null
+      }
+
       finalSuggestions.push({
         tempId: pendingItem.tempId,
         categoryId: catId,
@@ -964,6 +977,7 @@ ${JSON.stringify(
         confidence,
         reasoning: String(item.reasoning || ''),
         needsReview,
+        alternativeCategoryId: altCatId,
       })
     }
 

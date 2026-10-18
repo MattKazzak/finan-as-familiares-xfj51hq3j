@@ -399,6 +399,15 @@ export function WalletPage() {
 
   const pendingTransactionsCount = pendingTransactionsList.length
 
+  // Total em R$ dos pendentes (padrão Actual, P1): dá senso de urgência real à fila
+  const pendingTotalCents = useMemo(() => {
+    return pendingTransactionsList.reduce((acc, tx) => {
+      if (tx.type === 'expense') return acc + tx.amount_cents
+      if (tx.type === 'income') return acc - tx.amount_cents
+      return acc
+    }, 0)
+  }, [pendingTransactionsList])
+
   const pendingByPatternMap = useMemo(() => {
     const map = new Map<string, string[]>()
     pendingTransactionsList.forEach((tx) => {
@@ -513,6 +522,95 @@ export function WalletPage() {
       })
     } finally {
       setIsCategorizingPendingWithAi(false)
+    }
+  }
+
+  // ===== Bulk edit por seleção (P1 — padrão Monarch/Actual) =====
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedTxIds, setSelectedTxIds] = useState<Set<string>>(new Set())
+  const [bulkCategoryDialogOpen, setBulkCategoryDialogOpen] = useState(false)
+  const [bulkApplying, setBulkApplying] = useState(false)
+
+  const toggleSelectionMode = () => {
+    setSelectionMode((prev) => !prev)
+    setSelectedTxIds(new Set())
+  }
+
+  const toggleTxSelection = (id: string) => {
+    setSelectedTxIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const clearSelection = () => {
+    setSelectedTxIds(new Set())
+    setSelectionMode(false)
+  }
+
+  const handleBulkApplyCategory = async (
+    categoryId: string,
+    subcategoryId: string | null,
+    saveRule: boolean,
+  ) => {
+    if (selectedTxIds.size === 0) return
+    try {
+      setBulkApplying(true)
+      let count = 0
+      for (const id of selectedTxIds) {
+        try {
+          await updateTransaction(id, {
+            category_id: categoryId,
+            subcategory_id: subcategoryId,
+            // Rastro: categorização em lote é manual (sem ai_confidence)
+            ai_confidence: null,
+          })
+          count++
+        } catch (updateErr) {
+          console.warn(`Erro ao atualizar transação ${id} (bulk):`, updateErr)
+        }
+      }
+
+      if (saveRule && family) {
+        try {
+          const firstTx = transactions.find((tx) => selectedTxIds.has(tx.id))
+          if (firstTx?.description) {
+            const pattern =
+              extractPatternFromDescription(firstTx.description) ||
+              normalizeText(firstTx.description)
+            if (pattern) {
+              await upsertCategorizationRule({
+                family_id: family.id,
+                pattern,
+                category_id: categoryId,
+                subcategory_id: subcategoryId,
+              })
+            }
+          }
+        } catch (ruleErr) {
+          console.warn('Erro ao salvar regra do bulk:', ruleErr)
+        }
+      }
+
+      setBulkCategoryDialogOpen(false)
+      clearSelection()
+      toast({
+        title: `✨ ${count} ${count === 1 ? 'transação categorizada' : 'transações categorizadas'}!`,
+        description: saveRule ? 'Regra permanente criada.' : undefined,
+      })
+      triggerRefresh()
+      await loadMonthData()
+    } catch (err: any) {
+      console.error('Erro no bulk categorize:', err)
+      toast({
+        title: 'Erro ao categorizar em lote',
+        description: err?.message || 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setBulkApplying(false)
     }
   }
 
@@ -1070,6 +1168,7 @@ export function WalletPage() {
     groupedTransactions,
     pendingTransactionsCount,
     pendingTransactionsList,
+    pendingTotalCents,
     pendingByPatternMap,
     hasMoreTransactions,
     loadingMore,
@@ -1097,6 +1196,15 @@ export function WalletPage() {
     handleCategorizePendingWithAi,
     handleSaveInlineCategory,
     handleSaveBatchSameName,
+    selectionMode,
+    selectedTxIds,
+    toggleSelectionMode,
+    toggleTxSelection,
+    clearSelection,
+    bulkCategoryDialogOpen,
+    setBulkCategoryDialogOpen,
+    handleBulkApplyCategory,
+    bulkApplying,
     selectedTx,
     setSelectedTx,
     isDetailOpen,

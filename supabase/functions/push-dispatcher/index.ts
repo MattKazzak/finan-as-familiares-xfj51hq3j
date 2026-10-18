@@ -77,8 +77,13 @@ async function processQueue(): Promise<{
       const valor = `R$ ${(Math.abs(item.amount_cents ?? 0) / 100).toFixed(2).replace('.', ',')}`
       const nome = item.author_member_name || 'Alguém da família'
       const desc = item.description || (tipo === 'Receita' ? 'receita' : 'despesa')
-      const title = `${nome} lançou ${tipo === 'Receita' ? 'uma receita' : 'um gasto'}`
-      const body = `${desc} — ${valor}`
+      // Pendente de categoria (padrão Monarch, P1): transação sem categoria pede
+      // revisão — o push avisa os OUTROS membros pra ajudar a categorizar.
+      const isPending = item.description?.startsWith('[sem categoria]') === true
+      const title = isPending
+        ? `${nome} lançou ${tipo === 'Receita' ? 'uma receita' : 'um gasto'} sem categoria`
+        : `${nome} lançou ${tipo === 'Receita' ? 'uma receita' : 'um gasto'}`
+      const body = isPending ? `${desc} — ${valor} · toque para categorizar` : `${desc} — ${valor}`
 
       for (const t of targets ?? []) {
         try {

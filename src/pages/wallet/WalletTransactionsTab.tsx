@@ -10,6 +10,8 @@ import {
   Plus,
   Edit3,
   Trash2,
+  Check,
+  ListChecks,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatBRL, formatDayGroupHeader } from '@/lib/formatters'
@@ -30,6 +32,7 @@ export function WalletTransactionsTab() {
     setFilterOnlyPending,
     isCategorizingPendingWithAi,
     handleCategorizePendingWithAi,
+    pendingTotalCents,
     monthIncomeCents,
     monthExpenseCents,
     monthNetCents,
@@ -55,6 +58,15 @@ export function WalletTransactionsTab() {
     handleSaveInlineCategory,
     handleSaveBatchSameName,
     aiPendingSuggestions,
+    selectionMode,
+    selectedTxIds,
+    toggleSelectionMode,
+    toggleTxSelection,
+    clearSelection,
+    bulkCategoryDialogOpen,
+    setBulkCategoryDialogOpen,
+    handleBulkApplyCategory,
+    bulkApplying,
     setSelectedTx,
     setIsDetailOpen,
     setEditingTx,
@@ -164,9 +176,13 @@ export function WalletTransactionsTab() {
                 Lançamentos Pendentes ({pendingTransactionsCount})
               </h4>
               <span className="text-[11px] text-muted-foreground block">
-                Você tem {pendingTransactionsCount}{' '}
+                {pendingTransactionsCount}{' '}
                 {pendingTransactionsCount === 1 ? 'transação pendente' : 'transações pendentes'} de
-                categorização neste mês. Toque na linha para categorizar ou utilize a IA.
+                categorização neste mês ·{' '}
+                <span className="font-semibold text-amber-900 tabular-nums">
+                  {formatBRL(pendingTotalCents)}
+                </span>{' '}
+                sem categoria. Toque na linha para categorizar ou utilize a IA.
               </span>
             </div>
           </div>
@@ -232,6 +248,50 @@ export function WalletTransactionsTab() {
           >
             Ver todas as transações
           </Button>
+        </div>
+      ) : null}
+
+      {/* ===== Barra de seleção (bulk edit P1 — padrão Monarch) ===== */}
+      {selectionMode ? (
+        <div className="rounded-3xl border-2 border-violet-300 bg-violet-50/80 backdrop-blur-sm p-3.5 flex items-center justify-between gap-3 shadow-curiango sticky top-14 z-10">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-violet-600 text-white flex items-center justify-center shrink-0 font-bold text-sm">
+              {selectedTxIds.size}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-violet-900">
+                {selectedTxIds.size === 1
+                  ? '1 transação selecionada'
+                  : `${selectedTxIds.size} transações selecionadas`}
+              </p>
+              <p className="text-[11px] text-violet-700">Toque nas linhas para marcar</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={clearSelection}
+              className="rounded-xl text-xs text-violet-700 hover:text-violet-900 h-8 px-2"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setBulkCategoryDialogOpen(true)}
+              disabled={selectedTxIds.size === 0 || bulkApplying}
+              className="rounded-xl text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white h-8 px-3 gap-1.5"
+            >
+              {bulkApplying ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <ListChecks className="w-3.5 h-3.5" />
+              )}
+              <span>Categorizar</span>
+            </Button>
+          </div>
         </div>
       ) : null}
 
@@ -322,6 +382,21 @@ export function WalletTransactionsTab() {
               Limpar filtros
             </button>
           )}
+
+          {/* Bulk edit por seleção (P1 — padrão Monarch/Actual) */}
+          <button
+            type="button"
+            onClick={toggleSelectionMode}
+            className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 h-8 rounded-xl border transition-colors shadow-2xs active:scale-95 shrink-0 ${
+              selectionMode
+                ? 'border-violet-300 bg-violet-50 text-violet-700'
+                : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900'
+            }`}
+            title="Selecionar várias transações para categorizar em lote"
+          >
+            <ListChecks className="w-3.5 h-3.5" />
+            <span>{selectionMode ? 'Sair da seleção' : 'Selecionar'}</span>
+          </button>
         </div>
 
         <span className="text-xs text-slate-400 font-medium">
@@ -426,6 +501,11 @@ export function WalletTransactionsTab() {
                     <div
                       key={tx.id}
                       onClick={() => {
+                        // Modo seleção (bulk edit P1): toque marca/desmarca em vez de abrir detalhe
+                        if (selectionMode) {
+                          toggleTxSelection(tx.id)
+                          return
+                        }
                         setSelectedTx(tx)
                         setIsDetailOpen(true)
                       }}
@@ -434,6 +514,20 @@ export function WalletTransactionsTab() {
                       }`}
                     >
                       <div className="flex items-center gap-3 flex-1 overflow-hidden">
+                        {/* Checkbox no modo seleção (bulk edit P1) */}
+                        {selectionMode ? (
+                          <div
+                            className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-colors ${
+                              selectedTxIds.has(tx.id)
+                                ? 'bg-violet-600 border-violet-600'
+                                : 'border-slate-300 bg-white'
+                            }`}
+                          >
+                            {selectedTxIds.has(tx.id) && (
+                              <Check className="w-4 h-4 text-white stroke-[3]" />
+                            )}
+                          </div>
+                        ) : null}
                         <CategoryIconBox
                           icon={tx.category?.icon}
                           color={tx.category?.color}

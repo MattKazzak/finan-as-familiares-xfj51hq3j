@@ -71,6 +71,7 @@ interface TransactionInlineRowProps {
     subcategoryId?: string | null
     confidence?: number
     reasoning?: string
+    alternativeCategoryId?: string | null
   } | null
 }
 
@@ -147,6 +148,15 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
   const availableSubcategories = useMemo(() => {
     return activeCategory?.subcategories || []
   }, [activeCategory])
+
+  // Top-2 chutes da IA (padrão Copilot Money): quando há sugestão IA e a categoria
+  // selecionada é a sugerida, a alternativa da IA sobe pro topo da lista —
+  // corrigir um erro da IA vira 1 toque em vez de scroll na lista.
+  const aiAlternativeCategory = useMemo(() => {
+    if (!aiSuggestion?.alternativeCategoryId) return null
+    if (selectedCatId !== aiSuggestion.categoryId) return null
+    return filteredCategories.find((c) => c.id === aiSuggestion.alternativeCategoryId) || null
+  }, [aiSuggestion, selectedCatId, filteredCategories])
 
   // Agrupamento das categorias de despesas por Balde
   const categorizedByBucket = useMemo(() => {
@@ -498,6 +508,36 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
                     <SelectValue placeholder="Escolher categoria..." />
                   </SelectTrigger>
                   <SelectContent className="max-h-72">
+                    {/* Top-2 chutes da IA no topo (padrão Copilot Money, P1): a 2ª hipótese
+                        da IA aparece em destaque quando a 1ª está selecionada — corrigir
+                        erro da IA vira 1 toque. */}
+                    {aiAlternativeCategory && (
+                      <SelectGroup>
+                        <SelectLabel className="text-[10px] uppercase font-bold text-violet-600 tracking-wider flex items-center gap-1 px-2.5 py-1.5 bg-violet-50 rounded-md my-0.5">
+                          <Sparkles className="w-3 h-3" />
+                          <span>Outra hipótese da IA</span>
+                        </SelectLabel>
+                        <SelectItem value={aiAlternativeCategory.id} className="text-xs py-1.5">
+                          <span className="flex items-center gap-2">
+                            <div
+                              className="w-4 h-4 rounded-md flex items-center justify-center shrink-0"
+                              style={{
+                                backgroundColor: aiAlternativeCategory.color || '#10B981',
+                                color: '#FFFFFF',
+                              }}
+                            >
+                              <CategoryIcon
+                                name={aiAlternativeCategory.icon}
+                                className="w-2.5 h-2.5"
+                              />
+                            </div>
+                            <span className="font-semibold text-slate-800">
+                              {aiAlternativeCategory.name}
+                            </span>
+                          </span>
+                        </SelectItem>
+                      </SelectGroup>
+                    )}
                     {categorizedByBucket
                       ? BUCKET_GROUPS.map(({ bucket, label }) => {
                           const list = categorizedByBucket[bucket] || []

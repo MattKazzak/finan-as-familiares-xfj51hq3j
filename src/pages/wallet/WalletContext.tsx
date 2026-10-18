@@ -98,6 +98,7 @@ export interface WalletContextType {
   groupedTransactions: [string, Transaction[]][]
   pendingTransactionsCount: number
   pendingTransactionsList: Transaction[]
+  pendingTotalCents: number
   pendingByPatternMap: Map<string, string[]>
   hasMoreTransactions: boolean
   loadingMore: boolean
@@ -128,6 +129,21 @@ export interface WalletContextType {
   handleCategorizePendingWithAi: () => Promise<void>
   handleSaveInlineCategory: (data: SaveInlineCategoryData) => Promise<void>
   handleSaveBatchSameName: (data: SaveBatchSameNameData) => Promise<void>
+
+  // Bulk edit por seleção (P1 — padrão Monarch/Actual)
+  selectionMode: boolean
+  selectedTxIds: Set<string>
+  toggleSelectionMode: () => void
+  toggleTxSelection: (id: string) => void
+  clearSelection: () => void
+  bulkCategoryDialogOpen: boolean
+  setBulkCategoryDialogOpen: React.Dispatch<React.SetStateAction<boolean>>
+  handleBulkApplyCategory: (
+    categoryId: string,
+    subcategoryId: string | null,
+    saveRule: boolean,
+  ) => Promise<void>
+  bulkApplying: boolean
 
   // Ações de Transação (detalhe, edição, exclusão)
   selectedTx: Transaction | null
