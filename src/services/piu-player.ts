@@ -9,10 +9,25 @@ let ctx: AudioContext | null = null
 let audioEl: HTMLAudioElement | null = null
 let unlocked = false
 
+/** Estado atual da sessão de áudio (visível + destravado = piu confiável). */
+export function isPiuUnlocked(): boolean {
+  return unlocked
+}
+
+/** Avisa o SW se o piu pode tocar com confiança (p/ decidir suprimir o som do sistema). */
+export function notifyPiuState(active: boolean): void {
+  try {
+    navigator.serviceWorker?.controller?.postMessage({ type: 'PIU_SESSION', active })
+  } catch {
+    /* silencioso */
+  }
+}
+
 /** Chamado no primeiro pointerdown do app: destrava o áudio da sessão e pré-carrega o piu. */
 export function initPiuUnlock(): void {
   if (unlocked) return
   unlocked = true
+  notifyPiuState(!document.hidden)
   try {
     const AC =
       window.AudioContext ||

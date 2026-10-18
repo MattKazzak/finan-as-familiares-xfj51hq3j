@@ -2,7 +2,7 @@
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './main.css'
-import { playPiu, initPiuUnlock } from './services/piu-player'
+import { playPiu, initPiuUnlock, isPiuUnlocked } from './services/piu-player'
 
 // @skip-protected: Do not remove. Required for React rendering.
 import { registerAppServiceWorker } from './hooks/use-service-worker'
@@ -32,8 +32,18 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', (event) => {
     if (event.data?.type === 'PLAY_PIU') playPiu()
   })
+  // Sessão de áudio: avisa o SW quando a página fica visível/oculta (piu confiável só visível)
+  document.addEventListener('visibilitychange', () => {
+    navigator.serviceWorker.controller?.postMessage({
+      type: 'PIU_SESSION',
+      active: !document.hidden && isPiuUnlocked(),
+    })
+  })
+  document.addEventListener('visibilitychange', () => {}, { once: true })
 }
 window.addEventListener('pointerdown', initPiuUnlock, { once: true, capture: true })
 window.addEventListener('keydown', initPiuUnlock, { once: true, capture: true })
+// Ao carregar, informa estado inicial (visível = sim; destravado = ainda não)
+navigator.serviceWorker?.controller?.postMessage({ type: 'PIU_SESSION', active: false })
 
 createRoot(document.getElementById('root')!).render(<App />)

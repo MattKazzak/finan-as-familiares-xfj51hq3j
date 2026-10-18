@@ -77,6 +77,13 @@ self.addEventListener('message', (event) => {
 
 // ===== WEB PUSH (Curiangoo — notificações da família) =====
 // Mostra a notificação do sistema quando o app está em background/fechado.
+// Sessões de áudio: páginas destravadas avisam via PIU_SESSION (piu confiável = som próprio).
+const piuSessions = new Map()
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'PIU_SESSION') {
+    if (event.source?.id) piuSessions.set(event.source.id, !!event.data.active)
+  }
+})
 self.addEventListener('push', (event) => {
   let payload = { title: 'Curiangoo', body: 'Nova atividade da família', data: { url: '/inicio' } }
   try {
@@ -108,22 +115,25 @@ self.addEventListener('push', (event) => {
 
   event.waitUntil(
     (async () => {
-      // App ABERTO: suprime o som do sistema (silent) e toca SÓ o piu do Curiango na página.
-      // App FECHADO: notificação normal — som vem do canal do Android (configurável pelo usuário).
-      let appOpen = false
+      // Página ABERTA com sessão de áudio destravada: suprime o som do sistema e toca SÓ o piu.
+      // Caso contrário: notificação normal — som do canal do Android (nunca silêncio total).
+      let piuReliable = false
       try {
         const clientList = await self.clients.matchAll({
           type: 'window',
           includeUncontrolled: true,
         })
-        appOpen = clientList.length > 0
-        if (appOpen) clientList[0].postMessage({ type: 'PLAY_PIU' })
+        const visivel = clientList.find((c) => c.visibilityState === 'visible')
+        if (visivel) {
+          piuReliable = piuSessions.get(visivel.id) === true
+          visivel.postMessage({ type: 'PLAY_PIU' })
+        }
       } catch (e) {
         /* silencioso */
       }
       await self.registration.showNotification(
         title,
-        appOpen ? { ...options, silent: true } : options,
+        piuReliable ? { ...options, silent: true } : options,
       )
     })(),
   )
