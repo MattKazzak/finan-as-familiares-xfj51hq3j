@@ -77,13 +77,33 @@ self.addEventListener('message', (event) => {
 
 // ===== WEB PUSH (Curiangoo — notificações da família) =====
 // Mostra a notificação do sistema quando o app está em background/fechado.
-// Sessões de áudio: páginas destravadas avisam via PIU_SESSION (flag global — client.id não existe em todos os browsers).
-let piuSessionActive = false
-self.addEventListener('message', (event) => {
-  if (event.data?.type === 'PIU_SESSION') {
-    piuSessionActive = !!event.data.active
-  }
-})
+// Handshake ao vivo: SWs são efêmeros (morrem ~30s e revivem do zero a cada push) —
+// NADA de estado em memória. No push, PERGUNTAMOS à página se ela consegue tocar áudio
+// AGORA (MessageChannel, timeout 350ms). Sem resposta = som do sistema (fail-safe).
+async function queryPiuCapability(client) {
+  return new Promise((resolve) => {
+    try {
+      const channel = new MessageChannel()
+      let settled = false
+      const timer = setTimeout(() => {
+        if (!settled) {
+          settled = true
+          resolve(false)
+        }
+      }, 350)
+      channel.port1.onmessage = (ev) => {
+        if (!settled) {
+          settled = true
+          clearTimeout(timer)
+          resolve(!!ev.data?.canPlay)
+        }
+      }
+      client.postMessage({ type: 'PIU_QUERY' }, [channel.port2])
+    } catch (e) {
+      resolve(false)
+    }
+  })
+}
 self.addEventListener('push', (event) => {
   let payload = { title: 'Curiangoo', body: 'Nova atividade da família', data: { url: '/inicio' } }
   try {
@@ -115,8 +135,9 @@ self.addEventListener('push', (event) => {
 
   event.waitUntil(
     (async () => {
-      // Página ABERTA com sessão de áudio destravada: suprime o som do sistema e toca SÓ o piu.
-      // Caso contrário: notificação normal — som do canal do Android (nunca silêncio total).
+      // Handshake: página visível responde "consigo tocar áudio" em ≤350ms?
+      // Sim → som do sistema suprimido, SÓ o piu do Curiango toca.
+      // Não/timeout → notificação normal com som do sistema (nunca muda).
       let piuReliable = false
       try {
         const clientList = await self.clients.matchAll({
@@ -125,7 +146,7 @@ self.addEventListener('push', (event) => {
         })
         const visivel = clientList.find((c) => c.visibilityState === 'visible')
         if (visivel) {
-          piuReliable = piuSessionActive
+          piuReliable = await queryPiuCapability(visivel)
           visivel.postMessage({ type: 'PLAY_PIU' })
         }
       } catch (e) {

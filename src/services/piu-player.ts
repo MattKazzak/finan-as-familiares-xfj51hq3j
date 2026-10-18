@@ -1,7 +1,10 @@
 // Player do "piu" do Curiango — toca quando chega push com o app aberto (SW manda PLAY_PIU).
-// Política de autoplay: áudio só toca se houve interação do usuário nesta sessão da página.
-// Estratégia: no PRIMEIRO toque em qualquer lugar do app, destravamos e pré-carregamos o áudio —
-// daí em diante o piu toca em qualquer push da sessão. App fechado = som do sistema (canal).
+// ARQUITETURA À PROVA DE FALHAS (v0.0.425):
+// 1. SWs são efêmeros — NADA de estado em memória do SW. No push, o SW PERGUNTA à página
+//    via MessageChannel ("consegue tocar áudio AGORA?") com timeout de 350ms.
+// 2. A página responde canPlay só se: visível + áudio destravado + AudioContext running.
+// 3. Fail-safe: sem resposta/qualquer erro → som do sistema (nunca notificação muda).
+// 4. Autoplay policy: o 1º toque na sessão destrava e pré-carrega (initPiuUnlock).
 const PIU_URL =
   'https://evcxjxuakiyjerujntli.supabase.co/storage/v1/object/public/branding/curiango-piu-final.mp3?v=1'
 
@@ -9,25 +12,10 @@ let ctx: AudioContext | null = null
 let audioEl: HTMLAudioElement | null = null
 let unlocked = false
 
-/** Estado atual da sessão de áudio (visível + destravado = piu confiável). */
-export function isPiuUnlocked(): boolean {
-  return unlocked
-}
-
-/** Avisa o SW se o piu pode tocar com confiança (p/ decidir suprimir o som do sistema). */
-export function notifyPiuState(active: boolean): void {
-  try {
-    navigator.serviceWorker?.controller?.postMessage({ type: 'PIU_SESSION', active })
-  } catch {
-    /* silencioso */
-  }
-}
-
-/** Chamado no primeiro pointerdown do app: destrava o áudio da sessão e pré-carrega o piu. */
+/** Chamado no primeiro pointerdown/keydown do app: destrava o áudio da sessão e pré-carrega o piu. */
 export function initPiuUnlock(): void {
   if (unlocked) return
   unlocked = true
-  notifyPiuState(!document.hidden)
   try {
     const AC =
       window.AudioContext ||
@@ -40,12 +28,48 @@ export function initPiuUnlock(): void {
       audioEl = new Audio(PIU_URL)
       audioEl.preload = 'auto'
       audioEl.volume = 0.9
-      // pré-carrega de fato (autoplay policy exige gesto p/ PLAY, mas preload é livre)
       audioEl.load()
     }
   } catch {
     /* silencioso */
   }
+}
+
+/**
+ * Responde ao handshake do SW: a página consegue tocar o piu NESTE instante?
+ * Critérios: página visível + sessão destravada + (AudioContext running OU elemento pronto).
+ * Tenta resume rápido do AudioContext (150ms) antes de responder.
+ */
+export async function canPlayPiuNow(): Promise<boolean> {
+  try {
+    if (document.hidden || !unlocked) return false
+    if (ctx && ctx.state === 'suspended') {
+      await Promise.race([ctx.resume().catch(() => {}), new Promise((r) => setTimeout(r, 150))])
+    }
+    return (ctx !== null && ctx.state === 'running') || audioEl !== null
+  } catch {
+    return false
+  }
+}
+
+/** Responde o PIU_QUERY do SW via MessagePort (o SW espera até 350ms). */
+export function handlePiuQuery(port: MessagePort): void {
+  if (!port) return
+  void canPlayPiuNow()
+    .then((canPlay) => {
+      try {
+        port.postMessage({ canPlay })
+      } catch {
+        /* port fechado */
+      }
+    })
+    .catch(() => {
+      try {
+        port.postMessage({ canPlay: false })
+      } catch {
+        /* port fechado */
+      }
+    })
 }
 
 async function playViaContext(): Promise<boolean> {
