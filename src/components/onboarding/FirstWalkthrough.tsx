@@ -293,13 +293,16 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
           maxWidth: 320,
         }
 
-  // Seta: centro real do alvo, relativo ao container (clamp dentro do card)
+  // Seta: centro real do alvo, relativo AO CARD (bug provado no Chrome 19/10:
+  // arrowOff ~72px — a seta era posicionada relativa ao container, mas vive
+  // dentro do card, que fica 64px+8px à direita quando o mascote está ao lado).
+  const mascotOffset = effectivePos === 'bottom' && !isCenter ? 72 : 0
   const arrowLeft = rect
     ? Math.max(
         16,
         Math.min(
-          rect.left + rect.width / 2 - containerLeft - 6,
-          window.innerWidth - containerLeft - 44,
+          rect.left + rect.width / 2 - containerLeft - mascotOffset - 6,
+          window.innerWidth - containerLeft - mascotOffset - 44,
         ),
       )
     : 24
