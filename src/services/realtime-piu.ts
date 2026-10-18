@@ -2,31 +2,21 @@
 // a página ESCUTA o INSERT na tabela transactions direto do banco e toca o piu na hora.
 // Telemetria: status do canal vai pro console (diagnóstico em produção).
 // Fallback: polling leve a cada 20s (pega INSERTs que o Realtime perder).
+// v0.0.437: canais com nome ÚNICO por sessão (evita canal duplicado/abandonado no Realtime)
+// + re-subscribe automático se o canal cair (CHANNEL_ERROR/TIMED_OUT → tenta de novo em 5s).
 import { supabase } from '@/lib/supabase/client'
 import { initPiuUnlock, playPiu } from './piu-player'
 
 let started = false
 let lastSeenTxAt: string | null = null
+let realtimeOk = false // telemetria: último status do canal Realtime
 
 /** Inicia o listener de Realtime + fallback de polling (chamar 1x no bootstrap). */
 export function startRealtimePiu(): void {
   if (started) return
   started = true
 
-  try {
-    supabase
-      .channel('curiangoo-transactions-piu')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, () => {
-        playPiu()
-      })
-      .subscribe((status) => {
-        if (status !== 'SUBSCRIBED') {
-          console.warn('[RealtimePiu] canal:', status)
-        }
-      })
-  } catch {
-    /* Realtime indisponível — polling cobre */
-  }
+  subscribeRealtime()
 
   // Fallback: polling leve (1 query índice-friendly a cada 20s, só com app visível)
   document.addEventListener('visibilitychange', () => {
@@ -37,6 +27,38 @@ export function startRealtimePiu(): void {
   setInterval(() => {
     if (!document.hidden) void pollOnce()
   }, 20000)
+}
+
+function subscribeRealtime(): void {
+  try {
+    // Nome único por sessão: canal com nome fixo pode colidir com uma sessão antiga
+    // do mesmo device (aba fantasma) e o Realtime não entrega pro novo subscriber.
+    const channelName = `curiangoo-piu-${Date.now()}`
+    supabase
+      .channel(channelName)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, () => {
+        playPiu()
+      })
+      .subscribe((status) => {
+        realtimeOk = status === 'SUBSCRIBED'
+        if (!realtimeOk) {
+          console.warn('[RealtimePiu] canal:', status)
+          // CHANNEL_ERROR / TIMED_OUT / CLOSED → tenta de novo em 5s (auto-recuperação)
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            setTimeout(() => {
+              try {
+                supabase.removeChannel(supabase.channel(channelName))
+              } catch {
+                /* já removido */
+              }
+              subscribeRealtime()
+            }, 5000)
+          }
+        }
+      })
+  } catch {
+    /* Realtime indisponível — polling cobre */
+  }
 }
 
 async function pollOnce(): Promise<void> {
