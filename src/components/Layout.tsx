@@ -263,7 +263,7 @@ export default function Layout() {
               <CuriangoLogo
                 size={32}
                 color="#FCA311"
-                eyeColor="#FFFFFF"
+                eyeColor="#14213D"
                 eyeRadius={3.4}
                 eyeHighlight
               />
@@ -297,12 +297,14 @@ export default function Layout() {
         {/* BANNER EDUCATIVO DE INSTALAÇÃO PWA (POSICIONADO ACIMA DO DOCK FLUTUANTE) */}
         <InstallPwaBanner variant="bottom-nav" />
 
-        {/* DOCK FLUTUANTE EM PÍLULA (MOBILE APENAS < 768px, 360–412px SAFE) — R58: Fundo Azul-Marinho #14213D espelhando o herói sangrado do topo */}
+        {/* DOCK EDGE-TO-EDGE (18/10, Matheus): barra CHEIA que encosta na borda de baixo
+            (padrão Instagram/Nubank — fim do "controle remoto"). A cor desce até o limite
+            físico: fundo navy contínuo + barra de gestos do sistema por cima. */}
         <nav
           aria-label="Navegação Principal"
-          className="md:hidden fixed bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] inset-x-0 z-40 px-3 sm:px-4 max-w-md mx-auto pointer-events-none"
+          className="md:hidden fixed bottom-0 inset-x-0 z-40 pointer-events-none"
         >
-          <div className="pointer-events-auto w-full bg-[#14213D] border border-white/10 shadow-elevation-3 rounded-full px-2 py-1.5 flex items-center justify-between transition-all">
+          <div className="pointer-events-auto w-full bg-[#14213D] pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] px-2 flex items-end justify-between border-t border-white/10 shadow-[0_-4px_20px_rgba(20,33,61,0.25)]">
             {/* 1. Início */}
             <NavLink
               to="/inicio"
@@ -421,7 +423,7 @@ export default function Layout() {
                 </>
               )}
             </NavLink>
-          </div>{' '}
+          </div>
         </nav>
       </div>
 
