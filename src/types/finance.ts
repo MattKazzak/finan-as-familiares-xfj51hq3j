@@ -14,6 +14,9 @@ export interface Family {
   budget_model?: string | null
   created_by: string | null
   created_at: string
+  /** Tour de primeiro acesso: passos concluídos (["receita","despesa","importar"]) */
+  tour_steps_done?: string[] | null
+  tour_completed_at?: string | null
 }
 
 export interface FamilyMember {

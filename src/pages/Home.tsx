@@ -15,6 +15,7 @@ import { CountUp } from '@/components/common/CountUp'
 import { CategoryIconBox } from '@/components/common/CategoryIcon'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import { PremiumGate } from '@/components/billing/PremiumGate'
+import { FirstTour } from '@/components/onboarding/FirstTour'
 import { useAccessStatus } from '@/services/access-status'
 import { TransactionDetailDialog } from '@/components/transactions/TransactionDetailDialog'
 import { NewTransactionDialog } from '@/components/transactions/NewTransactionDialog'
@@ -906,6 +907,13 @@ export default function Home() {
 
       {/* 2. ÁREA CLARA (#F8F9FB) COM CARDS FLUTUANTES SOBREPONDO O FUNDO MARINHO */}
       <div className="relative -mt-6 sm:-mt-8 px-4 sm:px-6 pb-12 max-w-5xl mx-auto space-y-6">
+        {/* TOUR DE PRIMEIRO ACESSO (18/10, Matheus): checklist progressivo — ensina
+            fazendo, não bloqueia. Some sozinho quando os 3 passos estão concluídos. */}
+        {family && (
+          <FirstTour
+            stepsDone={Array.isArray(family.tour_steps_done) ? family.tour_steps_done : []}
+          />
+        )}
         {/* COPILOT NA HOME (16/10, v2 — fala do Curiango): card SEMPRE presente.
             Padrão-ouro de personagem conversando (Copilot Money/Monzo chat): o
             pássaro É o remetente (avatar à esquerda, como foto de perfil) e fala

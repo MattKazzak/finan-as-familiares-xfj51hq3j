@@ -1,17 +1,11 @@
 // AVOID UPDATING THIS FILE DIRECTLY. It is automatically generated.
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: '14.17'
   }
   public: {
     Tables: {
@@ -287,7 +281,7 @@ export type Database = {
       }
       backup_20261011_investments: {
         Row: {
-          asset_type: Database["public"]["Enums"]["asset_type"] | null
+          asset_type: Database['public']['Enums']['asset_type'] | null
           avg_price_cents: number | null
           created_at: string | null
           current_price_cents: number | null
@@ -298,7 +292,7 @@ export type Database = {
           ticker: string | null
         }
         Insert: {
-          asset_type?: Database["public"]["Enums"]["asset_type"] | null
+          asset_type?: Database['public']['Enums']['asset_type'] | null
           avg_price_cents?: number | null
           created_at?: string | null
           current_price_cents?: number | null
@@ -309,7 +303,7 @@ export type Database = {
           ticker?: string | null
         }
         Update: {
-          asset_type?: Database["public"]["Enums"]["asset_type"] | null
+          asset_type?: Database['public']['Enums']['asset_type'] | null
           avg_price_cents?: number | null
           created_at?: string | null
           current_price_cents?: number | null
@@ -360,7 +354,7 @@ export type Database = {
           member_id: string | null
           name: string | null
           subcategory_id: string | null
-          type: Database["public"]["Enums"]["transaction_type"] | null
+          type: Database['public']['Enums']['transaction_type'] | null
         }
         Insert: {
           active?: boolean | null
@@ -373,7 +367,7 @@ export type Database = {
           member_id?: string | null
           name?: string | null
           subcategory_id?: string | null
-          type?: Database["public"]["Enums"]["transaction_type"] | null
+          type?: Database['public']['Enums']['transaction_type'] | null
         }
         Update: {
           active?: boolean | null
@@ -386,7 +380,7 @@ export type Database = {
           member_id?: string | null
           name?: string | null
           subcategory_id?: string | null
-          type?: Database["public"]["Enums"]["transaction_type"] | null
+          type?: Database['public']['Enums']['transaction_type'] | null
         }
         Relationships: []
       }
@@ -402,7 +396,7 @@ export type Database = {
           percent_alert: number | null
           percent_default: number | null
           sort_order: number | null
-          type: Database["public"]["Enums"]["transaction_type"] | null
+          type: Database['public']['Enums']['transaction_type'] | null
         }
         Insert: {
           budget_bucket?: string | null
@@ -415,7 +409,7 @@ export type Database = {
           percent_alert?: number | null
           percent_default?: number | null
           sort_order?: number | null
-          type?: Database["public"]["Enums"]["transaction_type"] | null
+          type?: Database['public']['Enums']['transaction_type'] | null
         }
         Update: {
           budget_bucket?: string | null
@@ -428,7 +422,7 @@ export type Database = {
           percent_alert?: number | null
           percent_default?: number | null
           sort_order?: number | null
-          type?: Database["public"]["Enums"]["transaction_type"] | null
+          type?: Database['public']['Enums']['transaction_type'] | null
         }
         Relationships: []
       }
@@ -487,7 +481,7 @@ export type Database = {
           status: string | null
           subcategory_id: string | null
           transaction_date: string | null
-          type: Database["public"]["Enums"]["transaction_type"] | null
+          type: Database['public']['Enums']['transaction_type'] | null
         }
         Insert: {
           ai_confidence?: number | null
@@ -510,7 +504,7 @@ export type Database = {
           status?: string | null
           subcategory_id?: string | null
           transaction_date?: string | null
-          type?: Database["public"]["Enums"]["transaction_type"] | null
+          type?: Database['public']['Enums']['transaction_type'] | null
         }
         Update: {
           ai_confidence?: number | null
@@ -533,7 +527,7 @@ export type Database = {
           status?: string | null
           subcategory_id?: string | null
           transaction_date?: string | null
-          type?: Database["public"]["Enums"]["transaction_type"] | null
+          type?: Database['public']['Enums']['transaction_type'] | null
         }
         Relationships: []
       }
@@ -696,25 +690,25 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "budgets_category_id_fkey"
-            columns: ["category_id"]
+            foreignKeyName: 'budgets_category_id_fkey'
+            columns: ['category_id']
             isOneToOne: false
-            referencedRelation: "transaction_categories"
-            referencedColumns: ["id"]
+            referencedRelation: 'transaction_categories'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "budgets_family_id_fkey"
-            columns: ["family_id"]
+            foreignKeyName: 'budgets_family_id_fkey'
+            columns: ['family_id']
             isOneToOne: false
-            referencedRelation: "families"
-            referencedColumns: ["id"]
+            referencedRelation: 'families'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "budgets_subcategory_id_fkey"
-            columns: ["subcategory_id"]
+            foreignKeyName: 'budgets_subcategory_id_fkey'
+            columns: ['subcategory_id']
             isOneToOne: false
-            referencedRelation: "transaction_subcategories"
-            referencedColumns: ["id"]
+            referencedRelation: 'transaction_subcategories'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -751,25 +745,25 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "categorization_rules_category_id_fkey"
-            columns: ["category_id"]
+            foreignKeyName: 'categorization_rules_category_id_fkey'
+            columns: ['category_id']
             isOneToOne: false
-            referencedRelation: "transaction_categories"
-            referencedColumns: ["id"]
+            referencedRelation: 'transaction_categories'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "categorization_rules_family_id_fkey"
-            columns: ["family_id"]
+            foreignKeyName: 'categorization_rules_family_id_fkey'
+            columns: ['family_id']
             isOneToOne: false
-            referencedRelation: "families"
-            referencedColumns: ["id"]
+            referencedRelation: 'families'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "categorization_rules_subcategory_id_fkey"
-            columns: ["subcategory_id"]
+            foreignKeyName: 'categorization_rules_subcategory_id_fkey'
+            columns: ['subcategory_id']
             isOneToOne: false
-            referencedRelation: "transaction_subcategories"
-            referencedColumns: ["id"]
+            referencedRelation: 'transaction_subcategories'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -803,11 +797,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "copilot_messages_family_id_fkey"
-            columns: ["family_id"]
+            foreignKeyName: 'copilot_messages_family_id_fkey'
+            columns: ['family_id']
             isOneToOne: false
-            referencedRelation: "families"
-            referencedColumns: ["id"]
+            referencedRelation: 'families'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -838,25 +832,25 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "default_budgets_category_id_fkey"
-            columns: ["category_id"]
+            foreignKeyName: 'default_budgets_category_id_fkey'
+            columns: ['category_id']
             isOneToOne: false
-            referencedRelation: "transaction_categories"
-            referencedColumns: ["id"]
+            referencedRelation: 'transaction_categories'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "default_budgets_family_id_fkey"
-            columns: ["family_id"]
+            foreignKeyName: 'default_budgets_family_id_fkey'
+            columns: ['family_id']
             isOneToOne: false
-            referencedRelation: "families"
-            referencedColumns: ["id"]
+            referencedRelation: 'families'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "default_budgets_subcategory_id_fkey"
-            columns: ["subcategory_id"]
+            foreignKeyName: 'default_budgets_subcategory_id_fkey'
+            columns: ['subcategory_id']
             isOneToOne: false
-            referencedRelation: "transaction_subcategories"
-            referencedColumns: ["id"]
+            referencedRelation: 'transaction_subcategories'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -935,11 +929,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "family_invites_family_id_fkey"
-            columns: ["family_id"]
+            foreignKeyName: 'family_invites_family_id_fkey'
+            columns: ['family_id']
             isOneToOne: false
-            referencedRelation: "families"
-            referencedColumns: ["id"]
+            referencedRelation: 'families'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -970,11 +964,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "family_members_family_id_fkey"
-            columns: ["family_id"]
+            foreignKeyName: 'family_members_family_id_fkey'
+            columns: ['family_id']
             isOneToOne: false
-            referencedRelation: "families"
-            referencedColumns: ["id"]
+            referencedRelation: 'families'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -1008,24 +1002,24 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "goals_category_id_fkey"
-            columns: ["category_id"]
+            foreignKeyName: 'goals_category_id_fkey'
+            columns: ['category_id']
             isOneToOne: false
-            referencedRelation: "transaction_categories"
-            referencedColumns: ["id"]
+            referencedRelation: 'transaction_categories'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "goals_family_id_fkey"
-            columns: ["family_id"]
+            foreignKeyName: 'goals_family_id_fkey'
+            columns: ['family_id']
             isOneToOne: false
-            referencedRelation: "families"
-            referencedColumns: ["id"]
+            referencedRelation: 'families'
+            referencedColumns: ['id']
           },
         ]
       }
       investments: {
         Row: {
-          asset_type: Database["public"]["Enums"]["asset_type"]
+          asset_type: Database['public']['Enums']['asset_type']
           avg_price_cents: number
           created_at: string
           current_price_cents: number
@@ -1036,7 +1030,7 @@ export type Database = {
           ticker: string | null
         }
         Insert: {
-          asset_type?: Database["public"]["Enums"]["asset_type"]
+          asset_type?: Database['public']['Enums']['asset_type']
           avg_price_cents?: number
           created_at?: string
           current_price_cents?: number
@@ -1047,7 +1041,7 @@ export type Database = {
           ticker?: string | null
         }
         Update: {
-          asset_type?: Database["public"]["Enums"]["asset_type"]
+          asset_type?: Database['public']['Enums']['asset_type']
           avg_price_cents?: number
           created_at?: string
           current_price_cents?: number
@@ -1059,11 +1053,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "investments_family_id_fkey"
-            columns: ["family_id"]
+            foreignKeyName: 'investments_family_id_fkey'
+            columns: ['family_id']
             isOneToOne: false
-            referencedRelation: "families"
-            referencedColumns: ["id"]
+            referencedRelation: 'families'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -1196,18 +1190,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "recurring_income_overrides_family_id_fkey"
-            columns: ["family_id"]
+            foreignKeyName: 'recurring_income_overrides_family_id_fkey'
+            columns: ['family_id']
             isOneToOne: false
-            referencedRelation: "families"
-            referencedColumns: ["id"]
+            referencedRelation: 'families'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "recurring_income_overrides_recurring_income_id_fkey"
-            columns: ["recurring_income_id"]
+            foreignKeyName: 'recurring_income_overrides_recurring_income_id_fkey'
+            columns: ['recurring_income_id']
             isOneToOne: false
-            referencedRelation: "recurring_incomes"
-            referencedColumns: ["id"]
+            referencedRelation: 'recurring_incomes'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -1223,7 +1217,7 @@ export type Database = {
           member_id: string
           name: string
           subcategory_id: string | null
-          type: Database["public"]["Enums"]["transaction_type"]
+          type: Database['public']['Enums']['transaction_type']
         }
         Insert: {
           active?: boolean
@@ -1236,7 +1230,7 @@ export type Database = {
           member_id: string
           name: string
           subcategory_id?: string | null
-          type?: Database["public"]["Enums"]["transaction_type"]
+          type?: Database['public']['Enums']['transaction_type']
         }
         Update: {
           active?: boolean
@@ -1249,36 +1243,36 @@ export type Database = {
           member_id?: string
           name?: string
           subcategory_id?: string | null
-          type?: Database["public"]["Enums"]["transaction_type"]
+          type?: Database['public']['Enums']['transaction_type']
         }
         Relationships: [
           {
-            foreignKeyName: "recurring_incomes_category_id_fkey"
-            columns: ["category_id"]
+            foreignKeyName: 'recurring_incomes_category_id_fkey'
+            columns: ['category_id']
             isOneToOne: false
-            referencedRelation: "transaction_categories"
-            referencedColumns: ["id"]
+            referencedRelation: 'transaction_categories'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "recurring_incomes_family_id_fkey"
-            columns: ["family_id"]
+            foreignKeyName: 'recurring_incomes_family_id_fkey'
+            columns: ['family_id']
             isOneToOne: false
-            referencedRelation: "families"
-            referencedColumns: ["id"]
+            referencedRelation: 'families'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "recurring_incomes_member_id_fkey"
-            columns: ["member_id"]
+            foreignKeyName: 'recurring_incomes_member_id_fkey'
+            columns: ['member_id']
             isOneToOne: false
-            referencedRelation: "family_members"
-            referencedColumns: ["id"]
+            referencedRelation: 'family_members'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "recurring_incomes_subcategory_id_fkey"
-            columns: ["subcategory_id"]
+            foreignKeyName: 'recurring_incomes_subcategory_id_fkey'
+            columns: ['subcategory_id']
             isOneToOne: false
-            referencedRelation: "transaction_subcategories"
-            referencedColumns: ["id"]
+            referencedRelation: 'transaction_subcategories'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -1330,11 +1324,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "subscriptions_family_id_fkey"
-            columns: ["family_id"]
+            foreignKeyName: 'subscriptions_family_id_fkey'
+            columns: ['family_id']
             isOneToOne: false
-            referencedRelation: "families"
-            referencedColumns: ["id"]
+            referencedRelation: 'families'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -1352,7 +1346,7 @@ export type Database = {
           percent_alert: number | null
           percent_default: number | null
           sort_order: number | null
-          type: Database["public"]["Enums"]["transaction_type"]
+          type: Database['public']['Enums']['transaction_type']
         }
         Insert: {
           budget_bucket?: string | null
@@ -1367,7 +1361,7 @@ export type Database = {
           percent_alert?: number | null
           percent_default?: number | null
           sort_order?: number | null
-          type?: Database["public"]["Enums"]["transaction_type"]
+          type?: Database['public']['Enums']['transaction_type']
         }
         Update: {
           budget_bucket?: string | null
@@ -1382,15 +1376,15 @@ export type Database = {
           percent_alert?: number | null
           percent_default?: number | null
           sort_order?: number | null
-          type?: Database["public"]["Enums"]["transaction_type"]
+          type?: Database['public']['Enums']['transaction_type']
         }
         Relationships: [
           {
-            foreignKeyName: "transaction_categories_family_id_fkey"
-            columns: ["family_id"]
+            foreignKeyName: 'transaction_categories_family_id_fkey'
+            columns: ['family_id']
             isOneToOne: false
-            referencedRelation: "families"
-            referencedColumns: ["id"]
+            referencedRelation: 'families'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -1424,25 +1418,25 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "transaction_splits_family_id_fkey"
-            columns: ["family_id"]
+            foreignKeyName: 'transaction_splits_family_id_fkey'
+            columns: ['family_id']
             isOneToOne: false
-            referencedRelation: "families"
-            referencedColumns: ["id"]
+            referencedRelation: 'families'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "transaction_splits_member_id_fkey"
-            columns: ["member_id"]
+            foreignKeyName: 'transaction_splits_member_id_fkey'
+            columns: ['member_id']
             isOneToOne: false
-            referencedRelation: "family_members"
-            referencedColumns: ["id"]
+            referencedRelation: 'family_members'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "transaction_splits_transaction_id_fkey"
-            columns: ["transaction_id"]
+            foreignKeyName: 'transaction_splits_transaction_id_fkey'
+            columns: ['transaction_id']
             isOneToOne: false
-            referencedRelation: "transactions"
-            referencedColumns: ["id"]
+            referencedRelation: 'transactions'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -1485,18 +1479,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "transaction_subcategories_category_id_fkey"
-            columns: ["category_id"]
+            foreignKeyName: 'transaction_subcategories_category_id_fkey'
+            columns: ['category_id']
             isOneToOne: false
-            referencedRelation: "transaction_categories"
-            referencedColumns: ["id"]
+            referencedRelation: 'transaction_categories'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "transaction_subcategories_family_id_fkey"
-            columns: ["family_id"]
+            foreignKeyName: 'transaction_subcategories_family_id_fkey'
+            columns: ['family_id']
             isOneToOne: false
-            referencedRelation: "families"
-            referencedColumns: ["id"]
+            referencedRelation: 'families'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -1523,7 +1517,7 @@ export type Database = {
           status: string
           subcategory_id: string | null
           transaction_date: string
-          type: Database["public"]["Enums"]["transaction_type"]
+          type: Database['public']['Enums']['transaction_type']
         }
         Insert: {
           ai_confidence?: number | null
@@ -1547,7 +1541,7 @@ export type Database = {
           status?: string
           subcategory_id?: string | null
           transaction_date?: string
-          type: Database["public"]["Enums"]["transaction_type"]
+          type: Database['public']['Enums']['transaction_type']
         }
         Update: {
           ai_confidence?: number | null
@@ -1571,43 +1565,43 @@ export type Database = {
           status?: string
           subcategory_id?: string | null
           transaction_date?: string
-          type?: Database["public"]["Enums"]["transaction_type"]
+          type?: Database['public']['Enums']['transaction_type']
         }
         Relationships: [
           {
-            foreignKeyName: "transactions_category_id_fkey"
-            columns: ["category_id"]
+            foreignKeyName: 'transactions_category_id_fkey'
+            columns: ['category_id']
             isOneToOne: false
-            referencedRelation: "transaction_categories"
-            referencedColumns: ["id"]
+            referencedRelation: 'transaction_categories'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "transactions_family_id_fkey"
-            columns: ["family_id"]
+            foreignKeyName: 'transactions_family_id_fkey'
+            columns: ['family_id']
             isOneToOne: false
-            referencedRelation: "families"
-            referencedColumns: ["id"]
+            referencedRelation: 'families'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "transactions_member_id_fkey"
-            columns: ["member_id"]
+            foreignKeyName: 'transactions_member_id_fkey'
+            columns: ['member_id']
             isOneToOne: false
-            referencedRelation: "family_members"
-            referencedColumns: ["id"]
+            referencedRelation: 'family_members'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "transactions_recurring_income_id_fkey"
-            columns: ["recurring_income_id"]
+            foreignKeyName: 'transactions_recurring_income_id_fkey'
+            columns: ['recurring_income_id']
             isOneToOne: false
-            referencedRelation: "recurring_incomes"
-            referencedColumns: ["id"]
+            referencedRelation: 'recurring_incomes'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "transactions_subcategory_id_fkey"
-            columns: ["subcategory_id"]
+            foreignKeyName: 'transactions_subcategory_id_fkey'
+            columns: ['subcategory_id']
             isOneToOne: false
-            referencedRelation: "transaction_subcategories"
-            referencedColumns: ["id"]
+            referencedRelation: 'transaction_subcategories'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -1839,14 +1833,8 @@ export type Database = {
       user_belongs_to_family: { Args: { f_id: string }; Returns: boolean }
     }
     Enums: {
-      asset_type:
-        | "stock"
-        | "fii"
-        | "fixed_income"
-        | "crypto"
-        | "treasury"
-        | "other"
-      transaction_type: "income" | "expense"
+      asset_type: 'stock' | 'fii' | 'fixed_income' | 'crypto' | 'treasury' | 'other'
+      transaction_type: 'income' | 'expense'
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1854,33 +1842,31 @@ export type Database = {
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+type DatabaseWithoutInternals = Omit<Database, '__InternalSupabase'>
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, 'public'>]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
+    ? (DefaultSchema['Tables'] & DefaultSchema['Views'])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -1889,23 +1875,23 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
+    | keyof DefaultSchema['Tables']
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
+    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -1914,23 +1900,23 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
+    | keyof DefaultSchema['Tables']
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
+    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -1939,51 +1925,43 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
+    | keyof DefaultSchema['Enums']
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums']
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums'][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums']
+    ? DefaultSchema['Enums'][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
+    | keyof DefaultSchema['CompositeTypes']
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema['CompositeTypes']
+    ? DefaultSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
     : never
 
 export const Constants = {
   public: {
     Enums: {
-      asset_type: [
-        "stock",
-        "fii",
-        "fixed_income",
-        "crypto",
-        "treasury",
-        "other",
-      ],
-      transaction_type: ["income", "expense"],
+      asset_type: ['stock', 'fii', 'fixed_income', 'crypto', 'treasury', 'other'],
+      transaction_type: ['income', 'expense'],
     },
   },
 } as const
-

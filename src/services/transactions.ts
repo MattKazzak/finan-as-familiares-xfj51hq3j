@@ -226,6 +226,7 @@ export async function updateTransaction(
     installment_group_id: string | null
     status: 'confirmed' | 'projected'
     bank_transaction_id: string | null
+    ai_reasoning?: string | null
   }>,
 ) {
   const { data, error } = await supabase
