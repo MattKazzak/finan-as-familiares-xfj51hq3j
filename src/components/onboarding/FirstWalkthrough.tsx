@@ -1,25 +1,25 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { CuriangoChatBust } from '@/components/brand/CuriangoLogo'
 import { ArrowDown, X } from 'lucide-react'
 
 /**
- * FirstWalkthrough — Tour de primeiro acesso v3.2 (19/10, visão do Matheus).
+ * FirstWalkthrough — Tour de primeiro acesso v3.3 (19/10, print do Matheus).
  *
  * MISSÃO EDUCATIVA (18/10): o tour É a primeira aula do Curiango — cada balão
  * ensina um conceito em linguagem de amador, nunca jargão.
  *
- * Arquitetura v3.2 (corrige o teste do Matheus):
- *  - SETA no centro real do alvo (v3.1 usava left-8 fixo — a seta "não ficava
- *    em cima" do elemento).
- *  - SCROLL automático: alvo fora da tela é rolado pra vista antes de medir
- *    (os "próximos passos quebrados, desce pra bottom" — o balão ancorava num
- *    elemento invisível e caía pra baixo).
- *  - BALÃO auto-inverte: se não cabe abaixo do alvo, sobe pra cima (e vice-versa).
- *  - Navegação por ID na ordem FIXA (v3 navegava por índice numa lista que
- *    encolhia → passos pulados).
- *  - PERSONA: CuriangoChatBust (busto rindo + piscando, olhando pra conversa) é
- *    o ÚNICO ícone dos balões — pedido do Matheus ("ele olhando para a conversa,
- *    não apenas um enfeite").
+ * Erros do print 20:07 corrigidos aqui (v3.3):
+ *  - MASCOTE FORA do balão (padrão Duolingo): balão abaixo do alvo → mascote à
+ *    esquerda; balão acima → mascote em cima do balão. Antes ele ficava
+ *    "enterrado" dentro do card, na base da tela.
+ *  - MASCOTE redesenhado de frente (kawaii, rindo, piscando 2 olhos) — a v1
+ *    (silhueta de perfil espelhada) parecia falsa.
+ *  - BALÃO retangular e uniforme (rounded-xl, padding constante) — antes parecia
+ *    "janela branca".
+ *  - CONTINUAR sólido âmbar (antes era fantasma 15% e parecia desabilitado).
+ *  - X de pular no canto da TELA (não dentro do balão).
+ *  - Seta no centro real do alvo; scroll automático; balão auto-inverte de lado.
+ *  - Navegação por ID na ordem FIXA (v3 navegava por índice → passos pulados).
  *
  * Roteiro (7 passos): boas-vindas → saldo → primeira-receita → copilot →
  * baldes → dock → perfil
@@ -95,8 +95,8 @@ const STEPS: WalkthroughStep[] = [
   },
 ]
 
-/** Altura estimada do balão — usada pra decidir se inverte de lado */
-const BALLOON_H_ESTIMATE = 190
+/** Altura estimada do balão + mascote — usada pra decidir se inverte de lado */
+const BALLOON_H_ESTIMATE = 230
 const PAD = 8
 
 export interface FirstWalkthroughProps {
@@ -113,28 +113,49 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
   const firstPending = STEPS.find((s) => !stepsDone.includes(s.id))?.id ?? null
   const [currentId, setCurrentId] = useState<WalkthroughStepId | null>(firstPending)
   const [rect, setRect] = useState<DOMRect | null>(null)
-  const [measuring, setMeasuring] = useState(true)
   /** Lado EFETIVO do balão (pode inverter do preferido se não couber) */
   const [effectivePos, setEffectivePos] = useState<'top' | 'bottom'>('bottom')
-  /** Posição X da seta (centro do alvo, clamped) */
-  const [arrowLeft, setArrowLeft] = useState(32)
-  const balloonRef = useRef<HTMLDivElement>(null)
 
   const step = STEPS.find((s) => s.id === currentId)
   const isFirstStep = step?.id === STEPS[0].id
+
+  /** Mede, escolhe o lado que cabe e posiciona a seta no centro do alvo */
+  const applyPlacement = useCallback(
+    (r: DOMRect) => {
+      if (!step) return
+      const viewH = window.innerHeight
+      const spaceBelow = viewH - r.bottom
+      const spaceAbove = r.top
+      let pos = step.position
+      if (
+        pos === 'bottom' &&
+        spaceBelow < BALLOON_H_ESTIMATE + 24 &&
+        spaceAbove > BALLOON_H_ESTIMATE + 24
+      ) {
+        pos = 'top'
+      } else if (
+        pos === 'top' &&
+        spaceAbove < BALLOON_H_ESTIMATE + 24 &&
+        spaceBelow > BALLOON_H_ESTIMATE + 24
+      ) {
+        pos = 'bottom'
+      }
+      setEffectivePos(pos)
+      setRect(r)
+    },
+    [step],
+  )
 
   const measure = useCallback(() => {
     if (!step) return
     if (!step.targetSelector) {
       setRect(null)
-      setMeasuring(false)
       return
     }
     const el = document.querySelector(step.targetSelector)
     if (!el) {
       // Alvo ausente (ex.: card gated em modo free): PULA o passo — nunca trava
       setRect(null)
-      setMeasuring(false)
       return
     }
     // Alvo fora da vista → rola pra centro ANTES de medir (bug "passos quebrados")
@@ -142,50 +163,18 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
     const viewH = window.innerHeight
     if (r0.top < 60 || r0.bottom > viewH - 90) {
       el.scrollIntoView({ block: 'center', behavior: 'auto' })
-      // Re-mede após o scroll assentar
-      window.setTimeout(() => {
-        const r = el.getBoundingClientRect()
-        applyPlacement(r)
-      }, 80)
+      window.setTimeout(() => applyPlacement(el.getBoundingClientRect()), 80)
       return
     }
     applyPlacement(r0)
-  }, [step])
-
-  /** Mede, escolhe o lado que cabe e posiciona a seta no centro do alvo */
-  const applyPlacement = (r: DOMRect) => {
-    const viewH = window.innerHeight
-    const spaceBelow = viewH - r.bottom
-    const spaceAbove = r.top
-    let pos = step!.position
-    if (
-      pos === 'bottom' &&
-      spaceBelow < BALLOON_H_ESTIMATE + 24 &&
-      spaceAbove > BALLOON_H_ESTIMATE + 24
-    ) {
-      pos = 'top'
-    } else if (
-      pos === 'top' &&
-      spaceAbove < BALLOON_H_ESTIMATE + 24 &&
-      spaceBelow > BALLOON_H_ESTIMATE + 24
-    ) {
-      pos = 'bottom'
-    }
-    setEffectivePos(pos)
-    setRect(r)
-    // Seta no CENTRO do alvo (clamp pra não sair da tela)
-    setArrowLeft(Math.max(24, Math.min(r.left + r.width / 2 - 6, window.innerWidth - 44)))
-    setMeasuring(false)
-  }
+  }, [step, applyPlacement])
 
   useEffect(() => {
-    setMeasuring(true)
     const raf = requestAnimationFrame(() => measure())
-    const onResize = () => measure()
-    window.addEventListener('resize', onResize)
+    window.addEventListener('resize', measure)
     return () => {
       cancelAnimationFrame(raf)
-      window.removeEventListener('resize', onResize)
+      window.removeEventListener('resize', measure)
     }
   }, [measure])
 
@@ -211,7 +200,8 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
     onSkip()
   }
 
-  // Posição do balão: ancorado no alvo (lado efetivo) ou centralizado
+  // Container do balão: ancorado no alvo (lado efetivo) ou centralizado
+  const containerLeft = rect ? Math.max(16, Math.min(rect.left, window.innerWidth - 336)) : 0
   const balloonStyle: React.CSSProperties = isCenter
     ? {
         top: '50%',
@@ -222,14 +212,25 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
     : effectivePos === 'bottom'
       ? {
           top: rect!.bottom + PAD + 12,
-          left: Math.max(16, Math.min(rect!.left, window.innerWidth - 336)),
+          left: containerLeft,
           maxWidth: 320,
         }
       : {
           bottom: window.innerHeight - rect!.top + PAD + 12,
-          left: Math.max(16, Math.min(rect!.left, window.innerWidth - 336)),
+          left: containerLeft,
           maxWidth: 320,
         }
+
+  // Seta: centro real do alvo, relativo ao container (clamp dentro do card)
+  const arrowLeft = rect
+    ? Math.max(
+        16,
+        Math.min(
+          rect.left + rect.width / 2 - containerLeft - 6,
+          window.innerWidth - containerLeft - 44,
+        ),
+      )
+    : 24
 
   return (
     <div className="fixed inset-0 z-[60]" role="dialog" aria-label="Tour de primeiro acesso">
@@ -253,23 +254,40 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
         }
       />
 
-      {/* Balão do Curiango — persona: busto à esquerda olhando pra conversa */}
+      {/* Pular tour — canto da TELA (fora do balão, padrão Duolingo) */}
+      <button
+        type="button"
+        onClick={skipAll}
+        aria-label="Pular tour"
+        className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-white/10 text-white/70 flex items-center justify-center hover:bg-white/20 transition-colors"
+      >
+        <X className="w-4 h-4" />
+      </button>
+
+      {/* Mascote FORA do balão + balão retangular uniforme */}
       <div
-        ref={balloonRef}
         className="absolute z-10 animate-in fade-in slide-in-from-bottom-2 duration-300"
         style={balloonStyle}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="rounded-2xl bg-white shadow-elevation-3 px-4 py-4 border border-[rgba(20,33,61,0.08)]">
-          <div className="flex items-start gap-3">
-            {/* O Curiango: pescoço pra cima, rindo, piscando — encarando o texto */}
-            <CuriangoChatBust size={48} lookRight className="shrink-0 -mt-0.5" />
-            <div className="min-w-0 flex-1">
-              <p className="text-[14px] font-bold text-[#14213D] leading-tight">{step.title}</p>
-              <p className="text-[12.5px] text-slate-600 leading-relaxed mt-1.5">{step.text}</p>
+        {/* Balão acima do alvo → mascote EM CIMA do balão */}
+        {(effectivePos === 'top' || isCenter) && (
+          <CuriangoChatBust size={56} className="block mx-auto -mb-2 relative z-10" />
+        )}
 
-              {/* Rodapé: progresso + avançar explícito (o toque no overlay também avança) */}
-              <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+        <div className="flex items-end gap-2">
+          {/* Balão abaixo do alvo → mascote À ESQUERDA do balão */}
+          {effectivePos === 'bottom' && !isCenter && (
+            <CuriangoChatBust size={56} className="shrink-0 -mb-1" />
+          )}
+
+          <div className="flex-1 min-w-0 relative">
+            <div className="rounded-xl bg-white shadow-elevation-3 px-4 py-3.5 border border-[rgba(20,33,61,0.08)]">
+              <p className="text-[14px] font-bold text-[#14213D] leading-tight">{step.title}</p>
+              <p className="text-[12.5px] text-slate-600 leading-relaxed mt-1">{step.text}</p>
+
+              {/* Rodapé: progresso + avançar SÓLIDO */}
+              <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100">
                 <div className="flex gap-1">
                   {STEPS.map((s) => (
                     <span
@@ -283,35 +301,27 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
                 <button
                   type="button"
                   onClick={advance}
-                  className="text-[11px] font-bold text-[#14213D] bg-[#FCA311]/15 hover:bg-[#FCA311]/25 px-3 py-1.5 rounded-full transition-colors inline-flex items-center gap-1"
+                  className="text-[11.5px] font-bold text-white bg-[#FCA311] hover:bg-[#E08A00] px-4 py-1.5 rounded-full transition-colors inline-flex items-center gap-1.5 shadow-sm"
                 >
                   {isFirstStep ? 'Vamos começar' : 'Continuar'}
-                  <ArrowDown className="w-3 h-3" />
+                  <ArrowDown className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={skipAll}
-              aria-label="Pular tour"
-              className="shrink-0 w-6 h-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center hover:bg-slate-200 transition-colors"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
+
+            {/* Setinha apontando o alvo — no CENTRO real dele */}
+            {!isCenter && (
+              <div
+                className={`absolute w-3 h-3 rotate-45 bg-white border-[rgba(20,33,61,0.08)] ${
+                  effectivePos === 'bottom'
+                    ? '-top-1.5 border-l border-t'
+                    : '-bottom-1.5 border-r border-b'
+                }`}
+                style={{ left: arrowLeft }}
+              />
+            )}
           </div>
         </div>
-
-        {/* Setinha apontando o alvo — no CENTRO real dele (v3.2) */}
-        {!isCenter && (
-          <div
-            className={`absolute w-3 h-3 rotate-45 bg-white border-[rgba(20,33,61,0.08)] ${
-              effectivePos === 'bottom'
-                ? '-top-1.5 border-l border-t'
-                : '-bottom-1.5 border-r border-b'
-            }`}
-            style={{ left: arrowLeft }}
-          />
-        )}
       </div>
 
       {/* Dica de navegação (só a partir do 2º passo) */}

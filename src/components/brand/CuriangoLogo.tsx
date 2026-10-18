@@ -140,50 +140,46 @@ export const CuriangoHeadLogo: React.FC<CuriangoHeadLogoProps> = ({
 export interface CuriangoChatBustProps {
   size?: number | string
   className?: string
-  /** true (padrão): espelhado pra olhar para a DIREITA — para a conversa ao lado dele */
-  lookRight?: boolean
 }
 
 /**
- * CuriangoChatBust — o Curiango "persona" dos balões de conversa (19/10, Matheus):
- * busto (pescoço pra cima), RINDO (sorriso desenhado no bico), PISCANDO (pálpebra
- * SMIL dupla, mesma assinatura do logo, 4,8s) e OLHANDO PARA A CONVERSA — fica à
- * esquerda do balão espelhado pra direita, encarando o texto. Não é enfeite: é quem fala.
+ * CuriangoChatBust — o Curiango "persona" dos balões de conversa (19/10, Matheus).
+ * v2: DE FRENTE, kawaii (padrão Duolingo) — a v1 (silhueta de perfil espelhada +
+ * risco de sorriso) ficou falsa e antipática no print do Matheus.
+ * RINDO (bico aberto), PISCANDO os 2 olhos (pálpebra SMIL dupla 4,8s, assinatura
+ * da marca), bochechas, e tufos de orelha de bacurau (identidade da espécie).
  */
 export const CuriangoChatBust: React.FC<CuriangoChatBustProps> = ({
-  size = 48,
+  size = 56,
   className = '',
-  lookRight = true,
 }) => {
   return (
     <svg
       width={size}
       height={size}
-      viewBox="4 12 52 52"
+      viewBox="0 0 64 64"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
-      style={lookRight ? { transform: 'scaleX(-1)' } : undefined}
       aria-hidden="true"
     >
-      {/* Busto: cabeça + peito (recorte do path oficial; o viewBox corta no peito) */}
-      <path
-        d="M 11.6 22.3 C 12.8 22.8 14.6 23.6 16.4 22.8 C 19.8 21.4 24.6 21.6 29.6 24.8 C 36.8 29.8 44.8 40.2 53.2 49.8 C 53.8 50.6 54.2 51.2 54.4 51.8 C 49.4 49.4 44.8 47.6 41.2 53.2 C 45.4 60.2 47.8 65.4 47.8 67.2 C 47.8 68.4 45.6 69.2 42.8 69.4 C 36.4 69.6 28.6 67.2 22.8 61.4 C 18.2 56.8 16.8 50.8 17.2 41.5 C 17.5 34.2 16.8 29.8 14.8 26.2 C 13.6 24.2 12.2 23.2 11.6 22.3 Z"
-        fill="#FCA311"
-      />
-      {/* Sorriso — o riso no bico (assinatura do balão de conversa) */}
-      <path
-        d="M 12.6 27.6 C 14.2 30.8 17.8 31.6 20.6 30"
-        stroke="#14213D"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        fill="none"
-      />
-      {/* Olho expressivo + brilho */}
-      <circle cx="22.2" cy="27.2" r="3.4" fill="#14213D" />
-      <circle cx="23.2" cy="26.2" r="1" fill="#FFFFFF" opacity="0.9" />
-      {/* Pálpebra — piscar DUPLO a cada 4,8s (mesma assinatura do logo oficial) */}
-      <ellipse cx="22.2" cy="27.2" rx="4.8" ry="4.8" fill="#FCA311" opacity="0">
+      {/* Tufos de orelha (bacurau — ave noturna, identidade da marca) */}
+      <path d="M15 15 L19 4 L26 11 Z" fill="#FCA311" />
+      <path d="M49 15 L45 4 L38 11 Z" fill="#FCA311" />
+      {/* Busto (corpo espremido atrás da cabeça) */}
+      <ellipse cx="32" cy="60" rx="18" ry="12" fill="#FCA311" />
+      {/* Cabeça redonda */}
+      <circle cx="32" cy="32" r="24" fill="#FCA311" />
+      {/* Bochechas rosadas (kawaii) */}
+      <circle cx="16.5" cy="37" r="3.4" fill="#FFD9A6" />
+      <circle cx="47.5" cy="37" r="3.4" fill="#FFD9A6" />
+      {/* Olhos frontais grandes + brilho */}
+      <circle cx="23" cy="29" r="4.8" fill="#14213D" />
+      <circle cx="41" cy="29" r="4.8" fill="#14213D" />
+      <circle cx="24.6" cy="27.4" r="1.5" fill="#FFFFFF" />
+      <circle cx="42.6" cy="27.4" r="1.5" fill="#FFFFFF" />
+      {/* Pálpebras — piscar DUPLO nos 2 olhos (assinatura da marca, 4,8s) */}
+      <circle cx="23" cy="29" r="5.6" fill="#FCA311" opacity="0">
         <animate
           attributeName="opacity"
           values="0;0;1;1;0;0;1;1;0;0"
@@ -191,7 +187,19 @@ export const CuriangoChatBust: React.FC<CuriangoChatBustProps> = ({
           dur="4.8s"
           repeatCount="indefinite"
         />
-      </ellipse>
+      </circle>
+      <circle cx="41" cy="29" r="5.6" fill="#FCA311" opacity="0">
+        <animate
+          attributeName="opacity"
+          values="0;0;1;1;0;0;1;1;0;0"
+          keyTimes="0;0.93;0.94;0.955;0.96;0.965;0.975;0.99;0.995;1"
+          dur="4.8s"
+          repeatCount="indefinite"
+        />
+      </circle>
+      {/* Bico aberto sorrindo (rindo) */}
+      <path d="M26 36.5 L38 36.5 L32 41.5 Z" fill="#E08A00" />
+      <path d="M28.5 41.5 L35.5 41.5 L32 45 Z" fill="#14213D" />
     </svg>
   )
 }
