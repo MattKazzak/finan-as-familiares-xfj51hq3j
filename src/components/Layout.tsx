@@ -14,14 +14,17 @@ import { OnboardingWizardDialog } from '@/components/wallet/OnboardingWizardDial
 import { InstallPwaBanner } from '@/components/common/InstallPwaBanner'
 // 16/10: FAB do Copilot removido do Layout (insight da Home cobre o acesso à IA).
 // O componente e o teste continuam no código para a futura captura de voz global.
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { formatFamilyDisplayName } from '@/lib/formatters'
 import { fetchRecurringIncomes, fetchRecurringIncomeOverrides } from '@/services/recurring-incomes'
 import type { RecurringIncome, RecurringIncomeOverride } from '@/types/finance'
 
 export default function Layout() {
-  const { signOut } = useAuth()
+  const { signOut, user } = useAuth()
+  // Foto do usuário (Minha Conta → user_metadata.avatar_url) — agora aparece no
+  // header de todas as páginas (antes era só a inicial; a foto não aparecia em lugar nenhum).
+  const userAvatarUrl = (user as any)?.user_metadata?.avatar_url || null
   const {
     family,
     members,
@@ -242,9 +245,10 @@ export default function Layout() {
       <div className="flex-1 md:ml-60 flex flex-col min-h-screen bg-white">
         {/* HEADER TOP (visível em desktop e nas demais páginas; na Home (/inicio) o header moderno fintech já assume o topo no mobile e desktop, evitando cabeçalho duplicado ou barra cinza rígida) */}
         {location.pathname !== '/inicio' && (
-          <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-border px-4 py-3 sm:px-6 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <h2 className="text-base sm:text-lg font-bold text-brand tracking-tight">
+          <header className="sticky top-0 z-30 bg-[#14213D] text-white px-4 py-3 sm:px-6 flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              <CuriangoLogo size={26} eyeColor="#FFFFFF" eyeHighlight />
+              <h2 className="text-base sm:text-lg font-bold text-white tracking-tight truncate">
                 {getHeaderTitle()}
               </h2>
             </div>
@@ -257,31 +261,37 @@ export default function Layout() {
                   className="flex items-center gap-2 cursor-pointer group bg-brand-gray/40 hover:bg-brand-amber/15 px-2.5 py-1 rounded-full border border-brand-gray transition-all"
                 >
                   <Avatar className="w-7 h-7 border border-brand-amber/60 shadow-sm group-hover:ring-2 group-hover:ring-brand-amber transition-all">
+                    {userAvatarUrl ? (
+                      <AvatarImage src={userAvatarUrl} alt={currentMember?.name || 'Perfil'} />
+                    ) : null}
                     <AvatarFallback className="bg-gradient-to-tr from-brand to-brand-light text-white font-bold text-xs">
                       {userInitial}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-xs font-medium text-brand group-hover:text-brand transition-colors flex items-center gap-1">
+                  <span className="text-xs font-medium text-white group-hover:text-brand-amber transition-colors flex items-center gap-1">
                     {currentMember?.name ? (
                       <span>{currentMember.name}</span>
                     ) : loading ? (
-                      <span className="inline-block h-3 w-14 bg-slate-200 rounded animate-pulse align-middle" />
+                      <span className="inline-block h-3 w-14 bg-white/20 rounded animate-pulse align-middle" />
                     ) : null}
-                    <span className="text-[10px] text-slate-400">▾</span>
+                    <span className="text-[10px] text-white/50">▾</span>
                   </span>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 bg-brand-gray/40 px-2.5 py-1 rounded-full border border-brand-gray">
-                  <Avatar className="w-7 h-7 border border-brand-amber/60 shadow-sm">
+                <div className="flex items-center gap-2 bg-white/10 px-2.5 py-1 rounded-full border border-white/15">
+                  <Avatar className="w-7 h-7 border border-white/25 shadow-sm">
+                    {userAvatarUrl ? (
+                      <AvatarImage src={userAvatarUrl} alt={currentMember?.name || 'Perfil'} />
+                    ) : null}
                     <AvatarFallback className="bg-gradient-to-tr from-brand to-brand-light text-white font-bold text-xs">
                       {userInitial}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-xs font-medium text-brand">
+                  <span className="text-xs font-medium text-white">
                     {currentMember?.name ? (
                       <span>{currentMember.name}</span>
                     ) : loading ? (
-                      <span className="inline-block h-3 w-14 bg-slate-200 rounded animate-pulse align-middle" />
+                      <span className="inline-block h-3 w-14 bg-white/20 rounded animate-pulse align-middle" />
                     ) : null}
                   </span>
                 </div>

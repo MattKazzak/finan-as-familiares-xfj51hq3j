@@ -1,5 +1,10 @@
 import { useState } from 'react'
-import { Sparkles, CheckCircle2, Shield, Palmtree, Target } from 'lucide-react'
+import { Sparkles, CheckCircle2, Shield, Palmtree, Target, Info } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+} from '@/components/ui/dropdown-menu'
 import { formatBRL } from '@/lib/formatters'
 import { getBudgetModelTargets } from '@/services/budget-model'
 import type { Family } from '@/types/finance'
@@ -237,8 +242,26 @@ export function BudgetOverviewCard({
             </div>
           </div>
         </div>
-        {/* Botão de ajuste de perfil / renda */}
+        {/* Botão de ajuste de perfil / renda + metodologia (ℹ️ movido do cabeçalho
+            superior removido — 18/10, decisão do Matheus: 1 fonte de verdade) */}
         <div className="flex items-center gap-2 self-start sm:self-auto">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-md transition-colors"
+                aria-label="Sobre a metodologia de orçamento"
+                title="Sobre a metodologia"
+              >
+                <Info className="w-4 h-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="max-w-xs p-3 text-xs leading-relaxed">
+              Tetos baseados em percentuais da renda líquida familiar. Os modelos seguem
+              metodologias consagradas como a 50/30/20 (Elizabeth Warren) e variações para perfis de
+              família — com liberdade total de personalização.
+            </DropdownMenuContent>
+          </DropdownMenu>
           <button
             type="button"
             onClick={onOpenModelDialog}
