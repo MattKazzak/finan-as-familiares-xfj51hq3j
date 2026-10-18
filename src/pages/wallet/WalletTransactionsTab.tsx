@@ -465,6 +465,18 @@ export function WalletTransactionsTab() {
                                 <span>Fixa</span>
                               </span>
                             ) : null}
+                            {/* Chip "✨ IA" (padrão Copilot Intelligence, P0-2): transação
+                                categorizada pela IA tem ai_confidence < 1.0 gravado.
+                                Correção manual = null/1.0 → chip some (rastro auditável). */}
+                            {tx.ai_confidence != null && tx.ai_confidence < 1.0 ? (
+                              <span
+                                title="Categoria sugerida pela IA"
+                                className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-violet-50 text-violet-700 border border-violet-200/90 px-1.5 py-0.2 rounded-md shrink-0"
+                              >
+                                <Sparkles className="w-2.5 h-2.5" />
+                                <span>IA</span>
+                              </span>
+                            ) : null}
                           </div>
                           <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
                             <span className="inline-flex items-center gap-1 text-[11px] font-normal text-muted-foreground bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">

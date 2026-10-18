@@ -8,6 +8,79 @@ import {
   resolveBrazilianMerchantSeed,
   normalizeMerchantString,
 } from '../_shared/brazilian-seeds.ts'
+import { normalizeText } from '../_shared/text-normalize.ts'
+
+// ===== Thresholds centralizados (auditoria 18/10) =====
+// Abaixo de FALLBACK a IA não confia o suficiente nem p/ "Outros" → needsReview.
+// Entre FALLBACK e UNCERTAIN → cai no fallback seguro (Outros/null).
+// Acima de UNCERTAIN → sugestão válida (UI marca como incerta até 0.7).
+const CONFIDENCE_FALLBACK = 0.4
+const CONFIDENCE_UNCERTAIN = 0.6
+export const AI_CONFIDENCE_THRESHOLDS = {
+  fallback: CONFIDENCE_FALLBACK,
+  uncertain: CONFIDENCE_UNCERTAIN,
+}
+
+// ===== Regras de aprendizado da família (auditoria 18/10 — P0-1) =====
+// O prompt promete "regras da família têm prioridade máxima" mas a edge nunca as
+// buscava — regra "PADARIA → Alimentação" era ignorada pela IA. Agora: busca sob
+// RLS do usuário autenticado, aplica match determinístico ANTES da IA e injeta
+// as top ~30 no system prompt.
+interface FamilyRule {
+  pattern: string
+  category_id: string
+  subcategory_id: string | null
+}
+
+async function fetchFamilyRules(supabase: any, familyId: string | null): Promise<FamilyRule[]> {
+  if (!familyId) return []
+  try {
+    const { data, error } = await supabase
+      .from('categorization_rules')
+      .select('pattern, category_id, subcategory_id')
+      .eq('family_id', familyId)
+      .limit(200)
+    if (error) {
+      console.warn('[batch-categorize] Falha ao buscar regras da família (fail-open):', error)
+      return []
+    }
+    // Mais específicas primeiro (padrão mais longo ganha)
+    return ((data || []) as FamilyRule[]).sort(
+      (a, b) => (b.pattern?.length || 0) - (a.pattern?.length || 0),
+    )
+  } catch (e) {
+    console.warn('[batch-categorize] Exceção ao buscar regras (fail-open):', e)
+    return []
+  }
+}
+
+function matchFamilyRule(
+  description: string,
+  rules: FamilyRule[],
+  validCategoryIds: Set<string>,
+): {
+  categoryId: string
+  subcategoryId: string | null
+  confidence: number
+  reasoning: string
+} | null {
+  const norm = normalizeText(description)
+  if (!norm || rules.length === 0) return null
+  for (const rule of rules) {
+    const normPattern = normalizeText(rule.pattern || '')
+    if (!normPattern || normPattern.length < 2) continue
+    if (norm.includes(normPattern) && validCategoryIds.has(rule.category_id)) {
+      return {
+        categoryId: rule.category_id,
+        subcategoryId:
+          rule.subcategory_id && validCategoryIds.size > 0 ? rule.subcategory_id : null,
+        confidence: 0.99,
+        reasoning: `Regra da família: "${rule.pattern}"`,
+      }
+    }
+  }
+  return null
+}
 
 interface BatchTransactionItem {
   tempId: string
@@ -248,6 +321,11 @@ Deno.serve(async (req: Request) => {
 
     const targetFamilyId = memberRecord?.family_id ?? null
 
+    // Regras de aprendizado da família (P0-1, auditoria 18/10): buscadas sob RLS
+    // do usuário autenticado — aplicadas deterministicamente antes da IA e
+    // injetadas no prompt (o prompt promete prioridade máxima; agora entrega).
+    const familyRules = await fetchFamilyRules(supabase, targetFamilyId)
+
     // Buscar categorias e subcategorias ativas da família no Supabase
     let categoriesQuery = supabase
       .from('transaction_categories')
@@ -448,8 +526,8 @@ Instruções:
             subId = seedMatch.subcategoryId || subId
             confidence = seedMatch.confidence
             needsReview = false
-          } else if (!catId || !validCategoryIds.has(catId) || confidence < 0.4) {
-            // Nova regra de fallback: categoria inexistente ou baixa confiança (< 0.40)
+          } else if (!catId || !validCategoryIds.has(catId) || confidence < CONFIDENCE_FALLBACK) {
+            // Fallback seguro: categoria inexistente ou confiança abaixo do threshold centralizado
             const safeFallback = resolveSafeFallbackCategory(categoriesList)
             catId = safeFallback.categoryId
             subId = null
@@ -638,11 +716,25 @@ Retorne estritamente um objeto JSON válido completo com "declaredTotalCents" e 
       description: sanitizeRawText(t.description).trim(),
     }))
 
-    // Camada Determinística Rápida 1: resolve transações que batem no Seed Brasileiro
+    // Camada Determinística Rápida 0 (P0-1): regras da família têm prioridade MÁXIMA
+    // (padrão Maybe/Monarch — a correção do usuário vence a IA)
     const finalSuggestions: AiCategorizationResultItem[] = []
     const pendingForAi: BatchTransactionItem[] = []
 
     for (const t of transactions) {
+      const ruleResolution = matchFamilyRule(t.description, familyRules, validCategoryIds)
+      if (ruleResolution) {
+        finalSuggestions.push({
+          tempId: t.tempId,
+          categoryId: ruleResolution.categoryId,
+          subcategoryId: ruleResolution.subcategoryId,
+          confidence: ruleResolution.confidence,
+          reasoning: ruleResolution.reasoning,
+          needsReview: false,
+        })
+        continue
+      }
+
       const cleanedDesc = cleanMerchantDescription(t.description)
       const seedResolution =
         resolveBrazilianMerchantSeed(t.description, categoriesList) ||
@@ -704,7 +796,18 @@ REGRAS DE CLASSIFICAÇÃO:
      ]
    }
 2. Use EXCLUSIVAMENTE as categorias fornecidas no catálogo da família acima (use APENAS IDs "categoryId" e "subcategoryId" que EXISTEM no catálogo).
-3. Quando houver regras de aprendizado da família no contexto, elas têm prioridade máxima.
+3. REGRAS DE APRENDIZADO DA FAMÍLIA (prioridade máxima — vencem qualquer outra pista):
+${
+  familyRules.length > 0
+    ? familyRules
+        .slice(0, 30)
+        .map(
+          (r) =>
+            `- Se a descrição contém "${r.pattern}" → categoria id="${r.category_id}"${r.subcategory_id ? ` (subcategoria id="${r.subcategory_id}")` : ''}`,
+        )
+        .join('\n')
+    : '- (Nenhuma regra de aprendizado registrada ainda.)'
+}
 4. Considere o tipo da transação (receita/despesa) e o valor como pistas contextuais. Contexto brasileiro: termos como PG*, PAG*, MP*, IFOOD, UBER, DROGASIL, FARMÁCIA, POSTO, PADARIA, NETFLIX são estabelecimentos do dia a dia.
 DICIONÁRIO SEMÂNTICO FIXO (rodadas 27B / 49):
 - Gastos com cigarro, cigarros, maço de cigarro, tabaco, tabacaria, cigarro eletrônico/vape e charuto devem ser classificados em 'Compras › Tabaco & Cigarros' se existir no catálogo da família. JAMAIS classifique cigarro ou tabaco em Alimentação, Conveniência de posto, Farmácia ou Lazer.
@@ -841,8 +944,8 @@ ${JSON.stringify(
       const confidence = typeof item.confidence === 'number' ? item.confidence : 0.55
       let needsReview = false
 
-      // Fallback seguro se categoria sugerida for inválida ou confiança muito baixa (< 0.40)
-      if (!catId || !validCategoryIds.has(catId) || confidence < 0.4) {
+      // Fallback seguro se categoria sugerida for inválida ou confiança abaixo do threshold centralizado
+      if (!catId || !validCategoryIds.has(catId) || confidence < CONFIDENCE_FALLBACK) {
         const safeFallback = resolveSafeFallbackCategory(categoriesList)
         catId = safeFallback.categoryId
         subId = null

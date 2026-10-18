@@ -478,6 +478,10 @@ export function WalletPage() {
             await updateTransaction(item.tempId, {
               category_id: item.categoryId,
               subcategory_id: item.subcategoryId || null,
+              // Rastro de IA (P0-2, auditoria 18/10 — padrão Copilot Intelligence):
+              // grava a confiança pra transação auto-aplicada ser auditável e o UI
+              // poder exibir o chip "✨ IA" (transação manual = ai_confidence null/1.0).
+              ai_confidence: item.confidence ?? 0.7,
             })
             appliedCount++
           } catch (updateErr) {
