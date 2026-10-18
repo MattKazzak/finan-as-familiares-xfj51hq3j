@@ -1318,9 +1318,10 @@ export default function ProfilePage() {
                     if (error) throw error
                     toast({
                       title: 'Tour reiniciado! 🪶',
-                      description: 'Volte ao Início — o Curiango vai te apresentar tudo de novo.',
+                      description: 'O Curiango vai te apresentar tudo de novo.',
                     })
                     triggerRefresh()
+                    navigate('/inicio')
                   } catch {
                     toast({
                       title: 'Não foi possível reiniciar',
