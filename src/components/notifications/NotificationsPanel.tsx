@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Bell, BellOff, Smartphone, X, Loader2, CheckCircle2 } from 'lucide-react'
+import { Bell, BellOff, Smartphone, X, Loader2, CheckCircle2, Volume2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import {
   isPushSupported,
@@ -146,6 +146,32 @@ export default function NotificationsPanel({ onClose }: { onClose: () => void })
               )}
               Desativar notificações
             </button>
+
+            {/* Som + banner heads-up: o app não pode configurar — guia de 10s por plataforma */}
+            <div className="bg-[#FEF7E6] border border-[#FCA311]/30 rounded-2xl p-4">
+              <div className="flex items-start gap-3">
+                <Volume2 className="w-5 h-5 text-[#B87700] shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-bold text-[#14213D] mb-1">
+                    Ative o som e a faixa na tela
+                  </p>
+                  {/iPhone|iPad|iPod/i.test(navigator.userAgent) ? (
+                    <p className="text-xs text-[#4B5563] leading-relaxed">
+                      No iPhone: <strong>Ajustes</strong> → <strong>Notificações</strong> →{' '}
+                      <strong>Safari</strong> (ou Curiangoo, se instalado) → ative{' '}
+                      <strong>Sons</strong> e <strong>Banners</strong>.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-[#4B5563] leading-relaxed">
+                      No Android: segure uma notificação do Curiangoo →{' '}
+                      <strong>Todas as categorias</strong> → toque em <strong>curiangoo.com</strong>{' '}
+                      (ou Chrome) → ative <strong>Som</strong> e <strong>Flutuante</strong>. Feito
+                      isso, as notificações aparecem como faixa no topo, com som — igual WhatsApp.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
           /* Push não ativado */
