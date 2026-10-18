@@ -240,9 +240,12 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
       window.clearInterval(sampler)
     }
   }, [measure])
-  if (!step || measuring) return null
+  // NUNCA null durante measuring (bug provado no Chrome 19/10: entre passos o
+  // tour sumia até 2,5s — "passos quebrados" do Matheus). Balão fica
+  // centralizado visível enquanto mede e pousa quando o alvo é encontrado.
+  if (!step) return null
 
-  const isCenter = !step.targetSelector || !rect
+  const isCenter = !step.targetSelector || !rect || measuring
 
   const advance = () => {
     onCompleteStep(step.id)
