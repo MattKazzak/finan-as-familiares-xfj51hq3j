@@ -1,20 +1,41 @@
 // Player do "piu" do Curiango — toca quando chega push com o app aberto (SW manda PLAY_PIU).
-// Navegadores bloqueiam áudio sem interação prévia (autoplay policy): o piu toca quando
-// o usuário já tocou no app nesta sessão (sticky activation) ou ao tocar na notificação.
-// O som do sistema (canal Android/iOS) é o garantido com app fechado — este é o toque de marca.
+// Política de autoplay: áudio só toca se houve interação do usuário nesta sessão da página.
+// Estratégia: no PRIMEIRO toque em qualquer lugar do app, destravamos e pré-carregamos o áudio —
+// daí em diante o piu toca em qualquer push da sessão. App fechado = som do sistema (canal).
 const PIU_URL =
   'https://evcxjxuakiyjerujntli.supabase.co/storage/v1/object/public/branding/curiango-piu.mp3'
 
 let ctx: AudioContext | null = null
 let audioEl: HTMLAudioElement | null = null
+let unlocked = false
 
-async function playViaContext(): Promise<boolean> {
+/** Chamado no primeiro pointerdown do app: destrava o áudio da sessão e pré-carrega o piu. */
+export function initPiuUnlock(): void {
+  if (unlocked) return
+  unlocked = true
   try {
     const AC =
       window.AudioContext ||
       (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-    if (!AC) return false
-    if (!ctx) ctx = new AC()
+    if (AC) {
+      if (!ctx) ctx = new AC()
+      void ctx.resume().catch(() => {})
+    }
+    if (!audioEl) {
+      audioEl = new Audio(PIU_URL)
+      audioEl.preload = 'auto'
+      audioEl.volume = 0.9
+      // pré-carrega de fato (autoplay policy exige gesto p/ PLAY, mas preload é livre)
+      audioEl.load()
+    }
+  } catch {
+    /* silencioso */
+  }
+}
+
+async function playViaContext(): Promise<boolean> {
+  try {
+    if (!ctx) return false
     if (ctx.state === 'suspended') await ctx.resume().catch(() => {})
     if (ctx.state !== 'running') return false
     const res = await fetch(PIU_URL)
@@ -32,11 +53,7 @@ async function playViaContext(): Promise<boolean> {
 
 function playViaElement(): void {
   try {
-    if (!audioEl) {
-      audioEl = new Audio(PIU_URL)
-      audioEl.preload = 'auto'
-      audioEl.volume = 0.9
-    }
+    if (!audioEl) return
     audioEl.currentTime = 0
     void audioEl.play().catch(() => {
       /* autoplay bloqueado — som do sistema cobre */
