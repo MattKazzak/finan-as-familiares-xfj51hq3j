@@ -946,6 +946,7 @@ export default function Home() {
         {access.isPremium ? (
           <button
             type="button"
+            data-testid="copilot-card"
             onClick={() => navigate('/copilot')}
             className={`w-full text-left flex items-start gap-3 rounded-2xl border border-[rgba(20,33,61,0.08)] bg-white/95 px-4 py-3.5 shadow-sm transition-all active:scale-[0.98] border-l-[3px] ${
               insights.length > 0

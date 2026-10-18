@@ -371,6 +371,7 @@ export default function Layout() {
             {/* 5. Perfil */}
             <NavLink
               to="/perfil"
+              data-testid="dock-profile"
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
                   isActive ? 'text-[#FCA311] font-semibold' : 'text-white/70 hover:text-white'

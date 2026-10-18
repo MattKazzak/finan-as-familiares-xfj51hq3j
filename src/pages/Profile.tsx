@@ -12,7 +12,7 @@ import {
   deleteFamilyWorkspaceManually,
 } from '@/services/family'
 // Auditoria 16/10: imports do settlement removidos (migraram pra Carteira/Orçamentos)
-import { CreditCard, ExternalLink, ChevronRight, Settings } from 'lucide-react'
+import { CreditCard, ExternalLink, ChevronRight, Settings, RotateCcw } from 'lucide-react'
 import {
   fetchMySubscription,
   requestCancelSubscription,
@@ -93,6 +93,7 @@ export default function ProfilePage() {
     updateFamily,
     uploadFamilyAvatar,
     triggerRefresh,
+    family,
   } = useFamily()
   const { toast } = useToast()
   const navigate = useNavigate()
@@ -1295,6 +1296,44 @@ export default function ProfilePage() {
               <span className="text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-full shrink-0">
                 BRL (R$)
               </span>
+            </div>
+
+            {/* Reiniciar tour (19/10, Matheus): o usuário pode rever o walkthrough
+                quando quiser — padrão Duolingo (revisitar onboarding). Limpa o
+                progresso e recarrega: a Home mostra o tour de novo. */}
+            <div className="px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
+                  <RotateCcw className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-900">Reiniciar tour</p>
+                  <p className="text-[11px] text-slate-500">Rever a apresentação do Curiango</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const { error } = await (supabase as any).rpc('reset_family_tour')
+                    if (error) throw error
+                    toast({
+                      title: 'Tour reiniciado! 🪶',
+                      description: 'Volte ao Início — o Curiango vai te apresentar tudo de novo.',
+                    })
+                    triggerRefresh()
+                  } catch {
+                    toast({
+                      title: 'Não foi possível reiniciar',
+                      description: 'Tente novamente em instantes.',
+                      variant: 'destructive',
+                    })
+                  }
+                }}
+                className="shrink-0 text-xs font-bold text-[#14213D] bg-[#FCA311]/15 hover:bg-[#FCA311]/25 px-3.5 py-2 rounded-full transition-colors"
+              >
+                Reiniciar
+              </button>
             </div>
           </div>
         )}
