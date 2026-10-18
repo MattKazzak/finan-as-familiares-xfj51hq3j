@@ -124,6 +124,17 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-white flex flex-col md:flex-row text-foreground font-sans antialiased">
+      {/* EDGE-TO-EDGE (18/10, Matheus): pinta o fundo POR BAIXO das barras do sistema
+          (barra de status wifi/bateria em cima, barra de gestos embaixo) — sensação
+          de unidade que apps como Nubank/Pinterest/Instagram têm. */}
+      <div
+        aria-hidden="true"
+        className="md:hidden fixed inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-[#14213D] z-[60]"
+      />
+      <div
+        aria-hidden="true"
+        className="md:hidden fixed inset-x-0 bottom-0 h-[env(safe-area-inset-bottom)] bg-[#14213D] z-[60]"
+      />
       {/* SIDEBAR DESKTOP (>= 768px) com identidade profunda #14213D */}
       <aside className="hidden md:flex md:w-60 flex-col bg-brand border-r border-brand/90 text-white fixed inset-y-0 left-0 z-40">
         {/* Logo & Marca Oficial Curiangoo */}
@@ -247,9 +258,9 @@ export default function Layout() {
       <div className="flex-1 md:ml-60 flex flex-col min-h-screen bg-white">
         {/* HEADER TOP (visível em desktop e nas demais páginas; na Home (/inicio) o header moderno fintech já assume o topo no mobile e desktop, evitando cabeçalho duplicado ou barra cinza rígida) */}
         {location.pathname !== '/inicio' && (
-          <header className="sticky top-0 z-30 bg-[#14213D] text-white px-4 py-3 sm:px-6 flex items-center justify-between">
+          <header className="sticky top-0 z-30 bg-[#14213D] text-white pl-4 pr-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 sm:px-6 flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0">
-              <CuriangoLogo size={26} color="#FCA311" eyeColor="#FFFFFF" eyeHighlight />
+              <CuriangoLogo size={32} color="#FCA311" eyeColor="#FFFFFF" eyeHighlight />
               <h2 className="text-base sm:text-lg font-bold text-white tracking-tight truncate">
                 {getHeaderTitle()}
               </h2>
@@ -264,8 +275,8 @@ export default function Layout() {
         <main
           className={`flex-1 w-full overflow-x-hidden min-w-0 ${
             location.pathname === '/inicio'
-              ? 'p-0 pb-32 md:pb-8'
-              : 'max-w-[1200px] mx-auto p-4 sm:p-6 pb-32 md:pb-8'
+              ? 'p-0 pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-8'
+              : 'max-w-[1200px] mx-auto p-4 sm:p-6 pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-8'
           }`}
         >
           <Outlet />
@@ -283,7 +294,7 @@ export default function Layout() {
         {/* DOCK FLUTUANTE EM PÍLULA (MOBILE APENAS < 768px, 360–412px SAFE) — R58: Fundo Azul-Marinho #14213D espelhando o herói sangrado do topo */}
         <nav
           aria-label="Navegação Principal"
-          className="md:hidden fixed bottom-3 sm:bottom-4 inset-x-0 z-40 px-3 sm:px-4 max-w-md mx-auto pointer-events-none"
+          className="md:hidden fixed bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] inset-x-0 z-40 px-3 sm:px-4 max-w-md mx-auto pointer-events-none"
         >
           <div className="pointer-events-auto w-full bg-[#14213D] border border-white/10 shadow-elevation-3 rounded-full px-2 py-1.5 flex items-center justify-between transition-all">
             {/* 1. Início */}
