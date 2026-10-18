@@ -27,7 +27,9 @@ export function registerAppServiceWorker() {
   }
   window.__CURIANGOO_SW_REGISTERED__ = true
 
-  const swUrl = '/sw.js'
+  // CACHE-BUSTER: o Chrome pode servir o sw.js do cache HTTP por até 24h (causa clássica
+  // de PWA desatualizado). URL única por abertura força a checagem da versão real.
+  const swUrl = `/sw.js?v=${Date.now()}`
 
   window.addEventListener('load', () => {
     navigator.serviceWorker
@@ -35,8 +37,10 @@ export function registerAppServiceWorker() {
       .then((registration) => {
         registrationInstance = registration
 
-        // Se já existe um waiting worker pronto
+        // Se já existe um waiting worker pronto, ativa IMEDIATAMENTE (sem banner):
+        // skipWaiting + o controllerchange abaixo recarrega a página com os assets novos.
         if (registration.waiting) {
+          registration.waiting.postMessage({ type: 'SKIP_WAITING' })
           notifyUpdateListeners(true)
         }
 
