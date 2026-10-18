@@ -22,8 +22,8 @@ import type { RecurringIncome, RecurringIncomeOverride } from '@/types/finance'
 
 export default function Layout() {
   const { signOut, user } = useAuth()
-  // Foto do usuário (Minha Conta → user_metadata.avatar_url) — agora aparece no
-  // header de todas as páginas (antes era só a inicial; a foto não aparecia em lugar nenhum).
+  // Foto do usuário (Minha Conta → user_metadata.avatar_url) — aparece no bottom nav
+  // (item Perfil, estilo Pinterest) e na sidebar desktop. Antes não aparecia em lugar nenhum.
   const userAvatarUrl = (user as any)?.user_metadata?.avatar_url || null
   const {
     family,
@@ -115,11 +115,6 @@ export default function Layout() {
     { to: '/perfil', label: 'Perfil', icon: User },
   ]
 
-  const handleSignOut = async () => {
-    await signOut()
-    navigate('/')
-  }
-
   const userInitial = currentMember?.name?.charAt(0).toUpperCase() || 'F'
 
   return (
@@ -136,35 +131,22 @@ export default function Layout() {
         className="md:hidden fixed inset-x-0 bottom-0 h-[env(safe-area-inset-bottom)] bg-[#14213D] z-[60]"
       />
       {/* SIDEBAR DESKTOP (>= 768px) com identidade profunda #14213D */}
-      <aside className="hidden md:flex md:w-60 flex-col bg-brand border-r border-brand/90 text-white fixed inset-y-0 left-0 z-40">
-        {/* Logo & Marca Oficial Curiangoo */}
-        <div className="p-5 border-b border-white/10 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-brand-amber shadow-md shadow-black/20 shrink-0">
-            <CuriangoLogo size={28} color="#FCA311" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="font-semibold text-sm text-white tracking-tight truncate">Curiangoo</h1>
-            <p
-              className="text-xs text-white/70 break-words line-clamp-2 leading-tight"
-              title={family?.name ? formatFamilyDisplayName(family.name) : 'Finanças da Família'}
-            >
-              {family?.name ? formatFamilyDisplayName(family.name) : 'Finanças da Família'}
-            </p>
+      <aside className="hidden md:flex w-60 shrink-0 flex-col bg-[#14213D] text-white sticky top-0 h-screen">
+        {/* Logo + Nome */}
+        <div className="p-5 border-b border-white/10">
+          <div className="flex items-center gap-2.5">
+            <CuriangoLogo
+              size={28}
+              color="#FCA311"
+              eyeColor="#14213D"
+              eyeRadius={3.4}
+              eyeHighlight
+            />
+            <span className="text-lg font-bold tracking-tight">Curiangoo</span>
           </div>
         </div>
 
-        {/* Botão Nova Transação Desktop - Primary de ação #FCA311 */}
-        <div className="p-4">
-          <Button
-            onClick={() => openNewTransaction()}
-            className="w-full bg-brand-amber hover:bg-[#e08e08] text-brand font-bold py-2.5 shadow-md shadow-black/20 rounded-xl flex items-center justify-center gap-2 transition-all transform active:scale-95 cursor-pointer border-0"
-          >
-            <Plus className="w-5 h-5 stroke-[2.5]" />
-            Nova Transação
-          </Button>
-        </div>
-
-        {/* Links de navegação */}
+        {/* Navegação */}
         <nav className="flex-1 px-3 py-2 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon
@@ -206,7 +188,7 @@ export default function Layout() {
                 <AvatarFallback className="bg-brand-amber text-brand font-bold text-xs">
                   {userInitial}
                 </AvatarFallback>
-              </Avatar>{' '}
+              </Avatar>
               <div className="overflow-hidden">
                 <p className="text-xs font-semibold text-white truncate">
                   {currentMember?.name ? (
@@ -217,9 +199,7 @@ export default function Layout() {
                     ''
                   )}
                 </p>
-                <p className="text-[10px] text-brand-amber truncate font-medium">
-                  Trocar usuário ▾
-                </p>
+                <p className="text-[10px] text-brand-amber truncate font-medium">Meu perfil ▾</p>
               </div>
             </button>
           ) : (
@@ -229,7 +209,7 @@ export default function Layout() {
                 <AvatarFallback className="bg-brand-amber text-brand font-bold text-xs">
                   {userInitial}
                 </AvatarFallback>
-              </Avatar>{' '}
+              </Avatar>
               <div className="overflow-hidden">
                 <p className="text-xs font-semibold text-white truncate">
                   {currentMember?.name ? (
@@ -240,21 +220,22 @@ export default function Layout() {
                     ''
                   )}
                 </p>
-                <p className="text-[10px] text-white/60 truncate font-medium">Administrador</p>
+                <p className="text-[10px] text-brand-amber truncate font-medium">Meu perfil</p>
               </div>
             </div>
           )}
-          <button
-            onClick={handleSignOut}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={signOut}
             title="Sair da conta"
-            className="p-1.5 text-white/60 hover:text-red-400 hover:bg-white/10 rounded-lg transition-colors shrink-0"
+            className="text-white/70 hover:text-white hover:bg-white/10 shrink-0"
           >
             <LogOut className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </aside>
 
-      {/* ÁREA PRINCIPAL COM SCROLL */}
       <div className="flex-1 md:ml-60 flex flex-col min-h-screen bg-white">
         {/* HEADER TOP (visível em desktop e nas demais páginas; na Home (/inicio) o header moderno fintech já assume o topo no mobile e desktop, evitando cabeçalho duplicado ou barra cinza rígida) */}
         {location.pathname !== '/inicio' && (
@@ -289,42 +270,49 @@ export default function Layout() {
         </main>
 
         {/* COPILOT (16/10): FAB REMOVIDO — o card de insight da Home (com a cabecinha
-            animada do Curiango) já é o acesso vivo à IA na Home; 2 caminhos pro mesmo
-            destino na mesma tela era redundância e poluição visual. Benchmarks:
-            Nubank/Maybe/Monzo não usam FAB de IA — a inteligência mora no conteúdo.
+            animada do Curiango) já cobre o acesso à IA e evita redundância de caminhos.
             O FAB volta com função real quando existir captura de voz global. */}
 
         {/* BANNER EDUCATIVO DE INSTALAÇÃO PWA (POSICIONADO ACIMA DO DOCK FLUTUANTE) */}
         <InstallPwaBanner variant="bottom-nav" />
 
-        {/* DOCK EDGE-TO-EDGE (18/10, Matheus): barra CHEIA que encosta na borda de baixo
-            (padrão Instagram/Nubank — fim do "controle remoto"). A cor desce até o limite
-            físico: fundo navy contínuo + barra de gestos do sistema por cima. */}
+        {/* DOCK EDGE-TO-EDGE v3 (18/10, Matheus): barra CHEIA que encosta na borda de baixo
+            (padrão Instagram/Nubank) + SÓ ÍCONES sem rótulos + botão "+" erguido ACIMA da
+            barra (FAB clássico do Instagram — ação primária destacada, nunca na linha). */}
         <nav
           aria-label="Navegação Principal"
           className="md:hidden fixed bottom-0 inset-x-0 z-40 pointer-events-none"
         >
-          <div className="pointer-events-auto w-full bg-[#14213D] pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] px-2 flex items-end justify-between border-t border-white/10 shadow-[0_-4px_20px_rgba(20,33,61,0.25)]">
+          {/* Botão Nova erguido: sobressai ACIMA da barra (metade fora, metade dentro) */}
+          <div className="pointer-events-auto absolute inset-x-0 -top-6 flex justify-center z-10">
+            <button
+              type="button"
+              onClick={() => openNewTransaction()}
+              className="w-14 h-14 rounded-full bg-gradient-to-tr from-[#FCA311] via-[#fba825] to-[#ffb845] text-[#14213D] flex items-center justify-center shadow-lg shadow-[#FCA311]/40 border-4 border-[#14213D] active:scale-90 hover:scale-105 transition-all duration-200 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
+              aria-label="Nova Transação"
+              title="Nova Transação"
+            >
+              <Plus className="w-6 h-6 stroke-[2.5]" />
+            </button>
+          </div>
+          <div className="pointer-events-auto w-full bg-[#14213D] pt-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] px-1 flex items-center justify-between border-t border-white/10 shadow-[0_-4px_20px_rgba(20,33,61,0.25)]">
             {/* 1. Início */}
             <NavLink
               to="/inicio"
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-[#FCA311] font-semibold' : 'text-white/70 hover:text-white'
+                `flex flex-col items-center justify-center flex-1 py-2 transition-all duration-200 active:scale-95 ${
+                  isActive ? 'text-[#FCA311]' : 'text-white/70 hover:text-white'
                 }`
               }
             >
               {({ isActive }) => (
-                <>
-                  <div
-                    className={`p-1 rounded-full transition-all duration-200 ${
-                      isActive ? 'bg-[#FCA311]/20 scale-105 text-[#FCA311]' : ''
-                    }`}
-                  >
-                    <Home className="w-5 h-5" strokeWidth={1.5} />
-                  </div>
-                  <span className="text-[10px] tracking-tight mt-0.5 leading-none">Início</span>
-                </>
+                <div
+                  className={`p-2 rounded-full transition-all duration-200 ${
+                    isActive ? 'bg-[#FCA311]/15 scale-105' : ''
+                  }`}
+                >
+                  <Home className="w-6 h-6" strokeWidth={isActive ? 2.2 : 1.5} />
+                </div>
               )}
             </NavLink>
 
@@ -332,61 +320,42 @@ export default function Layout() {
             <NavLink
               to="/carteira"
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-[#FCA311] font-semibold' : 'text-white/70 hover:text-white'
+                `flex flex-col items-center justify-center flex-1 py-2 transition-all duration-200 active:scale-95 ${
+                  isActive ? 'text-[#FCA311]' : 'text-white/70 hover:text-white'
                 }`
               }
             >
               {({ isActive }) => (
-                <>
-                  <div
-                    className={`p-1 rounded-full transition-all duration-200 ${
-                      isActive ? 'bg-[#FCA311]/20 scale-105 text-[#FCA311]' : ''
-                    }`}
-                  >
-                    <Wallet className="w-5 h-5" strokeWidth={1.5} />
-                  </div>
-                  <span className="text-[10px] tracking-tight mt-0.5 leading-none">Carteira</span>
-                </>
+                <div
+                  className={`p-2 rounded-full transition-all duration-200 ${
+                    isActive ? 'bg-[#FCA311]/15 scale-105' : ''
+                  }`}
+                >
+                  <Wallet className="w-6 h-6" strokeWidth={isActive ? 2.2 : 1.5} />
+                </div>
               )}
             </NavLink>
 
-            {/* 3. BOTÃO CENTRAL "Nova" (AÇÃO ERGUIDA COM RÓTULO + ÍCONE — PADRÃO OURO R54/R55/R58) */}
-            <div className="flex-1 flex flex-col items-center justify-center py-0.5 -mt-3.5">
-              <button
-                type="button"
-                onClick={() => openNewTransaction()}
-                className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#FCA311] via-[#fba825] to-[#ffb845] text-[#14213D] flex items-center justify-center shadow-lg shadow-[#FCA311]/30 border-2 border-[#14213D] active:scale-90 hover:scale-105 transition-all duration-200 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
-                aria-label="Nova Transação"
-                title="Nova Transação"
-              >
-                <Plus className="w-5 h-5 stroke-[2.5]" />
-              </button>
-              <span className="text-[10px] font-semibold text-white tracking-tight mt-0.5 leading-none">
-                Nova
-              </span>
-            </div>
+            {/* 3. Espaço reservado do botão Nova (o botão real vive erguido acima da barra) */}
+            <div className="flex-1" aria-hidden="true" />
 
             {/* 4. Metas */}
             <NavLink
               to="/metas"
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-[#FCA311] font-semibold' : 'text-white/70 hover:text-white'
+                `flex flex-col items-center justify-center flex-1 py-2 transition-all duration-200 active:scale-95 ${
+                  isActive ? 'text-[#FCA311]' : 'text-white/70 hover:text-white'
                 }`
               }
             >
               {({ isActive }) => (
-                <>
-                  <div
-                    className={`p-1 rounded-full transition-all duration-200 ${
-                      isActive ? 'bg-[#FCA311]/20 scale-105 text-[#FCA311]' : ''
-                    }`}
-                  >
-                    <Target className="w-5 h-5" strokeWidth={1.5} />
-                  </div>
-                  <span className="text-[10px] tracking-tight mt-0.5 leading-none">Metas</span>
-                </>
+                <div
+                  className={`p-2 rounded-full transition-all duration-200 ${
+                    isActive ? 'bg-[#FCA311]/15 scale-105' : ''
+                  }`}
+                >
+                  <Target className="w-6 h-6" strokeWidth={isActive ? 2.2 : 1.5} />
+                </div>
               )}
             </NavLink>
 
@@ -394,33 +363,30 @@ export default function Layout() {
             <NavLink
               to="/perfil"
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-[#FCA311] font-semibold' : 'text-white/70 hover:text-white'
+                `flex flex-col items-center justify-center flex-1 py-2 transition-all duration-200 active:scale-95 ${
+                  isActive ? 'text-[#FCA311]' : 'text-white/70 hover:text-white'
                 }`
               }
             >
               {({ isActive }) => (
-                <>
-                  <div
-                    className={`p-0.5 rounded-full transition-all duration-200 ${
-                      isActive ? 'bg-[#FCA311]/20 scale-105' : ''
-                    }`}
-                  >
-                    {/* Foto do usuário no lugar do ícone (estilo Pinterest — 18/10, Matheus) */}
-                    <span className="block w-6 h-6 rounded-full overflow-hidden ring-1 ring-white/30">
-                      {userAvatarUrl ? (
-                        <img
-                          src={userAvatarUrl}
-                          alt="Meu perfil"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <User className="w-6 h-6" strokeWidth={1.5} />
-                      )}
-                    </span>
-                  </div>
-                  <span className="text-[10px] tracking-tight mt-0.5 leading-none">Perfil</span>
-                </>
+                <div
+                  className={`p-1.5 rounded-full transition-all duration-200 ${
+                    isActive ? 'bg-[#FCA311]/15 scale-105 ring-2 ring-[#FCA311]' : ''
+                  }`}
+                >
+                  {/* Foto do usuário no lugar do ícone (estilo Pinterest — 18/10, Matheus) */}
+                  <span className="block w-6 h-6 rounded-full overflow-hidden">
+                    {userAvatarUrl ? (
+                      <img
+                        src={userAvatarUrl}
+                        alt="Meu perfil"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="w-6 h-6" strokeWidth={isActive ? 2.2 : 1.5} />
+                    )}
+                  </span>
+                </div>
               )}
             </NavLink>
           </div>
