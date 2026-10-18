@@ -3,4 +3,4 @@
 // DEPOIS do build — o chunk do Perfil embutia sempre a versão ANTERIOR (lag de 1 build),
 // fazendo o Matheus achar que o update não chegou (falsa negativa em toda entrega).
 // REGRA: bumpar esta constante em TODO deploy, junto da mudança.
-export const APP_VERSION = '0.0.483'
+export const APP_VERSION = '0.0.484'

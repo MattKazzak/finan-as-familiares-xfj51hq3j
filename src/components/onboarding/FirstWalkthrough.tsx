@@ -215,14 +215,29 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
     setMeasuring(true)
     setRect(null)
     const raf = requestAnimationFrame(() => measure())
-    window.addEventListener('resize', measure)
-    // capture:true pega scroll de QUALQUER elemento (o main tem overflow
-    // próprio — scroll de container não dispara listener em window sem capture)
-    document.addEventListener('scroll', measure, { passive: true, capture: true })
+    // AMOSTRADOR contínuo (padrão Driver.js): o layout da Home muda DEPOIS do
+    // primeiro paint (RPCs chegam, fontes carregam, card do tour monta, scroll
+    // assenta) — medir uma vez só deixa o balão ancorado numa posição velha
+    // (bug do gap 515/520 nos prints do Matheus). Re-mede a cada 250ms enquanto
+    // o passo está ativo; setRect com o valor anterior = React nem re-renderiza.
+    const sampler = window.setInterval(() => {
+      if (!step?.targetSelector) return
+      const el = document.querySelector(step.targetSelector)
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      setRect((prev) =>
+        prev &&
+        Math.abs(prev.top - r.top) < 1 &&
+        Math.abs(prev.left - r.left) < 1 &&
+        Math.abs(prev.width - r.width) < 1
+          ? prev
+          : r,
+      )
+      setMeasuring(false)
+    }, 250)
     return () => {
       cancelAnimationFrame(raf)
-      window.removeEventListener('resize', measure)
-      document.removeEventListener('scroll', measure, { capture: true })
+      window.clearInterval(sampler)
     }
   }, [measure])
   if (!step || measuring) return null
