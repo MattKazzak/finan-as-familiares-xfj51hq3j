@@ -93,7 +93,6 @@ export default function ProfilePage() {
     updateFamily,
     uploadFamilyAvatar,
     triggerRefresh,
-    family,
   } = useFamily()
   const { toast } = useToast()
   const navigate = useNavigate()
