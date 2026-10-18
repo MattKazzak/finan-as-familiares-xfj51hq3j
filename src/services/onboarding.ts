@@ -49,7 +49,7 @@ export const CANONICAL_AI_RULES: ReadonlyArray<{
   {
     pattern: 'ROTATIVO',
     categoryName: 'Dívidas & Empréstimos',
-    subcategoryName: 'Fatura do Cartão (Rotativo & Parcelado)',
+    subcategoryName: 'Dívida do Cartão (juros e parcelas em atraso)',
   },
   {
     pattern: 'FATURA ANTERIOR',
@@ -101,7 +101,11 @@ export const CANONICAL_AI_RULES: ReadonlyArray<{
   },
 
   // Coparticipação (Saúde)
-  { pattern: 'COPARTICIPACAO', categoryName: 'Saúde', subcategoryName: 'Coparticipação' },
+  {
+    pattern: 'COPARTICIPACAO',
+    categoryName: 'Saúde',
+    subcategoryName: 'Plano de Saúde (mensalidade e coparticipação)',
+  },
 
   // 13º e Férias (Salário)
   { pattern: '13O', categoryName: 'Salário', subcategoryName: '13º & Férias' },
@@ -385,8 +389,8 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
         ],
       },
       {
-        name: 'Coparticipação',
-        icon: 'CreditCard',
+        name: 'Plano de Saúde (mensalidade e coparticipação)',
+        icon: 'HeartPulse',
         keywords: ['coparticipacao', 'coparticipacao unimed', 'coparticipacao plano'],
       },
       {
@@ -493,7 +497,7 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
     suggestedPercent: 0,
     subcategories: [
       {
-        name: 'Fatura do Cartão (Rotativo & Parcelado)',
+        name: 'Dívida do Cartão (juros e parcelas em atraso)',
         icon: 'CreditCard',
         keywords: ['fatura anterior', 'parcelamento fatura', 'rotativo cartao', 'juros cartao'],
       },
@@ -567,23 +571,24 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
         icon: 'Bike',
         keywords: ['ifood', 'rappi', 'aiqfome', 'uber eats'],
       },
+
       {
-        name: 'Fast Food & Lanches',
+        name: 'Lanches & Cafeterias',
         icon: 'Coffee',
         keywords: [
+          'cafeteria',
+          'starbucks',
+          'cacau show',
+          'kopenhagen',
+          'casa do pao de queijo',
           'mcdonalds',
           'burger king',
           'subway',
           'habibs',
+          'bobs',
           'pastel',
           'lanches rapido',
-          'bobs',
         ],
-      },
-      {
-        name: 'Cafeterias',
-        icon: 'Coffee',
-        keywords: ['cafeteria', 'starbucks', 'cacau show', 'kopenhagen', 'casa do pao de queijo'],
       },
       {
         name: 'Sorvete & Açaí',
@@ -621,7 +626,7 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
         keywords: ['passeio', 'parque', 'clube', 'resort', 'zoologico', 'aquario'],
       },
       {
-        name: 'Viagens: Passagens & Hospedagem',
+        name: 'Viagens (passagens, hospedagem e passeios)',
         icon: 'Plane',
         keywords: [
           'airbnb',
@@ -634,13 +639,9 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
           'pousada',
         ],
       },
+
       {
-        name: 'Viagens: Passeios & Pacotes',
-        icon: 'Compass',
-        keywords: ['decolar', 'cvc', 'pacote viagem', 'excursao', 'city tour'],
-      },
-      {
-        name: 'Hobbies & Jogos',
+        name: 'Hobbies',
         icon: 'Gamepad2',
         keywords: ['boardgame', 'hobby', 'aeromodelismo', 'colecionaveis', 'steam games'],
       },
@@ -650,7 +651,7 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
         keywords: ['livraria', 'livro', 'saraiva', 'panini', 'museu', 'exposicao'],
       },
       {
-        name: 'Eventos & Reuniões',
+        name: 'Encontros & Festas',
         icon: 'PartyPopper',
         keywords: [
           'festa',

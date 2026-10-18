@@ -281,7 +281,9 @@ Deno.serve(async (req) => {
       const [catRes, membersRes, famRes] = await Promise.all([
         supabase
           .from('transaction_categories')
-          .select('id, name, type, budget_bucket, transaction_subcategories(id, name)')
+          .select(
+            'id, name, type, budget_bucket, intent_tag, transaction_subcategories(id, name, intent_tag)',
+          )
           .eq('family_id', targetFamilyId)
           .order('name'),
         supabase
@@ -437,12 +439,17 @@ DADOS FINANCEIROS REAIS DA FAMÍLIA PARA O MÊS ATIVO SELECIONADO (${activeMonth
     }
 
     // Formatar categorias e subcategorias para o System Prompt
+    // Catálogo v3 (18/10): tags de intenção incluídas — a IA decide pela regra
+    // escrita (cai / não cai) em vez de adivinhar pelo nome.
     const categoriesContext = (categoriesList || [])
       .map((cat: any) => {
         const subs = (cat.transaction_subcategories || [])
-          .map((s: any) => s.name || (s as any))
+          .map((s: any) =>
+            s.intent_tag ? `${s.name} [intenção: ${s.intent_tag}]` : s.name || (s as any),
+          )
           .join(', ')
-        return `- Categoria: "${cat.name}" (Tipo: ${cat.type}, Balde: ${cat.budget_bucket || 'lifestyle'}${subs ? `, Subcategorias existentes: [${subs}]` : ''})`
+        const catIntent = cat.intent_tag ? `, Intenção: ${cat.intent_tag}` : ''
+        return `- Categoria: "${cat.name}" (Tipo: ${cat.type}, Balde: ${cat.budget_bucket || 'lifestyle'}${catIntent}${subs ? `, Subcategorias existentes: [${subs}]` : ''})`
       })
       .join('\n')
 

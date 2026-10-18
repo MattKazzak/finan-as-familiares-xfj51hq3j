@@ -345,7 +345,9 @@ Deno.serve(async (req: Request) => {
     // Buscar categorias e subcategorias ativas da família no Supabase
     let categoriesQuery = supabase
       .from('transaction_categories')
-      .select('id, name, type, budget_bucket, transaction_subcategories(id, name)')
+      .select(
+        'id, name, type, budget_bucket, intent_tag, transaction_subcategories(id, name, intent_tag)',
+      )
       .order('sort_order', { ascending: true })
 
     if (targetFamilyId) {
@@ -389,13 +391,20 @@ Deno.serve(async (req: Request) => {
     })
 
     // Formatar catálogo de categorias com baldes dinâmicos da família para o System Prompt
+    // Catálogo v3 (18/10): tags de intenção (o nome é o rótulo, a intenção é o significado)
+    // — a IA deixa de adivinhar e passa a decidir pela regra escrita (cai / não cai).
     const catalogPrompt = categoriesList
-      .map((cat: CategoryWithSubcategories) => {
+      .map((cat: any) => {
         const subs = (cat.transaction_subcategories || [])
-          .map((s: { id: string; name: string }) => `{"id": "${s.id}", "name": "${s.name}"}`)
+          .map((s: any) =>
+            s.intent_tag
+              ? `{"id": "${s.id}", "name": "${s.name}", "intent": "${s.intent_tag.replace(/"/g, "'")}"}`
+              : `{"id": "${s.id}", "name": "${s.name}"}`,
+          )
           .join(', ')
         const bucket = cat.budget_bucket || 'lifestyle'
-        return `- Categoria: id="${cat.id}", name="${cat.name}", type="${cat.type}", bucket="${bucket}", subcategories=[${subs}]`
+        const catIntent = cat.intent_tag ? `, intent="${cat.intent_tag.replace(/"/g, "'")}"` : ''
+        return `- Categoria: id="${cat.id}", name="${cat.name}", type="${cat.type}", bucket="${bucket}"${catIntent}, subcategories=[${subs}]`
       })
       .join('\n')
 
@@ -834,6 +843,12 @@ ${
     : '- (Nenhuma regra de aprendizado registrada ainda.)'
 }
 4. Considere o tipo da transação (receita/despesa) e o valor como pistas contextuais. Contexto brasileiro: termos como PG*, PAG*, MP*, IFOOD, UBER, DROGASIL, FARMÁCIA, POSTO, PADARIA, NETFLIX são estabelecimentos do dia a dia.
+REGRA ANTIDUPLICAÇÃO DA FATURA DE CARTÃO (catálogo v3 — CRÍTICA):
+- Compra paga com cartão = despesa na categoria da compra (ex.: mercado → Alimentação › Supermercado), com paymentMethod credito.
+- Pagamento de FATURA integral em dia NUNCA é despesa nova — é transferência (liquida compras já categorizadas). Se a transação for claramente "pagamento da fatura", retorne status "invalido" com mensagem explicando que fatura paga em dia não é gasto.
+- Só entra em Dívidas & Empréstimos › "Dívida do Cartão (juros e parcelas em atraso)" o que NÃO foi pago em dia: rotativo, parcelamento da fatura, atraso com juros/multa.
+- No total de gastos, pagamento de fatura nunca soma junto das compras já categorizadas.
+- Aportes em Reserva/Metas/Investimentos NÃO são gasto consumido — são o dinheiro destinado ao futuro (balde 20%).
 DICIONÁRIO SEMÂNTICO FIXO (rodadas 27B / 49):
 - Gastos com cigarro, cigarros, maço de cigarro, tabaco, tabacaria, cigarro eletrônico/vape e charuto devem ser classificados em 'Compras › Tabaco & Cigarros' se existir no catálogo da família. JAMAIS classifique cigarro ou tabaco em Alimentação, Conveniência de posto, Farmácia ou Lazer.
 - Gastos com doação, doar, caridade, doação para o catador devem ser classificados em 'Compras › Doações & Caridade' (tipo despesa).

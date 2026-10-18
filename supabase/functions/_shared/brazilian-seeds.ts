@@ -95,7 +95,7 @@ export const BRAZILIAN_MERCHANT_SEEDS: readonly SeedMerchantEntry[] = [
       'overdraft',
     ],
     suggestedSubcategoryNames: [
-      'Fatura do Cartão (Rotativo & Parcelado)',
+      'Dívida do Cartão (juros e parcelas em atraso)',
       'Empréstimos Pessoais',
       'Financiamento Imobiliário',
       'Financiamento de Veículo',
@@ -135,7 +135,7 @@ export const BRAZILIAN_MERCHANT_SEEDS: readonly SeedMerchantEntry[] = [
       'Padaria & Mercearia',
       'Restaurantes & Bares',
       'Delivery (iFood/Rappi)',
-      'Fast Food & Lanches',
+      'Lanches & Cafeterias',
     ],
   },
   // 5. Mobilidade / Transporte / Combustível / Pedágio
@@ -329,7 +329,11 @@ export const BRAZILIAN_MERCHANT_SEEDS: readonly SeedMerchantEntry[] = [
   {
     intent: 'coparticipacao',
     patterns: ['coparticipacao', 'coparticipação', 'coparticipacao unimed', 'copart unimed'],
-    suggestedSubcategoryNames: ['Coparticipação', 'Plano de Saúde & Convênio', 'Saúde'],
+    suggestedSubcategoryNames: [
+      'Plano de Saúde (mensalidade e coparticipação)',
+      'Plano de Saúde & Convênio',
+      'Saúde',
+    ],
   },
   // 12. Restituição de Imposto de Renda (Outras Receitas)
   {
@@ -375,7 +379,7 @@ export const BRAZILIAN_MERCHANT_SEEDS: readonly SeedMerchantEntry[] = [
     patterns: ['pensao', 'pensão', 'pensao inss', 'aposentadoria', 'beneficio inss', 'inss pensao'],
     suggestedSubcategoryNames: ['Aposentadoria & Pensão', 'Rendimentos'],
   },
-  // 18. Eventos & Reuniões (Lazer)
+  // 18. Encontros & Festas (Lazer)
   {
     intent: 'eventos_reunioes',
     patterns: [
@@ -395,7 +399,7 @@ export const BRAZILIAN_MERCHANT_SEEDS: readonly SeedMerchantEntry[] = [
       'aniversário',
       'resenha',
     ],
-    suggestedSubcategoryNames: ['Eventos & Reuniões', 'Lazer'],
+    suggestedSubcategoryNames: ['Encontros & Festas', 'Lazer'],
   },
 ] as const
 
@@ -557,7 +561,7 @@ export function resolveCategoryForIntent(
       pool[0] ||
       null
   } else if (intent === 'eventos_reunioes') {
-    // Busca preferencialmente Lazer › Eventos & Reuniões
+    // Busca preferencialmente Lazer › Encontros & Festas
     matchedCat =
       pool.find((c) => {
         const n = normalize(c.name)
