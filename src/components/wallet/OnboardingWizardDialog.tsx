@@ -85,6 +85,12 @@ export function OnboardingWizardDialog({
   family,
   onSuccess,
 }: OnboardingWizardDialogProps) {
+  // ===== Perfil da família (catálogo v3 — onboarding inteligente) =====
+  // 3 perguntas sim/não que OCULTAM categorias sem apagar (a família que adota
+  // um pet 6 meses depois reativa com 1 toque; o catálogo base continua idêntico).
+  const [hasVehicle, setHasVehicle] = useState(true)
+  const [hasPets, setHasPets] = useState(true)
+  const [hasChildren, setHasChildren] = useState(true)
   const { toast } = useToast()
 
   // 2 Etapas Limpas:
@@ -96,6 +102,10 @@ export function OnboardingWizardDialog({
   // 2: Renda Mensal Familiar (Renda Líquida Total dos Membros)
   // 3: Seu Orçamento em 3 Caixas (Resumo 50/30/20 + alternativo + Concluir e Ativar meu Plano)
   const [step, setStep] = useState<1 | 2 | 3>(1)
+  // Perfil da família (catálogo v3): oculta categorias irrelevantes sem apagar
+  const [hasVehicle, setHasVehicle] = useState(true)
+  const [hasPets, setHasPets] = useState(true)
+  const [hasChildren, setHasChildren] = useState(true)
   const [familyNameInput, setFamilyNameInput] = useState<string>('')
   const [incomeInput, setIncomeInput] = useState<string>('')
   const [selectedModelId, setSelectedModelId] = useState<BudgetModelId>(() => {
@@ -221,6 +231,26 @@ export function OnboardingWizardDialog({
     setStep(3)
   }
 
+  // Aplica o perfil: oculta categorias sem apagar (is_hidden — reativa com 1 toque
+  // na gestão de categorias; o catálogo base continua idêntico pra toda família).
+  const applyFamilyProfile = async (familyId: string) => {
+    const hideNames: string[] = []
+    if (!hasVehicle) hideNames.push('Transporte')
+    if (!hasPets) hideNames.push('Pets')
+    if (!hasChildren) hideNames.push('Educação')
+    if (hideNames.length === 0) return
+    try {
+      const { error } = await (supabase as any)
+        .from('transaction_categories')
+        .update({ is_hidden: true })
+        .eq('family_id', familyId)
+        .in('name', hideNames)
+      if (error) console.warn('[onboarding] Falha ao ocultar categorias do perfil:', error)
+    } catch (e) {
+      console.warn('[onboarding] Exceção ao ocultar categorias do perfil:', e)
+    }
+  }
+
   const handleActivatePlan = async () => {
     if (!family) return
     const trimmedName = familyNameInput.trim()
@@ -284,6 +314,9 @@ export function OnboardingWizardDialog({
         monthlyNetIncomeCents: parsedNetIncomeCents,
         modelPresetId: confirmedModelId,
       })
+
+      // Perfil da família (catálogo v3): oculta o que não se aplica — depois do seed
+      await applyFamilyProfile(family.id)
 
       // Guarda de completude: verifica se a família possui categorias e regras ativas
       try {
@@ -526,6 +559,44 @@ export function OnboardingWizardDialog({
                 , seu plano de referência é o{' '}
                 <strong className="text-emerald-700">{currentModel.name}</strong>:
               </p>
+            </div>
+
+            {/* Perfil da família (catálogo v3): 3 perguntas rápidas — oculta o que
+                não se aplica, sem apagar. Leve: 1 toque por resposta. */}
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-2.5 min-w-0">
+              <p className="text-xs font-bold text-slate-700">
+                Sua família tem...{' '}
+                <span className="font-normal text-slate-400">
+                  (ocultamos o que não se aplica — nada é apagado)
+                </span>
+              </p>
+              <div className="flex flex-col gap-1.5">
+                {[
+                  { label: 'Veículo (carro ou moto)', value: hasVehicle, setter: setHasVehicle },
+                  { label: 'Pets', value: hasPets, setter: setHasPets },
+                  {
+                    label: 'Filhos (escola e material escolar)',
+                    value: hasChildren,
+                    setter: setHasChildren,
+                  },
+                ].map((q) => (
+                  <button
+                    key={q.label}
+                    type="button"
+                    onClick={() => q.setter(!q.value)}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition-colors text-left"
+                  >
+                    <span className="text-xs font-semibold text-slate-700">{q.label}</span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                        q.value ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'
+                      }`}
+                    >
+                      {q.value ? 'Sim' : 'Não'}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* As 3 Caixas Visuais em Destaque */}

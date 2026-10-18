@@ -669,6 +669,7 @@ export function WalletBudgetsTab() {
                           {/* + : Criar subcategoria */}
                           <SubcategoryEditorPopover
                             parentCategoryName={item.category.name}
+                            parentCategoryId={item.category.id}
                             trigger={
                               <button
                                 type="button"
@@ -967,6 +968,7 @@ export function WalletBudgetsTab() {
                                   <SubcategoryEditorPopover
                                     subcategory={subItem.subcategory}
                                     parentCategoryName={item.category.name}
+                                    parentCategoryId={item.category.id}
                                     showBudgetFields={true}
                                     initialDefaultLimitCents={subItem.defaultLimitCents}
                                     initialMonthLimitCents={subItem.limitCents}
@@ -1222,6 +1224,7 @@ export function WalletBudgetsTab() {
                           </span>
                           <SubcategoryEditorPopover
                             parentCategoryName={item.category.name}
+                            parentCategoryId={item.category.id}
                             trigger={
                               <button
                                 type="button"
@@ -1254,6 +1257,7 @@ export function WalletBudgetsTab() {
                         <div className="py-2 px-2.5">
                           <SubcategoryEditorPopover
                             parentCategoryName={item.category.name}
+                            parentCategoryId={item.category.id}
                             trigger={
                               <button
                                 type="button"
@@ -1611,6 +1615,7 @@ export function WalletBudgetsTab() {
         <SubcategoryEditorPopover
           key={`menu-new-subcat-${mountedAddingSubcatCategory.id}`}
           parentCategoryName={mountedAddingSubcatCategory.name}
+          parentCategoryId={mountedAddingSubcatCategory.id}
           open={isMenuSubcatEditorOpen}
           onOpenChange={(isOpen) => {
             setIsMenuSubcatEditorOpen(isOpen)

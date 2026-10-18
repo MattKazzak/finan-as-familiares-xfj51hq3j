@@ -377,16 +377,21 @@ export async function fetchFamilyData() {
       .eq('family_id', family.id)
       .order('is_admin', { ascending: false })
       .order('name', { ascending: true }),
+    // Onboarding inteligente (catálogo v3): categorias ocultas (is_hidden) ficam
+    // FORA do app inteiro — pickers, decks, orçamentos. Reativação só no
+    // gerenciador de categorias (seção "Ocultas").
     (supabase as any)
       .from('transaction_categories')
       .select('*')
       .eq('family_id', family.id)
+      .eq('is_hidden', false)
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true }),
     (supabase as any)
       .from('transaction_subcategories')
       .select('*')
       .eq('family_id', family.id)
+      .eq('is_hidden', false)
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true }),
     (supabase as any)
@@ -687,6 +692,8 @@ export async function updateCategory(
     percent_default?: number | null
     percent_alert?: number | null
     budget_bucket?: 'essentials' | 'lifestyle' | 'future' | null
+    /** Onboarding inteligente (catálogo v3): ocultar/reativar sem apagar */
+    is_hidden?: boolean
   },
 ) {
   const payload: any = {}
@@ -700,6 +707,8 @@ export async function updateCategory(
   if (updates.type !== undefined) payload.type = updates.type
   if (updates.percent_default !== undefined) payload.percent_default = updates.percent_default
   if (updates.percent_alert !== undefined) payload.percent_alert = updates.percent_alert
+  // Onboarding inteligente (catálogo v3): ocultar/reativar sem apagar
+  if (updates.is_hidden !== undefined) payload.is_hidden = updates.is_hidden
 
   // Validação se o budget_bucket foi informado ou se alterou para despesa
   if (updates.budget_bucket !== undefined) {

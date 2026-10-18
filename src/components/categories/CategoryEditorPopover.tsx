@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Sheet,
@@ -236,6 +236,25 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
   const selectedBucketOption = BUCKET_OPTIONS.find((opt) => opt.id === budgetBucket)
   const bucketDisplayName = selectedBucketOption?.label || 'Essenciais'
 
+  // Trava de duplicata (catálogo v3 — padrão "aconselha, nunca bloqueia"): comparação
+  // local normalizada em 0ms; se o nome já existe no catálogo da família, mostra
+  // aviso com a categoria existente mas permite criar mesmo assim.
+  const existingSimilar = useMemo(() => {
+    const norm = (s: string) =>
+      s
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim()
+    const t = norm(name)
+    if (t.length < 3 || !allCategories) return null
+    return (
+      allCategories.find(
+        (c: any) => c.id !== category?.id && norm(c.name) === t && (c.type || 'expense') === type,
+      ) || null
+    )
+  }, [name, allCategories, category?.id, type])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -249,6 +268,13 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
     }
 
     setBucketError(null)
+    // Aconselha, nunca bloqueia: se já existe categoria igual, o aviso visível
+    // no form já orientou — o usuário pode insistir (dono do catálogo).
+    if (existingSimilar) {
+      console.warn(
+        `[categoria] Duplicata confirmada pelo usuário: "${trimmed}" já existe como "${existingSimilar.name}"`,
+      )
+    }
 
     try {
       setSaving(true)
@@ -293,6 +319,13 @@ export const CategoryEditorPopover: React.FC<CategoryEditorPopoverProps> = ({
           autoFocus
           required
         />
+        {/* Trava de duplicata (catálogo v3): aconselha, nunca bloqueia */}
+        {existingSimilar ? (
+          <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5 leading-snug">
+            Já existe <strong>{existingSimilar.name}</strong> no catálogo de vocês. Duplicar separa
+            o mesmo tipo de gasto em duas gavetas — prefira a existente. (Pode criar mesmo assim.)
+          </p>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-2 gap-2">

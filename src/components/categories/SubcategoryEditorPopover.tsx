@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Sheet,
@@ -14,6 +14,7 @@ import { Loader2, Plus, Calendar, Layers } from 'lucide-react'
 import { formatNumberBRL, parseBRLToCents } from '@/lib/formatters'
 import { useIsMobile } from '@/hooks/use-mobile'
 import type { TransactionSubcategory } from '@/types/finance'
+import { useFamily } from '@/hooks/use-family'
 
 export interface SubcategorySaveData {
   name: string
@@ -30,6 +31,8 @@ interface SubcategoryEditorPopoverProps {
   onOpenChange?: (open: boolean) => void
   onSave: (data: SubcategorySaveData) => Promise<void>
   title?: string
+  /** Id da categoria pai — habilita a trava de duplicata (catálogo v3) */
+  parentCategoryId?: string
   // Valores atuais de orçamento (quando disponíveis na visualização da carteira)
   initialDefaultLimitCents?: number
   initialMonthLimitCents?: number
@@ -46,6 +49,7 @@ export const SubcategoryEditorPopover: React.FC<SubcategoryEditorPopoverProps> =
   onOpenChange: setControlledOpen,
   onSave,
   title,
+  parentCategoryId,
   initialDefaultLimitCents = 0,
   initialMonthLimitCents = 0,
   hasMonthOverride = false,
@@ -64,6 +68,7 @@ export const SubcategoryEditorPopover: React.FC<SubcategoryEditorPopoverProps> =
   }
   const isEditing = Boolean(subcategory)
   const isMobile = useIsMobile()
+  const { categories: allCategories } = useFamily()
   const [name, setName] = useState('')
   const [defaultAmountStr, setDefaultAmountStr] = useState('')
   const [monthAmountStr, setMonthAmountStr] = useState('')
@@ -81,6 +86,23 @@ export const SubcategoryEditorPopover: React.FC<SubcategoryEditorPopoverProps> =
     }
     setOpen(nextOpen)
   }
+
+  // Trava de duplicata (catálogo v3 — aconselha, nunca bloqueia): comparação local
+  // normalizada contra as subcategorias da MESMA categoria pai (0ms).
+  const existingSimilar = useMemo(() => {
+    const norm = (s: string) =>
+      s
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim()
+    const t = norm(name)
+    if (t.length < 3 || !allCategories || !parentCategoryId) return null
+    const parent = allCategories.find((c) => c.id === parentCategoryId)
+    return (
+      parent?.subcategories?.find((s) => s.id !== subcategory?.id && norm(s.name) === t) || null
+    )
+  }, [name, allCategories, parentCategoryId, subcategory?.id])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -131,6 +153,14 @@ export const SubcategoryEditorPopover: React.FC<SubcategoryEditorPopoverProps> =
           autoFocus
           required
         />
+        {/* Trava de duplicata (catálogo v3): aconselha, nunca bloqueia */}
+        {existingSimilar ? (
+          <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5 leading-snug">
+            Já existe <strong>{existingSimilar.name}</strong> em{' '}
+            {parentCategoryName || 'esta categoria'}. Duplicar separa o mesmo gasto em duas gavetas
+            — prefira a existente. (Pode criar mesmo assim.)
+          </p>
+        ) : null}
       </div>
 
       {showBudgetFields ? (

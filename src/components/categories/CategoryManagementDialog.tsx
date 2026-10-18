@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -31,6 +31,7 @@ import { CategoryIcon, CategoryIconBox, AVAILABLE_ICONS } from '@/components/com
 import { CATEGORY_COLORS, BUCKET_OPTIONS } from './CategoryEditorPopover'
 import { useFamily } from '@/hooks/use-family'
 import { useToast } from '@/hooks/use-toast'
+import { updateCategory } from '@/services/family'
 import type { BudgetBucket, TransactionCategory, TransactionSubcategory } from '@/types/finance'
 import {
   Plus,
@@ -69,8 +70,35 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
   } = useFamily()
   const { toast } = useToast()
 
+  // ===== Categorias ocultas (catálogo v3 — onboarding inteligente) =====
+  // O app inteiro filtra is_hidden=false; aqui elas voltam a ser visíveis
+  // para reativação com 1 toque (RotateCcw).
+  const hiddenCategories = useMemo(
+    () => categories.filter((c) => c.is_hidden === true),
+    [categories],
+  )
+
+  const reactivateCategory = async (catId: string, catName: string) => {
+    try {
+      await updateCategory(catId, { is_hidden: false })
+      toast({
+        title: `✓ ${catName} reativada`,
+        description: 'A categoria voltou para os pickers e orçamentos do app.',
+      })
+      triggerRefresh()
+    } catch (e: any) {
+      console.warn('Erro ao reativar categoria:', e?.message)
+      toast({
+        title: 'Não foi possível reativar',
+        description: e?.message || 'Tente novamente em instantes.',
+        variant: 'destructive',
+      })
+    }
+  }
+
   // Filtro de visualização (todas, despesas, receitas)
   const [filterType, setFilterType] = useState<'all' | 'expense' | 'income'>('all')
+  const [reactivatingId, setReactivatingId] = useState<string | null>(null)
 
   // Formulário Nova Categoria
   const [isAddingCategory, setIsAddingCategory] = useState(false)
@@ -657,6 +685,56 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                 </div>
               )
             })}
+
+            {/* Categorias ocultas (catálogo v3 — onboarding inteligente): reativação
+                com 1 toque. O app inteiro as esconde; só aqui elas aparecem. */}
+            {hiddenCategories.length > 0 ? (
+              <div className="pt-2">
+                <p className="text-[10px] font-bold uppercase text-slate-400 tracking-wider px-1 py-1">
+                  Ocultas ({hiddenCategories.length})
+                </p>
+                <div className="space-y-1.5">
+                  {hiddenCategories.map((cat) => (
+                    <div
+                      key={cat.id}
+                      className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-slate-50/80 border border-slate-200/70"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 opacity-50"
+                          style={{ backgroundColor: cat.color || '#64748B', color: '#fff' }}
+                        >
+                          <Tag className="w-3 h-3" />
+                        </span>
+                        <span className="text-xs font-semibold text-slate-500 truncate">
+                          {cat.name}
+                        </span>
+                        <span className="text-[10px] text-slate-400 shrink-0">oculta</span>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={reactivatingId === cat.id}
+                        onClick={async () => {
+                          setReactivatingId(cat.id)
+                          await reactivateCategory(cat.id, cat.name)
+                          setReactivatingId(null)
+                        }}
+                        className="h-7 text-[11px] rounded-lg px-2 gap-1 shrink-0"
+                      >
+                        {reactivatingId === cat.id ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <RotateCcw className="w-3 h-3" />
+                        )}
+                        <span>Reativar</span>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <DialogFooter className="pt-2 border-t border-slate-100">

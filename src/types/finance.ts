@@ -420,6 +420,8 @@ export interface TransactionCategory {
   created_at: string
   /** Regra de fronteira escrita (catálogo v3): tooltip educativo do seletor */
   intent_tag?: string | null
+  /** Onboarding inteligente: oculta no app inteiro sem apagar (reativa no gerenciador) */
+  is_hidden?: boolean | null
   subcategories?: TransactionSubcategory[]
 }
 
