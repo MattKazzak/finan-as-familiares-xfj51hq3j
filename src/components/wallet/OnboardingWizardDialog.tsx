@@ -102,10 +102,6 @@ export function OnboardingWizardDialog({
   // 2: Renda Mensal Familiar (Renda Líquida Total dos Membros)
   // 3: Seu Orçamento em 3 Caixas (Resumo 50/30/20 + alternativo + Concluir e Ativar meu Plano)
   const [step, setStep] = useState<1 | 2 | 3>(1)
-  // Perfil da família (catálogo v3): oculta categorias irrelevantes sem apagar
-  const [hasVehicle, setHasVehicle] = useState(true)
-  const [hasPets, setHasPets] = useState(true)
-  const [hasChildren, setHasChildren] = useState(true)
   const [familyNameInput, setFamilyNameInput] = useState<string>('')
   const [incomeInput, setIncomeInput] = useState<string>('')
   const [selectedModelId, setSelectedModelId] = useState<BudgetModelId>(() => {
