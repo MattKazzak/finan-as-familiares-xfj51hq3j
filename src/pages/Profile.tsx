@@ -58,7 +58,7 @@ import { InstallInstructionsModal } from '@/components/common/InstallInstruction
 import { CategoryManagementDialog } from '@/components/categories/CategoryManagementDialog'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import { Sparkles, AlertCircle } from 'lucide-react'
-import packageJson from '../../package.json'
+import { APP_VERSION } from '@/lib/app-version'
 import {
   Dialog,
   DialogContent,
@@ -707,7 +707,7 @@ export default function ProfilePage() {
   }
 
   const familyInitial = family?.name?.charAt(0).toUpperCase() || 'F'
-  const appVersion = packageJson.version || '0.0.181'
+  const appVersion = APP_VERSION
 
   return (
     <div className="space-y-5 max-w-4xl mx-auto w-full min-w-0">
