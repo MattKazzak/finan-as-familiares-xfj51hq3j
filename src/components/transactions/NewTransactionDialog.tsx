@@ -41,7 +41,7 @@ import {
 } from '@/services/import/categorization'
 import { parseBRLToCents, formatNumberBRL, formatBRL } from '@/lib/formatters'
 import { createTransactionWithSplits, splitEqually, validateSplits } from '@/services/splits'
-import { UsersRound, DivideSquare } from 'lucide-react'
+import { UsersRound, DivideSquare, Users } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { ContextualSubcategorySelector } from '@/components/categories/ContextualSubcategorySelector'
 import { CategoryIcon } from '@/components/common/CategoryIcon'
@@ -912,7 +912,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                 <div className="pt-1 flex items-center gap-2">
                   <Users className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                   <p className="text-[11px] font-medium text-slate-600">
-                    {splitEqually(cents || 0, splitMemberIds)
+                    {splitEqually(parseBRLToCents(amountStr) || 0, splitMemberIds)
                       .map((s) => {
                         const m = members.find((mm) => mm.id === s.member_id)
                         return `${m?.name?.split(' ')[0]}: ${formatBRL(s.share_cents)}`

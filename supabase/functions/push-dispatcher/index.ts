@@ -31,8 +31,21 @@ function optionsFor(endpoint: string): Record<string, unknown> {
 
 let processing = false
 
-async function processQueue(): Promise<{ processed: number; sent: number; failed: number; erros: string[]; erro?: string }> {
-  if (!vapidOk) return { processed: 0, sent: 0, failed: 0, erros: [], erro: 'VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY ausentes — configure nos secrets da edge' }
+async function processQueue(): Promise<{
+  processed: number
+  sent: number
+  failed: number
+  erros: string[]
+  erro?: string
+}> {
+  if (!vapidOk)
+    return {
+      processed: 0,
+      sent: 0,
+      failed: 0,
+      erros: [],
+      erro: 'VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY ausentes — configure nos secrets da edge',
+    }
   if (processing) return { processed: 0, sent: 0, failed: 0, erros: [] }
   processing = true
   let sent = 0
@@ -53,7 +66,10 @@ async function processQueue(): Promise<{ processed: number; sent: number; failed
       })
       if (targetsErr) {
         console.error('targets error', targetsErr)
-        await admin.from('push_queue').update({ status: 'failed', attempts: item.attempts + 1 }).eq('id', item.id)
+        await admin
+          .from('push_queue')
+          .update({ status: 'failed', attempts: item.attempts + 1 })
+          .eq('id', item.id)
         continue
       }
 
@@ -90,13 +106,23 @@ async function processQueue(): Promise<{ processed: number; sent: number; failed
 
       await admin
         .from('push_queue')
-        .update({ status: 'sent', attempts: item.attempts + 1, processed_at: new Date().toISOString() })
+        .update({
+          status: 'sent',
+          attempts: item.attempts + 1,
+          processed_at: new Date().toISOString(),
+        })
         .eq('id', item.id)
     }
     return { processed: items.length, sent, failed: erros.length, erros }
   } catch (e) {
     console.error('processQueue error', e)
-    return { processed: 0, sent, failed: erros.length, erros, erro: e instanceof Error ? e.message : 'unknown' }
+    return {
+      processed: 0,
+      sent,
+      failed: erros.length,
+      erros,
+      erro: e instanceof Error ? e.message : 'unknown',
+    }
   } finally {
     processing = false
   }

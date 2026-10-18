@@ -7,7 +7,10 @@ const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ ok: false, hint: 'POST apenas' }), { status: 405, headers: { 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ ok: false, hint: 'POST apenas' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
   const res = await fetch(`${SUPABASE_URL}/functions/v1/push-dispatcher/process`, {
     method: 'POST',

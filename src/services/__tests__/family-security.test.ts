@@ -134,15 +134,17 @@ describe('Family Service - Camada de Serviço e Hardening RLS/RPC', () => {
         created_at: '2026-10-20T12:00:00Z',
       }
 
-      vi.mocked(supabase.rpc).mockImplementation(async (method: string) => {
+      vi.mocked(supabase.rpc).mockImplementation(((method: string) => {
         if (method === 'create_new_family_workspace') {
           createdCount++
           // Simula pequena latência da RPC
-          await new Promise((r) => setTimeout(r, 20))
-          return { data: 'fam-created-1', error: null } as any
+          return new Promise((r) => setTimeout(r, 20)).then(() => ({
+            data: 'fam-created-1',
+            error: null,
+          })) as any
         }
-        return { data: null, error: null } as any
-      })
+        return Promise.resolve({ data: null, error: null }) as any
+      }) as any)
 
       // Simula banco: inicialmente vazio; após criação, passa a ter mockCreatedFamily
       vi.mocked(supabase.from).mockImplementation((table: string) => {
