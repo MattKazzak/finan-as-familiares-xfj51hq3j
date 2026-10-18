@@ -201,6 +201,10 @@ export default function NotificationsPanel({ onClose }: { onClose: () => void })
               Você escolhe o que receber e pode desativar quando quiser. Sem spam — só o que
               acontece na sua família.
             </p>
+            <p className="text-[10px] text-slate-300 text-center leading-relaxed">
+              Som do Curiango: gravação de Dante Buzzetti (xeno-canto.org, XC668769), licença CC
+              BY-NC-SA.
+            </p>
           </div>
         )}
       </div>
