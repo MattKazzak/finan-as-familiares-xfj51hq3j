@@ -64,7 +64,7 @@ const STEPS: WalkthroughStep[] = [
     targetSelector: null,
     position: 'bottom',
     title: 'Oi! Eu sou o Curiango 🪶',
-    text: 'Você acabou de descobrir o que a maioria não tem: visão total do próprio dinheiro. Enquanto a maioria só percebe que estourou lá no fim do mês, você já sabe — hoje. Está na frente. E é pra te manter na frente que eu existo.',
+    text: 'Se você reservou um tempo pra cuidar das suas finanças, você já está na frente da maioria. Pouca gente sabe o que acontece no próprio ninho — eu vou te mostrar, passo a passo, e te ajudar nos dias que estão por vir.',
   },
   {
     id: 'saldo',
