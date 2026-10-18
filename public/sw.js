@@ -123,7 +123,7 @@ self.addEventListener('push', (event) => {
   )
 })
 
-// Clique na notificação: foca o app aberto ou abre /inicio
+// Clique na notificação: foca o app aberto ou abre /inicio + toca o piu (gesto garantido)
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
   const targetUrl = event.notification.data?.url || '/inicio'
@@ -132,6 +132,7 @@ self.addEventListener('notificationclick', (event) => {
       for (const client of clientList) {
         if ('focus' in client) {
           client.focus()
+          client.postMessage({ type: 'PLAY_PIU' })
           if ('navigate' in client) client.navigate(targetUrl)
           return
         }
