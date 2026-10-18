@@ -28,6 +28,15 @@ self.addEventListener('install', (event) => {
   )
 })
 
+// AUTO-CURA (v0.0.431): se esta instância foi registrada com URL com timestamp
+// (bug v0.0.429, loop de reload), desregistra-se — o app registra a URL estável /sw.js.
+self.addEventListener('activate', (event) => {
+  const swUrl = self.location.href
+  if (swUrl.includes('?v=') || swUrl.includes('&v=')) {
+    self.registration.unregister()
+  }
+})
+
 // Ativação: assume clientes imediatamente e deleta caches antigos
 self.addEventListener('activate', (event) => {
   event.waitUntil(
