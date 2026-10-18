@@ -2,7 +2,7 @@
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './main.css'
-import { playPiu, initPiuUnlock, handlePiuQuery } from './services/piu-player'
+import { startRealtimePiu, initPiuUnlock, playPiu } from './services/realtime-piu'
 
 // @skip-protected: Do not remove. Required for React rendering.
 import { registerAppServiceWorker } from './hooks/use-service-worker'
@@ -23,22 +23,22 @@ import { registerAppServiceWorker } from './hooks/use-service-worker'
   }
 })()
 
-// Registra o Service Worker oficial do Curiangoo com atualização forçada e skipWaiting
+// Registra o Service Worker (curiangoo-sw.js — nome novo, nunca cacheado)
 registerAppServiceWorker()
 
-// Som do Curiango: no push, o SW pergunta via PIU_QUERY e a página TOCA O PIU DE VERDADE
-// (prova real) — responde canPlay:true só com o som já tocando. PLAY_PIU = notificationclick.
+// PIU DO CURIANGO (padrão Discord/Slack): a página escuta INSERTs via Supabase Realtime
+// e toca o piu na hora — determinístico, sem SW, sem handshake, sem timeout.
+startRealtimePiu()
+
+// Destravamento do áudio: 1º toque/tecla da sessão (regra de autoplay do Chrome).
+window.addEventListener('pointerdown', initPiuUnlock, { once: true, capture: true })
+window.addEventListener('keydown', initPiuUnlock, { once: true, capture: true })
+
+// PLAY_PIU do SW (ao tocar numa notificação — gesto garantido)
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', (event) => {
     if (event.data?.type === 'PLAY_PIU') playPiu()
-    if (event.data?.type === 'PIU_QUERY' && event.ports?.[0]) {
-      handlePiuQuery(event.ports[0])
-    }
   })
 }
-// Destravamento do áudio: o 1º toque/tecla da sessão (regra de autoplay do Chrome —
-// renova a cada abertura do app; sem isso o piu falha e o som do sistema cobre).
-window.addEventListener('pointerdown', initPiuUnlock, { once: true, capture: true })
-window.addEventListener('keydown', initPiuUnlock, { once: true, capture: true })
 
 createRoot(document.getElementById('root')!).render(<App />)

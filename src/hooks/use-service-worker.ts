@@ -29,7 +29,9 @@ export function registerAppServiceWorker() {
 
   // URL ESTÁVEL: nunca usar timestamp no sw.js — o Chrome trata cada URL nova como
   // outro worker → instala → ativa → controllerchange → reload → loop infinito.
-  const swUrl = '/sw.js'
+  // SW v2: nome de arquivo novo (curiangoo-sw.js) — o Chrome servia /sw.js do cache
+  // HTTP por até 24h, prendendo updates. Arquivo novo = nunca cacheado = update na 1ª abertura.
+  const swUrl = '/curiangoo-sw.js'
 
   window.addEventListener('load', () => {
     navigator.serviceWorker
