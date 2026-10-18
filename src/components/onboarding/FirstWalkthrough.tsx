@@ -1,17 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
-import {
-  ArrowDown,
-  ArrowUp,
-  X,
-  Sparkles,
-  Wallet,
-  Plus,
-  MessageCircle,
-  Scale,
-  BarChart3,
-  Bell,
-} from 'lucide-react'
+import { ArrowDown, X, Sparkles, Wallet, Plus, MessageCircle, Scale, Bell } from 'lucide-react'
 
 /**
  * FirstWalkthrough — Tour de primeiro acesso v3 (19/10, visão do Matheus).
@@ -20,19 +9,20 @@ import {
  * MISSÃO EDUCATIVA (18/10): o tour É a primeira aula do Curiango — cada balão
  * ensina um conceito em linguagem de amador, nunca jargão.
  *
- * Arquitetura v3 (corrige os 2 bugs da v2, achados no teste do Matheus):
+ * Arquitetura v3.1 (corrige os 2 bugs da v3, achados no teste do Matheus):
+ *  - Navegação por ID na ordem FIXA de STEPS (v3 navegava por índice numa lista
+ *    que encolhia a cada passo marcado → passos pulados e fora de ordem).
  *  - O componente SEMPRE renderiza enquanto ativo (nunca desmonta entre passos —
  *    na v2, passo sem alvo na tela desmontava o componente inteiro e o clique
  *    de avançar morria).
  *  - Alvo sem data-testid na tela → passo é PULADO, não trava.
- *  - Overlay com pointer-events no overlay inteiro (toque em qualquer lugar avança)
- *    e o balão com stopPropagation (toque no balão não avança por acidente).
+ *  - Toque em qualquer lugar do overlay avança; o balão não avança por acidente.
  *
  * Roteiro (7 passos — boas-vindas + 6 descobertas):
- *  1. BOAS-VINDAS do Curiango (centro, sem alvo) — mensagem hipnotizante
- *  2. Saldo da família — "o pulso do ninho"
- *  3. Card do tour (primeira receita) — a ação que destrava tudo
- *  4. Balão do Curiango (insights) — "eu falo com você"
+ *  1. BOAS-VINDAS do Curiango (centro, sem alvo) — mensagem do Matheus
+ *  2. Saldo da família — "não vou deixar faltar grana no fim do mês"
+ *  3. Card do tour (primeira receita) — "registre suas receitas, ou fale comigo"
+ *  4. Balão do Curiango (Copilot) — "acabou a ansiedade financeira"
  *  5. Orçamento em 3 Baldes — o método
  *  6. Dock Nova — registrar tudo por aqui
  *  7. Perfil — onde configurar e reiniciar este tour
@@ -88,7 +78,7 @@ const STEPS: WalkthroughStep[] = [
     position: 'bottom',
     Icon: MessageCircle,
     title: 'Acabou a ansiedade financeira',
-    text: 'Eu organizo tudo pra você, é só me dizer: "lancei 60 no mercado", "quanto tenho pra semana?", "quanto sobrou esse mês?" — fala comigo como se fosse um amigo.',
+    text: 'Eu organizo tudo pra você, é só me dizer: "comprei 60 no mercado", "quanto tenho pra semana?", "quanto sobrou esse mês?" — fala comigo como se fosse um amigo.',
   },
   {
     id: 'baldes',
@@ -126,16 +116,17 @@ export interface FirstWalkthroughProps {
 }
 
 export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWalkthroughProps) {
-  // Estado LOCAL do índice (o componente é dono da navegação — nunca desmonta
-  // entre passos; desmontar era o bug da v2 que matava o toque).
-  const pending = STEPS.filter((s) => !stepsDone.includes(s.id))
-  const [index, setIndex] = useState(0)
+  // Navegação por ID na ordem FIXA de STEPS (bug v3: índice numa lista que
+  // encolhe a cada passo marcado → passos pulados e fora de ordem).
+  const firstPending = STEPS.find((s) => !stepsDone.includes(s.id))?.id ?? null
+  const [currentId, setCurrentId] = useState<WalkthroughStepId | null>(firstPending)
   const [rect, setRect] = useState<DOMRect | null>(null)
   const [measuring, setMeasuring] = useState(true)
 
-  const step = pending[Math.min(index, pending.length - 1)]
+  const step = STEPS.find((s) => s.id === currentId)
+  const isFirstStep = step?.id === STEPS[0].id
 
-  // Medir o alvo do passo atual (e re-medir em resize/scroll)
+  // Medir o alvo do passo atual (e re-medir em resize)
   const measure = useCallback(() => {
     if (!step) return
     if (!step.targetSelector) {
@@ -145,8 +136,8 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
     }
     const el = document.querySelector(step.targetSelector)
     if (!el) {
-      // Alvo ausente (ex.: copilot em modo free com layout diferente): PULA o
-      // passo e segue pro próximo — nunca trava (bug v2).
+      // Alvo ausente (ex.: card gated em modo free): PULA o passo e segue pro
+      // próximo — nunca trava (bug v2).
       setRect(null)
       setMeasuring(false)
       return
@@ -164,7 +155,7 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
       cancelAnimationFrame(raf)
       window.removeEventListener('resize', measure)
     }
-  }, [measure, index])
+  }, [measure])
 
   if (!step) return null
 
@@ -173,7 +164,15 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
 
   const advance = () => {
     onCompleteStep(step.id)
-    setIndex((i) => i + 1)
+    // Próximo passo pendente na ordem fixa (a lista NÃO encolhe — bug v3)
+    const idx = STEPS.findIndex((s) => s.id === step.id)
+    const next = STEPS.slice(idx + 1).find((s) => !stepsDone.includes(s.id))
+    if (!next) {
+      // Último passo: marca 'tour' pra encerrar o walkthrough
+      onCompleteStep('tour')
+    } else {
+      setCurrentId(next.id)
+    }
   }
 
   const skipAll = () => {
@@ -274,7 +273,7 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
               onClick={advance}
               className="text-[11px] font-bold text-[#14213D] bg-[#FCA311]/15 hover:bg-[#FCA311]/25 px-3 py-1.5 rounded-full transition-colors inline-flex items-center gap-1"
             >
-              {index === 0 ? 'Vamos começar' : 'Continuar'}
+              {isFirstStep ? 'Vamos começar' : 'Continuar'}
               <ArrowDown className="w-3 h-3" />
             </button>
           </div>
@@ -293,7 +292,7 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
       </div>
 
       {/* Dica de navegação (só a partir do 2º passo) */}
-      {index > 0 && (
+      {!isFirstStep && (
         <div className="absolute bottom-6 left-0 right-0 text-center pointer-events-none">
           <span className="text-[11px] text-white/60 font-medium bg-[#0B1526]/60 px-3 py-1.5 rounded-full">
             Toque em qualquer lugar para continuar

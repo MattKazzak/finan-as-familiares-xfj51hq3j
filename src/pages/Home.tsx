@@ -918,8 +918,17 @@ export default function Home() {
             WALKTHROUGH v2 (19/10, visão do Matheus: fundo escuro + balõezinhos):
             na PRIMEIRA visita (passo 'tour' pendente) mostra o coach-marks overlay;
             concluído/pulado, o checklist continua como guia permanente. */}
+        {family && (
+          <FirstTour
+            stepsDone={Array.isArray(family.tour_steps_done) ? family.tour_steps_done : []}
+          />
+        )}
+        {/* Walkthrough v3 SEMPRE por cima do card do tour (v3.1: antes eram
+            mutuamente exclusivos — o alvo do passo 'primeira-receita' não
+            existia durante o tour e o passo era pulado). */}
         {family &&
-          (Array.isArray(family.tour_steps_done) && !family.tour_steps_done.includes('tour') ? (
+          Array.isArray(family.tour_steps_done) &&
+          !family.tour_steps_done.includes('tour') && (
             <FirstWalkthrough
               stepsDone={Array.isArray(family.tour_steps_done) ? family.tour_steps_done : []}
               onCompleteStep={(id) =>
@@ -931,11 +940,7 @@ export default function Home() {
                   .then(() => triggerRefresh())
               }
             />
-          ) : (
-            <FirstTour
-              stepsDone={Array.isArray(family.tour_steps_done) ? family.tour_steps_done : []}
-            />
-          ))}
+          )}
         {/* COPILOT NA HOME (16/10, v2 — fala do Curiango): card SEMPRE presente.
             Padrão-ouro de personagem conversando (Copilot Money/Monzo chat): o
             pássaro É o remetente (avatar à esquerda, como foto de perfil) e fala
