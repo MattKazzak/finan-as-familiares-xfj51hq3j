@@ -260,7 +260,13 @@ export default function Layout() {
         {location.pathname !== '/inicio' && (
           <header className="sticky top-0 z-30 bg-[#14213D] text-white pl-4 pr-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 sm:px-6 flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0">
-              <CuriangoLogo size={32} color="#FCA311" eyeColor="#FFFFFF" eyeHighlight />
+              <CuriangoLogo
+                size={32}
+                color="#FCA311"
+                eyeColor="#FFFFFF"
+                eyeRadius={3.4}
+                eyeHighlight
+              />
               <h2 className="text-base sm:text-lg font-bold text-white tracking-tight truncate">
                 {getHeaderTitle()}
               </h2>
