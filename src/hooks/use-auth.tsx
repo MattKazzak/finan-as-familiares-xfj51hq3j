@@ -141,9 +141,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-        setSession(initialSession)
-        setUser(initialSession?.user ?? null)
-        setLoading(false)
+        // SESSÃO FANTASMA (18/10): após wipe dos auth.users no banco, o JWT salvo no
+        // localStorage do aparelho continua "válido" localmente e o app abria direto
+        // numa conta que não existe mais. Fix: se há sessão local, validar o usuário
+        // contra o servidor (getUser usa o token e consulta auth.users). 401/erro =
+        // usuário não existe mais → deslogar e limpar, caindo no login.
+        if (initialSession) {
+          supabase.auth
+            .getUser()
+            .then(({ data: { user: serverUser }, error: userError }) => {
+              if (userError || !serverUser) {
+                // Token órfão: usuário foi apagado no banco
+                supabase.auth.signOut()
+                setSession(null)
+                setUser(null)
+              } else {
+                setSession(initialSession)
+                setUser(serverUser)
+              }
+              setLoading(false)
+            })
+            .catch(() => {
+              // Falha de rede: manter sessão local (não punir usuário offline)
+              setSession(initialSession)
+              setUser(initialSession?.user ?? null)
+              setLoading(false)
+            })
+        } else {
+          setSession(null)
+          setUser(null)
+          setLoading(false)
+        }
       })
     }
 
