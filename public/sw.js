@@ -96,9 +96,9 @@ self.addEventListener('push', (event) => {
   const title = payload.title
   const options = {
     body: payload.body,
-    icon: 'https://evcxjxuakiyjerujntli.supabase.co/storage/v1/object/public/branding/push-icon-192.png',
+    icon: 'https://evcxjxuakiyjerujntli.supabase.co/storage/v1/object/public/branding/push-icon-192.png?v=2',
     badge:
-      'https://evcxjxuakiyjerujntli.supabase.co/storage/v1/object/public/branding/push-badge-96.png',
+      'https://evcxjxuakiyjerujntli.supabase.co/storage/v1/object/public/branding/push-badge-96.png?v=2',
     tag: payload.tag,
     data: payload.data,
     vibrate: [80, 40, 80],
@@ -106,7 +106,21 @@ self.addEventListener('push', (event) => {
     requireInteraction: false,
   }
 
-  event.waitUntil(self.registration.showNotification(title, options))
+  event.waitUntil(
+    (async () => {
+      // Som do Curiango: se o app estiver ABERTO, manda a página tocar o piu
+      try {
+        const clientList = await self.clients.matchAll({
+          type: 'window',
+          includeUncontrolled: true,
+        })
+        if (clientList.length > 0) clientList[0].postMessage({ type: 'PLAY_PIU' })
+      } catch (e) {
+        /* silencioso */
+      }
+      await self.registration.showNotification(title, options)
+    })(),
+  )
 })
 
 // Clique na notificação: foca o app aberto ou abre /inicio

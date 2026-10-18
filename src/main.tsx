@@ -2,6 +2,7 @@
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './main.css'
+import { playPiu } from './services/piu-player'
 
 // @skip-protected: Do not remove. Required for React rendering.
 import { registerAppServiceWorker } from './hooks/use-service-worker'
@@ -24,5 +25,12 @@ import { registerAppServiceWorker } from './hooks/use-service-worker'
 
 // Registra o Service Worker oficial do Curiangoo com atualização forçada e skipWaiting
 registerAppServiceWorker()
+
+// Som do Curiango: o SW manda PLAY_PIU quando chega push com o app aberto
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data?.type === 'PLAY_PIU') playPiu()
+  })
+}
 
 createRoot(document.getElementById('root')!).render(<App />)
