@@ -992,14 +992,26 @@ export default function Home() {
               />
               <span className="absolute -top-1 -right-1 w-2 h-2 animate-copilot-sparkle" />
             </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[13px] leading-snug text-[#14213D]">
-                {isNewToCopilot
-                  ? 'Bem-vindo! Fale comigo — toque em mim, eu te ajudo. 🪶'
-                  : insights.length > 0
+            <span key={isNewToCopilot ? 'convite' : 'fala'} className="min-w-0 flex-1">
+              {isNewToCopilot ? (
+                // CONVITE (copy que o Matheus amou, 19/10 21h): 2 linhas com a pena.
+                // Quando o tour acaba / 1º toque, o card SE TRANSFORMA na fala de
+                // insights (key força remount → animate-in toca na troca).
+                <>
+                  <span className="block text-[13px] font-semibold leading-tight text-[#14213D] animate-in fade-in duration-300">
+                    Bem-vindo! Fale comigo 🪶
+                  </span>
+                  <span className="block text-[11px] text-slate-500 leading-snug mt-0.5 animate-in fade-in duration-300">
+                    Toque em mim — eu lanço, categorizo e organizo pra você.
+                  </span>
+                </>
+              ) : (
+                <span className="block text-[13px] leading-snug text-[#14213D] animate-in fade-in duration-300">
+                  {insights.length > 0
                     ? insights[0].detail
                     : 'Tudo em ordem por aqui! Toque pra conversar comigo.'}
-              </span>
+                </span>
+              )}
             </span>
             <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 self-center" />
           </button>
