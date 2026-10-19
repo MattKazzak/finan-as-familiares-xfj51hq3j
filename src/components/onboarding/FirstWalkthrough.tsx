@@ -71,12 +71,12 @@ const STEPS: WalkthroughStep[] = [
   },
   {
     // Matheus 19/10: "só a que mencionei o clicável que leva pro chat" —
-    // ilumina o card-convite do Copilot (que agora É o convite sutil).
+    // ilumina o card do Copilot, que em família nova É o convite ao chat.
     id: 'copilot',
     targetSelector: '[data-testid="copilot-card"]',
     position: 'bottom',
     title: 'Acabou a ansiedade financeira',
-    text: 'Eu organizo tudo pra você, é só me dizer: "comprei 60 no mercado", "quanto tenho pra semana?", "quanto sobrou esse mês?" — fala comigo como se fosse um amigo.',
+    text: 'Esse balão é meu — toque nele pra conversar: "comprei 60 no mercado", "quanto tenho pra semana?", "quanto sobrou esse mês?". Fala comigo como se fosse um amigo.',
   },
   {
     id: 'baldes',

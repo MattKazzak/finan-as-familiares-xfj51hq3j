@@ -15,7 +15,6 @@ import { CountUp } from '@/components/common/CountUp'
 import { CategoryIconBox } from '@/components/common/CategoryIcon'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import { PremiumGate } from '@/components/billing/PremiumGate'
-import { FirstTour } from '@/components/onboarding/FirstTour'
 import { FirstWalkthrough } from '@/components/onboarding/FirstWalkthrough'
 import { useAccessStatus } from '@/services/access-status'
 import { TransactionDetailDialog } from '@/components/transactions/TransactionDetailDialog'
@@ -94,11 +93,22 @@ export default function Home() {
   } | null>(null)
   const [loadError, setLoadError] = useState(false)
   // Insights do Copilot (determinísticos via RPC get_family_insights — estilo Pierre:
-  // "o que merece sua atenção" no topo da Home, sem custo de IA)
+  // "o que merece sua atenção" no topo da Home, sem custo IA)
   const [insights, setInsights] = useState<
     Array<{ severity: 'danger' | 'warning' | 'success' | 'info'; title: string; detail: string }>
   >([])
-  // Evolução do saldo (gap 1 da auditoria 16/10): série diária dos últimos 30 dias
+  // CONVITE ao Copilot (19/10, Matheus 21h): família nova (passo 'copilot'
+  // pendente no tour) → o card do Copilot É o convite ao chat ("Bem-vindo!
+  // Fale comigo — toque em mim, eu te ajudo"), não a frase de insight. O
+  // 1º toque marca o passo e a fala normal volta.
+  const isNewToCopilot = useMemo(
+    () =>
+      Boolean(
+        family &&
+        (!Array.isArray(family.tour_steps_done) || !family.tour_steps_done.includes('copilot')),
+      ),
+    [family],
+  ) // Evolução do saldo (gap 1 da auditoria 16/10): série diária dos últimos 30 dias
   // via RPC get_family_balance_series (agregação no servidor, ~1 query). Falha
   // silenciosa: gráfico é enhancement, nunca bloqueia a Home.
   const [balanceSeries, setBalanceSeries] = useState<Array<{ day: string; balance_cents: number }>>(
@@ -913,19 +923,11 @@ export default function Home() {
 
       {/* 2. ÁREA CLARA (#F8F9FB) COM CARDS FLUTUANTES SOBREPONDO O FUNDO MARINHO */}
       <div className="relative -mt-6 sm:-mt-8 px-4 sm:px-6 pb-12 max-w-5xl mx-auto space-y-6">
-        {/* TOUR DE PRIMEIRO ACESSO (18/10, Matheus): checklist progressivo — ensina
-            fazendo, não bloqueia. Some sozinho quando os 3 passos estão concluídos.
-            WALKTHROUGH v2 (19/10, visão do Matheus: fundo escuro + balõezinhos):
-            na PRIMEIRA visita (passo 'tour' pendente) mostra o coach-marks overlay;
-            concluído/pulado, o checklist continua como guia permanente. */}
-        {family && (
-          <FirstTour
-            stepsDone={Array.isArray(family.tour_steps_done) ? family.tour_steps_done : []}
-          />
-        )}
-        {/* Walkthrough v3 SEMPRE por cima do card do tour (v3.1: antes eram
-            mutuamente exclusivos — o alvo do passo 'primeira-receita' não
-            existia durante o tour e o passo era pulado). */}
+        {/* WALKTHROUGH v3 (19/10): coach-marks na primeira visita (passo 'tour'
+            pendente). O convite ao Copilot NÃO é mais um card separado — o
+            PRÓPRIO card do Copilot (copilot-card) é a porta de entrada (Matheus
+            19/10 21h: "é ela que leva pro chat, ela é o copilot do usuário;
+            quando novo deve ser um convite, não essa frase de insight"). */}
         {family &&
           Array.isArray(family.tour_steps_done) &&
           !family.tour_steps_done.includes('tour') && (
@@ -946,22 +948,36 @@ export default function Home() {
             pássaro É o remetente (avatar à esquerda, como foto de perfil) e fala
             em 1 frase natural — sem título/subtítulo de notificação. Severidade
             vira hairline colorido discreto à esquerda do balão, não um ponto.
+            CONVITE (19/10, Matheus 21h): usuário NOVO (passo 'copilot' pendente
+            no tour) → o card É o convite ao chat ("Bem-vindo! Fale comigo —
+            toque em mim, eu te ajudo"), não uma frase de insight. Depois do
+            1º toque (ou tour concluído) volta à fala normal de insights.
             PAYWALL (17/10): em trial/premium a fala navega pro Copilot; em free
             o card vira teaser do Premium (mesma estética, CTA Assinar). */}
         {access.isPremium ? (
           <button
             type="button"
             data-testid="copilot-card"
-            onClick={() => navigate('/copilot')}
+            onClick={() => {
+              navigate('/copilot')
+              if (isNewToCopilot) {
+                ;(supabase as any)
+                  .rpc('mark_tour_step', { p_step: 'copilot' })
+                  .then(() => triggerRefresh())
+                  .catch(() => {})
+              }
+            }}
             className={`w-full text-left flex items-start gap-3 rounded-2xl border border-[rgba(20,33,61,0.08)] bg-white/95 px-4 py-3.5 shadow-sm transition-all active:scale-[0.98] border-l-[3px] ${
-              insights.length > 0
-                ? {
-                    danger: 'border-l-rose-400',
-                    warning: 'border-l-amber-400',
-                    success: 'border-l-emerald-400',
-                    info: 'border-l-slate-300',
-                  }[insights[0].severity]
-                : 'border-l-emerald-400'
+              isNewToCopilot
+                ? 'border-l-[#FCA311]'
+                : insights.length > 0
+                  ? {
+                      danger: 'border-l-rose-400',
+                      warning: 'border-l-amber-400',
+                      success: 'border-l-emerald-400',
+                      info: 'border-l-slate-300',
+                    }[insights[0].severity]
+                  : 'border-l-emerald-400'
             }`}
           >
             {/* Avatar do remetente: o próprio Curiango */}
@@ -978,9 +994,11 @@ export default function Home() {
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-[13px] leading-snug text-[#14213D]">
-                {insights.length > 0
-                  ? insights[0].detail
-                  : 'Tudo em ordem por aqui! Toque pra conversar comigo.'}
+                {isNewToCopilot
+                  ? 'Bem-vindo! Fale comigo — toque em mim, eu te ajudo. 🪶'
+                  : insights.length > 0
+                    ? insights[0].detail
+                    : 'Tudo em ordem por aqui! Toque pra conversar comigo.'}
               </span>
             </span>
             <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 self-center" />
