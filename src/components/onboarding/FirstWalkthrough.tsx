@@ -61,13 +61,17 @@ const STEPS: WalkthroughStep[] = [
     text: 'Nada de novidade por enquanto — mas eu não vou deixar faltar grana no fim do mês. Tudo que entra e sai passa por aqui, e eu fico de olho.',
   },
   {
+    // Matheus 19/10 (print 20:52): a seta errava o alvo — agora aponta pro
+    // botão Nova do dock (o caminho REAL de lançar, navy central).
     id: 'primeira-receita',
-    targetSelector: '[data-testid="first-tour-card"]',
-    position: 'bottom',
+    targetSelector: '[data-testid="dock-new-transaction"]',
+    position: 'top',
     title: 'Registre suas receitas',
     text: 'Ou fale comigo — "recebi 2.500 de salário" — que eu registro pra você. É o que faz tudo aqui funcionar.',
   },
   {
+    // Matheus 19/10: "só a que mencionei o clicável que leva pro chat" —
+    // ilumina o card-convite do Copilot (que agora É o convite sutil).
     id: 'copilot',
     targetSelector: '[data-testid="copilot-card"]',
     position: 'bottom',
@@ -289,12 +293,15 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
       }
     : effectivePos === 'bottom'
       ? {
-          top: rect!.bottom + PAD + 12,
+          // CLAMP (Matheus 19/10: balão dos Baldes ficava escondido embaixo e o
+          // Continuar não era clicável): o topo do balão nunca passa do limite
+          // que deixa o rodapé do card visível acima do dock.
+          top: Math.min(rect!.bottom + PAD + 12, window.innerHeight - 260),
           left: containerLeft,
           maxWidth: 320,
         }
       : {
-          bottom: window.innerHeight - rect!.top + PAD + 12,
+          bottom: Math.min(window.innerHeight - rect!.top + PAD + 12, window.innerHeight - 260),
           left: containerLeft,
           maxWidth: 320,
         }
