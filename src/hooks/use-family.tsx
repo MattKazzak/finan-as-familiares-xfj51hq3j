@@ -242,7 +242,21 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
 
   const triggerRefresh = useCallback(() => {
     setRefreshTrigger((prev) => prev + 1)
-  }, [])
+    // BUG TOUR RENASCENDO (19/10, Matheus): o tour termina → RPC grava o passo
+    // no banco → mas o objeto `family` no contexto ficava VELHO (triggerRefresh
+    // só recarregava transações). Voltar pra Home re-montava o walkthrough com
+    // tour_steps_done antigo = tour reiniciava sozinho a cada navegação.
+    // Fix: recarrega a família em background (SEM loading, sem flicker) junto.
+    ;(async () => {
+      if (!user) return
+      try {
+        const data = await fetchFamilyData()
+        setFamily(data.family)
+      } catch {
+        // Silencioso: o refresh de transações é o caminho principal
+      }
+    })()
+  }, [user])
 
   const reloadFamily = useCallback(async () => {
     if (!user) {

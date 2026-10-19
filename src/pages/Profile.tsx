@@ -93,6 +93,7 @@ export default function ProfilePage() {
     updateFamily,
     uploadFamilyAvatar,
     triggerRefresh,
+    reloadFamily,
   } = useFamily()
   const { toast } = useToast()
   const navigate = useNavigate()
@@ -1316,11 +1317,16 @@ export default function ProfilePage() {
                   try {
                     const { error } = await (supabase as any).rpc('reset_family_tour')
                     if (error) throw error
+                    // BUG (19/10, Matheus): reset_family_tour limpa o banco, mas o
+                    // contexto continuava com tour_steps_done antigo → a Home não
+                    // mostrava o tour, só o toast ("manda uma mensagem"). Agora:
+                    // recarrega a família ANTES de navegar — a Home já abre com o
+                    // estado zerado e o walkthrough nasce na hora.
+                    await reloadFamily()
                     toast({
                       title: 'Tour reiniciado! 🪶',
                       description: 'O Curiango vai te apresentar tudo de novo.',
                     })
-                    triggerRefresh()
                     navigate('/inicio')
                   } catch {
                     toast({
