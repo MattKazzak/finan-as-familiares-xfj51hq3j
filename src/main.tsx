@@ -23,6 +23,47 @@ import { registerAppServiceWorker } from './hooks/use-service-worker'
   }
 })()
 
+// AUTO-CURA DE CHUNK VELHO (20/10, tela branca pós-deploy): quando o app em
+// execução pede um chunk lazy que o deploy novo já substituiu (arquivo some do
+// servidor), o import dinâmico falha e a tela fica branca — o usuário precisa
+// fechar e reabrir 2x. Fix: captura o erro de chunk e recarrega a página UMA
+// vez por sessão (sessionStorage evita loop infinito se o problema persistir).
+;(function healStaleChunks() {
+  const KEY = 'curiangoo_chunk_reload'
+  window.addEventListener('error', (e) => {
+    const msg = e?.message || ''
+    const isChunkError =
+      /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i.test(
+        msg,
+      ) || /Loading chunk .* failed/i.test(msg)
+    if (!isChunkError) return
+    try {
+      if (sessionStorage.getItem(KEY)) return // já recarregou nesta sessão — não loopa
+      sessionStorage.setItem(KEY, '1')
+    } catch {
+      // sessionStorage indisponível — recarrega mesmo assim (1x)
+    }
+    window.location.replace(window.location.href)
+  })
+  // Vite também rejeita promises de import — cobre o caminho unhandledrejection
+  window.addEventListener('unhandledrejection', (e) => {
+    const reason = String(e?.reason?.message || e?.reason || '')
+    if (
+      /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i.test(
+        reason,
+      )
+    ) {
+      try {
+        if (sessionStorage.getItem(KEY)) return
+        sessionStorage.setItem(KEY, '1')
+      } catch {
+        // segue
+      }
+      window.location.replace(window.location.href)
+    }
+  })
+})()
+
 // Registra o Service Worker (curiangoo-sw.js — nome novo, nunca cacheado)
 registerAppServiceWorker()
 
