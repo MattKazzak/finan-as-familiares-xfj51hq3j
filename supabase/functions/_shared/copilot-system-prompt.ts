@@ -270,6 +270,10 @@ export interface BuildSystemPromptArgs {
   financialSummaryContext: string
   categoriesContext: string
   membersContext: string
+  /** Dica determinística de números detectados na frase (fix evals flaky 20/10).
+      A edge extrai os valores com REGEX (sem IA) e injeta aqui — o modelo para
+      de depender da sorte para converter "45,50" → 45.5 ou "doze" → 12. */
+  numericHintContext?: string
 }
 
 /**
@@ -277,8 +281,128 @@ export interface BuildSystemPromptArgs {
  * Todos os placeholders são preenchidos em runtime pela edge voice-parse.
  */
 export function buildSystemPrompt(args: BuildSystemPromptArgs): string {
-  return COPILOT_SYSTEM_PROMPT_TEMPLATE.replace(/\$\{(\w+)\}/g, (match, key: string) => {
+  const base = COPILOT_SYSTEM_PROMPT_TEMPLATE.replace(/\$\{(\w+)\}/g, (match, key: string) => {
     const value = (args as Record<string, string>)[key]
     return value !== undefined ? value : match
   })
+  // Dica determinística de números (fix evals flaky 20/10): quando a edge
+  // detecta valores com regex, eles são INJETADOS aqui como verdade absoluta —
+  // o modelo não "escolhe" se converte ou não.
+  if (args.numericHintContext) {
+    return base + '\n\n' + args.numericHintContext
+  }
+  return base
+}
+
+/**
+ * EXTRATOR DETERMINÍSTICO DE NÚMEROS (fix evals flaky 20/10 — c02/c05/c29/c34/c36):
+ * detecta valores monetários na frase com REGEX (zero IA, zero custo) e devolve
+ * um bloco de contexto que ensina ao modelo o valor EXATO extraído.
+ * Cobre: "45,50" · "1.250,90" · "doze reais" · "trinta e cinco" · "200".
+ */
+export function extractNumericHint(text: string): string | null {
+  if (!text) return null
+  const t = text.toLowerCase()
+  const found: number[] = []
+
+  // 1) Dígitos com centavos pt-BR: "45,50" · "1.250,90" (vírgula decimal)
+  const withCents = t.matchAll(/(\d{1,3}(?:\.\d{3})+|\d+),(\d{2})/g)
+  for (const m of withCents) {
+    const intPart = m[1].replace(/\./g, '')
+    found.push(Number(`${intPart}.${m[2]}`))
+  }
+
+  // 2) Dígitos inteiros com contexto monetário: "200 reais" · "R$ 200" · "pix de 200 pro"
+  if (found.length === 0) {
+    const ints = t.matchAll(
+      /(?:r\$\s*|de\s+|por\s+)?(\d{1,6})(?:\s*reais|\s*(?=pro\b|pra\b|no\b|na\b|em\b)|$)/g,
+    )
+    for (const m of ints) {
+      const n = Number(m[1])
+      if (n > 0 && n <= 999999) found.push(n)
+    }
+  }
+
+  // 3) Números por extenso (unidade → mil): "doze reais" · "trinta e cinco"
+  if (found.length === 0) {
+    const units: Record<string, number> = {
+      zero: 0,
+      um: 1,
+      uma: 1,
+      dois: 2,
+      duas: 2,
+      tres: 3,
+      três: 3,
+      quatro: 4,
+      cinco: 5,
+      seis: 6,
+      sete: 7,
+      oito: 8,
+      nove: 9,
+      dez: 10,
+      onze: 11,
+      doze: 12,
+      treze: 13,
+      catorze: 14,
+      quatorze: 14,
+      quinze: 15,
+      dezesseis: 16,
+      dezessete: 17,
+      dezoito: 18,
+      dezenove: 19,
+      dezenove: 19,
+      vinte: 20,
+      trinta: 30,
+      quarenta: 40,
+      cinquenta: 50,
+      sessenta: 60,
+      setenta: 70,
+      oitenta: 80,
+      noventa: 90,
+      cem: 100,
+      cento: 100,
+      duzentos: 200,
+      trezentos: 300,
+      quatrocentos: 400,
+      quinhentos: 500,
+      seiscentos: 600,
+      setecentos: 700,
+      oitocentos: 800,
+      novecentos: 900,
+    }
+    const composed = t.matchAll(
+      /\b(um|uma|dois|duas|tr[eê]s|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|treze|catorze|quatorze|quinze|dezesseis|dezessete|dezoito|dezenove|vinte|trinta|quarenta|cinquenta|sessenta|setenta|oitenta|noventa)(?:\s*e\s*(um|uma|dois|duas|tr[eê]s|quatro|cinco|seis|sete|oito|nove))?\s+reais\b/g,
+    )
+    for (const m of composed) {
+      const tens: Record<string, number> = {
+        vinte: 20,
+        trinta: 30,
+        quarenta: 40,
+        cinquenta: 50,
+        sessenta: 60,
+        setenta: 70,
+        oitenta: 80,
+        noventa: 90,
+      }
+      const unitsMap: Record<string, number> = { um: 1, uma: 1, dois: 2, duas: 2, três: 3, trez: 3 }
+      let total = 0
+      const word1 = m[1]
+      if (tens[word1] !== undefined) total += tens[word1]
+      else if (units[word1] !== undefined) total += units[word1]
+      if (m[2]) {
+        const w2 = m[2]
+        if (unitsMap[w2] !== undefined) total += unitsMap[w2]
+      }
+      if (total > 0) found.push(total)
+    }
+  }
+
+  if (found.length === 0) return null
+  const list = found.map((n) => `R$ ${n.toFixed(2).replace('.', ',')}`).join(' · ')
+  return [
+    'DICA DETERMINÍSTICA DE NÚMEROS (extração por regex — VERDADE ABSOLUTA, use-a):',
+    `A frase contém o(s) seguinte(s) valor(es) monetário(s) já convertido(s) para número: ${list}.`,
+    'Use um destes valores EXATOS no campo "valor" (number JS, ponto decimal).',
+    'NUNCA devolva "valor": null ou NaN quando esta dica existe — e NUNCA status "falta_valor".',
+  ].join('\n')
 }

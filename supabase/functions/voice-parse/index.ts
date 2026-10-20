@@ -1,7 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
-import { buildSystemPrompt } from '../_shared/copilot-system-prompt.ts'
+import { buildSystemPrompt, extractNumericHint } from '../_shared/copilot-system-prompt.ts'
 
 // Types para parsing e resposta
 interface SubItemProposta {
@@ -570,12 +570,17 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
     }
 
     // System prompt montado a partir do contrato versionado em _shared/copilot-system-prompt.ts
+    // + DICA DETERMINÍSTICA de números (fix evals flaky 20/10): regex extrai os
+    // valores da frase SEM IA e o modelo recebe o número exato pronto.
+    const numericHint = extractNumericHint(textoNormalizadoPtBr || texto)
+    if (numericHint) console.log('[NumericHint] injetado:', numericHint.split('\n')[1])
     const systemPrompt = buildSystemPrompt({
       activeMonthLabel,
       previousContextPrompt,
       financialSummaryContext,
       categoriesContext: categoriesContext || 'Nenhuma categoria específica cadastrada ainda.',
       membersContext: membersContext || 'Membro padrão',
+      numericHintContext: numericHint || undefined,
     })
 
     // Sanitização e validação das últimas 6 mensagens de histórico
