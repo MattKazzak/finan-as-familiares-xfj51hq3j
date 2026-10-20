@@ -164,6 +164,11 @@ interface FamilyContextType {
   hasAnyTransactions: boolean
   refreshTrigger: number
   triggerRefresh: () => void
+  /** Marca passo do tour: atualização OTIMISTA no contexto + RPC fire-and-forget.
+      FIX 20/10 (Matheus): o fim do tour disparava 7 fetches concorrentes da
+      família (1 por passo) e o último a RESPONDER vencia — um fetch velho
+      sobrescrevia tour_steps_done e o tour renascia ao voltar pra Home. */
+  markTourStepOptimistic: (stepId: string) => void
 }
 
 const FamilyContext = createContext<FamilyContextType | undefined>(undefined)
@@ -265,6 +270,24 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
       }
     })()
   }, [user, family?.id])
+
+  /** FIX TOUR RENASCENDO (20/10, Matheus): atualização otimista — marca o passo
+      no contexto NA HORA (o tour fecha no mesmo instante) e persiste via RPC em
+      background. Elimina a corrida: antes, o fim do tour disparava 1 fetch da
+      família POR PASSO (7 concorrentes) e o último a responder vencia — um
+      fetch velho sobrescrevia tour_steps_done e o tour renascia na Home. */
+  const markTourStepOptimistic = useCallback((stepId: string) => {
+    setFamily((prev) => {
+      if (!prev) return prev
+      const done = Array.isArray(prev.tour_steps_done) ? prev.tour_steps_done : []
+      if (done.includes(stepId)) return prev
+      return { ...prev, tour_steps_done: [...done, stepId] }
+    })
+    ;(supabase as any)
+      .rpc('mark_tour_step', { p_step: stepId })
+      .then(() => setRefreshTrigger((p) => p + 1))
+      .catch(() => {})
+  }, [])
 
   const reloadFamily = useCallback(async () => {
     if (!user) {
@@ -729,6 +752,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         hasAnyTransactions,
         refreshTrigger,
         triggerRefresh,
+        markTourStepOptimistic,
       }}
     >
       {children}

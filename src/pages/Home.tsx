@@ -59,14 +59,10 @@ export default function Home() {
     family,
     members,
     categories,
-    completeness,
-    currentMember,
-    selectedMemberId,
-    setSelectedMemberId,
-    openNewTransaction,
-    openOnboarding,
+    completeness,\n    currentMember,\n    selectedMemberId,\n    setSelectedMemberId,\n    openNewTransaction,\n    openOnboarding,
     refreshTrigger,
     triggerRefresh,
+    markTourStepOptimistic,
   } = useFamily()
   const { toast } = useToast()
   const navigate = useNavigate()
@@ -933,14 +929,8 @@ export default function Home() {
           !family.tour_steps_done.includes('tour') && (
             <FirstWalkthrough
               stepsDone={Array.isArray(family.tour_steps_done) ? family.tour_steps_done : []}
-              onCompleteStep={(id) =>
-                (supabase as any).rpc('mark_tour_step', { p_step: id }).then(() => triggerRefresh())
-              }
-              onSkip={() =>
-                (supabase as any)
-                  .rpc('mark_tour_step', { p_step: 'tour' })
-                  .then(() => triggerRefresh())
-              }
+              onCompleteStep={markTourStepOptimistic}
+              onSkip={() => markTourStepOptimistic('tour')}
             />
           )}
         {/* COPILOT NA HOME (16/10, v2 — fala do Curiango): card SEMPRE presente.
@@ -961,10 +951,7 @@ export default function Home() {
             onClick={() => {
               navigate('/copilot')
               if (isNewToCopilot) {
-                ;(supabase as any)
-                  .rpc('mark_tour_step', { p_step: 'copilot' })
-                  .then(() => triggerRefresh())
-                  .catch(() => {})
+                markTourStepOptimistic('copilot')
               }
             }}
             className={`w-full text-left flex items-start gap-3 rounded-2xl border border-[rgba(20,33,61,0.08)] bg-white/95 px-4 py-3.5 shadow-sm transition-all active:scale-[0.98] border-l-[3px] ${
