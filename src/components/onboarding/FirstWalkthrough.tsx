@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import { ArrowDown, X } from 'lucide-react'
 
@@ -32,7 +31,6 @@ export type WalkthroughStepId =
   | 'primeira-receita'
   | 'copilot'
   | 'baldes'
-  | 'dock'
   | 'perfil'
 
 interface WalkthroughStep {
@@ -84,13 +82,6 @@ const STEPS: WalkthroughStep[] = [
     position: 'bottom',
     title: 'O método dos 3 Baldes',
     text: 'Seu dinheiro se divide em Necessidades, Estilo de Vida e Futuro. Simples assim: quando um balde enche demais, eu te aviso antes do prejuízo.',
-  },
-  {
-    id: 'dock',
-    targetSelector: '[data-testid="dock-new-transaction"]',
-    position: 'top',
-    title: 'Registrar é um toque',
-    text: 'Esse botão é seu melhor amigo: receita, despesa, parcelado ou falando comigo. Lançar no dia = controle no fim do mês.',
   },
   {
     id: 'perfil',
@@ -273,20 +264,14 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
     setCurrentId(null)
   }
 
-  // PASSO COPILOT com ação real (Matheus: "não abre o copilot nem vai pra outra tela")
-  const openCopilot = () => {
-    onCompleteStep('copilot')
-    onCompleteStep('tour')
-    navigate('/copilot')
-  }
-
   // Container do balão: ancorado no alvo (lado efetivo) ou centralizado
   const containerLeft = rect ? Math.max(16, Math.min(rect.left, window.innerWidth - 336)) : 0
   const balloonStyle: React.CSSProperties = isCenter
     ? {
-        // Boas-vindas ENQUADRADA (Matheus 19/10: "não enquadra exatamente dentro
-        // da janela clara"): inset horizontal fixo, sem transform — o card
-        // respeita a largura da tela com margem simétrica.
+        // Boas-vindas ENQUADRADA + DESCIDA (Matheus 20/10: "aparece muito em
+        // cima, parece grudado no topo do celular"): folga de 18% da altura
+        // da tela acima do card — respira, sem colar na status bar.
+        top: Math.round(window.innerHeight * 0.18),
         left: 16,
         right: 16,
         maxWidth: 360,
@@ -396,15 +381,6 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
                   espaço demais, pontinhos desnecessários). Só a flechinha âmbar;
                   no passo Copilot, o botão de ação real. */}
               <div className="flex items-center justify-end gap-1.5 mt-2.5">
-                {step.id === 'copilot' && (
-                  <button
-                    type="button"
-                    onClick={openCopilot}
-                    className="text-[11.5px] font-bold text-white bg-[#14213D] hover:bg-[#1d2f52] px-3.5 py-1.5 rounded-full transition-colors shadow-sm"
-                  >
-                    Abrir o Copilot
-                  </button>
-                )}
                 <button
                   type="button"
                   onClick={advance}
@@ -430,15 +406,6 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
           </div>
         </div>
       </div>
-
-      {/* Dica de navegação (só a partir do 2º passo) */}
-      {!isFirstStep && (
-        <div className="absolute bottom-6 left-0 right-0 text-center pointer-events-none">
-          <span className="text-[11px] text-white/60 font-medium bg-[#0B1526]/60 px-3 py-1.5 rounded-full">
-            Toque em qualquer lugar para continuar
-          </span>
-        </div>
-      )}
     </div>
   )
 }

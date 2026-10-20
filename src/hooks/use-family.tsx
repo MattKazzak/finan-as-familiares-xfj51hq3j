@@ -246,17 +246,25 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     // no banco → mas o objeto `family` no contexto ficava VELHO (triggerRefresh
     // só recarregava transações). Voltar pra Home re-montava o walkthrough com
     // tour_steps_done antigo = tour reiniciava sozinho a cada navegação.
-    // Fix: recarrega a família em background (SEM loading, sem flicker) junto.
+    //
+    // APP LENTO (20/10, Matheus): a v1 deste fix chamava fetchFamilyData()
+    // (família + membros + categorias + completeness — 4+ queries) em CADA
+    // refresh de transação. Agora: 1 query leve, só a linha da família, para
+    // atualizar tour_steps_done e campos do contexto sem peso.
     ;(async () => {
-      if (!user) return
+      if (!user || !family?.id) return
       try {
-        const data = await fetchFamilyData()
-        setFamily(data.family)
+        const { data } = await (supabase as any)
+          .from('families')
+          .select('*')
+          .eq('id', family.id)
+          .single()
+        if (data) setFamily(data)
       } catch {
         // Silencioso: o refresh de transações é o caminho principal
       }
     })()
-  }, [user])
+  }, [user, family?.id])
 
   const reloadFamily = useCallback(async () => {
     if (!user) {
