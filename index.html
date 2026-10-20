@@ -81,6 +81,29 @@
         document.documentElement.style.colorScheme = 'light'
       } catch (e) {}
     </script>
+    <script>
+      // CAIXA-PRETA (20/10, tela branca pós-tour): captura erro fatal ANTES do
+      // React e o pinta na tela + grava em localStorage — sobrevive a reloads.
+      (function fatalTrap() {
+        try {
+          var show = function (kind, msg, stack) {
+            try {
+              localStorage.setItem(
+                'curiangoo_fatal',
+                JSON.stringify({ kind: kind, msg: String(msg).slice(0, 500), stack: String(stack || '').slice(0, 1500), t: Date.now() }),
+              )
+              var el = document.createElement('pre')
+              el.setAttribute('data-testid', 'fatal-trap')
+              el.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:99999;background:#fff;color:#900;font:11px monospace;padding:10px;border:2px solid #900;border-radius:8px;max-height:45vh;overflow:auto;white-space:pre-wrap'
+              el.textContent = 'ERRO FATAL (' + kind + '): ' + String(msg).slice(0, 500) + '\n\n' + String(stack || '').slice(0, 1500)
+              ;(document.body || document.documentElement).appendChild(el)
+            } catch (e) {}
+          }
+          window.addEventListener('error', function (e) { show('error', e.message, e.error && e.error.stack) }, true)
+          window.addEventListener('unhandledrejection', function (e) { show('rejection', e.reason && (e.reason.message || e.reason), e.reason && e.reason.stack) }, true)
+        } catch (e) {}
+      })()
+    </script>
     <!-- @skip-protected: Do not remove. Required for app features. -->
     <script src="https://goskip.dev/skip.js"></script>
     <!-- @skip-protected: Do not remove. App entrypoint. -->
