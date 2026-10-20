@@ -1,4 +1,9 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react'
+// FIX TELA BRANCA 2 (20/10, caixa-preta): este arquivo usava (supabase as any)
+// SEM import — o triggerRefresh da v492 engolia o ReferenceError no catch
+// silencioso (por isso o fix do tour renascendo nunca funcionou!), e o
+// markTourStepOptimistic crashava no clique. Import obrigatório.
+import { supabase } from '@/lib/supabase/client'
 import type {
   Family,
   FamilyMember,
