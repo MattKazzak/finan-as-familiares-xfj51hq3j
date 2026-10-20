@@ -106,7 +106,11 @@ export interface FirstWalkthroughProps {
 }
 
 export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWalkthroughProps) {
-  const navigate = useNavigate()
+  // FIX TELA BRANCA (20/10, caixa-preta no Chrome real): sobrou um
+  // `const navigate = useNavigate()` órfão — meu patch de ontem removeu o
+  // import do react-router-dom mas deixou a chamada. Build passa (é global
+  // indefinido, não erro de sintaxe), mas o mount do tour explodia em
+  // ReferenceError → tela branca para TODO usuário novo e no Reiniciar tour.
   // Navegação por ID na ordem FIXA de STEPS (a lista não encolhe — bug v3)
   const firstPending = STEPS.find((s) => !stepsDone.includes(s.id))?.id ?? null
   const [currentId, setCurrentId] = useState<WalkthroughStepId | null>(firstPending)
