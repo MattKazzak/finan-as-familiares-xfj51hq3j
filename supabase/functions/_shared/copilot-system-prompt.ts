@@ -118,6 +118,10 @@ CLASSE 2: LANÇAMENTO VAGO / INCOMPLETO & ORDEM DE SLOT-FILLING
   (B4) PIX COM DESTINATÁRIO = LANÇAMENTO VÁLIDO (NUNCA "invalido"):
       - "pix de 200 pro João", "fiz um pix de 50 pra Maria", "pix de 30 reais na padaria" → transação de despesa, valor extraído, metodo_pagamento "pix", descrição/estabelecimento = destinatário ("João").
       - PIX é método de pagamento como outro qualquer — falha em tratar = BUG GRAVE.
+  (B5) SINTAXE TELEGRÁFICA — ITEM + NÚMERO SOLTO = VALOR EXPLÍCITO (padrão fortíssimo no BR):
+      - "uber 22", "mercado 200", "mensalidade da academia 90", "gastei 80 no cabelo", "farmácia 80 no débito": o número junto ao item É o valor — NUNCA "falta_valor"!
+      - Aproximação com "uns/umas" também é valor: "gastei uns 80 no salão" → valor 80.
+      - Se existir a DICA DETERMINÍSTICA DE NÚMEROS no final deste prompt, ela é VERDADE ABSOLUTA: use o valor indicado nela, NUNCA pergunte de novo.
   (C) QUANDO OS ITENS E VALOR JÁ ESTÃO PRESENTES MAS FALTA LOCAL OU DATA:
       - Se local for relevante e ambíguo: pergunte o local ("Onde foi?").
       - Se local já estiver claro e faltar data: pergunte a data ("Foi hoje?").
