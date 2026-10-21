@@ -1461,7 +1461,50 @@ export function CopilotPage() {
       } else if (parsed.aiStatus === 'sucesso' && parsed.amountCents > 0) {
         setPendingTx(null)
         cardType = 'transacao'
-        await executeAutonomousSave(parsed)
+        const savedTx = await executeAutonomousSave(parsed)
+
+        // LANÇAMENTO RECORRENTE VIA COPILOT (21/10, pedido do Matheus):
+        // "aluguel de 1200 todo dia 5" cria a CONTA FIXA além da transação.
+        // Detecção local por regex (zero custo, funciona já) — quando a edge
+        // redeployar com a regra B6 do prompt, parsed.recorrente também chega.
+        const RECUR_RE =
+          /\b(todo|todos|toda|todas)\s+(os\s+|as\s+)?m[eê]s(es)?\b|\bfix[ao]\b|\brecorrente\b|\bsempre no dia\b|\bpor m[eê]s\b|\bmensal(mente)?\b/i
+        const recDayMatch = text.match(/dia\s+(\d{1,2})/i)
+        const wantsRecurring = parsed.recorrente === true || RECUR_RE.test(text)
+        if (wantsRecurring && family && savedTx) {
+          const recDay = Math.max(
+            1,
+            Math.min(
+              31,
+              (recDayMatch && parseInt(recDayMatch[1], 10)) ||
+                parseInt((savedTx.transaction_date || '').slice(8, 10), 10) ||
+                new Date().getDate(),
+            ),
+          )
+          try {
+            const { createRecurringIncome } = await import('@/services/recurring-incomes')
+            const recRule = await createRecurringIncome({
+              family_id: family.id,
+              member_id: savedTx.member_id,
+              category_id: savedTx.category_id,
+              subcategory_id: savedTx.subcategory_id,
+              name: parsed.description || text.slice(0, 60),
+              type: parsed.type,
+              amount_cents: parsed.amountCents,
+              day_of_month: recDay,
+            })
+            if (recRule?.id) {
+              await updateTransaction(savedTx.id, {
+                recurring_income_id: recRule.id,
+                is_recurring: true,
+                recurring_month: (savedTx.transaction_date || '').slice(0, 7) + '-01',
+              })
+            }
+            assistantText = `${parsed.friendlyMessage || 'Lançamento feito! 👍'} 🔁 Vou lançar automaticamente todo dia ${recDay}.`
+          } catch (recErr) {
+            console.warn('Copilot: erro ao criar conta fixa recorrente:', recErr)
+          }
+        }
       } else if (
         parsed.aiStatus === 'clarificacao' ||
         parsed.aiStatus === 'clarificacao_categoria'

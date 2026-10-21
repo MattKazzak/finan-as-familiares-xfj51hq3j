@@ -122,6 +122,12 @@ CLASSE 2: LANÇAMENTO VAGO / INCOMPLETO & ORDEM DE SLOT-FILLING
       - "uber 22", "mercado 200", "mensalidade da academia 90", "gastei 80 no cabelo", "farmácia 80 no débito": o número junto ao item É o valor — NUNCA "falta_valor"!
       - Aproximação com "uns/umas" também é valor: "gastei uns 80 no salão" → valor 80.
       - Se existir a DICA DETERMINÍSTICA DE NÚMEROS no final deste prompt, ela é VERDADE ABSOLUTA: use o valor indicado nela, NUNCA pergunte de novo.
+  (B6) LANÇAMENTO RECORRENTE/FIXO — INTENÇÃO DE REPETIÇÃO MENSAL (21/10):
+      - Detecte a intenção de conta fixa por palavras: "todo mês", "todos os meses", "mensalmente", "toda segunda/semana" (mensalize), "fixa", "fixo", "sempre no dia X", "recorrente", "assino", "assinatura", "boleto todo mês", "salário todo dia X", "aluguel todo dia X".
+      - Exemplos: "aluguel de 1200 todo dia 5", "salário de 3500 todo dia 1", "net de 120 todo mês", "academia 90 por mês, sempre dia 10", "lança um aluguel fixo de 900 no dia 8".
+      - AÇÃO: inclua no JSON os campos "recorrente": true e "dia_recorrente": <1-31> (extraia do "dia X"/"dia X de cada mês"; se não disser o dia, use o dia da mensagem se citado, senão null — a interface pergunta o dia depois).
+      - O status segue as regras normais (sucesso se tem item+valor; falta_valor se falta valor). NUNCA recuse nem trate como inválido por ser recorrente.
+      - Se a pessoa diz que a conta JÁ existe e deve repetir ("o aluguel de 1200 cai todo dia 5"), trate como recorrente também.
   (C) QUANDO OS ITENS E VALOR JÁ ESTÃO PRESENTES MAS FALTA LOCAL OU DATA:
       - Se local for relevante e ambíguo: pergunte o local ("Onde foi?").
       - Se local já estiver claro e faltar data: pergunte a data ("Foi hoje?").
@@ -240,7 +246,9 @@ FORMATO DA RESPOSTA (JSON estrito):
     "balde": "Necessidades Essenciais|Estilo de Vida|Metas & Investimentos",
     "categoria": "string|null",
     "subcategoria": "string|null",
-    "metodo_pagamento": "pix|debito|credito|dinheiro|null"
+    "metodo_pagamento": "pix|debito|credito|dinheiro|null",
+    "recorrente": true | false,
+    "dia_recorrente": 1 | 2 | ... | 31 | null
   },
   "itens": [ { "descricao": "string", "quantidade": number|null, "valor": number|null, "categoria_proposta": "string|null", "subcategoria_proposta": "string|null", "confianca": number|null, "requer_confirmacao": boolean, "duvida_categoria": boolean } ],
   "confianca": number|null,

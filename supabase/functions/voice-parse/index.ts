@@ -1193,6 +1193,14 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
       status: unmappedItems.length > 0 && status === 'sucesso' ? 'clarificacao' : status,
       acao: parsedAiJson?.acao ?? null,
       mes_alvo: mesAlvo,
+      // LANÇAMENTO RECORRENTE (21/10, B6): propaga a intenção de conta fixa
+      recorrente: parsedAiJson?.transacao?.recorrente === true || parsedAiJson?.recorrente === true,
+      dia_recorrente:
+        typeof parsedAiJson?.transacao?.dia_recorrente === 'number'
+          ? parsedAiJson.transacao.dia_recorrente
+          : typeof parsedAiJson?.dia_recorrente === 'number'
+            ? parsedAiJson.dia_recorrente
+            : null,
       tipo_resposta: isConsulta
         ? 'consulta'
         : isConsultoriaCategoria

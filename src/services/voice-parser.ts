@@ -146,6 +146,8 @@ export interface ParsedVoiceTransaction {
   extractedItems?: VoiceAiTransactionItem[] | null
   // Rodada 28: Modo Cesta
   mesAlvo?: string | null
+  recorrente?: boolean | null
+  diaRecorrente?: number | null
   isBasket?: boolean
   basketItemsDescription?: string
   basketEventTag?: string
@@ -3020,6 +3022,8 @@ export function mapAiResponseToParsedTransaction(
     structuredOptions,
     friendlyMessage: aiData.mensagem_amigavel,
     mesAlvo: aiData.mes_alvo || null,
+    recorrente: aiData.recorrente === true,
+    diaRecorrente: typeof aiData.dia_recorrente === 'number' ? aiData.dia_recorrente : null,
     aiError: aiData.error_detail || (aiData.error ? `Erro: ${aiData.error}` : null),
     isUncertainSuggestion:
       (typeof aiData.confianca === 'number' && aiData.confianca < 0.6) ||

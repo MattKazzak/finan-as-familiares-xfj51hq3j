@@ -422,6 +422,31 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           description: `A regra "${description.trim()}" foi salva com sucesso.`,
         })
       } else if (editingTransaction) {
+        // CONVERSÃO EM RECORRENTE (21/10, pedido do Matheus): transação comum
+        // editada com "Repetir todo mês" ligado cria a regra fixa e vincula.
+        if (!editingTransaction.recurring_income_id && isRecurring) {
+          try {
+            const newRule = await createRecurringIncome({
+              family_id: family.id,
+              member_id: memberId,
+              category_id: categoryId === 'none' ? null : categoryId,
+              subcategory_id:
+                subcategoryId === 'none' || categoryId === 'none' ? null : subcategoryId,
+              name: description.trim(),
+              type,
+              amount_cents: cents,
+              day_of_month: dayOfMonth,
+            })
+            await updateTransaction(editingTransaction.id, {
+              recurring_income_id: newRule?.id || null,
+              is_recurring: true,
+              recurring_month: transactionDate.slice(0, 7) + '-01',
+            })
+          } catch (convErr) {
+            console.warn('Erro ao converter transação em recorrente:', convErr)
+          }
+        }
+
         // Se a transação estiver vinculada a uma regra fixa recorrente, atualiza a regra fixa também se desejado
         if (editingTransaction.recurring_income_id && isRecurring) {
           try {
@@ -1169,7 +1194,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
             {dayOfMonth} de cada mês e alimenta a projeção orçamentária.
           </p>
         </div>
-      ) : !editingTransaction ? (
+      ) : (
         <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-2.5">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -1184,7 +1209,9 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                   Repetir todo mês (Fixo)
                 </Label>
                 <p className="text-[11px] text-slate-500 leading-tight mt-0.5 truncate">
-                  Alimenta o planejamento fixo do orçamento
+                  {editingTransaction
+                    ? 'Marque para virar lançamento fixo mensal'
+                    : 'Alimenta o planejamento fixo do orçamento'}
                 </p>
               </div>
             </div>
@@ -1203,19 +1230,18 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           </div>
 
           {/* Link discreto para gerenciar contas fixas */}
-          <div className="pt-1 flex items-center justify-between text-[11px]">
-            <button
-              type="button"
-              onClick={handleOpenRecurringManager}
-              className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-800 font-semibold hover:underline cursor-pointer"
-            >
-              <span>Gerenciar contas fixas 🔁</span>
-              <ExternalLink className="w-3 h-3" />
-            </button>
-          </div>
-
-          {/* Seção expandida quando "Repetir todo mês" ativado */}
-          {isRecurring && (
+<div className="pt-1 flex items-center justify-between text-[11px]">
+  <button
+    type="button"
+    onClick={handleOpenRecurringManager}
+    className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-800 font-semibold hover:underline cursor-pointer"
+  >
+    <span>Gerenciar contas fixas 🔁</span>
+    <ExternalLink className="w-3 h-3" />
+  </button>
+</div>
+{/* Seção expandida quando "Repetir todo mês" ativado */}
+{isRecurring && (
             <div className="pt-2.5 border-t border-slate-200/70 space-y-2 animate-in fade-in-50">
               <div className="flex items-center justify-between gap-3 bg-white p-2.5 rounded-xl border border-slate-200/90">
                 <div className="flex items-center gap-1.5">
