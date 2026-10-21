@@ -1230,18 +1230,18 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           </div>
 
           {/* Link discreto para gerenciar contas fixas */}
-<div className="pt-1 flex items-center justify-between text-[11px]">
-  <button
-    type="button"
-    onClick={handleOpenRecurringManager}
-    className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-800 font-semibold hover:underline cursor-pointer"
-  >
-    <span>Gerenciar contas fixas 🔁</span>
-    <ExternalLink className="w-3 h-3" />
-  </button>
-</div>
-{/* Seção expandida quando "Repetir todo mês" ativado */}
-{isRecurring && (
+          <div className="pt-1 flex items-center justify-between text-[11px]">
+            <button
+              type="button"
+              onClick={handleOpenRecurringManager}
+              className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-800 font-semibold hover:underline cursor-pointer"
+            >
+              <span>Gerenciar contas fixas 🔁</span>
+              <ExternalLink className="w-3 h-3" />
+            </button>
+          </div>
+          {/* Seção expandida quando "Repetir todo mês" ativado */}
+          {isRecurring && (
             <div className="pt-2.5 border-t border-slate-200/70 space-y-2 animate-in fade-in-50">
               <div className="flex items-center justify-between gap-3 bg-white p-2.5 rounded-xl border border-slate-200/90">
                 <div className="flex items-center gap-1.5">
@@ -1277,7 +1277,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
             </div>
           )}
         </div>
-      }
+      )}
 
       {/* ========================================================
           8. SEÇÃO DE PARCELAMENTO (APENAS PARA DESPESAS AVULSAS NÃO RECORRENTES)
