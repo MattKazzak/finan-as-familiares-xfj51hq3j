@@ -288,27 +288,48 @@ export async function fetchFamilyData() {
   let family: Family | null = null
 
   if (families && families.length > 0) {
-    // Avalia a completude das famílias para selecionar adequadamente
-    // Critério alinhado ao R50: completa = tem categorias E tem regras de IA
-    // (a comparação hardcoded com 19 categorias quebrava com catálogo customizado)
-    let chosenFamily: Family | null = null
-    for (const cand of families) {
-      const [{ count: cCount }, { count: rCount }] = await Promise.all([
-        (supabase as any)
-          .from('transaction_categories')
-          .select('id', { count: 'exact', head: true })
-          .eq('family_id', cand.id),
-        (supabase as any)
-          .from('categorization_rules')
-          .select('id', { count: 'exact', head: true })
-          .eq('family_id', cand.id),
-      ])
-      if ((cCount ?? 0) > 0 && (rCount ?? 0) > 0) {
-        chosenFamily = cand as Family
-        break
+    // FIX DUPLICAÇÃO DE FAMÍLIA (21/10, caso real da Karine): quando o usuário está em
+    // MAIS DE UMA família, o critério "prioriza a completa" escolhia a FANTASMA do
+    // onboarding (ela tem categorias+regras do wizard!) em vez da família real que ele
+    // acabou de aceitar por convite. Critério correto: a família onde ele tem membership
+    // MAIS RECENTE (a que ele entendeu estar usando por último — convite aceito agora
+    // vence o onboarding abandonado de ontem).
+    const { data: myMemberships } = await (supabase as any)
+      .from('family_members')
+      .select('family_id, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+    const latestMembershipFamilyId = myMemberships?.[0]?.family_id as string | undefined
+    if (latestMembershipFamilyId) {
+      const latest = (families as Family[]).find((f) => f.id === latestMembershipFamilyId)
+      if (latest) {
+        family = latest
       }
     }
-    family = chosenFamily ?? (families[0] as Family)
+    // Fallback: sem membership visível (não deveria ocorrer), segue o fluxo antigo.
+    if (!family) {
+      // Avalia a completude das famílias para selecionar adequadamente
+      // Critério alinhado ao R50: completa = tem categorias E tem regras de IA
+      // (a comparação hardcoded com 19 categorias quebrava com catálogo customizado)
+      let chosenFamily: Family | null = null
+      for (const cand of families) {
+        const [{ count: cCount }, { count: rCount }] = await Promise.all([
+          (supabase as any)
+            .from('transaction_categories')
+            .select('id', { count: 'exact', head: true })
+            .eq('family_id', cand.id),
+          (supabase as any)
+            .from('categorization_rules')
+            .select('id', { count: 'exact', head: true })
+            .eq('family_id', cand.id),
+        ])
+        if ((cCount ?? 0) > 0 && (rCount ?? 0) > 0) {
+          chosenFamily = cand as Family
+          break
+        }
+      }
+      family = chosenFamily ?? (families[0] as Family)
+    } // fim fallback if (!family)
   }
 
   // Se o usuário não possui uma família criada ainda, verifica se há convite pendente para aplicar
