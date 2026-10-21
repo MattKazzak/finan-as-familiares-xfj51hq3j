@@ -1277,7 +1277,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
             </div>
           )}
         </div>
-      ) : null}
+      }
 
       {/* ========================================================
           8. SEÇÃO DE PARCELAMENTO (APENAS PARA DESPESAS AVULSAS NÃO RECORRENTES)
