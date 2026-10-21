@@ -595,14 +595,16 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
         }
       }
     } else if (targetFamilyId) {
-      // Se o cliente não enviou historico_mensagens, busca as últimas 6 mensagens em copilot_messages
+      // Se o cliente não enviou historico_mensagens, busca as últimas 12 mensagens
+      // em copilot_messages (20/10, Matheus: 6 era curto pra "continua dali" —
+      // padrão de mercado 10-20; custo de token mínimo)
       try {
         const { data: dbMessages } = await supabase
           .from('copilot_messages')
           .select('role, content, created_at')
           .eq('family_id', targetFamilyId)
           .order('created_at', { ascending: false })
-          .limit(6)
+          .limit(12)
 
         if (dbMessages && dbMessages.length > 0) {
           const chronological = [...dbMessages].reverse()
@@ -643,6 +645,11 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
         response_format: { type: 'json_object' },
         temperature: 0.1,
         max_tokens: maxTokens,
+        // FIX EVALS FLAKY (20/10): seed fixo + top_p reduzido deixam a saída o
+        // mais determinística possível na API atual (temperature 0.1 já havia;
+        // a variância restante vinha do sampling). Mesma frase → mesma classe.
+        seed: 42,
+        top_p: 0.5,
       }),
     })
 
