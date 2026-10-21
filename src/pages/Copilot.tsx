@@ -348,6 +348,25 @@ export function CopilotPage() {
     const text = textToSend.trim()
     if (!text || isProcessing) return
 
+    // GUARDA 2 — TEXTO SEM CONTEÚDO (21/10, relato do Matheus: "aldndnwksksk"):
+    // sem vogais + consoantes repetidas = ruído digitado ou transcrição inventada
+    // do Whisper pra silêncio/assobio. NÃO gasta chamada de IA — responde na hora.
+    const letters = text.replace(/[^a-zà-úA-ZÀ-Ú]/g, '')
+    const vowels = letters.match(/[aeiouáàâãéêíóôõú]/gi)?.length ?? 0
+    if (letters.length >= 6 && vowels / letters.length < 0.2) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `asst-${Date.now()}`,
+          sender: 'assistant' as const,
+          text: 'Não consegui entender isso — parece que veio algo sem sentido. Pode repetir com outras palavras? Consigo lançar gastos ("gastei 30 no mercado"), responder saldos e tirar dúvidas das finanças de vocês.',
+          timestamp: new Date(),
+          cardType: 'consulta',
+        },
+      ])
+      return
+    }
+
     if (!hasConsent && !getLocalAiConsent()) {
       setShowConsentModal(true)
       return

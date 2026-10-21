@@ -165,6 +165,30 @@ Deno.serve(async (req) => {
     const textoNormalizadoPtBr =
       typeof texto === 'string' ? normalizeBrazilianCurrencyString(texto) : texto
 
+    // GUARDA 3 — TEXTO SEM CONTEÚDO FONÉTICO (21/10, relato do Matheus):
+    // "aldndnwksksk", transcrição inventada do Whisper pra silêncio/assobio.
+    // Sem vogais suficientes = ruído. Resposta honesta SEM gastar chamada de IA.
+    if (typeof textoNormalizadoPtBr === 'string' && textoNormalizadoPtBr.trim()) {
+      const letters = textoNormalizadoPtBr.replace(/[^a-zà-úA-ZÀ-Ú]/g, '')
+      const vowels = letters.match(/[aeiouáàâãéêíóôõú]/gi)?.length ?? 0
+      const words = textoNormalizadoPtBr.trim().split(/\s+/).length
+      if (letters.length >= 6 && words <= 4 && vowels / letters.length < 0.2) {
+        return new Response(
+          JSON.stringify({
+            status: 'invalido',
+            router: { classe: 9, confianca: 1, lacunas: null },
+            transacao: null,
+            pergunta_clarificacao: null,
+            opcoes_sugestao: null,
+            resposta_consulta: null,
+            mensagem_amigavel:
+              'Não consegui entender — parece que veio algo sem sentido. Pode repetir falando mais perto do microfone?',
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        )
+      }
+    }
+
     if (!texto || typeof texto !== 'string' || !texto.trim()) {
       return new Response(
         JSON.stringify({

@@ -75,6 +75,10 @@ export function useVoiceCapture(options: UseVoiceCaptureOptions = {}): UseVoiceC
   const recognitionRef = useRef<any>(null)
   const finalBufferRef = useRef('')
   const latestTranscriptRef = useRef('')
+  // GUARDA 1 (21/10, relato do Matheus): espelho síncrono de audioDetected —
+  // se nenhum som acima do ruído foi capturado, o áudio é silêncio e NEM
+  // chamamos o Whisper (que inventa palavras pra silêncio/assobio).
+  const audioDetectedRef = useRef(false)
 
   // Limpeza de buffers e analisadores Web Audio
   const cleanupAudioAnalyser = useCallback(() => {
@@ -351,6 +355,7 @@ export function useVoiceCapture(options: UseVoiceCaptureOptions = {}): UseVoiceC
     finalBufferRef.current = ''
     audioChunksRef.current = []
     setElapsedSeconds(0)
+    audioDetectedRef.current = false
 
     stopSources()
 
@@ -436,6 +441,7 @@ export function useVoiceCapture(options: UseVoiceCaptureOptions = {}): UseVoiceC
 
               if (totalEnergy > 10) {
                 setAudioDetected(true)
+                audioDetectedRef.current = true
               }
               setRealAudioLevels(bands)
               animationFrameRef.current = requestAnimationFrame(updateWaveform)
@@ -616,6 +622,17 @@ export function useVoiceCapture(options: UseVoiceCaptureOptions = {}): UseVoiceC
       try {
         const transcribeRes = await transcribeVoiceAudio(audioBlob)
         setIsTranscribing(false)
+
+        // GUARDA 1 — SILENCIO REAL (21/10, relato do Matheus): o hook mede os
+        // níveis de áudio o tempo todo; se NENHUM som acima do ruído foi detectado
+        // na gravação inteira, o áudio era silêncio — nem chama o Whisper
+        // (que "inventa" palavras pra silêncio/ruído).
+        if (!audioDetectedRef.current) {
+          const silentMsg = 'Não ouvi nada — fale mais perto do microfone ou digite abaixo.'
+          setErrorMessage(silentMsg)
+          onError?.(silentMsg)
+          return null
+        }
 
         if (transcribeRes.error || !transcribeRes.text) {
           const errDetail =
