@@ -1,16 +1,16 @@
 {
   "_versions": {
-    "voice-parse": 421,
-    "batch-categorize": 335,
-    "voice-transcribe": 123,
-    "webhook-mercadopago": 16,
-    "webhook-asaas": 17,
-    "whatsapp-webhook": 19,
-    "cancel-asaas-subscription": 13,
-    "create-asaas-checkout": 13,
-    "push-dispatcher": 18,
-    "push-cron-trigger": 12,
-    "audit-copilot-conversations": 2,
+    "voice-parse": 423,
+    "batch-categorize": 336,
+    "voice-transcribe": 124,
+    "webhook-mercadopago": 17,
+    "webhook-asaas": 18,
+    "whatsapp-webhook": 20,
+    "cancel-asaas-subscription": 14,
+    "create-asaas-checkout": 14,
+    "push-dispatcher": 19,
+    "push-cron-trigger": 13,
+    "audit-copilot-conversations": 3,
     "placeholder-check": 2
   }
 }

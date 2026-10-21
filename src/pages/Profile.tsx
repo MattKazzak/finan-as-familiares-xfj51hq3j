@@ -12,7 +12,7 @@ import {
   deleteFamilyWorkspaceManually,
 } from '@/services/family'
 // Auditoria 16/10: imports do settlement removidos (migraram pra Carteira/Orçamentos)
-import { CreditCard, ExternalLink, ChevronRight, Settings, RotateCcw } from 'lucide-react'
+import { CreditCard, ExternalLink, ChevronRight, Settings, RotateCcw, Bell } from 'lucide-react'
 import {
   fetchMySubscription,
   requestCancelSubscription,
@@ -109,6 +109,14 @@ export default function ProfilePage() {
   // Estado do modal de instruções PWA (iOS / Outros sem prompt nativo)
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false)
   const [isInstalling, setIsInstalling] = useState(false)
+  // NOTIFICAÇÕES (21/10): estado real do permission do browser
+  const [pushStatus, setPushStatus] = useState<'granted' | 'denied' | 'default' | 'unsupported'>(
+    typeof Notification !== 'undefined' ? Notification.permission : 'unsupported',
+  )
+  const [pushBusy, setPushBusy] = useState(false)
+  const [notificationsHelpOpen, setNotificationsHelpOpen] = useState(false)
+  // EXPORTAR CSV (LGPD portabilidade)
+  const [exporting, setExporting] = useState(false)
   const [isSignOutConfirmOpen, setIsSignOutConfirmOpen] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
 
@@ -682,6 +690,102 @@ export default function ProfilePage() {
       // localStorage indisponível
     }
     navigate('/')
+  }
+
+  // ATIVAR PUSH (21/10): pede permissão ao browser e registra a subscription
+  const handleEnablePush = async () => {
+    setPushBusy(true)
+    try {
+      const perm = await Notification.requestPermission()
+      setPushStatus(perm)
+      if (perm === 'granted') {
+        const { subscribeToPush } = await import('@/services/push')
+        const res = await subscribeToPush()
+        if (res.ok) {
+          toast({
+            title: 'Notificações ativas! 🔔',
+            description: 'Você vai receber o piu quando a família lançar algo.',
+          })
+        } else {
+          toast({
+            title: 'Quase lá',
+            description: 'Permissão dada, mas o cadastro falhou. Reabra o app e tente de novo.',
+            variant: 'destructive',
+          })
+        }
+      }
+    } catch (err: any) {
+      console.warn('Erro ao ativar push:', err)
+      toast({
+        title: 'Não foi possível ativar',
+        description: 'Feche e reabra o app e tente de novo.',
+        variant: 'destructive',
+      })
+    } finally {
+      setPushBusy(false)
+    }
+  }
+
+  // EXPORTAR CSV (21/10, LGPD portabilidade): todas as transações da família
+  const handleExportCsv = async () => {
+    if (!family) return
+    setExporting(true)
+    try {
+      const { fetchTransactions } = await import('@/services/transactions')
+      const rows = await fetchTransactions({ familyId: family.id })
+      const esc = (v: any) => {
+        const s = String(v ?? '')
+        return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+      }
+      const header = [
+        'Data',
+        'Tipo',
+        'Descricao',
+        'Categoria',
+        'Subcategoria',
+        'Valor (R$)',
+        'Responsavel',
+        'Status',
+      ]
+      const lines = [header.join(';')]
+      for (const tx of rows) {
+        lines.push(
+          [
+            tx.transaction_date,
+            tx.type === 'income' ? 'Receita' : 'Despesa',
+            esc(tx.description),
+            esc(tx.category?.name),
+            esc(tx.subcategory?.name),
+            ((tx.amount_cents || 0) / 100).toFixed(2).replace('.', ','),
+            esc(tx.member?.name),
+            tx.status === 'projected' ? 'Previsto' : 'Confirmado',
+          ].join(';'),
+        )
+      }
+      const blob = new Blob(['\uFEFF' + lines.join('\n')], {
+        encoding: undefined,
+        type: 'text/csv;charset=utf-8',
+      } as any)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `curiangoo-lancamentos-${new Date().toISOString().slice(0, 10)}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast({
+        title: 'Exportação pronta! 📄',
+        description: `${rows.length} lançamentos exportados em CSV.`,
+      })
+    } catch (err: any) {
+      console.error('Erro ao exportar CSV:', err)
+      toast({
+        title: 'Erro ao exportar',
+        description: 'Tente novamente em instantes.',
+        variant: 'destructive',
+      })
+    } finally {
+      setExporting(false)
+    }
   }
 
   const handleInstallShortcutClick = async () => {
@@ -1341,6 +1445,81 @@ export default function ProfilePage() {
                 Reiniciar
               </button>
             </div>
+
+            {/* NOTIFICAÇÕES (21/10, Matheus): o app depende de push (piu da família,
+                deep-link) e o usuário não tinha onde gerenciar. Estado real do
+                browser + guia de desbloqueio quando o canal foi negado. */}
+            <div className="px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
+                  <Bell className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-900">Notificações</p>
+                  <p className="text-[11px] text-slate-500" data-testid="push-status-label">
+                    {pushStatus === 'granted'
+                      ? 'Ativas — você recebe o piu da família'
+                      : pushStatus === 'denied'
+                        ? 'Bloqueadas pelo navegador — toque para ver como liberar'
+                        : pushStatus === 'unsupported'
+                          ? 'Não suportadas neste navegador'
+                          : 'Desligadas — toque para ativar'}
+                  </p>
+                </div>
+              </div>
+              {pushStatus === 'denied' ? (
+                <button
+                  type="button"
+                  onClick={() => setNotificationsHelpOpen(true)}
+                  className="shrink-0 text-xs font-bold text-[#14213D] bg-[#FCA311]/15 hover:bg-[#FCA311]/25 px-3.5 py-2 rounded-full transition-colors"
+                >
+                  Como liberar
+                </button>
+              ) : pushStatus === 'granted' ? (
+                <span className="shrink-0 text-[11px] font-bold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
+                  Ativas
+                </span>
+              ) : pushStatus === 'unsupported' ? (
+                <span className="shrink-0 text-[11px] font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                  Indisponível
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleEnablePush}
+                  disabled={pushBusy}
+                  className="shrink-0 text-xs font-bold text-[#14213D] bg-[#FCA311]/15 hover:bg-[#FCA311]/25 px-3.5 py-2 rounded-full transition-colors disabled:opacity-50"
+                >
+                  {pushBusy ? 'Ativando...' : 'Ativar'}
+                </button>
+              )}
+            </div>
+
+            {/* EXPORTAR MEUS DADOS (21/10, Matheus): direito de portabilidade LGPD.
+                Baixa TODAS as transações da família em CSV (abre no Excel/Google Planilhas). */}
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              disabled={exporting}
+              className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors text-left disabled:opacity-50"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                  <Download className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-900">Exportar meus dados</p>
+                  <p className="text-[11px] text-slate-500">
+                    Baixa todos os lançamentos em CSV (LGPD)
+                  </p>
+                </div>
+              </div>
+              {exporting ? (
+                <Loader2 className="w-4 h-4 text-slate-400 shrink-0 animate-spin" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+              )}
+            </button>
           </div>
         )}
       </section>
@@ -1890,6 +2069,44 @@ export default function ProfilePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* DIÁLOGO: COMO LIBERAR NOTIFICAÇÕES (21/10) — quando o canal foi bloqueado */}
+      <Dialog open={notificationsHelpOpen} onOpenChange={setNotificationsHelpOpen}>
+        <DialogContent className="rounded-3xl max-w-sm w-[92vw] p-6">
+          <DialogHeader>
+            <DialogTitle className="text-base text-[#14213D] text-left">
+              Como liberar as notificações
+            </DialogTitle>
+            <DialogDescription className="text-left text-xs text-slate-500">
+              As notificações foram bloqueadas pelo navegador. Para liberar:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="text-xs text-slate-600 leading-relaxed space-y-2">
+            <p>
+              <strong>1.</strong> Toque no ícone de cadeado à esquerda do endereço do navegador.
+            </p>
+            <p>
+              <strong>2.</strong> Entre em <strong>Permissões</strong> →{' '}
+              <strong>Notificações</strong> → marque <strong>Permitir</strong>.
+            </p>
+            <p>
+              <strong>3.</strong> No Android, se o app já estiver instalado: segure o ícone do
+              Curiangoo → <strong>Todas as categorias</strong> → ative <strong>Notificações</strong>{' '}
+              e <strong>Som</strong>.
+            </p>
+            <p>Pronto — o piu da família volta a tocar. 🐦</p>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              onClick={() => setNotificationsHelpOpen(false)}
+              className="w-full bg-[#14213D] hover:bg-[#1f2f54] text-white font-semibold rounded-xl text-xs border-0"
+            >
+              Entendi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* CONFIRMAÇÃO DE EXCLUSÃO DE CONTA (LGPD) */}
       <AlertDialog

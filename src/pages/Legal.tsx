@@ -78,6 +78,13 @@ export function PrivacyPage() {
           investimentos que você lança — pertencentes à sua família e visíveis apenas a ela.
         </p>
         <p>
+          <strong>Colaboração entre membros:</strong> o Curiangoo funciona como uma conta conjunta:
+          todos os membros da família podem visualizar, criar e{' '}
+          <strong>editar os lançamentos uns dos outros</strong> (inclusive corrigir categoria e
+          excluir). É assim que uma casa organiza o dinheiro junto — quem está na família, cuida da
+          casa.
+        </p>
+        <p>
           <strong>Copilot de voz:</strong> o áudio é processado em tempo real para transcrição e{' '}
           <strong>não é armazenado</strong> pelo Curiangoo. O texto das conversas fica salvo no
           histórico do seu chat.
@@ -102,9 +109,14 @@ export function PrivacyPage() {
         </p>
       </Section>
       <Section title="Seus direitos (LGPD)">
+        <p>Você pode acessar, corrigir, exportar e excluir seus dados a qualquer momento:</p>
         <p>
-          Você pode acessar, corrigir e excluir seus dados a qualquer momento: a exclusão da família
-          está no Perfil, e a exclusão da conta pode ser solicitada em Fale Conosco.
+          • <strong>Exportar seus lançamentos:</strong> Perfil → Minha conta → Exportar meus dados
+          (arquivo CSV).
+        </p>
+        <p>
+          • <strong>Excluir sua conta:</strong> Perfil → Minha conta → "Excluir minha conta". A
+          exclusão apaga seus dados de forma definitiva em até 30 dias.
         </p>
         <p>
           Dúvidas de privacidade: <strong>contato@curiangoo.com</strong>
@@ -136,6 +148,10 @@ export function TermsPage() {
         <p>
           Os lançamentos são feitos por você. Confira os extratos importados antes de confirmar — a
           leitura automática é auxiliar e pode cometer erros de categorização.
+        </p>
+        <p>
+          O Curiangoo é colaborativo: membros da mesma família podem editar lançamentos uns dos
+          outros. Lançou errado? Qualquer pessoa da casa pode corrigir.
         </p>
         <p>O administrador da família responde pelos dados lançados pelos membros convidados.</p>
       </Section>
