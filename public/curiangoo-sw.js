@@ -88,7 +88,10 @@ self.addEventListener('push', (event) => {
   const title = payload.title
   const options = {
     body: payload.body,
-    icon: 'https://evcxjxuakiyjerujntli.supabase.co/storage/v1/object/public/branding/push-icon-192.png?v=2',
+    // FIX ÍCONE NOTIFICAÇÃO (21/10, relato do Matheus — Samsung Internet): o
+    // push-icon antigo tinha fundo TRANSPARENTE e o Android/Samsung caía no
+    // fallback do ícone do browser (Saturno). Novo: fundo branco sólido.
+    icon: 'https://evcxjxuakiyjerujntli.supabase.co/storage/v1/object/public/branding/push-icon-192-v3.png',
     badge:
       'https://evcxjxuakiyjerujntli.supabase.co/storage/v1/object/public/branding/push-badge-96.png?v=2',
     tag: payload.tag,
