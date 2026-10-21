@@ -8,7 +8,7 @@
     "whatsapp-webhook": 19,
     "cancel-asaas-subscription": 13,
     "create-asaas-checkout": 13,
-    "push-dispatcher": 17,
+    "push-dispatcher": 18,
     "push-cron-trigger": 12,
     "audit-copilot-conversations": 2,
     "placeholder-check": 2

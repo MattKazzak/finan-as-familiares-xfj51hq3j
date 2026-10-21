@@ -93,7 +93,12 @@ async function processQueue(): Promise<{
               title,
               body,
               tag: `curiangoo-tx-${item.transaction_id}`,
-              data: { url: '/inicio', transactionId: item.transaction_id },
+              // DEEP-LINK (21/10): a notificação abre DIRETO no detalhe da
+              // transação (padrão Nubank/Monzo) — não na Home genérica.
+              data: {
+                url: `/inicio?tx=${item.transaction_id}`,
+                transactionId: item.transaction_id,
+              },
             }),
             optionsFor(t.endpoint),
           )

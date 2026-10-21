@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFamily } from '@/hooks/use-family'
 import { useActiveMonth } from '@/contexts/ActiveMonthContext'
@@ -285,6 +285,25 @@ export default function Home() {
   useEffect(() => {
     loadData()
   }, [loadData, refreshTrigger])
+
+  // DEEP-LINK DA NOTIFICAÇÃO (21/10, comportamento correto — padrão Nubank/Monzo):
+  // o push carrega ?tx=<id>; ao tocar na notificação o app abre DIRETO no detalhe
+  // da transação (não na Home genérica). Roda 1x após o primeiro load de dados.
+  const deepLinkAppliedRef = useRef(false)
+  useEffect(() => {
+    if (deepLinkAppliedRef.current || isInitialDataLoading) return
+    const params = new URLSearchParams(window.location.search)
+    const txId = params.get('tx')
+    if (!txId) return
+    const tx = transactions.find((t) => t.id === txId)
+    if (tx) {
+      deepLinkAppliedRef.current = true
+      setSelectedTx(tx)
+      setIsDetailOpen(true)
+      // Limpa o parâmetro da URL (deep-link é one-shot)
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [transactions, isInitialDataLoading])
 
   // Renda líquida prevista da família
   const plannedIncomeCents = family?.monthly_net_income_cents || 0
