@@ -2,6 +2,9 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 import { buildSystemPrompt, extractNumericHint } from '../_shared/copilot-system-prompt.ts'
+// REDEPLOY FORÇADO (21/10): a v418 no Supabase saiu corrompida (entrypoint apontando
+// para copilot-system-prompt.ts, index.ts ausente → função não respondia, 503/504).
+// Este comentário força o pipeline a reenviar os arquivos corretos.
 
 // Types para parsing e resposta
 interface SubItemProposta {

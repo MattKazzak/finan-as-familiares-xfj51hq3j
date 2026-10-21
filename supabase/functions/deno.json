@@ -1,6 +1,6 @@
 {
   "_versions": {
-    "voice-parse": 413,
+    "voice-parse": 419,
     "batch-categorize": 335,
     "voice-transcribe": 123,
     "webhook-mercadopago": 16,
@@ -10,6 +10,7 @@
     "create-asaas-checkout": 13,
     "push-dispatcher": 17,
     "push-cron-trigger": 12,
-    "audit-copilot-conversations": 2
+    "audit-copilot-conversations": 2,
+    "placeholder-check": 2
   }
 }
