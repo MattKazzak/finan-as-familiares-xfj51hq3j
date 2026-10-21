@@ -25,10 +25,23 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   })
 
-  // Janela: ontem no fuso de Brasília (America/Sao_Paulo = UTC-3, sem DST)
-  const now = new Date()
-  const yesterdayUTC = new Date(now.getTime() - 3 * 3600 * 1000 - 24 * 3600 * 1000)
-  const yStr = yesterdayUTC.toISOString().slice(0, 10)
+  // Janela: ontem no fuso de Brasília (America/Sao_Paulo = UTC-3, sem DST).
+  // BACKFILL (21/10): body {"date":"YYYY-MM-DD"} audita um dia específico —
+  // usado 1x p/ auditar conversas reais ANTERIORES à criação da auditoria.
+  let yStr: string
+  try {
+    const bodyJson = await req.json().catch(() => ({}))
+    const requested = (bodyJson as { date?: string })?.date
+    if (requested && /^\d{4}-\d{2}-\d{2}$/.test(requested)) {
+      yStr = requested
+    } else {
+      const now = new Date()
+      yStr = new Date(now.getTime() - 3 * 3600 * 1000 - 24 * 3600 * 1000).toISOString().slice(0, 10)
+    }
+  } catch {
+    const now = new Date()
+    yStr = new Date(now.getTime() - 3 * 3600 * 1000 - 24 * 3600 * 1000).toISOString().slice(0, 10)
+  }
   const startUTC = new Date(`${yStr}T00:00:00-03:00`).toISOString()
   const endUTC = new Date(`${yStr}T23:59:59-03:00`).toISOString()
 

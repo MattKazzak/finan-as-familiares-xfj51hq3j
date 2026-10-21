@@ -10,6 +10,6 @@
     "create-asaas-checkout": 13,
     "push-dispatcher": 17,
     "push-cron-trigger": 12,
-    "audit-copilot-conversations": 1
+    "audit-copilot-conversations": 2
   }
 }
