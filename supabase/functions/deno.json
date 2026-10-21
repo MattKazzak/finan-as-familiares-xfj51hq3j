@@ -9,6 +9,7 @@
     "cancel-asaas-subscription": 13,
     "create-asaas-checkout": 13,
     "push-dispatcher": 17,
-    "push-cron-trigger": 12
+    "push-cron-trigger": 12,
+    "audit-copilot-conversations": 1
   }
 }
