@@ -702,7 +702,7 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
         keywords: ['smart fit', 'academia', 'bluefit', 'gympass', 'totalpass', 'crossfit'],
       },
       {
-        name: 'Spa & Bem-estar',
+        name: 'Spa & Massagem',
         icon: 'HeartPulse',
         keywords: ['spa', 'massagem', 'drenagem', 'ofuro', 'relaxamento'],
       },

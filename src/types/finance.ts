@@ -239,7 +239,7 @@ export const CANONICAL_CATEGORIES: readonly CanonicalCategoryDefinition[] = [
       { name: 'Manicure & Estética', icon: 'Sparkles' },
       { name: 'Cosméticos & Perfumaria', icon: 'Package' },
       { name: 'Academia & Esportes', icon: 'Activity' },
-      { name: 'Spa & Bem-estar', icon: 'HeartPulse' },
+      { name: 'Spa & Massagem', icon: 'HeartPulse' },
     ],
   },
   // 10. Assinaturas & Apps (lifestyle, 7 subcategorias)
