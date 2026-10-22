@@ -1368,14 +1368,13 @@ export default function ProfilePage() {
                 <div className="w-9 h-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0">
                   <ShieldAlert className="w-4 h-4" />
                 </div>
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-red-700">Excluir minha conta</p>
                   <p className="text-[11px] text-slate-500">Apaga seus dados para sempre (LGPD)</p>
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
             </button>
-
-
           </div>
         )}
       </section>
@@ -1590,7 +1589,6 @@ export default function ProfilePage() {
                 </button>
               )}
             </div>
-
           </div>
         )}
       </section>
