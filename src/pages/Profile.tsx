@@ -117,6 +117,18 @@ export default function ProfilePage() {
   const [notificationsHelpOpen, setNotificationsHelpOpen] = useState(false)
   // EXPORTAR CSV (LGPD portabilidade)
   const [exporting, setExporting] = useState(false)
+// REFERRAL (22/10): programa Convide e Ganhe — código, contagens e link
+const [referral, setReferral] = useState<{
+  code: string | null
+  total: number
+  activated: number
+  bonus_days: number
+  cap: number
+} | null>(null)
+const [referralLink, setReferralLink] = useState<string | null>(null)
+const [referralCopied, setReferralCopied] = useState(false)
+const [referralDialogOpen, setReferralDialogOpen] = useState(false)
+const handleExportCsv = async () => {
   const [isSignOutConfirmOpen, setIsSignOutConfirmOpen] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
 
@@ -1520,6 +1532,44 @@ export default function ProfilePage() {
                 <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
               )}
             </button>
+
+            {/* CONVIDE E GANHE (22/10, Matheus): +7 dias de trial por amigo que
+                ativar (1ª transação), teto de 5. Compartilha via WhatsApp nativo. */}
+            <button
+              type="button"
+              onClick={async () => {
+                setReferralDialogOpen(true)
+                if (!referralLink) {
+                  try {
+                    const { getReferralLink, getReferralSummary } = await import(
+                      '@/services/referral'
+                    )
+                    const [link, summary] = await Promise.all([
+                      getReferralLink(),
+                      getReferralSummary(),
+                    ])
+                    setReferralLink(link)
+                    setReferral(summary)
+                  } catch {
+                    /* falha silenciosa: diálogo mostra estado vazio */
+                  }
+                }
+              }}
+              className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-50/60 transition-colors"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                  <Share className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-900">Convide e ganhe dias</p>
+                  <p className="text-[11px] text-slate-500">
+                    +7 dias por amigo que começar a usar
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+            </button>
           </div>
         )}
       </section>
@@ -2314,6 +2364,75 @@ export default function ProfilePage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* CONVIDE E GANHE (22/10): diálogo de compartilhamento — link + WhatsApp */}
+      <Dialog open={referralDialogOpen} onOpenChange={setReferralDialogOpen}>
+        <DialogContent className="max-w-sm rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-left">Convide e ganhe dias 🪶</DialogTitle>
+            <DialogDescription className="text-left text-xs leading-relaxed">
+              Compartilhe seu link: quando a pessoa criar a conta e lançar a primeira
+              transação, você ganha <strong>+7 dias</strong> de Curiango. Vale até 5
+              amigos (+35 dias).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-600 truncate">
+                {referralLink ?? 'Gerando seu link…'}
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="rounded-xl shrink-0"
+                onClick={async () => {
+                  if (!referralLink) return
+                  try {
+                    await navigator.clipboard.writeText(referralLink)
+                    setReferralCopied(true)
+                    setTimeout(() => setReferralCopied(false), 2000)
+                  } catch {
+                    /* clipboard bloqueado */
+                  }
+                }}
+              >
+                {referralCopied ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5" />
+                )}
+              </Button>
+            </div>
+            {referral && (
+              <div className="rounded-xl bg-amber-50 border border-amber-100 px-3 py-2.5 text-[11px] text-amber-800 leading-relaxed">
+                <strong>{referral.activated}</strong> de {referral.cap} amigos ativaram ·{' '}
+                <strong>+{referral.bonus_days} dias</strong> ganhos
+                {referral.code && (
+                  <>
+                    {' '}
+                    · seu código: <strong>{referral.code}</strong>
+                  </>
+                )}
+              </div>
+            )}
+            <Button
+              type="button"
+              className="w-full bg-[#25D366] hover:bg-[#1ebe59] text-white font-bold rounded-xl"
+              disabled={!referralLink}
+              onClick={async () => {
+                if (!referralLink) return
+                const { buildReferralMessage } = await import('@/services/referral')
+                const msg = encodeURIComponent(buildReferralMessage(referralLink))
+                window.open(`https://wa.me/?text=${msg}`, '_blank', 'noopener')
+              }}
+            >
+              <Share className="w-4 h-4 mr-1.5" />
+              Compartilhar no WhatsApp
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

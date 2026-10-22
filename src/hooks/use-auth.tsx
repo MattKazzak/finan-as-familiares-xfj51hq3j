@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase/client'
+import { applyReferralCode } from '@/services/referral'
 
 interface SignUpOptions {
   name?: string
@@ -73,6 +74,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else if (event === 'SIGNED_OUT') {
         setIsPasswordRecovery(false)
       } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+        // REFERRAL (22/10): 1º login/signup com código de convite na sessão →
+        // registra a indicação (1x — a RPC é idempotente e rejeita duplicado).
+        try {
+          const refCode = sessionStorage.getItem('curiangoo_ref')
+          if (refCode && newSession?.user) {
+            void applyReferralCode(refCode).then((ok) => {
+              if (ok) sessionStorage.removeItem('curiangoo_ref')
+            })
+          }
+        } catch {
+          /* sessionStorage indisponível */
+        }
         // Se entrou ou atualizou usuário, verificar se foi por confirmação de cadastro
         const hash = window.location.hash || ''
         const search = window.location.search || ''

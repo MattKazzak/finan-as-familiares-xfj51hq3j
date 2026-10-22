@@ -85,6 +85,22 @@ registerAppServiceWorker()
   setTimeout(remove, 4000) // fallback: nunca prender
 })()
 
+// REFERRAL (22/10): captura ?ref=CODE do link de convite ANTES de tudo —
+// guarda na sessionStorage (o usuário pode não estar logado ainda; o código
+// é aplicado no 1º login/signup via use-auth).
+;(function captureReferral() {
+  try {
+    const m = window.location.search.match(/[?&]ref=([A-Za-z0-9]+)/)
+    if (m) {
+      sessionStorage.setItem('curiangoo_ref', m[1].toUpperCase())
+      // limpa o ?ref= da URL (o usuário pode recarregar/compartilhar o link limpo)
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  } catch {
+    /* sessionStorage indisponível — segue */
+  }
+})()
+
 // PIU DO CURIANGO (padrão Discord/Slack): a página escuta INSERTs via Supabase Realtime
 // e toca o piu na hora — determinístico, sem SW, sem handshake, sem timeout.
 startRealtimePiu()
