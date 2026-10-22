@@ -376,7 +376,7 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
     suggestedPercent: 5,
     subcategories: [
       {
-        name: 'Plano de Saúde & Convênio',
+        name: 'Plano de Saúde (mensalidade e coparticipação)',
         icon: 'Shield',
         keywords: [
           'unimed',
@@ -472,7 +472,7 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
         ],
       },
       {
-        name: 'Material & Livros Didáticos',
+        name: 'Material Escolar & Livros',
         icon: 'Book',
         keywords: ['papelaria', 'kalunga', 'material escolar', 'livro didatico', 'apostila'],
       },
@@ -537,6 +537,11 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
         keywords: ['renegociacao', 'acordo divida', 'serasa limpa nome', 'acordo banco'],
       },
       {
+        name: 'Tarifas & Anuidade do Cartão',
+        icon: 'CreditCard',
+        keywords: ['anuidade', 'tarifa', 'mensalidade cartao', 'tarifa bancaria'],
+      },
+      {
         name: 'Juros & Multas',
         icon: 'AlertTriangle',
         keywords: ['juros de mora', 'multa por atraso', 'juros e encargos'],
@@ -554,7 +559,7 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
     suggestedPercent: 10,
     subcategories: [
       {
-        name: 'Restaurantes & Bares',
+        name: 'Restaurante no Local',
         icon: 'Utensils',
         keywords: [
           'outback',
@@ -822,6 +827,11 @@ export const STANDARDIZED_CATEGORIES_TREE: CategorySeedDefinition[] = [
         name: 'Tabaco & Cigarros',
         icon: 'Flame',
         keywords: ['cigarro', 'tabaco', 'tabacaria', 'vape', 'charuto', 'pod'],
+      },
+      {
+        name: 'Outros & Diversos',
+        icon: 'Package',
+        keywords: ['diversos', 'outros', 'variados'],
       },
       {
         name: 'Doações & Caridade',
