@@ -1158,6 +1158,58 @@ export default function ProfilePage() {
       </section>
 
       {/* ================================================
+          CONVIDE AMIGOS, GANHE DIAS GRÁTIS (22/10, Matheus): card de
+          crescimento em destaque — colado na assinatura (ganhar dias de
+          premium é assunto de assinatura). Teto de 10 amigos: o card NÃO
+          some — celebra ("ganhou o máximo") e vira prova social.
+          ================================================ */}
+      <section
+        className="bg-white/95 rounded-3xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 overflow-hidden"
+        aria-label="Convide amigos"
+      >
+        <button
+          type="button"
+          onClick={async () => {
+            setReferralDialogOpen(true)
+            if (!referralLink) {
+              try {
+                const { getReferralLink, getReferralSummary } = await import('@/services/referral')
+                const [link, summary] = await Promise.all([getReferralLink(), getReferralSummary()])
+                setReferralLink(link)
+                setReferral(summary)
+              } catch {
+                /* falha silenciosa: diálogo mostra estado vazio */
+              }
+            }
+          }}
+          className="w-full flex items-center gap-3.5 px-5 py-4 text-left hover:bg-slate-50/60 transition-colors"
+        >
+          <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+            <Share className="w-5 h-5" strokeWidth={1.75} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-slate-900 leading-tight">
+              Convide amigos, ganhe dias grátis
+            </p>
+            <p className="text-[11px] text-slate-500 truncate">
+              Cada amigo que usar o app te dá +7 dias de Curiango
+            </p>
+          </div>
+          {referral && referral.activated >= referral.cap ? (
+            <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 shrink-0">
+              Máximo 🎉
+            </span>
+          ) : referral && referral.bonus_days > 0 ? (
+            <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-700 shrink-0">
+              +{referral.bonus_days} dias
+            </span>
+          ) : (
+            <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+          )}
+        </button>
+      </section>
+
+      {/* ================================================
          GRUPO: MINHA CONTA (linha Pleo — expande ao toque)
          ================================================ */}
       <section
@@ -1530,41 +1582,6 @@ export default function ProfilePage() {
               ) : (
                 <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
               )}
-            </button>
-
-            {/* CONVIDE E GANHE (22/10, Matheus): +7 dias de trial por amigo que
-                ativar (1ª transação), teto de 5. Compartilha via WhatsApp nativo. */}
-            <button
-              type="button"
-              onClick={async () => {
-                setReferralDialogOpen(true)
-                if (!referralLink) {
-                  try {
-                    const { getReferralLink, getReferralSummary } =
-                      await import('@/services/referral')
-                    const [link, summary] = await Promise.all([
-                      getReferralLink(),
-                      getReferralSummary(),
-                    ])
-                    setReferralLink(link)
-                    setReferral(summary)
-                  } catch {
-                    /* falha silenciosa: diálogo mostra estado vazio */
-                  }
-                }
-              }}
-              className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-50/60 transition-colors"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                  <Share className="w-4 h-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-900">Convide e ganhe dias</p>
-                  <p className="text-[11px] text-slate-500">+7 dias por amigo que começar a usar</p>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
             </button>
           </div>
         )}
@@ -2370,7 +2387,7 @@ export default function ProfilePage() {
             <DialogTitle className="text-left">Convide e ganhe dias 🪶</DialogTitle>
             <DialogDescription className="text-left text-xs leading-relaxed">
               Compartilhe seu link: quando a pessoa criar a conta e lançar a primeira transação,
-              você ganha <strong>+7 dias</strong> de Curiango. Vale até 5 amigos (+35 dias).
+              você ganha <strong>+7 dias</strong> de Curiango. Vale até 10 amigos (+70 dias).
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -2401,10 +2418,16 @@ export default function ProfilePage() {
                 )}
               </Button>
             </div>
-            {referral && (
+            {referral && referral.activated >= referral.cap ? (
+              <div className="rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-2.5 text-[11px] text-emerald-800 leading-relaxed">
+                <strong>Parabéns! Você ganhou o máximo</strong> — {referral.cap} amigos ativaram e
+                você já somou <strong>+{referral.bonus_days} dias</strong>. Continue compartilhando
+                para espalhar o Curiango 🪶
+              </div>
+            ) : referral && referral.bonus_days > 0 ? (
               <div className="rounded-xl bg-amber-50 border border-amber-100 px-3 py-2.5 text-[11px] text-amber-800 leading-relaxed">
-                <strong>{referral.activated}</strong> de {referral.cap} amigos ativaram ·{' '}
-                <strong>+{referral.bonus_days} dias</strong> ganhos
+                Você já ganhou <strong>+{referral.bonus_days} dias</strong> · faltam{' '}
+                <strong>{referral.cap - referral.activated} convites</strong>
                 {referral.code && (
                   <>
                     {' '}
@@ -2412,7 +2435,7 @@ export default function ProfilePage() {
                   </>
                 )}
               </div>
-            )}
+            ) : null}
             <Button
               type="button"
               className="w-full bg-[#25D366] hover:bg-[#1ebe59] text-white font-bold rounded-xl"
