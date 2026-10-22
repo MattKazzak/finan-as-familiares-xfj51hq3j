@@ -1329,20 +1329,6 @@ export default function ProfilePage() {
               <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
             </button>
 
-            {/* Excluir conta (LGPD) */}
-            <button
-              type="button"
-              onClick={() => {
-                setDeleteConfirmText('')
-                setIsDeleteAccountOpen(true)
-              }}
-              className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-red-50/50 transition-colors text-left"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0">
-                  <ShieldAlert className="w-4 h-4" />
-                </div>
-                <div className="min-w-0 flex-1">
             {/* EXPORTAR MEUS DADOS (movido p/ Minha Conta 22/10): par LGPD do
                 Excluir — baixa teus dados (portabilidade) / apaga teus dados. */}
             <button
@@ -1369,17 +1355,19 @@ export default function ProfilePage() {
               )}
             </button>
 
-            {/* EXCLUIR: ação destrutiva fica por ÚLTIMO na seção (padrão de UX) */}
+            {/* Excluir conta (LGPD) — ação destrutiva por último */}
             <button
               type="button"
-              onClick={() => setIsDeleteDialogOpen(true)}
-              className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-red-50/50 transition-colors"
+              onClick={() => {
+                setDeleteConfirmText('')
+                setIsDeleteAccountOpen(true)
+              }}
+              className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-red-50/50 transition-colors text-left"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-9 h-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0">
-                  <Trash2 className="w-4 h-4" />
+                  <ShieldAlert className="w-4 h-4" />
                 </div>
-                <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-red-700">Excluir minha conta</p>
                   <p className="text-[11px] text-slate-500">Apaga seus dados para sempre (LGPD)</p>
                 </div>
