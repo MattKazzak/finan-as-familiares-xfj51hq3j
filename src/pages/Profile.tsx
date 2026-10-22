@@ -117,18 +117,17 @@ export default function ProfilePage() {
   const [notificationsHelpOpen, setNotificationsHelpOpen] = useState(false)
   // EXPORTAR CSV (LGPD portabilidade)
   const [exporting, setExporting] = useState(false)
-// REFERRAL (22/10): programa Convide e Ganhe — código, contagens e link
-const [referral, setReferral] = useState<{
-  code: string | null
-  total: number
-  activated: number
-  bonus_days: number
-  cap: number
-} | null>(null)
-const [referralLink, setReferralLink] = useState<string | null>(null)
-const [referralCopied, setReferralCopied] = useState(false)
-const [referralDialogOpen, setReferralDialogOpen] = useState(false)
-const handleExportCsv = async () => {
+  // REFERRAL (22/10): programa Convide e Ganhe — código, contagens e link
+  const [referral, setReferral] = useState<{
+    code: string | null
+    total: number
+    activated: number
+    bonus_days: number
+    cap: number
+  } | null>(null)
+  const [referralLink, setReferralLink] = useState<string | null>(null)
+  const [referralCopied, setReferralCopied] = useState(false)
+  const [referralDialogOpen, setReferralDialogOpen] = useState(false)
   const [isSignOutConfirmOpen, setIsSignOutConfirmOpen] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
 
@@ -1541,9 +1540,8 @@ const handleExportCsv = async () => {
                 setReferralDialogOpen(true)
                 if (!referralLink) {
                   try {
-                    const { getReferralLink, getReferralSummary } = await import(
-                      '@/services/referral'
-                    )
+                    const { getReferralLink, getReferralSummary } =
+                      await import('@/services/referral')
                     const [link, summary] = await Promise.all([
                       getReferralLink(),
                       getReferralSummary(),
@@ -1563,9 +1561,7 @@ const handleExportCsv = async () => {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-slate-900">Convide e ganhe dias</p>
-                  <p className="text-[11px] text-slate-500">
-                    +7 dias por amigo que começar a usar
-                  </p>
+                  <p className="text-[11px] text-slate-500">+7 dias por amigo que começar a usar</p>
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
@@ -2373,9 +2369,8 @@ const handleExportCsv = async () => {
           <DialogHeader>
             <DialogTitle className="text-left">Convide e ganhe dias 🪶</DialogTitle>
             <DialogDescription className="text-left text-xs leading-relaxed">
-              Compartilhe seu link: quando a pessoa criar a conta e lançar a primeira
-              transação, você ganha <strong>+7 dias</strong> de Curiango. Vale até 5
-              amigos (+35 dias).
+              Compartilhe seu link: quando a pessoa criar a conta e lançar a primeira transação,
+              você ganha <strong>+7 dias</strong> de Curiango. Vale até 5 amigos (+35 dias).
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
