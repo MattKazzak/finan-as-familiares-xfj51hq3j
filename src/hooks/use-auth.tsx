@@ -77,14 +77,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // REFERRAL (22/10): 1º login/signup com código de convite na sessão →
         // registra a indicação (1x — a RPC é idempotente e rejeita duplicado).
         try {
-          const refCode = sessionStorage.getItem('curiangoo_ref')
-          if (refCode && newSession?.user) {
-            void applyReferralCode(refCode).then((ok) => {
-              if (ok) sessionStorage.removeItem('curiangoo_ref')
-            })
+          const raw = localStorage.getItem('curiangoo_ref')
+          if (raw && newSession?.user) {
+            const parsed = JSON.parse(raw) as { code: string; t: number }
+            // Janela de atribuição: 30 dias (padrão de mercado). Expirado = ignora.
+            if (parsed?.code && Date.now() - parsed.t < 30 * 24 * 60 * 60 * 1000) {
+              void applyReferralCode(parsed.code).then((ok) => {
+                if (ok) localStorage.removeItem('curiangoo_ref')
+              })
+            } else {
+              localStorage.removeItem('curiangoo_ref')
+            }
           }
         } catch {
-          /* sessionStorage indisponível */
+          /* localStorage indisponível */
         }
         // Se entrou ou atualizou usuário, verificar se foi por confirmação de cadastro
         const hash = window.location.hash || ''

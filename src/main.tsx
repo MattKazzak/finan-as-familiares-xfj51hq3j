@@ -92,12 +92,18 @@ registerAppServiceWorker()
   try {
     const m = window.location.search.match(/[?&]ref=([A-Za-z0-9]+)/)
     if (m) {
-      sessionStorage.setItem('curiangoo_ref', m[1].toUpperCase())
+      // LOCALSTORAGE + janela de 30 dias (padrão de attribution de Google/Meta):
+      // a confirmação de email do signup abre em OUTRA aba no celular —
+      // sessionStorage morreria com a aba e o indicador perderia o crédito.
+      localStorage.setItem(
+        'curiangoo_ref',
+        JSON.stringify({ code: m[1].toUpperCase(), t: Date.now() }),
+      )
       // limpa o ?ref= da URL (o usuário pode recarregar/compartilhar o link limpo)
       window.history.replaceState({}, '', window.location.pathname)
     }
   } catch {
-    /* sessionStorage indisponível — segue */
+    /* localStorage indisponível — segue */
   }
 })()
 
