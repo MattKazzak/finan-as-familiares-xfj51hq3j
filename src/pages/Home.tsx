@@ -15,6 +15,7 @@ import { CountUp } from '@/components/common/CountUp'
 import { CategoryIconBox } from '@/components/common/CategoryIcon'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import { PremiumGate } from '@/components/billing/PremiumGate'
+import { TrialBanner } from '@/components/billing/TrialBanner'
 import { FirstWalkthrough } from '@/components/onboarding/FirstWalkthrough'
 import { useAccessStatus } from '@/services/access-status'
 import { TransactionDetailDialog } from '@/components/transactions/TransactionDetailDialog'
@@ -957,6 +958,10 @@ export default function Home() {
               onSkip={() => markTourStepOptimistic('tour')}
             />
           )}
+        {/* BANNER DE TRIAL (22/10, pedido do Matheus): padrão de mercado — só
+            nos últimos ≤3 dias do teste, dispensável por sessão. Fora da janela
+            não aparece nada (banner fixo vira papel de parede). */}
+        {access.access.status === 'trial' && <TrialBanner daysLeft={access.access.days_left} />}
         {/* COPILOT NA HOME (16/10, v2 — fala do Curiango): card SEMPRE presente.
             Padrão-ouro de personagem conversando (Copilot Money/Monzo chat): o
             pássaro É o remetente (avatar à esquerda, como foto de perfil) e fala
