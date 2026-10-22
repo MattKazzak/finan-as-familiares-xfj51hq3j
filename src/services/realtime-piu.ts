@@ -1,43 +1,57 @@
 // Piu do Curiango via Supabase Realtime — padrão Discord/Slack:
 // a página ESCUTA o INSERT na tabela transactions direto do banco e toca o piu na hora.
-// Telemetria: status do canal vai pro console (diagnóstico em produção).
-// Fallback: polling leve a cada 20s (pega INSERTs que o Realtime perder).
-// v0.0.437: canais com nome ÚNICO por sessão (evita canal duplicado/abandonado no Realtime)
-// + re-subscribe automático se o canal cair (CHANNEL_ERROR/TIMED_OUT → tenta de novo em 5s).
+// v0.0.516 — FIX DEFINITIVO "piu no próprio lançamento" (relato do Matheus 21/10 21:45):
+// O guard por member_id (v0.0.507) tinha uma JANELA DE CORRIDA fail-open: o
+// myMemberIdRef era populado async (getUser + select family_members = 200-800ms de
+// rede). Se um INSERT chegasse antes do ref resolver (app recém-aberto), o guard
+// via null e TOCAVA o piu pro próprio lançamento. Como os grandes resolvem
+// (Discord/Slack): a decisão é DETERMINÍSTICA e FAIL-CLOSED —
+//   1. O member_id é resolvido ANTES do subscribe (await no bootstrap);
+//   2. Se o member não estiver resolvido, o piu NÃO toca (falso-negativo — não
+//      ouvir 1 piu da Karine na 1ª abertura — é infinitamente melhor que o
+//      falso-positivo de tocar pro próprio lançamento);
+//   3. Telemetria: cada decisão registra o motivo no console (diagnóstico em produção).
 import { supabase } from '@/lib/supabase/client'
 import { initPiuUnlock, playPiu } from './piu-player'
 
 let started = false
 let lastSeenTxAt: string | null = null
 let realtimeOk = false // telemetria: último status do canal Realtime
-// FIX PIU PRÓPRIO (21/10): member_id do usuário logado — o piu não toca para
-// o próprio lançamento (o push já exclui o autor via get_family_push_targets).
-let myMemberIdRef: { current: string | null } = { current: null }
+// member_id do usuário logado — resolvido ANTES de qualquer som (fail-closed).
+let myMemberId: string | null = null
+let memberResolved = false
+
+/** Resolve o member_id do usuário logado (1x, await — chamado no bootstrap). */
+async function resolveMyMemberId(): Promise<void> {
+  try {
+    const { data: userData } = await supabase.auth.getUser()
+    const uid = userData.data?.user?.id
+    if (!uid) {
+      console.info('[RealtimePiu] sem usuário logado — piu desativado nesta sessão')
+      return
+    }
+    const { data: mem } = await supabase
+      .from('family_members')
+      .select('id')
+      .eq('user_id', uid)
+      .limit(1)
+      .maybeSingle()
+    myMemberId = mem?.id ?? null
+    memberResolved = true
+    console.info('[RealtimePiu] member resolvido:', myMemberId ? 'ok' : 'sem membro')
+  } catch {
+    // Falha de rede: fica fail-closed (memberResolved=false → nunca toca).
+    // A próxima abertura do app tenta de novo — não punir o usuário por rede ruim.
+    console.info('[RealtimePiu] falha ao resolver member — piu fail-closed')
+  }
+}
 
 /** Inicia o listener de Realtime + fallback de polling (chamar 1x no bootstrap). */
 export function startRealtimePiu(): void {
   if (started) return
   started = true
-
-  // FIX PIU PRÓPRIO: descobre o member_id do usuário logado (1x, fire-and-forget)
-  ;(async () => {
-    try {
-      const { data: userData } = await supabase.auth.getUser()
-      const uid = userData.data?.user?.id
-      if (!uid) return
-      const { data: mem } = await supabase
-        .from('family_members')
-        .select('id')
-        .eq('user_id', uid)
-        .limit(1)
-        .maybeSingle()
-      myMemberIdRef.current = mem?.id ?? null
-    } catch {
-      /* piu toca normal se falhar (comportamento antigo) */
-    }
-  })()
-
-  subscribeRealtime()
+  // FIX fail-closed: resolve o member ANTES de subscrever o canal.
+  void resolveMyMemberId().then(() => subscribeRealtime())
 
   // Fallback: polling leve (1 query índice-friendly a cada 20s, só com app visível)
   document.addEventListener('visibilitychange', () => {
@@ -61,12 +75,20 @@ function subscribeRealtime(): void {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'transactions' },
         (payload) => {
-          // FIX PIU PRÓPRIO (21/10, relato do Matheus): o piu é o som de "alguém
-          // da família mexeu nas finanças" — quem LANÇOU não precisa ser avisado
-          // do próprio lançamento (o app já mostra a confirmação na tela).
+          // O piu é o som de "alguém da família mexeu nas finanças" — quem LANÇOU
+          // não precisa ser avisado do próprio lançamento (o app já confirma na tela).
           const newTx = payload.new as { member_id?: string | null } | null
-          const myMemberId = myMemberIdRef.current
-          if (newTx?.member_id && myMemberId && newTx.member_id === myMemberId) return
+          // FAIL-CLOSED (v0.0.516): sem member resolvido, NUNCA toca — não arrisca
+          // tocar pro próprio lançamento (a janela de corrida do bug de 21/10).
+          if (!memberResolved) {
+            console.info('[RealtimePiu] INSERT ignorado: member ainda não resolvido')
+            return
+          }
+          if (newTx?.member_id && myMemberId && newTx.member_id === myMemberId) {
+            console.info('[RealtimePiu] INSERT ignorado: lançamento próprio')
+            return
+          }
+          console.info('[RealtimePiu] INSERT de outro membro — piu!')
           playPiu()
         },
       )
@@ -94,11 +116,12 @@ function subscribeRealtime(): void {
 
 async function pollOnce(): Promise<void> {
   try {
-    const { data: userData } = await supabase.auth.getUser()
-    const uid = userData.user?.id
-    if (!uid) return
+    // FAIL-CLOSED: mesmo no polling, só decide com o member resolvido.
+    if (!memberResolved) {
+      await resolveMyMemberId()
+      if (!memberResolved) return
+    }
     // Última transação da família do usuário (via view RLS da própria tabela)
-    // FIX PIU PRÓPRIO: traz o member_id junto — o autor não toca o próprio piu.
     const { data } = await supabase
       .from('transactions')
       .select('created_at, member_id')
@@ -112,7 +135,6 @@ async function pollOnce(): Promise<void> {
     }
     if (data.created_at > lastSeenTxAt) {
       lastSeenTxAt = data.created_at
-      const myMemberId = myMemberIdRef.current
       if (data.member_id && myMemberId && data.member_id === myMemberId) return
       playPiu()
     }
