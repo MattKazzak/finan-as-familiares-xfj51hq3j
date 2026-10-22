@@ -55,7 +55,10 @@ export function startRealtimePiu(): void {
   // SELF-HEAL (v0.0.517, provado E2E): login via SPA (sem reload) → re-resolve.
   // Sem isso, o piu ficaria desativado a sessão inteira após o login.
   supabase.auth.onAuthStateChange((event) => {
-    if (event === 'SIGNED_IN') void resolveMyMemberId()
+    // INITIAL_SESSION = sessão restaurada do localStorage no load da página
+    // (o bootstrap roda ANTES da sessão restaurar — provado E2E 22/10);
+    // SIGNED_IN = login via SPA. Ambos (re)resolvem o member (idempotente).
+    if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') void resolveMyMemberId()
   })
 
   // Fallback: polling leve (1 query índice-friendly a cada 20s, só com app visível)
