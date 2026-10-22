@@ -327,7 +327,7 @@ export function extractNumericHint(text: string): string | null {
   // 2) Dígitos inteiros com contexto monetário: "200 reais" · "R$ 200" · "pix de 200 pro"
   if (found.length === 0) {
     const ints = t.matchAll(
-      /(?:r\$\s*|de\s+|por\s+)?(\d{1,6})(?:\s*reais|\s*(?=pro\b|pra\b|no\b|na\b|em\b)|$)/g,
+      /(?:r\$\s*|de\s+|por\s+)?(\d{1,6})(?:\s*reais|\s*(?=pro\b|pra\b|no\b|na\b|em\b|todo\b|toda\b)|$)/g,
     )
     for (const m of ints) {
       const n = Number(m[1])
