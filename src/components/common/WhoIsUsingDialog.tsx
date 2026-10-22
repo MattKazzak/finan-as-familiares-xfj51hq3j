@@ -77,7 +77,11 @@ export function WhoIsUsingDialog({ open, onOpenChange }: WhoIsUsingDialogProps) 
                     </div>
                     <span className="text-[11px] text-slate-500">
                       <span>
-                        {isSelected ? 'Perfil ativo neste aparelho' : 'Toque para selecionar'}
+                        {isSelected
+                          ? 'Perfil ativo neste aparelho'
+                          : member.user_id
+                            ? 'Toque para selecionar'
+                            : 'Sem conta (excluída) — histórico da família'}
                       </span>
                     </span>
                   </div>
