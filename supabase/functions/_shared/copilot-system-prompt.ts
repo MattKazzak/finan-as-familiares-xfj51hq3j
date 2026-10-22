@@ -36,6 +36,7 @@ REGRA ANTIDUPLICAÇÃO DA FATURA DE CARTÃO (catálogo v3 — CRÍTICA)
 - Compra paga com cartão = despesa na categoria da compra (ex.: mercado → Alimentação), com método de pagamento cartão de crédito.
 - Pagamento de FATURA integral em dia NUNCA é despesa nova — é transferência (liquida compras já categorizadas). A regra se aplica SOMENTE quando o usuário menciona explicitamente "fatura" (ex.: "paguei a fatura do cartão", "fatura fechada", "paguei a fatura em dia"). Nesses casos, explique em 1 frase que fatura paga em dia não é gasto (as compras já foram lançadas quando feitas) e NÃO crie transação de despesa.
 - ATENÇÃO: "paguei o mercado", "paguei o almoço", "paguei a corrida" = compra NORMAL (Classe 1/2) — a palavra "paguei" sozinha NÃO significa fatura! Só existe fatura quando a palavra "fatura" aparece na frase.
+- ATENÇÃO (22/10): a regra da fatura NUNCA se aplica sem a palavra EXATA "fatura" na frase — nem "boleto", nem "carnê", nem "conta do cartão". "Paguei o boleto do cartão 300" é DESPESA NORMAL (Classe 1 → Dívidas & Empréstimos / Cartão & Boleto) — status "sucesso", NUNCA "invalido" e NUNCA transferência.
 - Só entra em Dívidas & Empréstimos › "Dívida do Cartão (juros e parcelas em atraso)" o que NÃO foi pago em dia: rotativo, parcelamento da fatura, atraso com juros/multa.
 - Aportes em Reserva de Emergência/Metas/Investimentos NÃO são gasto consumido — são o dinheiro destinado ao futuro (balde 20%).
 - Tags de intenção entre colchetes nas subcategorias acima são REGRAS DE FRONTEIRA: quando a tag diz "NÃO cai aqui → X", use o destino X indicado.
@@ -118,6 +119,9 @@ CLASSE 2: LANÇAMENTO VAGO / INCOMPLETO & ORDEM DE SLOT-FILLING
   (B4) PIX COM DESTINATÁRIO = LANÇAMENTO VÁLIDO (NUNCA "invalido"):
       - "pix de 200 pro João", "fiz um pix de 50 pra Maria", "pix de 30 reais na padaria" → transação de despesa, valor extraído, metodo_pagamento "pix", descrição/estabelecimento = destinatário ("João").
       - PIX é método de pagamento como outro qualquer — falha em tratar = BUG GRAVE.
+  (B4b) PIX RECEBIDO COM REMETENTE = RECEITA COMPLETA (22/10 — NUNCA "clarificacao"):
+      - "recebi 200 do João pelo pix", "o Marcos me pagou 150 no pix", "recebi pix de 80 da Ana" → RECEITA (tipo: "receita"), valor extraído, metodo_pagamento "pix", descrição/estabelecimento = remetente ("João").
+      - Quem enviou + valor + método já estão na frase: NÃO há nada a perguntar. Lance IMEDIATAMENTE (status "sucesso") — pedir clarificação aqui = BUG GRAVE.
   (B5) SINTAXE TELEGRÁFICA — ITEM + NÚMERO SOLTO = VALOR EXPLÍCITO (padrão fortíssimo no BR):
       - "uber 22", "mercado 200", "mensalidade da academia 90", "gastei 80 no cabelo", "farmácia 80 no débito": o número junto ao item É o valor — NUNCA "falta_valor"!
       - Aproximação com "uns/umas" também é valor: "gastei uns 80 no salão" → valor 80.
@@ -128,10 +132,20 @@ CLASSE 2: LANÇAMENTO VAGO / INCOMPLETO & ORDEM DE SLOT-FILLING
       - AÇÃO: inclua no JSON os campos "recorrente": true e "dia_recorrente": <1-31> (extraia do "dia X"/"dia X de cada mês"; se não disser o dia, use o dia da mensagem se citado, senão null — a interface pergunta o dia depois).
       - O status segue as regras normais (sucesso se tem item+valor; falta_valor se falta valor). NUNCA recuse nem trate como inválido por ser recorrente.
       - Se a pessoa diz que a conta JÁ existe e deve repetir ("o aluguel de 1200 cai todo dia 5"), trate como recorrente também.
+  (B7) GÍRIAS MONETÁRIAS BR = VALOR VÁLIDO (22/10):
+      - "conto(s)" e "pila(s)" significam REAIS: "gastei 200 conto na roupa" → valor 200; "paguei 50 pila no cinema" → valor 50; "50 conto de uber hoje" → valor 50. Status "sucesso", NUNCA "falta_valor".
+  (B8) COMPRA PARCELADA "Nx de N" (22/10):
+      - "comprei uma TV em 10x de 150" → valor TOTAL = número de parcelas × valor da parcela (10 × 150 = 1500), status "sucesso", categoria da compra (TV → eletrônico/Compras). Descrição pode citar "em 10x de R$ 150".
+      - O valor total é o que entra no campo "valor" — NUNCA "falta_valor" quando o padrão Nx de N está presente.
   (C) QUANDO OS ITENS E VALOR JÁ ESTÃO PRESENTES MAS FALTA LOCAL OU DATA:
       - Se local for relevante e ambíguo: pergunte o local ("Onde foi?").
       - Se local já estiver claro e faltar data: pergunte a data ("Foi hoje?").
       - Lembre-se: limite rigoroso de no máximo 2 perguntas em toda a interação.
+
+3. ISOLAMENTO DE HISTÓRICO E FIM DO VAZAMENTO DE VALORES ANTIGOS:
+  - Transações concluídas no passado (mesmo as que aparecem no historico_mensagens como "Lançado: R$ 146,00", "27, 19 e 100", etc.) PERTENCEM AO PASSADO.
+  - Ao iniciar ou avançar um novo fluxo de lançamento, valores de turnos passados JAMAIS devem preencher lacunas sem confirmação explícita ("os valores são os mesmos de antes?").
+  - NUNCA reaproveite valores ou categorias de transações já salvas para responder a confirmações de novos fluxos!
 
 CLASSE 3: CESTA COM OCASIÃO (Conjunto coerente que sugere evento ou encontro)
   Exemplos: "carne, carvão e cerveja, tudo 100", "picanha, carvão, gelo e cerveja 180 reais", "pipoca, refri e doces 45".
@@ -192,6 +206,7 @@ CLASSE 7: SOCIAL / SAUDAÇÃO
   Exemplos: "bom dia", "oi", "olá", "tudo bem?", "e aí Curiango".
   NUNCA extrai transação e NUNCA deixa router.classe null. Responda curto e caloroso, com a personalidade do Curiango + gancho útil ("Bom dia! Pronto pra registrar algo ou ver como estão as finanças de vocês?").
   router: { classe: 7 }, intencao: "social", transacao: null.
+  ATENÇÃO (22/10): ABREVIAÇÕES SOCIAIS de WhatsApp são Classe 7 (social), NUNCA "invalido": "vlw" (valeu), "obg" (obrigado), "blz" (beleza), "vc" (você), "tmj" (tamo junto), "flw" (falou), "abs" (abraços), "bjs" (beijos), "mto" (muito), "pq" (porque), "hj" (hoje), "tbm" (também), "kd" (cadê). Frases como "vlw curiango!", "obg pela ajuda", "blz, até mais" = agradecimento/despedida social → status "consulta", router.classe 7, resposta calorosa curta.
 
 CLASSE 8: COMANDOS E CORREÇÕES DIRETAS
   (A) DESFAZER: "desfaz", "apaga o último", "cancela esse lançamento" → acao: "desfazer", status: "acao_executada".
@@ -310,7 +325,8 @@ export function buildSystemPrompt(args: BuildSystemPromptArgs): string {
  * EXTRATOR DETERMINÍSTICO DE NÚMEROS (fix evals flaky 20/10 — c02/c05/c29/c34/c36):
  * detecta valores monetários na frase com REGEX (zero IA, zero custo) e devolve
  * um bloco de contexto que ensina ao modelo o valor EXATO extraído.
- * Cobre: "45,50" · "1.250,90" · "doze reais" · "trinta e cinco" · "200".
+ * Cobre: "45,50" · "1.250,90" · "doze reais" · "trinta e cinco" · "200" ·
+ *   gírias "conto(s)"/"pila(s)" (= reais) · padrão "N de/do coisa" ("60 de gasolina").
  */
 export function extractNumericHint(text: string): string | null {
   if (!text) return null
@@ -325,12 +341,14 @@ export function extractNumericHint(text: string): string | null {
   }
 
   // 2) Dígitos inteiros com contexto monetário: "200 reais" · "R$ 200" · "pix de 200 pro"
+  //    (22/10) + gírias "conto(s)"/"pila(s)" + padrão "N de/do coisa" ("60 de gasolina",
+  //    "recebi 200 do João") — com guarda para NÃO capturar dia de data ("10 de novembro").
   if (found.length === 0) {
     const ints = t.matchAll(
-      /(?:r\$\s*|de\s+|por\s+)?(\d{1,6})(?:\s*reais|\s*(?=pro\b|pra\b|no\b|na\b|em\b|todo\b|toda\b)|$)/g,
+      /(?:r\$\s*|de\s+|por\s+)?(\d{1,3}(?:\.\d{3})+|\d{1,6})(?:\s*(?:reais|contos?|pilas?)|\s*(?=pro\b|pra\b|no\b|na\b|em\b|todo\b|toda\b|d[oe]\b(?!\s+(?:janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b))|$)/g,
     )
     for (const m of ints) {
-      const n = Number(m[1])
+      const n = Number(m[1].replace(/\./g, ''))
       if (n > 0 && n <= 999999) found.push(n)
     }
   }
@@ -362,7 +380,6 @@ export function extractNumericHint(text: string): string | null {
       dezessete: 17,
       dezoito: 18,
       dezenove: 19,
-      dezenove: 19,
       vinte: 20,
       trinta: 30,
       quarenta: 40,
@@ -383,7 +400,7 @@ export function extractNumericHint(text: string): string | null {
       novecentos: 900,
     }
     const composed = t.matchAll(
-      /\b(um|uma|dois|duas|tr[eê]s|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|treze|catorze|quatorze|quinze|dezesseis|dezessete|dezoito|dezenove|vinte|trinta|quarenta|cinquenta|sessenta|setenta|oitenta|noventa)(?:\s*e\s*(um|uma|dois|duas|tr[eê]s|quatro|cinco|seis|sete|oito|nove))?\s+reais\b/g,
+      /\b(cem|cento|um|uma|dois|duas|tr[eê]s|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|treze|catorze|quatorze|quinze|dezesseis|dezessete|dezoito|dezenove|vinte|trinta|quarenta|cinquenta|sessenta|setenta|oitenta|noventa)(?:\s*e\s*(um|uma|dois|duas|tr[eê]s|quatro|cinco|seis|sete|oito|nove))?\s+reais\b(?=\s|[.,;!?]|$)/g,
     )
     for (const m of composed) {
       const tens: Record<string, number> = {
@@ -396,7 +413,20 @@ export function extractNumericHint(text: string): string | null {
         oitenta: 80,
         noventa: 90,
       }
-      const unitsMap: Record<string, number> = { um: 1, uma: 1, dois: 2, duas: 2, três: 3, trez: 3 }
+      const unitsMap: Record<string, number> = {
+        um: 1,
+        uma: 1,
+        dois: 2,
+        duas: 2,
+        três: 3,
+        trez: 3,
+        quatro: 4,
+        cinco: 5,
+        seis: 6,
+        sete: 7,
+        oito: 8,
+        nove: 9,
+      }
       let total = 0
       const word1 = m[1]
       if (tens[word1] !== undefined) total += tens[word1]
