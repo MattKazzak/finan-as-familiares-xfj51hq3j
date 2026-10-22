@@ -1050,7 +1050,9 @@ export default function ProfilePage() {
             {subscriptionLoading || accessLoading
               ? '…'
               : isSubscriptionActive(subscription)
-                ? 'Premium'
+                ? subscription?.plan === 'yearly'
+                  ? 'Premium · Anual'
+                  : 'Premium · Mensal'
                 : accessStatus.status === 'trial'
                   ? `Trial ${accessStatus.days_left}d`
                   : 'Inativo'}
@@ -1341,12 +1343,51 @@ export default function ProfilePage() {
                   <ShieldAlert className="w-4 h-4" />
                 </div>
                 <div className="min-w-0 flex-1">
+            {/* EXPORTAR MEUS DADOS (movido p/ Minha Conta 22/10): par LGPD do
+                Excluir — baixa teus dados (portabilidade) / apaga teus dados. */}
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              disabled={exporting}
+              className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-50/60 transition-colors"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                  <Download className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-900">Exportar meus dados</p>
+                  <p className="text-[11px] text-slate-500">
+                    Baixa todos os lançamentos em CSV (LGPD)
+                  </p>
+                </div>
+              </div>
+              {exporting ? (
+                <Loader2 className="w-4 h-4 text-slate-400 shrink-0 animate-spin" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+              )}
+            </button>
+
+            {/* EXCLUIR: ação destrutiva fica por ÚLTIMO na seção (padrão de UX) */}
+            <button
+              type="button"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-red-50/50 transition-colors"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+                  <Trash2 className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-red-700">Excluir minha conta</p>
                   <p className="text-[11px] text-slate-500">Apaga seus dados para sempre (LGPD)</p>
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
             </button>
+
+
           </div>
         )}
       </section>
@@ -1369,7 +1410,11 @@ export default function ProfilePage() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-slate-900 leading-tight">Preferências</p>
-            <p className="text-[11px] text-slate-500 truncate">Catálogo, moeda e instalar app</p>
+            <p className="text-[11px] text-slate-500 truncate">
+              Notificações{' '}
+              {pushStatus === 'granted' ? 'ativas' : pushStatus === 'denied' ? 'bloqueadas' : ''} ·
+              catálogo e instalar app
+            </p>
           </div>
           <ChevronRight
             className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${openSection === 'preferencias' ? 'rotate-90' : ''}`}
@@ -1558,35 +1603,9 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* EXPORTAR MEUS DADOS (21/10, Matheus): direito de portabilidade LGPD.
-                Baixa TODAS as transações da família em CSV (abre no Excel/Google Planilhas). */}
-            <button
-              type="button"
-              onClick={handleExportCsv}
-              disabled={exporting}
-              className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors text-left disabled:opacity-50"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
-                  <Download className="w-4 h-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-900">Exportar meus dados</p>
-                  <p className="text-[11px] text-slate-500">
-                    Baixa todos os lançamentos em CSV (LGPD)
-                  </p>
-                </div>
-              </div>
-              {exporting ? (
-                <Loader2 className="w-4 h-4 text-slate-400 shrink-0 animate-spin" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
-              )}
-            </button>
           </div>
         )}
       </section>
-
       {/* ================================================
           GRUPO: SOBRE (linha Pleo — expande ao toque)
           ================================================ */}
