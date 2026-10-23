@@ -194,10 +194,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .getUser()
             .then(({ data: { user: serverUser }, error: userError }) => {
               if (userError || !serverUser) {
-                // Token órfão: usuário foi apagado no banco
-                supabase.auth.signOut()
-                setSession(null)
-                setUser(null)
+                // 23/10 (Matheus: "desloga sozinho"): distinguir CONTA MORTA de
+                // FALHA DE REDE. Antes, qualquer erro deslogava — numa rede móvel
+                // fraca, o app abria e caía no login sem motivo.
+                const anyErr = userError as any
+                const status = anyErr?.status ?? anyErr?.code
+                const name = String(anyErr?.name || '')
+                const isAuthDead =
+                  !serverUser &&
+                  (!userError ||
+                    status === 401 ||
+                    status === 403 ||
+                    name === 'AuthSessionMissingError')
+
+                if (isAuthDead) {
+                  // Token órfão: usuário foi apagado no banco
+                  supabase.auth.signOut()
+                  setSession(null)
+                  setUser(null)
+                } else {
+                  // Erro incerto (rede/5xx): manter sessão local e deixar o
+                  // watchdog revalidar depois. Não punir usuário offline.
+                  setSession(initialSession)
+                  setUser(initialSession?.user ?? null)
+                }
               } else {
                 setSession(initialSession)
                 setUser(serverUser)
