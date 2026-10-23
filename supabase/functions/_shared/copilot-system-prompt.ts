@@ -137,6 +137,10 @@ CLASSE 2: LANÇAMENTO VAGO / INCOMPLETO & ORDEM DE SLOT-FILLING
   (B8) COMPRA PARCELADA "Nx de N" (22/10):
       - "comprei uma TV em 10x de 150" → valor TOTAL = número de parcelas × valor da parcela (10 × 150 = 1500), status "sucesso", categoria da compra (TV → eletrônico/Compras). Descrição pode citar "em 10x de R$ 150".
       - O valor total é o que entra no campo "valor" — NUNCA "falta_valor" quando o padrão Nx de N está presente.
+  (B9) APROXIMAÇÃO E MULTI-LANÇAMENTO (22/10, auditoria das conversas reais):
+      - Aproximação É valor: "em torno de 350", "cerca de 240", "mais ou menos 100", "uns 80" → use o número como valor EXATO, status "sucesso", NUNCA "falta_valor".
+      - MULTI-LANÇAMENTO: se a frase descreve 2+ contas distintas com valores próprios ("pago água em torno de 240 todo mês e luz em torno de 350"), crie UM item por conta no array "itens" — cada um com descrição, valor e categoria próprios. NUNCA junte tudo num lançamento só nem ignore contas.
+      - CORREÇÃO DE VALOR: se o histórico mostra que o usuário JÁ informou um valor (mesmo aproximado) e você perguntou de novo, ou o usuário diz "eu já falei", "não viu?", "já disse acima" — releia o histórico, use o valor que ele informou e lance. Pedir valor que já foi dito = BUG GRAVE.
   (C) QUANDO OS ITENS E VALOR JÁ ESTÃO PRESENTES MAS FALTA LOCAL OU DATA:
       - Se local for relevante e ambíguo: pergunte o local ("Onde foi?").
       - Se local já estiver claro e faltar data: pergunte a data ("Foi hoje?").
@@ -441,10 +445,20 @@ export function extractNumericHint(text: string): string | null {
 
   if (found.length === 0) return null
   const list = found.map((n) => `R$ ${n.toFixed(2).replace('.', ',')}`).join(' · ')
+  // MULTI-LANÇAMENTO (22/10, auditoria real): "pago água 240 todo mês e luz
+  // em torno de 350" = 2 lançamentos distintos. A dica agora lista TODOS os
+  // valores e manda a IA decidir quantos lançamentos a frase contém —
+  // cada valor pertence a UM lançamento (nunca juntar nem ignorar).
+  const multi = found.length > 1
   return [
     'DICA DETERMINÍSTICA DE NÚMEROS (extração por regex — VERDADE ABSOLUTA, use-a):',
     `A frase contém o(s) seguinte(s) valor(es) monetário(s) já convertido(s) para número: ${list}.`,
-    'Use um destes valores EXATOS no campo "valor" (number JS, ponto decimal).',
+    'Use o(s) valor(es) EXATOS acima no campo "valor" (number JS, ponto decimal).',
     'NUNCA devolva "valor": null ou NaN quando esta dica existe — e NUNCA status "falta_valor".',
-  ].join('\n')
+    multi
+      ? 'ATENÇÃO: há MÚLTIPLOS valores. Se a frase descreve MÚLTIPLOS lançamentos (ex.: "água 240 e luz 350"), crie UM item por valor em "itens" (multi-lançamento). Se apenas UM valor for o valor real do lançamento e os outros forem contexto (ex.: "comprei 50 e tenho 1000 no banco"), use o valor correto do lançamento.'
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n')
 }

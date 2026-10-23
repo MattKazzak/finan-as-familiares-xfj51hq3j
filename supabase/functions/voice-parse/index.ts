@@ -610,10 +610,12 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
       numericHintContext: numericHint || undefined,
     })
 
-    // Sanitização e validação das últimas 6 mensagens de histórico
+    // Sanitização e validação das últimas 12 mensagens de histórico
+    // (22/10, auditoria real: usuário corrigiu valor dito 7+ msgs atrás e a IA
+    // não viu — "eu disse em torno de 350, vc não viu?". 6 era curto demais.)
     let sanitizedHistory: Array<{ role: 'user' | 'assistant'; content: string }> = []
     if (Array.isArray(body.historico_mensagens) && body.historico_mensagens.length > 0) {
-      const rawHistory = body.historico_mensagens.slice(-6)
+      const rawHistory = body.historico_mensagens.slice(-12)
       for (const msg of rawHistory) {
         const role = msg?.role === 'assistant' ? 'assistant' : msg?.role === 'user' ? 'user' : null
         const content = typeof msg?.content === 'string' ? msg.content.trim() : ''
@@ -630,6 +632,9 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
           .from('copilot_messages')
           .select('role, content, created_at')
           .eq('family_id', targetFamilyId)
+          // PRIVACIDADE (22/10): chat é PRIVADO por membro — o fallback do banco
+          // também filtra pelo dono da sessão (user.id do JWT), igual ao RLS do app.
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(12)
 
