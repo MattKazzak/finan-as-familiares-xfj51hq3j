@@ -99,18 +99,21 @@ export default function Home() {
   const [insights, setInsights] = useState<
     Array<{ severity: 'danger' | 'warning' | 'success' | 'info'; title: string; detail: string }>
   >([])
-  // CONVITE ao Copilot (19/10, Matheus 21h): família nova (passo 'copilot'
-  // pendente no tour) → o card do Copilot É o convite ao chat ("Bem-vindo!
-  // Fale comigo — toque em mim, eu te ajudo"), não a frase de insight. O
-  // 1º toque marca o passo e a fala normal volta.
+  // CONVITE ao Copilot (22/10 v2, Matheus 21:39): o convite NÃO morre quando o
+  // tour acaba (redundante — "Tudo em ordem" pra quem não lançou nada é ruído).
+  // Ele persiste até o 1º CLIQUE REAL no card (passo 'copilot-usado', marcado
+  // só no onClick). O tour pode marcar 'copilot' à vontade — o convite segue
+  // até a pessoa realmente conversar. Depois disso, insights de valor real.
   const isNewToCopilot = useMemo(
     () =>
       Boolean(
         family &&
-        (!Array.isArray(family.tour_steps_done) || !family.tour_steps_done.includes('copilot')),
+        (!Array.isArray(family.tour_steps_done) ||
+          !family.tour_steps_done.includes('copilot-usado')),
       ),
     [family],
-  ) // Evolução do saldo (gap 1 da auditoria 16/10): série diária dos últimos 30 dias
+  )
+  // Evolução do saldo (gap 1 da auditoria 16/10): série diária dos últimos 30 dias
   // via RPC get_family_balance_series (agregação no servidor, ~1 query). Falha
   // silenciosa: gráfico é enhancement, nunca bloqueia a Home.
   const [balanceSeries, setBalanceSeries] = useState<Array<{ day: string; balance_cents: number }>>(
@@ -980,7 +983,9 @@ export default function Home() {
             onClick={() => {
               navigate('/copilot')
               if (isNewToCopilot) {
-                markTourStepOptimistic('copilot')
+                // 22/10: marca o USO REAL (não o passo do tour) — o convite
+                // só sai da Home quando a pessoa de fato entra no chat.
+                markTourStepOptimistic('copilot-usado')
               }
             }}
             className={`w-full text-left flex items-start gap-3 rounded-2xl border border-[rgba(20,33,61,0.08)] bg-white/95 px-4 py-3.5 shadow-sm transition-all active:scale-[0.98] border-l-[3px] ${
@@ -1010,15 +1015,17 @@ export default function Home() {
             </span>
             <span key={isNewToCopilot ? 'convite' : 'fala'} className="min-w-0 flex-1">
               {isNewToCopilot ? (
-                // CONVITE (copy que o Matheus amou, 19/10 21h): 2 linhas com a pena.
-                // Quando o tour acaba / 1º toque, o card SE TRANSFORMA na fala de
-                // insights (key força remount → animate-in toca na troca).
+                // CONVITE v2 (22/10, Matheus 21:39): persiste até o 1º clique REAL
+                // no card. Copy: calorosa, mostra o valor na 1ª frase, convida à
+                // ação com exemplo pronto — o usuário amador não precisa adivinhar
+                // o que falar. Depois do 1º uso, vira insights de valor real.
                 <>
                   <span className="block text-[13px] font-semibold leading-tight text-[#14213D] animate-in fade-in duration-300">
-                    Bem-vindo! Fale comigo 🪶
+                    Oi! Eu sou o Curiango 🪶
                   </span>
                   <span className="block text-[11px] text-slate-500 leading-snug mt-0.5 animate-in fade-in duration-300">
-                    Toque em mim — eu lanço, categorizo e organizo pra você.
+                    Toque aqui e me diga o que você gastou ou recebeu — eu anoto e organizo tudo pra
+                    você.
                   </span>
                 </>
               ) : (

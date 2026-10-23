@@ -49,14 +49,14 @@ const STEPS: WalkthroughStep[] = [
     targetSelector: null,
     position: 'bottom',
     title: 'Oi! Eu sou o Curiango 🪶',
-    text: 'Se você reservou um tempo pra cuidar das suas finanças, você já está na frente da maioria. Pouca gente sabe o que acontece no próprio ninho — eu vou te mostrar, passo a passo, e te ajudar nos dias que estão por vir.',
+    text: 'Você reservou um tempo pra cuidar do seu dinheiro — isso já te coloca na frente da maioria. Eu vou te mostrar em 1 minuto onde está tudo. Toque pra começar.',
   },
   {
     id: 'saldo',
     targetSelector: '[data-testid="balance-block"]',
     position: 'bottom',
     title: 'Aqui é o seu saldo',
-    text: 'Nada de novidade por enquanto — mas eu não vou deixar faltar grana no fim do mês. Tudo que entra e sai passa por aqui, e eu fico de olho.',
+    text: 'Tudo que entra e sai da família aparece aqui. É o número que responde a pergunta mais importante: "quanto sobra pro resto do mês?" — e eu aviso antes de ele ficar apertado.',
   },
   {
     // Matheus 19/10 (print 20:52): a seta errava o alvo — agora aponta pro
@@ -65,21 +65,21 @@ const STEPS: WalkthroughStep[] = [
     targetSelector: '[data-testid="dock-new-transaction"]',
     position: 'top',
     title: 'Registre suas receitas',
-    text: 'Ou fale comigo — "recebi 2.500 de salário" — que eu registro pra você. É o que faz tudo aqui funcionar.',
+    text: 'Todo app de finanças começa igual: sem lançamentos, ele não mostra nada. Toque no + e registre sua primeira receita — ou me diga "recebi 2.500 de salário" que eu anoto pra você.',
   },
   {
     id: 'baldes',
     targetSelector: '[data-testid="first-floating-card"]',
     position: 'bottom',
     title: 'O método dos 3 Baldes',
-    text: 'Seu dinheiro se divide em Necessidades, Estilo de Vida e Futuro. Simples assim: quando um balde enche demais, eu te aviso antes do prejuízo.',
+    text: 'Esqueça planilha: seu dinheiro se divide em 3 baldes — Necessidades, Estilo de Vida e Futuro. Quando um balde enche demais, eu aviso antes do prejuízo, não depois.',
   },
   {
     id: 'perfil',
     targetSelector: '[data-testid="dock-profile"]',
     position: 'top',
     title: 'Tudo se ajusta aqui',
-    text: 'Seu perfil, notificações e preferências moram aqui. Se quiser rever este tour, é só voltar em Perfil → Reiniciar tour.',
+    text: 'Aqui você ajusta tudo: perfil da família, notificações e sua assinatura. E se quiser rever este tour um dia, é só voltar em Perfil → Reiniciar tour.',
   },
   {
     // CLÍMAX DO TOUR (22/10, pedido do Matheus): o tour TERMINA em cima do card
@@ -90,7 +90,7 @@ const STEPS: WalkthroughStep[] = [
     targetSelector: '[data-testid="copilot-card"]',
     position: 'bottom',
     title: 'E eu moro aqui 🪶',
-    text: 'Toque nesse balão e a gente conversa: "comprei 60 no mercado", "quanto sobrou esse mês?", "quero poupar pra viagem". É só falar comigo como um amigo — eu registro tudo pra você.',
+    text: 'Esse card sou eu — e ele é um botão. Toque e fale comigo como um amigo: "comprei 60 no mercado", "quanto sobrou esse mês?". Eu anoto, organizo e nunca esqueço. A gente se fala por aí. 🪶',
   },
 ]
 
