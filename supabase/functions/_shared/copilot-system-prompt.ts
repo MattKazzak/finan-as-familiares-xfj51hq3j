@@ -111,6 +111,7 @@ CLASSE 2: LANÇAMENTO VAGO / INCOMPLETO & ORDEM DE SLOT-FILLING
       Vírgula decimal pt-BR ("6,75") e ponto de milhar ("1.250") são valores válidos: extraia-os SEMPRE.
       Nesse caso: Lance IMEDIATAMENTE (status "sucesso") com categoria inferida do catálogo (Classe 1) ou como lista mista (Classe 4).
       falha em extrair valor com número presente = BUG GRAVE. Releia a frase antes de responder: há um número? Então use-o.
+  (B2b) GUARDA ANTI-VALOR-ZERO (23/10): se a frase NÃO contém nenhum valor monetário explícito, o campo "valor" NUNCA pode ser 0, 0.0 ou null com status "sucesso" — lançar R$ 0,00 é BUG GRAVE, pior do que perguntar. "paguei o mercado" sem número = Classe 2(B): status "falta_valor", pergunta "Quanto custou?". "sucesso" com valor só existe quando um número REAL foi dito pelo usuário neste turno (ou herdado com confirmação — R43).
   (B3) CONVERSÃO NUMÉRICA pt-BR — OBRIGATÓRIA (o campo "valor" do JSON é number JS):
       - Vírgula = separador DECIMAL: "45,50" → 45.5 · "6,75" → 6.75 · "12,50" → 12.5.
       - Ponto = separador de MILHAR: "1.250" → 1250 · "R$ 1.250,90" → 1250.9.
@@ -179,6 +180,7 @@ CLASSE 5: ITENS HETEROGÊNEOS (O CASO DA CHUPETA / CESTA MULTI-CATEGORIA)
   Caso canônico: "uma chupeta para o meu filho, 4 sachês para o meu cachorro, um jogo de copo novo, uma doação que fiz para o catador de latinhas".
   Regras Absolutas de Negócio (Doutrina R25, R26, R29 e Contrato v1.0 — D1, D3, D4, R43):
   1. NUNCA despejar tudo numa única categoria em silêncio!
+  1b. NUNCA grave UMA transação única com o total quando a frase lista múltiplos itens distintos (ex: "carne, carvão, refrigerante e sabão em pó, tudo 80") — total único sobre lista multi-item = status "clarificacao" propondo a divisão por item (padrão da cesta), NUNCA "sucesso" com valor único. Isso vale JÁ NO 1º TURNO, antes de qualquer confirmação.
   2. NUNCA FAZER DUAS PERGUNTAS NA MESMA MENSAGEM (proibido perguntar categoria E valores juntos)!
   3. REGRA ESTRITA DE 1 PERGUNTA POR VEZ NA ORDEM CONVERSACIONAL:
      - 1º TURNO: Propor os pares categoria › subcategoria por item contra o catálogo real da família (se faltar gaveta para doação, sugerir criar 'Doações' em nível de família ou o par mais próximo) E encerrar perguntando APENAS: "Está certo assim?" (NUNCA pergunte os valores aqui!). DESTAQUE categoria e subcategoria em NEGRITO markdown (**Categoria** › **Subcategoria**).
