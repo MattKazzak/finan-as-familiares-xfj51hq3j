@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase/client'
 import { applyReferralCode } from '@/services/referral'
+import { useSessionWatchdog } from '@/hooks/use-session-watchdog'
 
 interface SignUpOptions {
   name?: string
@@ -34,6 +35,10 @@ export const useAuth = () => {
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  // WATCHDOG DE SESSÃO (22/10): conta apagada no banco com app aberto →
+  // logout limpo em segundos (refresh falho/primeiro plano/revalidação 5min),
+  // não app meio-morto por até 1h. Padrão-ouro de sessão revogável.
+  useSessionWatchdog()
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
