@@ -49,10 +49,18 @@ export async function fetchCopilotMessages(
   if (!familyId) return []
 
   try {
+    // PRIVADO POR MEMBRO (22/10, decisão do Matheus): cada um vê só o próprio
+    // chat — a conversa é pessoal, as finanças é que são da família.
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user?.id) return []
+
     let query = supabase
       .from('copilot_messages')
       .select('id, family_id, user_id, role, content, card_type, created_at')
       .eq('family_id', familyId)
+      .eq('user_id', user.id)
 
     if (beforeCreatedAt) {
       query = query.lt('created_at', beforeCreatedAt)
@@ -88,10 +96,17 @@ export async function fetchCopilotMessagesWithHasMore(
   if (!familyId) return { messages: [], hasMore: false }
 
   try {
+    // PRIVADO POR MEMBRO (22/10): idem fetchCopilotMessages.
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user?.id) return { messages: [], hasMore: false }
+
     let query = supabase
       .from('copilot_messages')
       .select('id, family_id, user_id, role, content, card_type, created_at')
       .eq('family_id', familyId)
+      .eq('user_id', user.id)
 
     if (beforeCreatedAt) {
       query = query.lt('created_at', beforeCreatedAt)
