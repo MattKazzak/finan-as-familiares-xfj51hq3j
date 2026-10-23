@@ -68,15 +68,6 @@ const STEPS: WalkthroughStep[] = [
     text: 'Ou fale comigo — "recebi 2.500 de salário" — que eu registro pra você. É o que faz tudo aqui funcionar.',
   },
   {
-    // Matheus 19/10: "só a que mencionei o clicável que leva pro chat" —
-    // ilumina o card do Copilot, que em família nova É o convite ao chat.
-    id: 'copilot',
-    targetSelector: '[data-testid="copilot-card"]',
-    position: 'bottom',
-    title: 'Acabou a ansiedade financeira',
-    text: 'Esse balão é meu — toque nele pra conversar: "comprei 60 no mercado", "quanto tenho pra semana?", "quanto sobrou esse mês?". Fala comigo como se fosse um amigo.',
-  },
-  {
     id: 'baldes',
     targetSelector: '[data-testid="first-floating-card"]',
     position: 'bottom',
@@ -89,6 +80,17 @@ const STEPS: WalkthroughStep[] = [
     position: 'top',
     title: 'Tudo se ajusta aqui',
     text: 'Seu perfil, notificações e preferências moram aqui. Se quiser rever este tour, é só voltar em Perfil → Reiniciar tour.',
+  },
+  {
+    // CLÍMAX DO TOUR (22/10, pedido do Matheus): o tour TERMINA em cima do card
+    // do Copilot — a última coisa que o usuário vê é onde mora o canal de
+    // conversa. Copy de boas-vindas convidativa: deixa claro que o card é um
+    // BOTÃO que abre o chat, e dá os 3 primeiros comandos prontos.
+    id: 'copilot',
+    targetSelector: '[data-testid="copilot-card"]',
+    position: 'bottom',
+    title: 'E eu moro aqui 🪶',
+    text: 'Toque nesse balão e a gente conversa: "comprei 60 no mercado", "quanto sobrou esse mês?", "quero poupar pra viagem". É só falar comigo como um amigo — eu registro tudo pra você.',
   },
 ]
 

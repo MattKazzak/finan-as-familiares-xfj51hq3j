@@ -141,6 +141,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       supabase.auth
         .exchangeCodeForSession(code)
         .then(({ data, error }) => {
+          // LINK EXPIRADO (22/10, padrão de mercado): o link de confirmação
+          // velho falha → Supabase devolve erro (otp_expired/already_used).
+          // Antes: catch silencioso, usuário caía no login sem entender NADA.
+          // Agora: sinal claro na tela de login com botão de reenvio.
+          if (error || !data?.session) {
+            try {
+              sessionStorage.setItem(
+                'curiangoo_auth_error',
+                JSON.stringify({
+                  kind: /otp_expired|expired|already/i.test(error?.message || '')
+                    ? 'link_expirado'
+                    : 'link_invalido',
+                  t: Date.now(),
+                }),
+              )
+            } catch {
+              /* storage restrito */
+            }
+          }
           if (!error && data?.session) {
             setSession(data.session)
             setUser(data.session.user)

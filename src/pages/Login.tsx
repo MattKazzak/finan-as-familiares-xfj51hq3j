@@ -95,6 +95,25 @@ export default function Login() {
   const [isEmailUnconfirmed, setIsEmailUnconfirmed] = useState(false)
   const [resendingEmail, setResendingEmail] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(0)
+  // LINK EXPIRADO (22/10): vindo do use-auth quando o link de confirmação do
+  // e-mail falhou (velho/já usado). Padrão de mercado: aviso claro + reenvio.
+  const [authLinkError, setAuthLinkError] = useState<'link_expirado' | 'link_invalido' | null>(
+    () => {
+      try {
+        const raw = sessionStorage.getItem('curiangoo_auth_error')
+        if (!raw) return null
+        const parsed = JSON.parse(raw) as { kind: string; t: number }
+        // consome: mostra 1x
+        sessionStorage.removeItem('curiangoo_auth_error')
+        if (Date.now() - parsed.t < 5 * 60 * 1000) {
+          return parsed.kind === 'link_expirado' ? 'link_expirado' : 'link_invalido'
+        }
+        return null
+      } catch {
+        return null
+      }
+    },
+  )
 
   // Gerenciamento do temporizador de cooldown de 60s
   useEffect(() => {
@@ -478,6 +497,46 @@ export default function Login() {
                 >
                   Seu Nome
                 </span>
+              </div>
+            </div>
+          )}
+
+          {/* LINK DE CONFIRMAÇÃO EXPIRADO/INVÁLIDO (22/10, padrão de mercado):
+              o usuário clicou num link velho do e-mail → aviso claro + reenvio.
+              Antes disso o app caía no login em silêncio. */}
+          {authLinkError && !isEmailUnconfirmed && (
+            <div
+              data-testid="auth-link-error-alert"
+              role="alert"
+              className="mb-6 p-4 text-xs bg-amber-50/90 border border-amber-300 text-amber-950 rounded-2xl font-medium animate-fade-in leading-relaxed space-y-3 shadow-elevation-1"
+            >
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                <span className="font-semibold text-amber-950 leading-snug">
+                  {authLinkError === 'link_expirado'
+                    ? 'Este link de confirmação expirou.'
+                    : 'Este link de confirmação já foi usado ou é inválido.'}
+                </span>
+              </div>
+              <p className="text-amber-800 leading-snug">
+                Sem problema — digite seu e-mail abaixo e envie um link novo. Links de confirmação
+                valem por 30 minutos.
+              </p>
+              <div className="pt-2 border-t border-amber-200/70 flex flex-col sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResendConfirmation}
+                  disabled={resendingEmail || resendCooldown > 0}
+                  className="border-amber-400 text-amber-950 hover:bg-amber-100"
+                >
+                  {resendingEmail
+                    ? 'Enviando…'
+                    : resendCooldown > 0
+                      ? `Aguarde ${resendCooldown}s`
+                      : 'Enviar novo link'}
+                </Button>
               </div>
             </div>
           )}
