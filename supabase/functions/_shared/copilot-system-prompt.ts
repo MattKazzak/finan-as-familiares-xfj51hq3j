@@ -356,6 +356,16 @@ export function extractNumericHint(text: string): string | null {
     found.push(Number(`${intPart}.${m[2]}`))
   }
 
+  // 1b) ABREVIAÇÃO DE MILHAR (23/10, eval c142): "2k" = 2000, "1,5k" = 1500,
+  //     "2 mil" = 2000. Padrão fortíssimo em conversa de WhatsApp brasileira.
+  if (found.length === 0) {
+    const kMatch = t.matchAll(/(\d{1,3}(?:[.,]\d{1,2})?)\s*(?:k|mil)\b/g)
+    for (const m of kMatch) {
+      const n = Math.round(Number(m[1].replace(',', '.')) * 1000)
+      if (n > 0 && n <= 999999) found.push(n)
+    }
+  }
+
   // 2) Dígitos inteiros com contexto monetário: "200 reais" · "R$ 200" · "pix de 200 pro"
   //    (22/10) + gírias "conto(s)"/"pila(s)" + padrão "N de/do coisa" ("60 de gasolina",
   //    "recebi 200 do João") — com guarda para NÃO capturar dia de data ("10 de novembro").
