@@ -240,10 +240,6 @@ export function WalletBudgetsTab() {
           <h3 className="font-semibold text-base text-foreground dark:text-white">
             Categorias e Subcategorias
           </h3>
-          <p className="text-xs text-muted-foreground">
-            Clique na linha para definir teto. Use o lápis para editar, o + para criar subcategoria
-            e a lixeira para excluir.
-          </p>
           <div className="mt-1.5 max-w-full">
             <button
               type="button"
