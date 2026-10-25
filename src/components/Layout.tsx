@@ -241,13 +241,25 @@ export default function Layout() {
         {location.pathname !== '/inicio' && (
           <header className="sticky top-0 z-30 bg-[#14213D] text-white pl-4 pr-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 sm:px-6 flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0">
-              <CuriangoLogo
-                size={32}
-                color="#FCA311"
-                eyeColor="#14213D"
-                eyeRadius={3.4}
-                eyeHighlight
-              />
+              {/* FIX 25/10 (Matheus): o pássaro agora é CAMINHO PRO COPILOT em toda
+                  tela interna — padrão Duolingo (mascote = atalho da feature de IA).
+                  40px (era 32px): alinhado ao card de insight da Home e ao toque
+                  confortável (44px de área com padding). */}
+              <button
+                type="button"
+                onClick={() => navigate('/copilot')}
+                aria-label="Falar com o Curiango"
+                title="Falar com o Curiango"
+                className="shrink-0 rounded-full p-1 -m-1 active:scale-90 transition-transform cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
+              >
+                <CuriangoLogo
+                  size={40}
+                  color="#FCA311"
+                  eyeColor="#14213D"
+                  eyeRadius={3.4}
+                  eyeHighlight
+                />
+              </button>
               <h2 className="text-base sm:text-lg font-bold text-white tracking-tight truncate">
                 {getHeaderTitle()}
               </h2>

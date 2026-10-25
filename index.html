@@ -96,8 +96,18 @@
               )
               var el = document.createElement('pre')
               el.setAttribute('data-testid', 'fatal-trap')
-              el.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:99999;background:#fff;color:#900;font:11px monospace;padding:10px;border:2px solid #900;border-radius:8px;max-height:45vh;overflow:auto;white-space:pre-wrap'
-              el.textContent = 'ERRO FATAL (' + kind + '): ' + String(msg).slice(0, 500) + '\n\n' + String(stack || '').slice(0, 1500)
+              // FIX 25/10 (Matheus: "não consigo usar a navy por causa disso"): a caixa
+              // branca com borda vermelha ficava FIXA sobre a faixa navy do edge-to-edge
+              // embaixo, sujando a identidade em produção. Agora é um chip discreto
+              // (só o texto "ERRO", sem stack visível) — o stack completo segue no
+              // localStorage (curiangoo_fatal) para diagnóstico; basta tocar no chip.
+              el.style.cssText = 'position:fixed;left:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);z-index:99999;background:#fff;color:#900;font:bold 10px monospace;padding:4px 8px;border:1px solid #900;border-radius:999px;cursor:pointer'
+              el.textContent = 'ERRO FATAL — toque p/ ver'
+              el.title = String(msg).slice(0, 500) + '\n\n' + String(stack || '').slice(0, 1500)
+              el.onclick = function () {
+                var full = 'ERRO FATAL (' + kind + '): ' + String(msg).slice(0, 500) + '\n\n' + String(stack || '').slice(0, 1500)
+                window.prompt('Erro capturado (copie):', full)
+              }
               ;(document.body || document.documentElement).appendChild(el)
             } catch (e) {}
           }
