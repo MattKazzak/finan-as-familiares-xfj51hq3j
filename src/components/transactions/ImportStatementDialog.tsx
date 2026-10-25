@@ -62,6 +62,7 @@ import type {
 } from '@/types/finance'
 import {
   UploadCloud,
+  FileText,
   AlertCircle,
   AlertTriangle,
   CheckCircle2,
@@ -1644,8 +1645,8 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           <DialogHeader className="shrink-0 px-3.5 sm:px-6 py-3 border-b border-slate-100 bg-white/95 backdrop-blur-md z-10">
             <div className="flex items-center justify-between gap-2 pr-7 sm:pr-8">
               <div className="flex items-center gap-2 min-w-0">
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm sm:text-base shrink-0 shadow-2xs">
-                  📥
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#14213D] text-[#FCA311] flex items-center justify-center shrink-0 shadow-2xs">
+                  <UploadCloud className="w-4.5 h-4.5 stroke-[1.8]" />
                 </div>
                 <div className="min-w-0">
                   {step === 'review' ? (
@@ -1684,13 +1685,13 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                   ) : (
                     <div className="flex items-center gap-2 flex-wrap">
                       <DialogTitle className="text-sm sm:text-base font-bold text-slate-900 truncate">
-                        Importar Extrato Bancário
+                        Importar Extrato ou Fatura
                       </DialogTitle>
                     </div>
                   )}
                   <p className="text-[11px] sm:text-xs text-slate-500 truncate mt-0.5">
                     {step === 'upload'
-                      ? 'Extratos OFX e faturas de cartão em PDF com conciliação automática.'
+                      ? 'Do banco ou do cartão: a IA lê e você só confere.'
                       : fileInfo
                         ? `${fileInfo.format} • ${fileInfo.name}`
                         : `${items.length} lançamentos identificados`}
@@ -1978,8 +1979,8 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 onClick={() => fileInputRef.current?.click()}
                 className={`border-2 border-dashed rounded-3xl p-8 sm:p-12 text-center cursor-pointer transition-all ${
                   parsing
-                    ? 'border-emerald-500 bg-emerald-50/50 cursor-wait'
-                    : 'border-slate-300 hover:border-emerald-600 hover:bg-slate-50/80 bg-white'
+                    ? 'border-[#FCA311] bg-amber-50/40 cursor-wait'
+                    : 'border-slate-300 hover:border-[#FCA311] hover:bg-amber-50/30 bg-white'
                 }`}
               >
                 <input
@@ -1990,7 +1991,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                   className="hidden"
                 />
 
-                <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto mb-4 shadow-sm">
+                <div className="w-16 h-16 rounded-2xl bg-[#14213D] text-[#FCA311] flex items-center justify-center mx-auto mb-4 shadow-sm">
                   {parsing ? (
                     <Loader2 className="w-8 h-8 animate-spin" />
                   ) : (
@@ -2002,40 +2003,47 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                   {parsing
                     ? isAiCategorizing
                       ? extractionProgress || 'Aplicando inteligência por IA (GPT-4o mini)...'
-                      : extractionProgress || 'Processando e analisando extrato ou fatura...'
-                    : 'Arraste seu arquivo OFX ou PDF de fatura aqui'}
+                      : extractionProgress || 'Lendo seu arquivo...'
+                    : 'Arraste seu arquivo aqui'}
                 </h3>
                 <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 mb-4">
                   {parsing
                     ? isAiCategorizing
                       ? 'Extraindo todas as páginas em paralelo com IA à prova de falhas e conferindo total...'
-                      : 'Lendo lançamentos, identificando parcelas e aplicando regras cadastradas...'
-                    : 'Ou clique para selecionar o arquivo (.ofx ou fatura em .pdf) do seu dispositivo'}
+                      : 'Lendo lançamentos, identificando parcelas e aplicando as regras da sua família...'
+                    : 'Extrato do banco ou fatura do cartão — ou toque para escolher do dispositivo'}
                 </p>
 
                 {/* Badges de formatos suportados */}
+                {/* Badges de formatos — FIX 25/10: dois chips claros em vez de um
+                    badge único verde confuso; cores da marca. */}
                 <div className="flex items-center justify-center gap-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-emerald-600 text-white shadow-sm px-3.5 py-1.5 rounded-xl">
-                    <Star className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
-                    <span>Extrato OFX (.ofx) &amp; Fatura Cartão em PDF (.pdf)</span>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-[#14213D] text-white shadow-sm px-3.5 py-1.5 rounded-xl">
+                    <FileText className="w-3.5 h-3.5 stroke-[1.8]" />
+                    <span>Extrato do banco · .ofx</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-[#FCA311] text-[#14213D] shadow-sm px-3.5 py-1.5 rounded-xl">
+                    <FileText className="w-3.5 h-3.5 stroke-[1.8]" />
+                    <span>Fatura do cartão · .pdf</span>
                   </span>
                 </div>
               </div>
 
               {/* Box Informativo: OFX & Mini-guia expansível */}
-              <div className="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/80 via-emerald-50/40 to-teal-50/30 p-4 sm:p-5 text-xs space-y-3.5 shadow-2xs">
+              <div className="rounded-2xl border border-[rgba(20,33,61,0.08)] bg-[#F8F9FB] p-4 sm:p-5 text-xs space-y-3.5 shadow-2xs">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-start gap-3 min-w-0 flex-1">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-100/90 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
-                      <Star className="w-4 h-4 fill-emerald-600 text-emerald-600" />
+                    <div className="w-8 h-8 rounded-xl bg-[#FCA311]/15 text-[#B45309] flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                      <Sparkles className="w-4 h-4 stroke-[1.8]" />
                     </div>
                     <div className="min-w-0 flex-1 space-y-0.5">
                       <h4 className="font-bold text-slate-900 text-xs sm:text-sm tracking-tight">
-                        Importação exclusiva via OFX
+                        Como funciona
                       </h4>
                       <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed">
-                        O OFX é o formato oficial dos bancos — garante datas, valores e
-                        identificadores precisos para não duplicar nada e evitar erros de leitura.
+                        A IA lê seu arquivo, separa as compras, identifica parcelas e sugere as
+                        categorias da sua família. Você revisa tudo antes de confirmar — nada entra
+                        sem seu OK.
                       </p>
                     </div>
                   </div>
@@ -2045,9 +2053,9 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={() => setShowBankGuide((prev) => !prev)}
-                    className="h-8 text-xs rounded-xl bg-white/95 border-emerald-300 text-emerald-800 hover:bg-emerald-100/60 shrink-0 font-semibold gap-1.5 self-start sm:self-center shadow-2xs"
+                    className="h-8 text-xs rounded-xl bg-white/95 border-slate-200 text-[#14213D] hover:bg-slate-50 shrink-0 font-semibold gap-1.5 self-start sm:self-center shadow-2xs"
                   >
-                    <Building2 className="w-3.5 h-3.5 text-emerald-700" />
+                    <Building2 className="w-3.5 h-3.5 text-[#14213D]" />
                     <span>{showBankGuide ? 'Ocultar guia' : 'Como exportar nos bancos'}</span>
                     {showBankGuide ? (
                       <ChevronUp className="w-3.5 h-3.5" />
