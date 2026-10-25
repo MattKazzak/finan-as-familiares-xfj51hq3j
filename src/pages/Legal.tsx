@@ -174,6 +174,21 @@ export function TermsPage() {
           famílias) podem ser suspensas. Você pode encerrar a conta quando quiser.
         </p>
       </Section>
+      <Section title="Créditos e licenças">
+        <p>
+          Som de notificação: canto de bacurau (<em>Nyctidromus albicollis</em>) gravado por Dante
+          Buzzetti —{' '}
+          <a
+            href="https://xeno-canto.org/668769"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#FCA311] font-semibold underline"
+          >
+            XC668769, xeno-canto.org
+          </a>
+          , sob licença Creative Commons BY-NC-SA 4.0.
+        </p>
+      </Section>
       <p className="text-[11px] text-slate-400 px-1">Última atualização: outubro de 2026.</p>
     </LegalShell>
   )
