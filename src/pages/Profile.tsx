@@ -842,7 +842,9 @@ export default function ProfilePage() {
                 className="w-full h-full object-cover"
               />
             )}
-            <AvatarFallback className="bg-slate-100 text-slate-600 font-semibold text-lg flex items-center justify-center w-full h-full">
+            {/* FIX 25/10: fallback âmbar (padrão Nubank) — o cinza-claro era apagado
+                e "branco" na percepção. Identidade da marca mesmo sem foto. */}
+            <AvatarFallback className="bg-[#FCA311] text-[#14213D] font-bold text-lg flex items-center justify-center w-full h-full">
               {familyInitial}
             </AvatarFallback>
           </Avatar>
@@ -1036,7 +1038,7 @@ export default function ProfilePage() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-slate-900 leading-tight">Assinatura</p>
-            <p className="text-[11px] text-slate-500 truncate">Plano, cobrança e cancelamento</p>
+            <p className="text-[11px] text-slate-500 truncate">Plano e cobrança</p>
           </div>
           <span
             className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${

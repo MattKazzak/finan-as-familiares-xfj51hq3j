@@ -714,7 +714,12 @@ export default function Home() {
                       className="w-full h-full object-cover"
                     />
                   )}
-                  <AvatarFallback className="bg-gradient-to-tr from-white/10 to-white/20 text-white font-semibold text-xs sm:text-sm rounded-2xl">
+                  {/* FIX 25/10 (Matheus: "fica branco quando não tem imagem"): o
+                      fallback era um gradiente branco translúcido sobre o navy —
+                      praticamente invisível, parecia um buraco. Padrão de mercado
+                      (Nubank/Pinterest): inicial em âmbar sólido — identidade viva
+                      mesmo sem foto. */}
+                  <AvatarFallback className="bg-[#FCA311] text-[#14213D] font-bold text-sm sm:text-base rounded-2xl">
                     {memberInitial}
                   </AvatarFallback>
                 </Avatar>
