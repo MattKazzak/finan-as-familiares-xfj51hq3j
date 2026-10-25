@@ -1232,7 +1232,7 @@ export function WalletBudgetsTab() {
               trigger={
                 <button
                   type="button"
-                  className="w-full py-3 border-2 border-dashed border-slate-200 hover:border-emerald-500/50 hover:bg-emerald-50/30 rounded-2xl flex items-center justify-center gap-2 text-xs font-semibold text-slate-600 hover:text-emerald-700 transition-all"
+                  className="w-full h-11 px-4 border border-dashed border-slate-300/80 bg-slate-50/40 hover:border-emerald-500/60 hover:bg-emerald-50/40 active:scale-[0.99] rounded-2xl flex items-center justify-center gap-2 text-xs font-semibold text-slate-600 hover:text-emerald-700 transition-all shadow-2xs touch-manipulation cursor-pointer"
                 >
                   <Plus className="w-4 h-4 text-emerald-600" />
                   <span>Nova categoria</span>
