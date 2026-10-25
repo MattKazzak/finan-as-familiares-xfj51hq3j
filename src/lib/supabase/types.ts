@@ -1,11 +1,17 @@
 // AVOID UPDATING THIS FILE DIRECTLY. It is automatically generated.
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: '14.17'
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -27,636 +33,6 @@ export type Database = {
           request_count?: number
           user_id?: string
           window_start?: string
-        }
-        Relationships: []
-      }
-      backup_20261011_budgets: {
-        Row: {
-          amount_cents: number | null
-          category_id: string | null
-          created_at: string | null
-          family_id: string | null
-          id: string | null
-          month: string | null
-          subcategory_id: string | null
-        }
-        Insert: {
-          amount_cents?: number | null
-          category_id?: string | null
-          created_at?: string | null
-          family_id?: string | null
-          id?: string | null
-          month?: string | null
-          subcategory_id?: string | null
-        }
-        Update: {
-          amount_cents?: number | null
-          category_id?: string | null
-          created_at?: string | null
-          family_id?: string | null
-          id?: string | null
-          month?: string | null
-          subcategory_id?: string | null
-        }
-        Relationships: []
-      }
-      backup_20261011_categorization_rules: {
-        Row: {
-          category_id: string | null
-          created_at: string | null
-          family_id: string | null
-          id: string | null
-          pattern: string | null
-          subcategory_id: string | null
-          user_id: string | null
-        }
-        Insert: {
-          category_id?: string | null
-          created_at?: string | null
-          family_id?: string | null
-          id?: string | null
-          pattern?: string | null
-          subcategory_id?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          category_id?: string | null
-          created_at?: string | null
-          family_id?: string | null
-          id?: string | null
-          pattern?: string | null
-          subcategory_id?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      backup_20261011_copilot_messages: {
-        Row: {
-          card_type: string | null
-          content: string | null
-          created_at: string | null
-          family_id: string | null
-          id: string | null
-          role: string | null
-          user_id: string | null
-        }
-        Insert: {
-          card_type?: string | null
-          content?: string | null
-          created_at?: string | null
-          family_id?: string | null
-          id?: string | null
-          role?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          card_type?: string | null
-          content?: string | null
-          created_at?: string | null
-          family_id?: string | null
-          id?: string | null
-          role?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      backup_20261011_default_budgets: {
-        Row: {
-          amount_cents: number | null
-          category_id: string | null
-          created_at: string | null
-          family_id: string | null
-          id: string | null
-          subcategory_id: string | null
-        }
-        Insert: {
-          amount_cents?: number | null
-          category_id?: string | null
-          created_at?: string | null
-          family_id?: string | null
-          id?: string | null
-          subcategory_id?: string | null
-        }
-        Update: {
-          amount_cents?: number | null
-          category_id?: string | null
-          created_at?: string | null
-          family_id?: string | null
-          id?: string | null
-          subcategory_id?: string | null
-        }
-        Relationships: []
-      }
-      backup_20261011_families: {
-        Row: {
-          avatar_url: string | null
-          budget_model: string | null
-          created_at: string | null
-          created_by: string | null
-          id: string | null
-          monthly_net_income_cents: number | null
-          name: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          budget_model?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          id?: string | null
-          monthly_net_income_cents?: number | null
-          name?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          budget_model?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          id?: string | null
-          monthly_net_income_cents?: number | null
-          name?: string | null
-        }
-        Relationships: []
-      }
-      backup_20261011_family_invites: {
-        Row: {
-          accepted_at: string | null
-          accepted_by: string | null
-          code: string | null
-          created_at: string | null
-          created_by: string | null
-          expires_at: string | null
-          family_id: string | null
-          id: string | null
-          max_uses: number | null
-          role: string | null
-          status: string | null
-          uses_count: number | null
-        }
-        Insert: {
-          accepted_at?: string | null
-          accepted_by?: string | null
-          code?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          expires_at?: string | null
-          family_id?: string | null
-          id?: string | null
-          max_uses?: number | null
-          role?: string | null
-          status?: string | null
-          uses_count?: number | null
-        }
-        Update: {
-          accepted_at?: string | null
-          accepted_by?: string | null
-          code?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          expires_at?: string | null
-          family_id?: string | null
-          id?: string | null
-          max_uses?: number | null
-          role?: string | null
-          status?: string | null
-          uses_count?: number | null
-        }
-        Relationships: []
-      }
-      backup_20261011_family_members: {
-        Row: {
-          created_at: string | null
-          family_id: string | null
-          id: string | null
-          is_admin: boolean | null
-          name: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          family_id?: string | null
-          id?: string | null
-          is_admin?: boolean | null
-          name?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          family_id?: string | null
-          id?: string | null
-          is_admin?: boolean | null
-          name?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      backup_20261011_goals: {
-        Row: {
-          category_id: string | null
-          created_at: string | null
-          deadline: string | null
-          family_id: string | null
-          id: string | null
-          name: string | null
-          target_amount_cents: number | null
-        }
-        Insert: {
-          category_id?: string | null
-          created_at?: string | null
-          deadline?: string | null
-          family_id?: string | null
-          id?: string | null
-          name?: string | null
-          target_amount_cents?: number | null
-        }
-        Update: {
-          category_id?: string | null
-          created_at?: string | null
-          deadline?: string | null
-          family_id?: string | null
-          id?: string | null
-          name?: string | null
-          target_amount_cents?: number | null
-        }
-        Relationships: []
-      }
-      backup_20261011_investments: {
-        Row: {
-          asset_type: Database['public']['Enums']['asset_type'] | null
-          avg_price_cents: number | null
-          created_at: string | null
-          current_price_cents: number | null
-          family_id: string | null
-          id: string | null
-          name: string | null
-          quantity: number | null
-          ticker: string | null
-        }
-        Insert: {
-          asset_type?: Database['public']['Enums']['asset_type'] | null
-          avg_price_cents?: number | null
-          created_at?: string | null
-          current_price_cents?: number | null
-          family_id?: string | null
-          id?: string | null
-          name?: string | null
-          quantity?: number | null
-          ticker?: string | null
-        }
-        Update: {
-          asset_type?: Database['public']['Enums']['asset_type'] | null
-          avg_price_cents?: number | null
-          created_at?: string | null
-          current_price_cents?: number | null
-          family_id?: string | null
-          id?: string | null
-          name?: string | null
-          quantity?: number | null
-          ticker?: string | null
-        }
-        Relationships: []
-      }
-      backup_20261011_recurring_income_overrides: {
-        Row: {
-          amount_cents: number | null
-          created_at: string | null
-          family_id: string | null
-          id: string | null
-          month: string | null
-          recurring_income_id: string | null
-        }
-        Insert: {
-          amount_cents?: number | null
-          created_at?: string | null
-          family_id?: string | null
-          id?: string | null
-          month?: string | null
-          recurring_income_id?: string | null
-        }
-        Update: {
-          amount_cents?: number | null
-          created_at?: string | null
-          family_id?: string | null
-          id?: string | null
-          month?: string | null
-          recurring_income_id?: string | null
-        }
-        Relationships: []
-      }
-      backup_20261011_recurring_incomes: {
-        Row: {
-          active: boolean | null
-          amount_cents: number | null
-          category_id: string | null
-          created_at: string | null
-          day_of_month: number | null
-          family_id: string | null
-          id: string | null
-          member_id: string | null
-          name: string | null
-          subcategory_id: string | null
-          type: Database['public']['Enums']['transaction_type'] | null
-        }
-        Insert: {
-          active?: boolean | null
-          amount_cents?: number | null
-          category_id?: string | null
-          created_at?: string | null
-          day_of_month?: number | null
-          family_id?: string | null
-          id?: string | null
-          member_id?: string | null
-          name?: string | null
-          subcategory_id?: string | null
-          type?: Database['public']['Enums']['transaction_type'] | null
-        }
-        Update: {
-          active?: boolean | null
-          amount_cents?: number | null
-          category_id?: string | null
-          created_at?: string | null
-          day_of_month?: number | null
-          family_id?: string | null
-          id?: string | null
-          member_id?: string | null
-          name?: string | null
-          subcategory_id?: string | null
-          type?: Database['public']['Enums']['transaction_type'] | null
-        }
-        Relationships: []
-      }
-      backup_20261011_transaction_categories: {
-        Row: {
-          budget_bucket: string | null
-          color: string | null
-          created_at: string | null
-          family_id: string | null
-          icon: string | null
-          id: string | null
-          name: string | null
-          percent_alert: number | null
-          percent_default: number | null
-          sort_order: number | null
-          type: Database['public']['Enums']['transaction_type'] | null
-        }
-        Insert: {
-          budget_bucket?: string | null
-          color?: string | null
-          created_at?: string | null
-          family_id?: string | null
-          icon?: string | null
-          id?: string | null
-          name?: string | null
-          percent_alert?: number | null
-          percent_default?: number | null
-          sort_order?: number | null
-          type?: Database['public']['Enums']['transaction_type'] | null
-        }
-        Update: {
-          budget_bucket?: string | null
-          color?: string | null
-          created_at?: string | null
-          family_id?: string | null
-          icon?: string | null
-          id?: string | null
-          name?: string | null
-          percent_alert?: number | null
-          percent_default?: number | null
-          sort_order?: number | null
-          type?: Database['public']['Enums']['transaction_type'] | null
-        }
-        Relationships: []
-      }
-      backup_20261011_transaction_subcategories: {
-        Row: {
-          category_id: string | null
-          color: string | null
-          created_at: string | null
-          family_id: string | null
-          icon: string | null
-          id: string | null
-          name: string | null
-          sort_order: number | null
-        }
-        Insert: {
-          category_id?: string | null
-          color?: string | null
-          created_at?: string | null
-          family_id?: string | null
-          icon?: string | null
-          id?: string | null
-          name?: string | null
-          sort_order?: number | null
-        }
-        Update: {
-          category_id?: string | null
-          color?: string | null
-          created_at?: string | null
-          family_id?: string | null
-          icon?: string | null
-          id?: string | null
-          name?: string | null
-          sort_order?: number | null
-        }
-        Relationships: []
-      }
-      backup_20261011_transactions: {
-        Row: {
-          ai_confidence: number | null
-          amount_cents: number | null
-          bank_transaction_id: string | null
-          category_id: string | null
-          created_at: string | null
-          description: string | null
-          family_id: string | null
-          id: string | null
-          installment_group_id: string | null
-          installment_number: number | null
-          installment_total: number | null
-          is_installment: boolean | null
-          is_recurring: boolean | null
-          member_id: string | null
-          payment_method: string | null
-          recurring_income_id: string | null
-          recurring_month: string | null
-          status: string | null
-          subcategory_id: string | null
-          transaction_date: string | null
-          type: Database['public']['Enums']['transaction_type'] | null
-        }
-        Insert: {
-          ai_confidence?: number | null
-          amount_cents?: number | null
-          bank_transaction_id?: string | null
-          category_id?: string | null
-          created_at?: string | null
-          description?: string | null
-          family_id?: string | null
-          id?: string | null
-          installment_group_id?: string | null
-          installment_number?: number | null
-          installment_total?: number | null
-          is_installment?: boolean | null
-          is_recurring?: boolean | null
-          member_id?: string | null
-          payment_method?: string | null
-          recurring_income_id?: string | null
-          recurring_month?: string | null
-          status?: string | null
-          subcategory_id?: string | null
-          transaction_date?: string | null
-          type?: Database['public']['Enums']['transaction_type'] | null
-        }
-        Update: {
-          ai_confidence?: number | null
-          amount_cents?: number | null
-          bank_transaction_id?: string | null
-          category_id?: string | null
-          created_at?: string | null
-          description?: string | null
-          family_id?: string | null
-          id?: string | null
-          installment_group_id?: string | null
-          installment_number?: number | null
-          installment_total?: number | null
-          is_installment?: boolean | null
-          is_recurring?: boolean | null
-          member_id?: string | null
-          payment_method?: string | null
-          recurring_income_id?: string | null
-          recurring_month?: string | null
-          status?: string | null
-          subcategory_id?: string | null
-          transaction_date?: string | null
-          type?: Database['public']['Enums']['transaction_type'] | null
-        }
-        Relationships: []
-      }
-      backup_20261011_user_preferences: {
-        Row: {
-          ai_consent: boolean | null
-          ai_consent_at: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          ai_consent?: boolean | null
-          ai_consent_at?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          ai_consent?: boolean | null
-          ai_consent_at?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      backup_20261011_users: {
-        Row: {
-          banned_until: string | null
-          confirmation_sent_at: string | null
-          confirmation_token: string | null
-          confirmed_at: string | null
-          created_at: string | null
-          deleted_at: string | null
-          email: string | null
-          email_change: string | null
-          email_change_confirm_status: number | null
-          email_change_sent_at: string | null
-          email_change_token_current: string | null
-          email_change_token_new: string | null
-          email_confirmed_at: string | null
-          encrypted_password: string | null
-          id: string | null
-          instance_id: string | null
-          invited_at: string | null
-          is_anonymous: boolean | null
-          is_sso_user: boolean | null
-          is_super_admin: boolean | null
-          last_sign_in_at: string | null
-          phone: string | null
-          phone_change: string | null
-          phone_change_sent_at: string | null
-          phone_change_token: string | null
-          phone_confirmed_at: string | null
-          raw_app_meta_data: Json | null
-          raw_user_meta_data: Json | null
-          reauthentication_sent_at: string | null
-          reauthentication_token: string | null
-          recovery_sent_at: string | null
-          recovery_token: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          banned_until?: string | null
-          confirmation_sent_at?: string | null
-          confirmation_token?: string | null
-          confirmed_at?: string | null
-          created_at?: string | null
-          deleted_at?: string | null
-          email?: string | null
-          email_change?: string | null
-          email_change_confirm_status?: number | null
-          email_change_sent_at?: string | null
-          email_change_token_current?: string | null
-          email_change_token_new?: string | null
-          email_confirmed_at?: string | null
-          encrypted_password?: string | null
-          id?: string | null
-          instance_id?: string | null
-          invited_at?: string | null
-          is_anonymous?: boolean | null
-          is_sso_user?: boolean | null
-          is_super_admin?: boolean | null
-          last_sign_in_at?: string | null
-          phone?: string | null
-          phone_change?: string | null
-          phone_change_sent_at?: string | null
-          phone_change_token?: string | null
-          phone_confirmed_at?: string | null
-          raw_app_meta_data?: Json | null
-          raw_user_meta_data?: Json | null
-          reauthentication_sent_at?: string | null
-          reauthentication_token?: string | null
-          recovery_sent_at?: string | null
-          recovery_token?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          banned_until?: string | null
-          confirmation_sent_at?: string | null
-          confirmation_token?: string | null
-          confirmed_at?: string | null
-          created_at?: string | null
-          deleted_at?: string | null
-          email?: string | null
-          email_change?: string | null
-          email_change_confirm_status?: number | null
-          email_change_sent_at?: string | null
-          email_change_token_current?: string | null
-          email_change_token_new?: string | null
-          email_confirmed_at?: string | null
-          encrypted_password?: string | null
-          id?: string | null
-          instance_id?: string | null
-          invited_at?: string | null
-          is_anonymous?: boolean | null
-          is_sso_user?: boolean | null
-          is_super_admin?: boolean | null
-          last_sign_in_at?: string | null
-          phone?: string | null
-          phone_change?: string | null
-          phone_change_sent_at?: string | null
-          phone_change_token?: string | null
-          phone_confirmed_at?: string | null
-          raw_app_meta_data?: Json | null
-          raw_user_meta_data?: Json | null
-          reauthentication_sent_at?: string | null
-          reauthentication_token?: string | null
-          recovery_sent_at?: string | null
-          recovery_token?: string | null
-          updated_at?: string | null
         }
         Relationships: []
       }
@@ -690,25 +66,25 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'budgets_category_id_fkey'
-            columns: ['category_id']
+            foreignKeyName: "budgets_category_id_fkey"
+            columns: ["category_id"]
             isOneToOne: false
-            referencedRelation: 'transaction_categories'
-            referencedColumns: ['id']
+            referencedRelation: "transaction_categories"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'budgets_family_id_fkey'
-            columns: ['family_id']
+            foreignKeyName: "budgets_family_id_fkey"
+            columns: ["family_id"]
             isOneToOne: false
-            referencedRelation: 'families'
-            referencedColumns: ['id']
+            referencedRelation: "families"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'budgets_subcategory_id_fkey'
-            columns: ['subcategory_id']
+            foreignKeyName: "budgets_subcategory_id_fkey"
+            columns: ["subcategory_id"]
             isOneToOne: false
-            referencedRelation: 'transaction_subcategories'
-            referencedColumns: ['id']
+            referencedRelation: "transaction_subcategories"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -745,27 +121,57 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'categorization_rules_category_id_fkey'
-            columns: ['category_id']
+            foreignKeyName: "categorization_rules_category_id_fkey"
+            columns: ["category_id"]
             isOneToOne: false
-            referencedRelation: 'transaction_categories'
-            referencedColumns: ['id']
+            referencedRelation: "transaction_categories"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'categorization_rules_family_id_fkey'
-            columns: ['family_id']
+            foreignKeyName: "categorization_rules_family_id_fkey"
+            columns: ["family_id"]
             isOneToOne: false
-            referencedRelation: 'families'
-            referencedColumns: ['id']
+            referencedRelation: "families"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'categorization_rules_subcategory_id_fkey'
-            columns: ['subcategory_id']
+            foreignKeyName: "categorization_rules_subcategory_id_fkey"
+            columns: ["subcategory_id"]
             isOneToOne: false
-            referencedRelation: 'transaction_subcategories'
-            referencedColumns: ['id']
+            referencedRelation: "transaction_subcategories"
+            referencedColumns: ["id"]
           },
         ]
+      }
+      copilot_audit_reports: {
+        Row: {
+          audit_date: string
+          created_at: string
+          id: string
+          report: Json
+          total_exchanges: number
+          total_messages: number
+          total_problems: number
+        }
+        Insert: {
+          audit_date: string
+          created_at?: string
+          id?: string
+          report?: Json
+          total_exchanges?: number
+          total_messages?: number
+          total_problems?: number
+        }
+        Update: {
+          audit_date?: string
+          created_at?: string
+          id?: string
+          report?: Json
+          total_exchanges?: number
+          total_messages?: number
+          total_problems?: number
+        }
+        Relationships: []
       }
       copilot_messages: {
         Row: {
@@ -797,11 +203,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'copilot_messages_family_id_fkey'
-            columns: ['family_id']
+            foreignKeyName: "copilot_messages_family_id_fkey"
+            columns: ["family_id"]
             isOneToOne: false
-            referencedRelation: 'families'
-            referencedColumns: ['id']
+            referencedRelation: "families"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -832,25 +238,25 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'default_budgets_category_id_fkey'
-            columns: ['category_id']
+            foreignKeyName: "default_budgets_category_id_fkey"
+            columns: ["category_id"]
             isOneToOne: false
-            referencedRelation: 'transaction_categories'
-            referencedColumns: ['id']
+            referencedRelation: "transaction_categories"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'default_budgets_family_id_fkey'
-            columns: ['family_id']
+            foreignKeyName: "default_budgets_family_id_fkey"
+            columns: ["family_id"]
             isOneToOne: false
-            referencedRelation: 'families'
-            referencedColumns: ['id']
+            referencedRelation: "families"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'default_budgets_subcategory_id_fkey'
-            columns: ['subcategory_id']
+            foreignKeyName: "default_budgets_subcategory_id_fkey"
+            columns: ["subcategory_id"]
             isOneToOne: false
-            referencedRelation: 'transaction_subcategories'
-            referencedColumns: ['id']
+            referencedRelation: "transaction_subcategories"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -863,6 +269,8 @@ export type Database = {
           id: string
           monthly_net_income_cents: number | null
           name: string
+          tour_completed_at: string | null
+          tour_steps_done: Json
         }
         Insert: {
           avatar_url?: string | null
@@ -872,6 +280,8 @@ export type Database = {
           id?: string
           monthly_net_income_cents?: number | null
           name: string
+          tour_completed_at?: string | null
+          tour_steps_done?: Json
         }
         Update: {
           avatar_url?: string | null
@@ -881,6 +291,8 @@ export type Database = {
           id?: string
           monthly_net_income_cents?: number | null
           name?: string
+          tour_completed_at?: string | null
+          tour_steps_done?: Json
         }
         Relationships: []
       }
@@ -929,11 +341,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'family_invites_family_id_fkey'
-            columns: ['family_id']
+            foreignKeyName: "family_invites_family_id_fkey"
+            columns: ["family_id"]
             isOneToOne: false
-            referencedRelation: 'families'
-            referencedColumns: ['id']
+            referencedRelation: "families"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -964,11 +376,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'family_members_family_id_fkey'
-            columns: ['family_id']
+            foreignKeyName: "family_members_family_id_fkey"
+            columns: ["family_id"]
             isOneToOne: false
-            referencedRelation: 'families'
-            referencedColumns: ['id']
+            referencedRelation: "families"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1002,24 +414,24 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'goals_category_id_fkey'
-            columns: ['category_id']
+            foreignKeyName: "goals_category_id_fkey"
+            columns: ["category_id"]
             isOneToOne: false
-            referencedRelation: 'transaction_categories'
-            referencedColumns: ['id']
+            referencedRelation: "transaction_categories"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'goals_family_id_fkey'
-            columns: ['family_id']
+            foreignKeyName: "goals_family_id_fkey"
+            columns: ["family_id"]
             isOneToOne: false
-            referencedRelation: 'families'
-            referencedColumns: ['id']
+            referencedRelation: "families"
+            referencedColumns: ["id"]
           },
         ]
       }
       investments: {
         Row: {
-          asset_type: Database['public']['Enums']['asset_type']
+          asset_type: Database["public"]["Enums"]["asset_type"]
           avg_price_cents: number
           created_at: string
           current_price_cents: number
@@ -1030,7 +442,7 @@ export type Database = {
           ticker: string | null
         }
         Insert: {
-          asset_type?: Database['public']['Enums']['asset_type']
+          asset_type?: Database["public"]["Enums"]["asset_type"]
           avg_price_cents?: number
           created_at?: string
           current_price_cents?: number
@@ -1041,7 +453,7 @@ export type Database = {
           ticker?: string | null
         }
         Update: {
-          asset_type?: Database['public']['Enums']['asset_type']
+          asset_type?: Database["public"]["Enums"]["asset_type"]
           avg_price_cents?: number
           created_at?: string
           current_price_cents?: number
@@ -1053,11 +465,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'investments_family_id_fkey'
-            columns: ['family_id']
+            foreignKeyName: "investments_family_id_fkey"
+            columns: ["family_id"]
             isOneToOne: false
-            referencedRelation: 'families'
-            referencedColumns: ['id']
+            referencedRelation: "families"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1190,18 +602,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'recurring_income_overrides_family_id_fkey'
-            columns: ['family_id']
+            foreignKeyName: "recurring_income_overrides_family_id_fkey"
+            columns: ["family_id"]
             isOneToOne: false
-            referencedRelation: 'families'
-            referencedColumns: ['id']
+            referencedRelation: "families"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'recurring_income_overrides_recurring_income_id_fkey'
-            columns: ['recurring_income_id']
+            foreignKeyName: "recurring_income_overrides_recurring_income_id_fkey"
+            columns: ["recurring_income_id"]
             isOneToOne: false
-            referencedRelation: 'recurring_incomes'
-            referencedColumns: ['id']
+            referencedRelation: "recurring_incomes"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1217,7 +629,7 @@ export type Database = {
           member_id: string
           name: string
           subcategory_id: string | null
-          type: Database['public']['Enums']['transaction_type']
+          type: Database["public"]["Enums"]["transaction_type"]
         }
         Insert: {
           active?: boolean
@@ -1230,7 +642,7 @@ export type Database = {
           member_id: string
           name: string
           subcategory_id?: string | null
-          type?: Database['public']['Enums']['transaction_type']
+          type?: Database["public"]["Enums"]["transaction_type"]
         }
         Update: {
           active?: boolean
@@ -1243,36 +655,77 @@ export type Database = {
           member_id?: string
           name?: string
           subcategory_id?: string | null
-          type?: Database['public']['Enums']['transaction_type']
+          type?: Database["public"]["Enums"]["transaction_type"]
         }
         Relationships: [
           {
-            foreignKeyName: 'recurring_incomes_category_id_fkey'
-            columns: ['category_id']
+            foreignKeyName: "recurring_incomes_category_id_fkey"
+            columns: ["category_id"]
             isOneToOne: false
-            referencedRelation: 'transaction_categories'
-            referencedColumns: ['id']
+            referencedRelation: "transaction_categories"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'recurring_incomes_family_id_fkey'
-            columns: ['family_id']
+            foreignKeyName: "recurring_incomes_family_id_fkey"
+            columns: ["family_id"]
             isOneToOne: false
-            referencedRelation: 'families'
-            referencedColumns: ['id']
+            referencedRelation: "families"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'recurring_incomes_member_id_fkey'
-            columns: ['member_id']
+            foreignKeyName: "recurring_incomes_member_id_fkey"
+            columns: ["member_id"]
             isOneToOne: false
-            referencedRelation: 'family_members'
-            referencedColumns: ['id']
+            referencedRelation: "family_members"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'recurring_incomes_subcategory_id_fkey'
-            columns: ['subcategory_id']
+            foreignKeyName: "recurring_incomes_subcategory_id_fkey"
+            columns: ["subcategory_id"]
             isOneToOne: false
-            referencedRelation: 'transaction_subcategories'
-            referencedColumns: ['id']
+            referencedRelation: "transaction_subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referrals: {
+        Row: {
+          activated_at: string | null
+          bonus_days: number
+          created_at: string
+          family_id: string | null
+          id: string
+          referred_user_id: string
+          referrer_user_id: string
+          status: string
+        }
+        Insert: {
+          activated_at?: string | null
+          bonus_days?: number
+          created_at?: string
+          family_id?: string | null
+          id?: string
+          referred_user_id: string
+          referrer_user_id: string
+          status?: string
+        }
+        Update: {
+          activated_at?: string | null
+          bonus_days?: number
+          created_at?: string
+          family_id?: string | null
+          id?: string
+          referred_user_id?: string
+          referrer_user_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1324,11 +777,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'subscriptions_family_id_fkey'
-            columns: ['family_id']
+            foreignKeyName: "subscriptions_family_id_fkey"
+            columns: ["family_id"]
             isOneToOne: false
-            referencedRelation: 'families'
-            referencedColumns: ['id']
+            referencedRelation: "families"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1346,7 +799,7 @@ export type Database = {
           percent_alert: number | null
           percent_default: number | null
           sort_order: number | null
-          type: Database['public']['Enums']['transaction_type']
+          type: Database["public"]["Enums"]["transaction_type"]
         }
         Insert: {
           budget_bucket?: string | null
@@ -1361,7 +814,7 @@ export type Database = {
           percent_alert?: number | null
           percent_default?: number | null
           sort_order?: number | null
-          type?: Database['public']['Enums']['transaction_type']
+          type?: Database["public"]["Enums"]["transaction_type"]
         }
         Update: {
           budget_bucket?: string | null
@@ -1376,15 +829,15 @@ export type Database = {
           percent_alert?: number | null
           percent_default?: number | null
           sort_order?: number | null
-          type?: Database['public']['Enums']['transaction_type']
+          type?: Database["public"]["Enums"]["transaction_type"]
         }
         Relationships: [
           {
-            foreignKeyName: 'transaction_categories_family_id_fkey'
-            columns: ['family_id']
+            foreignKeyName: "transaction_categories_family_id_fkey"
+            columns: ["family_id"]
             isOneToOne: false
-            referencedRelation: 'families'
-            referencedColumns: ['id']
+            referencedRelation: "families"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1418,25 +871,25 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'transaction_splits_family_id_fkey'
-            columns: ['family_id']
+            foreignKeyName: "transaction_splits_family_id_fkey"
+            columns: ["family_id"]
             isOneToOne: false
-            referencedRelation: 'families'
-            referencedColumns: ['id']
+            referencedRelation: "families"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'transaction_splits_member_id_fkey'
-            columns: ['member_id']
+            foreignKeyName: "transaction_splits_member_id_fkey"
+            columns: ["member_id"]
             isOneToOne: false
-            referencedRelation: 'family_members'
-            referencedColumns: ['id']
+            referencedRelation: "family_members"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'transaction_splits_transaction_id_fkey'
-            columns: ['transaction_id']
+            foreignKeyName: "transaction_splits_transaction_id_fkey"
+            columns: ["transaction_id"]
             isOneToOne: false
-            referencedRelation: 'transactions'
-            referencedColumns: ['id']
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1479,18 +932,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'transaction_subcategories_category_id_fkey'
-            columns: ['category_id']
+            foreignKeyName: "transaction_subcategories_category_id_fkey"
+            columns: ["category_id"]
             isOneToOne: false
-            referencedRelation: 'transaction_categories'
-            referencedColumns: ['id']
+            referencedRelation: "transaction_categories"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'transaction_subcategories_family_id_fkey'
-            columns: ['family_id']
+            foreignKeyName: "transaction_subcategories_family_id_fkey"
+            columns: ["family_id"]
             isOneToOne: false
-            referencedRelation: 'families'
-            referencedColumns: ['id']
+            referencedRelation: "families"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1517,7 +970,7 @@ export type Database = {
           status: string
           subcategory_id: string | null
           transaction_date: string
-          type: Database['public']['Enums']['transaction_type']
+          type: Database["public"]["Enums"]["transaction_type"]
         }
         Insert: {
           ai_confidence?: number | null
@@ -1541,7 +994,7 @@ export type Database = {
           status?: string
           subcategory_id?: string | null
           transaction_date?: string
-          type: Database['public']['Enums']['transaction_type']
+          type: Database["public"]["Enums"]["transaction_type"]
         }
         Update: {
           ai_confidence?: number | null
@@ -1565,43 +1018,43 @@ export type Database = {
           status?: string
           subcategory_id?: string | null
           transaction_date?: string
-          type?: Database['public']['Enums']['transaction_type']
+          type?: Database["public"]["Enums"]["transaction_type"]
         }
         Relationships: [
           {
-            foreignKeyName: 'transactions_category_id_fkey'
-            columns: ['category_id']
+            foreignKeyName: "transactions_category_id_fkey"
+            columns: ["category_id"]
             isOneToOne: false
-            referencedRelation: 'transaction_categories'
-            referencedColumns: ['id']
+            referencedRelation: "transaction_categories"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'transactions_family_id_fkey'
-            columns: ['family_id']
+            foreignKeyName: "transactions_family_id_fkey"
+            columns: ["family_id"]
             isOneToOne: false
-            referencedRelation: 'families'
-            referencedColumns: ['id']
+            referencedRelation: "families"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'transactions_member_id_fkey'
-            columns: ['member_id']
+            foreignKeyName: "transactions_member_id_fkey"
+            columns: ["member_id"]
             isOneToOne: false
-            referencedRelation: 'family_members'
-            referencedColumns: ['id']
+            referencedRelation: "family_members"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'transactions_recurring_income_id_fkey'
-            columns: ['recurring_income_id']
+            foreignKeyName: "transactions_recurring_income_id_fkey"
+            columns: ["recurring_income_id"]
             isOneToOne: false
-            referencedRelation: 'recurring_incomes'
-            referencedColumns: ['id']
+            referencedRelation: "recurring_incomes"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'transactions_subcategory_id_fkey'
-            columns: ['subcategory_id']
+            foreignKeyName: "transactions_subcategory_id_fkey"
+            columns: ["subcategory_id"]
             isOneToOne: false
-            referencedRelation: 'transaction_subcategories'
-            referencedColumns: ['id']
+            referencedRelation: "transaction_subcategories"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1610,6 +1063,7 @@ export type Database = {
           ai_consent: boolean
           ai_consent_at: string | null
           phone: string | null
+          referral_code: string | null
           updated_at: string
           user_id: string
         }
@@ -1617,6 +1071,7 @@ export type Database = {
           ai_consent?: boolean
           ai_consent_at?: string | null
           phone?: string | null
+          referral_code?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1624,8 +1079,42 @@ export type Database = {
           ai_consent?: boolean
           ai_consent_at?: string | null
           phone?: string | null
+          referral_code?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      waitlist: {
+        Row: {
+          created_at: string
+          email: string
+          email_pending: boolean
+          email_sent_at: string | null
+          id: string
+          name: string
+          position: number
+          whatsapp: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          email_pending?: boolean
+          email_sent_at?: string | null
+          id?: string
+          name: string
+          position: number
+          whatsapp: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          email_pending?: boolean
+          email_sent_at?: string | null
+          id?: string
+          name?: string
+          position?: number
+          whatsapp?: string
         }
         Relationships: []
       }
@@ -1704,6 +1193,7 @@ export type Database = {
         Args: { p_family_id: string; p_name: string }
         Returns: Json
       }
+      apply_referral_code: { Args: { p_code: string }; Returns: Json }
       cancel_my_subscription: {
         Args: never
         Returns: {
@@ -1791,8 +1281,15 @@ export type Database = {
       get_family_totals: { Args: { p_family_id: string }; Returns: Json }
       get_invite_preview: { Args: { p_code: string }; Returns: Json }
       get_my_access_status: { Args: never; Returns: Json }
+      get_my_referral_summary: { Args: never; Returns: Json }
       get_my_subscription: { Args: never; Returns: Json }
+      get_or_create_referral_code: { Args: never; Returns: string }
+      join_waitlist: {
+        Args: { p_email: string; p_name: string; p_whatsapp: string }
+        Returns: number
+      }
       leave_family: { Args: { p_family_id: string }; Returns: Json }
+      mark_tour_step: { Args: { p_step: string }; Returns: Json }
       remove_family_member: { Args: { p_member_id: string }; Returns: Json }
       rename_family_member: {
         Args: { p_member_id: string; p_new_name: string }
@@ -1806,6 +1303,8 @@ export type Database = {
         Args: { p_ids: string[] }
         Returns: undefined
       }
+      reset_family_tour: { Args: never; Returns: undefined }
+      test_whatsapp_token_alive: { Args: never; Returns: Json }
       upsert_subscription_from_webhook:
         | {
             Args: {
@@ -1833,8 +1332,14 @@ export type Database = {
       user_belongs_to_family: { Args: { f_id: string }; Returns: boolean }
     }
     Enums: {
-      asset_type: 'stock' | 'fii' | 'fixed_income' | 'crypto' | 'treasury' | 'other'
-      transaction_type: 'income' | 'expense'
+      asset_type:
+        | "stock"
+        | "fii"
+        | "fixed_income"
+        | "crypto"
+        | "treasury"
+        | "other"
+      transaction_type: "income" | "expense"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1842,31 +1347,33 @@ export type Database = {
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, '__InternalSupabase'>
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, 'public'>]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])
-    : never = never,
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])[TableName] extends {
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
-    ? (DefaultSchema['Tables'] & DefaultSchema['Views'])[DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -1875,23 +1382,23 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema['Tables']
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
-    : never = never,
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
-    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -1900,23 +1407,23 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema['Tables']
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
-    : never = never,
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
-    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -1925,43 +1432,51 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema['Enums']
+    | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums']
-    : never = never,
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums'][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums']
-    ? DefaultSchema['Enums'][DefaultSchemaEnumNameOrOptions]
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema['CompositeTypes']
+    | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
-    : never = never,
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema['CompositeTypes']
-    ? DefaultSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
 export const Constants = {
   public: {
     Enums: {
-      asset_type: ['stock', 'fii', 'fixed_income', 'crypto', 'treasury', 'other'],
-      transaction_type: ['income', 'expense'],
+      asset_type: [
+        "stock",
+        "fii",
+        "fixed_income",
+        "crypto",
+        "treasury",
+        "other",
+      ],
+      transaction_type: ["income", "expense"],
     },
   },
 } as const
+
