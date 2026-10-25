@@ -288,69 +288,74 @@ export default function InvestmentsPage() {
         </Button>
       </div>
 
-      {/* 2. Resumo da Carteira no Topo */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Valor Total da Carteira - Hero Azul-Marinho #14213D */}
-        <div className="bg-gradient-to-br from-brand via-[#192a4f] to-brand-dark rounded-3xl p-6 text-white shadow-lg shadow-brand/20 border border-brand">
-          <span className="text-xs uppercase font-semibold tracking-wider text-brand-amber">
-            Valor Total da Carteira
-          </span>
-          <div className="text-2xl sm:text-3xl font-semibold tabular-nums mt-1.5 text-white">
-            {formatBRL(totalCurrentValueCents)}
-          </div>
-          <p className="text-xs text-white/70 mt-1">Soma de todos os ativos atuais</p>
-        </div>
-
-        {/* Custo de Aquisição */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
-          <div>
-            <span className="text-xs uppercase font-bold tracking-wider text-slate-400">
-              Custo de Aquisição
+      {/* 2. Resumo da Carteira no Topo — FIX AUDITORIA 24/10: com carteira
+          VAZIA os 3 cards de R$ 0,00 empilhados faziam o app parecer "vazio/
+          quebrado" antes do empty state. Resumo só existe quando há ativos;
+          usuário novo vê direto o convite educativo ("Adicionar primeiro ativo"). */}
+      {investments.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Valor Total da Carteira - Hero Azul-Marinho #14213D */}
+          <div className="bg-gradient-to-br from-brand via-[#192a4f] to-brand-dark rounded-3xl p-6 text-white shadow-lg shadow-brand/20 border border-brand">
+            <span className="text-xs uppercase font-semibold tracking-wider text-brand-amber">
+              Valor Total da Carteira
             </span>
-            <div className="text-xl sm:text-2xl font-bold text-slate-800 tabular-nums mt-1.5">
-              {formatBRL(totalCostCents)}
+            <div className="text-2xl sm:text-3xl font-semibold tabular-nums mt-1.5 text-white">
+              {formatBRL(totalCurrentValueCents)}
             </div>
+            <p className="text-xs text-white/70 mt-1">Soma de todos os ativos atuais</p>
           </div>
-          <p className="text-xs text-slate-500 mt-2">Total investido originalmente</p>
-        </div>
 
-        {/* Lucro / Prejuízo Total */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between">
+          {/* Custo de Aquisição */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+            <div>
               <span className="text-xs uppercase font-bold tracking-wider text-slate-400">
-                Lucro / Prejuízo
+                Custo de Aquisição
               </span>
-              <span
-                className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                  totalProfitCents >= 0
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-red-100 text-red-700'
+              <div className="text-xl sm:text-2xl font-bold text-slate-800 tabular-nums mt-1.5">
+                {formatBRL(totalCostCents)}
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 mt-2">Total investido originalmente</p>
+          </div>
+
+          {/* Lucro / Prejuízo Total */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs uppercase font-bold tracking-wider text-slate-400">
+                  Lucro / Prejuízo
+                </span>
+                <span
+                  className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                    totalProfitCents >= 0
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-red-100 text-red-700'
+                  }`}
+                >
+                  {Number(totalProfitPercent) >= 0 ? '+' : ''}
+                  {totalProfitPercent}%
+                </span>
+              </div>
+              <div
+                className={`text-xl sm:text-2xl font-semibold tabular-nums mt-1.5 flex items-center gap-1.5 ${
+                  totalProfitCents >= 0 ? 'text-emerald-600' : 'text-red-600'
                 }`}
               >
-                {Number(totalProfitPercent) >= 0 ? '+' : ''}
-                {totalProfitPercent}%
-              </span>
+                {totalProfitCents >= 0 ? (
+                  <TrendingUp className="w-5 h-5 stroke-[2.5]" />
+                ) : (
+                  <TrendingDown className="w-5 h-5 stroke-[2.5]" />
+                )}
+                <span>
+                  {totalProfitCents >= 0 ? '+' : ''}
+                  {formatBRL(totalProfitCents)}
+                </span>
+              </div>
             </div>
-            <div
-              className={`text-xl sm:text-2xl font-semibold tabular-nums mt-1.5 flex items-center gap-1.5 ${
-                totalProfitCents >= 0 ? 'text-emerald-600' : 'text-red-600'
-              }`}
-            >
-              {totalProfitCents >= 0 ? (
-                <TrendingUp className="w-5 h-5 stroke-[2.5]" />
-              ) : (
-                <TrendingDown className="w-5 h-5 stroke-[2.5]" />
-              )}
-              <span>
-                {totalProfitCents >= 0 ? '+' : ''}
-                {formatBRL(totalProfitCents)}
-              </span>
-            </div>
+            <p className="text-xs text-slate-500 mt-2">Rentabilidade acumulada da carteira</p>
           </div>
-          <p className="text-xs text-slate-500 mt-2">Rentabilidade acumulada da carteira</p>
         </div>
-      </div>
+      )}
 
       {/* 3. Lista de Ativos */}
       <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm">

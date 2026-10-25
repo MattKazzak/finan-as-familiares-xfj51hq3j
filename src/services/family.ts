@@ -392,10 +392,17 @@ export async function fetchFamilyData() {
     { count: rulesCount, error: rulesErr },
     { count: transactionsCount, error: txErr },
   ] = await Promise.all([
+    // FIX AUDITORIA 24/10: membros órfãos (user_id NULL — conta apagada ou
+    // convidado que nunca entrou) NÃO aparecem mais nos chips de filtro da Home.
+    // O histórico de transações deles continua preservado (txs não são apagadas
+    // e seguem exibindo o nome do membro), mas filtrar "por pessoa" só faz
+    // sentido para membros com conta ativa. Sem isso, famílias com histórico
+    // mostravam chips fantasma ("Eval") na mesma altura dos membros reais.
     (supabase as any)
       .from('family_members')
       .select('*')
       .eq('family_id', family.id)
+      .not('user_id', 'is', null)
       .order('is_admin', { ascending: false })
       .order('name', { ascending: true }),
     // Onboarding inteligente (catálogo v3): categorias ocultas (is_hidden) ficam

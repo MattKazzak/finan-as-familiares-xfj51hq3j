@@ -869,8 +869,10 @@ export default function ProfilePage() {
                   Premium
                 </span>
               ) : accessStatus.status === 'trial' ? (
+                // FIX AUDITORIA 24/10: "Trial: 6d" sozinho não dizia o que acontece
+                // depois. Badge educativo: quantos dias + o que acontece no fim.
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                  Trial: {accessStatus.days_left}d
+                  Teste grátis · {accessStatus.days_left}d
                 </span>
               ) : null}
             </>
@@ -1072,6 +1074,23 @@ export default function ProfilePage() {
               subscription.status === 'canceled' ||
               subscription.status === 'expired' ? (
               <div className="space-y-3">
+                {/* FIX AUDITORIA 24/10 (missão educativa): explicar O QUE ACONTECE
+                    quando o trial acaba — antes, o usuário via só "Trial: 6d" sem
+                    saber se o app quebraria. Mensagem calma: nada quebra, vira o
+                    plano gratuito essencial. */}
+                {accessStatus.status === 'trial' && (
+                  <div className="rounded-2xl bg-amber-50 border border-amber-100 px-4 py-3">
+                    <p className="text-xs text-amber-800 leading-relaxed">
+                      <strong>
+                        Você está no período de teste: {accessStatus.days_left} dia(s) restante(s).
+                      </strong>{' '}
+                      Quando ele acabar, nada quebra: sua conta vira o plano{' '}
+                      <strong>gratuito essencial</strong> — você continua lançando e vendo tudo da
+                      família. O Premium destrava o Copilot de voz, os insights inteligentes, o
+                      gráfico e a importação ilimitada.
+                    </p>
+                  </div>
+                )}
                 <p className="text-xs text-slate-600">
                   Você ainda não tem assinatura ativa. Escolha um plano para desbloquear tudo:
                 </p>
