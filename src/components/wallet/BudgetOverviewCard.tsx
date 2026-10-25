@@ -285,19 +285,6 @@ export function BudgetOverviewCard({
               (toque no balde para filtrar alertas)
             </span>
           </div>
-          <span className="text-xs font-medium text-muted-foreground tabular-nums">
-            Comprometido:{' '}
-            <strong
-              className={
-                totalBudgetPercentOfIncome > 100
-                  ? 'text-[#E11D48] font-semibold'
-                  : 'text-[#14213D] dark:text-white font-semibold'
-              }
-            >
-              {totalBudgetPercentOfIncome}%
-            </strong>{' '}
-            da renda
-          </span>
         </div>
 
         {/* A BARRA ÚNICA MULTI-SEGMENTADA COM GRADIENTES SUTIS */}

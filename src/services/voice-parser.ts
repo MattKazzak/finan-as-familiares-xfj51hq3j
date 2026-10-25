@@ -89,6 +89,8 @@ export interface VoiceAiResponse {
   confianca?: number | null
   lacunas?: string[] | null
   mes_alvo?: string | null
+  recorrente?: boolean | null
+  dia_recorrente?: number | null
   resposta_consulta?: string | null
   transacao: VoiceAiTransaction | null
   pergunta_clarificacao: string | null

@@ -1,10 +1,10 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
 
 function buildEmailHtml(name: string, position: number): string {
   const firstName = name.trim().split(/\s+/)[0]
@@ -79,36 +79,42 @@ https://curiangoo.com`
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders })
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
   }
 
-  if (req.method !== "POST") {
-    return new Response(
-      JSON.stringify({ error: "METHOD_NOT_ALLOWED" }),
-      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    )
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'METHOD_NOT_ALLOWED' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 
   try {
-    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? ""
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
     if (!SUPABASE_SERVICE_ROLE_KEY) {
       return new Response(
-        JSON.stringify({ error: "CONFIG_MISSING", message: "SERVICE_ROLE não configurado (env padrão)." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({
+          error: 'CONFIG_MISSING',
+          message: 'SERVICE_ROLE não configurado (env padrão).',
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
     }
 
     const body = await req.json().catch(() => ({}))
     const { email, name, position } = body ?? {}
 
-    if (!email || !name || typeof position !== "number") {
+    if (!email || !name || typeof position !== 'number') {
       return new Response(
-        JSON.stringify({ error: "BAD_REQUEST", message: "Campos obrigatórios: email, name, position." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({
+          error: 'BAD_REQUEST',
+          message: 'Campos obrigatórios: email, name, position.',
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
     }
 
@@ -116,14 +122,14 @@ Deno.serve(async (req: Request) => {
 
     if (RESEND_API_KEY) {
       // Caminho 1: envio direto pela API do Resend
-      const resendRes = await fetch("https://api.resend.com/emails", {
-        method: "POST",
+      const resendRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
         headers: {
           Authorization: `Bearer ${RESEND_API_KEY}`,
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: "Curiangoo <contato@curiangoo.com>",
+          from: 'Curiangoo <contato@curiangoo.com>',
           to: [email],
           subject: `Vaga garantida! Você é o #${position} da fila do Curiangoo 🎉`,
           html: buildEmailHtml(name, position),
@@ -136,48 +142,54 @@ Deno.serve(async (req: Request) => {
         emailId = (resendData as { id?: string }).id ?? null
       } else {
         const errText = await resendRes.text()
-        console.error("[waitlist-confirm] Resend falhou:", resendRes.status, errText)
-        return new Response(
-          JSON.stringify({ error: "RESEND_FAILED", status: resendRes.status }),
-          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        )
+        console.error('[waitlist-confirm] Resend falhou:', resendRes.status, errText)
+        return new Response(JSON.stringify({ error: 'RESEND_FAILED', status: resendRes.status }), {
+          status: 502,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
       }
     } else {
       // Caminho 2 (sem secret): registra o pedido — o robô do Apollo envia via MCP Resend e marca o envio.
       // A edge marca um status 'pending' no email_sent_at NULL; o cron do Apollo varre e envia.
-      console.log("[waitlist-confirm] RESEND_API_KEY ausente — registro fica pendente para envio via MCP")
+      console.log(
+        '[waitlist-confirm] RESEND_API_KEY ausente — registro fica pendente para envio via MCP',
+      )
     }
 
     // Marcar como processado (service role)
     const markRes = await fetch(
       `${SUPABASE_URL}/rest/v1/waitlist?email=eq.${encodeURIComponent(email)}`,
       {
-        method: "PATCH",
+        method: 'PATCH',
         headers: {
           Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
           apikey: SUPABASE_SERVICE_ROLE_KEY,
-          "Content-Type": "application/json",
-          Prefer: "return=minimal",
+          'Content-Type': 'application/json',
+          Prefer: 'return=minimal',
         },
         body: JSON.stringify(
-          emailId ? { email_sent_at: new Date().toISOString() } : { email_pending: true }
+          emailId ? { email_sent_at: new Date().toISOString() } : { email_pending: true },
         ),
       },
     )
 
     if (!markRes.ok) {
-      console.error("[waitlist-confirm] Falha ao marcar registro:", markRes.status)
+      console.error('[waitlist-confirm] Falha ao marcar registro:', markRes.status)
     }
 
     return new Response(
-      JSON.stringify({ success: true, email_id: emailId, mode: emailId ? "resend" : "pending-mcp" }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({
+        success: true,
+        email_id: emailId,
+        mode: emailId ? 'resend' : 'pending-mcp',
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )
   } catch (e) {
-    console.error("[waitlist-confirm] Erro inesperado:", e)
-    return new Response(
-      JSON.stringify({ error: "INTERNAL_ERROR" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    )
+    console.error('[waitlist-confirm] Erro inesperado:', e)
+    return new Response(JSON.stringify({ error: 'INTERNAL_ERROR' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 })

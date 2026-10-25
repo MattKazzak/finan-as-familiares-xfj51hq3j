@@ -261,6 +261,7 @@ describe('OnboardingWizardDialog', () => {
       setLastImportSummary: vi.fn(),
       refreshTrigger: 0,
       triggerRefresh: mockTriggerRefresh,
+      markTourStepOptimistic: vi.fn(),
     })
 
     render(

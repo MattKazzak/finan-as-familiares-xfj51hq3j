@@ -25,7 +25,7 @@ let memberResolved = false
 async function resolveMyMemberId(): Promise<void> {
   try {
     const { data: userData } = await supabase.auth.getUser()
-    const uid = userData.data?.user?.id
+    const uid = userData.user?.id
     if (!uid) {
       console.info('[RealtimePiu] sem usuário logado — piu desativado nesta sessão')
       return

@@ -61,9 +61,10 @@ export function useSessionWatchdog() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
-      // Só TOKEN_REFRESH_FAILED interessa: o token pode ter morrido de verdade
-      // OU pode ser só rede. Um probe tolerante decide (nunca desloga direto).
-      if (event === 'TOKEN_REFRESH_FAILED') {
+      // Só TOKEN_REFRESH_FAILED (ou similar emitido pelo runtime) interessa:
+      // o token pode ter morrido de verdade OU pode ser só rede.
+      // Um probe tolerante decide (nunca desloga direto).
+      if ((event as string) === 'TOKEN_REFRESH_FAILED') {
         void runProbe('token-refresh-failed')
       }
       // SIGNED_OUT aqui é consequência do nosso próprio signOut ou logout do

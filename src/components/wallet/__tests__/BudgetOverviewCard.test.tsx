@@ -114,6 +114,9 @@ describe('BudgetOverviewCard', () => {
     // Os 3 baldes devem exibir "✓ Cota 100% alocada"
     const allocatedBadges = screen.getAllByText('✓ Cota 100% alocada')
     expect(allocatedBadges).toHaveLength(3)
+
+    // NÃO deve exibir o texto removido "Comprometido: X% da renda"
+    expect(screen.queryByText(/Comprometido:/i)).toBeNull()
   })
 
   it('com budget_model 60_25_15 e teto menor que a cota, exibe a folga livre para alocar calculada em cima do modelo', () => {
