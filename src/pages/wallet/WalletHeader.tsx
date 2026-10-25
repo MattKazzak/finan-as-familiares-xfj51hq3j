@@ -53,11 +53,11 @@ export function WalletHeader() {
               <button
                 type="button"
                 onClick={openImportStatement}
-                className="inline-flex items-center justify-center gap-1.5 text-xs font-medium text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 px-3 py-1 rounded-xl transition-colors border border-emerald-200/60 bg-white/80 shadow-2xs active:scale-95 touch-manipulation"
+                className="inline-flex items-center justify-center gap-1.5 min-h-[34px] px-3 py-1.5 rounded-2xl text-xs font-medium text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50/80 bg-white border border-emerald-200/80 shadow-2xs transition-all active:scale-95 touch-manipulation cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
                 title="Importar extrato bancário (OFX ou PDF)"
               >
                 <UploadCloud className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span>Importar OFX ou PDF</span>
+                <span>Importar extrato</span>
               </button>
             )}
           </MonthSelector>
