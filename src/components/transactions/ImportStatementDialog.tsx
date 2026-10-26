@@ -72,7 +72,6 @@ import {
   ArrowUpRight,
   Loader2,
   Sparkles,
-  Copy,
   Info,
   ChevronDown,
   ChevronUp,
@@ -2097,42 +2096,6 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                     </p>
                   </div>
                 )}
-              </div>
-
-              {/* Informações e Recursos de Apoio */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
-                  <div className="flex items-center gap-2 text-xs font-bold text-slate-800 mb-1">
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Categorias Inteligentes</span>
-                  </div>
-                  <p className="text-[11px] text-slate-500">
-                    O sistema reconhece termos como iFood, Uber, Mercado, Farmácia e Salário
-                    automaticamente.
-                  </p>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
-                  <div className="flex items-center gap-2 text-xs font-bold text-slate-800 mb-1">
-                    <Copy className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Anti-Duplicidade</span>
-                  </div>
-                  <p className="text-[11px] text-slate-500">
-                    Transações com mesma data e valor já registradas são identificadas para evitar
-                    lançamentos repetidos.
-                  </p>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
-                  <div className="flex items-center gap-2 text-xs font-bold text-slate-800 mb-1">
-                    <Info className="w-3.5 h-3.5 text-slate-600" strokeWidth={1.5} />
-                    <span>Revisão Completa</span>
-                  </div>
-                  <p className="text-[11px] text-slate-500">
-                    Você pode alterar categorias, atribuir membros, desmarcar itens ou criar novas
-                    categorias antes de salvar.
-                  </p>
-                </div>
               </div>
             </div>
           ) : null}
