@@ -77,7 +77,6 @@ import {
   ChevronUp,
   ShieldCheck,
   Check,
-  Building2,
   Star,
   ExternalLink,
   Maximize2,
@@ -210,7 +209,6 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
   const [ignoredLines, setIgnoredLines] = useState<IgnoredLineInfo[]>([])
   const [showIgnoredLines, setShowIgnoredLines] = useState(false)
   const [fileWarnings, setFileWarnings] = useState<string[]>([])
-  const [showBankGuide, setShowBankGuide] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
 
   // Estados para PDF protegido por senha (em memória, nunca persistidos)
@@ -254,55 +252,6 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
     }
   }, [members, defaultMemberId])
 
-  // Lista de bancos para o mini-guia "Onde exportar o OFX"
-  const BANK_GUIDES = [
-    {
-      name: 'Banco Inter',
-      step: 'Extrato → Filtrar período → Exportar → Escolher "OFX"',
-      badge: 'Conta / Fatura',
-    },
-    {
-      name: 'Nubank',
-      step: 'Faturas → Resumo da Fatura → Exportar Fatura → Escolher formato "OFX"',
-      badge: 'Cartão / Conta',
-    },
-    {
-      name: 'Itaú',
-      step: 'Conta Corrente → Ver Extrato → Salvar em outros formatos → OFX',
-      badge: 'Internet Banking',
-    },
-    {
-      name: 'Bradesco',
-      step: 'Saldos e Extratos → Extrato Mensal/Periódico → Salvar como OFX / Money',
-      badge: 'Internet Banking',
-    },
-    {
-      name: 'Santander',
-      step: 'Conta Corrente → Extrato → Exportar extrato → Selecionar OFX',
-      badge: 'Internet Banking',
-    },
-    {
-      name: 'Banco do Brasil',
-      step: 'Extrato de Conta Corrente → Salvar extrato → Formato OFX / Money 2000+',
-      badge: 'App / Web',
-    },
-    {
-      name: 'Caixa Econômica',
-      step: 'Minha Conta → Extrato por período → Exportar para Money/OFX',
-      badge: 'Internet Banking',
-    },
-    {
-      name: 'Sicredi',
-      step: 'Conta Corrente → Extratos → Exportar → Arquivo OFX',
-      badge: 'App / Web',
-    },
-    {
-      name: 'C6 Bank',
-      step: 'Extrato da Conta → Ícone de compartilhar/exportar → Escolher OFX',
-      badge: 'App C6',
-    },
-  ]
-
   // Resetar ao fechar ou cancelar
   const resetPasswordState = () => {
     setIsPasswordProtected(false)
@@ -334,7 +283,6 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
       setShowIgnoredLines(false)
       setFileWarnings([])
       setIsQuickCatOpen(false)
-      setShowBankGuide(false)
       setIsExpanded(false)
       setExtractionProgress('')
       setDeclaredTotalCents(null)
@@ -2028,74 +1976,23 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 </div>
               </div>
 
-              {/* Box Informativo: OFX & Mini-guia expansível */}
-              <div className="rounded-2xl border border-[rgba(20,33,61,0.08)] bg-[#F8F9FB] p-4 sm:p-5 text-xs space-y-3.5 shadow-2xs">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-start gap-3 min-w-0 flex-1">
-                    <div className="w-8 h-8 rounded-xl bg-[#FCA311]/15 text-[#B45309] flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
-                      <Sparkles className="w-4 h-4 stroke-[1.8]" />
-                    </div>
-                    <div className="min-w-0 flex-1 space-y-0.5">
-                      <h4 className="font-bold text-slate-900 text-xs sm:text-sm tracking-tight">
-                        Como funciona
-                      </h4>
-                      <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed">
-                        A IA lê seu arquivo, separa as compras, identifica parcelas e sugere as
-                        categorias da sua família. Você revisa tudo antes de confirmar — nada entra
-                        sem seu OK.
-                      </p>
-                    </div>
+              {/* Box Informativo: Como funciona */}
+              <div className="rounded-2xl border border-[rgba(20,33,61,0.08)] bg-[#F8F9FB] p-4 sm:p-5 text-xs shadow-2xs">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-[#FCA311]/15 text-[#B45309] flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                    <Sparkles className="w-4 h-4 stroke-[1.8]" />
                   </div>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowBankGuide((prev) => !prev)}
-                    className="h-8 text-xs rounded-xl bg-white/95 border-slate-200 text-[#14213D] hover:bg-slate-50 shrink-0 font-semibold gap-1.5 self-start sm:self-center shadow-2xs"
-                  >
-                    <Building2 className="w-3.5 h-3.5 text-[#14213D]" />
-                    <span>{showBankGuide ? 'Ocultar guia' : 'Como exportar nos bancos'}</span>
-                    {showBankGuide ? (
-                      <ChevronUp className="w-3.5 h-3.5" />
-                    ) : (
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    )}
-                  </Button>
-                </div>
-
-                {/* Lista de Bancos Expansível */}
-                {showBankGuide && (
-                  <div className="pt-3 border-t border-emerald-200/70 space-y-2.5">
-                    <div className="flex items-center gap-1.5 font-bold text-slate-800">
-                      <Building2 className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>Passo a passo nos principais bancos brasileiros:</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                      {BANK_GUIDES.map((b) => (
-                        <div
-                          key={b.name}
-                          className="p-2.5 rounded-xl bg-white/95 border border-emerald-100 shadow-[0_1px_2px_rgba(0,0,0,0.03)] text-[11px] space-y-1"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-slate-900">{b.name}</span>
-                            <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                              {b.badge}
-                            </span>
-                          </div>
-                          <p className="text-slate-600 leading-snug">{b.step}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <p className="text-[10px] text-slate-500 pt-0.5 italic">
-                      Dica: No Internet Banking ou app, procure a opção de download/compartilhar no
-                      extrato ou fatura e escolha <strong>OFX</strong> (às vezes listada como
-                      "Money", "MS Money" ou "Outros formatos").
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <h4 className="font-bold text-slate-900 text-xs sm:text-sm tracking-tight">
+                      Como funciona
+                    </h4>
+                    <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed">
+                      A IA lê seu arquivo, separa as compras, identifica parcelas e sugere as
+                      categorias da sua família. Você revisa tudo antes de confirmar — nada entra
+                      sem seu OK.
                     </p>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           ) : null}
