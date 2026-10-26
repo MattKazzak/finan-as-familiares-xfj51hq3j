@@ -1179,13 +1179,13 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
         if (realCompras) fallbackCat = realCompras.originalName
         validatedTx.categoria = fallbackCat
         validatedTx.subcategoria = null
-        if (status === 'sucesso') {
-          unmappedItems.push({
-            descricao: invalidDesc,
-            suggestedCat: fallbackCat,
-            suggestedSub: sanitizeItemNameForSub(invalidDesc),
-          })
-        }
+        // ANTIDOUTRINA c02 (26/10): lançamento simples (Classe 1) com valor presente NUNCA
+        // desce para clarificacao por par de categoria sem gaveta — cai na gaveta fallback
+        // (mais próxima) e segue "sucesso"; o usuário reclassifica depois. O downgrade
+        // honesto continua valendo para CESTAS multi-item (validatedItens acima).
+        console.warn(
+          `[voice-parse] Tx sem gaveta real → fallback ${fallbackCat} (item "${invalidDesc}")`,
+        )
       }
     }
 
