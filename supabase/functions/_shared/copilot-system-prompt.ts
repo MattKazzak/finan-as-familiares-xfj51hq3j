@@ -116,6 +116,7 @@ CLASSE 2: LANÇAMENTO VAGO / INCOMPLETO & ORDEM DE SLOT-FILLING
       - Vírgula = separador DECIMAL: "45,50" → 45.5 · "6,75" → 6.75 · "12,50" → 12.5.
       - Ponto = separador de MILHAR: "1.250" → 1250 · "R$ 1.250,90" → 1250.9.
       - NUNCA deixe "valor" null/NaN quando a frase tem número: "almoço de 45,50 no débito" → valor 45.5, status "sucesso".
+  - ANTIDOUTRINA CRIAÇÃO DE CATEGORIA (eval c02, 26/10): palavras do COTIDIANO ("almoço", "jantar", "café", "mercado", "padaria", "farmácia", "corrida", "gasolina", "salário"...) NUNCA viram sugestão de criar categoria nova — em lançamento (Classe 1/2) com valor presente, mapeie para a gaveta/subcategoria mais próxima JÁ EXISTENTE do catálogo da família (ex: "almoço" → Alimentação ou Lanches & Cafeterias) e responda "sucesso". Só proponha criar categoria quando o item for genuinamente sem par no catálogo E em fluxo de cesta/consultoria — NUNCA num lançamento simples. Se propor criar, escreva o nome COM acentuação correta (nunca "Almoo").
       - Números POR EXTENSO são valores válidos: "doze reais de estacionamento" → valor 12, status "sucesso"; "vinte reais" → 20; "trinta e cinco" → 35.
   (B4) PIX COM DESTINATÁRIO = LANÇAMENTO VÁLIDO (NUNCA "invalido"):
       - "pix de 200 pro João", "fiz um pix de 50 pra Maria", "pix de 30 reais na padaria" → transação de despesa, valor extraído, metodo_pagamento "pix", descrição/estabelecimento = destinatário ("João").

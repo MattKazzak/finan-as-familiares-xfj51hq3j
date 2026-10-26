@@ -773,7 +773,12 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
       'acao_executada',
       'modo_cesta',
     ]
-    const status = validStatuses.includes(parsedAiJson?.status) ? parsedAiJson.status : 'invalido'
+    const rawStatus = validStatuses.includes(parsedAiJson?.status)
+      ? parsedAiJson.status
+      : 'invalido'
+    // Normalização de contrato (26/10, eval c03): "acao_executada" é sinônimo de "sucesso" —
+    // mesmo resultado semântico, rótulo divergente quebrava o golden set. Unificar em "sucesso".
+    const status = rawStatus === 'acao_executada' ? 'sucesso' : rawStatus
 
     const isMudarMes = parsedAiJson?.acao === 'mudar_mes'
     const mesAlvo = parsedAiJson?.mes_alvo || null
