@@ -18,6 +18,12 @@ interface SubItemProposta {
   duvida_categoria?: boolean
 }
 
+interface ParcelaSerie {
+  total: number
+  valor_parcela: number
+  mes_inicio: string
+}
+
 interface ParsedVoiceTransaction {
   descricao: string
   estabelecimento?: string | null
@@ -28,6 +34,9 @@ interface ParsedVoiceTransaction {
   subcategoria?: string | null
   metodo_pagamento?: 'pix' | 'debito' | 'credito' | 'dinheiro' | null
   itens?: SubItemProposta[] | null
+  /** B8-SERIE (27/10): quando presente, o app cria a série de parcelas
+      (is_installment) em vez de uma transação única. */
+  parcelas?: ParcelaSerie | null
 }
 
 interface StructuredSuggestionOption {

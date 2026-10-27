@@ -1461,6 +1461,102 @@ export function CopilotPage() {
       } else if (parsed.aiStatus === 'sucesso' && parsed.amountCents > 0) {
         setPendingTx(null)
         cardType = 'transacao'
+
+        // SÉRIE DE PARCELAS (27/10, ordem do Matheus): "6x de 45" e "11 parcelas
+        // de 320 desde janeiro" agora criam a SÉRIE completa — uma transação por
+        // mês, vinculadas por installment_group_id, com is_installment = true.
+        // Retroativo: mes_inicio pode estar no passado (a edge extrai do texto).
+        if (parsed.parcelas && parsed.parcelas.total >= 2 && family) {
+          const { total, valorParcelaCents, mesInicio } = parsed.parcelas
+          const groupId = crypto.randomUUID()
+          const [y0, m0] = mesInicio.split('-').map(Number)
+          const memberId = currentMember?.id || members[0]?.id || ''
+          let cat = categories.find(
+            (cx) =>
+              cx.type === parsed.type &&
+              (cx.name.toLowerCase() === parsed.categoryNameSuggestion?.toLowerCase() ||
+                cx.name.toLowerCase().includes(parsed.categoryNameSuggestion?.toLowerCase() || '')),
+          )
+          const categoryId = cat?.id || null
+          let subcategoryId: string | null = null
+          if (cat && parsed.subcategoryNameSuggestion) {
+            const sub = cat.subcategories?.find(
+              (sx) => sx.name.toLowerCase() === parsed.subcategoryNameSuggestion?.toLowerCase(),
+            )
+            if (sub) subcategoryId = sub.id
+          }
+
+          let savedCount = 0
+          for (let i = 0; i < total; i++) {
+            // mês da parcela i: mesInicio + i meses (clamp de dezembro→janeiro)
+            const mi = m0 - 1 + i
+            const yy = y0 + Math.floor(mi / 12)
+            const mm = (mi % 12) + 1
+            const dateStr = `${yy}-${String(mm).padStart(2, '0')}-01`
+            const created = await createTransaction({
+              family_id: family.id,
+              member_id: memberId,
+              category_id: categoryId,
+              subcategory_id: subcategoryId,
+              type: parsed.type,
+              amount_cents: valorParcelaCents,
+              description: parsed.description,
+              transaction_date: dateStr,
+              status: 'confirmed',
+              is_installment: true,
+              installment_number: i + 1,
+              installment_total: total,
+              installment_group_id: groupId,
+            })
+            if (created) savedCount++
+          }
+
+          const [yEnd, mEnd] = [y0, m0]
+          const lastMonth = mEnd - 1 + (total - 1)
+          const yyEnd = y0 + Math.floor(lastMonth / 12)
+          const mmEnd = (lastMonth % 12) + 1
+          const monthNamesPt = [
+            'janeiro',
+            'fevereiro',
+            'março',
+            'abril',
+            'maio',
+            'junho',
+            'julho',
+            'agosto',
+            'setembro',
+            'outubro',
+            'novembro',
+            'dezembro',
+          ]
+          assistantText = `✅ ${savedCount} parcela(s) de ${(valorParcelaCents / 100)
+            .toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+            .replace('R$', 'R$')} gravadas — de ${monthNamesPt[m0 - 1]}/${String(y0).slice(2)} a ${
+            monthNamesPt[mmEnd - 1]
+          }/${String(yyEnd).slice(2)} (total ${parsed.amountFormatted}).`
+          lastCreatedTxIdRef.current = null
+          setIsProcessing(false)
+          if (family?.id) {
+            saveCopilotMessage({
+              familyId: family.id,
+              role: 'assistant',
+              content: assistantText,
+              cardType: 'transacao',
+            }).catch(() => {})
+          }
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `asst-${Date.now()}`,
+              sender: 'assistant',
+              text: assistantText,
+              timestamp: new Date(),
+              cardType: 'transacao',
+            },
+          ])
+          return
+        }
+
         const savedTx = await executeAutonomousSave(parsed)
 
         // LANÇAMENTO RECORRENTE VIA COPILOT (21/10, pedido do Matheus):
@@ -1586,7 +1682,7 @@ export function CopilotPage() {
   }, [hasConsent, isListening, startListening, stopListeningAndProcess])
 
   return (
-    <div className="flex flex-col h-[calc(100vh-5rem)] md:h-[calc(100vh-6rem)] max-w-2xl mx-auto bg-white/70 backdrop-blur-sm rounded-3xl border border-border/40 shadow-curiango overflow-hidden relative">
+    <div className="flex flex-col h-[calc(100dvh-5rem)] md:h-[calc(100dvh-6rem)] max-w-2xl mx-auto bg-white/70 backdrop-blur-sm rounded-3xl border border-border/40 shadow-curiango overflow-hidden relative">
       {/* Topo do Chat (CDS v1.0) */}
       <div className="flex items-center justify-between px-4 py-3 bg-brand text-white">
         <div className="flex items-center gap-3">
@@ -1745,8 +1841,12 @@ export function CopilotPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Rodapé e Barra de Entrada (Texto + Microfone Unificado CDS v1.0) */}
-      <div className="p-3 bg-white border-t border-border/40 space-y-2">
+      {/* Rodapé e Barra de Entrada (Texto + Microfone Unificado CDS v1.0)
+          FIX 27/10 (Matheus: "a barra navy pula ao enviar mensagem"): o pulo
+          era o viewport fixo (100vh) + o teclado mobile reajustando o layout.
+          100dvh acompanha o viewport DINÂMICO (teclado abre/fecha sem salto)
+          e o padding-bottom respeita a barra de gestos. */}
+      <div className="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-white border-t border-border/40 space-y-2">
         {/* Banner transitório de escuta contínua (ex: no-speech) */}
         {voiceInfoMessage && (
           <div

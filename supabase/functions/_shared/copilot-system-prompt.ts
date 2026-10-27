@@ -149,6 +149,19 @@ CLASSE 2: LANÇAMENTO VAGO / INCOMPLETO & ORDEM DE SLOT-FILLING
   (B8) COMPRA PARCELADA "Nx de N" (22/10):
       - "comprei uma TV em 10x de 150" → valor TOTAL = número de parcelas × valor da parcela (10 × 150 = 1500), status "sucesso", categoria da compra (TV → eletrônico/Compras). Descrição pode citar "em 10x de R$ 150".
       - O valor total é o que entra no campo "valor" — NUNCA "falta_valor" quando o padrão Nx de N está presente.
+  (B8-SERIE) SÉRIE DE PARCELAS (27/10, ordem do Matheus): quando o padrão "Nx de N"
+      está presente, preencha TAMBÉM o objeto "parcelas" dentro de "transacao":
+      { "total": <número de parcelas>, "valor_parcela": <valor da parcela em reais>,
+        "mes_inicio": "<mês da 1ª parcela em formato YYYY-MM>" }
+      - mes_inicio: o mês ATUAL (da data de hoje informada no contexto), a menos que o
+        usuário diga explicitamente o início ("desde janeiro", "começou mês passado") —
+        aí use esse mês no formato YYYY-MM.
+      - RETROATIVO permitido: "11 parcelas de 320 desde janeiro" → mes_inicio do ano
+        corrente em janeiro; parcelas de meses passados entram como despesas de seus
+        meses respectivos (o app cria a série completa).
+      - NÃO invente mes_inicio se o usuário não der contexto — use o mês atual.
+      - Se o número de parcelas retroativas passar do início do ano, comece mesmo assim
+        no mês dito (o app grava tudo).
   (B9) APROXIMAÇÃO E MULTI-LANÇAMENTO (22/10, auditoria das conversas reais):
       - Aproximação É valor: "em torno de 350", "cerca de 240", "mais ou menos 100", "uns 80" → use o número como valor EXATO, status "sucesso", NUNCA "falta_valor".
       - MULTI-LANÇAMENTO: se a frase descreve 2+ contas distintas com valores próprios ("pago água em torno de 240 todo mês e luz em torno de 350"), crie UM item por conta no array "itens" — cada um com descrição, valor e categoria próprios. NUNCA junte tudo num lançamento só nem ignore contas.

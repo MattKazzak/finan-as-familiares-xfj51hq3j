@@ -150,6 +150,14 @@ export interface ParsedVoiceTransaction {
   mesAlvo?: string | null
   recorrente?: boolean | null
   diaRecorrente?: number | null
+  /** B8-SERIE (27/10): série de parcelas detectada ("6x de 45", "11 parcelas
+      de 320 desde janeiro") — quando presente, o app grava N transações
+      vinculadas (is_installment) em meses sucessivos. */
+  parcelas?: {
+    total: number
+    valorParcelaCents: number
+    mesInicio: string // YYYY-MM
+  } | null
   isBasket?: boolean
   basketItemsDescription?: string
   basketEventTag?: string
@@ -3026,6 +3034,24 @@ export function mapAiResponseToParsedTransaction(
     mesAlvo: aiData.mes_alvo || null,
     recorrente: aiData.recorrente === true,
     diaRecorrente: typeof aiData.dia_recorrente === 'number' ? aiData.dia_recorrente : null,
+    // B8-SERIE (27/10): série de parcelas — validação defensiva (total 2-72,
+    // valor > 0, mes_inicio YYYY-MM). Qualquer campo inválido = null (gravação
+    // única normal, nunca série corrompida).
+    parcelas:
+      transacao?.parcelas &&
+      typeof transacao.parcelas.total === 'number' &&
+      transacao.parcelas.total >= 2 &&
+      transacao.parcelas.total <= 72 &&
+      typeof transacao.parcelas.valor_parcela === 'number' &&
+      transacao.parcelas.valor_parcela > 0 &&
+      typeof transacao.parcelas.mes_inicio === 'string' &&
+      /^\d{4}-\d{2}$/.test(transacao.parcelas.mes_inicio)
+        ? {
+            total: Math.floor(transacao.parcelas.total),
+            valorParcelaCents: Math.round(transacao.parcelas.valor_parcela * 100),
+            mesInicio: transacao.parcelas.mes_inicio,
+          }
+        : null,
     aiError: aiData.error_detail || (aiData.error ? `Erro: ${aiData.error}` : null),
     isUncertainSuggestion:
       (typeof aiData.confianca === 'number' && aiData.confianca < 0.6) ||
