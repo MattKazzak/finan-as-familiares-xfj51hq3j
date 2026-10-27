@@ -1575,6 +1575,107 @@ export function CopilotPage() {
           return
         }
 
+        // MULTI-ITEM COM VALORES (27/10, bug do Matheus): quando a edge devolve
+        // vários itens TODOS com valor (ex.: "250 de água, 350 de luz, 1620 de
+        // aluguel"), o caminho antigo gravava UMA transação com a SOMA —
+        // R$ 2.220 numa categoria só, itens perdidos, e uma única conta fixa
+        // com o valor total. Agora: cada item vira SUA transação na categoria
+        // certa; se o pedido é recorrente, cada item vira SUA conta fixa.
+        const itensProntos = (parsed.extractedItems || []).filter(
+          (it) => typeof it.valor === 'number' && it.valor > 0,
+        )
+        if (itensProntos.length >= 2) {
+          const memberId = currentMember?.id || members[0]?.id || ''
+          const wantsRecurringMulti =
+            parsed.recorrente === true ||
+            /\b(todo|todos|toda|todas)\s+(os\s+|as\s+)?m[eê]s(es)?\b|\bfix[ao]\b|\brecorrente\b/i.test(
+              text,
+            )
+          const resultados: string[] = []
+          for (const item of itensProntos) {
+            const itemCents = Math.round(item.valor * 100)
+            let itemCat = categories.find(
+              (cx) =>
+                cx.type === 'expense' &&
+                (cx.name.toLowerCase() === item.categoria_proposta?.toLowerCase() ||
+                  cx.name.toLowerCase().includes(item.categoria_proposta?.toLowerCase() || '')),
+            )
+            let itemSubId: string | null = null
+            if (itemCat && item.subcategoria_proposta) {
+              const sub = itemCat.subcategories?.find(
+                (sx) => sx.name.toLowerCase() === item.subcategoria_proposta?.toLowerCase(),
+              )
+              if (sub) itemSubId = sub.id
+            }
+            const todayStr = new Date().toISOString().split('T')[0]
+            const createdItem = await createTransaction({
+              family_id: family.id,
+              member_id: memberId,
+              category_id: itemCat?.id || null,
+              subcategory_id: itemSubId,
+              type: 'expense',
+              amount_cents: itemCents,
+              description: item.descricao,
+              transaction_date: todayStr,
+              status: 'confirmed',
+            })
+            if (!createdItem) continue
+            let linha = `${formatBRL(itemCents)} em ${item.categoria_proposta || 'Sem categoria'}${
+              item.subcategoria_proposta ? ` › ${item.subcategoria_proposta}` : ''
+            }`
+            if (wantsRecurringMulti && createdItem) {
+              try {
+                const { createRecurringIncome } = await import('@/services/recurring-incomes')
+                const recRule = await createRecurringIncome({
+                  family_id: family.id,
+                  member_id: memberId,
+                  category_id: itemCat?.id || null,
+                  subcategory_id: itemSubId,
+                  name: item.descricao,
+                  type: 'expense',
+                  amount_cents: itemCents,
+                  day_of_month: new Date().getDate(),
+                })
+                if (recRule?.id) {
+                  await updateTransaction(createdItem.id, {
+                    recurring_income_id: recRule.id,
+                    is_recurring: true,
+                    recurring_month: todayStr.slice(0, 7) + '-01',
+                  })
+                  linha += ' 🔁'
+                }
+              } catch (recErr) {
+                console.warn('Copilot: erro ao criar conta fixa do item:', recErr)
+              }
+            }
+            resultados.push(linha)
+          }
+          triggerRefresh()
+          assistantText = `Lancei ${resultados.length} ${
+            resultados.length === 1 ? 'conta' : 'contas'
+          }:\n${resultados.map((r) => `• ${r}`).join('\n')}`
+          setIsProcessing(false)
+          if (family?.id) {
+            saveCopilotMessage({
+              familyId: family.id,
+              role: 'assistant',
+              content: assistantText,
+              cardType: 'transacao',
+            }).catch(() => {})
+          }
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `asst-${Date.now()}`,
+              sender: 'assistant',
+              text: assistantText,
+              timestamp: new Date(),
+              cardType: 'transacao',
+            },
+          ])
+          return
+        }
+
         const savedTx = await executeAutonomousSave(parsed)
 
         // LANÇAMENTO RECORRENTE VIA COPILOT (21/10, pedido do Matheus):
