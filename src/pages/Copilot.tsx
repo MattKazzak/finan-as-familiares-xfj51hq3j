@@ -1458,7 +1458,17 @@ export function CopilotPage() {
           (isAskingForItems
             ? 'O que você comprou? Me conta os itens que eu já organizo pra você!'
             : `Entendi "${parsed.description}". Qual foi o valor?`)
-      } else if (parsed.aiStatus === 'sucesso' && parsed.amountCents > 0) {
+      } else if (
+        parsed.aiStatus === 'sucesso' &&
+        (parsed.amountCents > 0 ||
+          // MULTI-ITEM SEM VALOR TOTAL (27/10, bug real do Matheus): a edge às
+          // vezes responde itens completos com valor MAS sem o valor somado no
+          // objeto transacao (valor: undefined). O caminho antigo exigia
+          // amountCents > 0 e NUNCA gravava — o chat dizia "Lançado!" e o
+          // banco ficava vazio. Itens prontos também são lançamento válido.
+          (parsed.extractedItems || []).filter((it) => typeof it.valor === 'number' && it.valor > 0)
+            .length >= 2)
+      ) {
         setPendingTx(null)
         cardType = 'transacao'
 
