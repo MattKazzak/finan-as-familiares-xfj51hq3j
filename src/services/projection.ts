@@ -183,7 +183,14 @@ export function buildProjection(
     }
   }
 
-  // ── Metas: aporte mensal estimado até o prazo ─────────────────────────────
+  // ── Metas: só entram quando o usuário DECLARA o aporte mensal ─────────────
+  //
+  // DECISÃO DE PRODUTO (27/10, auditoria do motor): uma meta não é dívida — é
+  // intenção. Tratá-la como compromisso automático inventava dinheiro que
+  // ninguém prometeu (a Reserva de Emergência de R$ 5.000 virava R$ 8.100 de
+  // "dinheiro já comprometido" em 12 meses). Agora a meta entra na projeção
+  // SÓ quando o usuário diz "quero guardar X por mês" (a ação de 1 toque).
+  // A tela de Metas avisa quando o ritmo declarado não chega ao prazo.
   const metaSaidas = new Map<string, number>()
 
   for (const goal of metas) {
@@ -194,6 +201,9 @@ export function buildProjection(
     const current = Number(goal.progressoCents) || 0
     const falta = Math.max(0, target - current)
     if (falta <= 0) continue
+    // Sem aporte declarado não há compromisso — a meta é só uma intenção.
+    const aporteDeclarado = Number(goal.aporteMensalCents) || 0
+    if (aporteDeclarado <= 0) continue
 
     const deadlineMk = (goal.deadline || '').slice(0, 7)
     let mesesAtePrazo = horizonteMeses
@@ -202,11 +212,9 @@ export function buildProjection(
       const [y1, m1] = deadlineMk.split('-').map(Number)
       mesesAtePrazo = Math.max(1, (y1 - y0) * 12 + (m1 - m0) + 1)
     }
-    // AÇÃO DE 1 TOQUE (27/10): quando o usuário declara quanto quer guardar por
-    // mês, o valor DELE manda — a projeção deixa de adivinhar pelo prazo.
-    const aporteDeclarado = Number(goal.aporteMensalCents) || 0
-    const aporte = aporteDeclarado > 0 ? aporteDeclarado : Math.round(falta / mesesAtePrazo)
-    if (aporte <= 0) continue
+    // AÇÃO DE 1 TOQUE (27/10): o valor é SEMPRE o que o usuário declarou —
+    // a projeção nunca adivinha aporte pelo prazo.
+    const aporte = aporteDeclarado
 
     const mesesNoHorizonte = Math.min(mesesAtePrazo, horizonteMeses)
     const ateMk =
