@@ -59,8 +59,8 @@ export interface CategoryBudgetData {
 
 export interface WalletContextType {
   // Rota e Abas
-  activeTab: 'transacoes' | 'orcamentos'
-  setActiveTab: (tab: 'transacoes' | 'orcamentos') => void
+  activeTab: 'transacoes' | 'orcamentos' | 'projecao'
+  setActiveTab: (tab: 'transacoes' | 'orcamentos' | 'projecao') => void
 
   // Data / Mês
   currentDate: Date

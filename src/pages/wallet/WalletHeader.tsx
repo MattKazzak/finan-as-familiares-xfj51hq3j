@@ -12,7 +12,7 @@ export function WalletHeader() {
       <div className="flex flex-col sm:grid sm:grid-cols-3 items-center gap-4 mb-4">
         {/* Lado esquerdo no desktop: Abas segmentadas */}
         <div className="w-full sm:w-auto flex justify-center sm:justify-start">
-          <div className="bg-slate-100 p-1 rounded-2xl w-full sm:w-72 grid grid-cols-2">
+          <div className="bg-slate-100 p-1 rounded-2xl w-full sm:w-[26rem] grid grid-cols-3">
             <button
               type="button"
               onClick={() => {
@@ -40,6 +40,20 @@ export function WalletHeader() {
               }`}
             >
               Orçamentos
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('projecao')
+                navigate('/carteira?aba=projecao', { replace: true })
+              }}
+              className={`rounded-xl font-semibold text-xs py-2 transition-all ${
+                activeTab === 'projecao'
+                  ? 'bg-white text-emerald-700 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Projeção
             </button>
           </div>
         </div>

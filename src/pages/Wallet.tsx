@@ -53,6 +53,7 @@ import {
 import { WalletHeader } from './wallet/WalletHeader'
 import { WalletTransactionsTab } from './wallet/WalletTransactionsTab'
 import { WalletBudgetsTab } from './wallet/WalletBudgetsTab'
+import { WalletProjectionTab } from './wallet/WalletProjectionTab'
 import { WalletModals } from './wallet/WalletModals'
 
 export function WalletPage() {
@@ -80,19 +81,25 @@ export function WalletPage() {
   } = useFamily()
   const { toast } = useToast()
 
-  // Sincronização da aba com base na URL: /orcamentos ativa "orcamentos", /carteira ativa "transacoes"
-  const [activeTab, setActiveTab] = useState<'transacoes' | 'orcamentos'>(() => {
-    return location.pathname.includes('/orcamentos') ? 'orcamentos' : 'transacoes'
-  })
+  // Sincronização da aba com base na URL: /orcamentos ativa "orcamentos",
+  // /carteira ativa "transacoes"; ?aba=projecao ativa a aba Projeção (27/10).
+  const tabFromUrl = (): 'transacoes' | 'orcamentos' | 'projecao' => {
+    if (location.pathname.includes('/orcamentos')) return 'orcamentos'
+    if (location.search.includes('aba=projecao')) return 'projecao'
+    return 'transacoes'
+  }
+  const [activeTab, setActiveTab] = useState<'transacoes' | 'orcamentos' | 'projecao'>(tabFromUrl)
 
   // Sincronizar se a rota mudar externamente
   useEffect(() => {
     if (location.pathname.includes('/orcamentos')) {
       setActiveTab('orcamentos')
+    } else if (location.search.includes('aba=projecao')) {
+      setActiveTab('projecao')
     } else if (location.pathname.includes('/carteira')) {
       setActiveTab('transacoes')
     }
-  }, [location.pathname])
+  }, [location.pathname, location.search])
 
   // Estado do Mês Selecionado — Consolidado no activeMonth GLOBAL
   const {
@@ -1331,7 +1338,13 @@ export function WalletPage() {
         <WalletHeader />
 
         {/* Conteúdo da Aba Ativa */}
-        {activeTab === 'transacoes' ? <WalletTransactionsTab /> : <WalletBudgetsTab />}
+        {activeTab === 'transacoes' ? (
+          <WalletTransactionsTab />
+        ) : activeTab === 'orcamentos' ? (
+          <WalletBudgetsTab />
+        ) : (
+          <WalletProjectionTab />
+        )}
 
         {/* Modais, Sheets, Dialogs e Drawers */}
         <WalletModals />
