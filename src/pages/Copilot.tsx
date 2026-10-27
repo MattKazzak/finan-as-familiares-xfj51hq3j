@@ -33,7 +33,12 @@ import {
   fetchUserPreferencesWithFallback,
   saveUserAiConsent,
 } from '@/services/user-preferences'
-import { createTransaction, updateTransaction, fetchTransactions } from '@/services/transactions'
+import {
+  createTransaction,
+  updateTransaction,
+  fetchTransactions,
+  deleteTransaction,
+} from '@/services/transactions'
 import { BUCKET_METADATA } from '@/types/budget-presets'
 import { formatBRL } from '@/lib/formatters'
 import type { BudgetBucket } from '@/types/finance'
@@ -1262,6 +1267,74 @@ export function CopilotPage() {
         lancamentos_recentes: lancamentosRecentes as any,
       })
 
+      // ATENÇÃO 12 EXECUTADA (27/10): quando a edge decide "desfazer" (denúncia de
+      // duplicidade), o app PRECISA excluir de verdade — a promessa sem execução
+      // é pior que a mentira antiga. Exclui o lançamento MAIS RECENTE que casa
+      // com a descrição citada na frase do usuário.
+      if (parsed.acao === 'desfazer' && family?.id) {
+        const alvo = text.match(
+          /(?:lan[çc]ou|lan[çc]ado|lan[çc]e[ií]|exclu[ií]r?)\s+(?:a|o)?\s*([A-Za-zÀ-ú][A-Za-zÀ-ú0-9 ]{2,24})/i,
+        )
+        const alvoNome = (alvo?.[1] || '').trim().toLowerCase()
+        try {
+          const recentes = await fetchTransactions({ familyId: family.id, limit: 30 })
+          // candidatos: descrição contém o nome citado (ou qualquer um, se não citou)
+          const candidatos = recentes
+            .filter((t) => t.type === 'expense' || t.type === 'income')
+            .filter((t) =>
+              alvoNome ? (t.description || '').toLowerCase().includes(alvoNome) : true,
+            )
+          // duplicidade real? mesma descrição + mesmo valor em datas próximas
+          const grupos = new Map<string, typeof candidatos>()
+          for (const t of candidatos) {
+            const chave = `${(t.description || '').toLowerCase()}|${t.amount_cents}`
+            grupos.set(chave, [...(grupos.get(chave) || []), t])
+          }
+          const duplicado = [...grupos.values()].find((g) => g.length >= 2)
+          if (duplicado && duplicado.length >= 2) {
+            // exclui o mais recente do grupo duplicado
+            const alvoExclusao = [...duplicado].sort((a, b) =>
+              (b.created_at || '').localeCompare(a.created_at || ''),
+            )[0]
+            await deleteTransaction(alvoExclusao.id)
+            triggerRefresh()
+            assistantText = `É verdade — ${alvoExclusao.description} estava lançado duas vezes. Excluí um dos lançamentos (${formatBRL(
+              alvoExclusao.amount_cents,
+            )}) ✅`
+            cardType = 'sucesso'
+          } else {
+            assistantText =
+              'Deixa eu conferir... não encontrei lançamento duplicado agora. Pode me dizer qual lançamento devo excluir?'
+            cardType = 'consulta'
+          }
+        } catch (e) {
+          console.warn('Copilot: erro ao executar desfazer:', e)
+          assistantText =
+            'Tentei excluir mas algo falhou aqui. Você pode excluir manualmente na aba Transações?'
+          cardType = 'erro'
+        }
+        setIsProcessing(false)
+        if (family?.id) {
+          saveCopilotMessage({
+            familyId: family.id,
+            role: 'assistant',
+            content: assistantText,
+            cardType,
+          }).catch(() => {})
+        }
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `asst-${Date.now()}`,
+            sender: 'assistant',
+            text: assistantText,
+            timestamp: new Date(),
+            cardType,
+          },
+        ])
+        return
+      }
+
       // TAREFA 5: Interceptar comandos de correção de valor e comandos ainda não suportados (Fim do Fingimento)
       const isValueCorrectionIntent =
         parsed.acao === 'ajustar_valor' ||
@@ -1723,16 +1796,50 @@ export function CopilotPage() {
           /\b(todo|todos|toda|todas)\s+(os\s+|as\s+)?m[eê]s(es)?\b|\bfix[ao]\b|\brecorrente\b|\bsempre no dia\b|\bpor m[eê]s\b|\bmensal(mente)?\b/i
         const recDayMatch = text.match(/dia\s+(\d{1,2})/i)
         const wantsRecurring = parsed.recorrente === true || RECUR_RE.test(text)
+        // ATENÇÃO 14 (27/10, ordem do Matheus): "não é porque lancei hoje que é
+        // pra lançar todo mês neste dia". Sem dia dito (nem na frase, nem pela
+        // edge), o app PERGUNTA em vez de gravar com o dia de hoje.
+        const diaDito =
+          (recDayMatch && parseInt(recDayMatch[1], 10)) ||
+          (typeof parsed.diaRecorrente === 'number' &&
+          parsed.diaRecorrente >= 1 &&
+          parsed.diaRecorrente <= 31
+            ? parsed.diaRecorrente
+            : null)
+        if (wantsRecurring && family && savedTx && !diaDito) {
+          setPendingTx({
+            ...parsed,
+            description: parsed.description || savedTx.description,
+            clarificationQuestion: `Essa conta repete todo mês? Se sim, que dia ela cai? (ex.: "dia 5")`,
+            aiStatus: 'clarificacao',
+          })
+          cardType = 'clarificacao'
+          assistantText = `Lancei ${parsed.amountFormatted} em ${
+            parsed.categoryNameSuggestion || 'a categoria'
+          }. Essa é uma conta que repete todo mês? Se sim, que dia ela cai?`
+          setIsProcessing(false)
+          if (family?.id) {
+            saveCopilotMessage({
+              familyId: family.id,
+              role: 'assistant',
+              content: assistantText,
+              cardType,
+            }).catch(() => {})
+          }
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `asst-${Date.now()}`,
+              sender: 'assistant',
+              text: assistantText,
+              timestamp: new Date(),
+              cardType,
+            },
+          ])
+          return
+        }
         if (wantsRecurring && family && savedTx) {
-          const recDay = Math.max(
-            1,
-            Math.min(
-              31,
-              (recDayMatch && parseInt(recDayMatch[1], 10)) ||
-                parseInt((savedTx.transaction_date || '').slice(8, 10), 10) ||
-                new Date().getDate(),
-            ),
-          )
+          const recDay = Math.max(1, Math.min(31, diaDito || new Date().getDate()))
           try {
             const { createRecurringIncome } = await import('@/services/recurring-incomes')
             const recRule = await createRecurringIncome({
