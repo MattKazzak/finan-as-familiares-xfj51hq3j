@@ -54,6 +54,8 @@ export interface ProjectionResult {
   totalComprometidoCents: number
   /** Até quando vai o compromisso mais distante (label) */
   comprometidoAte: string | null
+  /** Soma mensal das contas fixas — a leitura "por mês", que o leigo entende */
+  totalMensalFixo: number
   months: ProjectionMonth[]
   commitments: FutureCommitment[]
   /** Primeiro mês projetado no vermelho (saldo < 0) — o alerta-chave */
@@ -282,15 +284,28 @@ export function buildProjection(
   }
   commitments.sort((a, b) => b.valorCents * b.mesesRestantes - a.valorCents * a.mesesRestantes)
 
+  // O rótulo "até X" só é honesto quando TODOS os compromissos têm fim previsto.
+  // Com conta fixa (recorrente) na lista, o horizonte é sempre 12 meses — dizer
+  // "até fev/27" olhando só as parcelas mentia sobre o número ao lado.
+  const temRecorrenteSemFim = commitments.some((c) => c.ateQuando === null)
+  const temRecorrente = Array.from(commitMap.values()).some((c) => c.origin === 'recorrente')
+  // Soma mensal das contas fixas: dá ao usuário a leitura "por mês", que é como
+  // ele pensa. O total de 12 meses sozinho é um número abstrato e assustador.
+  const totalMensalFixo = Array.from(commitMap.values())
+    .filter((c) => c.origin === 'recorrente')
+    .reduce((acc, c) => acc + c.valorCents, 0)
+
   const comprometidoAte =
-    commitments.length > 0
-      ? monthLabelOf(
-          commitments.reduce(
-            (acc, c) => (c.ateQuando && c.ateQuando > acc ? c.ateQuando : acc),
-            '0000-00',
-          ),
-        )
-      : null
+    commitments.length === 0
+      ? null
+      : temRecorrenteSemFim || temRecorrente
+        ? monthLabelOf(addMonths(thisMonthKey, horizonteMeses - 1))
+        : monthLabelOf(
+            commitments.reduce(
+              (acc, c) => (c.ateQuando && c.ateQuando > acc ? c.ateQuando : acc),
+              '0000-00',
+            ),
+          )
 
   const primeiroMesApertado = months.find((m) => m.saldoCents < 0) || null
   const mesMaisApertado =
@@ -302,6 +317,7 @@ export function buildProjection(
     saldoAtualCents,
     totalComprometidoCents: totalComprometido,
     comprometidoAte,
+    totalMensalFixo,
     months,
     commitments,
     primeiroMesApertado,

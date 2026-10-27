@@ -304,6 +304,13 @@ export function WalletProjectionTab() {
             <>Nenhum compromisso futuro lançado ainda. Tudo livre por aqui.</>
           )}
         </p>
+        {/* Leitura "por mês" — é como a pessoa pensa. O total de 12 meses
+            sozinho é abstrato; o /mês ela compara com o que ganha. */}
+        {projection.totalMensalFixo > 0 && (
+          <p className="mt-2 text-[11px] text-brand-amber font-semibold leading-snug">
+            São {fmt(projection.totalMensalFixo)} por mês em contas fixas.
+          </p>
+        )}
         <p className="mt-3 text-[10px] text-white/50 leading-snug">
           Com base nos seus lançamentos, contas fixas, parcelas e metas.
         </p>
@@ -503,8 +510,16 @@ export function WalletProjectionTab() {
 
 function CommitmentRow({ c, fmt }: { c: FutureCommitment; fmt: (n: number) => string }) {
   const Icon = c.origin === 'parcela' ? CreditCard : c.origin === 'meta' ? Target : Repeat
+  // Lançamento futuro avulso (IPVA em jan/27) NÃO é "conta fixa": ele acontece
+  // uma vez só. Chamar de conta fixa mentia sobre a natureza do compromisso.
   const originLabel =
-    c.origin === 'parcela' ? 'Parcela' : c.origin === 'meta' ? 'Meta' : 'Conta fixa'
+    c.origin === 'parcela'
+      ? 'Parcela'
+      : c.origin === 'meta'
+        ? 'Meta'
+        : c.origin === 'divida'
+          ? 'Lançamento futuro'
+          : 'Conta fixa'
   // FIX (27/10, achado na prova visual): a formatação anterior montava
   // "até 2027/27". Agora usa o label canônico do serviço (dez/27).
   const ateTxt = c.ateQuando ? `até ${monthLabelOf(c.ateQuando)}` : 'todo mês'
