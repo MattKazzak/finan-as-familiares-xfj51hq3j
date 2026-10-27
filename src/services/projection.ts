@@ -146,16 +146,20 @@ export function buildProjection(
     if (!rec.active) continue
     const amt = Number(rec.amount_cents) || 0
     const isExpense = rec.type === 'expense'
-    const key = rec.id
-    const commit = commitMap.get(`rec-${key}`) || {
-      id: `rec-${key}`,
-      nome: rec.name,
-      valorCents: amt,
-      ateQuando: null, // indeterminado (assinatura/conta fixa)
-      origin: 'recorrente' as CommitmentOrigin,
-      mesesRestantes: horizonteMeses,
+    // CORREÇÃO (27/10, achada na prova visual): RECEITA NÃO É COMPROMISSO.
+    // O salário entra no fluxo do mês (recEntradas), mas nunca na lista
+    // "quem já tem seu dinheiro" nem no total comprometido — senão o número
+    // gigante somava o que a família VAI RECEBER como se fosse dívida.
+    if (isExpense) {
+      commitMap.set(`rec-${rec.id}`, {
+        id: `rec-${rec.id}`,
+        nome: rec.name,
+        valorCents: amt,
+        ateQuando: null, // indeterminado (aluguel, assinatura, conta fixa)
+        origin: 'recorrente' as CommitmentOrigin,
+        mesesRestantes: horizonteMeses,
+      })
     }
-    commitMap.set(`rec-${key}`, commit)
     for (let i = 0; i < horizonteMeses; i++) {
       const mk = addMonths(startingMonthKey, i)
       if (isExpense) recSaidas.set(mk, (recSaidas.get(mk) || 0) + amt)
