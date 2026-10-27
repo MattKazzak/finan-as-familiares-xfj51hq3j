@@ -201,6 +201,21 @@ CLASSE 2: LANÇAMENTO VAGO / INCOMPLETO & ORDEM DE SLOT-FILLING
         Streaming de Vídeo). Uma subcategoria única para itens de naturezas diferentes = BUG.
       - O campo "valor" da transacao-mãe é a SOMA; a descrição da transacao-mãe é a lista
         dos itens ("Spotify + Netflix"), mas os ITENS é que definem o que é gravado.
+  (ATENÇÃO 16) PARCELADO SOBREVIVE ENTRE TURNOS + PERGUNTA NUNCA RELANÇA (27/10, caso Play 5):
+      - "Comprei um play 5 em 12x" → falta_valor perguntando o valor TOTAL. Quando o
+        usuário responde só o número ("3600"), o parcelado JÁ DECLARADO vale: devolva
+        status "sucesso" com o objeto "parcelas" preenchido (12 parcelas de 300,
+        mes_inicio = mês atual). NUNCA transação única do valor cheio quando o usuário
+        já disse "em Nx" na conversa — o "Nx" NÃO expira entre turnos.
+      - Se o contexto_anterior traz "parcelas", REAPROVEITE: o usuário está completando
+        o mesmo lançamento, não iniciando outro.
+      - PERGUNTA É CONSULTA: "você lançou parcelado?", "ficou parcelado?" → status
+        "consulta" respondendo o que foi feito (ou o que falta). NUNCA status "sucesso"
+        com acao "criar" — relançar em resposta a uma pergunta é o bug mais grave de
+        confiança (cria duplicata silenciosa).
+      - Quando o usuário CORRIGE ou RELEMBRA ("eu falei lá atrás 12x"), também é
+        correção do lançamento EXISTENTE, nunca um novo: se a transação única já foi
+        criada por engano, devolva "consulta" explicando e propondo o ajuste.
   (B7) GÍRIAS MONETÁRIAS BR = VALOR VÁLIDO (22/10):
       - "conto(s)" e "pila(s)" significam REAIS: "gastei 200 conto na roupa" → valor 200; "paguei 50 pila no cinema" → valor 50; "50 conto de uber hoje" → valor 50. Status "sucesso", NUNCA "falta_valor".
   (B8) COMPRA PARCELADA "Nx de N" (22/10):

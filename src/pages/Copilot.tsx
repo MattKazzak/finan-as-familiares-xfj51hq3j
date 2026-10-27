@@ -320,6 +320,25 @@ export function CopilotPage() {
           if (sub) subcategoryId = sub.id
         }
 
+        // GUARDA ANTI-DUPLICATA (27/10, caso Play 5): antes de criar, conferir se
+        // JÁ EXISTE transação com mesma descrição + mesmo valor nos últimos 2
+        // dias. Se existe, NÃO criar de novo — devolve a existente. Relançar por
+        // repetição de pergunta ("você lançou parcelado?" / resposta de
+        // clarificação) é o bug mais grave de confiança do Copilot.
+        const recent = await fetchTransactions({ familyId: family.id, limit: 50 })
+        const dupKey = (d: string, a: number) => `${(d || '').trim().toLowerCase()}|${a}`
+        const existing = (recent || []).find(
+          (t) =>
+            dupKey(t.description, t.amount_cents) ===
+              dupKey(txData.description, txData.amountCents) &&
+            Math.abs(Date.now() - new Date(t.created_at || t.transaction_date || '').getTime()) <
+              2 * 24 * 60 * 60 * 1000,
+        )
+        if (existing) {
+          lastCreatedTxIdRef.current = existing.id
+          return existing
+        }
+
         const todayStr = new Date().toISOString().split('T')[0]
         const memberId = currentMember?.id || members[0]?.id || ''
         const created = await createTransaction({
@@ -1254,6 +1273,10 @@ export function CopilotPage() {
             status: effectivePendingTx.aiStatus,
             routerClasse: effectivePendingTx.routerClasse,
             itens: updatedExtractedItems || effectivePendingTx.extractedItems,
+            // PARCELAS ENTRE TURNOS (27/10, caso Play 5): "comprei um play 5 em
+            // 12x" → pergunta valor → "3600" precisa CONTINUAR parcelado. Sem
+            // isso o 12x morre no turno seguinte e vira transação única cheia.
+            parcelas: effectivePendingTx.parcelas || undefined,
           }
         : undefined
 
@@ -1839,29 +1862,37 @@ export function CopilotPage() {
           return
         }
         if (wantsRecurring && family && savedTx) {
-          const recDay = Math.max(1, Math.min(31, diaDito || new Date().getDate()))
-          try {
-            const { createRecurringIncome } = await import('@/services/recurring-incomes')
-            const recRule = await createRecurringIncome({
-              family_id: family.id,
-              member_id: savedTx.member_id,
-              category_id: savedTx.category_id,
-              subcategory_id: savedTx.subcategory_id,
-              name: parsed.description || text.slice(0, 60),
-              type: parsed.type,
-              amount_cents: parsed.amountCents,
-              day_of_month: recDay,
-            })
-            if (recRule?.id) {
-              await updateTransaction(savedTx.id, {
-                recurring_income_id: recRule.id,
-                is_recurring: true,
-                recurring_month: (savedTx.transaction_date || '').slice(0, 7) + '-01',
+          // GUARDA ANTI-REGRA-DUPLICADA (27/10, caso Netflix): se a transação já
+          // tem regra recorrente anexada (re-lançamento barrado pelo guarda
+          // anti-duplicata devolveu a existente), NÃO criar outra regra — só
+          // atualizar o dia se for diferente.
+          if (savedTx.recurring_income_id) {
+            assistantText = `${parsed.friendlyMessage || 'Lançamento feito! 👍'} 🔁 Já está configurado para repetir todo dia ${recDayMatch ? recDayMatch[1] : 'o mesmo dia'}.`
+          } else {
+            const recDay = Math.max(1, Math.min(31, diaDito || new Date().getDate()))
+            try {
+              const { createRecurringIncome } = await import('@/services/recurring-incomes')
+              const recRule = await createRecurringIncome({
+                family_id: family.id,
+                member_id: savedTx.member_id,
+                category_id: savedTx.category_id,
+                subcategory_id: savedTx.subcategory_id,
+                name: parsed.description || text.slice(0, 60),
+                type: parsed.type,
+                amount_cents: parsed.amountCents,
+                day_of_month: recDay,
               })
+              if (recRule?.id) {
+                await updateTransaction(savedTx.id, {
+                  recurring_income_id: recRule.id,
+                  is_recurring: true,
+                  recurring_month: (savedTx.transaction_date || '').slice(0, 7) + '-01',
+                })
+              }
+              assistantText = `${parsed.friendlyMessage || 'Lançamento feito! 👍'} 🔁 Vou lançar automaticamente todo dia ${recDay}.`
+            } catch (recErr) {
+              console.warn('Copilot: erro ao criar conta fixa recorrente:', recErr)
             }
-            assistantText = `${parsed.friendlyMessage || 'Lançamento feito! 👍'} 🔁 Vou lançar automaticamente todo dia ${recDay}.`
-          } catch (recErr) {
-            console.warn('Copilot: erro ao criar conta fixa recorrente:', recErr)
           }
         }
       } else if (
