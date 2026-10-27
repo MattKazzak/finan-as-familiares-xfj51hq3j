@@ -18,6 +18,7 @@ import { useValuePrivacy } from '@/hooks/use-value-privacy'
 import {
   buildProjection,
   monthKeyOf,
+  monthLabelOf,
   type ProjectionResult,
   type FutureCommitment,
 } from '@/services/projection'
@@ -329,9 +330,9 @@ function CommitmentRow({ c, fmt }: { c: FutureCommitment; fmt: (n: number) => st
   const Icon = c.origin === 'parcela' ? CreditCard : c.origin === 'meta' ? Target : Repeat
   const originLabel =
     c.origin === 'parcela' ? 'Parcela' : c.origin === 'meta' ? 'Meta' : 'Conta fixa'
-  const ateTxt = c.ateQuando
-    ? `até ${c.ateQuando.split('-').reverse().join('/').slice(3)}/${c.ateQuando.slice(2, 4)}`
-    : 'todo mês'
+  // FIX (27/10, achado na prova visual): a formatação anterior montava
+  // "até 2027/27". Agora usa o label canônico do serviço (dez/27).
+  const ateTxt = c.ateQuando ? `até ${monthLabelOf(c.ateQuando)}` : 'todo mês'
 
   return (
     <li className="flex items-start gap-2.5">
