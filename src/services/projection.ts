@@ -47,6 +47,17 @@ export interface ProjectionMonth {
   saldoCents: number // acumulado a partir do saldo de hoje
 }
 
+/** Um compromisso DENTRO de um mês específico — é o que a lista mostra. */
+export interface ProjectionItem {
+  nome: string
+  valorCents: number
+  origin: CommitmentOrigin
+  /** Dia do mês em que cai (1-31), quando conhecido */
+  dia: number | null
+  /** Rótulo curto de contexto: "3 de 6", "4ª de 6", "conta fixa" */
+  detalhe: string
+}
+
 export interface ProjectionResult {
   /** Saldo real até hoje (transações confirmadas com data <= hoje) */
   saldoAtualCents: number
@@ -57,6 +68,10 @@ export interface ProjectionResult {
   /** Soma mensal das contas fixas — a leitura "por mês", que o leigo entende */
   totalMensalFixo: number
   months: ProjectionMonth[]
+  /** Itens mês a mês, para a lista navegável (padrão Monarch "Upcoming"). */
+  itensPorMes: Record<string, ProjectionItem[]>
+  /** Total de compromissos do mês ativo — o número grande do topo. */
+  totalMesAtivoCents: number
   commitments: FutureCommitment[]
   /** Primeiro mês projetado no vermelho (saldo < 0) — o alerta-chave */
   primeiroMesApertado: ProjectionMonth | null
@@ -251,6 +266,87 @@ export function buildProjection(
     }
   }
 
+  // ── Itens mês a mês (a lista que o usuário lê) ───────────────────────────
+  //
+  // PADRÃO MONARCH "Upcoming" (pesquisa 27/10): o leigo entende LISTA, não
+  // gráfico de 12 meses. Cada mês mostra nome, valor, dia e de que se trata.
+  const itensPorMes: Record<string, ProjectionItem[]> = {}
+  for (let i = 0; i < horizonteMeses; i++) {
+    itensPorMes[addMonths(startingMonthKey, i)] = []
+  }
+
+  // Recorrentes (conta fixa): dia conhecido
+  for (const rec of recorrentes) {
+    if (!rec.active) continue
+    const amt = Number(rec.amount_cents) || 0
+    if (amt <= 0 || rec.type !== 'expense') continue
+    const dia = Number(rec.day_of_month) || null
+    // Quantos meses essa conta já existe, para o rótulo "conta fixa"
+    for (let i = 0; i < horizonteMeses; i++) {
+      const mk = addMonths(startingMonthKey, i)
+      if (mk === thisMonthKey && dia && dia <= todayDay) continue
+      itensPorMes[mk]?.push({
+        nome: rec.name,
+        valorCents: amt,
+        origin: 'recorrente',
+        dia,
+        detalhe: 'conta fixa',
+      })
+    }
+  }
+
+  // Lançamentos futuros: parcelas com número, avulsos sozinhos
+  for (const tx of parcelasFuturas) {
+    const mk = (tx.transaction_date || '').slice(0, 7)
+    if (mk < startingMonthKey) continue
+    if (tx.type === 'income') continue
+    const amt = Number(tx.amount_cents) || 0
+    if (amt <= 0) continue
+    const dia = Number((tx.transaction_date || '').slice(8, 10)) || null
+    const numero = Number((tx as any).installment_number) || 0
+    const total = Number((tx as any).installment_total) || 0
+    itensPorMes[mk]?.push({
+      nome: tx.description || 'Lançamento',
+      valorCents: amt,
+      origin: (tx as any).is_installment ? 'parcela' : 'divida',
+      dia,
+      detalhe:
+        (tx as any).is_installment && numero > 0 && total > 0 ? `${numero} de ${total}` : 'uma vez',
+    })
+  }
+
+  // Metas com aporte declarado
+  for (const goal of metas) {
+    const aporteDeclarado = Number(goal.aporteMensalCents) || 0
+    if (aporteDeclarado <= 0) continue
+    const falta = Math.max(
+      0,
+      (Number(goal.target_amount_cents) || 0) - (Number(goal.progressoCents) || 0),
+    )
+    if (falta <= 0) continue
+    const deadlineMk = (goal.deadline || '').slice(0, 7)
+    for (let i = 0; i < horizonteMeses; i++) {
+      const mk = addMonths(startingMonthKey, i)
+      if (mk === thisMonthKey) continue
+      if (deadlineMk && mk > deadlineMk) continue
+      itensPorMes[mk]?.push({
+        nome: `Guardar: ${goal.name}`,
+        valorCents: aporteDeclarado,
+        origin: 'meta',
+        dia: null,
+        detalhe: 'aporte do mês',
+      })
+    }
+  }
+
+  // Ordena cada mês: maior valor primeiro, itens sem dia ao fim
+  const totalPorMes: Record<string, number> = {}
+  for (const mk of Object.keys(itensPorMes)) {
+    itensPorMes[mk].sort((a, b) => b.valorCents - a.valorCents)
+    totalPorMes[mk] = itensPorMes[mk].reduce((acc, it) => acc + it.valorCents, 0)
+  }
+  const totalMesAtivoCents = totalPorMes[startingMonthKey] || 0
+
   // ── Série mensal ──────────────────────────────────────────────────────────
   for (let i = 0; i < horizonteMeses; i++) {
     const mk = addMonths(startingMonthKey, i)
@@ -319,6 +415,8 @@ export function buildProjection(
     comprometidoAte,
     totalMensalFixo,
     months,
+    itensPorMes,
+    totalMesAtivoCents,
     commitments,
     primeiroMesApertado,
     mesMaisApertado,

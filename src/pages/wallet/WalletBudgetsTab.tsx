@@ -135,93 +135,10 @@ export function WalletBudgetsTab() {
           monthIncomeCents={monthIncomeCents}
         />
       ) : null}
-      {/* Card Geral de Orçamento Recorrente / Projeção */}
-      {(() => {
-        const now = new Date()
-        const isFutureMonth =
-          currentDate.getFullYear() > now.getFullYear() ||
-          (currentDate.getFullYear() === now.getFullYear() &&
-            currentDate.getMonth() > now.getMonth())
-
-        const cardTitle = isFutureMonth
-          ? `Projeção de ${formatMonthYear(currentDate)}`
-          : `Orçamento de ${formatMonthYear(currentDate)}`
-
-        const badgeText = categoryBudgetData.isTotalOver
-          ? `Excedeu ${formatBRL(Math.abs(categoryBudgetData.totalRemaining))}`
-          : isFutureMonth
-            ? `Livre ${formatBRL(categoryBudgetData.totalRemaining)}`
-            : `Restam ${formatBRL(categoryBudgetData.totalRemaining)}`
-
-        const consumedPrefix = isFutureMonth ? 'Comprometido ' : 'Gasto '
-
-        return (
-          <div className="bg-white/95 backdrop-blur-sm rounded-3xl p-6 sm:p-7 border border-[rgba(20,33,61,0.06)] shadow-elevation-1">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs uppercase font-semibold tracking-wider text-muted-foreground">
-                  {cardTitle}
-                </span>
-                {isFutureMonth ? (
-                  <span className="text-[11px] text-muted-foreground font-medium">
-                    · Teto mensal: {formatBRL(categoryBudgetData.totalBudget)}
-                  </span>
-                ) : (
-                  <span className="text-[11px] text-muted-foreground font-medium">
-                    · Padrão mensal
-                  </span>
-                )}
-              </div>
-              <span
-                className={`text-xs font-semibold px-2.5 py-1 rounded-full self-start sm:self-auto ${
-                  categoryBudgetData.isTotalOver
-                    ? 'bg-rose-100 text-finance-expense'
-                    : categoryBudgetData.totalPercent >= 75
-                      ? 'bg-amber-100 text-amber-800'
-                      : 'bg-emerald-100 text-finance-income'
-                }`}
-              >
-                <span>{badgeText}</span>
-              </span>
-            </div>
-
-            <div className="flex items-baseline justify-between mb-3">
-              <span className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground tabular-nums">
-                <span className="text-base sm:text-lg font-medium text-muted-foreground mr-1.5">
-                  {consumedPrefix}
-                </span>
-                <span className="inline-flex items-baseline gap-1.5 flex-wrap">
-                  <span>{formatBRL(categoryBudgetData.totalSpent)}</span>
-                  <span className="text-sm font-normal text-muted-foreground">
-                    de {formatBRL(categoryBudgetData.totalBudget)}
-                  </span>
-                </span>
-              </span>
-              <span className="text-sm font-semibold text-muted-foreground tabular-nums">
-                <span>{categoryBudgetData.totalPercent}%</span>
-              </span>
-            </div>
-
-            {/* Barra de Progresso com Limites CDS e gradientes orgânicos sutis */}
-            <div className="w-full bg-slate-100/90 h-3 rounded-full overflow-hidden shadow-inner">
-              <div
-                className={`h-full rounded-full transition-all duration-700 ${
-                  categoryBudgetData.isTotalOver
-                    ? 'bg-gradient-to-r from-[#E11D48] to-[#f43f5e]'
-                    : categoryBudgetData.totalPercent >= 75
-                      ? 'bg-gradient-to-r from-[#FCA311] to-[#fdb744]'
-                      : 'bg-gradient-to-r from-[#059669] to-[#10B981]'
-                }`}
-                style={{ width: `${Math.min(categoryBudgetData.totalPercent, 100)}%` }}
-              />
-            </div>
-
-            <div className="text-[11px] text-muted-foreground mt-2 text-right">
-              <span>Tetos recorrentes mensais</span>
-            </div>
-          </div>
-        )
-      })()}
+      {/* CARD GERAL DE ORÇAMENTO RECORRENTE — REMOVIDO (27/10, ordem do Matheus):
+          repetia o que os 3 Baldes e a lista de categorias já mostram, e com a
+          aba Projeção na Carteira virou redundância tripla. A lista de tetos por
+          categoria logo abaixo continua sendo o lugar de editar orçamento. */}
       {/* FAROL & ALERTAS PREVENTIVOS — Posicionado logo abaixo do card de orçamento e acima da lista de categorias */}
       <BudgetAlertsFarol
         family={family}
