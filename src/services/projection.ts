@@ -122,7 +122,13 @@ export function buildProjection(
 
   let running = saldoAtualCents
 
-  // ── Parcelas futuras (todas com data > hoje, por contrato da UI) ───────────
+  // ── Lançamentos futuros: parcelas E contas já agendadas ───────────────────
+  //
+  // CONVERSA COM O APP (27/10): antes eu só olhava `is_installment`. Uma conta
+  // já lançada com data futura (ex.: IPVA em jan/27, mensalidade agendada) é
+  // dinheiro REALMENTE comprometido e ficava de fora — a projeção mentia por
+  // omissão. Agora todo lançamento futuro entra: parcela agrupa a série,
+  // lançamento avulso conta sozinho.
   const parcelasPorMes = new Map<string, number>()
   const parcelaGrupos = new Map<string, FutureCommitment>()
 
@@ -130,9 +136,14 @@ export function buildProjection(
     const mk = (tx.transaction_date || '').slice(0, 7)
     if (mk < startingMonthKey) continue // segurança: nada anterior ao mês ativo
     const amt = Number(tx.amount_cents) || 0
-    parcelasPorMes.set(mk, (parcelasPorMes.get(mk) || 0) + amt)
+    if (amt <= 0) continue
+    const isEntrada = tx.type === 'income'
+    parcelasPorMes.set(mk, (parcelasPorMes.get(mk) || 0) + (isEntrada ? -amt : amt))
+    // Receita futura já lançada não é compromisso — entra só no fluxo do mês.
+    if (isEntrada) continue
 
-    const key = (tx as any).installment_group_id || tx.id
+    const instalment = Boolean((tx as any).is_installment)
+    const key = instalment ? (tx as any).installment_group_id || tx.id : `avulso-${tx.id}`
     const existing = parcelaGrupos.get(key)
     if (existing) {
       existing.mesesRestantes += 1
@@ -140,10 +151,10 @@ export function buildProjection(
     } else {
       parcelaGrupos.set(key, {
         id: key,
-        nome: tx.description || 'Compra parcelada',
+        nome: tx.description || (instalment ? 'Compra parcelada' : 'Conta agendada'),
         valorCents: amt,
         ateQuando: mk,
-        origin: 'parcela',
+        origin: instalment ? 'parcela' : 'divida',
         mesesRestantes: 1,
       })
     }

@@ -16,6 +16,7 @@ import { useActiveMonth } from '@/contexts/ActiveMonthContext'
 import { formatBRL, parseBRLToCents } from '@/lib/formatters'
 import { useValuePrivacy } from '@/hooks/use-value-privacy'
 import { useToast } from '@/hooks/use-toast'
+import { useFamily } from '@/hooks/use-family'
 import {
   buildProjection,
   monthKeyOf,
@@ -23,7 +24,7 @@ import {
   type ProjectionResult,
   type FutureCommitment,
 } from '@/services/projection'
-import type { Transaction, Goal } from '@/types/finance'
+import type { Transaction, Goal, RecurringIncome } from '@/types/finance'
 
 /**
  * ABA PROJEÇÃO FINANCEIRA (27/10, ordem do Matheus)
@@ -58,6 +59,10 @@ function writeAporteSalvo(goalId: string, cents: number) {
 }
 
 export function WalletProjectionTab() {
+  // CONVERSA COM O APP (27/10): `refreshTrigger` do useFamily muda sempre que
+  // algo é criado/editado no app (lar de transação, importação, meta...). Sem
+  // depender dele, a Projeção mostrava dados congelados do momento em que a aba
+  // abriu — o usuário lançava uma parcela e o número não mexia.
   const { family, recurringIncomes } = useWallet()
   const { activeMonth } = useActiveMonth()
   const { hideValues, maskValue } = useValuePrivacy()
@@ -66,6 +71,11 @@ export function WalletProjectionTab() {
   // AÇÃO DE 1 TOQUE (Caminho B, Ação 5): qual meta está com o campo aberto
   const [acaoAberta, setAcaoAberta] = useState(false)
   const [valorAporte, setValorAporte] = useState('')
+
+  // CONVERSA COM O APP (27/10): `refreshTrigger` muda sempre que algo é criado
+  // ou editado no app (lançamento, importação, meta...). Sem depender dele a
+  // aba mostrava dados congelados desde que foi aberta.
+  const { refreshTrigger } = useFamily()
 
   const [loading, setLoading] = useState(true)
   const [saldoCents, setSaldoCents] = useState(0)
@@ -77,6 +87,10 @@ export function WalletProjectionTab() {
   const [parcelasFuturas, setParcelasFuturas] = useState<Transaction[]>([])
   const [metas, setMetas] = useState<Goal[]>([])
   const [mediaGastosCents, setMediaGastosCents] = useState(0)
+  // Contas fixas buscadas AQUI (não herdadas do contexto da Carteira): o
+  // contexto só recarrega quando o mês muda, então uma conta fixa criada em
+  // outra tela não aparecia na projeção.
+  const [recorrentesLocal, setRecorrentesLocal] = useState<RecurringIncome[]>([])
 
   useEffect(() => {
     if (!family?.id) return
@@ -93,39 +107,43 @@ export function WalletProjectionTab() {
 
         const startOfThisMonth = `${todayStr.slice(0, 7)}-01`
 
-        const [saldoRes, parcelasRes, metasRes, receitasRes, gastosRes] = await Promise.all([
-          // EXATIDÃO (27/10): saldo ATÉ HOJE, nunca o total global. O total
-          // global já inclui as parcelas e contas futuras lançadas — usá-lo e
-          // depois projetar as mesmas parcelas contava o dinheiro duas vezes.
-          (supabase as any).rpc('get_family_balance_until', {
-            p_family_id: family.id,
-            p_until_date: todayStr,
-          }),
-          supabase
-            .from('transactions')
-            .select('*')
-            .eq('family_id', family.id)
-            .eq('is_installment', true)
-            .gt('transaction_date', todayStr)
-            .neq('status', 'projected'),
-          supabase.from('goals').select('*').eq('family_id', family.id),
-          // Receitas por categoria: o progresso de cada meta é a soma das
-          // receitas da categoria vinculada (mesma regra da tela de Metas).
-          supabase
-            .from('transactions')
-            .select('category_id, amount_cents, type')
-            .eq('family_id', family.id)
-            .eq('type', 'income')
-            .neq('status', 'projected'),
-          supabase
-            .from('transactions')
-            .select('amount_cents, transaction_date, recurring_income_id, is_installment')
-            .eq('family_id', family.id)
-            .eq('type', 'expense')
-            .neq('status', 'projected')
-            .gte('transaction_date', threeAgoStr)
-            .lt('transaction_date', startOfThisMonth),
-        ])
+        const [saldoRes, parcelasRes, metasRes, recorrentesRes, receitasRes, gastosRes] =
+          await Promise.all([
+            // EXATIDÃO (27/10): saldo ATÉ HOJE, nunca o total global. O total
+            // global já inclui as parcelas e contas futuras lançadas — usá-lo e
+            // depois projetar as mesmas parcelas contava o dinheiro duas vezes.
+            (supabase as any).rpc('get_family_balance_until', {
+              p_family_id: family.id,
+              p_until_date: todayStr,
+            }),
+            // Tudo que AINDA VAI CAIR e já está lançado (data > hoje): parcelas E
+            // contas agendadas. Antes eu filtrava por is_installment e ignorava
+            // lançamentos futuros avulsos — dinheiro comprometido ficava de fora.
+            supabase
+              .from('transactions')
+              .select('*')
+              .eq('family_id', family.id)
+              .gt('transaction_date', todayStr)
+              .neq('status', 'projected'),
+            supabase.from('goals').select('*').eq('family_id', family.id),
+            supabase.from('recurring_incomes').select('*').eq('family_id', family.id),
+            // Receitas por categoria: o progresso de cada meta é a soma das
+            // receitas da categoria vinculada (mesma regra da tela de Metas).
+            supabase
+              .from('transactions')
+              .select('category_id, amount_cents, type')
+              .eq('family_id', family.id)
+              .eq('type', 'income')
+              .neq('status', 'projected'),
+            supabase
+              .from('transactions')
+              .select('amount_cents, transaction_date, recurring_income_id, is_installment')
+              .eq('family_id', family.id)
+              .eq('type', 'expense')
+              .neq('status', 'projected')
+              .gte('transaction_date', threeAgoStr)
+              .lt('transaction_date', startOfThisMonth),
+          ])
 
         if (cancelled) return
 
@@ -176,13 +194,15 @@ export function WalletProjectionTab() {
     return () => {
       cancelled = true
     }
-  }, [family?.id])
+  }, [family?.id, refreshTrigger, activeMonth])
 
   const projection: ProjectionResult = useMemo(
     () =>
       buildProjection(
         saldoCents,
-        recurringIncomes || [],
+        // Preferência: o que esta aba buscou (sempre fresco). Fallback: o estado
+        // do contexto da Carteira, para a tela nunca ficar vazia se a busca falhar.
+        recorrentesLocal.length > 0 ? recorrentesLocal : recurringIncomes || [],
         parcelasFuturas,
         metas,
         mediaGastosCents,
@@ -192,6 +212,7 @@ export function WalletProjectionTab() {
       ),
     [
       saldoCents,
+      recorrentesLocal,
       recurringIncomes,
       parcelasFuturas,
       metas,
