@@ -522,10 +522,10 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
   - DECISÃO DE UX: NÃO usamos chips/cards; a resposta é LIVRE por voz ou texto e você deve interpretá-la:
     a) Se o usuário CONFIRMAR o evento ("sim", "foi churrasco", "churrasco com os amigos", "resenha", "festa", "encontro", "churrasco sim"):
        * Registre a cesta INTEIRA em UMA transação (status: "sucesso").
-       * Categoria: 'Lazer' › 'Eventos & Reuniões' (ou 'Restaurantes & Bares' se não houver 'Eventos & Reuniões'), Balde: 'Estilo de Vida'.
+       * Categoria: use o par de OCASIÃO que EXISTE no CATÁLOGO DA FAMÍLIA (padrão: 'Lazer' › 'Encontros & Festas'; NUNCA invente 'Eventos & Reuniões' — só use um par se ele estiver no catálogo), Balde: 'Estilo de Vida'.
        * Descrição OBRIGATÓRIA: a lista dos itens preservada com o evento (ex: "${previousContext.descricao || 'Itens'} — churrasco").
        * Valor: preserve o valor total da cesta (${valorStr}).
-       * Mensagem amigável: "Lançado: ${valorStr} em **Lazer** › **Eventos & Reuniões** 👍!"
+       * Mensagem amigável: "Lançado: ${valorStr} em **Lazer** › **Encontros & Festas** 👍!"
     b) Se o usuário NEGAR o evento ("não, compra de casa", "nada disso, comprei pra deixar aqui em casa", "alimentação", "mercado comum"):
        * Registre a cesta INTEIRA em 'Alimentação' › 'Supermercado & Atacado' (ou 'Alimentação'), Balde: 'Necessidades Essenciais'.
        * Descrição: mantenha os itens da cesta (ex: "${previousContext.descricao || 'Itens'} — casa").
@@ -571,19 +571,19 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
   - Se a mensagem atual for CORREÇÃO PARCIAL (SEMÂNTICA — COM OU SEM "NÃO"):
     * A detecção é SEMÂNTICA, NÃO lexical: qualquer formulação que atribua/vincule itens a uma ocasião ou destino diferente ("Essa carne também é para um churrasco", "A carne e o carvão são para o churrasco de hoje", "o carvão também é pro churrasco", "não, a carne é para churrasco", "carne pro churrasco") ativa a CORREÇÃO PARCIAL SEMÂNTICA!
     * Aplica-se EXCLUSIVAMENTE aos itens expressamente nomeados ou referenciados; todos os demais itens mantêm suas gavetas e categorias propostas intactas!
-    * NUNCA lançar tudo em um par único (ex.: NUNCA lançar tudo em Alimentação › Supermercado & Atacado nem tudo em Lazer › Eventos & Reuniões)!
+    * NUNCA lançar tudo em um par único (ex.: NUNCA lançar tudo em Alimentação › Supermercado & Atacado nem tudo em Lazer › Encontros & Festas)!
     * Se houver total único consolidado (ex: R$ 280):
       - status: "falta_valor" (ou "clarificacao")
       - FORMATO OBRIGATÓRIO DA PERGUNTA DE DIVISÃO COM CONTEXTO (nomeando o que divide e por quê):
         "Entendi — [itens corrigidos] vão para [par da ocasião] e [itens restantes] ficam nas gavetas deles. Como o total é único (R$ X), preciso dividir: aproximadamente quanto foi da parte de [ocasião]?"
-        Exemplo: "Entendi — carne e carvão vão para **Lazer** › **Eventos & Reuniões** e rodas, long neck e sachê ficam nas gavetas deles. Como o total é único (R$ 280,00), preciso dividir: aproximadamente quanto foi da parte do churrasco?"
+       Exemplo: "Entendi — carne e carvão vão para **Lazer** › **Encontros & Festas** e rodas, long neck e sachê ficam nas gavetas deles. Como o total é único (R$ 280,00), preciso dividir: aproximadamente quanto foi da parte do churrasco?"
       - Gravação SÓ após a divisão confirmada pelo usuário!
   - Se o usuário pedir para re-exibir a proposta ("Me mostre como vc separou", "como você separou?", "como ficou?", "me mostra a separação"):
     * Re-exiba a proposta ATUAL em LISTA VERTICAL (um item por linha), refletindo as correções acumuladas!
     * Exemplo de re-exibição:
       "Separei assim:
-      • carne → **Lazer** › **Eventos & Reuniões**
-      • carvão → **Lazer** › **Eventos & Reuniões**
+      • carne → **Lazer** › **Encontros & Festas**
+      • carvão → **Lazer** › **Encontros & Festas**
       • rodas para o meu filho → **Compras** › **Bebês & Crianças**
       • long neck ultra → **Alimentação** › **Bebidas**
       • sachês para o meu cachorro → **Pets** › **Alimentação Pet**"
@@ -601,8 +601,19 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
     // valores da frase SEM IA e o modelo recebe o número exato pronto.
     const numericHint = extractNumericHint(textoNormalizadoPtBr || texto)
     if (numericHint) console.log('[NumericHint] injetado:', numericHint.split('\n')[1])
+    // DATA REAL DE HOJE (27/10, auditoria real 26/10): a IA chutava "22 de outubro"
+    // porque o prompt não continha a data. Agora é injetada como VERDADE ABSOLUTA
+    // (fuso America/Sao_Paulo), formatada por extenso.
+    const todayParts = new Intl.DateTimeFormat('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(new Date())
     const systemPrompt = buildSystemPrompt({
       activeMonthLabel,
+      todayContext: todayParts,
       previousContextPrompt,
       financialSummaryContext,
       categoriesContext: categoriesContext || 'Nenhuma categoria específica cadastrada ainda.',
