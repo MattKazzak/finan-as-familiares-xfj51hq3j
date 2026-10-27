@@ -243,17 +243,33 @@ export function OnboardingWizardDialog({
     const hideNames: string[] = []
     if (!hasVehicle) hideNames.push('Transporte')
     if (!hasPets) hideNames.push('Pets')
-    if (!hasChildren) hideNames.push('Educação')
-    if (hideNames.length === 0) return
-    try {
-      const { error } = await (supabase as any)
-        .from('transaction_categories')
-        .update({ is_hidden: true })
-        .eq('family_id', familyId)
-        .in('name', hideNames)
-      if (error) console.warn('[onboarding] Falha ao ocultar categorias do perfil:', error)
-    } catch (e) {
-      console.warn('[onboarding] Exceção ao ocultar categorias do perfil:', e)
+    if (hideNames.length > 0) {
+      try {
+        const { error } = await (supabase as any)
+          .from('transaction_categories')
+          .update({ is_hidden: true })
+          .eq('family_id', familyId)
+          .in('name', hideNames)
+        if (error) console.warn('[onboarding] Falha ao ocultar categorias do perfil:', error)
+      } catch (e) {
+        console.warn('[onboarding] Erro inesperado ao ocultar categorias:', e)
+      }
+    }
+    // FILHOS (27/10, correção do Matheus): não ter filhos NUNCA oculta a
+    // categoria Educação — o usuário pode estudar (faculdade, cursos, idiomas).
+    // Oculta apenas as subcategorias exclusivas de filhos, dentro da Educação.
+    if (!hasChildren) {
+      try {
+        const { error: subError } = await (supabase as any)
+          .from('transaction_subcategories')
+          .update({ is_hidden: true })
+          .eq('family_id', familyId)
+          .in('name', ['Escola & Creche', 'Educação Futura (dos Filhos)'])
+        if (subError)
+          console.warn('[onboarding] Falha ao ocultar subcategorias de filhos:', subError)
+      } catch (e) {
+        console.warn('[onboarding] Erro ao ocultar subcategorias de filhos:', e)
+      }
     }
   }
 
