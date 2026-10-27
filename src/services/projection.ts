@@ -3,13 +3,24 @@
  *
  * FILOSOFIA (usuário leigo, app educativo):
  * - 1 número gigante: "R$ X do seu dinheiro futuro já tem dono"
- * - Linha do saldo em 12 meses, sem jargão: mês apertado = âmbar + frase pronta
+ * - Série de 12 meses, sem jargão: mês apertado = âmbar + frase pronta
  * - Lista "quem come seu futuro": cada compromisso com origem e data-fim
  * - Máx 1 ação por visita — o Curiango prepara, o usuário aprova (Caminho B, Ação 5)
  *
  * HONESTIDADE: projeção baseada só no que o usuário lançou (recorrentes +
  * parcelas + metas + média de gastos). A UI SEMPRE diz "com base nos seus
  * lançamentos" — mesmo padrão do YNAB, sem Open Finance.
+ *
+ * REGRAS DE EXATIDÃO (27/10 — corrigidas após auditoria do próprio motor):
+ * 1. O saldo base é o saldo ATÉ HOJE (nunca o total global): assim as parcelas e
+ *    contas fixas que ainda vão cair NÃO entram duas vezes.
+ * 2. Toda parcela usada na projeção tem data > hoje. Nenhuma parcela já paga
+ *    entra de novo na conta.
+ * 3. No MÊS CORRENTE só conta o que ainda não passou: recorrente com
+ *    day_of_month > dia de hoje, parcelas com data > hoje; a média de gastos
+ *    variáveis não entra (já está refletida no saldo de hoje).
+ * 4. A média de gastos variáveis ignora o que é recorrente e o que é parcela
+ *    (senão esses valores seriam somados duas vezes).
  */
 
 import type { RecurringIncome, Transaction, Goal } from '@/types/finance'
@@ -33,11 +44,11 @@ export interface ProjectionMonth {
   label: string // "nov/26"
   entradasCents: number
   saidasCents: number
-  saldoCents: number // acumulado a partir do saldo atual
+  saldoCents: number // acumulado a partir do saldo de hoje
 }
 
 export interface ProjectionResult {
-  /** Saldo real de hoje (última transação confirmada acumulada) */
+  /** Saldo real até hoje (transações confirmadas com data <= hoje) */
   saldoAtualCents: number
   /** Total do dinheiro futuro já comprometido (soma de todos os meses) */
   totalComprometidoCents: number
@@ -84,12 +95,13 @@ function addMonths(monthKey: string, n: number): string {
 /**
  * Calcula a projeção de 12 meses a partir do mês ativo.
  *
- * @param saldoAtualCents  saldo real acumulado até hoje (fonte: get_family_balance_until / Home)
- * @param recorrentes     contas fixas ativas (entradas e saídas)
- * @param parcelasFuturas transações is_installment com data >= mês ativo
- * @param metas           metas com aporte mensal estimado
- * @param mediaGastosCents média de gastos variáveis dos últimos 3 meses (fallback
- *                        quando a família não lança tudo como recorrente)
+ * @param saldoAtualCents   saldo real ATÉ HOJE (RPC get_family_balance_until com a data de hoje)
+ * @param recorrentes       contas fixas ativas (entradas e saídas)
+ * @param parcelasFuturas   transações is_installment com data > HOJE (nenhuma já paga)
+ * @param metas             metas com aporte mensal estimado
+ * @param mediaGastosCents  média mensal de gastos VARIÁVEIS (sem recorrentes, sem parcelas)
+ * @param startingMonthKey  mês ativo (YYYY-MM)
+ * @param todayStr          data de hoje (YYYY-MM-DD) — separa o que já caiu do que ainda vai cair
  */
 export function buildProjection(
   saldoAtualCents: number,
@@ -98,35 +110,32 @@ export function buildProjection(
   metas: Goal[],
   mediaGastosCents: number,
   startingMonthKey: string,
+  todayStr: string,
   horizonteMeses = 12,
 ): ProjectionResult {
   const months: ProjectionMonth[] = []
   const commitMap = new Map<string, FutureCommitment>()
 
-  // Saldo acumulado começa no real
+  const todayDay = Number(todayStr.slice(8, 10)) || 1
+  const thisMonthKey = todayStr.slice(0, 7)
+
   let running = saldoAtualCents
 
-  // Parcelas futuras agrupadas por mês
+  // ── Parcelas futuras (todas com data > hoje, por contrato da UI) ───────────
   const parcelasPorMes = new Map<string, number>()
+  const parcelaGrupos = new Map<string, FutureCommitment>()
+
   for (const tx of parcelasFuturas) {
     const mk = (tx.transaction_date || '').slice(0, 7)
-    if (mk < startingMonthKey) continue // retroativas já entraram no saldo atual
+    if (mk < startingMonthKey) continue // segurança: nada anterior ao mês ativo
     const amt = Number(tx.amount_cents) || 0
     parcelasPorMes.set(mk, (parcelasPorMes.get(mk) || 0) + amt)
-  }
 
-  // Compromissos de parcela (agrupados por grupo = uma linha na lista)
-  const parcelaGrupos = new Map<string, FutureCommitment>()
-  for (const tx of parcelasFuturas) {
     const key = (tx as any).installment_group_id || tx.id
-    const mk = (tx.transaction_date || '').slice(0, 7)
-    if (mk < startingMonthKey) continue
     const existing = parcelaGrupos.get(key)
-    const amt = Number(tx.amount_cents) || 0
     if (existing) {
       existing.mesesRestantes += 1
       existing.ateQuando = mk > (existing.ateQuando || '') ? mk : existing.ateQuando
-      // valor mensal = valor de UMA parcela (todas iguais na série do Copilot)
     } else {
       parcelaGrupos.set(key, {
         id: key,
@@ -139,17 +148,18 @@ export function buildProjection(
     }
   }
 
-  // Recorrentes: entradas e saídas por mês
+  // ── Recorrentes: fluxo por mês + compromisso (só despesa) ─────────────────
   const recEntradas = new Map<string, number>()
   const recSaidas = new Map<string, number>()
+
   for (const rec of recorrentes) {
     if (!rec.active) continue
     const amt = Number(rec.amount_cents) || 0
     const isExpense = rec.type === 'expense'
-    // CORREÇÃO (27/10, achada na prova visual): RECEITA NÃO É COMPROMISSO.
-    // O salário entra no fluxo do mês (recEntradas), mas nunca na lista
-    // "quem já tem seu dinheiro" nem no total comprometido — senão o número
-    // gigante somava o que a família VAI RECEBER como se fosse dívida.
+    if (amt <= 0) continue
+
+    // RECEITA NUNCA É COMPROMISSO (correção 27/10): entra no fluxo do mês,
+    // jamais na lista "quem já tem seu dinheiro" nem no total comprometido.
     if (isExpense) {
       commitMap.set(`rec-${rec.id}`, {
         id: `rec-${rec.id}`,
@@ -160,64 +170,82 @@ export function buildProjection(
         mesesRestantes: horizonteMeses,
       })
     }
+
+    const diaCobranca = Number(rec.day_of_month) || 1
     for (let i = 0; i < horizonteMeses; i++) {
       const mk = addMonths(startingMonthKey, i)
+      // MÊS CORRENTE: só conta o que ainda não caiu (dia da cobrança > hoje).
+      // O que já passou está dentro do saldo de hoje — contar de novo inflaria.
+      if (mk === thisMonthKey && diaCobranca <= todayDay) continue
       if (isExpense) recSaidas.set(mk, (recSaidas.get(mk) || 0) + amt)
       else recEntradas.set(mk, (recEntradas.get(mk) || 0) + amt)
     }
   }
 
-  // Metas: aporte mensal estimado até o prazo (ou até o horizonte)
+  // ── Metas: aporte mensal estimado até o prazo ─────────────────────────────
   const metaSaidas = new Map<string, number>()
+
   for (const goal of metas) {
     const target = Number(goal.target_amount_cents) || 0
+    const current = Number((goal as any).current_amount_cents) || 0
+    const falta = Math.max(0, target - current)
+    if (falta <= 0) continue
+
     const deadlineMk = (goal.deadline || '').slice(0, 7)
-    if (target <= 0) continue
-    // aporte mensal = total / meses restantes até prazo (mín. 1 mês)
-    let mesesAtePrazo = 1
+    let mesesAtePrazo = horizonteMeses
     if (deadlineMk >= startingMonthKey) {
       const [y0, m0] = startingMonthKey.split('-').map(Number)
       const [y1, m1] = deadlineMk.split('-').map(Number)
       mesesAtePrazo = Math.max(1, (y1 - y0) * 12 + (m1 - m0) + 1)
     }
-    const aporte = Math.round(target / mesesAtePrazo)
+    const aporte = Math.round(falta / mesesAtePrazo)
+    if (aporte <= 0) continue
+
+    const mesesNoHorizonte = Math.min(mesesAtePrazo, horizonteMeses)
     const ateMk =
       deadlineMk >= startingMonthKey ? deadlineMk : addMonths(startingMonthKey, horizonteMeses - 1)
+
     commitMap.set(`meta-${goal.id}`, {
       id: `meta-${goal.id}`,
       nome: `Meta: ${goal.name}`,
       valorCents: aporte,
       ateQuando: ateMk,
       origin: 'meta',
-      mesesRestantes: Math.min(mesesAtePrazo, horizonteMeses),
+      mesesRestantes: mesesNoHorizonte,
     })
-    for (let i = 0; i < Math.min(mesesAtePrazo, horizonteMeses); i++) {
+
+    for (let i = 0; i < mesesNoHorizonte; i++) {
       const mk = addMonths(startingMonthKey, i)
+      // Mês corrente: o aporte do mês ou já saiu (está no saldo) ou ainda vai
+      // sair — não temos o dia, então não contamos (conservador, nunca otimista).
+      if (mk === thisMonthKey) continue
       metaSaidas.set(mk, (metaSaidas.get(mk) || 0) + aporte)
     }
   }
 
-  // Série mensal
+  // ── Série mensal ──────────────────────────────────────────────────────────
   for (let i = 0; i < horizonteMeses; i++) {
     const mk = addMonths(startingMonthKey, i)
     const entradas = recEntradas.get(mk) || 0
-    const saidas =
+    const fixas =
       (recSaidas.get(mk) || 0) + (parcelasPorMes.get(mk) || 0) + (metaSaidas.get(mk) || 0)
-    // Gastos variáveis: média dos últimos meses como compromisso contínuo
-    const variaveis = mediaGastosCents
-    running += entradas - saidas - variaveis
+    // Média de gastos variáveis: já está dentro do saldo de hoje no mês corrente.
+    const variaveis = mk === thisMonthKey ? 0 : mediaGastosCents
+
+    running += entradas - fixas - variaveis
     months.push({
       monthKey: mk,
       label: monthLabelOf(mk),
       entradasCents: entradas,
-      saidasCents: saidas + variaveis,
+      saidasCents: fixas + variaveis,
       saldoCents: running,
     })
   }
 
-  // Total comprometido = saídas fixas + parcelas + metas (NÃO conta gasto variável estimado)
+  // ── Total comprometido (só despesas fixas + parcelas + metas) ─────────────
   let totalComprometido = 0
   const commitments: FutureCommitment[] = []
+
   for (const c of commitMap.values()) {
     totalComprometido += c.valorCents * c.mesesRestantes
     commitments.push(c)

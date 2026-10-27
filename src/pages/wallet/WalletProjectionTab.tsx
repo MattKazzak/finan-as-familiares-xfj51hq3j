@@ -43,6 +43,11 @@ export function WalletProjectionTab() {
 
   const [loading, setLoading] = useState(true)
   const [saldoCents, setSaldoCents] = useState(0)
+  // Data de hoje (YYYY-MM-DD) — separa o que já caiu do que ainda vai cair.
+  const [todayStrRef] = useState(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  })
   const [parcelasFuturas, setParcelasFuturas] = useState<Transaction[]>([])
   const [metas, setMetas] = useState<Goal[]>([])
   const [mediaGastosCents, setMediaGastosCents] = useState(0)
@@ -60,38 +65,50 @@ export function WalletProjectionTab() {
         const threeAgo = new Date(today.getFullYear(), today.getMonth() - 3, 1)
         const threeAgoStr = `${threeAgo.getFullYear()}-${String(threeAgo.getMonth() + 1).padStart(2, '0')}-01`
 
-        const [totalsRes, parcelasRes, metasRes, gastosRes] = await Promise.all([
-          (supabase as any).rpc('get_family_totals', { p_family_id: family.id }),
+        const startOfThisMonth = `${todayStr.slice(0, 7)}-01`
+
+        const [saldoRes, parcelasRes, metasRes, gastosRes] = await Promise.all([
+          // EXATIDÃO (27/10): saldo ATÉ HOJE, nunca o total global. O total
+          // global já inclui as parcelas e contas futuras lançadas — usá-lo e
+          // depois projetar as mesmas parcelas contava o dinheiro duas vezes.
+          (supabase as any).rpc('get_family_balance_until', {
+            p_family_id: family.id,
+            p_until_date: todayStr,
+          }),
           supabase
             .from('transactions')
             .select('*')
             .eq('family_id', family.id)
             .eq('is_installment', true)
-            .gte('transaction_date', todayStr)
+            .gt('transaction_date', todayStr)
             .neq('status', 'projected'),
           supabase.from('goals').select('*').eq('family_id', family.id),
           supabase
             .from('transactions')
-            .select('amount_cents, transaction_date')
+            .select('amount_cents, transaction_date, recurring_income_id, is_installment')
             .eq('family_id', family.id)
             .eq('type', 'expense')
             .neq('status', 'projected')
             .gte('transaction_date', threeAgoStr)
-            .lt('transaction_date', todayStr),
+            .lt('transaction_date', startOfThisMonth),
         ])
 
         if (cancelled) return
 
-        const totals = Array.isArray(totalsRes.data) ? totalsRes.data[0] : totalsRes.data
-        const income = Number(totals?.total_income_cents) || 0
-        const expense = Number(totals?.total_expense_cents) || 0
+        const saldoRow = Array.isArray(saldoRes.data) ? saldoRes.data[0] : saldoRes.data
+        const income = Number(saldoRow?.total_income_cents) || 0
+        const expense = Number(saldoRow?.total_expense_cents) || 0
         setSaldoCents(income - expense)
 
         setParcelasFuturas((parcelasRes.data || []) as Transaction[])
         setMetas((metasRes.data || []) as Goal[])
 
-        // média mensal de gastos (3 meses): soma / 3
-        const rows = gastosRes.data || []
+        // média mensal de gastos VARIÁVEIS (3 meses fechados): exclui recorrentes
+        // (entram pela própria regra) e parcelas (entram pela série) — senão o
+        // mesmo valor seria contado duas vezes no mês.
+        const rows = (gastosRes.data || []).filter(
+          (r: any) => !r.recurring_income_id && !r.is_installment,
+        )
         const totalGastos = rows.reduce(
           (acc: number, r: any) => acc + (Number(r.amount_cents) || 0),
           0,
@@ -119,9 +136,18 @@ export function WalletProjectionTab() {
         metas,
         mediaGastosCents,
         activeMonth,
+        todayStrRef,
         12,
       ),
-    [saldoCents, recurringIncomes, parcelasFuturas, metas, mediaGastosCents, activeMonth],
+    [
+      saldoCents,
+      recurringIncomes,
+      parcelasFuturas,
+      metas,
+      mediaGastosCents,
+      activeMonth,
+      todayStrRef,
+    ],
   )
 
   const fmt = (cents: number) => (hideValues ? maskValue(formatBRL(cents)) : formatBRL(cents))
