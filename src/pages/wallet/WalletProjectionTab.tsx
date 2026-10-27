@@ -522,7 +522,14 @@ function CommitmentRow({ c, fmt }: { c: FutureCommitment; fmt: (n: number) => st
           : 'Conta fixa'
   // FIX (27/10, achado na prova visual): a formatação anterior montava
   // "até 2027/27". Agora usa o label canônico do serviço (dez/27).
-  const ateTxt = c.ateQuando ? `até ${monthLabelOf(c.ateQuando)}` : 'todo mês'
+  const ateTxt =
+    c.origin === 'divida' || c.mesesRestantes === 1
+      ? c.ateQuando
+        ? `em ${monthLabelOf(c.ateQuando)}`
+        : 'uma vez'
+      : c.ateQuando
+        ? `até ${monthLabelOf(c.ateQuando)}`
+        : 'todo mês'
 
   return (
     <li className="flex items-start gap-2.5">
@@ -537,7 +544,10 @@ function CommitmentRow({ c, fmt }: { c: FutureCommitment; fmt: (n: number) => st
       </div>
       <span className="text-[11px] font-bold text-[#14213D] shrink-0 tabular-nums">
         {fmt(c.valorCents)}
-        <span className="text-[9px] font-medium text-slate-400">/mês</span>
+        {/* Lançamento avulso acontece UMA vez: "/mês" ali seria mentira. */}
+        <span className="text-[9px] font-medium text-slate-400">
+          {c.origin === 'divida' || c.mesesRestantes === 1 ? '' : '/mês'}
+        </span>
       </span>
     </li>
   )
