@@ -115,22 +115,31 @@ export function ActiveMonthProvider({
     return parseMonthStrToDate(activeMonth)
   }, [activeMonth])
 
-  // Limite estrito: não permitir navegar para meses futuros além do mês atual
+  // MESES FUTUROS (27/10, ordem do Matheus): parcelas lançadas pelo Copilot
+  // ("6x de 45") criam transações em meses futuros — o usuário PRECISA poder
+  // avançar e conferir o compromisso em cada mês. Horizonte: +24 meses a
+  // partir do mês corrente (cobre parcelamento de até 24x, padrão BR).
+  const maxFutureMonth = useMemo(() => {
+    const d = parseMonthStrToDate(currentSystemMonth)
+    d.setMonth(d.getMonth() + 24)
+    return formatDateToMonthStr(d)
+  }, [currentSystemMonth])
+
   const isNextMonthDisabled = useMemo(() => {
-    return activeMonth >= currentSystemMonth
-  }, [activeMonth, currentSystemMonth])
+    return activeMonth >= maxFutureMonth
+  }, [activeMonth, maxFutureMonth])
 
   const setActiveMonth = useCallback(
     (monthStr: string) => {
       if (!monthStr || !/^\d{4}-\d{2}$/.test(monthStr)) return
-      // Limita ao mês atual se tentar ir para o futuro
-      if (monthStr > currentSystemMonth) {
-        setActiveMonthState(currentSystemMonth)
+      // Limita ao horizonte futuro (+24 meses)
+      if (monthStr > maxFutureMonth) {
+        setActiveMonthState(maxFutureMonth)
       } else {
         setActiveMonthState(monthStr)
       }
     },
-    [currentSystemMonth],
+    [maxFutureMonth],
   )
 
   const prevMonth = useCallback(() => {
@@ -143,15 +152,14 @@ export function ActiveMonthProvider({
 
   const nextMonth = useCallback(() => {
     setActiveMonthState((prev) => {
-      if (prev >= currentSystemMonth) {
-        return prev // Bloqueado: não avança além do mês atual
+      if (prev >= maxFutureMonth) {
+        return prev // Bloqueado: horizonte de +24 meses atingido
       }
       const d = parseMonthStrToDate(prev)
       d.setMonth(d.getMonth() + 1)
-      const nextStr = formatDateToMonthStr(d)
-      return nextStr > currentSystemMonth ? currentSystemMonth : nextStr
+      return formatDateToMonthStr(d)
     })
-  }, [currentSystemMonth])
+  }, [maxFutureMonth])
 
   const value = useMemo<ActiveMonthContextValue>(() => {
     return {

@@ -1529,11 +1529,29 @@ export function CopilotPage() {
             'novembro',
             'dezembro',
           ]
-          assistantText = `✅ ${savedCount} parcela(s) de ${(valorParcelaCents / 100)
-            .toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-            .replace('R$', 'R$')} gravadas — de ${monthNamesPt[m0 - 1]}/${String(y0).slice(2)} a ${
+          // Transparência total (27/10, pedido do Matheus): a resposta diz ONDE
+          // caiu — categoria › subcategoria › balde. Sem categoria casada
+          // (anti-chute), avisa honestamente que vai pro deck de revisão.
+          const bucketLabel =
+            cat?.budget_bucket === 'essentials'
+              ? 'Necessidades Essenciais'
+              : cat?.budget_bucket === 'lifestyle'
+                ? 'Estilo de Vida'
+                : cat?.budget_bucket === 'future'
+                  ? 'Metas & Investimentos'
+                  : null
+          const destinoTxt = cat
+            ? `${cat.name}${subcategoryId ? ` › ${parsed.subcategoryNameSuggestion}` : ''}${
+                bucketLabel ? ` (${bucketLabel})` : ''
+              }`
+            : 'sem categoria — confira no deck de revisão'
+          const fmtBRL = (cents: number) =>
+            (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+          assistantText = `✅ ${savedCount} parcela(s) de ${fmtBRL(
+            valorParcelaCents,
+          )} gravadas — de ${monthNamesPt[m0 - 1]}/${String(y0).slice(2)} a ${
             monthNamesPt[mmEnd - 1]
-          }/${String(yyEnd).slice(2)} (total ${parsed.amountFormatted}).`
+          }/${String(yyEnd).slice(2)} (total ${parsed.amountFormatted}) em ${destinoTxt}.`
           lastCreatedTxIdRef.current = null
           setIsProcessing(false)
           if (family?.id) {

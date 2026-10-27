@@ -92,7 +92,7 @@ export function MonthSelector({
                   ? 'text-white/80 hover:text-white hover:bg-white/15 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]'
                   : 'text-slate-500 hover:text-[#14213D] hover:bg-slate-100 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]'
             }`}
-            title={isNextMonthDisabled ? 'Limite atingido (mês atual)' : 'Próximo mês'}
+            title={isNextMonthDisabled ? 'Limite atingido (+24 meses)' : 'Próximo mês'}
             aria-label="Próximo mês"
           >
             <ChevronRight className="w-3.5 h-3.5" />
@@ -139,7 +139,7 @@ export function MonthSelector({
               ? 'text-slate-300 cursor-not-allowed opacity-40'
               : 'text-slate-600 hover:text-[#14213D] hover:bg-slate-100 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]'
           }`}
-          title={isNextMonthDisabled ? 'Limite atingido (mês atual)' : 'Próximo mês'}
+          title={isNextMonthDisabled ? 'Limite atingido (+24 meses)' : 'Próximo mês'}
           aria-label="Próximo mês"
         >
           <ChevronRight className="w-4 h-4" />

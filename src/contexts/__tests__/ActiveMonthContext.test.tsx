@@ -55,28 +55,32 @@ describe('ActiveMonthContext & MonthSelector - Estado Global e Seletor Reutiliz�
       })
 
       expect(result.current.activeMonth).toBe(current)
-      expect(result.current.isNextMonthDisabled).toBe(true)
+      // Horizonte futuro +24 meses (27/10): mês atual NÃO é mais o limite
+      expect(result.current.isNextMonthDisabled).toBe(false)
     })
 
-    it('bloqueia navegação para o futuro além do mês atual', () => {
+    it('permite avançar para meses futuros até o horizonte de +24 meses (parcelas)', () => {
       const current = getCurrentSystemMonthStr()
       const { result } = renderHook(() => useActiveMonth(), {
         wrapper: ({ children }) => <ActiveMonthProvider>{children}</ActiveMonthProvider>,
       })
 
-      expect(result.current.isNextMonthDisabled).toBe(true)
-
-      // Chamar nextMonth não deve avançar
+      // Avançar 1 mês a partir do mês atual agora é permitido
       act(() => {
         result.current.nextMonth()
       })
-      expect(result.current.activeMonth).toBe(current)
+      const d = parseMonthStrToDate(current)
+      d.setMonth(d.getMonth() + 1)
+      expect(result.current.activeMonth).toBe(formatDateToMonthStr(d))
 
-      // Chamar setActiveMonth para um mês futuro deve limitar ao mês atual
+      // Muito além do horizonte: limita a +24 meses
       act(() => {
         result.current.setActiveMonth('2099-12')
       })
-      expect(result.current.activeMonth).toBe(current)
+      const dMax = parseMonthStrToDate(current)
+      dMax.setMonth(dMax.getMonth() + 24)
+      expect(result.current.activeMonth).toBe(formatDateToMonthStr(dMax))
+      expect(result.current.isNextMonthDisabled).toBe(true)
     })
 
     it('permite navegar para meses anteriores e reabilitar avanço até o limite', () => {
@@ -138,7 +142,7 @@ describe('ActiveMonthContext & MonthSelector - Estado Global e Seletor Reutiliz�
       expect(screen.queryByText('Inverno')).toBeNull()
     })
 
-    it('desabilita o botão próximo mês quando atinge o mês atual do sistema', () => {
+    it('habilita o botão próximo mês no mês atual (horizonte futuro +24 meses)', () => {
       const current = getCurrentSystemMonthStr()
       render(
         <ActiveMonthProvider initialMonth={current}>
@@ -147,7 +151,7 @@ describe('ActiveMonthContext & MonthSelector - Estado Global e Seletor Reutiliz�
       )
 
       const nextBtn = screen.getByRole('button', { name: /próximo mês/i })
-      expect((nextBtn as HTMLButtonElement).disabled).toBe(true)
+      expect((nextBtn as HTMLButtonElement).disabled).toBe(false)
     })
   })
 
