@@ -570,6 +570,12 @@ export interface Goal {
   deadline: string // YYYY-MM-DD
   created_at: string
   category?: TransactionCategory
+  /** Derivado em runtime (NÃO é coluna): soma das receitas da categoria vinculada
+      — mesma regra da tela de Metas. Usado pela Projeção. */
+  progressoCents?: number
+  /** Declarado pelo usuário na Projeção ("quero guardar X por mês").
+      Quando presente, vence o aporte calculado pelo prazo. */
+  aporteMensalCents?: number
 }
 
 export interface Investment {

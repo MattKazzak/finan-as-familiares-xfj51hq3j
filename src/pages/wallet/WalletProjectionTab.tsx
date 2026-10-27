@@ -13,8 +13,9 @@ import {
 import { supabase } from '@/lib/supabase/client'
 import { useWallet } from './WalletContext'
 import { useActiveMonth } from '@/contexts/ActiveMonthContext'
-import { formatBRL } from '@/lib/formatters'
+import { formatBRL, parseBRLToCents } from '@/lib/formatters'
 import { useValuePrivacy } from '@/hooks/use-value-privacy'
+import { useToast } from '@/hooks/use-toast'
 import {
   buildProjection,
   monthKeyOf,
@@ -35,11 +36,36 @@ import type { Transaction, Goal } from '@/types/finance'
  * 4. MÁXIMO 1 ação por visita
  * 5. NUNCA esconder a origem dos números: "com base nos seus lançamentos"
  */
+/** Aportes declarados pelo usuário: { goalId: cents } no navegador. */
+const APORTES_KEY = 'curiangoo_aportes_metas_v1'
+function readAportesSalvos(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(APORTES_KEY)
+    return raw ? (JSON.parse(raw) as Record<string, number>) : {}
+  } catch {
+    return {}
+  }
+}
+function writeAporteSalvo(goalId: string, cents: number) {
+  try {
+    const atual = readAportesSalvos()
+    if (cents > 0) atual[goalId] = cents
+    else delete atual[goalId]
+    localStorage.setItem(APORTES_KEY, JSON.stringify(atual))
+  } catch {
+    /* silencioso: preferência local, nunca bloqueia a tela */
+  }
+}
+
 export function WalletProjectionTab() {
   const { family, recurringIncomes } = useWallet()
   const { activeMonth } = useActiveMonth()
   const { hideValues, maskValue } = useValuePrivacy()
   const navigate = useNavigate()
+  const { toast } = useToast()
+  // AÇÃO DE 1 TOQUE (Caminho B, Ação 5): qual meta está com o campo aberto
+  const [acaoAberta, setAcaoAberta] = useState(false)
+  const [valorAporte, setValorAporte] = useState('')
 
   const [loading, setLoading] = useState(true)
   const [saldoCents, setSaldoCents] = useState(0)
@@ -67,7 +93,7 @@ export function WalletProjectionTab() {
 
         const startOfThisMonth = `${todayStr.slice(0, 7)}-01`
 
-        const [saldoRes, parcelasRes, metasRes, gastosRes] = await Promise.all([
+        const [saldoRes, parcelasRes, metasRes, receitasRes, gastosRes] = await Promise.all([
           // EXATIDÃO (27/10): saldo ATÉ HOJE, nunca o total global. O total
           // global já inclui as parcelas e contas futuras lançadas — usá-lo e
           // depois projetar as mesmas parcelas contava o dinheiro duas vezes.
@@ -83,6 +109,14 @@ export function WalletProjectionTab() {
             .gt('transaction_date', todayStr)
             .neq('status', 'projected'),
           supabase.from('goals').select('*').eq('family_id', family.id),
+          // Receitas por categoria: o progresso de cada meta é a soma das
+          // receitas da categoria vinculada (mesma regra da tela de Metas).
+          supabase
+            .from('transactions')
+            .select('category_id, amount_cents, type')
+            .eq('family_id', family.id)
+            .eq('type', 'income')
+            .neq('status', 'projected'),
           supabase
             .from('transactions')
             .select('amount_cents, transaction_date, recurring_income_id, is_installment')
@@ -101,7 +135,24 @@ export function WalletProjectionTab() {
         setSaldoCents(income - expense)
 
         setParcelasFuturas((parcelasRes.data || []) as Transaction[])
-        setMetas((metasRes.data || []) as Goal[])
+        // Progresso de cada meta = soma das receitas da categoria vinculada
+        const porCategoria = new Map<string, number>()
+        for (const r of receitasRes.data || []) {
+          const cid = (r as any).category_id
+          if (!cid) continue
+          porCategoria.set(
+            cid,
+            (porCategoria.get(cid) || 0) + (Number((r as any).amount_cents) || 0),
+          )
+        }
+        const aportesSalvos = readAportesSalvos()
+        setMetas(
+          ((metasRes.data || []) as Goal[]).map((g) => ({
+            ...g,
+            progressoCents: g.category_id ? porCategoria.get(g.category_id) || 0 : 0,
+            aporteMensalCents: aportesSalvos[g.id] || undefined,
+          })),
+        )
 
         // média mensal de gastos VARIÁVEIS (3 meses fechados): exclui recorrentes
         // (entram pela própria regra) e parcelas (entram pela série) — senão o
@@ -162,6 +213,43 @@ export function WalletProjectionTab() {
   const alerta = projection.primeiroMesApertado
   const apertado = projection.mesMaisApertado
 
+  // A meta que a ação de 1 toque oferece: a que ainda tem prazo e maior falta.
+  const metaFoco = useMemo(() => {
+    const comPrazo = metas.filter(
+      (g) => g.deadline && (Number(g.target_amount_cents) || 0) > (g.progressoCents || 0),
+    )
+    if (comPrazo.length === 0) return null
+    return comPrazo.reduce((acc, g) => {
+      const faltaAcc = (Number(acc.target_amount_cents) || 0) - (acc.progressoCents || 0)
+      const faltaG = (Number(g.target_amount_cents) || 0) - (g.progressoCents || 0)
+      return faltaG > faltaAcc ? g : acc
+    })
+  }, [metas])
+
+  const salvarAporte = () => {
+    if (!metaFoco) return
+    const cents = parseBRLToCents(valorAporte)
+    if (!cents || cents <= 0) {
+      toast({
+        title: 'Informe um valor',
+        description: 'Digite quanto você quer guardar por mês (ex.: 200,00).',
+        variant: 'destructive',
+      })
+      return
+    }
+    writeAporteSalvo(metaFoco.id, cents)
+    // Atualiza o estado local para recalcular na hora, sem recarregar a página
+    setMetas((prev) =>
+      prev.map((g) => (g.id === metaFoco.id ? { ...g, aporteMensalCents: cents } : g)),
+    )
+    setAcaoAberta(false)
+    setValorAporte('')
+    toast({
+      title: 'Projeção atualizada 👍',
+      description: `Agora considero ${formatBRL(cents)} por mês em “${metaFoco.name}”.`,
+    })
+  }
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -212,6 +300,46 @@ export function WalletProjectionTab() {
               Pelo ritmo atual, seu saldo chega a {fmt(alerta.saldoCents)} nesse mês. Não é o fim do
               mundo — é só a hora de segurar um pouco antes.
             </p>
+
+            {/* AÇÃO DE 1 TOQUE (Caminho B, Ação 5): o Curiango prepara, você aprova. */}
+            {metaFoco && !acaoAberta && (
+              <button
+                type="button"
+                onClick={() => setAcaoAberta(true)}
+                className="mt-2.5 inline-flex items-center gap-1.5 rounded-xl bg-[#14213D] text-white text-[11px] font-semibold px-3 py-2 active:scale-95 transition-transform cursor-pointer"
+              >
+                <Target className="w-3 h-3" strokeWidth={2} />
+                Definir quanto guardar por mês
+              </button>
+            )}
+
+            {metaFoco && acaoAberta && (
+              <div className="mt-2.5 rounded-xl bg-white border border-slate-200 p-2.5">
+                <label className="block text-[10px] font-semibold text-[#14213D] mb-1">
+                  Quanto quero guardar por mês em “{metaFoco.name}”
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-slate-500">R$</span>
+                  <input
+                    inputMode="decimal"
+                    value={valorAporte}
+                    onChange={(e) => setValorAporte(e.target.value)}
+                    placeholder="200,00"
+                    className="flex-1 min-w-0 text-[12px] px-2 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#FCA311]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => salvarAporte()}
+                    className="rounded-lg bg-[#FCA311] text-[#14213D] text-[11px] font-bold px-2.5 py-1.5 active:scale-95 transition-transform cursor-pointer"
+                  >
+                    Guardar
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-500 mt-1.5 leading-snug">
+                  Eu recalculo a projeção com esse valor. Você pode mudar ou tirar quando quiser.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       ) : projection.totalComprometidoCents > 0 ? (

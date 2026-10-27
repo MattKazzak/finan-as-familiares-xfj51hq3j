@@ -98,8 +98,9 @@ function addMonths(monthKey: string, n: number): string {
  * @param saldoAtualCents   saldo real ATÉ HOJE (RPC get_family_balance_until com a data de hoje)
  * @param recorrentes       contas fixas ativas (entradas e saídas)
  * @param parcelasFuturas   transações is_installment com data > HOJE (nenhuma já paga)
- * @param metas             metas com aporte mensal estimado
- * @param mediaGastosCents  média mensal de gastos VARIÁVEIS (sem recorrentes, sem parcelas)
+ * @param metas             metas já enriquecidas com `progressoCents` (soma das
+ *                          receitas da categoria vinculada) e, opcionalmente,
+ *                          `aporteMensalCents` (o que o usuário declarou guardar) * @param mediaGastosCents  média mensal de gastos VARIÁVEIS (sem recorrentes, sem parcelas)
  * @param startingMonthKey  mês ativo (YYYY-MM)
  * @param todayStr          data de hoje (YYYY-MM-DD) — separa o que já caiu do que ainda vai cair
  */
@@ -187,7 +188,10 @@ export function buildProjection(
 
   for (const goal of metas) {
     const target = Number(goal.target_amount_cents) || 0
-    const current = Number((goal as any).current_amount_cents) || 0
+    // Progresso da meta = soma das RECEITAS da categoria vinculada (mesma regra
+    // da tela de Metas). `current_amount_cents` não existe em goals — ler esse
+    // campo devolvia sempre 0 e fazia a meta parecer 100% pendente.
+    const current = Number(goal.progressoCents) || 0
     const falta = Math.max(0, target - current)
     if (falta <= 0) continue
 
@@ -198,7 +202,10 @@ export function buildProjection(
       const [y1, m1] = deadlineMk.split('-').map(Number)
       mesesAtePrazo = Math.max(1, (y1 - y0) * 12 + (m1 - m0) + 1)
     }
-    const aporte = Math.round(falta / mesesAtePrazo)
+    // AÇÃO DE 1 TOQUE (27/10): quando o usuário declara quanto quer guardar por
+    // mês, o valor DELE manda — a projeção deixa de adivinhar pelo prazo.
+    const aporteDeclarado = Number(goal.aporteMensalCents) || 0
+    const aporte = aporteDeclarado > 0 ? aporteDeclarado : Math.round(falta / mesesAtePrazo)
     if (aporte <= 0) continue
 
     const mesesNoHorizonte = Math.min(mesesAtePrazo, horizonteMeses)
