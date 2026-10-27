@@ -1211,6 +1211,32 @@ export function CopilotPage() {
         return
       }
 
+      // ATENÇÃO 11 (27/10): perguntas sobre lançamento recente ("e a Netflix?",
+      // "onde lançou o Spotify?") chegam SEM pendência ativa — o previousCtx
+      // antigo só existia durante um fluxo pendente. Sem saber o que foi
+      // lançado há pouco, a edge relançava o item mencionado. Agora o contexto
+      // carrega as últimas transações reais da família.
+      let lancamentosRecentes: Array<{
+        descricao: string
+        valor: number
+        data: string
+      }> = []
+      if (family?.id) {
+        try {
+          const recentes = await fetchTransactions({
+            familyId: family.id,
+            limit: 5,
+          })
+          lancamentosRecentes = recentes.map((t) => ({
+            descricao: t.description,
+            valor: (Number(t.amount_cents) || 0) / 100,
+            data: t.transaction_date,
+          }))
+        } catch (e) {
+          console.warn('Copilot: falha ao buscar lançamentos recentes p/ contexto:', e)
+        }
+      }
+
       const previousCtx = effectivePendingTx
         ? {
             descricao: effectivePendingTx.description,
@@ -1233,6 +1259,7 @@ export function CopilotPage() {
         activeMonth,
         contexto_anterior: previousCtx as any,
         historico_mensagens: historicoSanitizado as any,
+        lancamentos_recentes: lancamentosRecentes as any,
       })
 
       // TAREFA 5: Interceptar comandos de correção de valor e comandos ainda não suportados (Fim do Fingimento)

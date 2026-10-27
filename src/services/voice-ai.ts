@@ -44,6 +44,9 @@ export interface ParseVoiceWithAiOptions {
   contexto_anterior?: VoiceAiPreviousContext | null
   historico_mensagens?: ChatMessagePayload[] | null
   activeMonth?: string | null
+  /** ATENÇÃO 11 (27/10): últimos lançamentos reais da família — dá à edge o
+      contexto para responder "e a Netflix?" como consulta em vez de relançar. */
+  lancamentos_recentes?: Array<{ descricao: string; valor: number; data: string }> | null
 }
 
 /**
@@ -57,6 +60,7 @@ export async function parseVoiceWithAi({
   contexto_anterior,
   historico_mensagens,
   activeMonth,
+  lancamentos_recentes,
 }: ParseVoiceWithAiOptions): Promise<ParsedVoiceTransaction> {
   const trimmed = texto.trim()
   if (!trimmed) {
@@ -91,6 +95,10 @@ export async function parseVoiceWithAi({
         historico_mensagens:
           Array.isArray(historico_mensagens) && historico_mensagens.length > 0
             ? historico_mensagens.slice(-6)
+            : null,
+        lancamentos_recentes:
+          Array.isArray(lancamentos_recentes) && lancamentos_recentes.length > 0
+            ? lancamentos_recentes.slice(-5)
             : null,
         categorias: serializedCategories.length > 0 ? serializedCategories : null,
       },

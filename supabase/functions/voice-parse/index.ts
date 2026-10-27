@@ -491,6 +491,26 @@ DADOS FINANCEIROS REAIS DA FAMÍLIA PARA O MÊS ATIVO SELECIONADO (${activeMonth
 
     const membersContext = (membersData || []).map((m: any) => `"${m.name}"`).join(', ')
 
+    // ATENÇÃO 11 (27/10): últimos lançamentos REAIS da família — contexto para
+    // perguntas como "e a Netflix?" serem respondidas como consulta (ONDE e
+    // por quanto) em vez de relançar o item mencionado.
+    const lancamentosRecentes = Array.isArray(body.lancamentos_recentes)
+      ? body.lancamentos_recentes
+      : []
+    let lancamentosRecentesPrompt = ''
+    if (lancamentosRecentes.length > 0) {
+      const linhas = lancamentosRecentes
+        .map(
+          (l: any) =>
+            `- "${l.descricao}" — R$ ${Number(l.valor).toFixed(2).replace('.', ',')} em ${l.data}`,
+        )
+        .join('\n')
+      lancamentosRecentesPrompt = `
+ÚLTIMOS LANÇAMENTOS REAIS DA FAMÍLIA (já gravados no banco):
+${linhas}
+Se a pergunta do usuário for sobre um destes itens ("e a Netflix?", "onde lançou o Spotify?"), responda como CONSULTA com o que está aqui — NUNCA crie novo lançamento.`
+    }
+
     const previousContext = body.contexto_anterior
     let previousContextPrompt = ''
     if (
@@ -623,7 +643,7 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
     const systemPrompt = buildSystemPrompt({
       activeMonthLabel,
       todayContext: todayParts,
-      previousContextPrompt,
+      previousContextPrompt: (previousContextPrompt || '') + lancamentosRecentesPrompt,
       financialSummaryContext,
       categoriesContext: categoriesContext || 'Nenhuma categoria específica cadastrada ainda.',
       membersContext: membersContext || 'Membro padrão',
