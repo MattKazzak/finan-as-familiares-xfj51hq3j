@@ -543,6 +543,18 @@ CONTEXTO ANTERIOR DE UMA TRANSAÇÃO EM ANDAMENTO NA SESSÃO:
 - Balde anterior: "${previousContext.balde || ''}"
 - Tipo anterior: "${previousContext.tipo || 'despesa'}"
 - Status anterior: "${previousContext.status || ''}"
+- Parcelamento JÁ DECLARADO anteriormente: ${
+        previousContext.parcelas && Number(previousContext.parcelas.total) > 1
+          ? `${Number(previousContext.parcelas.total)}x de R$ ${Number(
+              previousContext.parcelas.valor_parcela || 0,
+            )
+              .toFixed(2)
+              .replace(
+                '.',
+                ',',
+              )} (1ª parcela em ${previousContext.parcelas.mes_inicio || 'mês atual'}) — o "Nx" NÃO expira entre turnos (ATENÇÃO 16)`
+          : 'nenhum'
+      }
 - Opções de sugestão oferecidas anteriormente: [${opcoesStr}]
 
 INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTENÇÃO:
@@ -818,10 +830,70 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
       : 'invalido'
     // Normalização de contrato (26/10, eval c03): "acao_executada" é sinônimo de "sucesso" —
     // mesmo resultado semântico, rótulo divergente quebrava o golden set. Unificar em "sucesso".
-    const status = rawStatus === 'acao_executada' ? 'sucesso' : rawStatus
+    // `let`: a GUARDA PERGUNTA-NUNCA-RELANÇA (ATENÇÃO 16) pode rebaixar para "consulta".
+    let status: string = rawStatus === 'acao_executada' ? 'sucesso' : rawStatus
 
     const isMudarMes = parsedAiJson?.acao === 'mudar_mes'
     const mesAlvo = parsedAiJson?.mes_alvo || null
+
+    // GUARDA ANTI-APAGÃO (27/10, v448): "desfazer" só é legítimo com denúncia explícita
+    // de erro/duplicidade na frase. Sem isso, "só uma vez" foi interpretado como correção
+    // e APAGOU um lançamento legítimo (perda de dado do usuário). Rede de segurança.
+    if (parsedAiJson?.acao === 'desfazer' && typeof textoNormalizadoPtBr === 'string') {
+      const tNorm = normalizeText(textoNormalizadoPtBr)
+      const pedidoExplicito =
+        /(desfaz|desfazer|apaga|apagar|exclui|excluir|remove|remover|duplicad|duas vezes|de novo|errad[oa]|cancel|corrig|corrige)/.test(
+          tNorm,
+        )
+      if (!pedidoExplicito) {
+        console.warn(
+          `[voice-parse] Bloqueado "desfazer" sem denúncia explícita de erro. Texto: "${textoNormalizadoPtBr}"`,
+        )
+        parsedAiJson.acao = 'criar'
+        if (parsedAiJson?.transacao) {
+          parsedAiJson.transacao.recorrente = false
+        }
+        parsedAiJson.recorrente = false
+      }
+    }
+
+    // GUARDA PERGUNTA-NUNCA-RELANÇA (27/10, ATENÇÃO 16 — caso Play 5 "Você lançou parcelado?"):
+    // uma PERGUNTA sobre o lançamento que acabou de ser feito nunca pode criar outro.
+    // Conservadora de propósito: exige (a) frase interrogativa, (b) contexto/contexto
+    // recém-lançado, (c) NENHUM verbo de lançamento novo na frase. Zero IA.
+    if (
+      status === 'sucesso' &&
+      parsedAiJson?.acao !== 'desfazer' &&
+      parsedAiJson?.acao !== 'mudar_mes' &&
+      typeof textoNormalizadoPtBr === 'string'
+    ) {
+      const tN = normalizeText(textoNormalizadoPtBr)
+      const temVerboDeLancamentoNovo =
+        /\b(lancei|lance|lança|lanca|comprei|compre|paguei|pague|gastei|gaste|recebi|receba|ganhei|ganhe|anota|anote|cria|crie|registra|registre|cola|bota|bote|poe|poe|acabei de|fiz)\b/.test(
+          tN,
+        )
+      const ehInterrogativa =
+        /\?/.test(textoNormalizadoPtBr) ||
+        /^(voce|vc|tu)\b/.test(tN) ||
+        /^(foi|ficou|ta|esta|sera|era|deu|caiu)\b/.test(tN) ||
+        /\b(voce|vc)\s+(lancou|registrou|colocou|anotou|gravou|criou|fez|separou|marcou)\b/.test(
+          tN,
+        ) ||
+        (/\b(falei|disse|pedi|mandei)\b/.test(tN) &&
+          /\b(la\s+atras|antes|outro\s+dia|ontem|ja|isso|assim)\b/.test(tN))
+      const temLancamentoConhecido =
+        (previousContext && (previousContext.descricao || previousContext.valor)) ||
+        lancamentosRecentes.length > 0 ||
+        sanitizedHistory.some(
+          (m) => m.role === 'assistant' && /lan[çc]ad|registrad/i.test(m.content),
+        )
+      if (ehInterrogativa && temLancamentoConhecido && !temVerboDeLancamentoNovo) {
+        status = 'consulta'
+        console.warn(
+          `[voice-parse] ATENÇÃO 16: pergunta rebaixada de "sucesso" para "consulta" ("${textoNormalizadoPtBr}")`,
+        )
+      }
+    }
 
     const isConsulta = status === 'consulta' || parsedAiJson?.tipo_resposta === 'consulta'
     const isConsultoriaCategoria =
@@ -876,9 +948,57 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
       })
     }
 
+    // GUARDA MULTI-ITEM (27/10, v445): a IA erra a aritmética ao somar itens
+    // ("250+350+1620" → 2420/2520 em vez de 2220). O total da transação-mãe
+    // NUNCA pode divergir da soma dos itens: se divergir, a SOMA MANDA.
+    const itensForSum = Array.isArray(parsedAiJson?.itens)
+      ? parsedAiJson.itens
+      : Array.isArray(parsedAiJson?.transacao?.itens)
+        ? parsedAiJson.transacao.itens
+        : null
+    const somaItens =
+      Array.isArray(itensForSum) && itensForSum.length >= 2
+        ? itensForSum.reduce((acc: number, it: any) => acc + (Number(it?.valor) || 0), 0)
+        : 0
+    if (somaItens > 0 && parsedAiJson?.transacao) {
+      const valorIA = Number(parsedAiJson.transacao.valor)
+      if (!(Math.abs(valorIA - somaItens) < 0.005)) {
+        console.warn(
+          `[voice-parse] Total da IA divergente (${valorIA}) — corrigido para a soma dos itens: ${somaItens}`,
+        )
+        parsedAiJson.transacao.valor = somaItens
+      }
+      // ATENÇÃO 15 (27/10, v449): a descrição da transação-mãe é a LISTA dos itens
+      // separada por " + " — nunca nomes colados por vírgula ("Spotify, Netflix").
+      const nomesItens = (itensForSum as any[])
+        .map((it: any) => (it?.descricao ? String(it.descricao).trim() : ''))
+        .filter((n: string) => n.length > 0)
+      const descAtual = String(parsedAiJson.transacao.descricao || '')
+      const descColada =
+        nomesItens.length >= 2 && descAtual.includes(',') && !descAtual.includes(' + ')
+      if (descColada) {
+        parsedAiJson.transacao.descricao = nomesItens.join(' + ')
+        console.warn(
+          `[voice-parse] Descrição colada corrigida → "${parsedAiJson.transacao.descricao}"`,
+        )
+      }
+    }
+
     // Normalização estrita da mensagem amigável para status 'sucesso'
     let finalMensagemAmigavel = parsedAiJson?.mensagem_amigavel ?? respostaConsulta ?? null
-    if (status === 'sucesso' && parsedAiJson?.transacao) {
+    const isMultiItemResponse = somaItens > 0 && !isConsulta && status === 'sucesso'
+    if (isMultiItemResponse) {
+      // GUARDA MULTI-ITEM (27/10, v445): a lista vertical por item é OBRIGATÓRIA —
+      // a normalização de categoria única abaixo não pode sobrescrevê-la.
+      const linhas = (itensForSum as any[])
+        .map((it: any) => {
+          const v = Number(it?.valor) || 0
+          return `• ${it?.descricao || 'item'} — ${formatCentsToBRL(Math.round(v * 100))}`
+        })
+        .join('\n')
+      finalMensagemAmigavel = `Lançado (${(itensForSum as any[]).length} lançamentos, total ${formatCentsToBRL(Math.round(somaItens * 100))}):\n${linhas}`
+    }
+    if (status === 'sucesso' && parsedAiJson?.transacao && !isMultiItemResponse) {
       const tx = parsedAiJson.transacao
       let rawCat = (tx.categoria || 'Outros').trim()
       if (rawCat.toLowerCase() === 'geral') rawCat = 'Outros'
@@ -1204,6 +1324,126 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
       : parsedAiJson?.transacao
         ? { ...parsedAiJson.transacao }
         : null
+
+    // GUARDA PARCELAS (27/10, ATENÇÃO 16 — caso Play 5): o "Nx" declarado NUNCA expira
+    // entre turnos. Duas redes de segurança determinísticas (zero IA):
+    //  (1) SLOT-FILL: turno que é SÓ o número respondendo um falta_valor e o contexto
+    //      anterior já trazia o parcelamento → injeta "parcelas" (nunca tx única).
+    //  (2) NORMALIZAÇÃO: "parcelas" só sai válido (total×valor_parcela = valor, mes_inicio YYYY-MM).
+    const mesAtualISO = (() => {
+      const p = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+      }).format(new Date())
+      return p
+    })()
+
+    // Detecta parcelamento JÁ DECLARADO pelo usuário na conversa (o "Nx" não expira).
+    // Ordem: objeto parcelas do contexto → descrição do contexto → histórico recente.
+    const detectDeclaredInstallments = (): number => {
+      const doObjeto = Number(previousContext?.parcelas?.total)
+      if (Number.isFinite(doObjeto) && doObjeto >= 2) return Math.round(doObjeto)
+      const padroes = [
+        /\bem\s+(\d{1,2})\s*(?:x|vezes)\b/i,
+        /\b(\d{1,2})\s*(?:x|vezes)\s*(?:de|sem\s+juros)?\b/i,
+        /\b(\d{1,2})\s*parcelas?\b/i,
+      ]
+      const varrer = (txt: string): number => {
+        for (const re of padroes) {
+          const m = txt.match(re)
+          if (m) {
+            const n = parseInt(m[1], 10)
+            if (n >= 2 && n <= 48) return n
+          }
+        }
+        return 0
+      }
+      const daDescricao = varrer(String(previousContext?.descricao || ''))
+      if (daDescricao) return daDescricao
+      for (let i = sanitizedHistory.length - 1; i >= 0; i--) {
+        const msg = sanitizedHistory[i]
+        if (msg.role !== 'user') continue
+        const n = varrer(msg.content)
+        if (n) return n
+      }
+      return 0
+    }
+
+    // GUARDA SLOT-FILL (27/10, ATENÇÃO 16 — caso Play 5, turno 2): se o turno anterior
+    // ficou em falta_valor e o usuário responde APENAS o número ("3600"), esse número É o
+    // valor da transação pendente. A IA às vezes reabre a pergunta ("O que você comprou?")
+    // — re-perguntar o que o usuário já disse é o bug de UX que esta guarda elimina (zero IA).
+    const numeroIsoladoT2 = /^[r$\s]*\d[\d.]*(?:,\d{1,2})?\s*(?:reais|real)?[\s.!]*$/i.test(
+      String(textoNormalizadoPtBr || '').trim(),
+    )
+    if (
+      numeroIsoladoT2 &&
+      previousContext &&
+      previousContext.status === 'falta_valor' &&
+      (previousContext.descricao || previousContext.categoria)
+    ) {
+      const valorDoTurno = (() => {
+        const limpo = String(textoNormalizadoPtBr || '')
+          .replace(/reais|real/gi, '')
+          .replace(/[r$\s]/gi, '')
+          .replace(/\.(?=\d{3}\b)/g, '')
+          .replace(',', '.')
+          .trim()
+        const n = Number(limpo)
+        return Number.isFinite(n) && n > 0 ? n : null
+      })()
+      if (valorDoTurno !== null) {
+        const descCtx = String(previousContext.descricao || previousContext.categoria || 'Compra')
+        const totalDeclarado =
+          Number(previousContext?.parcelas?.total) || detectDeclaredInstallments()
+        const mesHoje = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'America/Sao_Paulo',
+          year: 'numeric',
+          month: '2-digit',
+        }).format(new Date())
+        const parcelasTurno =
+          totalDeclarado >= 2
+            ? {
+                total: Math.round(totalDeclarado),
+                valor_parcela: Math.round((valorDoTurno / totalDeclarado) * 100) / 100,
+                mes_inicio: /^\d{4}-\d{2}$/.test(
+                  String(previousContext?.parcelas?.mes_inicio || ''),
+                )
+                  ? String(previousContext.parcelas.mes_inicio)
+                  : mesHoje,
+              }
+            : null
+        validatedTx = {
+          descricao: descCtx,
+          estabelecimento: previousContext.estabelecimento || null,
+          valor: valorDoTurno,
+          tipo: previousContext.tipo === 'receita' ? 'receita' : 'despesa',
+          balde: previousContext.balde || 'Necessidades Essenciais',
+          categoria: previousContext.categoria || null,
+          subcategoria: previousContext.subcategoria || null,
+          metodo_pagamento: previousContext.metodo_pagamento || null,
+          recorrente: false,
+          dia_recorrente: null,
+          parcelas: parcelasTurno,
+        } as any
+        status = 'sucesso'
+        // A mensagem amigável foi montada ANTES desta guarda (a IA tinha devolvido
+        // falta_valor). Sem reescrever, o app mostraria "Quanto custou?" com um
+        // lançamento pronto — o pior dos dois mundos.
+        const catMsg = String(previousContext.categoria || 'Outros')
+        const subMsg = previousContext.subcategoria ? String(previousContext.subcategoria) : null
+        finalMensagemAmigavel = subMsg
+          ? `Lançado: ${formatCentsToBRL(Math.round(valorDoTurno * 100))} em **${catMsg}** › **${subMsg}** 👍!`
+          : `Lançado: ${formatCentsToBRL(Math.round(valorDoTurno * 100))} em **${catMsg}** 👍!`
+        parsedAiJson.pergunta_clarificacao = null
+        parsedAiJson.mensagem_amigavel = finalMensagemAmigavel
+        console.warn(
+          `[voice-parse] GUARDA SLOT-FILL: valor ${valorDoTurno} recuperado do turno 2 para "${descCtx}"${parcelasTurno ? ` (${parcelasTurno.total}x de ${parcelasTurno.valor_parcela})` : ''}`,
+        )
+      }
+    }
+
     if (isCatalogAvailable && validatedTx && validatedTx.categoria) {
       const match = matchTolerantPair(validatedTx.categoria, validatedTx.subcategoria)
       if (match) {
@@ -1229,8 +1469,194 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
       }
     }
 
+    // ATENÇÃO 16 (27/10, caso Play 5): parcelas declaradas no contexto NÃO se perdem
+    // quando o turno é só o número (slot-fill acima já cobre o caso principal; esta
+    // reinjeção cobre o caso em que a IA devolveu a tx sem o objeto parcelas).
+    if (
+      validatedTx &&
+      !isConsulta &&
+      status === 'sucesso' &&
+      !validatedTx.parcelas &&
+      Number(validatedTx.valor) > 0 &&
+      Number(previousContext?.valor || 0) === 0 &&
+      detectDeclaredInstallments() >= 2
+    ) {
+      const soNumero = /^[r$\s]*\d[\d.]*(?:,\d{1,2})?\s*(?:reais|real)?[\s.!]*$/i.test(
+        (textoNormalizadoPtBr || '').trim(),
+      )
+      if (soNumero) {
+        const detectado = detectDeclaredInstallments()
+        const totalCtx = Math.round(Number(previousContext?.parcelas?.total) || detectado)
+        const parcelaCtx = Number(previousContext?.parcelas?.valor_parcela)
+        const valorTotal = Number(validatedTx.valor) || 0
+        const valorParcela =
+          parcelaCtx > 0 ? parcelaCtx : Math.round((valorTotal / Math.max(totalCtx, 1)) * 100) / 100
+        validatedTx.parcelas = {
+          total: totalCtx,
+          valor_parcela: valorParcela,
+          mes_inicio: /^\d{4}-\d{2}$/.test(String(previousContext?.parcelas?.mes_inicio || ''))
+            ? String(previousContext.parcelas.mes_inicio)
+            : mesAtualISO,
+        }
+        console.warn(
+          `[voice-parse] ATENÇÃO 16: parcelas do contexto reinjetadas (${totalCtx}x de ${valorParcela})`,
+        )
+      }
+    }
+
     let defensiveClarification = parsedAiJson?.pergunta_clarificacao ?? null
     let defensiveMensagem = finalMensagemAmigavel
+
+    // GUARDA "Nx de N" NO TURNO ATUAL (27/10, caso curso 12x de 24,50): a IA às
+    // vezes ignora o parcelado declarado NA PRÓPRIA FRASE e devolve transação
+    // única (às vezes recorrente com dia alucinado do histórico). Padrão completo
+    // na frase = parcelas OBRIGATÓRIAS (zero IA), e parcelado NUNCA é recorrente:
+    // a série de parcelas já cobre os meses sozinha.
+    if (validatedTx && !isConsulta && status === 'sucesso') {
+      const mNx = (textoNormalizadoPtBr || '').match(
+        /\b(\d{1,2})\s*(?:x|vezes|parcelas?)\s*(?:de\s+|sem\s+juros\s+)?\s*(?:r\$\s*)?([\d][\d.,]*)/i,
+      )
+      if (mNx) {
+        const nP = parseInt(mNx[1], 10)
+        // textoNormalizadoPtBr já converteu vírgula decimal em PONTO ("24,50"→"24.50"):
+        // parse direto com ponto decimal; ponto de milhar ("1.250") não sobrevive à normalização.
+        const vP = parseFloat(mNx[2].replace(/,/g, '.'))
+        // A FRASE é a fonte da verdade: se a IA devolveu parcelas em outra escala
+        // (ex.: centavos — 12x24,50 virou total 29400), corrige pelo texto.
+        if (nP >= 2 && nP <= 48 && vP > 0) {
+          const totalCalc = Math.round(nP * vP * 100) / 100
+          validatedTx.parcelas = { total: nP, valor_parcela: vP, mes_inicio: mesAtualISO }
+          validatedTx.valor = totalCalc
+          // PARCELADO ≠ RECORRENTE: tira a recorrência e o dia (mesmo herdado do histórico)
+          validatedTx.recorrente = false
+          if (parsedAiJson?.transacao) {
+            parsedAiJson.transacao.recorrente = false
+            parsedAiJson.transacao.dia_recorrente = null
+          }
+          parsedAiJson.recorrente = false
+          parsedAiJson.dia_recorrente = null
+          if (
+            typeof defensiveMensagem === 'string' &&
+            !/\d+\s*x\s+de\s+R\$/.test(defensiveMensagem)
+          ) {
+            defensiveMensagem = `${defensiveMensagem} (${nP}x de ${formatCentsToBRL(Math.round(vP * 100))}, 1ª em ${mesAtualISO})`
+          }
+          console.warn(
+            `[voice-parse] GUARDA Nx-de-N: parcelas injetadas (${nP}x de ${vP}, total ${totalCalc})`,
+          )
+        }
+      }
+    }
+
+    // NORMALIZAÇÃO DE PARCELAS (27/10): "parcelas" só sai válido
+    // (total×valor_parcela = valor, mes_inicio YYYY-MM).
+    if (validatedTx?.parcelas) {
+      const p: any = validatedTx.parcelas
+      const totalNum = Math.round(Number(p.total))
+      let parcelaNum = Number(p.valor_parcela)
+      const valorTx = Number(validatedTx.valor) || 0
+      if (totalNum >= 2) {
+        if (!(parcelaNum > 0) && valorTx > 0) {
+          parcelaNum = Math.round((valorTx / totalNum) * 100) / 100
+        }
+        if (parcelaNum > 0) {
+          validatedTx.parcelas = {
+            total: totalNum,
+            valor_parcela: parcelaNum,
+            mes_inicio: /^\d{4}-\d{2}$/.test(String(p.mes_inicio || ''))
+              ? String(p.mes_inicio)
+              : mesAtualISO,
+          }
+          if (valorTx > 0 && Math.abs(valorTx - totalNum * parcelaNum) >= 0.01) {
+            validatedTx.valor = Math.round(totalNum * parcelaNum * 100) / 100
+            console.warn(
+              `[voice-parse] GUARDA PARCELAS: total corrigido para ${validatedTx.valor} (${totalNum}x${parcelaNum})`,
+            )
+          }
+          const resumoParcelas = `${totalNum}x de ${formatCentsToBRL(Math.round(parcelaNum * 100))}`
+          if (
+            typeof defensiveMensagem === 'string' &&
+            !/\d+\s*x\s+de\s+R\$/.test(defensiveMensagem)
+          ) {
+            defensiveMensagem = `${defensiveMensagem} (${resumoParcelas}, 1ª em ${validatedTx.parcelas.mes_inicio})`
+          }
+        }
+      } else {
+        validatedTx.parcelas = null
+      }
+    }
+
+    // ===== GUARDAS DETERMINÍSTICAS DA ATENÇÃO 16 (27/10) =====
+    const textoNormT = normalizeText(textoNormalizadoPtBr || '')
+
+    // (G1) ATENÇÃO 14 — RECORRÊNCIA INFERIDA NUNCA VIRA CONTA FIXA SEM DIA.
+    // Se a IA marcou recorrente SEM o usuário ter dito dia/palavra de recorrência,
+    // isso é dedução dela ("Netflix" = assinatura), e o contrato manda PERGUNTAR.
+    // Quando o usuário DIZ "recorrente/todo mês", o lançamento passa direto (B6).
+    const disseRecorrenciaExplicita =
+      /(todo\s+mes|todos\s+os\s+meses|mensalmente|recorrente|fixa|fixo|assino|assinatura|todo\s+dia|dia\s+\d|por\s+mes)/.test(
+        textoNormT,
+      )
+    const diaRecorrenteNum = Number(
+      parsedAiJson?.transacao?.dia_recorrente ?? parsedAiJson?.dia_recorrente,
+    )
+    const recorrenteSaiu =
+      parsedAiJson?.transacao?.recorrente === true || parsedAiJson?.recorrente === true
+    if (
+      status === 'sucesso' &&
+      recorrenteSaiu &&
+      !(Number.isFinite(diaRecorrenteNum) && diaRecorrenteNum >= 1) &&
+      !disseRecorrenciaExplicita &&
+      !(validatedTx?.parcelas && Number(validatedTx.parcelas.total) >= 2)
+    ) {
+      status = 'clarificacao'
+      parsedAiJson.recorrente = true
+      if (parsedAiJson?.transacao) parsedAiJson.transacao.recorrente = true
+      parsedAiJson.dia_recorrente = null
+      if (parsedAiJson?.transacao) parsedAiJson.transacao.dia_recorrente = null
+      defensiveClarification = 'Essa é uma conta que repete todo mês? Se sim, que dia ela cai?'
+      defensiveMensagem = defensiveClarification
+      console.warn(
+        `[voice-parse] ATENÇÃO 14: recorrência inferida sem dia → clarificacao ("${textoNormalizadoPtBr}")`,
+      )
+    }
+
+    // (G2) B2 — PERGUNTAR VALOR QUANDO O VALOR ESTÁ NA FRASE É BUG.
+    // A IA às vezes devolve clarificacao "Quanto custou?" com o valor já preenchido
+    // ("Netflix 59,90 todo dia 5"). Se há valor > 0 e a única lacuna é o valor,
+    // o lançamento está completo: promove para sucesso (zero IA).
+    if (
+      (status === 'clarificacao' || status === 'falta_valor') &&
+      validatedTx &&
+      Number(validatedTx.valor) > 0
+    ) {
+      const pedeValor =
+        /(quanto\s+(custo|custou|custa|foi|deu|vale|é|e)|custa\s+quanto|qual\s+(o\s+)?valor|valor\s+(dele|disso|da\s+compra))/i.test(
+          `${parsedAiJson?.pergunta_clarificacao || ''} ${defensiveMensagem || ''}`,
+        )
+      if (pedeValor) {
+        status = 'sucesso'
+        parsedAiJson.status = 'sucesso'
+        defensiveClarification = null
+        const catG = String(validatedTx.categoria || 'Outros')
+        const subG = validatedTx.subcategoria ? String(validatedTx.subcategoria) : null
+        defensiveMensagem = subG
+          ? `Lançado: ${formatCentsToBRL(Math.round(Number(validatedTx.valor) * 100))} em **${catG}** › **${subG}** 👍!`
+          : `Lançado: ${formatCentsToBRL(Math.round(Number(validatedTx.valor) * 100))} em **${catG}** 👍!`
+        parsedAiJson.mensagem_amigavel = defensiveMensagem
+        console.warn(
+          `[voice-parse] B2: valor presente na frase — pergunta de valor descartada ("${textoNormalizadoPtBr}")`,
+        )
+        // Recorrência com dia dito continua sendo conta fixa legítima
+        if (Number.isFinite(diaRecorrenteNum) && diaRecorrenteNum >= 1) {
+          if (parsedAiJson?.transacao) {
+            parsedAiJson.transacao.recorrente = true
+            parsedAiJson.transacao.dia_recorrente = diaRecorrenteNum
+          }
+        }
+      }
+    }
+    // ===== FIM DAS GUARDAS DA ATENÇÃO 16 =====
 
     if (unmappedItems.length > 0) {
       const firstUnmapped = unmappedItems[0]
@@ -1244,13 +1670,21 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
       acao: parsedAiJson?.acao ?? null,
       mes_alvo: mesAlvo,
       // LANÇAMENTO RECORRENTE (21/10, B6): propaga a intenção de conta fixa
-      recorrente: parsedAiJson?.transacao?.recorrente === true || parsedAiJson?.recorrente === true,
+      // GUARDA PARCELADO ≠ RECORRENTE (27/10, ATENÇÃO 16 — caso Play 5): uma compra
+      // parcelada NUNCA é conta fixa. Se a IA marcou os dois, o parcelamento vence
+      // (recorrente criaria uma conta fixa eterna além da série).
+      recorrente:
+        validatedTx?.parcelas && Number(validatedTx.parcelas.total) >= 2
+          ? false
+          : parsedAiJson?.transacao?.recorrente === true || parsedAiJson?.recorrente === true,
       dia_recorrente:
-        typeof parsedAiJson?.transacao?.dia_recorrente === 'number'
-          ? parsedAiJson.transacao.dia_recorrente
-          : typeof parsedAiJson?.dia_recorrente === 'number'
-            ? parsedAiJson.dia_recorrente
-            : null,
+        validatedTx?.parcelas && Number(validatedTx.parcelas.total) >= 2
+          ? null
+          : typeof parsedAiJson?.transacao?.dia_recorrente === 'number'
+            ? parsedAiJson.transacao.dia_recorrente
+            : typeof parsedAiJson?.dia_recorrente === 'number'
+              ? parsedAiJson.dia_recorrente
+              : null,
       tipo_resposta: isConsulta
         ? 'consulta'
         : isConsultoriaCategoria
