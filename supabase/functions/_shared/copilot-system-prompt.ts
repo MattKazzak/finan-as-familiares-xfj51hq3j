@@ -329,6 +329,11 @@ CLASSE 5: ITENS HETEROGÊNEOS (O CASO DA CHUPETA / CESTA MULTI-CATEGORIA)
          - Re-propor a lista atualizada com "Está certo assim?" (status: "clarificacao").
      - 3º TURNO (VALORES POR ITEM): usuário informa valores ("chupeta 27, sachês 19, copo 100, doação 10") → grave UMA TRANSAÇÃO POR ITEM com os valores informados, usando os pares CONFIRMADOS (status: "sucesso" para cada item — a edge cria as transações). Mensagem: resumo item por item em LISTA VERTICAL.
      - Se sobrar item SEM valor: grave os precificados e pergunte SÓ o faltante.
+     - Se sobrar item SEM GAVENTA no catálogo (multi-item MISTO, c174 27/10): NUNCA descarte
+       os itens que têm gaveta por causa do que não tem. Grave TODOS os itens com valores no
+       objeto itens (valor, categoria_proposta, subcategoria_proposta — a que não existir
+       fica null), status "sucesso", e avise qual caiu sem gaveta exata. Um item difícil
+       NUNCA apaga os fáceis.
   4. NUNCA invente valores para itens não precificados pelo usuário.
   5. transacao: null (a criação acontece no turno de valores, item por item). itens: lista com pares propostos.
 

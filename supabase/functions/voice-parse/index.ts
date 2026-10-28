@@ -854,6 +854,16 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
           parsedAiJson.transacao.recorrente = false
         }
         parsedAiJson.recorrente = false
+      } else if (rawStatus === 'invalido' || rawStatus === 'acao_executada') {
+        // c172 (27/10, golden set v4): denúncia de duplicidade legítima com status
+        // "invalido" quebra o contrato — "invalido" significa "não entendi", e a
+        // edge ENTENDEU perfeitamente (mensagem certa, acao desfazer certa).
+        // O app executa a exclusão local via acao=desfazer; aqui o status vira
+        // "consulta" (resposta honesta sobre o que foi feito).
+        status = 'consulta'
+        console.warn(
+          `[voice-parse] c172: desfazer legítimo promovido de "${rawStatus}" para "consulta"`,
+        )
       }
     }
 
