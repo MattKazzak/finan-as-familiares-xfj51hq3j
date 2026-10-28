@@ -833,6 +833,36 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
     // `let`: a GUARDA PERGUNTA-NUNCA-RELANÇA (ATENÇÃO 16) pode rebaixar para "consulta".
     let status: string = rawStatus === 'acao_executada' ? 'sucesso' : rawStatus
 
+    // c77 (28/10): fiado/caderneta com valor explícito é compra já realizada.
+    // Não depende da IA: evita re-perguntar R$ 35 do pão ou tratar como dívida futura.
+    if (status === 'falta_valor' && typeof textoNormalizadoPtBr === 'string') {
+      const tFiado = normalizeText(textoNormalizadoPtBr)
+      const ehFiado = /\b(fiado|caderneta|caderninho|pendurei)\b/.test(tFiado)
+      const hintFiado = extractNumericHint(textoNormalizadoPtBr || texto)
+      const valorFiado = hintFiado?.match(/R\$\s*([\d.]+),([\d]{2})/) || null
+      if (ehFiado && valorFiado) {
+        const valor = Number(`${valorFiado[1].replace(/\./g, '')}.${valorFiado[2]}`)
+        if (Number.isFinite(valor) && valor > 0) {
+          status = 'sucesso'
+          parsedAiJson.status = 'sucesso'
+          parsedAiJson.acao = 'criar'
+          parsedAiJson.transacao = {
+            descricao: textoNormalizadoPtBr,
+            valor,
+            tipo: 'despesa',
+            balde: 'Necessidades Essenciais',
+            categoria: 'Alimentação',
+            subcategoria: null,
+            metodo_pagamento: null,
+          }
+          parsedAiJson.mensagem_amigavel = `Lançado: ${formatCentsToBRL(Math.round(valor * 100))} em **Alimentação** 👍!`
+          console.warn(
+            `[voice-parse] c77: fiado com valor explícito promovido a sucesso (${valor})`,
+          )
+        }
+      }
+    }
+
     // c33 (28/10): se há verbo inequívoco de gasto + valor monetário detectado,
     // "invalido" da IA não pode descartar o lançamento (ex.: "gastei 1.250 no
     // notebook"). Fallback conservador: Compras sem subcategoria, para revisão;
