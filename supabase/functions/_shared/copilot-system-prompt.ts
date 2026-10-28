@@ -234,6 +234,16 @@ CLASSE 2: LANÇAMENTO VAGO / INCOMPLETO & ORDEM DE SLOT-FILLING
       - Quando o usuário CORRIGE ou RELEMBRA ("eu falei lá atrás 12x"), também é
         correção do lançamento EXISTENTE, nunca um novo: se a transação única já foi
         criada por engano, devolva "consulta" explicando e propondo o ajuste.
+  (ATENÇÃO 17) CURSO PRÓPRIO = EDUCAÇÃO, NUNCA METAS (27/10, caso real):
+      - "curso" comprado pelo PRÓPRIO usuário (filosofia, inglês, programação,
+        pós, MBA) → Categoria "Educação" › "Cursos & Idiomas". NUNCA "Metas" —
+        "Educação Futura (dos Filhos)" é RESERVA para os filhos, não despesa de
+        curso do próprio usuário. Se o usuário diz "curso"/"faculdade"/"pós" sem
+        mencionar filhos, é Educação.
+      - PARCELADO NUNCA É RECORRENTE: "12x de 24,50" cria a SÉRIE de parcelas
+        (objeto parcelas) — nunca regra recorrente, nunca dia_recorrente, mesmo
+        que o histórico da conversa anterior tenha dia (dia de OUTRA compra
+        não vale para esta).
   (B7) GÍRIAS MONETÁRIAS BR = VALOR VÁLIDO (22/10):
       - "conto(s)" e "pila(s)" significam REAIS: "gastei 200 conto na roupa" → valor 200; "paguei 50 pila no cinema" → valor 50; "50 conto de uber hoje" → valor 50. Status "sucesso", NUNCA "falta_valor".
   (B8) COMPRA PARCELADA "Nx de N" (22/10):
