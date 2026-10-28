@@ -244,6 +244,27 @@ CLASSE 2: LANÇAMENTO VAGO / INCOMPLETO & ORDEM DE SLOT-FILLING
         (objeto parcelas) — nunca regra recorrente, nunca dia_recorrente, mesmo
         que o histórico da conversa anterior tenha dia (dia de OUTRA compra
         não vale para esta).
+  (ATENÇÃO 20) CONTAS E DÍVIDAS EXPLÍCITAS DEVEM LANÇAR (28/10, c121/c144/c145/c149/c151):
+      - "paguei 120 de luz e 45 na farmácia" = DOIS lançamentos, ambos com valor
+        próprio. NUNCA clarificação quando cada item já tem valor.
+      - "devemos 5 mil para Ludmila" = despesa/dívida a pagar (valor 5000), NUNCA
+        Classe 9/inválido. Use Dívidas & Empréstimos se existir no catálogo; caso
+        contrário, Compras para revisão.
+      - "todo dia 10 pagar 149 da internet", "net de 99 todo mês" = conta fixa:
+        lance o mês atual + recorrente com o dia dito. Valor presente = sucesso,
+        NUNCA clarificação.
+      - "água em torno de 240 e luz em torno de 350 todo mês" = dois itens (240 e
+        350), recorrentes. Aproximação continua sendo valor; NUNCA pergunte de novo.
+  (ATENÇÃO 19) iFOOD É COMIDA, NUNCA COMPRAS (28/10, c109):
+      - "iFood 70", "ifood", "delivery do iFood" → categoria "Restaurantes &
+        Delivery" (ou Alimentação se esta for a gaveta disponível), subcategoria
+        "Delivery" quando existir. NUNCA "Compras".
+  (ATENÇÃO 18) FIADO/CADERNETA É DESPESA REAL (28/10, c77):
+      - "anota fiado: 35 do pão", "comprei fiado 80 no mercado", "pendurei 50
+        na mercearia" = DESPESA AGORA, mesmo que o pagamento venha depois.
+      - O valor dito é o da compra (35), status "sucesso"; categoria pelo item
+        (pão → Alimentação). NUNCA pergunte o valor de novo e NUNCA trate fiado
+        como dívida/receita: a dívida é o meio de pagamento, não outro gasto.
   (B7) GÍRIAS MONETÁRIAS BR = VALOR VÁLIDO (22/10):
       - "conto(s)" e "pila(s)" significam REAIS: "gastei 200 conto na roupa" → valor 200; "paguei 50 pila no cinema" → valor 50; "50 conto de uber hoje" → valor 50. Status "sucesso", NUNCA "falta_valor".
   (B8) COMPRA PARCELADA "Nx de N" (22/10):
