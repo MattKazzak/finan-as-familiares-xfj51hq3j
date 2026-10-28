@@ -833,8 +833,68 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
     // `let`: a GUARDA PERGUNTA-NUNCA-RELANÇA (ATENÇÃO 16) pode rebaixar para "consulta".
     let status: string = rawStatus === 'acao_executada' ? 'sucesso' : rawStatus
 
+    // c33 (28/10): se há verbo inequívoco de gasto + valor monetário detectado,
+    // "invalido" da IA não pode descartar o lançamento (ex.: "gastei 1.250 no
+    // notebook"). Fallback conservador: Compras sem subcategoria, para revisão;
+    // nunca inventa uma gaveta específica e nunca perde valor explícito.
+    if (status === 'invalido' && typeof textoNormalizadoPtBr === 'string') {
+      const tLanc = normalizeText(textoNormalizadoPtBr)
+      const gastoExplicito = /\b(gastei|comprei|paguei|lancei|lanca|lança|anota|registre)\b/.test(
+        tLanc,
+      )
+      const hintNums = extractNumericHint(textoNormalizadoPtBr || texto)
+      const valorHint = hintNums?.match(/R\$\s*([\d.]+),([\d]{2})/) || null
+      if (gastoExplicito && valorHint) {
+        const valor = Number(`${valorHint[1].replace(/\./g, '')}.${valorHint[2]}`)
+        if (Number.isFinite(valor) && valor > 0) {
+          status = 'sucesso'
+          parsedAiJson.status = 'sucesso'
+          parsedAiJson.acao = 'criar'
+          parsedAiJson.tipo_resposta = 'transacao'
+          parsedAiJson.intencao = 'transacao'
+          parsedAiJson.transacao = {
+            descricao: textoNormalizadoPtBr,
+            valor,
+            tipo: 'despesa',
+            balde: 'Estilo de Vida',
+            categoria: 'Compras',
+            subcategoria: null,
+            metodo_pagamento: null,
+          }
+          parsedAiJson.mensagem_amigavel = `Lançado: ${formatCentsToBRL(Math.round(valor * 100))} em **Compras** 👍! Confira a categoria no deck de revisão.`
+          console.warn(
+            `[voice-parse] c33: invalido com valor explícito promovido a sucesso (${valor})`,
+          )
+        }
+      }
+    }
+
     const isMudarMes = parsedAiJson?.acao === 'mudar_mes'
     const mesAlvo = parsedAiJson?.mes_alvo || null
+
+    // FATURA FUTURA NUNCA RECRIA/REMOVE LANÇAMENTOS (c143, 28/10): "não paguei
+    // essa fatura ainda; vou pagar dia 10" é uma atualização/consulta, não uma
+    // transação e muito menos um comando de desfazer. O usuário não realizou
+    // movimento financeiro — preservar dados e explicar isso é obrigatório.
+    if (typeof textoNormalizadoPtBr === 'string') {
+      const tFatura = normalizeText(textoNormalizadoPtBr)
+      const faturaFutura =
+        /\bfatura\b/.test(tFatura) &&
+        /(nao paguei|ainda nao paguei|vou pagar|vai ser paga|sera paga|dia\s+\d|novembro|dezembro|janeiro)/.test(
+          tFatura,
+        )
+      if (faturaFutura) {
+        status = 'consulta'
+        parsedAiJson.status = 'consulta'
+        parsedAiJson.acao = null
+        parsedAiJson.transacao = null
+        parsedAiJson.mensagem_amigavel =
+          'Certo — como essa fatura ainda não foi paga, não vou criar nem desfazer nenhum lançamento. Quando ela vencer, as compras já estarão registradas aqui.'
+        console.warn(
+          `[voice-parse] c143: fatura futura tratada como consulta ("${textoNormalizadoPtBr}")`,
+        )
+      }
+    }
 
     // GUARDA ANTI-APAGÃO (27/10, v448): "desfazer" só é legítimo com denúncia explícita
     // de erro/duplicidade na frase. Sem isso, "só uma vez" foi interpretado como correção
