@@ -1736,15 +1736,31 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
     }
     // ===== FIM DAS GUARDAS DA ATENÇÃO 16 =====
 
-    if (unmappedItems.length > 0) {
+    // c121/c174 (28/10): num multi-item, UMA gaveta difícil não pode apagar os
+    // itens fáceis. O item sem par real segue sem categoria para o deck de revisão;
+    // os demais são lançados agora. Só pede clarificação se TODOS forem difíceis.
+    const isMixedMultiWithMapped =
+      Array.isArray(validatedItens) &&
+      validatedItens.length >= 2 &&
+      validatedItens.some((it: any) => it?.categoria_proposta)
+    if (unmappedItems.length > 0 && !isMixedMultiWithMapped) {
       const firstUnmapped = unmappedItems[0]
       const honestSuggestion = `Nenhuma gaveta encaixa bem para ${firstUnmapped.descricao} — sugiro criar ${firstUnmapped.suggestedSub} em ${firstUnmapped.suggestedCat}. Posso criar?`
       defensiveClarification = honestSuggestion
       defensiveMensagem = honestSuggestion
+    } else if (unmappedItems.length > 0 && isMixedMultiWithMapped) {
+      defensiveMensagem =
+        'Lancei os itens identificados. O que não encaixou em uma gaveta vai para revisão para você confirmar depois.'
+      console.warn(
+        '[voice-parse] c121: multi-item misto preservado; item sem gaveta segue para revisão',
+      )
     }
 
     const sanitizedResponse = {
-      status: unmappedItems.length > 0 && status === 'sucesso' ? 'clarificacao' : status,
+      status:
+        unmappedItems.length > 0 && status === 'sucesso' && !isMixedMultiWithMapped
+          ? 'clarificacao'
+          : status,
       acao: parsedAiJson?.acao ?? null,
       mes_alvo: mesAlvo,
       // LANÇAMENTO RECORRENTE (21/10, B6): propaga a intenção de conta fixa
