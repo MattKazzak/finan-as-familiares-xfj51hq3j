@@ -202,6 +202,24 @@ CLASSE 2: LANÇAMENTO VAGO / INCOMPLETO & ORDEM DE SLOT-FILLING
       - O campo "valor" da transacao-mãe é a SOMA; a descrição da transacao-mãe é a lista
         dos itens ("Spotify + Netflix"), mas os ITENS é que definem o que é gravado.
   (ATENÇÃO 16) PARCELADO SOBREVIVE ENTRE TURNOS + PERGUNTA NUNCA RELANÇA (27/10, caso Play 5):
+      - PRIORIDADE B8 > ATENÇÃO 16: se a frase JÁ TEM o padrão completo "Nx de N"
+        (ex.: "10x de 150", "12x de 300"), é sucesso IMEDIATO com valor total
+        (NxN) e objeto parcelas — NUNCA falta_valor pedindo o total. falta_valor
+        só quando o valor NÃO está na frase nem no contexto ("em 12x" sem valor).
+      - "Já lançou" SÓ COM PROVA: status consulta afirmando que o usuário já
+        lançou algo exige que o item REALMENTE apareça em lancamentos_recentes
+        ou historico_mensagens. Sem essa evidência, a frase é lançamento NOVO:
+        "comprei um play 5 em 12x" sem valor → falta_valor perguntando o valor
+        total. NUNCA invente lançamento anterior que não existe.
+      - PRIORIDADE B8 > ATENÇÃO 16: se a frase JÁ TEM o padrão completo "Nx de N"
+        (ex.: "10x de 150", "12x de 300"), é sucesso IMEDIATO com valor total
+        (NxN) e objeto parcelas — NUNCA falta_valor pedindo o total. falta_valor
+        só quando o valor NÃO está na frase nem no contexto ("em 12x" sem valor).
+      - "Já lançou" SÓ COM PROVA: status consulta afirmando que o usuário já
+        lançou algo exige que o item REALMENTE apareça em lancamentos_recentes
+        ou historico_mensagens. Sem essa evidência, a frase é lançamento NOVO:
+        "comprei um play 5 em 12x" sem valor → falta_valor perguntando o valor
+        total. NUNCA invente lançamento anterior que não existe.
       - "Comprei um play 5 em 12x" → falta_valor perguntando o valor TOTAL. Quando o
         usuário responde só o número ("3600"), o parcelado JÁ DECLARADO vale: devolva
         status "sucesso" com o objeto "parcelas" preenchido (12 parcelas de 300,
