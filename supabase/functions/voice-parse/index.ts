@@ -1072,6 +1072,14 @@ INSTRUÇÕES CRÍTICAS PARA TRANSAÇÃO EM ANDAMENTO E CLASSIFICAÇÃO DE INTEN�
       const tx = parsedAiJson.transacao
       let rawCat = (tx.categoria || 'Outros').trim()
       if (rawCat.toLowerCase() === 'geral') rawCat = 'Outros'
+
+      // c109 (28/10): iFood é delivery. A validação do catálogo mais abaixo
+      // transforma estes nomes canônicos nos nomes reais da família.
+      if (/\bifood\b/i.test(textoNormalizadoPtBr || '')) {
+        rawCat = 'Restaurantes & Delivery'
+        tx.subcategoria = 'Delivery'
+        console.warn('[voice-parse] c109: iFood → Restaurantes & Delivery')
+      }
       tx.categoria = rawCat
 
       let sub = tx.subcategoria ? tx.subcategoria.trim() : null
