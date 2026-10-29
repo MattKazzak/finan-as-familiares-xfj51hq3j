@@ -92,6 +92,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isLongPressTriggeredRef = useRef<boolean>(false)
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null)
+  const mouseDownPosRef = useRef<{ x: number; y: number } | null>(null)
 
   // Lazy loading via IntersectionObserver: só dispara o carregamento da miniatura
   // quando o cartão entra no campo de visão (viewport)
@@ -222,6 +223,43 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
     }, 500)
   }
 
+  // Suporte a long press também via mouse (desktop) com botão principal (esquerdo)
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Ignora cliques com outros botões que não o esquerdo (button !== 0)
+    if (e.button !== 0) return
+    isLongPressTriggeredRef.current = false
+    mouseDownPosRef.current = { x: e.clientX, y: e.clientY }
+    clearLongPressTimer()
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressTriggeredRef.current = true
+      if (onLongPressSelect) {
+        onLongPressSelect(doc)
+      } else if (onToggleSelect) {
+        onToggleSelect(doc)
+      }
+    }, 500)
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (mouseDownPosRef.current) {
+      const dx = Math.abs(e.clientX - mouseDownPosRef.current.x)
+      const dy = Math.abs(e.clientY - mouseDownPosRef.current.y)
+      if (dx > 10 || dy > 10) {
+        clearLongPressTimer()
+      }
+    }
+  }
+
+  const handleMouseUp = () => {
+    clearLongPressTimer()
+  }
+
+  // Suprime o menu de contexto nativo do navegador especificamente nos cartões
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
   const handleTouchMove = (e: React.TouchEvent) => {
     // Se o usuário rolou o dedo mais de 10px, cancela o long press para não atrapalhar o scroll
     if (touchStartPosRef.current && e.touches[0]) {
@@ -287,7 +325,17 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
-        className={`group relative flex flex-col bg-white rounded-2xl border transition-all overflow-hidden select-none ${
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onContextMenu={handleContextMenu}
+        style={{
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none',
+          userSelect: 'none',
+        }}
+        className={`group relative flex flex-col bg-white rounded-2xl border transition-all overflow-hidden select-none document-card-touch-suppress ${
           isSelected
             ? 'border-[#FCA311] ring-2 ring-[#FCA311]/50 shadow-md bg-amber-50/20'
             : isSelectionMode
@@ -356,7 +404,13 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
         <button
           type="button"
           onClick={handleCardClick}
-          className="relative w-full aspect-[4/3] bg-gradient-to-b from-slate-50 to-slate-100/90 flex items-center justify-center overflow-hidden focus:outline-hidden focus:ring-2 focus:ring-[#FCA311] focus:ring-inset text-left cursor-pointer"
+          onContextMenu={handleContextMenu}
+          style={{
+            WebkitTouchCallout: 'none',
+            WebkitUserSelect: 'none',
+            userSelect: 'none',
+          }}
+          className="relative w-full aspect-[4/3] bg-gradient-to-b from-slate-50 to-slate-100/90 flex items-center justify-center overflow-hidden focus:outline-hidden focus:ring-2 focus:ring-[#FCA311] focus:ring-inset text-left cursor-pointer select-none document-card-touch-suppress"
           title={isSelectionMode ? (isSelected ? 'Desmarcar' : 'Selecionar') : `Abrir ${doc.title}`}
           aria-label={
             isSelectionMode
@@ -373,11 +427,26 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
             </div>
           ) : thumbnailUrl ? (
             // Miniatura renderizada com sucesso (tanto para imagem quanto para 1ª página do PDF)
-            <div className="relative w-full h-full">
+            <div
+              className="relative w-full h-full select-none"
+              style={{
+                WebkitTouchCallout: 'none',
+                WebkitUserSelect: 'none',
+                userSelect: 'none',
+              }}
+            >
               <img
                 src={thumbnailUrl}
                 alt={doc.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                draggable={false}
+                onContextMenu={handleContextMenu}
+                style={{
+                  WebkitTouchCallout: 'none',
+                  WebkitUserSelect: 'none',
+                  userSelect: 'none',
+                  pointerEvents: 'none', // Previne ações nativas do navegador de arrastar e chamar menu contextual
+                }}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 select-none pointer-events-none"
                 loading="lazy"
               />
               {/* Se for PDF, adiciona uma pílula sutil identificadora de tipo */}

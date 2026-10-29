@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Loader2, FolderOpen, Share2, X, CheckSquare, Check } from 'lucide-react'
+import { Plus, Loader2, FolderOpen, Share2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   FamilyDocument,
@@ -240,22 +240,6 @@ export const DocumentExplorerGrid: React.FC<DocumentExplorerGridProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Atalho desktop/mobile para entrar no modo de seleção quando houver 2+ documentos */}
-            {documents.length > 1 && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleEnterSelectionMode()}
-                className="h-9 px-3 border-slate-200 text-[#14213D] hover:bg-slate-50 rounded-2xl text-xs font-semibold gap-1.5"
-                title="Selecionar vários documentos para compartilhar"
-              >
-                <CheckSquare className="w-3.5 h-3.5 text-[#FCA311]" />
-                <span className="hidden sm:inline">Selecionar vários</span>
-                <span className="sm:hidden">Selecionar</span>
-              </Button>
-            )}
-
             {/* Botão Adicionar destacado no topo */}
             <Button
               type="button"
@@ -303,6 +287,13 @@ export const DocumentExplorerGrid: React.FC<DocumentExplorerGridProps> = ({
         /* Matriz de documentos: 2 colunas em telas pequenas (360-412px), 3 em sm, 4 em md+ sem overflow */
         <div
           data-testid="documents-grid"
+          onContextMenu={(e) => {
+            // Suprime contextmenu nativo na área da grade se o clique ocorrer sobre cartões
+            const target = e.target as HTMLElement | null
+            if (target?.closest('[data-testid^="doc-card-"]')) {
+              e.preventDefault()
+            }
+          }}
           className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 w-full"
         >
           {documents.map((doc) => (

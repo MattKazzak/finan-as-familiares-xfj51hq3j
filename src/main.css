@@ -538,4 +538,12 @@
       0 8px 24px -4px rgba(20, 33, 61, 0.08),
       0 24px 48px -12px rgba(20, 33, 61, 0.14);
   }
+
+  /* Suprime callouts e ações nativas de toque em cartões interativos de documentos */
+  .document-card-touch-suppress {
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    -webkit-tap-highlight-color: transparent;
+  }
 }

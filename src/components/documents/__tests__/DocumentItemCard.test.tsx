@@ -210,4 +210,49 @@ describe('DocumentItemCard', () => {
       expect(screen.getByText('PDF')).toBeDefined()
     })
   })
+
+  it('suprime contextmenu nativo no cartão chamando preventDefault e stopPropagation', () => {
+    render(
+      <DocumentItemCard
+        document={samplePdfDoc}
+        currentUserId="user-1"
+        onOpenViewer={vi.fn()}
+        onShare={vi.fn()}
+        onRequestDelete={vi.fn()}
+      />,
+    )
+
+    const card = screen.getByTestId(`doc-card-${samplePdfDoc.id}`)
+    const contextMenuEvent = new MouseEvent('contextmenu', {
+      bubbles: true,
+      cancelable: true,
+    })
+    const preventDefaultSpy = vi.spyOn(contextMenuEvent, 'preventDefault')
+    const stopPropagationSpy = vi.spyOn(contextMenuEvent, 'stopPropagation')
+
+    card.dispatchEvent(contextMenuEvent)
+
+    expect(preventDefaultSpy).toHaveBeenCalled()
+    expect(stopPropagationSpy).toHaveBeenCalled()
+  })
+
+  it('renderiza imagem de miniatura com draggable={false} e estilos de touch-callout suprimidos', async () => {
+    render(
+      <DocumentItemCard
+        document={sampleImageDoc}
+        currentUserId="user-1"
+        onOpenViewer={vi.fn()}
+        onShare={vi.fn()}
+        onRequestDelete={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      const img = screen.getByAltText('Comprovante Residência') as HTMLImageElement
+      expect(img).toBeDefined()
+      expect(img.draggable).toBe(false)
+      expect(img.className).toContain('select-none')
+      expect(img.className).toContain('pointer-events-none')
+    })
+  })
 })
