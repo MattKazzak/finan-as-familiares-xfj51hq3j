@@ -18,7 +18,6 @@ import {
   SharedDocumentPublicInfo,
   getDocumentSignedUrl,
   formatDocumentSize,
-  DOCUMENT_CATEGORIES,
 } from '@/services/family-documents'
 
 export default function SharedDocumentPage() {
@@ -103,8 +102,6 @@ export default function SharedDocumentPage() {
 
   const isImage = docInfo?.mime_type?.startsWith('image/')
   const isPdf = docInfo?.mime_type === 'application/pdf'
-  const categoryLabel =
-    DOCUMENT_CATEGORIES.find((c) => c.id === docInfo?.category)?.label || 'Documento'
 
   return (
     <div className="min-h-screen bg-[#F8F9FB] flex flex-col justify-between p-4 sm:p-6 text-[#14213D]">
@@ -163,10 +160,7 @@ export default function SharedDocumentPage() {
           <div className="bg-white rounded-3xl p-5 sm:p-6 border border-[rgba(20,33,61,0.06)] shadow-elevation-1 space-y-4">
             {/* Topo do documento */}
             <div className="space-y-1 text-left">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">
-                  {categoryLabel}
-                </span>
+              <div className="flex items-center justify-end gap-2">
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-[#B45309] border border-amber-200/80">
                   <Clock className="w-3 h-3" />
                   {timeRemainingStr}

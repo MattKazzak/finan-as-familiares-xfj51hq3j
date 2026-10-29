@@ -19,8 +19,6 @@ import {
 } from 'lucide-react'
 import {
   FamilyDocument,
-  DocumentCategory,
-  DOCUMENT_CATEGORIES,
   getDocumentExpirationStatus,
   formatDocumentSize,
   getDocumentSignedUrl,
@@ -103,8 +101,6 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
       isMounted = false
     }
   }, [doc.storage_path, isImage])
-
-  const categoryLabel = DOCUMENT_CATEGORIES.find((c) => c.id === doc.category)?.label || 'Documento'
 
   return (
     <>
@@ -211,7 +207,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
               {doc.title}
             </p>
             <p className="text-[10px] text-[#64748B] truncate mt-0.5">
-              {categoryLabel} • {formatDocumentSize(doc.file_size_bytes)}
+              {formatDocumentSize(doc.file_size_bytes)}
             </p>
           </div>
 
@@ -316,8 +312,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                 {doc.title}
               </SheetTitle>
               <SheetDescription className="text-xs text-[#64748B]">
-                {categoryLabel} • {formatDocumentSize(doc.file_size_bytes)} • por{' '}
-                {doc.uploaded_by_name}
+                {formatDocumentSize(doc.file_size_bytes)} • por {doc.uploaded_by_name}
               </SheetDescription>
             </SheetHeader>
 

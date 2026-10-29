@@ -31,7 +31,6 @@ import {
 import {
   FamilyDocument,
   DocumentCategory,
-  DOCUMENT_CATEGORIES,
   getDocumentSignedUrl,
   updateFamilyDocument,
   deleteFamilyDocument,
@@ -246,11 +245,8 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md w-[92vw] rounded-3xl p-5 sm:p-6 bg-white max-h-[92vh] overflow-y-auto">
           <DialogHeader className="text-left pb-1">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">
-                {DOCUMENT_CATEGORIES.find((c) => c.id === document.category)?.label || 'Documento'}
-              </span>
-              {expirationStatus.label && (
+            {expirationStatus.label && (
+              <div className="flex items-center justify-end pb-1">
                 <span
                   className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                     expirationStatus.isExpired
@@ -260,8 +256,8 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                 >
                   {expirationStatus.label}
                 </span>
-              )}
-            </div>
+              </div>
+            )}
 
             <DialogTitle className="text-base font-semibold text-[#14213D] leading-snug break-words">
               {document.title}
@@ -375,21 +371,6 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                   onChange={(e) => setEditTitle(e.target.value)}
                   className="h-9 text-xs bg-white"
                 />
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold text-[#14213D]">Pasta</Label>
-                <select
-                  value={editCategory}
-                  onChange={(e) => setEditCategory(e.target.value as DocumentCategory)}
-                  className="w-full h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs text-[#14213D]"
-                >
-                  {DOCUMENT_CATEGORIES.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.label} ({c.description})
-                    </option>
-                  ))}
-                </select>
               </div>
 
               <div className="flex items-center justify-between pt-1">
