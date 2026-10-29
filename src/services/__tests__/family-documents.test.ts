@@ -88,6 +88,130 @@ describe('Serviço de Documentos da Família (Pasta de Documentos)', () => {
     expect(SHARE_DURATION_CONFIG['24h'].seconds).toBe(24 * 60 * 60)
   })
 
+  describe('shareMultipleDocuments (compartilhamento em lote com fallback)', () => {
+    const mockDoc1: FamilyDocument = {
+      id: 'doc-multi-1',
+      family_id: 'fam-123',
+      uploaded_by: 'user-1',
+      uploaded_by_name: 'Usuário',
+      title: 'RG Frente e Verso',
+      category: 'identidade',
+      storage_path: 'fam-123/rg.jpg',
+      file_name: 'rg.jpg',
+      file_size_bytes: 300 * 1024,
+      mime_type: 'image/jpeg',
+      expires_at: null,
+      is_shared_with_family: true,
+      created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z',
+    }
+
+    const mockDoc2: FamilyDocument = {
+      id: 'doc-multi-2',
+      family_id: 'fam-123',
+      uploaded_by: 'user-1',
+      uploaded_by_name: 'Usuário',
+      title: 'Comprovante Luz',
+      category: 'residencia',
+      storage_path: 'fam-123/luz.pdf',
+      file_name: 'luz.pdf',
+      file_size_bytes: 400 * 1024,
+      mime_type: 'application/pdf',
+      expires_at: null,
+      is_shared_with_family: true,
+      created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z',
+    }
+
+    it('impede lote que exceda 25MB com mensagem clara e sem travar', async () => {
+      const hugeDoc: FamilyDocument = {
+        ...mockDoc1,
+        id: 'huge-doc',
+        file_size_bytes: 26 * 1024 * 1024, // 26 MB
+      }
+
+      await expect(familyDocsModule.shareMultipleDocuments([hugeDoc, mockDoc2])).rejects.toThrow(
+        /limite de 25 MB/i,
+      )
+    })
+
+    it('compartilha múltiplos arquivos juntos via navigator.share nativo quando canShare({ files }) aceitar', async () => {
+      const shareMock = vi.fn().mockResolvedValue(undefined)
+      const canShareMock = vi.fn().mockReturnValue(true)
+
+      Object.defineProperty(globalThis, 'navigator', {
+        value: {
+          share: shareMock,
+          canShare: canShareMock,
+        },
+        writable: true,
+        configurable: true,
+      })
+
+      const originalFetch = globalThis.fetch
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        blob: vi.fn().mockResolvedValue(new Blob(['conteudo'], { type: 'image/jpeg' })),
+      } as any)
+
+      vi.spyOn(familyDocsModule, 'getDocumentSignedUrl').mockResolvedValue(
+        'https://signed.url/file',
+      )
+
+      const result = await familyDocsModule.shareMultipleDocuments([mockDoc1, mockDoc2])
+
+      expect(result.method).toBe('native-files')
+      expect(result.count).toBe(2)
+      expect(shareMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          files: expect.arrayContaining([expect.any(File)]),
+        }),
+      )
+
+      globalThis.fetch = originalFetch
+    })
+
+    it('fallback desktop: copia links temporários de todos os selecionados no clipboard', async () => {
+      const writeTextMock = vi.fn().mockResolvedValue(undefined)
+
+      // Sem navigator.share
+      Object.defineProperty(globalThis, 'navigator', {
+        value: {
+          clipboard: {
+            writeText: writeTextMock,
+          },
+        },
+        writable: true,
+        configurable: true,
+      })
+
+      vi.spyOn(familyDocsModule, 'createDocumentTemporaryShare').mockImplementation(async (doc) => {
+        return {
+          share: {} as any,
+          publicUrl: `https://curiangoo.com/doc/token-${doc.id}`,
+        }
+      })
+
+      const result = await familyDocsModule.shareMultipleDocuments([mockDoc1, mockDoc2])
+
+      expect(result.method).toBe('clipboard-links')
+      expect(result.count).toBe(2)
+      if (result.method === 'clipboard-links') {
+        expect(result.publicUrls).toEqual([
+          'https://curiangoo.com/doc/token-doc-multi-1',
+          'https://curiangoo.com/doc/token-doc-multi-2',
+        ])
+      }
+      expect(writeTextMock).toHaveBeenCalledWith(
+        expect.stringContaining('https://curiangoo.com/doc/token-doc-multi-1'),
+      )
+      expect(writeTextMock).toHaveBeenCalledWith(
+        expect.stringContaining('https://curiangoo.com/doc/token-doc-multi-2'),
+      )
+    })
+  })
+
   describe('shareDocumentFileOrLink (compartilhamento nativo e fallbacks)', () => {
     const mockDoc: FamilyDocument = {
       id: 'doc-share-1',

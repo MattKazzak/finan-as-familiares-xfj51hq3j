@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Loader2, FolderOpen, Camera, Upload, Sparkles } from 'lucide-react'
+import { Plus, Loader2, FolderOpen, Share2, X, CheckSquare, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   FamilyDocument,
   fetchFamilyDocuments,
   shareDocumentFileOrLink,
+  shareMultipleDocuments,
+  MAX_MULTI_SHARE_BYTES,
 } from '@/services/family-documents'
 import { DocumentItemCard } from './DocumentItemCard'
 import { AddDocumentModal } from './AddDocumentModal'
@@ -39,6 +41,83 @@ export const DocumentExplorerGrid: React.FC<DocumentExplorerGridProps> = ({
   const [viewerDoc, setViewerDoc] = useState<FamilyDocument | null>(null)
   const [deleteDoc, setDeleteDoc] = useState<FamilyDocument | null>(null)
   const [sharingDocId, setSharingDocId] = useState<string | null>(null)
+
+  // Estado da seleção múltipla
+  const [isSelectionMode, setIsSelectionMode] = useState<boolean>(false)
+  const [selectedDocIds, setSelectedDocIds] = useState<Set<string>>(new Set())
+  const [isBatchSharing, setIsBatchSharing] = useState<boolean>(false)
+
+  // Funções de seleção
+  const handleEnterSelectionMode = (initialDoc?: FamilyDocument) => {
+    setIsSelectionMode(true)
+    if (initialDoc) {
+      setSelectedDocIds(new Set([initialDoc.id]))
+    }
+  }
+
+  const handleExitSelectionMode = () => {
+    setIsSelectionMode(false)
+    setSelectedDocIds(new Set())
+  }
+
+  const handleToggleSelectDoc = (doc: FamilyDocument) => {
+    setSelectedDocIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(doc.id)) {
+        next.delete(doc.id)
+      } else {
+        next.add(doc.id)
+      }
+      return next
+    })
+  }
+
+  const handleSelectAll = () => {
+    if (selectedDocIds.size === documents.length) {
+      // Se já estavam todos selecionados, limpa
+      setSelectedDocIds(new Set())
+    } else {
+      setSelectedDocIds(new Set(documents.map((d) => d.id)))
+    }
+  }
+
+  // Compartilhamento em lote dos itens selecionados
+  const handleBatchShare = async () => {
+    if (isBatchSharing) return
+    const docsToShare = documents.filter((d) => selectedDocIds.has(d.id))
+    if (docsToShare.length === 0) {
+      toast({
+        title: 'Selecione ao menos um documento',
+        description: 'Toque nos documentos que deseja compartilhar.',
+      })
+      return
+    }
+
+    setIsBatchSharing(true)
+    try {
+      const result = await shareMultipleDocuments(docsToShare, '24h')
+      if (result.method === 'clipboard-links') {
+        toast({
+          title: `${result.count} link${result.count > 1 ? 's' : ''} copiado${result.count > 1 ? 's' : ''} 📋`,
+          description: `Links válidos por 24 horas copiados para a área de transferência.`,
+        })
+      } else if (result.method === 'native-files') {
+        toast({
+          title: `${result.count} documento${result.count > 1 ? 's' : ''} compartilhado${result.count > 1 ? 's' : ''} 🎉`,
+        })
+      }
+      // Sai do modo de seleção após compartilhar com sucesso
+      handleExitSelectionMode()
+    } catch (err: any) {
+      toast({
+        title: 'Não foi possível compartilhar em lote',
+        description: err?.message || 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsBatchSharing(false)
+    }
+  }
 
   const handleShareDocument = async (doc: FamilyDocument) => {
     if (sharingDocId) return
@@ -83,32 +162,112 @@ export const DocumentExplorerGrid: React.FC<DocumentExplorerGridProps> = ({
 
   return (
     <div className="w-full bg-white rounded-3xl border border-[rgba(20,33,61,0.06)] shadow-sm p-4 sm:p-6 space-y-4 sm:space-y-5">
-      {/* Barra superior estilo explorador: Título limpo + Botão "Adicionar" bem visível no topo */}
-      <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-100">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="text-base sm:text-lg font-bold text-[#14213D] tracking-tight">
-              Documentos
-            </h3>
-            {documents.length > 0 && (
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-                {documents.length}
-              </span>
-            )}
-          </div>
-          <p className="text-[11px] text-[#64748B] truncate mt-0.5">Cofre de arquivos da família</p>
-        </div>
-
-        {/* Botão Adicionar destacado no topo */}
-        <Button
-          type="button"
-          onClick={() => setIsAddOpen(true)}
-          className="h-10 px-4 bg-[#14213D] hover:bg-[#1f3159] text-white rounded-2xl text-xs sm:text-sm font-semibold shrink-0 gap-2 shadow-xs transition-transform active:scale-95"
+      {/* Barra superior normal OU Barra de Ação de Seleção Múltipla */}
+      {isSelectionMode ? (
+        <div
+          data-testid="selection-mode-bar"
+          className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 p-3 sm:p-3.5 bg-[#14213D] text-white rounded-2xl shadow-md border border-[#14213D]"
         >
-          <Plus className="w-4 h-4 text-[#FCA311]" />
-          <span>Adicionar</span>
-        </Button>
-      </div>
+          {/* Lado esquerdo: Botão fechar + Contador */}
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleExitSelectionMode}
+              className="h-8 w-8 p-0 text-white hover:bg-white/10 rounded-xl"
+              title="Cancelar seleção"
+              aria-label="Cancelar seleção"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+            <div>
+              <p className="text-xs sm:text-sm font-bold tracking-tight">
+                {selectedDocIds.size} {selectedDocIds.size === 1 ? 'selecionado' : 'selecionados'}
+              </p>
+              <p className="text-[10px] text-slate-300 hidden sm:block">
+                Toque nos cartões para marcar ou desmarcar
+              </p>
+            </div>
+          </div>
+
+          {/* Lado direito: Selecionar tudo + Compartilhar */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {documents.length > 1 && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleSelectAll}
+                className="h-8 px-2.5 text-xs text-slate-200 hover:text-white hover:bg-white/10 rounded-xl font-medium"
+              >
+                {selectedDocIds.size === documents.length ? 'Desmarcar tudo' : 'Selecionar tudo'}
+              </Button>
+            )}
+
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleBatchShare}
+              disabled={selectedDocIds.size === 0 || isBatchSharing}
+              className="h-9 px-3.5 bg-[#FCA311] hover:bg-[#e0910e] text-[#14213D] font-bold text-xs sm:text-sm rounded-xl gap-1.5 shadow-xs transition-transform active:scale-95 disabled:opacity-50"
+            >
+              {isBatchSharing ? (
+                <Loader2 className="w-4 h-4 animate-spin text-[#14213D]" />
+              ) : (
+                <Share2 className="w-4 h-4 text-[#14213D]" />
+              )}
+              <span>Compartilhar</span>
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="text-base sm:text-lg font-bold text-[#14213D] tracking-tight">
+                Documentos
+              </h3>
+              {documents.length > 0 && (
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                  {documents.length}
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-[#64748B] truncate mt-0.5">
+              Cofre de arquivos da família
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Atalho desktop/mobile para entrar no modo de seleção quando houver 2+ documentos */}
+            {documents.length > 1 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleEnterSelectionMode()}
+                className="h-9 px-3 border-slate-200 text-[#14213D] hover:bg-slate-50 rounded-2xl text-xs font-semibold gap-1.5"
+                title="Selecionar vários documentos para compartilhar"
+              >
+                <CheckSquare className="w-3.5 h-3.5 text-[#FCA311]" />
+                <span className="hidden sm:inline">Selecionar vários</span>
+                <span className="sm:hidden">Selecionar</span>
+              </Button>
+            )}
+
+            {/* Botão Adicionar destacado no topo */}
+            <Button
+              type="button"
+              onClick={() => setIsAddOpen(true)}
+              className="h-10 px-4 bg-[#14213D] hover:bg-[#1f3159] text-white rounded-2xl text-xs sm:text-sm font-semibold shrink-0 gap-2 shadow-xs transition-transform active:scale-95"
+            >
+              <Plus className="w-4 h-4 text-[#FCA311]" />
+              <span>Adicionar</span>
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Grade de Documentos estilo explorador */}
       {loading ? (
@@ -151,9 +310,13 @@ export const DocumentExplorerGrid: React.FC<DocumentExplorerGridProps> = ({
               key={doc.id}
               document={doc}
               currentUserId={currentUserId}
+              isSelectionMode={isSelectionMode}
+              isSelected={selectedDocIds.has(doc.id)}
               onOpenViewer={(d) => setViewerDoc(d)}
               onShare={(d) => handleShareDocument(d)}
               onRequestDelete={(d) => setDeleteDoc(d)}
+              onToggleSelect={(d) => handleToggleSelectDoc(d)}
+              onLongPressSelect={(d) => handleEnterSelectionMode(d)}
             />
           ))}
         </div>

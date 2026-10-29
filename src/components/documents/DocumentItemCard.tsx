@@ -6,16 +6,10 @@ import {
   Share2,
   Trash2,
   Eye,
-  Download,
   Lock,
-  Clock,
-  Sparkles,
-  Camera,
-  Upload,
-  Plus,
   Loader2,
-  AlertTriangle,
-  FolderOpen,
+  Check,
+  CheckSquare,
 } from 'lucide-react'
 import {
   FamilyDocument,
@@ -57,6 +51,14 @@ interface DocumentItemCardProps {
   onOpenViewer: (doc: FamilyDocument) => void
   onShare?: (doc: FamilyDocument) => void
   onRequestDelete: (doc: FamilyDocument) => void
+  /** Modo de seleção múltipla ativo */
+  isSelectionMode?: boolean
+  /** Se este cartão está selecionado */
+  isSelected?: boolean
+  /** Alterna a seleção deste cartão */
+  onToggleSelect?: (doc: FamilyDocument) => void
+  /** Disparado ao segurar o cartão por ~500ms (long press) para entrar no modo de seleção */
+  onLongPressSelect?: (doc: FamilyDocument) => void
 }
 
 /**
@@ -70,10 +72,13 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
   onOpenViewer,
   onShare,
   onRequestDelete,
+  isSelectionMode = false,
+  isSelected = false,
+  onToggleSelect,
+  onLongPressSelect,
 }) => {
   const isImage = doc.mime_type.startsWith('image/')
   const isPdf = doc.mime_type === 'application/pdf'
-  const isOwner = doc.uploaded_by === currentUserId
   const expiration = getDocumentExpirationStatus(doc.expires_at)
   const isMobile = useIsMobile()
 
@@ -84,6 +89,9 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
   const [isSharing, setIsSharing] = useState<boolean>(false)
   const [isVisibleInViewport, setIsVisibleInViewport] = useState<boolean>(false)
   const cardContainerRef = useRef<HTMLDivElement | null>(null)
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isLongPressTriggeredRef = useRef<boolean>(false)
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null)
 
   // Lazy loading via IntersectionObserver: só dispara o carregamento da miniatura
   // quando o cartão entra no campo de visão (viewport)
@@ -182,6 +190,68 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
     }
   }, [isVisibleInViewport, doc.storage_path, isImage, isPdf])
 
+  // Limpeza de timer de long-press
+  const clearLongPressTimer = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    isLongPressTriggeredRef.current = false
+    const touch = e.touches[0]
+    if (touch) {
+      touchStartPosRef.current = { x: touch.clientX, y: touch.clientY }
+    }
+    clearLongPressTimer()
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressTriggeredRef.current = true
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        try {
+          navigator.vibrate?.(40)
+        } catch {
+          // ignore
+        }
+      }
+      if (onLongPressSelect) {
+        onLongPressSelect(doc)
+      } else if (onToggleSelect) {
+        onToggleSelect(doc)
+      }
+    }, 500)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    // Se o usuário rolou o dedo mais de 10px, cancela o long press para não atrapalhar o scroll
+    if (touchStartPosRef.current && e.touches[0]) {
+      const dx = Math.abs(e.touches[0].clientX - touchStartPosRef.current.x)
+      const dy = Math.abs(e.touches[0].clientY - touchStartPosRef.current.y)
+      if (dx > 10 || dy > 10) {
+        clearLongPressTimer()
+      }
+    }
+  }
+
+  const handleTouchEnd = () => {
+    clearLongPressTimer()
+  }
+
+  // Toque / clique no cartão
+  const handleCardClick = () => {
+    // Se acabou de disparar o long press no mesmo toque, não abre o viewer
+    if (isLongPressTriggeredRef.current) {
+      isLongPressTriggeredRef.current = false
+      return
+    }
+
+    if (isSelectionMode) {
+      onToggleSelect?.(doc)
+    } else {
+      onOpenViewer(doc)
+    }
+  }
+
   const handleDirectShare = async () => {
     if (onShare) {
       onShare(doc)
@@ -213,13 +283,52 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
     <>
       <div
         ref={cardContainerRef}
-        className="group relative flex flex-col bg-white rounded-2xl border border-[rgba(20,33,61,0.08)] shadow-[0_4px_20px_-4px_rgba(20,33,61,0.05)] hover:shadow-md hover:border-slate-300 transition-all overflow-hidden select-none"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+        className={`group relative flex flex-col bg-white rounded-2xl border transition-all overflow-hidden select-none ${
+          isSelected
+            ? 'border-[#FCA311] ring-2 ring-[#FCA311]/50 shadow-md bg-amber-50/20'
+            : isSelectionMode
+              ? 'border-slate-300 hover:border-[#FCA311]/60 shadow-[0_4px_20px_-4px_rgba(20,33,61,0.05)]'
+              : 'border-[rgba(20,33,61,0.08)] shadow-[0_4px_20px_-4px_rgba(20,33,61,0.05)] hover:shadow-md hover:border-slate-300'
+        }`}
         data-testid={`doc-card-${doc.id}`}
+        data-selected={isSelected}
       >
-        {/* Badges flutuantes no topo da miniatura */}
-        <div className="absolute top-2 left-2 right-2 flex items-center justify-between gap-1 pointer-events-none z-10">
+        {/* Checkbox / Botão de Seleção (visível no modo de seleção ou no hover desktop para facilitar entrada) */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            if (isSelectionMode) {
+              onToggleSelect?.(doc)
+            } else {
+              onLongPressSelect?.(doc)
+            }
+          }}
+          className={`absolute top-2 left-2 z-20 w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+            isSelected
+              ? 'bg-[#FCA311] text-[#14213D] shadow-md ring-2 ring-white scale-105'
+              : isSelectionMode
+                ? 'bg-white/90 text-slate-400 border border-slate-300 hover:border-[#FCA311] shadow-xs'
+                : 'opacity-0 group-hover:opacity-100 bg-white/90 text-slate-400 border border-slate-300 hover:text-[#14213D] shadow-xs'
+          }`}
+          title={isSelected ? 'Desmarcar documento' : 'Selecionar documento'}
+          aria-label={isSelected ? `Desmarcar ${doc.title}` : `Selecionar ${doc.title}`}
+        >
+          {isSelected ? (
+            <Check className="w-4 h-4 stroke-[3]" />
+          ) : (
+            <span className="w-3.5 h-3.5 rounded-full border border-slate-400" />
+          )}
+        </button>
+
+        {/* Badges flutuantes no topo da miniatura (deslocadas para a direita quando no modo de seleção) */}
+        <div className="absolute top-2 right-2 flex items-center gap-1 pointer-events-none z-10">
           {/* Badge Privado se não compartilhado com a família */}
-          {!doc.is_shared_with_family ? (
+          {!doc.is_shared_with_family && (
             <span
               className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-slate-900/80 text-white backdrop-blur-xs shadow-xs"
               title="Visível apenas para você"
@@ -227,8 +336,6 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
               <Lock className="w-2.5 h-2.5" />
               Privado
             </span>
-          ) : (
-            <span />
           )}
 
           {/* Badge de vencimento */}
@@ -245,13 +352,19 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
           )}
         </div>
 
-        {/* Área de miniatura / ícone (clicável para abrir visualizador) */}
+        {/* Área de miniatura / ícone (clicável: alterna seleção se estiver no modo de seleção, ou abre visualizador) */}
         <button
           type="button"
-          onClick={() => onOpenViewer(doc)}
+          onClick={handleCardClick}
           className="relative w-full aspect-[4/3] bg-gradient-to-b from-slate-50 to-slate-100/90 flex items-center justify-center overflow-hidden focus:outline-hidden focus:ring-2 focus:ring-[#FCA311] focus:ring-inset text-left cursor-pointer"
-          title={`Abrir ${doc.title}`}
-          aria-label={`Visualizar documento ${doc.title}`}
+          title={isSelectionMode ? (isSelected ? 'Desmarcar' : 'Selecionar') : `Abrir ${doc.title}`}
+          aria-label={
+            isSelectionMode
+              ? isSelected
+                ? `Desmarcar ${doc.title}`
+                : `Selecionar ${doc.title}`
+              : `Visualizar documento ${doc.title}`
+          }
         >
           {thumbLoading ? (
             <div className="flex flex-col items-center justify-center gap-1 text-slate-400">
@@ -309,11 +422,14 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
           {/* Nome e metadados rápidos */}
           <div
             className="cursor-pointer"
-            onClick={() => onOpenViewer(doc)}
+            onClick={handleCardClick}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') onOpenViewer(doc)
+              if (e.key === 'Enter' || e.key === ' ') {
+                if (isSelectionMode) onToggleSelect?.(doc)
+                else onOpenViewer(doc)
+              }
             }}
           >
             <p
@@ -329,92 +445,125 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
 
           {/* Barra de ações embaixo do cartão */}
           <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between gap-1">
-            {/* Ações diretas compactas */}
-            <div className="flex items-center gap-1 min-w-0">
+            {isSelectionMode ? (
+              /* No modo de seleção: botão grande e direto para alternar a seleção */
               <Button
                 type="button"
-                variant="ghost"
+                variant={isSelected ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => onOpenViewer(doc)}
-                className="h-7 w-7 p-0 rounded-lg text-slate-600 hover:text-[#14213D] hover:bg-slate-100"
-                title="Visualizar documento"
-                aria-label={`Visualizar ${doc.title}`}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onToggleSelect?.(doc)
+                }}
+                className={`w-full h-7 text-[11px] font-semibold rounded-lg gap-1.5 transition-colors ${
+                  isSelected
+                    ? 'bg-[#14213D] text-white hover:bg-[#1f3159]'
+                    : 'text-slate-700 border-slate-200 hover:bg-slate-50'
+                }`}
               >
-                <Eye className="w-3.5 h-3.5" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleDirectShare}
-                disabled={isSharing}
-                className="h-7 w-7 p-0 rounded-lg text-slate-600 hover:text-[#14213D] hover:bg-slate-100"
-                title="Compartilhar documento"
-                aria-label={`Compartilhar ${doc.title}`}
-              >
-                {isSharing ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
-                ) : (
-                  <Share2 className="w-3.5 h-3.5 text-blue-600" />
-                )}
-              </Button>
-            </div>
-
-            {/* Menu três pontinhos ou botão mobile com bottom sheet */}
-            {isMobile ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setActionSheetOpen(true)}
-                className="h-7 w-7 p-0 rounded-lg text-slate-500 hover:text-[#14213D] hover:bg-slate-100"
-                title="Mais opções"
-                aria-label={`Mais opções para ${doc.title}`}
-              >
-                <MoreVertical className="w-3.5 h-3.5" />
+                <Check className={`w-3 h-3 ${isSelected ? 'text-[#FCA311]' : 'text-slate-400'}`} />
+                <span>{isSelected ? 'Selecionado' : 'Selecionar'}</span>
               </Button>
             ) : (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+              <>
+                {/* Ações diretas compactas */}
+                <div className="flex items-center gap-1 min-w-0">
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
+                    onClick={() => onOpenViewer(doc)}
+                    className="h-7 w-7 p-0 rounded-lg text-slate-600 hover:text-[#14213D] hover:bg-slate-100"
+                    title="Visualizar documento"
+                    aria-label={`Visualizar ${doc.title}`}
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDirectShare}
+                    disabled={isSharing}
+                    className="h-7 w-7 p-0 rounded-lg text-slate-600 hover:text-[#14213D] hover:bg-slate-100"
+                    title="Compartilhar documento"
+                    aria-label={`Compartilhar ${doc.title}`}
+                  >
+                    {isSharing ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                    ) : (
+                      <Share2 className="w-3.5 h-3.5 text-blue-600" />
+                    )}
+                  </Button>
+                </div>
+
+                {/* Menu três pontinhos ou botão mobile com bottom sheet */}
+                {isMobile ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setActionSheetOpen(true)}
                     className="h-7 w-7 p-0 rounded-lg text-slate-500 hover:text-[#14213D] hover:bg-slate-100"
                     title="Mais opções"
                     aria-label={`Mais opções para ${doc.title}`}
                   >
                     <MoreVertical className="w-3.5 h-3.5" />
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="w-44 rounded-2xl p-1 bg-white shadow-xl"
-                >
-                  <DropdownMenuItem
-                    onClick={() => onOpenViewer(doc)}
-                    className="text-xs rounded-xl cursor-pointer"
-                  >
-                    <Eye className="w-3.5 h-3.5 mr-2 text-slate-500" />
-                    Visualizar / Detalhes
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={handleDirectShare}
-                    className="text-xs rounded-xl cursor-pointer"
-                  >
-                    <Share2 className="w-3.5 h-3.5 mr-2 text-blue-600" />
-                    Compartilhar
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => onRequestDelete(doc)}
-                    className="text-xs rounded-xl text-rose-600 focus:text-rose-700 focus:bg-rose-50 cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 mr-2 text-rose-600" />
-                    Excluir Documento
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                ) : (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 rounded-lg text-slate-500 hover:text-[#14213D] hover:bg-slate-100"
+                        title="Mais opções"
+                        aria-label={`Mais opções para ${doc.title}`}
+                      >
+                        <MoreVertical className="w-3.5 h-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      className="w-44 rounded-2xl p-1 bg-white shadow-xl"
+                    >
+                      <DropdownMenuItem
+                        onClick={() => {
+                          if (onLongPressSelect) onLongPressSelect(doc)
+                          else onToggleSelect?.(doc)
+                        }}
+                        className="text-xs rounded-xl cursor-pointer"
+                      >
+                        <CheckSquare className="w-3.5 h-3.5 mr-2 text-[#FCA311]" />
+                        Selecionar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => onOpenViewer(doc)}
+                        className="text-xs rounded-xl cursor-pointer"
+                      >
+                        <Eye className="w-3.5 h-3.5 mr-2 text-slate-500" />
+                        Visualizar / Detalhes
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={handleDirectShare}
+                        className="text-xs rounded-xl cursor-pointer"
+                      >
+                        <Share2 className="w-3.5 h-3.5 mr-2 text-blue-600" />
+                        Compartilhar
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => onRequestDelete(doc)}
+                        className="text-xs rounded-xl text-rose-600 focus:text-rose-700 focus:bg-rose-50 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 mr-2 text-rose-600" />
+                        Excluir Documento
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -439,6 +588,26 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
             </SheetHeader>
 
             <div className="space-y-1 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setActionSheetOpen(false)
+                  if (onLongPressSelect) onLongPressSelect(doc)
+                  else onToggleSelect?.(doc)
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-amber-50/60 text-left transition-colors text-xs font-semibold text-[#14213D]"
+              >
+                <div className="w-8 h-8 rounded-xl bg-amber-50 text-[#FCA311] flex items-center justify-center">
+                  <CheckSquare className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="leading-tight">Selecionar vários</p>
+                  <p className="text-[10px] text-[#64748B] font-normal">
+                    Entra no modo para compartilhar múltiplos arquivos
+                  </p>
+                </div>
+              </button>
+
               <button
                 type="button"
                 onClick={() => {

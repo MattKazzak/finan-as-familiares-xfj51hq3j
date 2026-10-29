@@ -462,6 +462,144 @@ export type ShareDocumentResult =
   | { method: 'clipboard-link'; success: true; publicUrl: string }
 
 /**
+ * Limite de tamanho sugerido para lote de compartilhamento (25 MB)
+ * para evitar travamentos ou rejeições pelo sistema operacional / navegador.
+ */
+export const MAX_MULTI_SHARE_BYTES = 25 * 1024 * 1024
+
+export type ShareMultipleDocumentsResult =
+  | { method: 'native-files'; success: true; count: number }
+  | { method: 'sequential-native'; success: true; count: number }
+  | { method: 'clipboard-links'; success: true; count: number; publicUrls: string[] }
+
+/**
+ * Compartilha múltiplos documentos de uma vez.
+ * Segue a regra do prompt:
+ * 1. Valida tamanho total (se > 25MB, lança erro claro sugerindo compartilhar em partes).
+ * 2. Busca arquivos via URL assinada de curta duração e cria File objects.
+ * 3. Se navigator.canShare({ files }) suportar o lote completo, abre o share nativo com todos os arquivos juntos.
+ * 4. Fallback 1: se navigator.share existir mas o lote falhar, tenta compartilhar sequencialmente ou por links temporários.
+ * 5. Fallback 2 (Desktop ou sem navigator.share): gera links temporários de 24h para todos e copia para a área de transferência.
+ */
+export async function shareMultipleDocuments(
+  docs: FamilyDocument[],
+  defaultDuration: ShareDurationOption = '24h',
+): Promise<ShareMultipleDocumentsResult> {
+  if (!docs || docs.length === 0) {
+    throw new Error('Nenhum documento selecionado para compartilhar.')
+  }
+
+  // Se tiver apenas 1 documento, delega pro share unitário preservando consistência
+  if (docs.length === 1) {
+    const singleRes = await shareDocumentFileOrLink(docs[0], defaultDuration)
+    if (singleRes.method === 'native-file') {
+      return { method: 'native-files', success: true, count: 1 }
+    }
+    if (singleRes.method === 'native-link') {
+      return { method: 'sequential-native', success: true, count: 1 }
+    }
+    return {
+      method: 'clipboard-links',
+      success: true,
+      count: 1,
+      publicUrls: [singleRes.publicUrl],
+    }
+  }
+
+  // Validação de tamanho total do lote
+  const totalBytes = docs.reduce((acc, d) => acc + (d.file_size_bytes || 0), 0)
+  if (totalBytes > MAX_MULTI_SHARE_BYTES) {
+    const totalMb = (totalBytes / (1024 * 1024)).toFixed(1)
+    throw new Error(
+      `O lote selecionado soma ${totalMb} MB (limite de 25 MB). Remova alguns itens ou compartilhe em partes menores.`,
+    )
+  }
+
+  const isNavShareAvailable =
+    typeof navigator !== 'undefined' && typeof navigator.share === 'function'
+
+  // Caso 1: Dispositivo móvel com suporte a múltiplos arquivos em navigator.share
+  if (isNavShareAvailable && typeof navigator.canShare === 'function') {
+    try {
+      // Baixa os arquivos em paralelo via URL assinada
+      const files: File[] = await Promise.all(
+        docs.map(async (doc) => {
+          const signedUrl = await getDocumentSignedUrl(doc.storage_path, 3600)
+          const res = await fetch(signedUrl)
+          if (!res.ok) {
+            throw new Error(`Falha ao obter arquivo ${doc.file_name}: HTTP ${res.status}`)
+          }
+          const blob = await res.blob()
+          const mime = doc.mime_type || blob.type || 'application/octet-stream'
+          return new File([blob], doc.file_name, { type: mime })
+        }),
+      )
+
+      if (navigator.canShare({ files })) {
+        await navigator.share({
+          files,
+          title: `${docs.length} documentos da família`,
+        })
+        return { method: 'native-files', success: true, count: docs.length }
+      }
+    } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        // Usuário cancelou a folha nativa intencionalmente
+        return { method: 'native-files', success: true, count: docs.length }
+      }
+      console.warn(
+        '[shareMultipleDocuments] Falha no compartilhamento nativo de múltiplos arquivos, tentando fallback:',
+        err,
+      )
+    }
+  }
+
+  // Fallback Desktop ou navegadores que não suportam canShare({ files }):
+  // Gera links temporários públicos de 24h para todos os itens selecionados
+  const createdShares = await Promise.all(
+    docs.map((doc) => createDocumentTemporaryShare(doc, defaultDuration)),
+  )
+  const publicUrls = createdShares.map((s) => s.publicUrl)
+
+  // Se o navegador suportar navigator.share (ex.: mobile sem suporte a múltiplos blobs mas com share de texto):
+  if (isNavShareAvailable) {
+    try {
+      const summaryText = docs.map((doc, idx) => `${doc.title}: ${publicUrls[idx]}`).join('\n\n')
+
+      await navigator.share({
+        title: `${docs.length} documentos da família`,
+        text: summaryText,
+      })
+      return { method: 'sequential-native', success: true, count: docs.length }
+    } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        return { method: 'sequential-native', success: true, count: docs.length }
+      }
+      console.warn(
+        '[shareMultipleDocuments] Falha ao compartilhar URLs nativamente, copiando para clipboard:',
+        err,
+      )
+    }
+  }
+
+  // Fallback Desktop / padrão: copiar todos os links para a área de transferência
+  const linksClipboardText = docs
+    .map((doc, idx) => `📄 ${doc.title}\n${publicUrls[idx]}`)
+    .join('\n\n')
+
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(linksClipboardText)
+  }
+
+  return {
+    method: 'clipboard-links',
+    success: true,
+    count: docs.length,
+    publicUrls,
+  }
+}
+
+/**
  * Compartilha o documento usando a melhor estratégia disponível:
  * 1. Mobile/Aparelho com navigator.canShare({ files }): baixa o arquivo real via URL assinada e
  *    chama navigator.share({ files: [file], title }) -> envia imagem/PDF direto pro WhatsApp/Telegram

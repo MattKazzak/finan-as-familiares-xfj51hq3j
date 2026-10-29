@@ -86,6 +86,47 @@ describe('DocumentItemCard', () => {
     expect(screen.queryByText(/Outros/i)).toBeNull()
   })
 
+  it('exibe checkbox e alterna seleção no modo de seleção', () => {
+    const onToggleSelectMock = vi.fn()
+    const onOpenViewerMock = vi.fn()
+
+    const { rerender } = render(
+      <DocumentItemCard
+        document={samplePdfDoc}
+        currentUserId="user-1"
+        isSelectionMode={true}
+        isSelected={false}
+        onOpenViewer={onOpenViewerMock}
+        onToggleSelect={onToggleSelectMock}
+        onRequestDelete={vi.fn()}
+      />,
+    )
+
+    // Botão de seleção presente
+    const selectBtn = screen.getByRole('button', { name: 'Selecionar' })
+    expect(selectBtn).toBeDefined()
+
+    // Clicar no botão aciona onToggleSelect e NÃO abre o visualizador
+    selectBtn.click()
+    expect(onToggleSelectMock).toHaveBeenCalledWith(samplePdfDoc)
+    expect(onOpenViewerMock).not.toHaveBeenCalled()
+
+    // Quando selecionado:
+    rerender(
+      <DocumentItemCard
+        document={samplePdfDoc}
+        currentUserId="user-1"
+        isSelectionMode={true}
+        isSelected={true}
+        onOpenViewer={onOpenViewerMock}
+        onToggleSelect={onToggleSelectMock}
+        onRequestDelete={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: 'Selecionado' })).toBeDefined()
+  })
+
   it('aciona onShare ao clicar no botão de compartilhar do cartão', () => {
     const onShareMock = vi.fn()
     render(
