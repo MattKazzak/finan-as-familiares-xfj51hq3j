@@ -42,6 +42,7 @@ import {
   FamilyDocumentShare,
   getDocumentExpirationStatus,
   formatDocumentSize,
+  formatDocumentSubtitle,
   triggerLocalDocumentBackup,
 } from '@/services/family-documents'
 import { toast } from '@/hooks/use-toast'
@@ -264,7 +265,11 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
             </DialogTitle>
             <DialogDescription className="text-xs text-[#64748B]">
               Enviado por {document.uploaded_by_name} •{' '}
-              {formatDocumentSize(document.file_size_bytes)}
+              {formatDocumentSubtitle(
+                document.mime_type,
+                document.file_size_bytes,
+                document.file_name,
+              )}
             </DialogDescription>
           </DialogHeader>
 

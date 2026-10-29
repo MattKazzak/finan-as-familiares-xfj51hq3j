@@ -18,6 +18,7 @@ import {
   SharedDocumentPublicInfo,
   getDocumentSignedUrl,
   formatDocumentSize,
+  formatDocumentSubtitle,
 } from '@/services/family-documents'
 
 export default function SharedDocumentPage() {
@@ -170,7 +171,12 @@ export default function SharedDocumentPage() {
                 {docInfo.title}
               </h1>
               <p className="text-xs text-[#64748B]">
-                {docInfo.file_name} • {formatDocumentSize(docInfo.file_size_bytes || 0)}
+                {docInfo.file_name} •{' '}
+                {formatDocumentSubtitle(
+                  docInfo.mime_type,
+                  docInfo.file_size_bytes || 0,
+                  docInfo.file_name,
+                )}
               </p>
             </div>
 

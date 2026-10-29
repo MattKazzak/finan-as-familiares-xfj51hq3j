@@ -173,6 +173,81 @@ export function formatDocumentSize(bytes: number): string {
 }
 
 /**
+ * Retorna o rótulo amigável do formato do arquivo em caixa alta (ex: 'PDF', 'JPEG', 'PNG', 'WEBP', 'DOCX').
+ * É derivado primariamente do mime_type e secundariamente do nome do arquivo (extensão).
+ * Nunca retorna categoria interna ('outros', etc.).
+ */
+export function getDocumentFormatLabel(mimeType?: string | null, fileName?: string | null): string {
+  const cleanMime = (mimeType || '').trim().toLowerCase()
+  const cleanFile = (fileName || '').trim().toLowerCase()
+  const fileExt = cleanFile.includes('.') ? cleanFile.split('.').pop() || '' : ''
+
+  if (cleanMime === 'application/pdf' || fileExt === 'pdf') {
+    return 'PDF'
+  }
+  if (cleanMime === 'image/jpeg' || fileExt === 'jpg' || fileExt === 'jpeg') {
+    return 'JPEG'
+  }
+  if (cleanMime === 'image/png' || fileExt === 'png') {
+    return 'PNG'
+  }
+  if (cleanMime === 'image/webp' || fileExt === 'webp') {
+    return 'WEBP'
+  }
+  if (cleanMime === 'image/gif' || fileExt === 'gif') {
+    return 'GIF'
+  }
+  if (cleanMime === 'image/svg+xml' || fileExt === 'svg') {
+    return 'SVG'
+  }
+  if (
+    cleanMime === 'application/msword' ||
+    cleanMime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    fileExt === 'doc' ||
+    fileExt === 'docx'
+  ) {
+    return fileExt === 'doc' ? 'DOC' : 'DOCX'
+  }
+  if (
+    cleanMime === 'application/vnd.ms-excel' ||
+    cleanMime === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+    fileExt === 'xls' ||
+    fileExt === 'xlsx'
+  ) {
+    return fileExt === 'xls' ? 'XLS' : 'XLSX'
+  }
+  if (cleanMime === 'text/plain' || fileExt === 'txt') {
+    return 'TXT'
+  }
+
+  // Se tiver extensão de arquivo identificável, usa a extensão em maiúsculas
+  if (fileExt && fileExt.length <= 5) {
+    return fileExt.toUpperCase()
+  }
+
+  // Se for mime de imagem genérico
+  if (cleanMime.startsWith('image/')) {
+    const sub = cleanMime.replace('image/', '').toUpperCase()
+    return sub || 'IMAGEM'
+  }
+
+  return 'ARQUIVO'
+}
+
+/**
+ * Retorna o subtítulo combinado padronizado "FORMATO • TAMANHO" (ex: "PDF • 100 KB", "JPEG • 11 KB")
+ */
+export function formatDocumentSubtitle(
+  mimeType?: string | null,
+  fileSizeBytes?: number | null,
+  fileName?: string | null,
+): string {
+  const format = getDocumentFormatLabel(mimeType, fileName)
+  const size = formatDocumentSize(fileSizeBytes || 0)
+  return `${format} • ${size}`
+}
+
+/**
  * Busca todos os documentos acessíveis da família
  */
 export async function fetchFamilyDocuments(familyId: string): Promise<FamilyDocument[]> {

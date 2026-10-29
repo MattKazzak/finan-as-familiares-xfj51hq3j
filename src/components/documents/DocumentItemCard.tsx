@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   FileText,
   FileImage,
@@ -20,11 +20,10 @@ import {
 import {
   FamilyDocument,
   getDocumentExpirationStatus,
-  formatDocumentSize,
+  formatDocumentSubtitle,
   getDocumentSignedUrl,
-  triggerLocalDocumentBackup,
-  deleteFamilyDocument,
 } from '@/services/family-documents'
+import { renderPdfFirstPageThumbnail } from '@/services/pdf-thumbnail'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -78,12 +77,52 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
   const isMobile = useIsMobile()
 
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null)
-  const [thumbLoading, setThumbLoading] = useState<boolean>(isImage)
+  const [thumbLoading, setThumbLoading] = useState<boolean>(isImage || isPdf)
   const [actionSheetOpen, setActionSheetOpen] = useState<boolean>(false)
+  const [pdfRenderFailed, setPdfRenderFailed] = useState<boolean>(false)
+  const [isVisibleInViewport, setIsVisibleInViewport] = useState<boolean>(false)
+  const cardContainerRef = useRef<HTMLDivElement | null>(null)
 
-  // Obtém URL assinada temporária para a miniatura se for imagem
+  // Lazy loading via IntersectionObserver: só dispara o carregamento da miniatura
+  // quando o cartão entra no campo de visão (viewport)
   useEffect(() => {
+    const el = cardContainerRef.current
+    if (!el || typeof window === 'undefined') {
+      setIsVisibleInViewport(true)
+      return
+    }
+
+    if (!('IntersectionObserver' in window)) {
+      setIsVisibleInViewport(true)
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0]
+        if (entry && (entry.isIntersecting || entry.intersectionRatio > 0)) {
+          setIsVisibleInViewport(true)
+          observer.disconnect()
+        }
+      },
+      { rootMargin: '200px 0px' }, // Inicia 200px antes para sensação fluida
+    )
+
+    observer.observe(el)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
+
+  // Carrega miniatura com URL assinada:
+  // - Para imagem: exibe a imagem direta
+  // - Para PDF: renderiza a primeira página via pdfjs-dist em canvas e gera dataURL com fallback gracioso
+  useEffect(() => {
+    if (!isVisibleInViewport) return
+
     let isMounted = true
+
     if (isImage) {
       setThumbLoading(true)
       getDocumentSignedUrl(doc.storage_path, 3600)
@@ -96,15 +135,55 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
         .finally(() => {
           if (isMounted) setThumbLoading(false)
         })
+    } else if (isPdf) {
+      setThumbLoading(true)
+      setPdfRenderFailed(false)
+
+      getDocumentSignedUrl(doc.storage_path, 3600)
+        .then(async (signedUrl) => {
+          if (!isMounted) return
+          try {
+            const pageDataUrl = await renderPdfFirstPageThumbnail(signedUrl, {
+              targetWidth: 360,
+              timeoutMs: 12000,
+            })
+            if (isMounted) {
+              setThumbnailUrl(pageDataUrl)
+            }
+          } catch (renderErr) {
+            console.warn(
+              '[DocumentItemCard] Falha ao renderizar miniatura do PDF, usando ícone:',
+              renderErr,
+            )
+            if (isMounted) {
+              setPdfRenderFailed(true)
+              setThumbnailUrl(null)
+            }
+          }
+        })
+        .catch((err) => {
+          console.warn('[DocumentItemCard] Erro ao obter signedUrl para PDF:', err)
+          if (isMounted) {
+            setPdfRenderFailed(true)
+            setThumbnailUrl(null)
+          }
+        })
+        .finally(() => {
+          if (isMounted) setThumbLoading(false)
+        })
+    } else {
+      setThumbLoading(false)
     }
+
     return () => {
       isMounted = false
     }
-  }, [doc.storage_path, isImage])
+  }, [isVisibleInViewport, doc.storage_path, isImage, isPdf])
 
   return (
     <>
       <div
+        ref={cardContainerRef}
         className="group relative flex flex-col bg-white rounded-2xl border border-[rgba(20,33,61,0.08)] shadow-[0_4px_20px_-4px_rgba(20,33,61,0.05)] hover:shadow-md hover:border-slate-300 transition-all overflow-hidden select-none"
         data-testid={`doc-card-${doc.id}`}
       >
@@ -145,26 +224,29 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
           title={`Abrir ${doc.title}`}
           aria-label={`Visualizar documento ${doc.title}`}
         >
-          {isImage ? (
-            thumbLoading ? (
-              <div className="flex flex-col items-center justify-center gap-1 text-slate-400">
-                <Loader2 className="w-5 h-5 animate-spin text-[#FCA311]" />
-                <span className="text-[10px]">Carregando...</span>
-              </div>
-            ) : thumbnailUrl ? (
+          {thumbLoading ? (
+            <div className="flex flex-col items-center justify-center gap-1 text-slate-400">
+              <Loader2 className="w-5 h-5 animate-spin text-[#FCA311]" />
+              <span className="text-[10px]">Carregando...</span>
+            </div>
+          ) : thumbnailUrl ? (
+            // Miniatura renderizada com sucesso (tanto para imagem quanto para 1ª página do PDF)
+            <div className="relative w-full h-full">
               <img
                 src={thumbnailUrl}
                 alt={doc.title}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 loading="lazy"
               />
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-1 text-slate-400">
-                <FileImage className="w-8 h-8 text-blue-500" strokeWidth={1.5} />
-                <span className="text-[10px] font-medium text-slate-500">Imagem</span>
-              </div>
-            )
-          ) : isPdf ? (
+              {/* Se for PDF, adiciona uma pílula sutil identificadora de tipo */}
+              {isPdf && (
+                <span className="absolute bottom-1.5 right-1.5 text-[9px] font-extrabold px-1.5 py-0.5 rounded-md bg-rose-900/80 text-white backdrop-blur-xs shadow-xs tracking-wider uppercase pointer-events-none">
+                  PDF
+                </span>
+              )}
+            </div>
+          ) : isPdf || pdfRenderFailed ? (
+            // Fallback gracioso para PDF: ícone clássico elegante caso a renderização falhe
             <div className="flex flex-col items-center justify-center gap-1.5 p-3 text-center">
               <div className="w-12 h-12 rounded-xl bg-rose-50 text-[#E11D48] border border-rose-100 flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
                 <FileText className="w-6 h-6" strokeWidth={1.75} />
@@ -173,13 +255,18 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                 PDF
               </span>
             </div>
+          ) : isImage ? (
+            <div className="flex flex-col items-center justify-center gap-1 text-slate-400">
+              <FileImage className="w-8 h-8 text-blue-500" strokeWidth={1.5} />
+              <span className="text-[10px] font-medium text-slate-500">Imagem</span>
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center gap-1.5 p-3 text-center">
               <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-600 border border-slate-200 flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
                 <FileText className="w-6 h-6" strokeWidth={1.75} />
               </div>
               <span className="text-[10px] font-bold text-slate-600 uppercase">
-                {doc.file_name.split('.').pop() || 'DOC'}
+                {doc.file_name.split('.').pop() || 'ARQUIVO'}
               </span>
             </div>
           )}
@@ -207,7 +294,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
               {doc.title}
             </p>
             <p className="text-[10px] text-[#64748B] truncate mt-0.5">
-              {formatDocumentSize(doc.file_size_bytes)}
+              {formatDocumentSubtitle(doc.mime_type, doc.file_size_bytes, doc.file_name)}
             </p>
           </div>
 
@@ -312,7 +399,8 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                 {doc.title}
               </SheetTitle>
               <SheetDescription className="text-xs text-[#64748B]">
-                {formatDocumentSize(doc.file_size_bytes)} • por {doc.uploaded_by_name}
+                {formatDocumentSubtitle(doc.mime_type, doc.file_size_bytes, doc.file_name)} • por{' '}
+                {doc.uploaded_by_name}
               </SheetDescription>
             </SheetHeader>
 

@@ -51,6 +51,33 @@ describe('Serviço de Documentos da Família (Pasta de Documentos)', () => {
     expect(formatDocumentSize(2.5 * 1024 * 1024)).toBe('2.5 MB')
   })
 
+  it('deriva o formato correto e monta o subtítulo FORMATO • TAMANHO', async () => {
+    const { getDocumentFormatLabel, formatDocumentSubtitle } =
+      await import('@/services/family-documents')
+
+    // Formatos por MIME e por extensão
+    expect(getDocumentFormatLabel('application/pdf', 'fatura.pdf')).toBe('PDF')
+    expect(getDocumentFormatLabel('image/jpeg', 'foto.jpg')).toBe('JPEG')
+    expect(getDocumentFormatLabel('image/png', 'recibo.png')).toBe('PNG')
+    expect(getDocumentFormatLabel('image/webp', 'avatar.webp')).toBe('WEBP')
+    expect(getDocumentFormatLabel('text/plain', 'notas.txt')).toBe('TXT')
+    expect(getDocumentFormatLabel(null, 'documento.pdf')).toBe('PDF')
+    expect(getDocumentFormatLabel('application/octet-stream', 'planilha.xlsx')).toBe('XLSX')
+
+    // Subtítulo completo: "FORMATO • TAMANHO"
+    expect(formatDocumentSubtitle('application/pdf', 100 * 1024, 'doc.pdf')).toBe('PDF • 100 KB')
+    expect(formatDocumentSubtitle('image/jpeg', 11 * 1024, 'foto.jpg')).toBe('JPEG • 11 KB')
+    expect(formatDocumentSubtitle('image/png', 25 * 1024, 'print.png')).toBe('PNG • 25 KB')
+    expect(formatDocumentSubtitle('application/pdf', 920 * 1024, 'contrato.pdf')).toBe(
+      'PDF • 920 KB',
+    )
+
+    // Nunca exibe nomes de categoria no subtítulo
+    expect(formatDocumentSubtitle('application/pdf', 11 * 1024, 'outros.pdf')).not.toContain(
+      'Outros',
+    )
+  })
+
   it('oferece opções seguras de duração de link temporário (15m, 1h, 24h)', () => {
     expect(SHARE_DURATION_CONFIG['15m'].seconds).toBe(15 * 60)
     expect(SHARE_DURATION_CONFIG['1h'].seconds).toBe(60 * 60)

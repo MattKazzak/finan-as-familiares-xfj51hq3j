@@ -175,9 +175,9 @@ describe('Documentos no Perfil e DocumentsPage', () => {
       expect(screen.getByLabelText('Compartilhar RG Matheus')).toBeDefined()
       expect(screen.getByLabelText('Mais opções para RG Matheus')).toBeDefined()
 
-      // Subtítulo do cartão exibe apenas tamanho do arquivo, sem categoria ou "Outros"
-      expect(screen.getByText('1 MB')).toBeDefined()
-      expect(screen.getByText('500 KB')).toBeDefined()
+      // Subtítulo do cartão exibe formato + tamanho do arquivo, sem categoria ou "Outros"
+      expect(screen.getByText('JPEG • 1 MB')).toBeDefined()
+      expect(screen.getByText('PDF • 500 KB')).toBeDefined()
       expect(screen.queryByText(/Identidade •/i)).toBeNull()
       expect(screen.queryByText(/Residência •/i)).toBeNull()
       expect(screen.queryByText(/Outros/i)).toBeNull()
