@@ -114,7 +114,10 @@ export const AddDocumentModal: React.FC<AddDocumentModalProps> = ({
   const handleScannerProcessed = (processedFile: File) => {
     setFile(processedFile)
     if (!title.trim()) {
-      const baseName = processedFile.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ')
+      const baseName = processedFile.name
+        .replace(/\.[^/.]+$/, '')
+        .replace(/-(escaneado|digitalizado)$/i, '')
+        .replace(/[-_]/g, ' ')
       setTitle(baseName.charAt(0).toUpperCase() + baseName.slice(1))
     }
   }

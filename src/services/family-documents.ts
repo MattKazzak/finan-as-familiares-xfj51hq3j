@@ -1,4 +1,10 @@
 import { supabase } from '@/lib/supabase/client'
+import {
+  QuadCorners,
+  ScanFilterMode,
+  warpPerspectiveCanvas,
+  applyScanFiltersToImageData,
+} from './document-scanner-core'
 
 export type DocumentCategory = 'identidade' | 'familia' | 'residencia' | 'saude' | 'outros'
 
@@ -474,18 +480,30 @@ export async function fetchSharedDocumentByToken(token: string): Promise<SharedD
  * - Aplica ajuste de contraste, brilho e nitidez para visual de documento impresso digitalizado
  * - Exporta como JPEG otimizado
  */
+
 export interface ScanProcessingOptions {
   contrast?: number // ex: 1.25 (padrão)
   brightness?: number // ex: 1.05 (padrão)
   grayscale?: boolean // ex: false
-  quality?: number // 0.85
+  quality?: number // 0.88
+  filterMode?: ScanFilterMode // 'color' | 'grayscale' | 'bw'
+  corners?: QuadCorners | null // se fornecido, faz correção de perspectiva
+  sharpen?: boolean // unsharp mask leve
 }
 
 export async function processScannedImage(
   imageSource: File | Blob | string,
   options: ScanProcessingOptions = {},
 ): Promise<Blob> {
-  const { contrast = 1.25, brightness = 1.05, grayscale = false, quality = 0.88 } = options
+  const {
+    contrast = 1.25,
+    brightness = 1.05,
+    grayscale = false,
+    quality = 0.88,
+    filterMode = grayscale ? 'grayscale' : 'color',
+    corners = null,
+    sharpen = false,
+  } = options
 
   return new Promise((resolve, reject) => {
     const img = new Image()
@@ -502,41 +520,78 @@ export async function processScannedImage(
       if (objectUrl) URL.revokeObjectURL(objectUrl)
 
       // Limita tamanho para não sobrecarregar mobile
-      const maxDim = 1800
+      const maxDim = 1920
       let w = img.width
       let h = img.height
 
+      let scaleFactor = 1
       if (w > maxDim || h > maxDim) {
         if (w > h) {
+          scaleFactor = maxDim / w
           h = Math.round((h * maxDim) / w)
           w = maxDim
         } else {
+          scaleFactor = maxDim / h
           w = Math.round((w * maxDim) / h)
           h = maxDim
         }
       }
 
-      const canvas = document.createElement('canvas')
-      canvas.width = w
-      canvas.height = h
-      const ctx = canvas.getContext('2d')
+      // 1. Desenha no canvas base redimensionado
+      const baseCanvas = document.createElement('canvas')
+      baseCanvas.width = w
+      baseCanvas.height = h
+      const baseCtx = baseCanvas.getContext('2d')
 
-      if (!ctx) {
+      if (!baseCtx) {
         reject(new Error('Canvas 2D context não suportado'))
         return
       }
 
-      // Aplica filtros nativos de canvas
-      const filterParts = [`contrast(${contrast * 100}%)`, `brightness(${brightness * 100}%)`]
-      if (grayscale) {
-        filterParts.push('grayscale(100%)')
+      baseCtx.drawImage(img, 0, 0, w, h)
+
+      // 2. Se houver cantos definidos, aplica homografia de perspectiva
+      let processedCanvas: HTMLCanvasElement = baseCanvas
+
+      if (corners) {
+        // Ajusta cantos para a escala redimensionada caso img original tenha tamanho diferente
+        const scaledCorners: QuadCorners = {
+          topLeft: {
+            x: Math.round(corners.topLeft.x * scaleFactor),
+            y: Math.round(corners.topLeft.y * scaleFactor),
+          },
+          topRight: {
+            x: Math.round(corners.topRight.x * scaleFactor),
+            y: Math.round(corners.topRight.y * scaleFactor),
+          },
+          bottomRight: {
+            x: Math.round(corners.bottomRight.x * scaleFactor),
+            y: Math.round(corners.bottomRight.y * scaleFactor),
+          },
+          bottomLeft: {
+            x: Math.round(corners.bottomLeft.x * scaleFactor),
+            y: Math.round(corners.bottomLeft.y * scaleFactor),
+          },
+        }
+
+        processedCanvas = warpPerspectiveCanvas(baseCanvas, scaledCorners)
       }
-      ctx.filter = filterParts.join(' ')
 
-      // Desenha imagem com os filtros aplicados
-      ctx.drawImage(img, 0, 0, w, h)
+      // 3. Aplica pós-processamento (Colorido, Cinza, P&B adaptativo, Contraste, Brilho e Sharpening)
+      const pCtx = processedCanvas.getContext('2d')
+      if (pCtx) {
+        const pImgData = pCtx.getImageData(0, 0, processedCanvas.width, processedCanvas.height)
+        applyScanFiltersToImageData(pImgData, {
+          contrast,
+          brightness,
+          filterMode,
+          sharpen,
+        })
+        pCtx.putImageData(pImgData, 0, 0)
+      }
 
-      canvas.toBlob(
+      // 4. Exporta blob JPEG
+      processedCanvas.toBlob(
         (blob) => {
           if (!blob) {
             reject(new Error('Falha ao exportar imagem escaneada'))
@@ -549,7 +604,7 @@ export async function processScannedImage(
       )
     }
 
-    img.onerror = (err) => {
+    img.onerror = () => {
       if (objectUrl) URL.revokeObjectURL(objectUrl)
       reject(new Error('Não foi possível ler a imagem para escaneamento.'))
     }
