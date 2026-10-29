@@ -24,7 +24,6 @@ import {
   X,
 } from 'lucide-react'
 import {
-  DOCUMENT_CATEGORIES,
   DocumentCategory,
   uploadFamilyDocument,
   FamilyDocument,
@@ -48,10 +47,9 @@ export const AddDocumentModal: React.FC<AddDocumentModalProps> = ({
   onOpenChange,
   familyId,
   uploadedByName,
-  defaultCategory = 'identidade',
+  defaultCategory = 'outros',
   onSuccess,
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState<DocumentCategory>(defaultCategory)
   const [title, setTitle] = useState<string>('')
   const [expiresAt, setExpiresAt] = useState<string>('')
   const [hasExpiration, setHasExpiration] = useState<boolean>(false)
@@ -70,7 +68,6 @@ export const AddDocumentModal: React.FC<AddDocumentModalProps> = ({
 
   React.useEffect(() => {
     if (open) {
-      setSelectedCategory(defaultCategory)
       setTitle('')
       setExpiresAt('')
       setHasExpiration(false)
@@ -78,7 +75,7 @@ export const AddDocumentModal: React.FC<AddDocumentModalProps> = ({
       setFile(null)
       setLoading(false)
     }
-  }, [open, defaultCategory])
+  }, [open])
 
   const handleSelectFile = (e: React.ChangeEvent<HTMLInputElement>, isScan: boolean = false) => {
     const selected = e.target.files?.[0]
@@ -150,7 +147,7 @@ export const AddDocumentModal: React.FC<AddDocumentModalProps> = ({
         fileName: file.name,
         mimeType: file.type || 'application/octet-stream',
         title: title.trim(),
-        category: selectedCategory,
+        category: defaultCategory || 'outros',
         expiresAt: hasExpiration && expiresAt ? expiresAt : null,
         isSharedWithFamily,
         uploadedByName,
@@ -321,37 +318,6 @@ export const AddDocumentModal: React.FC<AddDocumentModalProps> = ({
                 className="h-10 text-xs rounded-xl border-slate-200"
                 required
               />
-            </div>
-
-            {/* Categoria / Pasta */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#14213D]">Pasta de Organização</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                {DOCUMENT_CATEGORIES.map((cat) => {
-                  const isSelected = selectedCategory === cat.id
-                  return (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => setSelectedCategory(cat.id)}
-                      className={`px-3 py-2 rounded-xl text-left border transition-all ${
-                        isSelected
-                          ? 'bg-[#14213D] text-white border-[#14213D] shadow-xs'
-                          : 'bg-[#F8F9FB] text-slate-700 border-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      <p className="text-xs font-semibold truncate leading-tight">{cat.label}</p>
-                      <p
-                        className={`text-[9px] truncate mt-0.5 ${
-                          isSelected ? 'text-slate-200' : 'text-slate-500'
-                        }`}
-                      >
-                        {cat.description}
-                      </p>
-                    </button>
-                  )
-                })}
-              </div>
             </div>
 
             {/* Data opcional de Validade */}
