@@ -690,6 +690,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => navigate('/perfil')}
+                data-testid="home-profile-avatar"
                 className="relative shrink-0 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311] rounded-2xl active:scale-95 transition-transform cursor-pointer"
                 aria-label="Abrir meu perfil"
                 title="Meu perfil"

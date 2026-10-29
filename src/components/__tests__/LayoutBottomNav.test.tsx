@@ -66,11 +66,11 @@ describe('Layout - Bottom Navigation R54/R58', () => {
     const navContainer = navBar.querySelector('.bg-\\[\\#14213D\\]')
     expect(navContainer).not.toBeNull()
 
-    // Rótulos consistentes dos outros itens
+    // Rótulos consistentes dos itens da pílula (Perfil foi pro topo; Patrimônio entrou)
     expect(screen.getByText('Início')).toBeDefined()
     expect(screen.getByText('Carteira')).toBeDefined()
+    expect(screen.getByText('Patrimônio')).toBeDefined()
     expect(screen.getByText('Metas')).toBeDefined()
-    expect(screen.getByText('Perfil')).toBeDefined()
   })
 
   it('aciona openNewTransaction("income") ao clicar no FAB central "Nova Transação" (R67)', () => {

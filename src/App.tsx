@@ -19,6 +19,7 @@ const Home = lazy(() => import('@/pages/Home'))
 const Wallet = lazy(() => import('@/pages/Wallet'))
 const Goals = lazy(() => import('@/pages/Goals'))
 const Investments = lazy(() => import('@/pages/Investments'))
+const Patrimony = lazy(() => import('@/pages/Patrimony'))
 const Profile = lazy(() => import('@/pages/Profile'))
 const ImportReviewPage = lazy(() => import('@/pages/ImportReviewPage'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
@@ -225,10 +226,18 @@ const App = () => (
               }
             />
             <Route
+              path="/patrimonio"
+              element={
+                <Suspense fallback={PageFallback}>
+                  <Patrimony />
+                </Suspense>
+              }
+            />
+            <Route
               path="/investimentos"
               element={
                 <Suspense fallback={PageFallback}>
-                  <Investments />
+                  <Patrimony />
                 </Suspense>
               }
             />

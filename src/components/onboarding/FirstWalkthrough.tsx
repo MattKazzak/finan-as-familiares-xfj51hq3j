@@ -76,10 +76,10 @@ const STEPS: WalkthroughStep[] = [
   },
   {
     id: 'perfil',
-    targetSelector: '[data-testid="dock-profile"]',
-    position: 'top',
+    targetSelector: '[data-testid="header-profile-avatar"], [data-testid="home-profile-avatar"]',
+    position: 'bottom',
     title: 'Tudo se ajusta aqui',
-    text: 'Aqui você ajusta tudo: perfil da família, notificações e sua assinatura. E se quiser rever este tour um dia, é só voltar em Perfil → Reiniciar tour.',
+    text: 'No avatar do topo você acessa tudo: seu perfil, membros da família, notificações e assinatura. E se quiser rever este tour, é só ir em Perfil → Reiniciar tour.',
   },
   {
     // CLÍMAX DO TOUR (22/10, pedido do Matheus): o tour TERMINA em cima do card

@@ -95,8 +95,9 @@ export default function Layout() {
         return 'Orçamentos & 3 Baldes'
       case '/metas':
         return 'Planejamento de Metas'
+      case '/patrimonio':
       case '/investimentos':
-        return 'Carteira de Investimentos'
+        return 'Gestão de Patrimônio'
       case '/perfil':
         return 'Família & Configurações'
       case '/importar':
@@ -109,9 +110,8 @@ export default function Layout() {
   const navItems = [
     { to: '/inicio', label: 'Início', icon: Home },
     { to: '/carteira', label: 'Carteira', icon: Wallet },
-    // FAB no centro no mobile
+    { to: '/patrimonio', label: 'Patrimônio', icon: TrendingUp },
     { to: '/metas', label: 'Metas', icon: Target },
-    { to: '/investimentos', label: 'Investimentos', icon: TrendingUp },
     { to: '/perfil', label: 'Perfil', icon: User },
   ]
 
@@ -265,8 +265,26 @@ export default function Layout() {
               </h2>
             </div>
 
-            {/* Lado direito vazio (18/10, Matheus): identidade limpa — a foto do
-                usuário vive no bottom nav (estilo Pinterest), não aqui. */}
+            {/* FRENTE 1: Avatar do topo estilo Spotify/Pinterest — toque abre DIRETO o perfil */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => navigate('/perfil')}
+                data-testid="header-profile-avatar"
+                aria-label="Abrir Perfil e Configurações"
+                title="Meu Perfil e Configurações da Família"
+                className="flex items-center gap-2 rounded-full p-0.5 ring-2 ring-white/20 hover:ring-[#FCA311] active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
+              >
+                <Avatar className="w-8 h-8 shrink-0">
+                  {userAvatarUrl ? (
+                    <AvatarImage src={userAvatarUrl} alt={currentMember?.name || 'Meu perfil'} />
+                  ) : null}
+                  <AvatarFallback className="bg-[#FCA311] text-[#14213D] font-bold text-xs">
+                    {userInitial}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </div>
           </header>
         )}
 
@@ -357,9 +375,34 @@ export default function Layout() {
               </span>
             </div>
 
-            {/* 4. Metas */}
+            {/* 4. Patrimônio (FRENTE 2 — substitui o slot da pílula) */}
+            <NavLink
+              to="/patrimonio"
+              data-testid="dock-patrimony"
+              className={({ isActive }) =>
+                `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
+                  isActive ? 'text-[#FCA311] font-semibold' : 'text-white/70 hover:text-white'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <div
+                    className={`p-1 rounded-full transition-all duration-200 ${
+                      isActive ? 'bg-[#FCA311]/20 scale-105 text-[#FCA311]' : ''
+                    }`}
+                  >
+                    <TrendingUp className="w-5 h-5" strokeWidth={1.5} />
+                  </div>
+                  <span className="text-[10px] tracking-tight mt-0.5 leading-none">Patrimônio</span>
+                </>
+              )}
+            </NavLink>
+
+            {/* 5. Metas */}
             <NavLink
               to="/metas"
+              data-testid="dock-metas"
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
                   isActive ? 'text-[#FCA311] font-semibold' : 'text-white/70 hover:text-white'
@@ -376,45 +419,6 @@ export default function Layout() {
                     <Target className="w-5 h-5" strokeWidth={1.5} />
                   </div>
                   <span className="text-[10px] tracking-tight mt-0.5 leading-none">Metas</span>
-                </>
-              )}
-            </NavLink>
-
-            {/* 5. Perfil */}
-            <NavLink
-              to="/perfil"
-              data-testid="dock-profile"
-              className={({ isActive }) =>
-                `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-[#FCA311] font-semibold' : 'text-white/70 hover:text-white'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <div
-                    className={`p-0.5 rounded-full transition-all duration-200 ${
-                      isActive ? 'bg-[#FCA311]/20 scale-105' : ''
-                    }`}
-                  >
-                    {/* Foto do usuário no lugar do ícone (estilo Pinterest — 18/10, Matheus).
-                        FALLBACK PROFISSIONAL (19/10): sem foto = INICIAL do membro sobre
-                        âmbar (padrão WhatsApp/Notion) — nunca um ícone genérico vazio. */}
-                    <span className="block w-6 h-6 rounded-full overflow-hidden ring-1 ring-white/30">
-                      {userAvatarUrl ? (
-                        <img
-                          src={userAvatarUrl}
-                          alt="Meu perfil"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span className="w-full h-full bg-[#FCA311] text-[#14213D] flex items-center justify-center text-[11px] font-bold">
-                          {userInitial}
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                  <span className="text-[10px] tracking-tight mt-0.5 leading-none">Perfil</span>
                 </>
               )}
             </NavLink>
