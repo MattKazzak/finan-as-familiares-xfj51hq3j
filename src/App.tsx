@@ -31,6 +31,7 @@ const PrivacyPage = lazy(() => import('@/pages/Legal').then((m) => ({ default: m
 const TermsPage = lazy(() => import('@/pages/Legal').then((m) => ({ default: m.TermsPage })))
 const FaqPage = lazy(() => import('@/pages/Legal').then((m) => ({ default: m.FaqPage })))
 const ContactPage = lazy(() => import('@/pages/Legal').then((m) => ({ default: m.ContactPage })))
+const SharedDocumentPage = lazy(() => import('@/pages/SharedDocumentPage'))
 
 const PageFallback = (
   <div className="min-h-screen bg-white flex items-center justify-center">
@@ -143,6 +144,14 @@ const App = () => (
           {/* Rotas públicas e dedicadas de redefinição de senha */}
           <Route path="/redefinir-senha" element={<ResetPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route
+            path="/doc/:token"
+            element={
+              <Suspense fallback={PageFallback}>
+                <SharedDocumentPage />
+              </Suspense>
+            }
+          />
 
           {/* Rotas públicas legais/institucionais */}
           <Route

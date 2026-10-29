@@ -57,6 +57,7 @@ import { ApplyBudgetModelDialog } from '@/components/wallet/ApplyBudgetModelDial
 import { InstallInstructionsModal } from '@/components/common/InstallInstructionsModal'
 import { CategoryManagementDialog } from '@/components/categories/CategoryManagementDialog'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
+import { DocumentFolderSection } from '@/components/documents/DocumentFolderSection'
 import { Sparkles, AlertCircle } from 'lucide-react'
 import { APP_VERSION } from '@/lib/app-version'
 import {
@@ -1231,6 +1232,19 @@ export default function ProfilePage() {
           )}
         </button>
       </section>
+
+      {/* ================================================
+          GRUPO: PASTA DE DOCUMENTOS DA FAMÍLIA (Feature segura)
+          ================================================ */}
+      {family?.id && (
+        <DocumentFolderSection
+          familyId={family.id}
+          currentUserId={user?.id || ''}
+          currentUserName={userDisplayName}
+          isOpen={openSection === 'documentos'}
+          onToggle={() => toggleSection('documentos')}
+        />
+      )}
 
       {/* ================================================
          GRUPO: MINHA CONTA (linha Pleo — expande ao toque)
