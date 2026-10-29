@@ -1234,15 +1234,13 @@ export default function ProfilePage() {
       </section>
 
       {/* ================================================
-          GRUPO: PASTA DE DOCUMENTOS DA FAMÍLIA (Feature segura)
+          GRUPO: PASTA DE DOCUMENTOS DA FAMÍLIA (Página limpa estilo Explorer)
           ================================================ */}
       {family?.id && (
         <DocumentFolderSection
           familyId={family.id}
           currentUserId={user?.id || ''}
           currentUserName={userDisplayName}
-          isOpen={openSection === 'documentos'}
-          onToggle={() => toggleSection('documentos')}
         />
       )}
 

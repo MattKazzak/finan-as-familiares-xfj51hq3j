@@ -58,32 +58,50 @@ describe('DocumentFolderSection Component', () => {
     vi.mocked(familyDocsService.fetchFamilyDocuments).mockResolvedValue(sampleDocuments)
   })
 
-  it('exibe o título "Pasta de Documentos" e a quantidade de documentos', async () => {
+  it('exibe o título "Documentos", botão "Adicionar" e a quantidade de documentos', async () => {
     render(
       <DocumentFolderSection
         familyId={mockFamilyId}
         currentUserId={mockUserId}
         currentUserName={mockUserName}
-        isOpen={true}
-        onToggle={vi.fn()}
       />,
     )
 
     await waitFor(() => {
-      expect(screen.getByText('Pasta de Documentos')).toBeDefined()
+      expect(screen.getByText('Documentos')).toBeDefined()
+      expect(screen.getByRole('button', { name: /Adicionar/i })).toBeDefined()
       expect(screen.getByText('RG Matheus')).toBeDefined()
       expect(screen.getByText('Comprovante Luz Outubro')).toBeDefined()
     })
   })
 
-  it('indica quando um documento é Privado', async () => {
+  it('renderiza os documentos em formato de grade (grid) estilo explorador de arquivos', async () => {
     render(
       <DocumentFolderSection
         familyId={mockFamilyId}
         currentUserId={mockUserId}
         currentUserName={mockUserName}
-        isOpen={true}
-        onToggle={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      const grid = screen.getByTestId('documents-grid')
+      expect(grid).toBeDefined()
+      expect(grid.className).toContain('grid')
+      expect(grid.className).toContain('grid-cols-2')
+
+      // Os cartões individuais
+      expect(screen.getByTestId('doc-card-doc-1')).toBeDefined()
+      expect(screen.getByTestId('doc-card-doc-2')).toBeDefined()
+    })
+  })
+
+  it('indica quando um documento é Privado no cartão', async () => {
+    render(
+      <DocumentFolderSection
+        familyId={mockFamilyId}
+        currentUserId={mockUserId}
+        currentUserName={mockUserName}
       />,
     )
 
@@ -92,52 +110,19 @@ describe('DocumentFolderSection Component', () => {
     })
   })
 
-  it('permite filtrar documentos por pasta (ex.: Residência)', async () => {
+  it('exibe ações de visualizar e compartilhar em cada documento da grade', async () => {
     render(
       <DocumentFolderSection
         familyId={mockFamilyId}
         currentUserId={mockUserId}
         currentUserName={mockUserName}
-        isOpen={true}
-        onToggle={vi.fn()}
       />,
     )
 
     await waitFor(() => {
-      expect(screen.getByText('RG Matheus')).toBeDefined()
-    })
-
-    // Clica na pasta Residência
-    const residenciaBtn = screen.getByRole('button', { name: /Residência/i })
-    fireEvent.click(residenciaBtn)
-
-    await waitFor(() => {
-      expect(screen.getByText('Comprovante Luz Outubro')).toBeDefined()
-      expect(screen.queryByText('RG Matheus')).toBeNull()
-    })
-  })
-
-  it('possui campo de busca por nome de documento', async () => {
-    render(
-      <DocumentFolderSection
-        familyId={mockFamilyId}
-        currentUserId={mockUserId}
-        currentUserName={mockUserName}
-        isOpen={true}
-        onToggle={vi.fn()}
-      />,
-    )
-
-    await waitFor(() => {
-      expect(screen.getByText('RG Matheus')).toBeDefined()
-    })
-
-    const searchInput = screen.getByPlaceholderText('Buscar documento...')
-    fireEvent.change(searchInput, { target: { value: 'Luz' } })
-
-    await waitFor(() => {
-      expect(screen.getByText('Comprovante Luz Outubro')).toBeDefined()
-      expect(screen.queryByText('RG Matheus')).toBeNull()
+      expect(screen.getByLabelText('Visualizar RG Matheus')).toBeDefined()
+      expect(screen.getByLabelText('Compartilhar RG Matheus')).toBeDefined()
+      expect(screen.getByLabelText('Mais opções para RG Matheus')).toBeDefined()
     })
   })
 })
