@@ -7,26 +7,31 @@ export interface DocumentFolderSectionProps {
   currentUserName: string
   isOpen?: boolean
   onToggle?: () => void
+  showEmbeddedGrid?: boolean
 }
 
 /**
- * Interface simplificada da Pasta de Documentos no Curiangoo (Perfil).
- * Atende o pedido do usuário: página limpa e branca, botão Adicionar bem visível
- * no topo e documentos exibidos em grade (matriz lado a lado que quebra para baixo,
- * como no Windows Explorer) com miniaturas e ações embaixo (compartilhar, visualizar, deletar).
+ * Item de Pasta de Documentos do Perfil.
+ * Pode renderizar como item de acordeão que navega para a página dedicada /perfil/documentos
+ * ou, se showEmbeddedGrid for verdadeiro, renderizar a grade completa.
  */
 export const DocumentFolderSection: React.FC<DocumentFolderSectionProps> = ({
   familyId,
   currentUserId,
   currentUserName,
+  showEmbeddedGrid = true,
 }) => {
-  return (
-    <section aria-label="Pasta de Documentos" className="w-full">
-      <DocumentExplorerGrid
-        familyId={familyId}
-        currentUserId={currentUserId}
-        currentUserName={currentUserName}
-      />
-    </section>
-  )
+  if (showEmbeddedGrid) {
+    return (
+      <section aria-label="Pasta de Documentos" className="w-full">
+        <DocumentExplorerGrid
+          familyId={familyId}
+          currentUserId={currentUserId}
+          currentUserName={currentUserName}
+        />
+      </section>
+    )
+  }
+
+  return null
 }

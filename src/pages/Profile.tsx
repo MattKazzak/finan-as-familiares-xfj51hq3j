@@ -58,7 +58,8 @@ import { InstallInstructionsModal } from '@/components/common/InstallInstruction
 import { CategoryManagementDialog } from '@/components/categories/CategoryManagementDialog'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 import { DocumentFolderSection } from '@/components/documents/DocumentFolderSection'
-import { Sparkles, AlertCircle } from 'lucide-react'
+import { fetchFamilyDocuments, getDocumentExpirationStatus } from '@/services/family-documents'
+import { Sparkles, AlertCircle, Folder } from 'lucide-react'
 import { APP_VERSION } from '@/lib/app-version'
 import {
   Dialog,
@@ -333,6 +334,33 @@ export default function ProfilePage() {
   // Gestão de outras famílias incompletas (Tarefa 2.3)
   const [incompleteFamilies, setIncompleteFamilies] = useState<Array<any>>([])
   const [deletingIncompleteFamId, setDeletingIncompleteFamId] = useState<string | null>(null)
+
+  // ===== Resumo de Documentos para o Acordeão no Perfil =====
+  const [docsCount, setDocsCount] = useState<number | null>(null)
+  const [docsExpiringCount, setDocsExpiringCount] = useState<number>(0)
+
+  useEffect(() => {
+    let isMounted = true
+    if (!family?.id) return
+
+    fetchFamilyDocuments(family.id)
+      .then((docs) => {
+        if (!isMounted) return
+        setDocsCount(docs.length)
+        const expiring = docs.filter((d) => {
+          const st = getDocumentExpirationStatus(d.expires_at)
+          return st.isExpiringSoon || st.isExpired
+        }).length
+        setDocsExpiringCount(expiring)
+      })
+      .catch((err) => {
+        console.warn('Falha leve ao carregar resumo de documentos:', err)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [family?.id])
 
   // ===== Minha Assinatura (billing) =====
   const [subscription, setSubscription] = useState<MySubscription | null>(null)
@@ -1234,14 +1262,51 @@ export default function ProfilePage() {
       </section>
 
       {/* ================================================
-          GRUPO: PASTA DE DOCUMENTOS DA FAMÍLIA (Página limpa estilo Explorer)
+          GRUPO: PASTA DE DOCUMENTOS DA FAMÍLIA (Item de acordeão / navegação)
           ================================================ */}
       {family?.id && (
-        <DocumentFolderSection
-          familyId={family.id}
-          currentUserId={user?.id || ''}
-          currentUserName={userDisplayName}
-        />
+        <section
+          className="bg-white/95 rounded-3xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 overflow-hidden"
+          aria-label="Pasta de Documentos"
+        >
+          <button
+            type="button"
+            onClick={() => {
+              toggleSection('documentos')
+              navigate('/perfil/documentos')
+            }}
+            className="w-full flex items-center gap-3.5 px-5 py-4 text-left hover:bg-slate-50/60 transition-colors"
+            aria-expanded={openSection === 'documentos'}
+          >
+            <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+              <Folder className="w-5 h-5" strokeWidth={1.75} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-slate-900 leading-tight">Documentos</p>
+              <p className="text-[11px] text-slate-500 truncate">
+                {docsCount === null
+                  ? 'Cofre de arquivos da família'
+                  : docsCount === 0
+                    ? 'Cofre de arquivos da família'
+                    : docsExpiringCount > 0
+                      ? `${docsCount} ${docsCount === 1 ? 'documento' : 'documentos'} • ${docsExpiringCount} ${docsExpiringCount === 1 ? 'vencendo ou vencido' : 'vencendo ou vencidos'}`
+                      : `${docsCount} ${docsCount === 1 ? 'documento cadastrado' : 'documentos cadastrados'}`}
+              </p>
+            </div>
+            {docsExpiringCount > 0 ? (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 shrink-0">
+                Atenção
+              </span>
+            ) : docsCount !== null && docsCount > 0 ? (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 shrink-0">
+                {docsCount}
+              </span>
+            ) : null}
+            <ChevronRight
+              className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${openSection === 'documentos' ? 'rotate-90' : ''}`}
+            />
+          </button>
+        </section>
       )}
 
       {/* ================================================

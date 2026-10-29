@@ -100,6 +100,8 @@ export default function Layout() {
         return 'Gestão de Patrimônio'
       case '/perfil':
         return 'Família & Configurações'
+      case '/perfil/documentos':
+        return 'Documentos da Família'
       case '/importar':
         return 'Revisão de Importação'
       default:

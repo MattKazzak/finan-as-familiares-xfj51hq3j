@@ -21,6 +21,7 @@ const Goals = lazy(() => import('@/pages/Goals'))
 const Investments = lazy(() => import('@/pages/Investments'))
 const Patrimony = lazy(() => import('@/pages/Patrimony'))
 const Profile = lazy(() => import('@/pages/Profile'))
+const DocumentsPage = lazy(() => import('@/pages/DocumentsPage'))
 const ImportReviewPage = lazy(() => import('@/pages/ImportReviewPage'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
 const InviteAcceptPage = lazy(() =>
@@ -255,6 +256,14 @@ const App = () => (
               element={
                 <Suspense fallback={PageFallback}>
                   <Profile />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/perfil/documentos"
+              element={
+                <Suspense fallback={PageFallback}>
+                  <DocumentsPage />
                 </Suspense>
               }
             />
