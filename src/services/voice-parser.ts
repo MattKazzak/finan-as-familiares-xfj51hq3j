@@ -42,6 +42,11 @@ export interface VoiceAiTransaction {
   subcategoria: string | null
   metodo_pagamento: string | null
   itens?: VoiceAiTransactionItem[] | null
+  parcelas?: {
+    total?: number
+    valor_parcela?: number
+    mes_inicio?: string
+  } | null
 }
 
 export type SuggestionOptionType = 'existente' | 'nova'

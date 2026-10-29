@@ -90,9 +90,11 @@
         try {
           var show = function (kind, msg, stack) {
             try {
+              var safeMsg = (msg === undefined || msg === null || msg === '') ? '(sem mensagem — veja stack)' : String(msg)
+              var safeStack = (stack === undefined || stack === null || stack === '') ? '(stack indisponível)' : String(stack)
               localStorage.setItem(
                 'curiangoo_fatal',
-                JSON.stringify({ kind: kind, msg: String(msg).slice(0, 500), stack: String(stack || '').slice(0, 1500), t: Date.now() }),
+                JSON.stringify({ kind: kind, msg: safeMsg.slice(0, 500), stack: safeStack.slice(0, 1500), t: Date.now() }),
               )
               var el = document.createElement('pre')
               el.setAttribute('data-testid', 'fatal-trap')
@@ -103,16 +105,54 @@
               // localStorage (curiangoo_fatal) para diagnóstico; basta tocar no chip.
               el.style.cssText = 'position:fixed;left:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);z-index:99999;background:#fff;color:#900;font:bold 10px monospace;padding:4px 8px;border:1px solid #900;border-radius:999px;cursor:pointer'
               el.textContent = 'ERRO FATAL — toque p/ ver'
-              el.title = String(msg).slice(0, 500) + '\n\n' + String(stack || '').slice(0, 1500)
+              el.title = safeMsg.slice(0, 500) + '\n\n' + safeStack.slice(0, 1500)
               el.onclick = function () {
-                var full = 'ERRO FATAL (' + kind + '): ' + String(msg).slice(0, 500) + '\n\n' + String(stack || '').slice(0, 1500)
+                var full = 'ERRO FATAL (' + kind + '): ' + safeMsg.slice(0, 500) + '\n\n' + safeStack.slice(0, 1500)
                 window.prompt('Erro capturado (copie):', full)
               }
               ;(document.body || document.documentElement).appendChild(el)
             } catch (e) {}
           }
-          window.addEventListener('error', function (e) { show('error', e.message, e.error && e.error.stack) }, true)
-          window.addEventListener('unhandledrejection', function (e) { show('rejection', e.reason && (e.reason.message || e.reason), e.reason && e.reason.stack) }, true)
+          window.addEventListener('error', function (e) {
+            try {
+              // Filtra erros de carregamento de recurso (script, img, link, etc.) que bolham na window
+              if (e.target && e.target !== window && e.target.tagName) {
+                var tag = String(e.target.tagName).toUpperCase()
+                if (tag === 'SCRIPT' || tag === 'IMG' || tag === 'LINK' || tag === 'IFRAME' || tag === 'SOURCE') {
+                  console.warn('[fatalTrap] Erro de carregamento de recurso ignorado:', tag, e.target.src || e.target.href)
+                  return
+                }
+              }
+              var stack = (e.error && e.error.stack) ? e.error.stack : (new Error().stack || '')
+              show('error', e.message, stack)
+            } catch (err) {}
+          }, true)
+          window.addEventListener('unhandledrejection', function (e) {
+            try {
+              var r = e.reason
+              var msg = ''
+              var stack = ''
+              if (r instanceof Error) {
+                msg = r.message
+                stack = r.stack || ''
+              } else if (r === undefined || r === null) {
+                msg = '(promise rejeitada sem motivo)'
+              } else if (typeof r === 'object') {
+                try {
+                  msg = JSON.stringify(r).slice(0, 300)
+                } catch (stringifyErr) {
+                  msg = String(r)
+                }
+                stack = r.stack || ''
+              } else {
+                msg = String(r)
+              }
+              if (!stack) {
+                stack = new Error().stack || ''
+              }
+              show('rejection', msg, stack)
+            } catch (err) {}
+          }, true)
         } catch (e) {}
       })()
     </script>

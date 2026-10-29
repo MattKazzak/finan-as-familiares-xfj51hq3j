@@ -1290,6 +1290,9 @@ export function CopilotPage() {
         lancamentos_recentes: lancamentosRecentes as any,
       })
 
+      let assistantText = parsed.friendlyMessage || 'Pronto!'
+      let cardType: string | null = null
+
       // ATENÇÃO 12 EXECUTADA (27/10): quando a edge decide "desfazer" (denúncia de
       // duplicidade), o app PRECISA excluir de verdade — a promessa sem execução
       // é pior que a mentira antiga. Exclui o lançamento MAIS RECENTE que casa
@@ -1554,9 +1557,6 @@ export function CopilotPage() {
           )
         }
       }
-
-      let assistantText = parsed.friendlyMessage || 'Pronto!'
-      let cardType: string | null = null
 
       if (parsed.aiStatus === 'consulta' || parsed.tipoResposta === 'consulta') {
         assistantText =
