@@ -453,6 +453,89 @@ export const SHARE_DURATION_CONFIG: Record<
   '24h': { label: '24 horas (máximo)', seconds: 24 * 60 * 60 },
 }
 
+/**
+ * Resultado do compartilhamento rápido/nativo de documento
+ */
+export type ShareDocumentResult =
+  | { method: 'native-file'; success: true }
+  | { method: 'native-link'; success: true }
+  | { method: 'clipboard-link'; success: true; publicUrl: string }
+
+/**
+ * Compartilha o documento usando a melhor estratégia disponível:
+ * 1. Mobile/Aparelho com navigator.canShare({ files }): baixa o arquivo real via URL assinada e
+ *    chama navigator.share({ files: [file], title }) -> envia imagem/PDF direto pro WhatsApp/Telegram
+ * 2. Mobile/Aparelho com navigator.share mas sem suporte a arquivos: cria link temporário de 24h
+ *    e chama navigator.share({ title, url })
+ * 3. Desktop / Navegador sem navigator.share: cria link temporário de 24h e copia para o clipboard
+ */
+export async function shareDocumentFileOrLink(
+  doc: FamilyDocument,
+  defaultDuration: ShareDurationOption = '24h',
+): Promise<ShareDocumentResult> {
+  const isNavShareAvailable =
+    typeof navigator !== 'undefined' && typeof navigator.share === 'function'
+
+  // Caso 1: Testar suporte ao compartilhamento nativo de arquivos
+  if (isNavShareAvailable && typeof navigator.canShare === 'function') {
+    try {
+      const signedUrl = await getDocumentSignedUrl(doc.storage_path, 3600)
+      const res = await fetch(signedUrl)
+      if (!res.ok) {
+        throw new Error(`Falha ao obter arquivo: HTTP ${res.status}`)
+      }
+      const blob = await res.blob()
+      const mime = doc.mime_type || blob.type || 'application/octet-stream'
+      const file = new File([blob], doc.file_name, { type: mime })
+
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: doc.title,
+        })
+        return { method: 'native-file', success: true }
+      }
+    } catch (err: any) {
+      // Se o usuário cancelou o share nativo (AbortError), não tenta fallback para não abrir popup duplicado
+      if (err?.name === 'AbortError') {
+        return { method: 'native-file', success: true }
+      }
+      console.warn(
+        '[shareDocumentFileOrLink] Falha ao compartilhar arquivo nativo, tentando link:',
+        err,
+      )
+    }
+  }
+
+  // Se não foi possível compartilhar o arquivo nativo, precisa do link temporário público
+  const { publicUrl } = await createDocumentTemporaryShare(doc, defaultDuration)
+
+  // Caso 2: Aparelho suporta navigator.share apenas com URL/texto
+  if (isNavShareAvailable) {
+    try {
+      await navigator.share({
+        title: doc.title,
+        url: publicUrl,
+      })
+      return { method: 'native-link', success: true }
+    } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        return { method: 'native-link', success: true }
+      }
+      console.warn(
+        '[shareDocumentFileOrLink] Falha ao compartilhar URL nativa, caindo para clipboard:',
+        err,
+      )
+    }
+  }
+
+  // Caso 3: Desktop ou sem navigator.share -> copia link para área de transferência
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(publicUrl)
+  }
+  return { method: 'clipboard-link', success: true, publicUrl }
+}
+
 export async function createDocumentTemporaryShare(
   doc: FamilyDocument,
   duration: ShareDurationOption,

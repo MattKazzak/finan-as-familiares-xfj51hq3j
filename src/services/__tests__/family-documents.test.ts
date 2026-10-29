@@ -1,10 +1,14 @@
 import { describe, it, expect } from 'vitest'
+import { vi } from 'vitest'
 import {
   DOCUMENT_CATEGORIES,
   getDocumentExpirationStatus,
   formatDocumentSize,
   SHARE_DURATION_CONFIG,
+  shareDocumentFileOrLink,
+  FamilyDocument,
 } from '@/services/family-documents'
+import * as familyDocsModule from '@/services/family-documents'
 
 describe('Serviço de Documentos da Família (Pasta de Documentos)', () => {
   it('contém exatamente as 5 pastas canônicas acordadas com a usuária', () => {
@@ -82,5 +86,115 @@ describe('Serviço de Documentos da Família (Pasta de Documentos)', () => {
     expect(SHARE_DURATION_CONFIG['15m'].seconds).toBe(15 * 60)
     expect(SHARE_DURATION_CONFIG['1h'].seconds).toBe(60 * 60)
     expect(SHARE_DURATION_CONFIG['24h'].seconds).toBe(24 * 60 * 60)
+  })
+
+  describe('shareDocumentFileOrLink (compartilhamento nativo e fallbacks)', () => {
+    const mockDoc: FamilyDocument = {
+      id: 'doc-share-1',
+      family_id: 'fam-123',
+      uploaded_by: 'user-1',
+      uploaded_by_name: 'Usuário',
+      title: 'Minha CNH Digital',
+      category: 'identidade',
+      storage_path: 'fam-123/cnh.pdf',
+      file_name: 'cnh.pdf',
+      file_size_bytes: 200 * 1024,
+      mime_type: 'application/pdf',
+      expires_at: null,
+      is_shared_with_family: true,
+      created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z',
+    }
+
+    it('compartilha o ARQUIVO real via navigator.share quando canShare({ files }) for suportado', async () => {
+      const shareMock = vi.fn().mockResolvedValue(undefined)
+      const canShareMock = vi.fn().mockReturnValue(true)
+
+      // Mock navigator.share e canShare
+      Object.defineProperty(globalThis, 'navigator', {
+        value: {
+          share: shareMock,
+          canShare: canShareMock,
+        },
+        writable: true,
+        configurable: true,
+      })
+
+      // Mock fetch para devolver blob do arquivo
+      const originalFetch = globalThis.fetch
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        blob: vi.fn().mockResolvedValue(new Blob(['conteudo pdf'], { type: 'application/pdf' })),
+      } as any)
+
+      vi.spyOn(familyDocsModule, 'getDocumentSignedUrl').mockResolvedValue(
+        'https://supabase.signed/cnh.pdf',
+      )
+
+      const result = await shareDocumentFileOrLink(mockDoc)
+
+      expect(result.method).toBe('native-file')
+      expect(canShareMock).toHaveBeenCalled()
+      expect(shareMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Minha CNH Digital',
+          files: expect.any(Array),
+        }),
+      )
+
+      globalThis.fetch = originalFetch
+    })
+
+    it('compartilha a URL pública quando o navegador tiver navigator.share mas sem suporte a arquivos', async () => {
+      const shareMock = vi.fn().mockResolvedValue(undefined)
+      const canShareMock = vi.fn().mockReturnValue(false) // Sem suporte a arquivos
+
+      Object.defineProperty(globalThis, 'navigator', {
+        value: {
+          share: shareMock,
+          canShare: canShareMock,
+        },
+        writable: true,
+        configurable: true,
+      })
+
+      vi.spyOn(familyDocsModule, 'createDocumentTemporaryShare').mockResolvedValue({
+        share: {} as any,
+        publicUrl: 'https://curiangoo.com/doc/token123',
+      })
+
+      const result = await shareDocumentFileOrLink(mockDoc)
+
+      expect(result.method).toBe('native-link')
+      expect(shareMock).toHaveBeenCalledWith({
+        title: 'Minha CNH Digital',
+        url: 'https://curiangoo.com/doc/token123',
+      })
+    })
+
+    it('copia o link temporário no clipboard quando for desktop / sem navigator.share', async () => {
+      const writeTextMock = vi.fn().mockResolvedValue(undefined)
+
+      Object.defineProperty(globalThis, 'navigator', {
+        value: {
+          clipboard: {
+            writeText: writeTextMock,
+          },
+        },
+        writable: true,
+        configurable: true,
+      })
+
+      vi.spyOn(familyDocsModule, 'createDocumentTemporaryShare').mockResolvedValue({
+        share: {} as any,
+        publicUrl: 'https://curiangoo.com/doc/token456',
+      })
+
+      const result = await shareDocumentFileOrLink(mockDoc)
+
+      expect(result.method).toBe('clipboard-link')
+      expect(writeTextMock).toHaveBeenCalledWith('https://curiangoo.com/doc/token456')
+    })
   })
 })

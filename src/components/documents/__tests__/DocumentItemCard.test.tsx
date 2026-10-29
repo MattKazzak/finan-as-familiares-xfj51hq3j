@@ -86,6 +86,23 @@ describe('DocumentItemCard', () => {
     expect(screen.queryByText(/Outros/i)).toBeNull()
   })
 
+  it('aciona onShare ao clicar no botão de compartilhar do cartão', () => {
+    const onShareMock = vi.fn()
+    render(
+      <DocumentItemCard
+        document={samplePdfDoc}
+        currentUserId="user-1"
+        onOpenViewer={vi.fn()}
+        onShare={onShareMock}
+        onRequestDelete={vi.fn()}
+      />,
+    )
+
+    const shareBtn = screen.getByTitle('Compartilhar documento')
+    shareBtn.click()
+    expect(onShareMock).toHaveBeenCalledWith(samplePdfDoc)
+  })
+
   it('exibe o subtítulo "JPEG • 11 KB" para documento de imagem e nunca mostra a categoria interna', () => {
     render(
       <DocumentItemCard

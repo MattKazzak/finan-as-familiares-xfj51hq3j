@@ -22,6 +22,7 @@ import {
   getDocumentExpirationStatus,
   formatDocumentSubtitle,
   getDocumentSignedUrl,
+  shareDocumentFileOrLink,
 } from '@/services/family-documents'
 import { renderPdfFirstPageThumbnail } from '@/services/pdf-thumbnail'
 import { Button } from '@/components/ui/button'
@@ -54,7 +55,7 @@ interface DocumentItemCardProps {
   document: FamilyDocument
   currentUserId: string
   onOpenViewer: (doc: FamilyDocument) => void
-  onShare: (doc: FamilyDocument) => void
+  onShare?: (doc: FamilyDocument) => void
   onRequestDelete: (doc: FamilyDocument) => void
 }
 
@@ -80,6 +81,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
   const [thumbLoading, setThumbLoading] = useState<boolean>(isImage || isPdf)
   const [actionSheetOpen, setActionSheetOpen] = useState<boolean>(false)
   const [pdfRenderFailed, setPdfRenderFailed] = useState<boolean>(false)
+  const [isSharing, setIsSharing] = useState<boolean>(false)
   const [isVisibleInViewport, setIsVisibleInViewport] = useState<boolean>(false)
   const cardContainerRef = useRef<HTMLDivElement | null>(null)
 
@@ -179,6 +181,33 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
       isMounted = false
     }
   }, [isVisibleInViewport, doc.storage_path, isImage, isPdf])
+
+  const handleDirectShare = async () => {
+    if (onShare) {
+      onShare(doc)
+      return
+    }
+
+    if (isSharing) return
+    setIsSharing(true)
+    try {
+      const result = await shareDocumentFileOrLink(doc, '24h')
+      if (result.method === 'clipboard-link') {
+        toast({
+          title: 'Link copiado para compartilhar 📋',
+          description: 'Link válido por 24 horas gerado e copiado para a área de transferência.',
+        })
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Não foi possível compartilhar',
+        description: err?.message || 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSharing(false)
+    }
+  }
 
   return (
     <>
@@ -317,12 +346,17 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={() => onShare(doc)}
+                onClick={handleDirectShare}
+                disabled={isSharing}
                 className="h-7 w-7 p-0 rounded-lg text-slate-600 hover:text-[#14213D] hover:bg-slate-100"
-                title="Compartilhar link temporário"
+                title="Compartilhar documento"
                 aria-label={`Compartilhar ${doc.title}`}
               >
-                <Share2 className="w-3.5 h-3.5 text-blue-600" />
+                {isSharing ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                ) : (
+                  <Share2 className="w-3.5 h-3.5 text-blue-600" />
+                )}
               </Button>
             </div>
 
@@ -365,11 +399,11 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                     Visualizar / Detalhes
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => onShare(doc)}
+                    onClick={handleDirectShare}
                     className="text-xs rounded-xl cursor-pointer"
                   >
                     <Share2 className="w-3.5 h-3.5 mr-2 text-blue-600" />
-                    Compartilhar Link
+                    Compartilhar
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -428,7 +462,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                 type="button"
                 onClick={() => {
                   setActionSheetOpen(false)
-                  onShare(doc)
+                  handleDirectShare()
                 }}
                 className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-blue-50/60 text-left transition-colors text-xs font-semibold text-blue-700"
               >
@@ -436,9 +470,9 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                   <Share2 className="w-4 h-4" />
                 </div>
                 <div>
-                  <p className="leading-tight">Compartilhar link seguro</p>
+                  <p className="leading-tight">Compartilhar</p>
                   <p className="text-[10px] text-[#64748B] font-normal">
-                    Link temporário de 15 min, 1 h ou 24 h com revogação
+                    Enviar arquivo via WhatsApp, Telegram ou copiar link
                   </p>
                 </div>
               </button>

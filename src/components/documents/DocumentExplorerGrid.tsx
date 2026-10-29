@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react'
 import { Plus, Loader2, FolderOpen, Camera, Upload, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { FamilyDocument, fetchFamilyDocuments } from '@/services/family-documents'
+import {
+  FamilyDocument,
+  fetchFamilyDocuments,
+  shareDocumentFileOrLink,
+} from '@/services/family-documents'
 import { DocumentItemCard } from './DocumentItemCard'
 import { AddDocumentModal } from './AddDocumentModal'
 import { DocumentViewerModal } from './DocumentViewerModal'
-import { ShareDocumentDialog } from './ShareDocumentDialog'
 import { DeleteDocumentConfirmDialog } from './DeleteDocumentConfirmDialog'
+import { toast } from '@/hooks/use-toast'
 
 export interface DocumentExplorerGridProps {
   familyId: string
@@ -33,8 +37,30 @@ export const DocumentExplorerGrid: React.FC<DocumentExplorerGridProps> = ({
   // Modais de ação
   const [isAddOpen, setIsAddOpen] = useState<boolean>(false)
   const [viewerDoc, setViewerDoc] = useState<FamilyDocument | null>(null)
-  const [shareDoc, setShareDoc] = useState<FamilyDocument | null>(null)
   const [deleteDoc, setDeleteDoc] = useState<FamilyDocument | null>(null)
+  const [sharingDocId, setSharingDocId] = useState<string | null>(null)
+
+  const handleShareDocument = async (doc: FamilyDocument) => {
+    if (sharingDocId) return
+    setSharingDocId(doc.id)
+    try {
+      const result = await shareDocumentFileOrLink(doc, '24h')
+      if (result.method === 'clipboard-link') {
+        toast({
+          title: 'Link copiado para compartilhar 📋',
+          description: 'Link válido por 24 horas copiado para a área de transferência.',
+        })
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Não foi possível compartilhar',
+        description: err?.message || 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSharingDocId(null)
+    }
+  }
 
   const loadDocuments = async () => {
     if (!familyId) return
@@ -126,7 +152,7 @@ export const DocumentExplorerGrid: React.FC<DocumentExplorerGridProps> = ({
               document={doc}
               currentUserId={currentUserId}
               onOpenViewer={(d) => setViewerDoc(d)}
-              onShare={(d) => setShareDoc(d)}
+              onShare={(d) => handleShareDocument(d)}
               onRequestDelete={(d) => setDeleteDoc(d)}
             />
           ))}
@@ -160,15 +186,6 @@ export const DocumentExplorerGrid: React.FC<DocumentExplorerGridProps> = ({
           setDocuments((prev) => prev.filter((d) => d.id !== deletedId))
           setViewerDoc(null)
         }}
-      />
-
-      {/* Diálogo Rápido de Compartilhamento Temporário (15m, 1h, 24h) */}
-      <ShareDocumentDialog
-        open={Boolean(shareDoc)}
-        onOpenChange={(open) => {
-          if (!open) setShareDoc(null)
-        }}
-        document={shareDoc}
       />
 
       {/* Diálogo Rápido de Confirmação de Exclusão (com backup antes de apagar) */}

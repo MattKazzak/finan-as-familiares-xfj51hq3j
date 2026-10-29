@@ -44,6 +44,7 @@ import {
   formatDocumentSize,
   formatDocumentSubtitle,
   triggerLocalDocumentBackup,
+  shareDocumentFileOrLink,
 } from '@/services/family-documents'
 import { toast } from '@/hooks/use-toast'
 
@@ -74,12 +75,13 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
   const [editShared, setEditShared] = useState<boolean>(true)
   const [savingEdit, setSavingEdit] = useState<boolean>(false)
 
-  // Compartilhamento temporário
+  // Compartilhamento
   const [isSharingOpen, setIsSharingOpen] = useState<boolean>(false)
   const [selectedDuration, setSelectedDuration] = useState<ShareDurationOption>('1h')
   const [generatingShare, setGeneratingShare] = useState<boolean>(false)
   const [activeShares, setActiveShares] = useState<FamilyDocumentShare[]>([])
   const [copiedShareUrl, setCopiedShareUrl] = useState<string | null>(null)
+  const [isDirectSharing, setIsDirectSharing] = useState<boolean>(false)
 
   // Confirmação de exclusão com backup
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState<boolean>(false)
@@ -158,6 +160,28 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
       })
     } finally {
       setSavingEdit(false)
+    }
+  }
+
+  const handleDirectShare = async () => {
+    if (isDirectSharing) return
+    setIsDirectSharing(true)
+    try {
+      const result = await shareDocumentFileOrLink(document, '24h')
+      if (result.method === 'clipboard-link') {
+        toast({
+          title: 'Link copiado para compartilhar 📋',
+          description: 'Link válido por 24 horas copiado para a área de transferência.',
+        })
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Não foi possível compartilhar',
+        description: err?.message || 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsDirectSharing(false)
     }
   }
 
@@ -524,20 +548,19 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
 
           {/* Barra de Ações Principais */}
           <div className="grid grid-cols-4 gap-2 pt-3 border-t border-slate-100">
-            {/* Compartilhar link */}
+            {/* Compartilhar direto (folha nativa ou link copiado) */}
             <button
               type="button"
-              onClick={() => {
-                setIsSharingOpen(!isSharingOpen)
-                setIsEditing(false)
-              }}
-              className={`flex flex-col items-center justify-center p-2 rounded-xl border text-center transition-colors ${
-                isSharingOpen
-                  ? 'bg-amber-50 text-amber-700 border-amber-300'
-                  : 'bg-[#F8F9FB] text-slate-700 border-slate-200 hover:bg-slate-100'
-              }`}
+              onClick={handleDirectShare}
+              disabled={isDirectSharing}
+              className="flex flex-col items-center justify-center p-2 rounded-xl border bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100 text-center transition-colors cursor-pointer"
+              title="Compartilhar arquivo ou link"
             >
-              <Share2 className="w-4 h-4 mb-1" />
+              {isDirectSharing ? (
+                <Loader2 className="w-4 h-4 mb-1 animate-spin text-amber-700" />
+              ) : (
+                <Share2 className="w-4 h-4 mb-1" />
+              )}
               <span className="text-[10px] font-semibold leading-tight">Compartilhar</span>
             </button>
 
