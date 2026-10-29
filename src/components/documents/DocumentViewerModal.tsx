@@ -71,8 +71,6 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
   const [isEditing, setIsEditing] = useState<boolean>(false)
   const [editTitle, setEditTitle] = useState<string>('')
   const [editCategory, setEditCategory] = useState<DocumentCategory>('outros')
-  const [editExpiresAt, setEditExpiresAt] = useState<string>('')
-  const [editHasExpiration, setEditHasExpiration] = useState<boolean>(false)
   const [editShared, setEditShared] = useState<boolean>(true)
   const [savingEdit, setSavingEdit] = useState<boolean>(false)
 
@@ -99,8 +97,6 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
 
     setEditTitle(document.title)
     setEditCategory(document.category)
-    setEditExpiresAt(document.expires_at || '')
-    setEditHasExpiration(Boolean(document.expires_at))
     setEditShared(document.is_shared_with_family)
 
     let isMounted = true
@@ -146,7 +142,6 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
       const updated = await updateFamilyDocument(document.id, {
         title: editTitle.trim(),
         category: editCategory,
-        expiresAt: editHasExpiration && editExpiresAt ? editExpiresAt : null,
         isSharedWithFamily: editShared,
       })
       toast({
@@ -396,26 +391,6 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                   ))}
                 </select>
               </div>
-
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-xs text-[#14213D] font-medium">Tem validade?</span>
-                <Switch
-                  checked={editHasExpiration}
-                  onCheckedChange={(checked) => {
-                    setEditHasExpiration(checked)
-                    if (!checked) setEditExpiresAt('')
-                  }}
-                />
-              </div>
-
-              {editHasExpiration && (
-                <Input
-                  type="date"
-                  value={editExpiresAt}
-                  onChange={(e) => setEditExpiresAt(e.target.value)}
-                  className="h-9 text-xs bg-white"
-                />
-              )}
 
               <div className="flex items-center justify-between pt-1">
                 <div>

@@ -17,7 +17,6 @@ import {
   Sparkles,
   FileText,
   Loader2,
-  Calendar,
   Eye,
   Lock,
   AlertCircle,
@@ -51,8 +50,6 @@ export const AddDocumentModal: React.FC<AddDocumentModalProps> = ({
   onSuccess,
 }) => {
   const [title, setTitle] = useState<string>('')
-  const [expiresAt, setExpiresAt] = useState<string>('')
-  const [hasExpiration, setHasExpiration] = useState<boolean>(false)
   const [isSharedWithFamily, setIsSharedWithFamily] = useState<boolean>(true)
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
@@ -69,8 +66,6 @@ export const AddDocumentModal: React.FC<AddDocumentModalProps> = ({
   React.useEffect(() => {
     if (open) {
       setTitle('')
-      setExpiresAt('')
-      setHasExpiration(false)
       setIsSharedWithFamily(true)
       setFile(null)
       setLoading(false)
@@ -148,7 +143,7 @@ export const AddDocumentModal: React.FC<AddDocumentModalProps> = ({
         mimeType: file.type || 'application/octet-stream',
         title: title.trim(),
         category: defaultCategory || 'outros',
-        expiresAt: hasExpiration && expiresAt ? expiresAt : null,
+        expiresAt: null,
         isSharedWithFamily,
         uploadedByName,
       })
@@ -318,40 +313,6 @@ export const AddDocumentModal: React.FC<AddDocumentModalProps> = ({
                 className="h-10 text-xs rounded-xl border-slate-200"
                 required
               />
-            </div>
-
-            {/* Data opcional de Validade */}
-            <div className="space-y-2 p-3 rounded-2xl bg-[#F8F9FB] border border-[rgba(20,33,61,0.06)]">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-[#64748B]" />
-                  <div>
-                    <p className="text-xs font-semibold text-[#14213D]">Data de Validade</p>
-                    <p className="text-[10px] text-[#64748B]">
-                      Avisa na lista quando estiver perto de vencer
-                    </p>
-                  </div>
-                </div>
-                <Switch
-                  checked={hasExpiration}
-                  onCheckedChange={(checked) => {
-                    setHasExpiration(checked)
-                    if (!checked) setExpiresAt('')
-                  }}
-                />
-              </div>
-
-              {hasExpiration && (
-                <div className="pt-2">
-                  <Input
-                    type="date"
-                    value={expiresAt}
-                    onChange={(e) => setExpiresAt(e.target.value)}
-                    className="h-9 text-xs rounded-xl bg-white border-slate-200"
-                    required={hasExpiration}
-                  />
-                </div>
-              )}
             </div>
 
             {/* Visibilidade na família */}

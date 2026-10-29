@@ -43,13 +43,16 @@ describe('AddDocumentModal', () => {
     expect(screen.queryByText('Convênios e prontuários')).toBeNull()
     expect(screen.queryByText('Diversos e profissionais')).toBeNull()
 
+    // O bloco de Data de Validade também não deve existir no DOM
+    expect(screen.queryByText('Data de Validade')).toBeNull()
+    expect(screen.queryByText('Avisa na lista quando estiver perto de vencer')).toBeNull()
+
     // Mas os outros elementos continuam presentes
     expect(screen.getByText('Como deseja adicionar?')).toBeDefined()
     expect(screen.getByText('Tirar Foto')).toBeDefined()
     expect(screen.getByText('Importar')).toBeDefined()
     expect(screen.getByText('Escanear')).toBeDefined()
     expect(screen.getByLabelText(/Nome do documento/i)).toBeDefined()
-    expect(screen.getByText('Data de Validade')).toBeDefined()
     expect(screen.getByText('Compartilhado com a família')).toBeDefined()
   })
 
