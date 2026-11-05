@@ -150,9 +150,18 @@
     --success: 160 84% 36%;
     --success-foreground: 0 0% 100%;
 
-    --border: 221 35% 24%;
+    /* CDS v2.0: no dark, a semântica financeira e o âmbar (--accent-brand)
+       seguem IGUAIS ao modo claro — o erro continua separado da despesa. */
+    --income: 160 84% 31%; /* #059669 — igual ao claro */
+    --expense: 342 76% 49%; /* #E11D48 — igual ao claro */
+    --error: 0 72% 51%; /* #DC2626 — igual ao claro */
+
+    --border: 218 35% 24%; /* CDS v2.0 */
     --input: 221 35% 24%;
-    --ring: 37 97% 53%;
+
+    /* CDS v2.0: foco precisa ser visível sobre fundo escuro. */
+    --ring: 0 0% 100%;
+    --ring-accent: 38 98% 53%;
 
     --sidebar-background: 221 51% 12%;
     --sidebar-foreground: 0 0% 98%;
@@ -163,11 +172,14 @@
     --sidebar-border: 221 35% 24%;
     --sidebar-ring: 37 97% 53%;
 
-    --chart-1: 37 97% 53%;
+    /* ── CDS v2.0 · Charts no dark: a paleta é a MESMA do claro (6 séries),
+       com chart-2 (navy) clareado para contraste sobre fundo escuro. */
+    --chart-1: 38 98% 53%;
     --chart-2: 221 51% 60%;
-    --chart-3: 160 70% 45%;
+    --chart-3: 160 84% 31%;
     --chart-4: 0 74% 54%;
     --chart-5: 221 30% 75%;
+    --chart-6: 38 60% 72%;
   }
 
   /* Garantia estrutural GLOBAL: impede rolagem horizontal em qualquer tela do app e fixa visual claro */
