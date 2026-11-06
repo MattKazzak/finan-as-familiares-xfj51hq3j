@@ -23,6 +23,8 @@ import {
 } from 'lucide-react'
 import { InstallPwaBanner } from '@/components/common/InstallPwaBanner'
 // Logo oficial do login (nova logo 2026: pássaro + wordmark em navy #14213D).
+// Fundo branco da imagem anulável por CSS (multiply some com o fundo claro
+// #F8F9FB da página) — equivalente visual a um PNG alpha, sem asset binário.
 // Arquivo de imagem integral enviado pelo dono — NÃO recriar nem trocar por SVG.
 import curiangooLoginLogo from '@/assets/imagemgerada1793989752917-c429b.png'
 
@@ -347,7 +349,7 @@ export default function Login() {
             <img
               src={curiangooLoginLogo}
               alt="Curiangoo"
-              className="w-[200px] h-auto select-none pointer-events-none drop-shadow-sm"
+              className="w-[200px] h-auto select-none pointer-events-none mix-blend-multiply"
               draggable={false}
             />
           </div>
