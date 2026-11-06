@@ -128,7 +128,7 @@ export function CategoryTransactionsDrawer({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[88vh] flex flex-col bg-card/95 backdrop-blur-sm border-t border-border/40 shadow-curiango">
+      <DrawerContent className="max-h-[88vh] flex flex-col bg-card/95 backdrop-blur-sm border-t border-border/40 shadow-cds">
         <DrawerHeader className="text-left border-b border-border/40 pb-3">
           <div className="flex items-center gap-3">
             {category && (
@@ -141,7 +141,7 @@ export function CategoryTransactionsDrawer({
               />
             )}
             <div className="min-w-0 flex-1">
-              <DrawerTitle className="text-base sm:text-lg font-semibold text-[#14213D] dark:text-white truncate flex items-center gap-2">
+              <DrawerTitle className="text-base sm:text-lg font-semibold text-ink dark:text-white truncate flex items-center gap-2">
                 <span>{getTitle()}</span>
                 {filterType === 'direct' && (
                   <Badge
@@ -165,7 +165,7 @@ export function CategoryTransactionsDrawer({
               <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 mx-auto mb-2 flex items-center justify-center">
                 <AlertCircle className="w-5 h-5 stroke-[1.5]" />
               </div>
-              <p className="text-sm font-semibold text-[#14213D] dark:text-white">
+              <p className="text-sm font-semibold text-ink dark:text-white">
                 Nenhuma transação encontrada
               </p>
               <p className="text-xs text-muted-foreground mt-1">
@@ -190,7 +190,7 @@ export function CategoryTransactionsDrawer({
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start gap-1.5 flex-wrap">
-                          <p className="font-medium text-xs sm:text-sm text-[#14213D] dark:text-white break-words leading-tight">
+                          <p className="font-medium text-xs sm:text-sm text-ink dark:text-white break-words leading-tight">
                             {formatTransactionTitle(tx)}
                           </p>
                         </div>
@@ -201,7 +201,7 @@ export function CategoryTransactionsDrawer({
                           </span>
                           {tx.member && <span className="shrink-0">• {tx.member.name}</span>}
                           {currentSubcat && (
-                            <span className="inline-flex items-center gap-1 text-[#14213D] dark:text-slate-200 font-medium shrink-0">
+                            <span className="inline-flex items-center gap-1 text-ink dark:text-slate-200 font-medium shrink-0">
                               <Tag className="w-3 h-3 text-muted-foreground" strokeWidth={1.5} />
                               {currentSubcat.name}
                             </span>
@@ -213,17 +213,17 @@ export function CategoryTransactionsDrawer({
                     <div className="text-right shrink-0">
                       <span
                         className={`font-semibold tracking-tight text-xs sm:text-sm md:text-base tabular-nums flex items-center justify-end gap-0.5 ${
-                          tx.type === 'expense' ? 'text-[#E11D48]' : 'text-[#059669]'
+                          tx.type === 'expense' ? 'text-expense' : 'text-income'
                         }`}
                       >
                         {tx.type === 'expense' ? (
                           <ArrowDownRight
-                            className="w-3.5 h-3.5 text-[#E11D48] inline"
+                            className="w-3.5 h-3.5 text-expense inline"
                             strokeWidth={1.5}
                           />
                         ) : (
                           <ArrowUpRight
-                            className="w-3.5 h-3.5 text-[#059669] inline"
+                            className="w-3.5 h-3.5 text-income inline"
                             strokeWidth={1.5}
                           />
                         )}
@@ -250,7 +250,7 @@ export function CategoryTransactionsDrawer({
                               onClick={() => handleSubcategoryChange(tx, subcat.id)}
                               className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs transition-all border ${
                                 isSelected
-                                  ? 'bg-[#14213D] text-white border-[#14213D] font-medium shadow-xs'
+                                  ? 'bg-ink text-white border-ink font-medium shadow-xs'
                                   : 'bg-slate-100/70 hover:bg-slate-200/80 text-slate-700 dark:text-slate-300 border-border/40'
                               } ${isUpdating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-95'}`}
                             >
@@ -264,7 +264,7 @@ export function CategoryTransactionsDrawer({
                             type="button"
                             disabled={isUpdating}
                             onClick={() => handleSubcategoryChange(tx, null)}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xl text-xs text-[#E11D48] hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xl text-xs text-expense hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 transition-colors cursor-pointer"
                           >
                             Limpar
                           </button>

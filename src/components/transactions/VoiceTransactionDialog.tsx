@@ -3384,7 +3384,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             {(isTranscribingAudio || isProcessingAi) && !isListening && (
               <div className="mb-2 flex items-center gap-2 text-xs text-slate-600 px-1">
                 <span className="w-2 h-2 rounded-full bg-brand-amber animate-pulse shrink-0" />
-                <span className="font-medium text-[11px] text-[#14213D]">
+                <span className="font-medium text-[11px] text-ink">
                   {isTranscribingAudio ? 'Transcrevendo áudio' : 'Processando com IA'}
                 </span>
               </div>
@@ -3401,7 +3401,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 <div className="flex items-center gap-2 shrink-0">
                   <span
                     data-testid="recording-elapsed-time"
-                    className="font-mono text-xs font-semibold text-[#14213D] tracking-tight tabular-nums"
+                    className="font-mono text-xs font-semibold text-ink tracking-tight tabular-nums"
                   >
                     {Math.floor(recordingElapsedSeconds / 60)
                       .toString()
@@ -3433,7 +3433,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                     return (
                       <span
                         key={bIdx}
-                        className="w-1 bg-[#FCA311] rounded-full transition-[height] duration-150 ease-out"
+                        className="w-1 bg-action rounded-full transition-[height] duration-150 ease-out"
                         style={{ height: `${barHeightPx}px` }}
                       />
                     )
@@ -3445,7 +3445,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                   <button
                     type="button"
                     onClick={handleCancelRecording}
-                    className="px-2 py-1.5 text-xs font-medium text-[#64748B] hover:text-[#14213D] transition-colors cursor-pointer"
+                    className="px-2 py-1.5 text-xs font-medium text-body2 hover:text-ink transition-colors cursor-pointer"
                     aria-label="Cancelar gravação"
                   >
                     Cancelar
@@ -3454,11 +3454,11 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                   <button
                     type="button"
                     onClick={handleStopRecordingAndProcess}
-                    className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-[#14213D] flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 group"
+                    className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-ink flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 group"
                     aria-label="Parar gravação e processar"
                     title="Parar gravação"
                   >
-                    <Square className="w-4 h-4 fill-[#14213D] text-[#14213D] rounded-xs group-hover:scale-105 transition-transform" />
+                    <Square className="w-4 h-4 fill-ink text-ink rounded-xs group-hover:scale-105 transition-transform" />
                   </button>
                 </div>
               </div>
@@ -3473,7 +3473,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                   onChange={(e) => setInputVal(e.target.value)}
                   placeholder="Mensagem ou fale..."
                   disabled={isProcessingAi || isTranscribingAudio}
-                  className="w-full rounded-2xl h-11 text-xs sm:text-sm bg-slate-50 border-border/60 text-[#14213D] placeholder:text-muted-foreground focus:bg-white focus:border-brand-amber focus:ring-1 focus:ring-brand-amber transition-colors min-w-0 pr-20"
+                  className="w-full rounded-2xl h-11 text-xs sm:text-sm bg-slate-50 border-border/60 text-ink placeholder:text-muted-foreground focus:bg-white focus:border-brand-amber focus:ring-1 focus:ring-brand-amber transition-colors min-w-0 pr-20"
                 />
 
                 <div className="absolute right-1.5 flex items-center gap-1">
@@ -3492,7 +3492,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                     title="Falar comando por voz"
                     className="w-8 h-8 rounded-xl text-slate-600 hover:text-brand hover:bg-slate-200/60 flex items-center justify-center transition-all cursor-pointer disabled:opacity-40"
                   >
-                    <Mic className="w-4 h-4 text-[#14213D]" strokeWidth={1.5} />
+                    <Mic className="w-4 h-4 text-ink" strokeWidth={1.5} />
                   </button>
 
                   {/* Botão Enviar com ícone Send */}
@@ -3502,7 +3502,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                     aria-label="Enviar mensagem"
                     className="w-8 h-8 rounded-xl bg-brand text-white hover:bg-brand-light disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all cursor-pointer shrink-0"
                   >
-                    <Send className="w-3.5 h-3.5 text-[#FCA311]" strokeWidth={1.5} />
+                    <Send className="w-3.5 h-3.5 text-action" strokeWidth={1.5} />
                   </button>
                 </div>
               </form>

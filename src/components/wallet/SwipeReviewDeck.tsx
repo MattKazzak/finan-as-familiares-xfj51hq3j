@@ -307,7 +307,7 @@ export function SwipeReviewDeck() {
             </div>
             <span
               className={`font-bold text-sm tabular-nums shrink-0 ${
-                isIncome ? 'text-[#059669]' : 'text-[#E11D48]'
+                isIncome ? 'text-income' : 'text-expense'
               }`}
             >
               {isIncome ? '+' : '−'} {formatBRL(current.amount_cents)}
@@ -317,13 +317,13 @@ export function SwipeReviewDeck() {
           {/* Indicadores de swipe */}
           <div className="mt-3 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
             <span
-              className="text-[#E11D48] transition-opacity"
+              className="text-expense transition-opacity"
               style={{ opacity: dragX < -30 ? 1 : 0.25 }}
             >
               ← trocar
             </span>
             <span
-              className="text-[#059669] transition-opacity"
+              className="text-income transition-opacity"
               style={{ opacity: dragX > 30 ? 1 : 0.25 }}
             >
               aceitar →
@@ -439,7 +439,7 @@ export function SwipeReviewDeck() {
             size="sm"
             onClick={() => setPickerOpen(true)}
             disabled={saving}
-            className="rounded-xl text-xs font-bold h-9 flex-1 gap-1.5 border-[#E11D48]/30 text-[#E11D48] hover:bg-rose-50"
+            className="rounded-xl text-xs font-bold h-9 flex-1 gap-1.5 border-expense/30 text-expense hover:bg-rose-50"
           >
             <ArrowLeftRight className="w-3.5 h-3.5" />
             <span>Trocar</span>
@@ -449,7 +449,7 @@ export function SwipeReviewDeck() {
             size="sm"
             onClick={accept}
             disabled={saving || !suggestion?.categoryId}
-            className="rounded-xl text-xs font-bold h-9 flex-1 gap-1.5 bg-[#059669] hover:bg-[#047857] text-white border-0"
+            className="rounded-xl text-xs font-bold h-9 flex-1 gap-1.5 bg-income hover:bg-emerald-700 text-white border-0"
           >
             {saving ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />

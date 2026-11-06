@@ -273,7 +273,7 @@ export function WalletProjectionTab() {
   return (
     <div className="space-y-4 pb-2">
       {/* MÊS ABERTO: o número grande é do MÊS, não do ano */}
-      <div className="rounded-3xl bg-[#14213D] text-white p-5 shadow-curiango">
+      <div className="rounded-3xl bg-ink text-[color:var(--text-inverse)] p-5 shadow-cds">
         <div className="flex items-center justify-between">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-white/60">
             {isPassado ? 'Já foi' : isMesAtual ? 'Ainda vai sair este mês' : 'Comprometido em'}
@@ -314,7 +314,7 @@ export function WalletProjectionTab() {
         <div className="rounded-2xl border-l-[3px] border-l-amber-500 bg-amber-50/70 p-3.5 flex gap-2.5">
           <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" strokeWidth={2} />
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-[#14213D] leading-snug">
+            <p className="text-xs font-semibold text-ink leading-snug">
               Este mês o saldo fica negativo
             </p>
             <p className="text-[11px] text-slate-600 leading-snug mt-0.5">
@@ -326,7 +326,7 @@ export function WalletProjectionTab() {
               <button
                 type="button"
                 onClick={() => setAcaoAberta(true)}
-                className="mt-2.5 inline-flex items-center gap-1.5 rounded-xl bg-[#14213D] text-white text-[11px] font-semibold px-3 py-2 active:scale-95 transition-transform cursor-pointer"
+                className="mt-2.5 inline-flex items-center gap-1.5 rounded-xl bg-ink text-white text-[11px] font-semibold px-3 py-2 active:scale-95 transition-transform cursor-pointer"
               >
                 <Target className="w-3 h-3" strokeWidth={2} />
                 Definir quanto guardar por mês
@@ -335,7 +335,7 @@ export function WalletProjectionTab() {
 
             {metaFoco && acaoAberta && (
               <div className="mt-2.5 rounded-xl bg-white border border-slate-200 p-2.5">
-                <label className="block text-[10px] font-semibold text-[#14213D] mb-1">
+                <label className="block text-[10px] font-semibold text-ink mb-1">
                   Quanto quero guardar por mês em “{metaFoco.name}”
                 </label>
                 <div className="flex items-center gap-1.5">
@@ -345,12 +345,12 @@ export function WalletProjectionTab() {
                     value={valorAporte}
                     onChange={(e) => setValorAporte(e.target.value)}
                     placeholder="200,00"
-                    className="flex-1 min-w-0 text-[12px] px-2 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#FCA311]"
+                    className="flex-1 min-w-0 text-[12px] px-2 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-action"
                   />
                   <button
                     type="button"
                     onClick={salvarAporte}
-                    className="rounded-lg bg-[#FCA311] text-[#14213D] text-[11px] font-bold px-2.5 py-1.5 active:scale-95 transition-transform cursor-pointer"
+                    className="rounded-lg bg-action text-white text-[11px] font-bold px-2.5 py-1.5 active:scale-95 transition-transform cursor-pointer"
                   >
                     Guardar
                   </button>
@@ -364,7 +364,7 @@ export function WalletProjectionTab() {
       {/* A LISTA — o coração da aba (padrão Monarch "Upcoming") */}
       <div className="rounded-3xl border border-slate-200/80 bg-white overflow-hidden">
         <div className="px-4 pt-4 pb-2 flex items-center justify-between">
-          <h3 className="text-xs font-bold text-[#14213D]">O que já tem dono</h3>
+          <h3 className="text-xs font-bold text-ink">O que já tem dono</h3>
           <span className="text-[10px] font-semibold text-slate-400">
             {monthLabelOf(activeMonth)}
           </span>
@@ -389,7 +389,7 @@ export function WalletProjectionTab() {
                     <Icon className="w-4 h-4 text-slate-500" strokeWidth={1.8} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[12px] font-semibold text-[#14213D] truncate leading-tight">
+                    <p className="text-[12px] font-semibold text-ink truncate leading-tight">
                       {it.nome}
                     </p>
                     <p className="text-[10px] text-slate-500 leading-tight mt-0.5">
@@ -397,7 +397,7 @@ export function WalletProjectionTab() {
                       {it.detalhe}
                     </p>
                   </div>
-                  <span className="text-[12px] font-bold text-[#14213D] shrink-0 tabular-nums">
+                  <span className="text-[12px] font-bold text-ink shrink-0 tabular-nums">
                     {fmt(it.valorCents)}
                   </span>
                 </li>
@@ -409,7 +409,7 @@ export function WalletProjectionTab() {
         {itens.length > 0 && (
           <div className="px-4 py-3 bg-slate-50/70 flex items-center justify-between">
             <span className="text-[11px] font-semibold text-slate-600">Total do mês</span>
-            <span className="text-[13px] font-extrabold text-[#14213D] tabular-nums">
+            <span className="text-[13px] font-extrabold text-ink tabular-nums">
               {fmt(totalMes)}
             </span>
           </div>
@@ -428,14 +428,14 @@ export function WalletProjectionTab() {
         <Info className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" strokeWidth={1.8} />
         <div className="min-w-0">
           <p className="text-[11px] text-slate-600 leading-snug">
-            <span className="font-semibold text-[#14213D]">Como isso funciona:</span> eu listo o que
-            você já lançou — contas fixas, parcelas e metas — mês a mês. Não é adivinhação: é o seu
+            <span className="font-semibold text-ink">Como isso funciona:</span> eu listo o que você
+            já lançou — contas fixas, parcelas e metas — mês a mês. Não é adivinhação: é o seu
             próprio dinheiro já prometido.
           </p>
           <button
             type="button"
             onClick={() => navigate('/copilot')}
-            className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#14213D] hover:text-[#FCA311] transition-colors cursor-pointer"
+            className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-ink hover:text-action transition-colors cursor-pointer"
           >
             <Sparkles className="w-3 h-3" strokeWidth={2} />
             Perguntar ao Curiango
@@ -453,7 +453,7 @@ export function WalletProjectionTab() {
           )}
           <p className="text-[11px] text-slate-600 leading-snug">
             Sobrando ou faltando, seu saldo previsto no fim deste mês:{' '}
-            <span className="font-bold text-[#14213D]">{fmt(mesProjection.saldoCents)}</span>
+            <span className="font-bold text-ink">{fmt(mesProjection.saldoCents)}</span>
           </p>
         </div>
       )}

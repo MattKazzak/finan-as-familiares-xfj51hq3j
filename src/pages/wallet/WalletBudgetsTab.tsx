@@ -152,7 +152,7 @@ export function WalletBudgetsTab() {
         onOpenModelDialog={() => setIsApplyModelOpen(true)}
       />
       {/* Lista de Orçamentos com Hierarquia Categoria Pai -> Subcategorias e Gestão Inline com Ícones */}
-      <div className="bg-white/95 backdrop-blur-sm rounded-3xl border border-[rgba(20,33,61,0.06)] p-6 sm:p-7 shadow-elevation-1 space-y-4">
+      <div className="bg-white/95 backdrop-blur-sm rounded-3xl border border-line p-6 sm:p-7 shadow-elevation-1 space-y-4">
         <div>
           <h3 className="font-semibold text-base text-foreground dark:text-white">
             Categorias e Subcategorias

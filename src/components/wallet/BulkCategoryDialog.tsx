@@ -108,7 +108,7 @@ export function BulkCategoryDialog() {
 
   return (
     <Dialog open={bulkCategoryDialogOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-md w-[95vw] rounded-3xl p-5 bg-card/95 backdrop-blur-sm border border-border/40 shadow-curiango">
+      <DialogContent className="max-w-md w-[95vw] rounded-3xl p-5 bg-card/95 backdrop-blur-sm border border-border/40 shadow-cds">
         <DialogHeader className="text-left">
           <DialogTitle className="flex items-center gap-2 text-base">
             <Layers className="w-4 h-4 text-violet-600" />

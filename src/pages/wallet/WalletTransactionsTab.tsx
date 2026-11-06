@@ -76,14 +76,14 @@ export function WalletTransactionsTab() {
     <div className="space-y-6 sm:space-y-7 mt-0 animate-in fade-in-50 duration-200 min-w-0">
       {/* 1. VISÃO DE RESUMO PÓS-IMPORTAÇÃO & SEÇÃO DE REVISÃO DE PENDENTES (Com Barra de Progresso) */}
       {lastImportSummary ? (
-        <div className="rounded-3xl border border-[rgba(20,33,61,0.06)] bg-white/95 backdrop-blur-sm p-5 sm:p-6 shadow-elevation-1 space-y-3 animate-in fade-in-50 duration-200">
+        <div className="rounded-3xl border border-line bg-white/95 backdrop-blur-sm p-5 sm:p-6 shadow-elevation-1 space-y-3 animate-in fade-in-50 duration-200">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0 font-semibold text-base">
                 {lastImportSummary.pending === 0 ? '✓' : '↓'}
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold text-sm sm:text-base text-[#14213D] dark:text-white leading-tight">
+                <h4 className="font-semibold text-sm sm:text-base text-ink dark:text-white leading-tight">
                   {lastImportSummary.pending === 0 ? (
                     'Tudo categorizado!'
                   ) : (
@@ -110,7 +110,7 @@ export function WalletTransactionsTab() {
                   className={`text-xs font-semibold rounded-xl shadow-xs transition-all gap-1.5 ${
                     filterOnlyPending
                       ? 'bg-amber-600 hover:bg-amber-700 text-white'
-                      : 'bg-[#059669] hover:bg-[#047857] text-white'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
                   }`}
                 >
                   <Sparkles className="w-3.5 h-3.5" />
@@ -121,7 +121,7 @@ export function WalletTransactionsTab() {
                   </span>
                 </Button>
               ) : (
-                <span className="text-xs font-semibold text-[#059669] bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 px-2.5 py-1 rounded-xl">
+                <span className="text-xs font-semibold text-income bg-income-subtle dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 px-2.5 py-1 rounded-xl">
                   100% revisado
                 </span>
               )}
@@ -142,7 +142,7 @@ export function WalletTransactionsTab() {
             <div className="space-y-1.5 pt-1">
               <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700 dark:text-slate-300">
                 <span>Progresso da categorização</span>
-                <span className="tabular-nums text-[#059669]">
+                <span className="tabular-nums text-income">
                   {lastImportSummary.categorized} de {lastImportSummary.total} revisadas (
                   {Math.round((lastImportSummary.categorized / lastImportSummary.total) * 100)}
                   %)
@@ -150,7 +150,7 @@ export function WalletTransactionsTab() {
               </div>
               <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-[#059669] rounded-full transition-all duration-500 ease-out"
+                  className="h-full bg-emerald-600 rounded-full transition-all duration-500 ease-out"
                   style={{
                     width: `${Math.min(
                       100,
@@ -164,13 +164,13 @@ export function WalletTransactionsTab() {
         </div>
       ) : filterOnlyPending && pendingTransactionsCount === 0 ? (
         /* Estado de Sucesso quando o usuário estava filtrando pendentes e terminou todas */
-        <div className="rounded-3xl border border-border/40 bg-card/90 backdrop-blur-sm p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-curiango animate-in fade-in-50">
+        <div className="rounded-3xl border border-border/40 bg-card/90 backdrop-blur-sm p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-cds animate-in fade-in-50">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center font-semibold text-base shrink-0">
               ✓
             </div>
             <div>
-              <h4 className="font-semibold text-sm sm:text-base text-[#14213D] dark:text-white">
+              <h4 className="font-semibold text-sm sm:text-base text-ink dark:text-white">
                 Tudo categorizado!
               </h4>
               <p className="text-xs text-muted-foreground">
@@ -181,7 +181,7 @@ export function WalletTransactionsTab() {
           <Button
             size="sm"
             onClick={() => setFilterOnlyPending(false)}
-            className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] text-xs rounded-xl font-semibold border-0"
+            className="bg-action hover:bg-action-hover text-white text-xs rounded-xl font-semibold border-0"
           >
             Ver todas as transações
           </Button>
@@ -193,7 +193,7 @@ export function WalletTransactionsTab() {
 
       {/* ===== Barra de seleção (bulk edit P1 — padrão Monarch) ===== */}
       {selectionMode ? (
-        <div className="rounded-3xl border-2 border-violet-300 bg-violet-50/80 backdrop-blur-sm p-3.5 flex items-center justify-between gap-3 shadow-curiango sticky top-14 z-10">
+        <div className="rounded-3xl border-2 border-violet-300 bg-violet-50/80 backdrop-blur-sm p-3.5 flex items-center justify-between gap-3 shadow-cds sticky top-14 z-10">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-9 h-9 rounded-xl bg-violet-600 text-white flex items-center justify-center shrink-0 font-bold text-sm">
               {selectedTxIds.size}
@@ -237,34 +237,34 @@ export function WalletTransactionsTab() {
 
       {/* Summary Strip (3 Mini Cards com elevação e respiro) */}
       <div className="grid grid-cols-3 gap-3 sm:gap-4">
-        <div className="bg-white/95 backdrop-blur-sm p-3.5 sm:p-4 rounded-2xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 flex flex-col justify-between">
-          <div className="flex items-center gap-1.5 text-[#059669] text-[11px] font-semibold uppercase tracking-wider">
+        <div className="bg-white/95 backdrop-blur-sm p-3.5 sm:p-4 rounded-2xl border border-line shadow-elevation-1 flex flex-col justify-between">
+          <div className="flex items-center gap-1.5 text-income text-[11px] font-semibold uppercase tracking-wider">
             <ArrowUpRight className="w-3.5 h-3.5" strokeWidth={1.5} />
             <span>Receitas</span>
           </div>
-          <span className="text-sm sm:text-lg font-semibold tracking-tight text-[#059669] tabular-nums mt-1 truncate">
+          <span className="text-sm sm:text-lg font-semibold tracking-tight text-income tabular-nums mt-1 truncate">
             {formatBRL(monthIncomeCents)}
           </span>
         </div>
 
-        <div className="bg-white/95 backdrop-blur-sm p-3.5 sm:p-4 rounded-2xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 flex flex-col justify-between">
-          <div className="flex items-center gap-1.5 text-[#E11D48] text-[11px] font-semibold uppercase tracking-wider">
+        <div className="bg-white/95 backdrop-blur-sm p-3.5 sm:p-4 rounded-2xl border border-line shadow-elevation-1 flex flex-col justify-between">
+          <div className="flex items-center gap-1.5 text-expense text-[11px] font-semibold uppercase tracking-wider">
             <ArrowDownRight className="w-3.5 h-3.5" strokeWidth={1.5} />
             <span>Despesas</span>
           </div>
-          <span className="text-sm sm:text-lg font-semibold tracking-tight text-[#E11D48] tabular-nums mt-1 truncate">
+          <span className="text-sm sm:text-lg font-semibold tracking-tight text-expense tabular-nums mt-1 truncate">
             {formatBRL(monthExpenseCents)}
           </span>
         </div>
 
-        <div className="bg-white/95 backdrop-blur-sm p-3.5 sm:p-4 rounded-2xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 flex flex-col justify-between">
+        <div className="bg-white/95 backdrop-blur-sm p-3.5 sm:p-4 rounded-2xl border border-line shadow-elevation-1 flex flex-col justify-between">
           <div className="flex items-center gap-1.5 text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
             <Scale className="w-3.5 h-3.5" strokeWidth={1.5} />
             <span>Saldo Mês</span>
           </div>
           <span
             className={`text-sm sm:text-lg font-semibold tracking-tight tabular-nums mt-1 truncate ${
-              monthNetCents >= 0 ? 'text-[#059669]' : 'text-[#E11D48]'
+              monthNetCents >= 0 ? 'text-income' : 'text-expense'
             }`}
           >
             {formatBRL(monthNetCents)}
@@ -280,15 +280,13 @@ export function WalletTransactionsTab() {
             size="sm"
             onClick={() => setIsFilterSheetOpen(true)}
             className={`rounded-xl text-xs font-semibold gap-1.5 h-8 ${
-              activeFiltersCount > 0
-                ? 'border-[#FCA311] bg-[#FCA311]/15 text-[#14213D]'
-                : 'text-slate-600'
+              activeFiltersCount > 0 ? 'border-action bg-action/15 text-ink' : 'text-slate-600'
             }`}
           >
             <Filter className="w-3.5 h-3.5" />
             <span>Filtrar</span>
             {activeFiltersCount > 0 && (
-              <span className="w-4 h-4 rounded-full bg-[#14213D] text-white text-[10px] flex items-center justify-center font-bold">
+              <span className="w-4 h-4 rounded-full bg-ink text-white text-[10px] flex items-center justify-center font-bold">
                 {activeFiltersCount}
               </span>
             )}
@@ -350,11 +348,11 @@ export function WalletTransactionsTab() {
           Carregando transações...
         </div>
       ) : groupedTransactions.length === 0 ? (
-        <div className="bg-white/95 backdrop-blur-sm rounded-3xl p-10 text-center border border-[rgba(20,33,61,0.06)] shadow-elevation-1">
+        <div className="bg-white/95 backdrop-blur-sm rounded-3xl p-10 text-center border border-line shadow-elevation-1">
           <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 mx-auto flex items-center justify-center shrink-0 mb-2">
             <CategoryIcon name="Tag" className="w-4 h-4" strokeWidth={1.5} />
           </div>
-          <p className="font-semibold text-[#14213D] dark:text-white text-sm">
+          <p className="font-semibold text-ink dark:text-white text-sm">
             Nenhuma transação encontrada
           </p>
           <p className="text-xs text-muted-foreground mt-1 mb-4">
@@ -366,14 +364,14 @@ export function WalletTransactionsTab() {
             <Button
               onClick={openImportStatement}
               variant="outline"
-              className="border-border text-[#14213D] hover:bg-slate-100 text-xs rounded-xl"
+              className="border-border text-ink hover:bg-slate-100 text-xs rounded-xl"
             >
-              <UploadCloud className="w-4 h-4 mr-1.5 text-[#14213D]" />
+              <UploadCloud className="w-4 h-4 mr-1.5 text-ink" />
               Importar Extrato (OFX)
             </Button>
             <Button
               onClick={() => openNewTransaction('income')}
-              className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] text-xs rounded-xl font-semibold border-0"
+              className="bg-action hover:bg-action-hover text-white text-xs rounded-xl font-semibold border-0"
             >
               <Plus className="w-4 h-4 mr-1.5 stroke-[2]" />
               Adicionar primeira transação
@@ -385,11 +383,11 @@ export function WalletTransactionsTab() {
           {groupedTransactions.map(([dateKey, dayTxs]) => (
             <div
               key={dateKey}
-              className="bg-card/90 backdrop-blur-sm rounded-3xl border border-border/40 shadow-curiango overflow-hidden"
+              className="bg-card/90 backdrop-blur-sm rounded-3xl border border-border/40 shadow-cds overflow-hidden"
             >
               {/* Cabeçalho do dia */}
               <div className="bg-slate-50/80 dark:bg-slate-800/60 px-4 py-2 border-b border-border/40 flex items-center justify-between">
-                <span className="font-semibold text-xs text-[#14213D] dark:text-white">
+                <span className="font-semibold text-xs text-ink dark:text-white">
                   {formatDayGroupHeader(dateKey)}
                 </span>
                 <span className="text-[11px] text-muted-foreground">
@@ -479,10 +477,8 @@ export function WalletTransactionsTab() {
                         <div className="overflow-hidden pr-2">
                           <div className="flex items-center gap-1.5 overflow-hidden flex-wrap">
                             <p
-                              className={`font-medium text-xs sm:text-sm group-hover:text-[#14213D] dark:group-hover:text-white transition-colors truncate ${
-                                isProjected
-                                  ? 'text-muted-foreground'
-                                  : 'text-[#14213D] dark:text-white'
+                              className={`font-medium text-xs sm:text-sm group-hover:text-ink dark:group-hover:text-white transition-colors truncate ${
+                                isProjected ? 'text-muted-foreground' : 'text-ink dark:text-white'
                               }`}
                               title={formatTransactionTitle(tx)}
                             >
@@ -520,7 +516,7 @@ export function WalletTransactionsTab() {
                               <span className="text-xs text-muted-foreground truncate font-normal">
                                 <span>{tx.category.name}</span>
                                 {tx.subcategory && (
-                                  <span className="text-[#14213D] dark:text-slate-200 font-medium ml-1">
+                                  <span className="text-ink dark:text-slate-200 font-medium ml-1">
                                     · {tx.subcategory.name}
                                   </span>
                                 )}
@@ -538,10 +534,10 @@ export function WalletTransactionsTab() {
                         <span
                           className={`font-semibold tracking-tight text-xs sm:text-sm md:text-base tabular-nums ${
                             isIncome
-                              ? 'text-[#059669]'
+                              ? 'text-income'
                               : isProjected
                                 ? 'text-amber-800 border-b border-dashed border-amber-400'
-                                : 'text-[#E11D48]'
+                                : 'text-expense'
                           }`}
                         >
                           <span>
@@ -569,7 +565,7 @@ export function WalletTransactionsTab() {
                               e.stopPropagation()
                               setTxToDelete(tx)
                             }}
-                            className="p-1.5 text-slate-400 hover:text-[#E11D48] hover:bg-rose-50 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-expense hover:bg-rose-50 rounded-lg transition-colors"
                             title="Excluir"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -592,11 +588,11 @@ export function WalletTransactionsTab() {
                 size="sm"
                 onClick={loadMoreTransactions}
                 disabled={loadingMore}
-                className="rounded-full text-xs font-medium border-border/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-[#14213D] dark:text-slate-200 px-5 py-2 shadow-sm"
+                className="rounded-full text-xs font-medium border-border/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-ink dark:text-slate-200 px-5 py-2 shadow-sm"
               >
                 {loadingMore ? (
                   <span className="flex items-center gap-2">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#FCA311]" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-action" />
                     <span>Carregando mais lançamentos...</span>
                   </span>
                 ) : (

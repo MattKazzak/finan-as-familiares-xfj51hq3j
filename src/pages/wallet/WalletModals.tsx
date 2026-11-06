@@ -271,7 +271,7 @@ export function WalletModals() {
               <Button
                 type="submit"
                 disabled={savingBudget}
-                className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] rounded-xl text-xs font-bold border-0"
+                className="bg-action hover:bg-action-hover text-white rounded-xl text-xs font-bold border-0"
               >
                 {savingBudget ? (
                   <>
@@ -327,7 +327,7 @@ export function WalletModals() {
                   onClick={() => setFilterType(null)}
                   className={`py-2 text-xs font-bold rounded-xl border transition-all ${
                     filterType === null
-                      ? 'border-[#FCA311] bg-[#FCA311]/15 text-[#14213D]'
+                      ? 'border-action bg-action/15 text-ink'
                       : 'border-slate-200 text-slate-600'
                   }`}
                 >
@@ -378,7 +378,7 @@ export function WalletModals() {
                         }}
                         className={`text-xs px-3 py-1.5 rounded-xl border font-medium transition-all ${
                           isSelected
-                            ? 'bg-[#14213D] text-white border-[#14213D]'
+                            ? 'bg-ink text-white border-ink'
                             : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                         }`}
                       >
@@ -409,7 +409,7 @@ export function WalletModals() {
                       }}
                       className={`text-xs px-2.5 py-1.5 rounded-xl border font-medium transition-all flex items-center gap-1.5 ${
                         isSelected
-                          ? 'bg-[#14213D] text-white border-[#14213D]'
+                          ? 'bg-ink text-white border-ink'
                           : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                       }`}
                     >
@@ -439,7 +439,7 @@ export function WalletModals() {
               <Button
                 type="button"
                 onClick={() => setIsFilterSheetOpen(false)}
-                className="flex-1 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] rounded-xl text-xs font-bold border-0"
+                className="flex-1 bg-action hover:bg-action-hover text-white rounded-xl text-xs font-bold border-0"
               >
                 Ver Resultados
               </Button>
@@ -634,7 +634,7 @@ export function WalletModals() {
               <Button
                 type="submit"
                 disabled={savingNewSubcat || !newSubcatName.trim()}
-                className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] rounded-xl text-xs font-bold border-0"
+                className="bg-action hover:bg-action-hover text-white rounded-xl text-xs font-bold border-0"
               >
                 {savingNewSubcat ? 'Criando...' : 'Criar Subcategoria'}
               </Button>

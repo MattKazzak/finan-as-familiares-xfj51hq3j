@@ -1592,7 +1592,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           <DialogHeader className="shrink-0 px-3.5 sm:px-6 py-3 border-b border-slate-100 bg-white/95 backdrop-blur-md z-10">
             <div className="flex items-center justify-between gap-2 pr-7 sm:pr-8">
               <div className="flex items-center gap-2 min-w-0">
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#14213D] text-[#FCA311] flex items-center justify-center shrink-0 shadow-2xs">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-ink text-action flex items-center justify-center shrink-0 shadow-2xs">
                   <UploadCloud className="w-4.5 h-4.5 stroke-[1.8]" />
                 </div>
                 <div className="min-w-0">
@@ -1926,8 +1926,8 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 onClick={() => fileInputRef.current?.click()}
                 className={`border-2 border-dashed rounded-3xl p-8 sm:p-12 text-center cursor-pointer transition-all ${
                   parsing
-                    ? 'border-[#FCA311] bg-amber-50/40 cursor-wait'
-                    : 'border-slate-300 hover:border-[#FCA311] hover:bg-amber-50/30 bg-white'
+                    ? 'border-action bg-amber-50/40 cursor-wait'
+                    : 'border-slate-300 hover:border-action hover:bg-amber-50/30 bg-white'
                 }`}
               >
                 <input
@@ -1938,7 +1938,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                   className="hidden"
                 />
 
-                <div className="w-16 h-16 rounded-2xl bg-[#14213D] text-[#FCA311] flex items-center justify-center mx-auto mb-4 shadow-sm">
+                <div className="w-16 h-16 rounded-2xl bg-ink text-action flex items-center justify-center mx-auto mb-4 shadow-sm">
                   {parsing ? (
                     <Loader2 className="w-8 h-8 animate-spin" />
                   ) : (
@@ -1965,11 +1965,11 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                 {/* Badges de formatos — FIX 25/10: dois chips claros em vez de um
                     badge único verde confuso; cores da marca. */}
                 <div className="flex items-center justify-center gap-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-[#14213D] text-white shadow-sm px-3.5 py-1.5 rounded-xl">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-ink text-[color:var(--text-inverse)] shadow-sm px-3.5 py-1.5 rounded-xl">
                     <FileText className="w-3.5 h-3.5 stroke-[1.8]" />
                     <span>Extrato do banco · .ofx</span>
                   </span>
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-[#FCA311] text-[#14213D] shadow-sm px-3.5 py-1.5 rounded-xl">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-action text-white shadow-sm px-3.5 py-1.5 rounded-xl">
                     <FileText className="w-3.5 h-3.5 stroke-[1.8]" />
                     <span>Fatura do cartão · .pdf</span>
                   </span>
@@ -1977,9 +1977,9 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
               </div>
 
               {/* Box Informativo: Como funciona */}
-              <div className="rounded-2xl border border-[rgba(20,33,61,0.08)] bg-[#F8F9FB] p-4 sm:p-5 text-xs shadow-2xs">
+              <div className="rounded-2xl border border-line bg-bg p-4 sm:p-5 text-xs shadow-2xs">
                 <div className="flex items-start gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-[#FCA311]/15 text-[#B45309] flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                  <div className="w-8 h-8 rounded-xl bg-action/15 text-[#B45309] flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
                     <Sparkles className="w-4 h-4 stroke-[1.8]" />
                   </div>
                   <div className="min-w-0 flex-1 space-y-0.5">
