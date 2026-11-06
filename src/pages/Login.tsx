@@ -22,7 +22,9 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import { InstallPwaBanner } from '@/components/common/InstallPwaBanner'
-import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
+// Logo oficial do login (nova logo 2026: pássaro + wordmark em navy #14213D).
+// Arquivo de imagem integral enviado pelo dono — NÃO recriar nem trocar por SVG.
+import curiangooLoginLogo from '@/assets/imagemgerada1793989752917-c429b.png'
 
 type AuthMode = 'login' | 'signup' | 'forgot_password'
 type SignupStep = 'credentials' | 'profile'
@@ -335,26 +337,23 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-[#F8F9FB] flex flex-col justify-between items-center px-4 py-8 sm:py-12 selection:bg-[#FCA311]/20">
       <div className="w-full max-w-[420px] mx-auto my-auto flex flex-col items-center">
-        {/* Marca: pássaro GRANDE solto (sem quadrado) + wordmark — padrão Nubank/Monzo */}
+        {/* Marca: logo horizontal oficial (pássaro + wordmark "Curiangoo" em navy) */}
         <header className="flex flex-col items-center text-center mb-8 sm:mb-10 w-full">
           <div
             data-testid="brand-logo-container"
             aria-label="Curiangoo"
             className="mb-4 flex items-center justify-center"
           >
-            <CuriangoLogo
-              size={96}
-              color="#FCA311"
-              eyeColor="#14213D"
-              eyeRadius={3.4}
-              eyeHighlight
-              className="drop-shadow-sm"
+            <img
+              src={curiangooLoginLogo}
+              alt="Curiangoo"
+              className="w-[200px] h-auto select-none pointer-events-none drop-shadow-sm"
+              draggable={false}
             />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-[#14213D] tracking-tight">
-            Curiangoo{' '}
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-600 font-light mt-3 max-w-xs leading-relaxed">
+          {/* Wordmark vive dentro da própria imagem — h1 só para leitores de tela/semântica */}
+          <h1 className="sr-only">Curiangoo</h1>
+          <p className="text-xs sm:text-sm text-slate-600 font-light mt-1 max-w-xs leading-relaxed">
             {mode === 'login' &&
               'Acesse sua conta familiar para acompanhar despesas, receitas e investimentos.'}
             {mode === 'signup' &&
