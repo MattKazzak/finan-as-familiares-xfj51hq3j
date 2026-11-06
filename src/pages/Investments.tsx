@@ -281,22 +281,19 @@ export default function InvestmentsPage() {
 
         <Button
           onClick={openCreateDialog}
-          className="bg-brand-amber hover:bg-[#e08e08] text-brand font-bold text-xs rounded-xl shadow-sm gap-1.5 border-0"
+          className="bg-action hover:bg-action-hover text-white font-bold text-xs rounded-xl shadow-cds gap-1.5 border-0"
         >
           <Plus className="w-4 h-4 stroke-[2.5]" />
           <span>+ Adicionar Ativo</span>
         </Button>
       </div>
 
-      {/* 2. Resumo da Carteira no Topo — FIX AUDITORIA 24/10: com carteira
-          VAZIA os 3 cards de R$ 0,00 empilhados faziam o app parecer "vazio/
-          quebrado" antes do empty state. Resumo só existe quando há ativos;
-          usuário novo vê direto o convite educativo ("Adicionar primeiro ativo"). */}
+      {/* 2. Resumo da Carteira no Topo */}
       {investments.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Valor Total da Carteira - Hero Azul-Marinho #14213D */}
-          <div className="bg-gradient-to-br from-brand via-[#192a4f] to-brand-dark rounded-3xl p-6 text-white shadow-lg shadow-brand/20 border border-brand">
-            <span className="text-xs uppercase font-semibold tracking-wider text-brand-amber">
+          {/* Valor Total da Carteira - Hero Ink */}
+          <div className="bg-gradient-to-br from-ink via-ink/90 to-ink text-white rounded-3xl p-6 shadow-cds border border-line">
+            <span className="text-xs uppercase font-semibold tracking-wider text-action">
               Valor Total da Carteira
             </span>
             <div className="text-2xl sm:text-3xl font-semibold tabular-nums mt-1.5 text-white">
@@ -387,7 +384,7 @@ export default function InvestmentsPage() {
             </p>
             <Button
               onClick={openCreateDialog}
-              className="bg-brand-amber hover:bg-[#e08e08] text-brand text-xs font-bold rounded-xl shadow-sm"
+              className="bg-action hover:bg-action-hover text-white text-xs font-bold rounded-xl shadow-cds"
             >
               <Plus className="w-4 h-4 mr-1.5 stroke-[2.5]" />
               Adicionar primeiro ativo
@@ -630,9 +627,9 @@ export default function InvestmentsPage() {
               <Button
                 type="submit"
                 disabled={savingAsset}
-                className="bg-brand-amber hover:bg-[#e08e08] text-brand font-bold"
+                className="bg-action hover:bg-action-hover text-white font-bold"
               >
-                {savingAsset && <Loader2 className="w-4 h-4 mr-2 animate-spin text-brand" />}
+                {savingAsset && <Loader2 className="w-4 h-4 mr-2 animate-spin text-white" />}
                 {editingAsset ? 'Salvar Alterações' : 'Adicionar'}
               </Button>
             </DialogFooter>

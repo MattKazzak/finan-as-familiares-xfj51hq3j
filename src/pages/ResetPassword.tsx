@@ -137,26 +137,24 @@ export default function ResetPassword() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8F9FB] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-bg flex items-center justify-center p-4">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-[#FCA311]" />
-          <span className="text-xs text-slate-600 font-medium">
-            Validando link de recuperação...
-          </span>
+          <Loader2 className="w-8 h-8 animate-spin text-action" />
+          <span className="text-xs text-body2 font-medium">Validando link de recuperação...</span>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FB] flex flex-col justify-between items-center px-4 py-8 sm:py-12 selection:bg-[#FCA311]/20">
+    <div className="min-h-screen bg-bg flex flex-col justify-between items-center px-4 py-8 sm:py-12 selection:bg-action/20">
       <div className="w-full max-w-[420px] mx-auto my-auto flex flex-col items-center">
         {/* Cabeçalho — Layout vertical centralizado e respiro generoso */}
         <header className="flex flex-col items-center text-center mb-8 sm:mb-10 w-full">
           <div
             data-testid="brand-logo-container"
             aria-label="Curiangoo"
-            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white border border-[rgba(20,33,61,0.08)] shadow-elevation-1 mb-5 flex items-center justify-center p-2.5 transition-transform hover:scale-105"
+            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-surface border border-line shadow-cds mb-5 flex items-center justify-center p-2.5 transition-transform hover:scale-105"
           >
             <CuriangoLogo
               size={36}
@@ -166,38 +164,38 @@ export default function ResetPassword() {
               eyeHighlight
             />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-semibold text-[#14213D] tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-ink tracking-tight">
             Criar Nova Senha — Curiangoo
           </h1>
-          <p className="text-xs sm:text-sm text-slate-600 font-light mt-2 max-w-xs leading-relaxed">
+          <p className="text-xs sm:text-sm text-body2 font-light mt-2 max-w-xs leading-relaxed">
             Escolha uma nova senha forte para proteger sua conta e as finanças da sua família.
           </p>
         </header>
 
         {/* Card Principal com sombra suave */}
-        <main className="w-full bg-white rounded-3xl p-6 sm:p-9 shadow-elevation-2 border border-[#14213D]/[0.06] backdrop-blur-sm">
+        <main className="w-full bg-surface rounded-3xl p-6 sm:p-9 shadow-elevation-2 border border-line backdrop-blur-sm">
           <form onSubmit={handleSubmit} className="space-y-6">
             {successMessage && (
               <div
                 role="status"
-                className="p-3.5 text-xs bg-emerald-50 border border-emerald-200 text-emerald-950 rounded-2xl font-medium animate-fade-in flex items-start gap-2.5 leading-relaxed"
+                className="p-3.5 text-xs bg-income-subtle border border-line text-income rounded-2xl font-medium animate-fade-in flex items-start gap-2.5 leading-relaxed"
               >
-                <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-4 h-4 text-income shrink-0 mt-0.5" />
                 <span>{successMessage}</span>
               </div>
             )}
 
-            {/* Campo Nova Senha (Estilo Underline com Ícone Linear e Destaque Âmbar #FCA311 no Campo Ativo) */}
+            {/* Campo Nova Senha */}
             <div>
               <Label
                 htmlFor="new-password"
-                className="text-xs font-light text-slate-600 mb-1 block tracking-wide"
+                className="text-xs font-light text-body2 mb-1 block tracking-wide"
               >
                 Nova Senha
               </Label>
-              <div className="relative group border-b border-slate-300 focus-within:border-[#FCA311] focus-within:ring-1 focus-within:ring-[#FCA311] transition-all bg-transparent">
+              <div className="relative group border-b border-line focus-within:border-action focus-within:ring-1 focus-within:ring-action transition-all bg-transparent">
                 <Lock
-                  className="w-4 h-4 text-slate-400 group-focus-within:text-[#FCA311] absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
+                  className="w-4 h-4 text-body3 group-focus-within:text-action absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
                   strokeWidth={1.5}
                 />
                 <Input
@@ -257,13 +255,13 @@ export default function ResetPassword() {
             <div>
               <Label
                 htmlFor="confirm-new-password"
-                className="text-xs font-light text-slate-600 mb-1 block tracking-wide"
+                className="text-xs font-light text-body2 mb-1 block tracking-wide"
               >
                 Confirmar Nova Senha
               </Label>
-              <div className="relative group border-b border-slate-300 focus-within:border-[#FCA311] focus-within:ring-1 focus-within:ring-[#FCA311] transition-all bg-transparent">
+              <div className="relative group border-b border-line focus-within:border-action focus-within:ring-1 focus-within:ring-action transition-all bg-transparent">
                 <Lock
-                  className="w-4 h-4 text-slate-400 group-focus-within:text-[#FCA311] absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
+                  className="w-4 h-4 text-body3 group-focus-within:text-action absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
                   strokeWidth={1.5}
                 />
                 <Input
@@ -307,7 +305,7 @@ export default function ResetPassword() {
               <Button
                 type="submit"
                 disabled={submitting || Boolean(successMessage)}
-                className="w-full h-12 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-xl shadow-elevation-1 hover:shadow-elevation-2 active:scale-[0.99] transition-all border-0 text-sm"
+                className="w-full h-12 bg-action hover:bg-action-hover text-white font-bold rounded-xl shadow-cds hover:shadow-elevation-2 active:scale-[0.99] transition-all border-0 text-sm"
               >
                 {submitting ? (
                   <span className="flex items-center justify-center gap-2">

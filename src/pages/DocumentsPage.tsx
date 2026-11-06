@@ -31,7 +31,7 @@ export default function DocumentsPage() {
           variant="ghost"
           size="sm"
           onClick={() => navigate('/perfil')}
-          className="text-xs font-semibold text-[#14213D] hover:bg-slate-100/80 rounded-xl h-9 px-3 gap-1.5 -ml-2"
+          className="text-xs font-semibold text-ink hover:bg-surface-2 rounded-xl h-9 px-3 gap-1.5 -ml-2"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Voltar ao Perfil</span>
@@ -45,7 +45,7 @@ export default function DocumentsPage() {
           currentUserName={userDisplayName}
         />
       ) : (
-        <div className="bg-white rounded-3xl border border-[rgba(20,33,61,0.06)] shadow-sm p-8 text-center text-slate-500">
+        <div className="bg-surface rounded-3xl border border-line shadow-cds p-8 text-center text-body2">
           <p className="text-sm">Carregando família...</p>
         </div>
       )}

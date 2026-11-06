@@ -36,7 +36,7 @@ const SharedDocumentPage = lazy(() => import('@/pages/SharedDocumentPage'))
 
 const PageFallback = (
   <div className="min-h-screen bg-white flex items-center justify-center">
-    <Loader2 className="w-6 h-6 animate-spin text-[#FCA311]" />
+    <Loader2 className="w-6 h-6 animate-spin text-action" />
   </div>
 )
 
@@ -82,11 +82,11 @@ function ProtectedLayout() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#14213D] to-[#1f3159] flex items-center justify-center text-[#FCA311] shadow-lg shadow-[#14213D]/20 mb-4 animate-bounce border border-[#14213D]/30">
-          <Coins className="w-7 h-7 text-[#FCA311]" strokeWidth={1.5} />
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-ink to-[#1f3159] flex items-center justify-center text-action shadow-lg shadow-ink/20 mb-4 animate-bounce border border-ink/30">
+          <Coins className="w-7 h-7 text-action" strokeWidth={1.5} />
         </div>
-        <div className="flex items-center gap-2 text-[#14213D] text-sm font-semibold">
-          <Loader2 className="w-4 h-4 animate-spin text-[#FCA311]" />
+        <div className="flex items-center gap-2 text-ink text-sm font-semibold">
+          <Loader2 className="w-4 h-4 animate-spin text-action" />
           <span>Carregando Finanças da Família...</span>
         </div>
       </div>
@@ -122,7 +122,7 @@ function LoginRoute() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-[#FCA311]" />
+        <Loader2 className="w-6 h-6 animate-spin text-action" />
       </div>
     )
   }

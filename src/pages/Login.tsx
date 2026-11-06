@@ -337,7 +337,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FB] flex flex-col justify-between items-center px-4 py-8 sm:py-12 selection:bg-[#FCA311]/20">
+    <div className="min-h-screen bg-bg flex flex-col justify-between items-center px-4 py-8 sm:py-12 selection:bg-action/20">
       <div className="w-full max-w-[420px] mx-auto my-auto flex flex-col items-center">
         {/* Marca: logo horizontal oficial (pássaro + wordmark "Curiangoo" em navy) */}
         <header className="flex flex-col items-center text-center mb-8 sm:mb-10 w-full">
@@ -355,7 +355,7 @@ export default function Login() {
           </div>
           {/* Wordmark vive dentro da própria imagem — h1 só para leitores de tela/semântica */}
           <h1 className="sr-only">Curiangoo</h1>
-          <p className="text-xs sm:text-sm text-slate-600 font-light mt-1 max-w-xs leading-relaxed">
+          <p className="text-xs sm:text-sm text-body2 font-light mt-1 max-w-xs leading-relaxed">
             {mode === 'login' &&
               'Acesse sua conta familiar para acompanhar despesas, receitas e investimentos.'}
             {mode === 'signup' &&
@@ -373,13 +373,13 @@ export default function Login() {
             ou R$ 149,90/ano. Só no modo login (mantém o cadastro enxuto). */}
         {mode === 'signup' && (
           <section aria-label="Planos e preços" className="w-full mb-6 space-y-3">
-            <div className="w-full rounded-3xl bg-[#14213D] text-white p-5 shadow-elevation-2">
+            <div className="w-full rounded-3xl bg-ink text-white p-5 shadow-cds">
               <p className="text-sm font-semibold leading-tight">
                 A plataforma de finanças da sua família, com assistente inteligente de voz.
               </p>
               <p className="text-xs text-white/70 mt-1.5 leading-relaxed">
-                Comece com <span className="font-bold text-[#FCA311]">7 dias grátis</span> — sem
-                cartão de crédito, sem compromisso. Ao final, escolha o plano ideal:
+                Comece com <span className="font-bold text-action">7 dias grátis</span> — sem cartão
+                de crédito, sem compromisso. Ao final, escolha o plano ideal:
               </p>
             </div>
             {/* Planos selecionáveis: a escolha define o checkout após o trial */}
@@ -391,17 +391,17 @@ export default function Login() {
                 onClick={() => setSelectedPlan('monthly')}
                 className={`rounded-2xl p-3.5 text-left transition-all active:scale-[0.98] ${
                   selectedPlan === 'monthly'
-                    ? 'border-2 border-[#14213D] bg-white shadow-elevation-1'
-                    : 'border border-[rgba(20,33,61,0.1)] bg-white hover:border-[#14213D]/40'
+                    ? 'border-2 border-ink bg-surface shadow-cds'
+                    : 'border border-line bg-surface hover:border-ink/40'
                 }`}
               >
-                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                <p className="text-[11px] font-semibold text-body2 uppercase tracking-wide">
                   Mensal
                 </p>
-                <p className="text-lg font-bold text-[#14213D] mt-0.5">
-                  R$ 19,90<span className="text-xs font-medium text-slate-400">/mês</span>
+                <p className="text-lg font-bold text-ink mt-0.5">
+                  R$ 19,90<span className="text-xs font-medium text-body3">/mês</span>
                 </p>
-                <p className="text-[10px] text-slate-400 mt-0.5">Cancele quando quiser</p>
+                <p className="text-[10px] text-body3 mt-0.5">Cancele quando quiser</p>
               </button>
               <button
                 type="button"
@@ -410,17 +410,17 @@ export default function Login() {
                 onClick={() => setSelectedPlan('yearly')}
                 className={`rounded-2xl p-3.5 text-left transition-all active:scale-[0.98] ${
                   selectedPlan === 'yearly'
-                    ? 'border-2 border-[#FCA311] bg-white shadow-elevation-1'
-                    : 'border-2 border-[#FCA311]/40 bg-white hover:border-[#FCA311]/70'
+                    ? 'border-2 border-action bg-surface shadow-cds'
+                    : 'border-2 border-action/40 bg-surface hover:border-action/70'
                 }`}
               >
-                <p className="text-[11px] font-semibold text-[#B45309] uppercase tracking-wide">
+                <p className="text-[11px] font-semibold text-warning uppercase tracking-wide">
                   Anual
                 </p>
-                <p className="text-lg font-bold text-[#14213D] mt-0.5">
-                  R$ 149,90<span className="text-xs font-medium text-slate-400">/ano</span>
+                <p className="text-lg font-bold text-ink mt-0.5">
+                  R$ 149,90<span className="text-xs font-medium text-body3">/ano</span>
                 </p>
-                <p className="text-[10px] font-bold text-emerald-700 mt-0.5">Economize R$ 89,90</p>
+                <p className="text-[10px] font-bold text-income mt-0.5">Economize R$ 89,90</p>
               </button>
             </div>
           </section>
@@ -429,14 +429,12 @@ export default function Login() {
         <main className="w-full p-6 sm:p-9">
           {/* Alternador de Modo Minimalista (Login / Criar Conta) */}
           {mode !== 'forgot_password' && (
-            <div className="flex p-1 bg-slate-100 rounded-2xl mb-7 border border-[#14213D]/[0.05]">
+            <div className="flex p-1 bg-surface-2 rounded-2xl mb-7 border border-line">
               <button
                 type="button"
                 onClick={() => switchMode('login')}
                 className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all ${
-                  mode === 'login'
-                    ? 'bg-white text-[#14213D] shadow-elevation-1'
-                    : 'text-slate-600 hover:text-[#14213D]'
+                  mode === 'login' ? 'bg-surface text-ink shadow-cds' : 'text-body2 hover:text-ink'
                 }`}
               >
                 Entrar na Conta
@@ -445,9 +443,7 @@ export default function Login() {
                 type="button"
                 onClick={() => switchMode('signup')}
                 className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all ${
-                  mode === 'signup'
-                    ? 'bg-white text-[#14213D] shadow-elevation-1'
-                    : 'text-slate-600 hover:text-[#14213D]'
+                  mode === 'signup' ? 'bg-surface text-ink shadow-cds' : 'text-body2 hover:text-ink'
                 }`}
               >
                 Criar Nova Conta
@@ -461,9 +457,7 @@ export default function Login() {
               <div className="flex items-center gap-2">
                 <span
                   className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-semibold tabular-nums transition-colors ${
-                    signupStep === 'credentials'
-                      ? 'bg-[#14213D] text-white'
-                      : 'bg-emerald-600 text-white'
+                    signupStep === 'credentials' ? 'bg-ink text-white' : 'bg-emerald-600 text-white'
                   }`}
                 >
                   {signupStep === 'profile' ? '✓' : '1'}
@@ -471,8 +465,8 @@ export default function Login() {
                 <span
                   className={`text-xs ${
                     signupStep === 'credentials'
-                      ? 'font-semibold text-[#14213D]'
-                      : 'text-slate-600 font-light'
+                      ? 'font-semibold text-ink'
+                      : 'text-body2 font-light'
                   }`}
                 >
                   Credenciais
@@ -482,18 +476,14 @@ export default function Login() {
               <div className="flex items-center gap-2">
                 <span
                   className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-semibold tabular-nums transition-colors ${
-                    signupStep === 'profile'
-                      ? 'bg-[#14213D] text-white'
-                      : 'bg-slate-100 text-slate-500'
+                    signupStep === 'profile' ? 'bg-ink text-white' : 'bg-surface-2 text-body3'
                   }`}
                 >
                   2
                 </span>
                 <span
                   className={`text-xs ${
-                    signupStep === 'profile'
-                      ? 'font-semibold text-[#14213D]'
-                      : 'text-slate-500 font-light'
+                    signupStep === 'profile' ? 'font-semibold text-ink' : 'text-body3 font-light'
                   }`}
                 >
                   Seu Nome
@@ -613,9 +603,9 @@ export default function Login() {
                   >
                     Seu Nome
                   </Label>
-                  <div className="relative group border-b border-slate-300 focus-within:border-[#FCA311] transition-all bg-transparent">
+                  <div className="relative group border-b border-line focus-within:border-action transition-all bg-transparent">
                     <UserIcon
-                      className="w-4 h-4 text-slate-400 group-focus-within:text-[#FCA311] absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
+                      className="w-4 h-4 text-body3 group-focus-within:text-action absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
                       strokeWidth={1.5}
                     />
                     <Input
@@ -624,7 +614,7 @@ export default function Login() {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Ex: Matheus"
-                      className="pl-8 pr-2 h-11 border-0 rounded-none bg-transparent placeholder:text-slate-400 placeholder:font-light text-slate-900 font-normal focus-visible:ring-0 focus-visible:ring-offset-0 text-sm shadow-none"
+                      className="pl-8 pr-2 h-11 border-0 rounded-none bg-transparent placeholder:text-body3 placeholder:font-light text-ink font-normal focus-visible:ring-0 focus-visible:ring-offset-0 text-sm shadow-none"
                       required
                       autoFocus
                     />
@@ -640,17 +630,17 @@ export default function Login() {
             {/* ETAPA DE CREDENCIAIS (LOGIN OU SIGNUP PASSO 1 OU RECUPERAÇÃO) */}
             {(mode !== 'signup' || signupStep === 'credentials') && (
               <>
-                {/* E-mail (Estilo Underline com Ícone Linear e Destaque Âmbar #FCA311 no Campo Ativo) */}
+                {/* E-mail (Estilo Underline com Ícone Linear e Destaque Âmbar no Campo Ativo) */}
                 <div>
                   <Label
                     htmlFor="auth-email"
-                    className="text-xs font-light text-slate-600 mb-1 block tracking-wide"
+                    className="text-xs font-light text-body2 mb-1 block tracking-wide"
                   >
                     E-mail
                   </Label>
-                  <div className="relative group border-b border-slate-300 focus-within:border-[#FCA311] transition-all bg-transparent">
+                  <div className="relative group border-b border-line focus-within:border-action transition-all bg-transparent">
                     <Mail
-                      className="w-4 h-4 text-slate-400 group-focus-within:text-[#FCA311] absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
+                      className="w-4 h-4 text-body3 group-focus-within:text-action absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
                       strokeWidth={1.5}
                     />
                     <Input
@@ -659,7 +649,7 @@ export default function Login() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="seu.email@exemplo.com"
-                      className="pl-8 pr-2 h-11 border-0 rounded-none bg-transparent placeholder:text-slate-400 placeholder:font-light text-slate-900 font-normal focus-visible:ring-0 focus-visible:ring-offset-0 text-sm shadow-none"
+                      className="pl-8 pr-2 h-11 border-0 rounded-none bg-transparent placeholder:text-body3 placeholder:font-light text-ink font-normal focus-visible:ring-0 focus-visible:ring-offset-0 text-sm shadow-none"
                       required
                       autoFocus={mode !== 'signup'}
                     />
@@ -672,7 +662,7 @@ export default function Login() {
                     <div className="flex items-center justify-between mb-1">
                       <Label
                         htmlFor="auth-pass"
-                        className="text-xs font-light text-slate-600 tracking-wide"
+                        className="text-xs font-light text-body2 tracking-wide"
                       >
                         Senha
                       </Label>
@@ -680,15 +670,15 @@ export default function Login() {
                         <button
                           type="button"
                           onClick={() => switchMode('forgot_password')}
-                          className="text-xs text-[#14213D] hover:text-[#0e172a] font-normal hover:underline transition-colors focus:outline-none"
+                          className="text-xs text-ink hover:text-ink/80 font-normal hover:underline transition-colors focus:outline-none"
                         >
                           Esqueci minha senha
                         </button>
                       )}
                     </div>
-                    <div className="relative group border-b border-slate-300 focus-within:border-[#FCA311] transition-all bg-transparent">
+                    <div className="relative group border-b border-line focus-within:border-action transition-all bg-transparent">
                       <Lock
-                        className="w-4 h-4 text-slate-400 group-focus-within:text-[#FCA311] absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
+                        className="w-4 h-4 text-body3 group-focus-within:text-action absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
                         strokeWidth={1.5}
                       />
                       <Input
@@ -697,13 +687,13 @@ export default function Login() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="pl-8 pr-9 h-11 border-0 rounded-none bg-transparent placeholder:text-slate-400 placeholder:font-light text-slate-900 font-normal focus-visible:ring-0 focus-visible:ring-offset-0 text-sm shadow-none"
+                        className="pl-8 pr-9 h-11 border-0 rounded-none bg-transparent placeholder:text-body3 placeholder:font-light text-ink font-normal focus-visible:ring-0 focus-visible:ring-offset-0 text-sm shadow-none"
                         required
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword((prev) => !prev)}
-                        className="absolute right-0 top-0 h-11 w-8 flex items-center justify-end text-slate-400 hover:text-slate-700 transition-colors focus:outline-none"
+                        className="absolute right-0 top-0 h-11 w-8 flex items-center justify-end text-body3 hover:text-ink transition-colors focus:outline-none"
                         aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                       >
                         {showPassword ? (
@@ -754,9 +744,9 @@ export default function Login() {
                     >
                       Confirmar Senha
                     </Label>
-                    <div className="relative group border-b border-slate-300 focus-within:border-[#FCA311] transition-all bg-transparent">
+                    <div className="relative group border-b border-line focus-within:border-action transition-all bg-transparent">
                       <Lock
-                        className="w-4 h-4 text-slate-400 group-focus-within:text-[#FCA311] absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
+                        className="w-4 h-4 text-body3 group-focus-within:text-action absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
                         strokeWidth={1.5}
                       />
                       <Input
@@ -765,13 +755,13 @@ export default function Login() {
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="pl-8 pr-9 h-11 border-0 rounded-none bg-transparent placeholder:text-slate-400 placeholder:font-light text-slate-900 font-normal focus-visible:ring-0 focus-visible:ring-offset-0 text-sm shadow-none"
+                        className="pl-8 pr-9 h-11 border-0 rounded-none bg-transparent placeholder:text-body3 placeholder:font-light text-ink font-normal focus-visible:ring-0 focus-visible:ring-offset-0 text-sm shadow-none"
                         required
                       />
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword((prev) => !prev)}
-                        className="absolute right-0 top-0 h-11 w-8 flex items-center justify-end text-slate-400 hover:text-slate-700 transition-colors focus:outline-none"
+                        className="absolute right-0 top-0 h-11 w-8 flex items-center justify-end text-body3 hover:text-ink transition-colors focus:outline-none"
                         aria-label={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
                       >
                         {showConfirmPassword ? (
@@ -828,7 +818,7 @@ export default function Login() {
                   <Button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 h-12 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-xl shadow-elevation-1 hover:shadow-elevation-2 active:scale-[0.99] transition-all border-0 text-sm"
+                    className="flex-1 h-12 bg-action hover:bg-action-hover text-white font-bold rounded-xl shadow-cds active:scale-[0.99] transition-all border-0 text-sm"
                   >
                     {loading ? (
                       <span className="flex items-center justify-center gap-2">
@@ -844,7 +834,7 @@ export default function Login() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-12 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-xl shadow-elevation-1 hover:shadow-elevation-2 active:scale-[0.99] transition-all border-0 text-sm"
+                  className="w-full h-12 bg-action hover:bg-action-hover text-white font-bold rounded-xl shadow-cds active:scale-[0.99] transition-all border-0 text-sm"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
@@ -877,7 +867,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => switchMode('login')}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-[#14213D] transition-colors"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-body2 hover:text-ink transition-colors"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
                   <span>Voltar para o Login</span>
@@ -886,19 +876,19 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => switchMode(mode === 'login' ? 'signup' : 'login')}
-                  className="text-xs font-normal text-slate-600 hover:text-[#14213D] transition-colors"
+                  className="text-xs font-normal text-body2 hover:text-ink transition-colors"
                 >
                   {mode === 'login' ? (
                     <span>
                       Ainda não tem conta?{' '}
-                      <strong className="font-semibold text-[#14213D] underline">
+                      <strong className="font-semibold text-ink underline">
                         Criar workspace familiar
                       </strong>
                     </span>
                   ) : (
                     <span>
                       Já possui cadastro?{' '}
-                      <strong className="font-semibold text-[#14213D] underline">
+                      <strong className="font-semibold text-ink underline">
                         Entrar com e-mail e senha
                       </strong>
                     </span>

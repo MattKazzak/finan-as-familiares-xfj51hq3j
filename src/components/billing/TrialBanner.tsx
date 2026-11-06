@@ -49,16 +49,16 @@ export function TrialBanner({ daysLeft }: TrialBannerProps) {
   return (
     <div
       data-testid="trial-banner"
-      className="rounded-2xl border border-[#FCA311]/45 bg-[#FFF8EC] px-4 py-3.5 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300"
+      className="rounded-2xl border border-action/45 bg-action/10 px-4 py-3.5 shadow-cds animate-in fade-in slide-in-from-top-2 duration-300"
     >
       <div className="flex items-start gap-3">
-        <span className="shrink-0 w-9 h-9 rounded-full bg-[#FCA311]/20 flex items-center justify-center mt-0.5">
-          <Clock className="w-4 h-4 text-[#B87A0D]" strokeWidth={2} />
+        <span className="shrink-0 w-9 h-9 rounded-full bg-action/20 flex items-center justify-center mt-0.5">
+          <Clock className="w-4 h-4 text-warning" strokeWidth={2} />
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-semibold leading-tight text-[#14213D]">{title}</p>
-          <p className="text-[11px] text-slate-600 leading-snug mt-1">
+          <p className="text-[13px] font-semibold leading-tight text-ink">{title}</p>
+          <p className="text-[11px] text-body2 leading-snug mt-1">
             Convide um amigo e ganhe +7 dias — os lançamentos continuam grátis pra sempre.
           </p>
 
@@ -66,14 +66,14 @@ export function TrialBanner({ daysLeft }: TrialBannerProps) {
             <button
               type="button"
               onClick={() => navigate('/perfil')}
-              className="text-[11px] font-semibold px-3 py-1.5 rounded-full bg-[#14213D] text-white active:scale-95 transition-transform"
+              className="text-[11px] font-semibold px-3 py-1.5 rounded-full bg-ink text-white active:scale-95 transition-transform"
             >
               Convidar amigo
             </button>
             <button
               type="button"
               onClick={() => navigate('/perfil')}
-              className="text-[11px] font-semibold px-3 py-1.5 rounded-full border border-[#14213D]/20 text-[#14213D] active:scale-95 transition-transform"
+              className="text-[11px] font-semibold px-3 py-1.5 rounded-full border border-line text-ink active:scale-95 transition-transform"
             >
               Ver planos
             </button>

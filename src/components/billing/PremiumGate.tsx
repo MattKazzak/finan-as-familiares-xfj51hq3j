@@ -26,7 +26,7 @@ export function PremiumGate({
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-[rgba(20,33,61,0.08)] bg-white/95 p-4 text-xs text-slate-400">
+      <div className="rounded-2xl border border-line bg-surface/95 p-4 text-xs text-body3">
         Carregando...
       </div>
     )
@@ -37,19 +37,19 @@ export function PremiumGate({
   }
 
   return (
-    <div className="rounded-2xl border border-[rgba(20,33,61,0.08)] bg-white/95 px-4 py-4 shadow-sm">
+    <div className="rounded-2xl border border-line bg-surface/95 px-4 py-4 shadow-cds">
       <div className="flex items-center gap-3">
         <span className="shrink-0 relative">
           <CuriangoLogo size={32} color="#FCA311" eyeColor="#14213D" eyeRadius={2.8} eyeHighlight />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-semibold text-[#14213D] leading-tight">{title}</p>
-          <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{description}</p>
+          <p className="text-[13px] font-semibold text-ink leading-tight">{title}</p>
+          <p className="text-[11px] text-body2 mt-0.5 leading-snug">{description}</p>
         </div>
         <button
           type="button"
           onClick={() => navigate('/perfil')}
-          className="shrink-0 inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full bg-[#FCA311] text-[#14213D] hover:bg-[#e08e08] transition-colors"
+          className="shrink-0 inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full bg-action text-white hover:bg-action-hover transition-colors"
         >
           <Sparkles className="w-3 h-3" />
           Assinar

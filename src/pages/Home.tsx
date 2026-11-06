@@ -645,19 +645,19 @@ export default function Home() {
   if (isFamilyIncomplete) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center max-w-md mx-auto">
-        <div className="w-16 h-16 rounded-3xl bg-[#14213D] text-[#FCA311] flex items-center justify-center shadow-lg shadow-[#14213D]/20 mb-4 animate-pulse">
+        <div className="w-16 h-16 rounded-3xl bg-ink text-action flex items-center justify-center shadow-lg shadow-ink/20 mb-4 animate-pulse">
           <Sparkles className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-bold text-[#14213D] tracking-tight">
+        <h2 className="text-xl font-bold text-ink tracking-tight">
           Configuração da Família Pendente
         </h2>
-        <p className="text-xs sm:text-sm text-slate-500 mt-2 leading-relaxed">
+        <p className="text-xs sm:text-sm text-body2 mt-2 leading-relaxed">
           O espaço da sua família precisa de alguns passos rápidos para ativar o orçamento
           inteligente e o catálogo de categorias.
         </p>
         <Button
           onClick={openOnboarding}
-          className="mt-6 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold text-sm rounded-2xl px-6 h-12 shadow-md shadow-[#FCA311]/25 border-0"
+          className="mt-6 bg-action hover:bg-action-hover text-white font-bold text-sm rounded-2xl px-6 h-12 shadow-md shadow-action/25 border-0"
         >
           <Sparkles className="w-4 h-4 mr-2" />
           Retomar Configuração da Família
@@ -667,15 +667,15 @@ export default function Home() {
   }
 
   return (
-    <div className="w-full min-w-0 overflow-x-hidden bg-[#F8F9FB]">
-      {/* 1. FUNDO MARINHO SANGRADO NO TOPO (#14213D) */}
+    <div className="w-full min-w-0 overflow-x-hidden bg-bg">
+      {/* 1. FUNDO MARINHO SANGRADO NO TOPO */}
       <div
         data-testid="hero-bleeding-top"
-        className="w-full bg-[#14213D] text-white pt-5 sm:pt-7 pb-10 sm:pb-12 px-4 sm:px-6 relative overflow-hidden"
+        className="w-full bg-ink text-white pt-5 sm:pt-7 pb-10 sm:pb-12 px-4 sm:px-6 relative overflow-hidden"
       >
         {/* Efeitos de luz sutis */}
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
-        <div className="absolute -top-16 -right-16 w-64 h-64 bg-[#FCA311]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-16 -right-16 w-64 h-64 bg-action/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="max-w-5xl mx-auto space-y-5">
           {/* Linha 1 do cabeçalho (Saudação + Membro + Ações 👁 e 🔔) */}
@@ -683,19 +683,17 @@ export default function Home() {
             data-testid="header-greeting-row"
             className="flex items-center justify-between gap-2 sm:gap-3 min-w-0"
           >
-            {/* Lado Esquerdo: Avatar + Saudação + Família (AFINAÇÃO 16/10: o avatar
-                navega pro Perfil — a identidade vem do login, não de uma pergunta.
-                O filtro de membros vive nos chips logo abaixo.) */}
+            {/* Lado Esquerdo: Avatar + Saudação + Família */}
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
               <button
                 type="button"
                 onClick={() => navigate('/perfil')}
                 data-testid="home-profile-avatar"
-                className="relative shrink-0 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311] rounded-2xl active:scale-95 transition-transform cursor-pointer"
+                className="relative shrink-0 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action rounded-2xl active:scale-95 transition-transform cursor-pointer"
                 aria-label="Abrir meu perfil"
                 title="Meu perfil"
               >
-                <Avatar className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl border-2 border-white/20 shadow-sm transition-all group-hover:border-[#FCA311] overflow-hidden">
+                <Avatar className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl border-2 border-white/20 shadow-sm transition-all group-hover:border-action overflow-hidden">
                   {family?.avatar_url && (
                     <AvatarImage
                       src={family.avatar_url}
@@ -703,12 +701,7 @@ export default function Home() {
                       className="w-full h-full object-cover"
                     />
                   )}
-                  {/* FIX 25/10 (Matheus: "fica branco quando não tem imagem"): o
-                      fallback era um gradiente branco translúcido sobre o navy —
-                      praticamente invisível, parecia um buraco. Padrão de mercado
-                      (Nubank/Pinterest): inicial em âmbar sólido — identidade viva
-                      mesmo sem foto. */}
-                  <AvatarFallback className="bg-[#FCA311] text-[#14213D] font-bold text-sm sm:text-base rounded-2xl">
+                  <AvatarFallback className="bg-action text-white font-bold text-sm sm:text-base rounded-2xl">
                     {memberInitial}
                   </AvatarFallback>
                 </Avatar>
@@ -761,7 +754,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={toggleHideValues}
-                className="p-1.5 sm:p-2 rounded-2xl text-slate-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
+                className="p-1.5 sm:p-2 rounded-2xl text-slate-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
                 aria-label={hideValues ? 'Mostrar valores' : 'Ocultar valores'}
                 title={
                   hideValues
@@ -770,7 +763,7 @@ export default function Home() {
                 }
               >
                 {hideValues ? (
-                  <EyeOff className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2] text-[#FCA311]" />
+                  <EyeOff className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2] text-action" />
                 ) : (
                   <Eye className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2]" />
                 )}
@@ -779,12 +772,12 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setShowNotifications(true)}
-                className="relative p-1.5 sm:p-2 rounded-2xl text-slate-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
+                className="relative p-1.5 sm:p-2 rounded-2xl text-slate-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
                 aria-label="Notificações"
                 title="Notificações da família"
               >
                 <Bell className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2]" />
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#FCA311] ring-2 ring-[#14213D]" />
+                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-action ring-2 ring-ink" />
               </button>
             </div>
           </div>
@@ -805,13 +798,13 @@ export default function Home() {
               onClick={() => setSelectedMemberId(null)}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer border touch-manipulation ${
                 selectedMemberId === null
-                  ? 'bg-[#FCA311] text-[#14213D] border-[#FCA311] shadow-sm'
+                  ? 'bg-action text-white border-action shadow-sm'
                   : 'bg-white/10 text-white/80 border-white/10 hover:bg-white/15 hover:text-white'
               }`}
             >
               <Users
                 className={`w-3.5 h-3.5 shrink-0 ${
-                  selectedMemberId === null ? 'text-[#14213D]' : 'text-slate-300'
+                  selectedMemberId === null ? 'text-white' : 'text-slate-300'
                 }`}
               />
               <span>Todos</span>
@@ -825,14 +818,14 @@ export default function Home() {
                   onClick={() => setSelectedMemberId(m.id)}
                   className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer border touch-manipulation ${
                     isSelected
-                      ? 'bg-[#FCA311] text-[#14213D] border-[#FCA311] shadow-sm'
+                      ? 'bg-action text-white border-action shadow-sm'
                       : 'bg-white/10 text-white/80 border-white/10 hover:bg-white/15 hover:text-white'
                   }`}
                   title={m.name}
                 >
                   <span
                     className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${
-                      isSelected ? 'bg-[#14213D] text-white' : 'bg-white/20 text-white'
+                      isSelected ? 'bg-ink text-white' : 'bg-white/20 text-white'
                     }`}
                   >
                     {m.name.charAt(0).toUpperCase()}
@@ -857,7 +850,7 @@ export default function Home() {
               </div>
               <button
                 onClick={() => loadData()}
-                className="shrink-0 rounded-xl bg-[#14213D] px-3.5 py-2 text-xs font-semibold text-white active:scale-95 transition-transform"
+                className="shrink-0 rounded-xl bg-ink px-3.5 py-2 text-xs font-semibold text-white active:scale-95 transition-transform"
               >
                 Tentar novamente
               </button>
@@ -939,7 +932,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 2. ÁREA CLARA (#F8F9FB) COM CARDS FLUTUANTES SOBREPONDO O FUNDO MARINHO */}
+      {/* 2. ÁREA CLARA (bg-bg) COM CARDS FLUTUANTES SOBREPONDO O FUNDO MARINHO */}
       <div className="relative -mt-6 sm:-mt-8 px-4 sm:px-6 pb-12 max-w-5xl mx-auto space-y-6">
         {/* WALKTHROUGH v3 (19/10): coach-marks na primeira visita (passo 'tour'
             pendente). O convite ao Copilot NÃO é mais um card separado — o
@@ -982,9 +975,9 @@ export default function Home() {
                 markTourStepOptimistic('copilot-usado')
               }
             }}
-            className={`w-full text-left flex items-start gap-3 rounded-2xl border border-[rgba(20,33,61,0.08)] bg-white/95 px-4 py-3.5 shadow-sm transition-all active:scale-[0.98] border-l-[3px] ${
+            className={`w-full text-left flex items-start gap-3 rounded-2xl border border-line bg-surface px-4 py-3.5 shadow-sm transition-all active:scale-[0.98] border-l-[3px] ${
               isNewToCopilot
-                ? 'border-l-[#FCA311]'
+                ? 'border-l-action'
                 : insights.length > 0
                   ? {
                       danger: 'border-l-rose-400',
@@ -1009,34 +1002,30 @@ export default function Home() {
             </span>
             <span key={isNewToCopilot ? 'convite' : 'fala'} className="min-w-0 flex-1">
               {isNewToCopilot ? (
-                // CONVITE v2 (22/10, Matheus 21:39): persiste até o 1º clique REAL
-                // no card. Copy: calorosa, mostra o valor na 1ª frase, convida à
-                // ação com exemplo pronto — o usuário amador não precisa adivinhar
-                // o que falar. Depois do 1º uso, vira insights de valor real.
                 <>
-                  <span className="block text-[13px] font-semibold leading-tight text-[#14213D] animate-in fade-in duration-300">
+                  <span className="block text-[13px] font-semibold leading-tight text-ink animate-in fade-in duration-300">
                     Oi! Eu sou o Curiango 🪶
                   </span>
-                  <span className="block text-[11px] text-slate-500 leading-snug mt-0.5 animate-in fade-in duration-300">
+                  <span className="block text-[11px] text-body2 leading-snug mt-0.5 animate-in fade-in duration-300">
                     Toque aqui e me diga o que você gastou ou recebeu — eu anoto e organizo tudo pra
                     você.
                   </span>
                 </>
               ) : (
-                <span className="block text-[13px] leading-snug text-[#14213D] animate-in fade-in duration-300">
+                <span className="block text-[13px] leading-snug text-ink animate-in fade-in duration-300">
                   {insights.length > 0
                     ? insights[0].detail
                     : 'Tudo em ordem por aqui! Toque pra conversar comigo.'}
                 </span>
               )}
             </span>
-            <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 self-center" />
+            <ChevronRight className="w-4 h-4 text-body3 shrink-0 self-center" />
           </button>
         ) : (
           <button
             type="button"
             onClick={() => navigate('/perfil')}
-            className="w-full text-left flex items-start gap-3 rounded-2xl border border-[rgba(20,33,61,0.08)] bg-white/95 px-4 py-3.5 shadow-sm transition-all active:scale-[0.98] border-l-[3px] border-l-[#FCA311]"
+            className="w-full text-left flex items-start gap-3 rounded-2xl border border-line bg-surface px-4 py-3.5 shadow-sm transition-all active:scale-[0.98] border-l-[3px] border-l-action"
           >
             <span className="shrink-0 relative mt-0.5" aria-hidden="true">
               <CuriangoLogo
@@ -1050,45 +1039,36 @@ export default function Home() {
               <span className="absolute -top-1 -right-1 w-2 h-2 animate-copilot-sparkle" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[13px] font-semibold leading-snug text-[#14213D]">
+              <span className="block text-[13px] font-semibold leading-snug text-ink">
                 O Curiango analisa suas finanças e fala com você
               </span>
-              <span className="block text-[11px] text-slate-500 mt-0.5">
+              <span className="block text-[11px] text-body2 mt-0.5">
                 Desbloqueie o Copilot com o Premium — toque pra ver os planos
               </span>
             </span>
-            <span className="shrink-0 self-center text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#FCA311] text-[#14213D]">
+            <span className="shrink-0 self-center text-[10px] font-bold px-2.5 py-1 rounded-full bg-action text-white">
               Premium
             </span>
           </button>
         )}{' '}
-        {/* GRÁFICO DE EVOLUÇÃO DO SALDO — REMOVIDO (27/10, ordem do Matheus).
-            Motivos: (1) sparkline de linha é linguagem de app de investimento,
-            não de app EDUCATIVO para leigo; (2) estava quebrado — mostrava
-            sempre os 30 dias até HOJE mesmo ao navegar para meses passados,
-            o que dava a impressão de dado errado; (3) a leitura de futuro
-            agora vive na aba Projeção da Carteira, em linguagem simples.
-            A RPC get_family_balance_series segue no banco (sem uso no app). */}
-        {/* PRIMEIRO CARD CLARO: Sobrepõe o marinho com rounded-3xl generoso e sombra R56 */}
+        {/* PRIMEIRO CARD CLARO: Sobrepõe o marinho com rounded-3xl generoso e sombra CDS */}
         <div
           data-testid="first-floating-card"
-          className="bg-white/95 backdrop-blur-sm rounded-3xl p-5 sm:p-7 border border-[rgba(20,33,61,0.06)] shadow-elevation-2 space-y-6"
+          className="bg-surface backdrop-blur-sm rounded-3xl p-5 sm:p-7 border border-line shadow-elevation-2 space-y-6"
         >
-          {/* Seção A removida (auditoria 16/10): anel de Receitas Previstas migrou para a aba Orçamentos (BudgetOverviewCard), onde tem contexto de renda/previsto. A Home agora abre direto nos Baldes — hierarquia: saldo → mês → baldes. */}
-
           {/* Seção B: Orçamento em 3 Baldes */}
           <div>
             <div className="flex items-center justify-between gap-2 mb-4 min-w-0">
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <div className="w-9 h-9 rounded-xl bg-slate-100 text-[#14213D] flex items-center justify-center shrink-0 border border-[rgba(20,33,61,0.04)]">
+                <div className="w-9 h-9 rounded-xl bg-slate-100 text-ink flex items-center justify-center shrink-0 border border-line/40">
                   <Scale className="w-4 h-4" strokeWidth={1.5} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-sm text-[#14213D] leading-tight">
+                  <h3 className="font-semibold text-sm text-ink leading-tight">
                     Orçamento em 3 Baldes
                   </h3>
                   {budgetModelLabel && (
-                    <span className="text-[10px] text-slate-400 font-medium block">
+                    <span className="text-[10px] text-body3 font-medium block">
                       {budgetModelLabel}
                     </span>
                   )}
@@ -1098,10 +1078,10 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => navigate('/orcamentos')}
-                className="text-xs font-semibold text-[#14213D] hover:text-[#14213D] flex items-center gap-1 cursor-pointer"
+                className="text-xs font-semibold text-ink hover:text-ink flex items-center gap-1 cursor-pointer"
               >
                 <span>Ajustar</span>
-                <ChevronRight className="w-3.5 h-3.5 text-[#FCA311]" />
+                <ChevronRight className="w-3.5 h-3.5 text-action" />
               </button>
             </div>
 
@@ -1117,7 +1097,7 @@ export default function Home() {
                   limit: bucketsData.essentials.limitCents,
                   percent: bucketsData.essentials.percent,
                   isOver: bucketsData.essentials.isOver,
-                  barGradient: 'bg-gradient-to-r from-[#14213D] to-[#1f3159]',
+                  barGradient: 'bg-gradient-to-r from-ink to-[#1f3159]',
                 },
                 {
                   key: 'lifestyle',
@@ -1128,7 +1108,7 @@ export default function Home() {
                   limit: bucketsData.lifestyle.limitCents,
                   percent: bucketsData.lifestyle.percent,
                   isOver: bucketsData.lifestyle.isOver,
-                  barGradient: 'bg-gradient-to-r from-[#FCA311] to-[#fdb744]',
+                  barGradient: 'bg-gradient-to-r from-action to-[#fdb744]',
                 },
                 {
                   key: 'future',
@@ -1139,7 +1119,7 @@ export default function Home() {
                   limit: bucketsData.future.limitCents,
                   percent: bucketsData.future.percent,
                   isOver: bucketsData.future.isOver,
-                  barGradient: 'bg-gradient-to-r from-[#10B981] to-[#34d399]',
+                  barGradient: 'bg-gradient-to-r from-data-3 to-[#34d399]',
                 },
               ].map((bucket) => {
                 const remaining = bucket.limit - bucket.spent
@@ -1160,7 +1140,7 @@ export default function Home() {
                         />
                         <span className="font-semibold break-words">{bucket.name}</span>
                         {bucket.percentIncome !== null && (
-                          <span className="text-[10px] text-slate-400 font-medium shrink-0">
+                          <span className="text-[10px] text-body3 font-medium shrink-0">
                             ({bucket.percentIncome}%)
                           </span>
                         )}
@@ -1168,7 +1148,7 @@ export default function Home() {
                     </div>
 
                     <div className="flex items-baseline justify-between text-right tabular-nums">
-                      <span className="text-[11px] text-slate-500">
+                      <span className="text-[11px] text-body2">
                         {bucket.limit > 0 ? (
                           isOver ? (
                             <span className="font-bold text-rose-600">
@@ -1177,9 +1157,7 @@ export default function Home() {
                           ) : !hasSpent ? (
                             <span className="font-semibold text-slate-700">
                               resta {maskValue(formatBRL(remaining))}{' '}
-                              <span className="text-[10px] text-slate-400 font-normal">
-                                (intacto)
-                              </span>
+                              <span className="text-[10px] text-body3 font-normal">(intacto)</span>
                             </span>
                           ) : (
                             <span className="font-bold text-slate-700">
@@ -1195,9 +1173,7 @@ export default function Home() {
                     <div className="w-full bg-slate-200/70 h-2 rounded-full overflow-hidden shadow-inner">
                       <div
                         className={`h-full rounded-full transition-all duration-700 ${
-                          isOver
-                            ? 'bg-gradient-to-r from-[#E11D48] to-[#f43f5e]'
-                            : bucket.barGradient
+                          isOver ? 'bg-gradient-to-r from-expense to-[#f43f5e]' : bucket.barGradient
                         }`}
                         style={{ width: `${Math.min(bucket.percent, 100)}%` }}
                       />
@@ -1207,7 +1183,7 @@ export default function Home() {
               })}
             </div>
 
-            <p className="mt-3 text-[10px] text-slate-400 font-medium leading-relaxed text-center sm:text-left">
+            <p className="mt-3 text-[10px] text-body3 font-medium leading-relaxed text-center sm:text-left">
               Necessidades: moradia e mercado · Estilo: lazer e refeições · Futuro: reserva e metas
             </p>
           </div>
@@ -1215,15 +1191,15 @@ export default function Home() {
         {/* 3. NOVO CARD: GRÁFICO DE BARRAS POR CATEGORIA (R58 Tarefa 4) */}
         <div
           data-testid="category-expenses-card"
-          className="bg-white/95 backdrop-blur-sm rounded-3xl p-5 sm:p-7 border border-[rgba(20,33,61,0.06)] shadow-elevation-1 space-y-4"
+          className="bg-surface backdrop-blur-sm rounded-3xl p-5 sm:p-7 border border-line shadow-elevation-1 space-y-4"
         >
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-slate-100 text-[#14213D] flex items-center justify-center shrink-0 border border-[rgba(20,33,61,0.04)]">
+              <div className="w-9 h-9 rounded-xl bg-slate-100 text-ink flex items-center justify-center shrink-0 border border-line/40">
                 <BarChart3 className="w-4 h-4" strokeWidth={1.5} />
               </div>
               <div>
-                <h3 className="font-semibold text-sm sm:text-base text-[#14213D] leading-tight">
+                <h3 className="font-semibold text-sm sm:text-base text-ink leading-tight">
                   Gastos por Categoria
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -1250,7 +1226,7 @@ export default function Home() {
             </div>
           ) : categoryExpenses.list.length === 0 ? (
             <div className="py-8 flex flex-col items-center justify-center text-center">
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-2">
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-body3 mb-2">
                 <BarChart3 className="w-6 h-6 stroke-[1.5]" />
               </div>
               <p className="text-xs font-semibold text-slate-700">
@@ -1275,23 +1251,23 @@ export default function Home() {
                 return (
                   <div key={item.id} className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-[#14213D] truncate max-w-[200px] sm:max-w-none">
+                      <span className="font-medium text-ink truncate max-w-[200px] sm:max-w-none">
                         {item.name}
                       </span>
                       <div className="flex items-center gap-2 shrink-0 tabular-nums">
                         <span className="font-semibold text-slate-700">
                           {maskValue(formatBRL(item.amountCents))}
                         </span>
-                        <span className="text-[10px] text-slate-400 font-medium">
+                        <span className="text-[10px] text-body3 font-medium">
                           ({percentOfTotal}%)
                         </span>
                       </div>
                     </div>
 
-                    {/* Barra de progresso CDS: azul-marinho #14213D com cantos suaves */}
+                    {/* Barra de progresso CDS: azul-marinho ink com cantos suaves */}
                     <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
                       <div
-                        className="bg-[#14213D] h-full rounded-full transition-all duration-500 ease-out"
+                        className="bg-ink h-full rounded-full transition-all duration-500 ease-out"
                         style={{ width: `${barWidth}%` }}
                         role="progressbar"
                         aria-label={`Gastos na categoria ${item.name}`}
@@ -1307,12 +1283,10 @@ export default function Home() {
           )}
         </div>
         {/* 4. SEÇÃO ÚLTIMAS TRANSAÇÕES */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-3xl border border-[rgba(20,33,61,0.06)] p-5 sm:p-7 shadow-elevation-1">
+        <div className="bg-surface backdrop-blur-sm rounded-3xl border border-line p-5 sm:p-7 shadow-elevation-1">
           <div className="flex items-center justify-between mb-4 gap-2">
             <div className="min-w-0">
-              <h3 className="font-semibold text-base text-[#14213D] break-words">
-                Últimas Transações
-              </h3>
+              <h3 className="font-semibold text-base text-ink break-words">Últimas Transações</h3>
               <p className="text-xs text-muted-foreground break-words mt-0.5">
                 Histórico recente de receitas e despesas
               </p>
@@ -1320,10 +1294,10 @@ export default function Home() {
             <Button
               variant="ghost"
               onClick={() => navigate('/carteira')}
-              className="text-xs font-semibold text-[#14213D] hover:text-[#14213D] hover:bg-slate-100 rounded-xl px-2.5 py-1.5 shrink-0 h-auto"
+              className="text-xs font-semibold text-ink hover:text-ink hover:bg-slate-100 rounded-xl px-2.5 py-1.5 shrink-0 h-auto"
             >
               <span>Ver todas</span>
-              <ChevronRight className="w-4 h-4 ml-1 text-[#FCA311]" />
+              <ChevronRight className="w-4 h-4 ml-1 text-action" />
             </Button>
           </div>
 
@@ -1344,7 +1318,7 @@ export default function Home() {
             </div>
           ) : recentItems.length === 0 ? (
             <div className="py-12 flex flex-col items-center text-center">
-              <div className="w-16 h-16 rounded-3xl bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+              <div className="w-16 h-16 rounded-3xl bg-slate-100 flex items-center justify-center text-body3 mb-3">
                 <WalletCards className="w-8 h-8 stroke-[1.5]" />
               </div>
               <h4 className="font-semibold text-slate-800 text-sm">Nenhuma transação ainda</h4>
@@ -1353,7 +1327,7 @@ export default function Home() {
               </p>
               <Button
                 onClick={() => openNewTransaction()}
-                className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-semibold text-xs rounded-xl shadow-curiango"
+                className="bg-action hover:bg-action-hover text-white font-semibold text-xs rounded-xl shadow-cds"
               >
                 <Plus className="w-4 h-4 mr-1.5 stroke-[1.5]" />
                 Adicionar primeira transação
@@ -1389,7 +1363,7 @@ export default function Home() {
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-1.5 min-w-0">
                           <p
-                            className="font-medium text-xs sm:text-sm text-[#14213D] group-hover:text-[#14213D] transition-colors break-words leading-tight"
+                            className="font-medium text-xs sm:text-sm text-ink group-hover:text-ink transition-colors break-words leading-tight"
                             title={displayTitle}
                           >
                             {displayTitle}
@@ -1424,7 +1398,7 @@ export default function Home() {
                           <span className="text-slate-300 shrink-0 hidden xs:inline">•</span>
 
                           <span className="inline-flex items-center gap-1 font-normal text-muted-foreground bg-slate-100 px-1.5 py-0.5 rounded-md shrink-0 text-xs">
-                            <span className="w-2.5 h-2.5 rounded-full bg-[#14213D] text-white flex items-center justify-center text-[7px] font-bold shrink-0">
+                            <span className="w-2.5 h-2.5 rounded-full bg-ink text-white flex items-center justify-center text-[7px] font-bold shrink-0">
                               {tx.member?.name?.charAt(0).toUpperCase() || 'M'}
                             </span>
                             <span className="break-words">{tx.member?.name || 'Membro'}</span>
@@ -1436,7 +1410,7 @@ export default function Home() {
                             <span className="font-normal text-muted-foreground text-xs break-words">
                               <span>{tx.category.name}</span>
                               {tx.subcategory && (
-                                <span className="text-[#14213D] font-medium ml-1">
+                                <span className="text-ink font-medium ml-1">
                                   · {tx.subcategory.name}
                                 </span>
                               )}
@@ -1453,7 +1427,7 @@ export default function Home() {
                     <div className="text-right shrink-0 pl-1 pt-0.5 sm:pt-0">
                       <span
                         className={`font-semibold tracking-tight text-xs sm:text-sm md:text-base tabular-nums whitespace-nowrap ${
-                          isIncome ? 'text-[#059669]' : 'text-[#E11D48]'
+                          isIncome ? 'text-income' : 'text-expense'
                         }`}
                       >
                         {hideValues

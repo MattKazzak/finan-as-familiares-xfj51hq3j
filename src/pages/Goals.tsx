@@ -216,7 +216,7 @@ export default function GoalsPage() {
         {goals.length > 0 && (
           <Button
             onClick={openCreateDialog}
-            className="bg-brand-amber hover:bg-[#e08e08] text-brand font-bold text-xs rounded-xl shadow-elevation-1 gap-1.5 border-0"
+            className="bg-action hover:bg-action-hover text-white font-bold text-xs rounded-xl shadow-cds gap-1.5 border-0"
           >
             <Plus className="w-4 h-4" />
             <span>+ Nova meta</span>
@@ -229,17 +229,17 @@ export default function GoalsPage() {
         <div className="py-12 text-center text-xs text-slate-400">Carregando metas...</div>
       ) : goals.length === 0 ? (
         /* Empty State */
-        <div className="bg-white/95 backdrop-blur-sm rounded-3xl p-12 text-center border border-[rgba(20,33,61,0.06)] shadow-elevation-1">
-          <div className="w-16 h-16 rounded-3xl bg-slate-100 text-[#14213D] flex items-center justify-center mx-auto mb-3 shadow-2xs border border-[rgba(20,33,61,0.04)]">
+        <div className="bg-surface/95 backdrop-blur-sm rounded-3xl p-12 text-center border border-line shadow-cds">
+          <div className="w-16 h-16 rounded-3xl bg-surface-2 text-ink flex items-center justify-center mx-auto mb-3 shadow-2xs border border-line">
             <Target className="w-8 h-8 stroke-[1.5]" />
           </div>
-          <h3 className="font-bold text-slate-800 text-base">Nenhuma meta definida</h3>
-          <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto mb-5">
+          <h3 className="font-bold text-ink text-base">Nenhuma meta definida</h3>
+          <p className="text-xs text-body2 mt-1 max-w-xs mx-auto mb-5">
             Defina sonhos como viagem de férias, troca de carro ou reserva de emergência.
           </p>
           <Button
             onClick={openCreateDialog}
-            className="bg-brand-amber hover:bg-[#e08e08] text-brand text-xs font-bold rounded-xl border-0 shadow-elevation-1"
+            className="bg-action hover:bg-action-hover text-white text-xs font-bold rounded-xl border-0 shadow-cds"
           >
             <Plus className="w-4 h-4 mr-1.5" />
             Criar primeira meta
@@ -264,20 +264,20 @@ export default function GoalsPage() {
             return (
               <div
                 key={goal.id}
-                className="bg-white/95 backdrop-blur-sm rounded-2xl p-5 sm:p-6 border border-[rgba(20,33,61,0.06)] shadow-elevation-1 hover:shadow-elevation-2 transition-all flex flex-col justify-between group"
+                className="bg-surface/95 backdrop-blur-sm rounded-2xl p-5 sm:p-6 border border-line shadow-cds hover:shadow-elevation-2 transition-all flex flex-col justify-between group"
               >
                 <div>
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100 shadow-2xs">
+                      <div className="w-10 h-10 rounded-xl bg-income-subtle text-income flex items-center justify-center shrink-0 border border-line shadow-2xs">
                         <CategoryIcon
                           name={goal.category?.icon || 'Target'}
-                          className="w-4 h-4 text-[#10B981]"
+                          className="w-4 h-4 text-data-3"
                           strokeWidth={1.5}
                         />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-sm sm:text-base text-[#14213D] leading-tight">
+                        <h4 className="font-semibold text-sm sm:text-base text-ink leading-tight">
                           {goal.name}
                         </h4>
                         {goal.deadline && (
@@ -310,23 +310,23 @@ export default function GoalsPage() {
                   <div className="space-y-1.5 mb-4">
                     <div className="flex items-baseline justify-between text-xs">
                       <span className="text-slate-500 font-medium">Meta Total:</span>
-                      <span className="font-semibold tracking-tight text-[#14213D] tabular-nums">
+                      <span className="font-semibold tracking-tight text-ink tabular-nums">
                         {formatBRL(goal.target_amount_cents)}
                       </span>
                     </div>
 
                     <div className="flex items-baseline justify-between text-xs">
                       <span className="text-slate-500 font-medium">Valor Guardado:</span>
-                      <span className="font-bold text-emerald-700 tabular-nums">
+                      <span className="font-bold text-income tabular-nums">
                         {formatBRL(savedCents)} ({percent}%)
                       </span>
                     </div>
                   </div>
 
                   {/* Anel / Barra de Progresso CDS com gradiente orgânico */}
-                  <div className="w-full bg-slate-100/90 h-2.5 rounded-full overflow-hidden mb-4 shadow-inner">
+                  <div className="w-full bg-surface-2 h-2.5 rounded-full overflow-hidden mb-4 shadow-inner">
                     <div
-                      className="h-full rounded-full transition-all duration-700 bg-gradient-to-r from-[#10B981] to-[#34d399]"
+                      className="h-full rounded-full transition-all duration-700 bg-gradient-to-r from-[var(--data-3)] to-emerald-400"
                       style={{
                         width: `${percent}%`,
                       }}
@@ -469,7 +469,7 @@ export default function GoalsPage() {
               <Button
                 type="submit"
                 disabled={saving}
-                className="bg-brand-amber hover:bg-[#e08e08] text-brand font-bold border-0"
+                className="bg-action hover:bg-action-hover text-white font-bold border-0"
               >
                 {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {editingGoal ? 'Salvar Alterações' : 'Criar Meta'}

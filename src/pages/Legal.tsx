@@ -16,8 +16,8 @@ function LegalShell({
 }) {
   const navigate = useNavigate()
   return (
-    <div className="min-h-screen bg-[#F8F9FB]">
-      <header className="bg-[#14213D] text-white px-4 pt-12 pb-6 sm:pt-14">
+    <div className="min-h-screen bg-bg">
+      <header className="bg-ink text-white px-4 pt-12 pb-6 sm:pt-14">
         <div className="max-w-2xl mx-auto">
           <button
             onClick={() => navigate(-1)}
@@ -59,9 +59,9 @@ function LegalShell({
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="bg-white rounded-2xl border border-[#14213D]/[0.06] shadow-elevation-1 p-5">
-      <h2 className="text-sm font-bold text-[#14213D] mb-2">{title}</h2>
-      <div className="text-xs text-slate-600 leading-relaxed space-y-2">{children}</div>
+    <section className="bg-surface rounded-2xl border border-line shadow-cds p-5">
+      <h2 className="text-sm font-bold text-ink mb-2">{title}</h2>
+      <div className="text-xs text-body2 leading-relaxed space-y-2">{children}</div>
     </section>
   )
 }
@@ -182,7 +182,7 @@ export function TermsPage() {
             href="https://xeno-canto.org/668769"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#FCA311] font-semibold underline"
+            className="text-action font-semibold underline"
           >
             XC668769, xeno-canto.org
           </a>
@@ -241,14 +241,14 @@ export function FaqPage() {
         {FAQ_ITEMS.map((item, i) => (
           <div
             key={i}
-            className="bg-white rounded-2xl border border-[#14213D]/[0.06] shadow-elevation-1 overflow-hidden"
+            className="bg-surface rounded-2xl border border-line shadow-cds overflow-hidden"
           >
             <button
               onClick={() => setOpenIndex(openIndex === i ? null : i)}
               className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left"
               aria-expanded={openIndex === i}
             >
-              <span className="text-sm font-semibold text-[#14213D]">{item.q}</span>
+              <span className="text-sm font-semibold text-ink">{item.q}</span>
               <ChevronDown
                 className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${
                   openIndex === i ? 'rotate-180' : ''
@@ -256,7 +256,7 @@ export function FaqPage() {
               />
             </button>
             {openIndex === i && (
-              <div className="px-5 pb-4 text-xs text-slate-600 leading-relaxed animate-fade-in">
+              <div className="px-5 pb-4 text-xs text-body2 leading-relaxed animate-fade-in">
                 {item.a}
               </div>
             )}
@@ -265,7 +265,7 @@ export function FaqPage() {
       </div>
       <Link
         to="/contato"
-        className="flex items-center justify-center gap-2 py-3 text-xs font-semibold text-[#14213D] hover:text-[#FCA311] transition-colors"
+        className="flex items-center justify-center gap-2 py-3 text-xs font-semibold text-ink hover:text-action transition-colors"
       >
         <HelpCircle className="w-4 h-4" />
         Não achou sua resposta? Fale com a gente
@@ -280,17 +280,17 @@ export function ContactPage() {
     <LegalShell title="Fale conosco" subtitle="Respondemos em até 48h úteis">
       <Section title="Canais de atendimento">
         <p className="flex items-center gap-2">
-          <Mail className="w-4 h-4 text-[#FCA311]" />
+          <Mail className="w-4 h-4 text-action" />
           <strong>contato@curiangoo.com</strong>
         </p>
-        <p className="text-[11px] text-slate-500">
+        <p className="text-[11px] text-body3">
           Para questões de privacidade e LGPD: privacidade@curiangoo.com
         </p>
       </Section>
       <Section title="Antes de escrever">
         <p>
           Dúvidas de uso costumam estar no{' '}
-          <Link to="/faq" className="text-[#FCA311] font-semibold">
+          <Link to="/faq" className="text-action font-semibold">
             FAQ
           </Link>{' '}
           — é mais rápido por lá.
@@ -301,12 +301,12 @@ export function ContactPage() {
         </p>
       </Section>
       {sent ? (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 text-sm text-emerald-900 font-medium">
+        <div className="bg-income-subtle border border-line rounded-2xl p-5 text-sm text-income font-medium">
           Mensagem enviada! Vamos te responder no seu e-mail em até 48h úteis. 💛
         </div>
       ) : (
         <form
-          className="bg-white rounded-2xl border border-[#14213D]/[0.06] shadow-elevation-1 p-5 space-y-3"
+          className="bg-surface rounded-2xl border border-line shadow-cds p-5 space-y-3"
           onSubmit={(e) => {
             e.preventDefault()
             // MVP: mailto direto — trocar por Edge Function de e-mail no lançamento
@@ -321,36 +321,36 @@ export function ContactPage() {
           }}
         >
           <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1">Seu nome</label>
+            <label className="text-xs font-medium text-body2 block mb-1">Seu nome</label>
             <input
               name="nome"
               required
-              className="w-full h-11 px-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#FCA311]/40 focus:border-[#FCA311]"
+              className="w-full h-11 px-3 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-action/40 focus:border-action"
               placeholder="Como podemos te chamar?"
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1">Assunto</label>
+            <label className="text-xs font-medium text-body2 block mb-1">Assunto</label>
             <input
               name="assunto"
               required
-              className="w-full h-11 px-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#FCA311]/40 focus:border-[#FCA311]"
+              className="w-full h-11 px-3 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-action/40 focus:border-action"
               placeholder="Dúvida, bug ou sugestão"
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1">Mensagem</label>
+            <label className="text-xs font-medium text-body2 block mb-1">Mensagem</label>
             <textarea
               name="mensagem"
               required
               rows={5}
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#FCA311]/40 focus:border-[#FCA311] resize-none"
+              className="w-full px-3 py-2.5 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-action/40 focus:border-action resize-none"
               placeholder="Conta pra gente o que precisa..."
             />
           </div>
           <button
             type="submit"
-            className="w-full h-12 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-xl shadow-elevation-1 active:scale-[0.99] transition-all text-sm"
+            className="w-full h-12 bg-action hover:bg-action-hover text-white font-bold rounded-xl shadow-cds active:scale-[0.99] transition-all text-sm"
           >
             Enviar mensagem
           </button>

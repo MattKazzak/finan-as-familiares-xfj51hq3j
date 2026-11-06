@@ -279,7 +279,7 @@ export function InviteAcceptPage() {
                 <Button
                   onClick={handleAcceptLoggedIn}
                   disabled={actionLoading}
-                  className="w-full h-11 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-xl shadow-md shadow-[#FCA311]/20 active:scale-98 transition-all text-xs sm:text-sm border-0"
+                  className="w-full h-11 bg-action hover:bg-action-hover text-white font-bold rounded-xl shadow-cds active:scale-98 transition-all text-xs sm:text-sm border-0"
                 >
                   {actionLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -453,7 +453,7 @@ export function InviteAcceptPage() {
                   <Button
                     type="submit"
                     disabled={actionLoading}
-                    className="w-full h-11 mt-2 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-xl shadow-md shadow-[#FCA311]/20 active:scale-98 transition-all text-xs sm:text-sm border-0"
+                    className="w-full h-11 mt-2 bg-action hover:bg-action-hover text-white font-bold rounded-xl shadow-cds active:scale-98 transition-all text-xs sm:text-sm border-0"
                   >
                     {actionLoading ? (
                       <Loader2 className="w-4 h-4 animate-spin mr-2" />
