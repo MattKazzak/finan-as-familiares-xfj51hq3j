@@ -385,9 +385,9 @@ export default function PatrimonyPage() {
   return (
     <div className="space-y-6 sm:space-y-8 max-w-5xl mx-auto w-full min-w-0 pb-12">
       {/* 1. HERO — VISÃO CONSOLIDADA DO PATRIMÔNIO LÍQUIDO */}
-      <div className="bg-gradient-to-br from-[#14213D] via-[#1a2b4e] to-[#0f192e] text-white rounded-3xl p-6 sm:p-8 shadow-elevation-2 border border-white/10 relative overflow-hidden">
+      <div className="bg-gradient-to-br from-ink via-[#1a2b4e] to-[#0f192e] text-white rounded-3xl p-6 sm:p-8 shadow-elevation-2 border border-white/10 relative overflow-hidden">
         {/* Luzes decorativas de fundo CDS */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-[#FCA311]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-80 h-80 bg-action/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-60 h-60 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 space-y-6">
@@ -409,7 +409,7 @@ export default function PatrimonyPage() {
 
             <Button
               onClick={openCreateDialog}
-              className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold text-xs rounded-xl shadow-md gap-1.5 border-0 self-start sm:self-auto cursor-pointer"
+              className="bg-action hover:bg-action-hover text-white font-bold text-xs rounded-xl shadow-md gap-1.5 border-0 self-start sm:self-auto cursor-pointer"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>Adicionar Ativo</span>
@@ -464,7 +464,7 @@ export default function PatrimonyPage() {
             <div className="bg-white/5 rounded-2xl p-4 border border-white/10 backdrop-blur-xs">
               <div className="flex items-center justify-between text-xs text-slate-300 mb-1">
                 <span className="flex items-center gap-1.5 font-medium">
-                  <Landmark className="w-4 h-4 text-[#FCA311]" />
+                  <Landmark className="w-4 h-4 text-action" />
                   Caixa & Contas
                 </span>
                 <span className="text-[10px] font-semibold text-slate-400">Liquidez</span>
@@ -497,7 +497,7 @@ export default function PatrimonyPage() {
 
       {/* 2. DISTRIBUIÇÃO POR CLASSE DE ATIVO */}
       {assetClassBreakdown.length > 0 && (
-        <div className="bg-white/95 rounded-3xl p-5 sm:p-6 border border-[rgba(20,33,61,0.06)] shadow-elevation-1">
+        <div className="bg-white/95 rounded-3xl p-5 sm:p-6 border border-line shadow-elevation-1">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
@@ -557,7 +557,7 @@ export default function PatrimonyPage() {
       )}
 
       {/* 3. SEÇÃO PRINCIPAL — CARTEIRA DE INVESTIMENTOS (DADOS REAIS FUNCIONAIS) */}
-      <div className="bg-white/95 rounded-3xl border border-[rgba(20,33,61,0.06)] p-5 sm:p-6 shadow-elevation-1">
+      <div className="bg-white/95 rounded-3xl border border-line p-5 sm:p-6 shadow-elevation-1">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
           <div>
             <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
@@ -573,7 +573,7 @@ export default function PatrimonyPage() {
             <Button
               onClick={openCreateDialog}
               size="sm"
-              className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold text-xs rounded-xl shadow-xs gap-1 border-0"
+              className="bg-action hover:bg-action-hover text-white font-bold text-xs rounded-xl shadow-xs gap-1 border-0"
             >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
               <span>Novo Ativo</span>
@@ -588,7 +588,7 @@ export default function PatrimonyPage() {
         ) : investments.length === 0 ? (
           /* Empty State Amigável CDS */
           <div className="py-12 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 p-6">
-            <div className="w-14 h-14 rounded-2xl bg-[#14213D]/5 text-[#14213D] flex items-center justify-center mx-auto mb-3">
+            <div className="w-14 h-14 rounded-2xl bg-ink/5 text-ink flex items-center justify-center mx-auto mb-3">
               <PieChart className="w-7 h-7 stroke-[1.5]" />
             </div>
             <h4 className="font-bold text-slate-800 text-sm">Nenhum investimento registrado</h4>
@@ -598,7 +598,7 @@ export default function PatrimonyPage() {
             </p>
             <Button
               onClick={openCreateDialog}
-              className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] text-xs font-bold rounded-xl shadow-xs"
+              className="bg-action hover:bg-action-hover text-white text-xs font-bold rounded-xl shadow-xs"
             >
               <Plus className="w-4 h-4 mr-1.5 stroke-[2.5]" />
               Adicionar primeiro ativo
@@ -720,7 +720,7 @@ export default function PatrimonyPage() {
       </div>
 
       {/* 4. SEÇÃO METAS CONECTADAS AOS BALDES (ESTRUTURADA COM DADOS REAIS EXISTENTES) */}
-      <div className="bg-white/95 rounded-3xl border border-[rgba(20,33,61,0.06)] p-5 sm:p-6 shadow-elevation-1">
+      <div className="bg-white/95 rounded-3xl border border-line p-5 sm:p-6 shadow-elevation-1">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
@@ -736,7 +736,7 @@ export default function PatrimonyPage() {
             variant="ghost"
             size="sm"
             onClick={() => navigate('/metas')}
-            className="text-xs font-semibold text-[#14213D] hover:text-[#FCA311] hover:bg-slate-50 gap-1 rounded-xl"
+            className="text-xs font-semibold text-ink hover:text-action hover:bg-slate-50 gap-1 rounded-xl"
           >
             <span>Ver todas as metas</span>
             <ChevronRight className="w-3.5 h-3.5" />
@@ -802,7 +802,7 @@ export default function PatrimonyPage() {
       </div>
 
       {/* 5. SEÇÃO DÍVIDAS E FINANCIAMENTOS (LADO PASSIVO — PREPARADA PARA EVOLUIR) */}
-      <div className="bg-white/95 rounded-3xl border border-[rgba(20,33,61,0.06)] p-5 sm:p-6 shadow-elevation-1">
+      <div className="bg-white/95 rounded-3xl border border-line p-5 sm:p-6 shadow-elevation-1">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Building2 className="w-4 h-4 text-rose-500" />
@@ -859,7 +859,7 @@ export default function PatrimonyPage() {
       </div>
 
       {/* 6. ALOCAÇÃO IDEAL VS REAL (PREPARADA PARA EVOLUIR) */}
-      <div className="bg-white/95 rounded-3xl border border-[rgba(20,33,61,0.06)] p-5 sm:p-6 shadow-elevation-1">
+      <div className="bg-white/95 rounded-3xl border border-line p-5 sm:p-6 shadow-elevation-1">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Scale className="w-4 h-4 text-blue-600" />
@@ -1029,9 +1029,9 @@ export default function PatrimonyPage() {
               <Button
                 type="submit"
                 disabled={savingAsset}
-                className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold"
+                className="bg-action hover:bg-action-hover text-white font-bold"
               >
-                {savingAsset && <Loader2 className="w-4 h-4 mr-2 animate-spin text-[#14213D]" />}
+                {savingAsset && <Loader2 className="w-4 h-4 mr-2 animate-spin text-white" />}
                 {editingAsset ? 'Salvar Alterações' : 'Adicionar ao Patrimônio'}
               </Button>
             </DialogFooter>

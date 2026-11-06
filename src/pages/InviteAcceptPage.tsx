@@ -204,14 +204,14 @@ export function InviteAcceptPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-[#E5E5E5]/30 to-slate-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-[#14213D]/10 border border-[#E5E5E5] p-6 sm:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-white via-slate-100/40 to-slate-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-ink/10 border border-line p-6 sm:p-8">
         {/* Cabeçalho */}
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-[#E5E5E5] p-3 shadow-inner mb-3 flex items-center justify-center text-[#14213D]">
+          <div className="w-14 h-14 rounded-2xl bg-slate-100 p-3 shadow-inner mb-3 flex items-center justify-center text-ink">
             <Users className="w-8 h-8" />
           </div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-[#14213D] tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-semibold text-ink tracking-tight">
             Convite para Família
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">

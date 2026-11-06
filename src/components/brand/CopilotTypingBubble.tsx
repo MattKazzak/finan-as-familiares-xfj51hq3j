@@ -30,7 +30,7 @@ export const CopilotTypingBubble: React.FC<CopilotTypingBubbleProps> = ({ classN
       {/* Bolha limpa com apenas 3 reticências animadas (sem texto e sem fundo azul) */}
       <div
         data-testid="copilot-typing-dots"
-        className="bg-white border border-slate-200/90 text-slate-800 rounded-2xl rounded-tl-xs px-2.5 py-1.5 flex items-center shadow-curiango"
+        className="bg-white border border-slate-200/90 text-slate-800 rounded-2xl rounded-tl-xs px-2.5 py-1.5 flex items-center shadow-cds"
       >
         <div className="flex items-center gap-1 py-0.5" aria-label="digitando...">
           <span

@@ -1976,7 +1976,7 @@ export function CopilotPage() {
   }, [hasConsent, isListening, startListening, stopListeningAndProcess])
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-5rem)] md:h-[calc(100dvh-6rem)] max-w-2xl mx-auto bg-white/70 backdrop-blur-sm rounded-3xl border border-border/40 shadow-curiango overflow-hidden relative">
+    <div className="flex flex-col h-[calc(100dvh-5rem)] md:h-[calc(100dvh-6rem)] max-w-2xl mx-auto bg-white/70 backdrop-blur-sm rounded-3xl border border-border/40 shadow-cds overflow-hidden relative">
       {/* Topo do Chat (CDS v1.0) */}
       <div className="flex items-center justify-between px-4 py-3 bg-brand text-white">
         <div className="flex items-center gap-3">
@@ -2043,7 +2043,7 @@ export function CopilotPage() {
               className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-full`}
             >
               <div
-                className={`max-w-[85%] sm:max-w-[75%] rounded-2xl p-3 text-xs sm:text-sm leading-relaxed shadow-curiango ${
+                className={`max-w-[85%] sm:max-w-[75%] rounded-2xl p-3 text-xs sm:text-sm leading-relaxed shadow-cds ${
                   isUser
                     ? 'bg-brand text-white rounded-br-xs'
                     : 'bg-white text-brand border border-border/60 rounded-bl-xs'
@@ -2203,8 +2203,8 @@ export function CopilotPage() {
         {/* Status de transição quando transcrevendo áudio */}
         {isTranscribing && !isListening && (
           <div className="flex items-center gap-2 text-xs text-slate-600 px-1">
-            <span className="w-2 h-2 rounded-full bg-brand-amber animate-pulse shrink-0" />
-            <span className="font-medium text-[11px] text-[#14213D]">Transcrevendo áudio</span>
+            <span className="w-2 h-2 rounded-full bg-action animate-pulse shrink-0" />
+            <span className="font-medium text-[11px] text-ink">Transcrevendo áudio</span>
           </div>
         )}
 
@@ -2219,7 +2219,7 @@ export function CopilotPage() {
             <div className="flex items-center gap-2 shrink-0">
               <span
                 data-testid="copilot-elapsed-time"
-                className="font-mono text-xs font-semibold text-[#14213D] tracking-tight tabular-nums"
+                className="font-mono text-xs font-semibold text-ink tracking-tight tabular-nums"
               >
                 {Math.floor(voiceElapsedSeconds / 60)
                   .toString()
@@ -2249,7 +2249,7 @@ export function CopilotPage() {
                 return (
                   <span
                     key={bIdx}
-                    className="w-1 bg-[#FCA311] rounded-full transition-[height] duration-150 ease-out"
+                    className="w-1 bg-action rounded-full transition-[height] duration-150 ease-out"
                     style={{ height: `${barHeightPx}px` }}
                   />
                 )
@@ -2261,7 +2261,7 @@ export function CopilotPage() {
               <button
                 type="button"
                 onClick={cancelListening}
-                className="px-2 py-1.5 text-xs font-medium text-[#64748B] hover:text-[#14213D] transition-colors cursor-pointer"
+                className="px-2 py-1.5 text-xs font-medium text-body2 hover:text-ink transition-colors cursor-pointer"
                 aria-label="Cancelar gravação"
               >
                 Cancelar
@@ -2270,11 +2270,11 @@ export function CopilotPage() {
               <button
                 type="button"
                 onClick={handleToggleListening}
-                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-[#14213D] flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 group"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-ink flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 group"
                 aria-label="Parar gravação e transcrever"
                 title="Parar gravação"
               >
-                <Square className="w-4 h-4 fill-[#14213D] text-[#14213D] rounded-xs group-hover:scale-105 transition-transform" />
+                <Square className="w-4 h-4 fill-ink text-ink rounded-xs group-hover:scale-105 transition-transform" />
               </button>
             </div>
           </div>
@@ -2305,7 +2305,7 @@ export function CopilotPage() {
                 disabled={isProcessing || isTranscribing}
                 className="w-8 h-8 rounded-xl text-slate-600 hover:text-brand hover:bg-slate-200/60 flex items-center justify-center transition-all cursor-pointer shrink-0 disabled:opacity-40"
               >
-                <Mic className="w-4 h-4 text-[#14213D]" strokeWidth={1.5} />
+                <Mic className="w-4 h-4 text-ink" strokeWidth={1.5} />
               </button>
 
               <button
@@ -2314,7 +2314,7 @@ export function CopilotPage() {
                 aria-label="Enviar mensagem"
                 className="w-8 h-8 rounded-xl bg-brand text-white hover:bg-brand-light disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all cursor-pointer shrink-0"
               >
-                <Send className="w-3.5 h-3.5 text-[#FCA311]" strokeWidth={1.5} />
+                <Send className="w-3.5 h-3.5 text-action" strokeWidth={1.5} />
               </button>
             </div>
           </form>

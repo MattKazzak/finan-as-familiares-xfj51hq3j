@@ -861,9 +861,9 @@ export default function ProfilePage() {
           da página, sem selo, sem botão chamativo. Editar = ícone de lápis discreto.
           Premium = badge sutil. A ação de assinatura vive na linha Assinatura do hub.
           ================================================ */}
-      <div className="bg-white/95 rounded-3xl p-5 shadow-elevation-1 border border-[rgba(20,33,61,0.06)] flex items-center justify-between gap-3">
+      <div className="bg-white/95 rounded-3xl p-5 shadow-elevation-1 border border-line flex items-center justify-between gap-3">
         <div className="flex items-center gap-3.5 min-w-0 flex-1">
-          <Avatar className="w-12 h-12 rounded-full border border-[rgba(20,33,61,0.08)] text-slate-700 font-semibold text-lg shadow-sm overflow-hidden shrink-0">
+          <Avatar className="w-12 h-12 rounded-full border border-line text-slate-700 font-semibold text-lg shadow-sm overflow-hidden shrink-0">
             {family?.avatar_url && (
               <AvatarImage
                 src={family.avatar_url}
@@ -873,7 +873,7 @@ export default function ProfilePage() {
             )}
             {/* FIX 25/10: fallback âmbar (padrão Nubank) — o cinza-claro era apagado
                 e "branco" na percepção. Identidade da marca mesmo sem foto. */}
-            <AvatarFallback className="bg-[#FCA311] text-[#14213D] font-bold text-lg flex items-center justify-center w-full h-full">
+            <AvatarFallback className="bg-action text-white font-bold text-lg flex items-center justify-center w-full h-full">
               {familyInitial}
             </AvatarFallback>
           </Avatar>
@@ -912,7 +912,7 @@ export default function ProfilePage() {
             type="button"
             onClick={openEditFamilyDialog}
             aria-label="Editar família"
-            className="w-9 h-9 rounded-full border border-[rgba(20,33,61,0.08)] bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-50 flex items-center justify-center transition-colors shadow-sm"
+            className="w-9 h-9 rounded-full border border-line bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-50 flex items-center justify-center transition-colors shadow-sm"
           >
             <Pencil className="w-4 h-4" />
           </button>
@@ -920,12 +920,13 @@ export default function ProfilePage() {
       </div>
 
       {/* ================================================
-          GRUPO: FAMÍLIA (linha Pleo — expande ao toque)
+          GRUPO: DOCUMENTOS & ARQUIVOS DA FAMÍLIA (linha Pleo)
           ================================================ */}
       <section
-        className="bg-white/95 rounded-3xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 overflow-hidden"
-        aria-label="Família"
+        className="bg-white/95 rounded-3xl border border-line shadow-elevation-1 overflow-hidden"
+        aria-label="Documentos e Arquivos"
       >
+        {' '}
         <button
           type="button"
           onClick={() => toggleSection('familia')}
@@ -969,7 +970,7 @@ export default function ProfilePage() {
                   {isFamilyAdmin ? (
                     <Button
                       onClick={handleOpenInviteModal}
-                      className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold text-xs rounded-xl shadow-sm gap-1.5 h-8 px-3 border-0"
+                      className="bg-action hover:bg-action-hover text-white font-bold text-xs rounded-xl shadow-sm gap-1.5 h-8 px-3 border-0"
                     >
                       <UserPlus className="w-3.5 h-3.5 stroke-[2.5]" />
                       <span>Convidar membro</span>
@@ -1053,7 +1054,7 @@ export default function ProfilePage() {
          ================================================ */}
       <section
         id="sec-assinatura"
-        className="bg-white/95 rounded-3xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 overflow-hidden"
+        className="bg-white/95 rounded-3xl border border-line shadow-elevation-1 overflow-hidden"
         aria-label="Assinatura"
       >
         <button
@@ -1077,7 +1078,7 @@ export default function ProfilePage() {
                   ? 'bg-emerald-100 text-emerald-700'
                   : accessStatus.status === 'trial'
                     ? 'bg-amber-100 text-amber-700'
-                    : 'bg-[#FCA311]/15 text-[#B45309]'
+                    : 'bg-action/15 text-[#B45309]'
             }`}
           >
             {subscriptionLoading || accessLoading
@@ -1130,7 +1131,7 @@ export default function ProfilePage() {
                     href={CHECKOUT_URLS.monthly}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-between gap-2 py-3 px-4 rounded-2xl border-2 border-[#059669] text-[#14213D] hover:bg-emerald-50 transition-colors"
+                    className="flex items-center justify-between gap-2 py-3 px-4 rounded-2xl border-2 border-income text-ink hover:bg-emerald-50 transition-colors"
                   >
                     <span className="flex flex-col leading-tight">
                       <span className="font-semibold">R$ 19,90/mês</span>
@@ -1142,7 +1143,7 @@ export default function ProfilePage() {
                     href={CHECKOUT_URLS.yearly}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-between gap-2 py-3 px-4 rounded-2xl bg-gradient-to-r from-[#059669] to-[#0aa278] text-white hover:opacity-95 transition-opacity"
+                    className="flex items-center justify-between gap-2 py-3 px-4 rounded-2xl bg-gradient-to-r from-income to-[#0aa278] text-white hover:opacity-95 transition-opacity"
                   >
                     <span className="flex flex-col leading-tight">
                       <span className="font-semibold">R$ 149,90/ano</span>
@@ -1216,7 +1217,7 @@ export default function ProfilePage() {
           some — celebra ("ganhou o máximo") e vira prova social.
           ================================================ */}
       <section
-        className="bg-white/95 rounded-3xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 overflow-hidden"
+        className="bg-white/95 rounded-3xl border border-line shadow-elevation-1 overflow-hidden"
         aria-label="Convide amigos"
       >
         <button
@@ -1266,7 +1267,7 @@ export default function ProfilePage() {
           ================================================ */}
       {family?.id && (
         <section
-          className="bg-white/95 rounded-3xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 overflow-hidden"
+          className="bg-white/95 rounded-3xl border border-line shadow-elevation-1 overflow-hidden"
           aria-label="Pasta de Documentos"
         >
           <button
@@ -1310,11 +1311,11 @@ export default function ProfilePage() {
       )}
 
       {/* ================================================
-         GRUPO: MINHA CONTA (linha Pleo — expande ao toque)
-         ================================================ */}
+          GRUPO: APLICATIVO (linha Pleo — expande ao toque)
+          ================================================ */}
       <section
-        className="bg-white/95 rounded-3xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 overflow-hidden"
-        aria-label="Minha conta"
+        className="bg-white/95 rounded-3xl border border-line shadow-elevation-1 overflow-hidden"
+        aria-label="Preferências do Aplicativo"
       >
         {' '}
         <button
@@ -1340,7 +1341,7 @@ export default function ProfilePage() {
             <div className="px-5 py-3.5 border-t border-slate-100 flex items-center gap-3">
               {' '}
               <div className="relative shrink-0">
-                <Avatar className="w-11 h-11 border border-[#FCA311]/40">
+                <Avatar className="w-11 h-11 border border-action/40">
                   {userAvatarUrl && (
                     <AvatarImage
                       src={userAvatarUrl}
@@ -1348,7 +1349,7 @@ export default function ProfilePage() {
                       className="object-cover"
                     />
                   )}
-                  <AvatarFallback className="bg-gradient-to-tr from-[#14213D] to-[#1f3159] text-[#FCA311] font-bold text-sm">
+                  <AvatarFallback className="bg-gradient-to-tr from-ink to-[#1f3159] text-action font-bold text-sm">
                     {userDisplayName.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
@@ -1356,7 +1357,7 @@ export default function ProfilePage() {
                   type="button"
                   onClick={() => userAvatarInputRef.current?.click()}
                   disabled={uploadingUserAvatar}
-                  className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#FCA311] text-[#14213D] flex items-center justify-center shadow border-2 border-white"
+                  className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-action text-white flex items-center justify-center shadow border-2 border-white"
                   aria-label="Alterar minha foto"
                 >
                   {uploadingUserAvatar ? (
@@ -1385,7 +1386,7 @@ export default function ProfilePage() {
                   setUserNameInput(userDisplayName)
                   setIsAccountNameOpen(true)
                 }}
-                className="text-[11px] font-semibold text-[#FCA311] hover:bg-[#FCA311]/10 rounded-xl h-8 shrink-0"
+                className="text-[11px] font-semibold text-action hover:bg-action/10 rounded-xl h-8 shrink-0"
               >
                 Editar meu nome
               </Button>
@@ -1481,7 +1482,7 @@ export default function ProfilePage() {
           GRUPO: PREFERÊNCIAS (linha Pleo — expande ao toque)
           ================================================ */}
       <section
-        className="bg-white/95 rounded-3xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 overflow-hidden"
+        className="bg-white/95 rounded-3xl border border-line shadow-elevation-1 overflow-hidden"
         aria-label="Preferências"
       >
         <button
@@ -1520,7 +1521,7 @@ export default function ProfilePage() {
                   <div
                     data-testid="profile-install-logo"
                     aria-label="Curiangoo"
-                    className="w-9 h-9 rounded-xl bg-[#14213D] flex items-center justify-center shrink-0"
+                    className="w-9 h-9 rounded-xl bg-ink flex items-center justify-center shrink-0"
                   >
                     <CuriangoLogo size={20} color="#FCA311" />
                   </div>
@@ -1533,7 +1534,7 @@ export default function ProfilePage() {
                     </p>
                   </div>
                 </div>
-                <span className="text-[11px] font-bold text-[#FCA311] shrink-0 flex items-center gap-1">
+                <span className="text-[11px] font-bold text-action shrink-0 flex items-center gap-1">
                   {isInstalling ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1633,7 +1634,7 @@ export default function ProfilePage() {
                     })
                   }
                 }}
-                className="shrink-0 text-xs font-bold text-[#14213D] bg-[#FCA311]/15 hover:bg-[#FCA311]/25 px-3.5 py-2 rounded-full transition-colors"
+                className="shrink-0 text-xs font-bold text-ink bg-action/15 hover:bg-action/25 px-3.5 py-2 rounded-full transition-colors"
               >
                 Reiniciar
               </button>
@@ -1664,7 +1665,7 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => setNotificationsHelpOpen(true)}
-                  className="shrink-0 text-xs font-bold text-[#14213D] bg-[#FCA311]/15 hover:bg-[#FCA311]/25 px-3.5 py-2 rounded-full transition-colors"
+                  className="shrink-0 text-xs font-bold text-ink bg-action/15 hover:bg-action/25 px-3.5 py-2 rounded-full transition-colors"
                 >
                   Como liberar
                 </button>
@@ -1681,7 +1682,7 @@ export default function ProfilePage() {
                   type="button"
                   onClick={handleEnablePush}
                   disabled={pushBusy}
-                  className="shrink-0 text-xs font-bold text-[#14213D] bg-[#FCA311]/15 hover:bg-[#FCA311]/25 px-3.5 py-2 rounded-full transition-colors disabled:opacity-50"
+                  className="shrink-0 text-xs font-bold text-ink bg-action/15 hover:bg-action/25 px-3.5 py-2 rounded-full transition-colors disabled:opacity-50"
                 >
                   {pushBusy ? 'Ativando...' : 'Ativar'}
                 </button>
@@ -1694,7 +1695,7 @@ export default function ProfilePage() {
           GRUPO: SOBRE (linha Pleo — expande ao toque)
           ================================================ */}
       <section
-        className="bg-white/95 rounded-3xl border border-[rgba(20,33,61,0.06)] shadow-elevation-1 overflow-hidden"
+        className="bg-white/95 rounded-3xl border border-line shadow-elevation-1 overflow-hidden"
         aria-label="Sobre o Curiangoo"
       >
         <button
@@ -2240,7 +2241,7 @@ export default function ProfilePage() {
       <Dialog open={notificationsHelpOpen} onOpenChange={setNotificationsHelpOpen}>
         <DialogContent className="rounded-3xl max-w-sm w-[92vw] p-6">
           <DialogHeader>
-            <DialogTitle className="text-base text-[#14213D] text-left">
+            <DialogTitle className="text-base text-ink text-left">
               Como liberar as notificações
             </DialogTitle>
             <DialogDescription className="text-left text-xs text-slate-500">
@@ -2266,7 +2267,7 @@ export default function ProfilePage() {
             <Button
               type="button"
               onClick={() => setNotificationsHelpOpen(false)}
-              className="w-full bg-[#14213D] hover:bg-[#1f2f54] text-white font-semibold rounded-xl text-xs border-0"
+              className="w-full bg-ink hover:bg-ink/90 text-white font-semibold rounded-xl text-xs border-0"
             >
               Entendi
             </Button>
