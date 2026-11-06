@@ -185,16 +185,15 @@
   /* ── CDS v2.0 · Camada de tokens (Rodada 1) ──────────────────────────────
      Tokens novos ainda NÃO consumidos pelos componentes: nada visual muda.
      Marca: logo navy #1D2535 sobre branco, monocromático.
-     ATENÇÃO: --border, --primary e --accent já existem como canais HSL
-     (hsl(var(--…)) no tailwind.config.ts). Os valores hex da especificação
-     para esses três nomes NÃO foram aplicados aqui, para não quebrar bordas
-     e botões; a migração deles fica para a rodada de consumo dos tokens. */
+     Nomes de ink/action/line não colidem com os canais HSL do shadcn
+     (--border, --primary, --accent continuam sendo canais HSL no tailwind.config.ts). */
   :root {
     /* --- Estrutura --- */
     --bg: #f5f7fa;
     --surface: #ffffff;
     --surface-2: #eef1f6;
-    /* --border: #E1E6EE;  (pendente — colide com hsl(var(--border))) */
+    --line: #e1e6ee;
+    --line-strong: #c9d2df;
     --border-strong: #c9d2df;
     --text: #141c2e;
     --text-2: #5a6b85;
@@ -203,14 +202,14 @@
 
     /* --- Marca --- */
     --brand-ink: #1d2535; /* hex exato do logo */
-    /* --primary: #1A2234;  (pendente — colide com hsl(var(--primary))) */
-    --primary-hover: #232e45;
-    --primary-subtle: #e8edf5;
+    --ink: #1a2234;
+    --ink-hover: #232e45;
+    --ink-subtle: #e8edf5;
 
     /* --- Ação (única cor viva do sistema) --- */
-    /* --accent: #2F5BEA;  (pendente — colide com hsl(var(--accent))) */
-    --accent-hover: #2449c4;
-    --accent-subtle: #e7edfd;
+    --action: #2f5bea;
+    --action-hover: #2449c4;
+    --action-subtle: #e7edfd;
 
     /* --- Semântica financeira --- */
     --income: #0f7a5a;
@@ -241,7 +240,8 @@
     --bg: #0b111e;
     --surface: #141c2e;
     --surface-2: #1c2638;
-    /* --border: #26324A;  (pendente — colide com hsl(var(--border))) */
+    --line: #26324a;
+    --line-strong: #35435e;
     --border-strong: #35435e;
     --text: #f2f5fa;
     --text-2: #9aa9bf;
@@ -250,14 +250,14 @@
 
     /* --- Marca --- */
     --brand-ink: #f2f5fa;
-    /* --primary: #F2F5FA;  (pendente — colide com hsl(var(--primary))) */
-    --primary-hover: #ffffff;
-    --primary-subtle: #1c2638;
+    --ink: #f2f5fa;
+    --ink-hover: #ffffff;
+    --ink-subtle: #1c2638;
 
     /* --- Ação --- */
-    /* --accent: #5B82F5;  (pendente — colide com hsl(var(--accent))) */
-    --accent-hover: #7a9bff;
-    --accent-subtle: #1b2a4a;
+    --action: #5b82f5;
+    --action-hover: #7a9bff;
+    --action-subtle: #1b2a4a;
 
     /* --- Semântica financeira --- */
     --income: #34b88a;
