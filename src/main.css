@@ -182,6 +182,100 @@
     --chart-6: 38 60% 72%;
   }
 
+  /* ── CDS v2.0 · Camada de tokens (Rodada 1) ──────────────────────────────
+     Tokens novos ainda NÃO consumidos pelos componentes: nada visual muda.
+     Marca: logo navy #1D2535 sobre branco, monocromático.
+     ATENÇÃO: --border, --primary e --accent já existem como canais HSL
+     (hsl(var(--…)) no tailwind.config.ts). Os valores hex da especificação
+     para esses três nomes NÃO foram aplicados aqui, para não quebrar bordas
+     e botões; a migração deles fica para a rodada de consumo dos tokens. */
+  :root {
+    /* --- Estrutura --- */
+    --bg: #f5f7fa;
+    --surface: #ffffff;
+    --surface-2: #eef1f6;
+    /* --border: #E1E6EE;  (pendente — colide com hsl(var(--border))) */
+    --border-strong: #c9d2df;
+    --text: #141c2e;
+    --text-2: #5a6b85;
+    --text-3: #93a1b5;
+    --text-inverse: #ffffff;
+
+    /* --- Marca --- */
+    --brand-ink: #1d2535; /* hex exato do logo */
+    /* --primary: #1A2234;  (pendente — colide com hsl(var(--primary))) */
+    --primary-hover: #232e45;
+    --primary-subtle: #e8edf5;
+
+    /* --- Ação (única cor viva do sistema) --- */
+    /* --accent: #2F5BEA;  (pendente — colide com hsl(var(--accent))) */
+    --accent-hover: #2449c4;
+    --accent-subtle: #e7edfd;
+
+    /* --- Semântica financeira --- */
+    --income: #0f7a5a;
+    --income-subtle: #e3f3ed;
+    --expense: #c33b54;
+    --expense-subtle: #fbe9ec;
+    --warning: #b4790f;
+    --warning-subtle: #fbf1dc;
+
+    /* --- Dados / baldes --- */
+    --data-1: #1a2234; /* Essenciais */
+    --data-2: #2f5bea; /* Estilo de Vida */
+    --data-3: #0f7a5a; /* Metas */
+    --data-4: #7c8ca6;
+    --data-5: #5b8db8;
+    --data-6: #b4790f;
+
+    /* --- Elevação --- */
+    --shadow-card: 0 10px 30px -10px rgba(20, 28, 46, 0.06);
+    --shadow-float: 0 16px 40px -12px rgba(20, 28, 46, 0.12);
+    --shadow-dock: 0 18px 48px -14px rgba(20, 28, 46, 0.2);
+  }
+
+  /* Dark (CDS v2.0): valores CORRETOS para rodadas futuras. O app segue
+     light-only (blindagem acima). Semântica mais clara no escuro por legibilidade. */
+  .dark {
+    /* --- Estrutura --- */
+    --bg: #0b111e;
+    --surface: #141c2e;
+    --surface-2: #1c2638;
+    /* --border: #26324A;  (pendente — colide com hsl(var(--border))) */
+    --border-strong: #35435e;
+    --text: #f2f5fa;
+    --text-2: #9aa9bf;
+    --text-3: #6b7b94;
+    --text-inverse: #141c2e;
+
+    /* --- Marca --- */
+    --brand-ink: #f2f5fa;
+    /* --primary: #F2F5FA;  (pendente — colide com hsl(var(--primary))) */
+    --primary-hover: #ffffff;
+    --primary-subtle: #1c2638;
+
+    /* --- Ação --- */
+    /* --accent: #5B82F5;  (pendente — colide com hsl(var(--accent))) */
+    --accent-hover: #7a9bff;
+    --accent-subtle: #1b2a4a;
+
+    /* --- Semântica financeira --- */
+    --income: #34b88a;
+    --income-subtle: #10281f;
+    --expense: #e5677d;
+    --expense-subtle: #2a1520;
+    --warning: #e0a83c;
+    --warning-subtle: #2a2213;
+
+    /* --- Dados / baldes --- */
+    --data-1: #f2f5fa;
+    --data-2: #5b82f5;
+    --data-3: #34b88a;
+    --data-4: #6b7b94;
+    --data-5: #5b8db8;
+    --data-6: #e0a83c;
+  }
+
   /* Garantia estrutural GLOBAL: impede rolagem horizontal em qualquer tela do app e fixa visual claro */
   html {
     background-color: #f8f9fb !important;
