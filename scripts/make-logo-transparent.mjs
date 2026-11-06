@@ -17,10 +17,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const SRC = path.join(__dirname, '..', 'src', 'assets', 'imagemgerada1793989752917-c429b.png')
 const OUT = path.join(__dirname, '..', 'src', 'assets', 'curiangoo-logo-transparent.png')
 
-const { data, info } = await sharp(SRC)
-  .ensureAlpha()
-  .raw()
-  .toBuffer({ resolveWithObject: true })
+const { data, info } = await sharp(SRC).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
 
 const { width, height, channels } = info
 
@@ -31,7 +28,9 @@ const N = width * height
 const alphaCore = new Uint8Array(N)
 for (let i = 0; i < N; i++) {
   const o = i * channels
-  const r = data[o], g = data[o + 1], b = data[o + 2]
+  const r = data[o],
+    g = data[o + 1],
+    b = data[o + 2]
   const lum = 0.299 * r + 0.587 * g + 0.114 * b
   const chroma = Math.max(r, g, b) - Math.min(r, g, b)
   // chroma alto = pixel colorido de verdade (nunca apagar, mesmo se claro)
@@ -49,15 +48,26 @@ for (let i = 0; i < N; i++) {
 // olho) e volta a ser opaco em vez de virar furo transparente.
 const visited = new Uint8Array(N)
 const queue = new Int32Array(N)
-let qh = 0, qt = 0
+let qh = 0,
+  qt = 0
 const push = (i) => {
-  if (!visited[i] && alphaCore[i] < 255) { visited[i] = 1; queue[qt++] = i }
+  if (!visited[i] && alphaCore[i] < 255) {
+    visited[i] = 1
+    queue[qt++] = i
+  }
 }
-for (let x = 0; x < width; x++) { push(x); push((height - 1) * width + x) }
-for (let y = 0; y < height; y++) { push(y * width); push(y * width + width - 1) }
+for (let x = 0; x < width; x++) {
+  push(x)
+  push((height - 1) * width + x)
+}
+for (let y = 0; y < height; y++) {
+  push(y * width)
+  push(y * width + width - 1)
+}
 while (qh < qt) {
   const i = queue[qh++]
-  const x = i % width, y = (i / width) | 0
+  const x = i % width,
+    y = (i / width) | 0
   if (x > 0) push(i - 1)
   if (x < width - 1) push(i + 1)
   if (y > 0) push(i - width)
@@ -73,16 +83,22 @@ for (let y = 0; y < height; y++) {
     const i = y * width + x
     const a = alphaCore[i]
     if (a === 0 || a === 255) continue
-    let sr = 0, sg = 0, sb = 0, n = 0
+    let sr = 0,
+      sg = 0,
+      sb = 0,
+      n = 0
     for (let dy = -1; dy <= 1; dy++) {
       for (let dx = -1; dx <= 1; dx++) {
         if (dx === 0 && dy === 0) continue
-        const nx = x + dx, ny = y + dy
+        const nx = x + dx,
+          ny = y + dy
         if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue
         const j = ny * width + nx
         if (!isOpaque(j)) continue
         const oj = j * channels
-        sr += out[oj]; sg += out[oj + 1]; sb += out[oj + 2]
+        sr += out[oj]
+        sg += out[oj + 1]
+        sb += out[oj + 2]
         n++
       }
     }
@@ -103,9 +119,7 @@ for (let i = 0; i < N; i++) {
   out[o + 3] = visited[i] === 1 ? alphaCore[i] : 255
 }
 
-await sharp(out, { raw: { width, height, channels } })
-  .png({ compressionLevel: 9 })
-  .toFile(OUT)
+await sharp(out, { raw: { width, height, channels } }).png({ compressionLevel: 9 }).toFile(OUT)
 
 const stats = fs.statSync(OUT)
 console.log(`OK: ${OUT} (${width}x${height}, ${(stats.size / 1024).toFixed(1)} KB)`)

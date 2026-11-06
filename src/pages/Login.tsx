@@ -425,11 +425,11 @@ export default function Login() {
             </div>
           </section>
         )}
-        {/* Card Principal — Elegância Minimalista Fintech em Tema Claro com Sombra Suave */}
-        <main className="w-full bg-white rounded-3xl p-6 sm:p-9 shadow-elevation-2 border border-[#14213D]/[0.06] backdrop-blur-sm">
+        {/* Conteúdo principal — sem card: fica direto sobre o fundo da página, em continuidade com a logo */}
+        <main className="w-full p-6 sm:p-9">
           {/* Alternador de Modo Minimalista (Login / Criar Conta) */}
           {mode !== 'forgot_password' && (
-            <div className="flex p-1 bg-[#F8F9FB] rounded-2xl mb-7 border border-[#14213D]/[0.05]">
+            <div className="flex p-1 bg-slate-100 rounded-2xl mb-7 border border-[#14213D]/[0.05]">
               <button
                 type="button"
                 onClick={() => switchMode('login')}
