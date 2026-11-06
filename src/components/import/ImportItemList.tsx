@@ -121,17 +121,17 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
                 {item.isPossibleDuplicate && !item.isDuplicate ? (
                   <span
                     title={item.duplicateReason || 'Possível duplicata por data e valor'}
-                    className="text-[10px] font-semibold bg-amber-50 text-amber-900 border border-[#FCA311]/40 px-1.5 py-0.2 rounded-md shrink-0 flex items-center gap-0.5"
+                    className="text-[10px] font-semibold bg-amber-50 text-amber-900 border border-action/40 px-1.5 py-0.2 rounded-md shrink-0 flex items-center gap-0.5"
                   >
-                    <AlertTriangle className="w-2.5 h-2.5 text-[#FCA311]" strokeWidth={1.5} />{' '}
-                    possível duplicata
+                    <AlertTriangle className="w-2.5 h-2.5 text-action" strokeWidth={1.5} /> possível
+                    duplicata
                   </span>
                 ) : item.isDuplicate ? (
                   <span
                     title={item.duplicateReason}
-                    className="text-[10px] font-semibold bg-amber-50 text-amber-900 border border-[#FCA311]/30 px-1.5 py-0.2 rounded-md shrink-0 flex items-center gap-0.5"
+                    className="text-[10px] font-semibold bg-amber-50 text-amber-900 border border-action/30 px-1.5 py-0.2 rounded-md shrink-0 flex items-center gap-0.5"
                   >
-                    <AlertTriangle className="w-2.5 h-2.5 text-[#FCA311]" strokeWidth={1.5} />{' '}
+                    <AlertTriangle className="w-2.5 h-2.5 text-action" strokeWidth={1.5} />{' '}
                     Duplicada
                   </span>
                 ) : null}
@@ -141,7 +141,7 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
                   </span>
                 )}
                 {item.isReconciledManual && (
-                  <span className="text-[10px] font-semibold bg-emerald-50 text-[#059669] border border-emerald-200/70 px-1.5 py-0.2 rounded-md shrink-0 flex items-center gap-0.5">
+                  <span className="text-[10px] font-semibold bg-emerald-50 text-income border border-emerald-200/70 px-1.5 py-0.2 rounded-md shrink-0 flex items-center gap-0.5">
                     <Link2 className="w-2.5 h-2.5" strokeWidth={1.5} /> Conciliado
                   </span>
                 )}
@@ -159,7 +159,7 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
                     )}
                   </span>
                 ) : (
-                  <span className="font-semibold text-amber-900 bg-amber-50 border border-[#FCA311]/30 px-1.5 py-0.2 rounded">
+                  <span className="font-semibold text-amber-900 bg-amber-50 border border-action/30 px-1.5 py-0.2 rounded">
                     Pendente
                   </span>
                 )}
@@ -174,7 +174,7 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
                     }`}
                     title={item.aiReasoning || 'Sugerido pela IA'}
                   >
-                    <Sparkles className="w-2.5 h-2.5 text-[#FCA311]" strokeWidth={1.5} />
+                    <Sparkles className="w-2.5 h-2.5 text-action" strokeWidth={1.5} />
                     {item.isUncertain ||
                     (typeof item.aiConfidence === 'number' && item.aiConfidence < 0.6)
                       ? 'sugestão incerta'
@@ -222,7 +222,7 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
             <div className="text-right shrink-0">
               <span
                 className={`font-semibold text-xs sm:text-sm tabular-nums whitespace-nowrap block ${
-                  isIncome ? 'text-[#059669]' : 'text-slate-900'
+                  isIncome ? 'text-income' : 'text-slate-900'
                 }`}
               >
                 {isIncome ? '+' : '−'} {formatBRL(item.amount_cents)}

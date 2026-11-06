@@ -161,12 +161,12 @@ export const DocumentExplorerGrid: React.FC<DocumentExplorerGridProps> = ({
   }, [familyId])
 
   return (
-    <div className="w-full bg-white rounded-3xl border border-[rgba(20,33,61,0.06)] shadow-sm p-4 sm:p-6 space-y-4 sm:space-y-5">
+    <div className="w-full bg-white rounded-3xl border border-line shadow-sm p-4 sm:p-6 space-y-4 sm:space-y-5">
       {/* Barra superior normal OU Barra de Ação de Seleção Múltipla */}
       {isSelectionMode ? (
         <div
           data-testid="selection-mode-bar"
-          className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 p-3 sm:p-3.5 bg-[#14213D] text-white rounded-2xl shadow-md border border-[#14213D]"
+          className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 p-3 sm:p-3.5 bg-ink text-white rounded-2xl shadow-md border border-ink"
         >
           {/* Lado esquerdo: Botão fechar + Contador */}
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -210,12 +210,12 @@ export const DocumentExplorerGrid: React.FC<DocumentExplorerGridProps> = ({
               size="sm"
               onClick={handleBatchShare}
               disabled={selectedDocIds.size === 0 || isBatchSharing}
-              className="h-9 px-3.5 bg-[#FCA311] hover:bg-[#e0910e] text-[#14213D] font-bold text-xs sm:text-sm rounded-xl gap-1.5 shadow-xs transition-transform active:scale-95 disabled:opacity-50"
+              className="h-9 px-3.5 bg-action hover:opacity-90 text-white font-bold text-xs sm:text-sm rounded-xl gap-1.5 shadow-xs transition-transform active:scale-95 disabled:opacity-50"
             >
               {isBatchSharing ? (
-                <Loader2 className="w-4 h-4 animate-spin text-[#14213D]" />
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
               ) : (
-                <Share2 className="w-4 h-4 text-[#14213D]" />
+                <Share2 className="w-4 h-4 text-white" />
               )}
               <span>Compartilhar</span>
             </Button>
@@ -225,18 +225,14 @@ export const DocumentExplorerGrid: React.FC<DocumentExplorerGridProps> = ({
         <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="text-base sm:text-lg font-bold text-[#14213D] tracking-tight">
-                Documentos
-              </h3>
+              <h3 className="text-base sm:text-lg font-bold text-ink tracking-tight">Documentos</h3>
               {documents.length > 0 && (
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
                   {documents.length}
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-[#64748B] truncate mt-0.5">
-              Cofre de arquivos da família
-            </p>
+            <p className="text-[11px] text-body2 truncate mt-0.5">Cofre de arquivos da família</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -244,9 +240,9 @@ export const DocumentExplorerGrid: React.FC<DocumentExplorerGridProps> = ({
             <Button
               type="button"
               onClick={() => setIsAddOpen(true)}
-              className="h-10 px-4 bg-[#14213D] hover:bg-[#1f3159] text-white rounded-2xl text-xs sm:text-sm font-semibold shrink-0 gap-2 shadow-xs transition-transform active:scale-95"
+              className="h-10 px-4 bg-ink hover:opacity-90 text-white rounded-2xl text-xs sm:text-sm font-semibold shrink-0 gap-2 shadow-xs transition-transform active:scale-95"
             >
-              <Plus className="w-4 h-4 text-[#FCA311]" />
+              <Plus className="w-4 h-4 text-action" />
               <span>Adicionar</span>
             </Button>
           </div>
@@ -256,20 +252,18 @@ export const DocumentExplorerGrid: React.FC<DocumentExplorerGridProps> = ({
       {/* Grade de Documentos estilo explorador */}
       {loading ? (
         <div className="py-16 flex flex-col items-center justify-center text-slate-400 gap-2.5">
-          <Loader2 className="w-6 h-6 animate-spin text-[#FCA311]" />
+          <Loader2 className="w-6 h-6 animate-spin text-action" />
           <p className="text-xs font-medium">Carregando documentos...</p>
         </div>
       ) : documents.length === 0 ? (
         /* Estado vazio limpo */
-        <div className="py-12 px-4 text-center rounded-2xl bg-[#F8F9FB] border border-dashed border-slate-200 space-y-3">
-          <div className="w-14 h-14 rounded-2xl bg-amber-50 text-[#FCA311] flex items-center justify-center mx-auto shadow-xs">
+        <div className="py-12 px-4 text-center rounded-2xl bg-bg border border-dashed border-slate-200 space-y-3">
+          <div className="w-14 h-14 rounded-2xl bg-amber-50 text-action flex items-center justify-center mx-auto shadow-xs">
             <FolderOpen className="w-7 h-7" />
           </div>
           <div className="space-y-1">
-            <p className="text-sm font-semibold text-[#14213D]">
-              Nenhum documento adicionado ainda
-            </p>
-            <p className="text-xs text-[#64748B] max-w-sm mx-auto leading-relaxed">
+            <p className="text-sm font-semibold text-ink">Nenhum documento adicionado ainda</p>
+            <p className="text-xs text-body2 max-w-sm mx-auto leading-relaxed">
               Tire uma foto na hora, importe um PDF ou escaneie RG, CNH, comprovantes e certidões.
             </p>
           </div>
@@ -277,9 +271,9 @@ export const DocumentExplorerGrid: React.FC<DocumentExplorerGridProps> = ({
           <Button
             type="button"
             onClick={() => setIsAddOpen(true)}
-            className="text-xs font-semibold bg-[#14213D] text-white hover:bg-[#1f3159] rounded-xl h-9 px-4 gap-1.5 shadow-xs"
+            className="text-xs font-semibold bg-ink text-white hover:opacity-90 rounded-xl h-9 px-4 gap-1.5 shadow-xs"
           >
-            <Plus className="w-3.5 h-3.5 text-[#FCA311]" />
+            <Plus className="w-3.5 h-3.5 text-action" />
             Adicionar Primeiro Documento
           </Button>
         </div>

@@ -21,13 +21,13 @@ export function PwaUpdateBanner({ className = '' }: PwaUpdateBannerProps) {
       aria-label="Atualização disponível do Curiangoo"
       className={`fixed top-4 inset-x-3 z-50 max-w-md mx-auto animate-in fade-in slide-in-from-top-4 duration-300 ${className}`}
     >
-      <div className="bg-[#14213D] text-white border border-[#FCA311]/40 shadow-2xl shadow-[#14213D]/40 rounded-2xl p-3 sm:p-3.5 ring-1 ring-white/10 flex items-center gap-3">
+      <div className="bg-ink text-white border border-action/40 shadow-2xl shadow-black/40 rounded-2xl p-3 sm:p-3.5 ring-1 ring-white/10 flex items-center gap-3">
         {/* Ícone de novidade */}
         <div
           data-testid="pwa-update-icon"
-          className="w-9 h-9 rounded-xl bg-[#FCA311]/15 text-[#FCA311] border border-[#FCA311]/30 flex items-center justify-center shrink-0"
+          className="w-9 h-9 rounded-xl bg-action/15 text-action border border-action/30 flex items-center justify-center shrink-0"
         >
-          <Sparkles className="w-4 h-4 text-[#FCA311]" />
+          <Sparkles className="w-4 h-4 text-action" />
         </div>
 
         {/* Texto informativo discreto */}
@@ -46,7 +46,7 @@ export function PwaUpdateBanner({ className = '' }: PwaUpdateBannerProps) {
             size="sm"
             onClick={updateServiceWorker}
             disabled={isUpdating}
-            className="h-7 px-2.5 text-xs bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-lg shadow-sm flex items-center gap-1 transition-all active:scale-95 border-0"
+            className="h-7 px-2.5 text-xs bg-action hover:opacity-90 text-white font-bold rounded-lg shadow-sm flex items-center gap-1 transition-all active:scale-95 border-0"
           >
             <RefreshCw className={`w-3 h-3 ${isUpdating ? 'animate-spin' : ''}`} />
             <span>{isUpdating ? 'Atualizando...' : 'Atualizar'}</span>

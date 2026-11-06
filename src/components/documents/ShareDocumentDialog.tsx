@@ -95,10 +95,10 @@ export const ShareDocumentDialog: React.FC<ShareDocumentDialogProps> = ({
           <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center mb-1">
             <Share2 className="w-5 h-5" />
           </div>
-          <DialogTitle className="text-base font-semibold text-[#14213D] leading-tight">
+          <DialogTitle className="text-base font-semibold text-ink leading-tight">
             Compartilhar Documento
           </DialogTitle>
-          <DialogDescription className="text-xs text-[#64748B]">
+          <DialogDescription className="text-xs text-body2">
             Gere um link temporário seguro para &quot;{doc.title}&quot;. O link abre sem login
             apenas enquanto estiver no prazo.
           </DialogDescription>
@@ -107,7 +107,7 @@ export const ShareDocumentDialog: React.FC<ShareDocumentDialogProps> = ({
         <div className="space-y-3 pt-2">
           {/* Seletor de tempo */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-[#14213D]">Validade do link</label>
+            <label className="text-xs font-semibold text-ink">Validade do link</label>
             <div className="grid grid-cols-3 gap-1.5">
               {(['15m', '1h', '24h'] as ShareDurationOption[]).map((dur) => (
                 <button
@@ -116,8 +116,8 @@ export const ShareDocumentDialog: React.FC<ShareDocumentDialogProps> = ({
                   onClick={() => setSelectedDuration(dur)}
                   className={`py-2 px-2 rounded-xl text-xs font-semibold border transition-all text-center ${
                     selectedDuration === dur
-                      ? 'bg-[#14213D] text-white border-[#14213D]'
-                      : 'bg-[#F8F9FB] text-slate-700 border-slate-200 hover:bg-slate-100'
+                      ? 'bg-ink text-white border-ink'
+                      : 'bg-bg text-slate-700 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
                   {dur === '15m' ? '15 min' : dur === '1h' ? '1 hora' : '24 horas'}
@@ -165,7 +165,7 @@ export const ShareDocumentDialog: React.FC<ShareDocumentDialogProps> = ({
                         <p className="font-mono text-[10px] text-slate-700 truncate">
                           .../doc/{share.token.slice(0, 10)}...
                         </p>
-                        <p className="text-[10px] text-[#64748B]">
+                        <p className="text-[10px] text-body2">
                           Expira{' '}
                           {new Date(share.expires_at).toLocaleTimeString('pt-BR', {
                             hour: '2-digit',

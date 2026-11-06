@@ -35,7 +35,7 @@ export function WhoIsUsingDialog({ open, onOpenChange }: WhoIsUsingDialogProps) 
     <Dialog open={isActuallyOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm w-[92vw] rounded-3xl p-6">
         <DialogHeader className="text-center sm:text-center pb-2">
-          <div className="w-12 h-12 rounded-2xl bg-[#E5E5E5] text-[#14213D] flex items-center justify-center mx-auto mb-2 shadow-inner">
+          <div className="w-12 h-12 rounded-2xl bg-surface-2 text-ink flex items-center justify-center mx-auto mb-2 shadow-inner">
             <Sparkles className="w-6 h-6 stroke-[2]" />
           </div>
           <DialogTitle className="text-lg font-bold text-slate-900">Quem está usando?</DialogTitle>
@@ -54,13 +54,13 @@ export function WhoIsUsingDialog({ open, onOpenChange }: WhoIsUsingDialogProps) 
                 onClick={() => handleSelectMember(member.id)}
                 className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all duration-150 ${
                   isSelected
-                    ? 'border-[#FCA311] bg-[#FCA311]/10 shadow-sm ring-2 ring-[#FCA311]/25'
+                    ? 'border-action bg-action/10 shadow-sm ring-2 ring-action/25'
                     : 'border-[#E5E5E5] hover:bg-[#E5E5E5]/40 hover:border-slate-300'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <Avatar className="w-10 h-10 border border-emerald-200">
-                    <AvatarFallback className="bg-gradient-to-tr from-[#14213D] to-[#1f3159] text-[#FCA311] font-bold text-sm">
+                    <AvatarFallback className="bg-gradient-to-tr from-ink to-ink/80 text-action font-bold text-sm">
                       {member.name.charAt(0).toUpperCase()}
                     </AvatarFallback>{' '}
                   </Avatar>
@@ -88,7 +88,7 @@ export function WhoIsUsingDialog({ open, onOpenChange }: WhoIsUsingDialogProps) 
                 </div>
 
                 {isSelected ? (
-                  <div className="w-6 h-6 rounded-full bg-[#FCA311] text-[#14213D] flex items-center justify-center shadow-sm font-semibold">
+                  <div className="w-6 h-6 rounded-full bg-action text-white flex items-center justify-center shadow-sm font-semibold">
                     <Check className="w-3.5 h-3.5 stroke-[3]" />
                   </div>
                 ) : null}

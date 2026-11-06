@@ -39,7 +39,7 @@ export function InstallInstructionsModal({
           <div
             data-testid="install-modal-logo"
             aria-label="Curiangoo"
-            className="mx-auto w-16 h-16 rounded-2xl bg-[#14213D] p-2 shadow-lg shadow-[#14213D]/25 mb-3 flex items-center justify-center border border-[#14213D]"
+            className="mx-auto w-16 h-16 rounded-2xl bg-ink p-2 shadow-lg shadow-black/25 mb-3 flex items-center justify-center border border-ink"
           >
             <CuriangoLogo size={40} color="#FCA311" />
           </div>

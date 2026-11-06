@@ -61,20 +61,20 @@ export const ImportQuickFilters: React.FC<ImportQuickFiltersProps> = ({
       id: 'low_confidence',
       label: 'IA Incerta',
       count: counts.lowConfidence,
-      icon: <Sparkles className="w-3 h-3 text-[#FCA311]" strokeWidth={1.5} />,
+      icon: <Sparkles className="w-3 h-3 text-action" strokeWidth={1.5} />,
       badgeVariant: 'default',
     },
     {
       id: 'expenses',
       label: 'Saídas',
       count: counts.expenses,
-      icon: <ArrowDownRight className="w-3 h-3 text-[#E11D48]" strokeWidth={1.5} />,
+      icon: <ArrowDownRight className="w-3 h-3 text-expense" strokeWidth={1.5} />,
     },
     {
       id: 'incomes',
       label: 'Entradas',
       count: counts.incomes,
-      icon: <ArrowUpRight className="w-3 h-3 text-[#059669]" strokeWidth={1.5} />,
+      icon: <ArrowUpRight className="w-3 h-3 text-income" strokeWidth={1.5} />,
     },
     ...(counts.duplicates > 0
       ? [
@@ -82,7 +82,7 @@ export const ImportQuickFilters: React.FC<ImportQuickFiltersProps> = ({
             id: 'duplicates' as QuickFilterType,
             label: 'Duplicadas',
             count: counts.duplicates,
-            icon: <AlertCircle className="w-3 h-3 text-[#FCA311]" strokeWidth={1.5} />,
+            icon: <AlertCircle className="w-3 h-3 text-action" strokeWidth={1.5} />,
             badgeVariant: 'amber' as const,
           },
         ]
@@ -113,7 +113,7 @@ export const ImportQuickFilters: React.FC<ImportQuickFiltersProps> = ({
                   isActive
                     ? 'bg-white/25 text-white'
                     : f.badgeVariant === 'amber'
-                      ? 'bg-amber-50 text-amber-900 border border-[#FCA311]/30'
+                      ? 'bg-amber-50 text-amber-900 border border-action/30'
                       : 'bg-muted/70 text-slate-600 border border-border/30'
                 }`}
               >
@@ -138,7 +138,7 @@ export const ImportQuickFilters: React.FC<ImportQuickFiltersProps> = ({
           }`}
           title="Itens com menor certeza ou sem categoria aparecem primeiro"
         >
-          <Sparkles className="w-3 h-3 text-[#FCA311]" strokeWidth={1.5} />
+          <Sparkles className="w-3 h-3 text-action" strokeWidth={1.5} />
           <span>{sortByConfidence ? 'Ordenado por incerteza' : 'Priorizar incertos'}</span>
         </Button>
       </div>

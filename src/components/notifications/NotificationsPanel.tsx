@@ -83,10 +83,10 @@ export default function NotificationsPanel({ onClose }: { onClose: () => void })
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-[#14213D] flex items-center justify-center">
-              <Bell className="w-4.5 h-4.5 text-[#FCA311]" />
+            <div className="w-9 h-9 rounded-xl bg-ink flex items-center justify-center">
+              <Bell className="w-4.5 h-4.5 text-action" />
             </div>
-            <h2 className="text-lg font-bold text-[#14213D]">Notificações</h2>
+            <h2 className="text-lg font-bold text-ink">Notificações</h2>
           </div>
           <button
             type="button"
@@ -100,16 +100,16 @@ export default function NotificationsPanel({ onClose }: { onClose: () => void })
 
         {checking ? (
           <div className="flex justify-center py-10">
-            <Loader2 className="w-6 h-6 animate-spin text-[#14213D]/40" />
+            <Loader2 className="w-6 h-6 animate-spin text-ink/40" />
           </div>
         ) : !supported || (!standalone && /iPhone|iPad|iPod/i.test(navigator.userAgent)) ? (
           /* iOS sem PWA instalado */
           <div className="space-y-4">
-            <div className="bg-[#FEF7E6] border border-[#FCA311]/30 rounded-2xl p-4">
+            <div className="bg-[#FEF7E6] border border-action/30 rounded-2xl p-4">
               <div className="flex items-start gap-3">
                 <Smartphone className="w-5 h-5 text-[#B87700] shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-bold text-[#14213D] mb-1">Instale o app primeiro</p>
+                  <p className="text-sm font-bold text-ink mb-1">Instale o app primeiro</p>
                   <p className="text-xs text-[#4B5563] leading-relaxed">
                     No iPhone, as notificações só funcionam com o Curiangoo instalado na tela de
                     início: toque em <strong>Compartilhar</strong> →{' '}
@@ -148,28 +148,26 @@ export default function NotificationsPanel({ onClose }: { onClose: () => void })
             </button>
 
             {/* Som + banner heads-up: o app não pode configurar — guia de 10s por plataforma */}
-            <div className="bg-[#FEF7E6] border border-[#FCA311]/30 rounded-2xl p-4">
+            <div className="bg-[#FEF7E6] border border-action/30 rounded-2xl p-4">
               <div className="flex items-start gap-3">
                 <Volume2 className="w-5 h-5 text-[#B87700] shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-bold text-[#14213D] mb-1">
-                    Ative o som e a faixa na tela
-                  </p>
+                  <p className="text-sm font-bold text-ink mb-1">Ative o som e a faixa na tela</p>
                   {/iPhone|iPad|iPod/i.test(navigator.userAgent) ? (
                     <div className="text-xs text-[#4B5563] leading-relaxed space-y-2">
                       <p>
-                        <strong className="text-[#14213D]">1. PWA instalado?</strong> As
-                        notificações no iPhone só funcionam com o Curiangoo instalado (iOS 16.4+):
-                        Safari → botão Compartilhar → "Adicionar à Tela de Início". Abra pelo ícone.
+                        <strong className="text-ink">1. PWA instalado?</strong> As notificações no
+                        iPhone só funcionam com o Curiangoo instalado (iOS 16.4+): Safari → botão
+                        Compartilhar → "Adicionar à Tela de Início". Abra pelo ícone.
                       </p>
                       <p>
-                        <strong className="text-[#14213D]">2. Permitir notificações:</strong>{' '}
-                        Ajustes → Notificações → Curiangoo → ative "Permitir Notificações",{' '}
+                        <strong className="text-ink">2. Permitir notificações:</strong> Ajustes →
+                        Notificações → Curiangoo → ative "Permitir Notificações",{' '}
                         <strong>Sons</strong> e <strong>Banners</strong> (estilo temporário mostra a
                         faixa no topo).
                       </p>
                       <p>
-                        <strong className="text-[#14213D]">3. Não perturbe:</strong> Ajustes → Não
+                        <strong className="text-ink">3. Não perturbe:</strong> Ajustes → Não
                         Perturbe / Modos de Foco → verifique se o Curiangoo não está silenciado.
                       </p>
                       <p className="text-[10px] text-slate-400">
@@ -180,19 +178,19 @@ export default function NotificationsPanel({ onClose }: { onClose: () => void })
                   ) : (
                     <div className="text-xs text-[#4B5563] leading-relaxed space-y-2">
                       <p>
-                        <strong className="text-[#14213D]">1. Som e faixa no topo:</strong> segure
-                        uma notificação do Curiangoo na bandeja → "Todas as categorias" → toque em{' '}
+                        <strong className="text-ink">1. Som e faixa no topo:</strong> segure uma
+                        notificação do Curiangoo na bandeja → "Todas as categorias" → toque em{' '}
                         <strong>curiangoo.com</strong> (ou Chrome) → ative <strong>Som</strong> e{' '}
                         <strong>Flutuante</strong>. Igual WhatsApp.
                       </p>
                       <p>
-                        <strong className="text-[#14213D]">2. App aberto:</strong> o piu do Curiango
-                        toca automaticamente (só o piu, sem som do sistema).
+                        <strong className="text-ink">2. App aberto:</strong> o piu do Curiango toca
+                        automaticamente (só o piu, sem som do sistema).
                       </p>
                       <p>
-                        <strong className="text-[#14213D]">3. Não perturbe:</strong> se estiver com
-                        "Não perturbe" ativo, notificações chegam sem som — desative ou adicione o
-                        Chrome como exceção.
+                        <strong className="text-ink">3. Não perturbe:</strong> se estiver com "Não
+                        perturbe" ativo, notificações chegam sem som — desative ou adicione o Chrome
+                        como exceção.
                       </p>
                     </div>
                   )}
@@ -203,8 +201,8 @@ export default function NotificationsPanel({ onClose }: { onClose: () => void })
         ) : (
           /* Push não ativado */
           <div className="space-y-4">
-            <div className="bg-[#14213D] rounded-2xl p-5 text-white">
-              <Bell className="w-6 h-6 text-[#FCA311] mb-3" />
+            <div className="bg-ink rounded-2xl p-5 text-white">
+              <Bell className="w-6 h-6 text-action mb-3" />
               <p className="text-sm font-bold mb-1">Saiba na hora o que acontece no ninho</p>
               <p className="text-xs text-white/70 leading-relaxed">
                 Quando você ou a Karine lançarem um gasto, os outros membros da família recebem uma
@@ -215,7 +213,7 @@ export default function NotificationsPanel({ onClose }: { onClose: () => void })
               type="button"
               onClick={handleActivate}
               disabled={loading}
-              className="w-full py-3.5 rounded-xl bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold text-sm shadow-elevation-1 active:scale-[0.99] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-xl bg-action hover:opacity-90 text-white font-bold text-sm shadow-elevation-1 active:scale-[0.99] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

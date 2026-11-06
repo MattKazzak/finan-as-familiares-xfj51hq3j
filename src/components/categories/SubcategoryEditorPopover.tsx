@@ -288,7 +288,7 @@ export const SubcategoryEditorPopover: React.FC<SubcategoryEditorPopoverProps> =
           type="submit"
           size="sm"
           disabled={saving || !name.trim()}
-          className="h-8 text-xs rounded-xl bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold px-3.5 border-0"
+          className="h-8 text-xs rounded-xl bg-action hover:opacity-90 text-white font-bold px-3.5 border-0"
         >
           <span className="flex items-center gap-1.5">
             {saving ? (

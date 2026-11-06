@@ -165,7 +165,7 @@ export const DocumentCropCanvas: React.FC<DocumentCropCanvasProps> = ({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
-      className="relative w-full h-full min-h-[250px] max-h-[340px] select-none touch-none overflow-hidden bg-slate-900 rounded-2xl flex items-center justify-center border border-[rgba(20,33,61,0.08)]"
+      className="relative w-full h-full min-h-[250px] max-h-[340px] select-none touch-none overflow-hidden bg-slate-900 rounded-2xl flex items-center justify-center border border-line"
       style={{ touchAction: 'none' }}
     >
       {/* Imagem de fundo */}
@@ -212,7 +212,7 @@ export const DocumentCropCanvas: React.FC<DocumentCropCanvasProps> = ({
           <polygon
             points={polygonPoints}
             fill="rgba(252, 163, 17, 0.12)"
-            stroke="#FCA311"
+            stroke="var(--action)"
             strokeWidth="2.5"
             strokeDasharray={activeCorner ? '4 3' : 'none'}
             strokeLinejoin="round"
@@ -301,8 +301,8 @@ const CornerHandle: React.FC<CornerHandleProps> = ({ corner, point, isActive, on
       <div
         className={`w-6 h-6 rounded-full border-2 border-white shadow-md transition-transform flex items-center justify-center ${
           isActive
-            ? 'scale-125 bg-[#FCA311] ring-4 ring-amber-400/50'
-            : 'bg-[#14213D] hover:scale-110 hover:bg-[#FCA311]'
+            ? 'scale-125 bg-action ring-4 ring-amber-400/50'
+            : 'bg-ink hover:scale-110 hover:bg-action'
         }`}
       >
         <div className="w-1.5 h-1.5 rounded-full bg-white" />

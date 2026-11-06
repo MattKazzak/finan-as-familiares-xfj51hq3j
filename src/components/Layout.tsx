@@ -252,7 +252,7 @@ export default function Layout() {
                 onClick={() => navigate('/copilot')}
                 aria-label="Falar com o Curiango"
                 title="Falar com o Curiango"
-                className="shrink-0 rounded-full p-1 -m-1 active:scale-90 transition-transform cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
+                className="shrink-0 rounded-full p-1 -m-1 active:scale-90 transition-transform cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
               >
                 <CuriangoLogo
                   size={40}
@@ -275,13 +275,13 @@ export default function Layout() {
                 data-testid="header-profile-avatar"
                 aria-label="Abrir Perfil e Configurações"
                 title="Meu Perfil e Configurações da Família"
-                className="flex items-center gap-2 rounded-full p-0.5 ring-2 ring-white/20 hover:ring-[#FCA311] active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
+                className="flex items-center gap-2 rounded-full p-0.5 ring-2 ring-white/20 hover:ring-action active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
               >
                 <Avatar className="w-8 h-8 shrink-0">
                   {userAvatarUrl ? (
                     <AvatarImage src={userAvatarUrl} alt={currentMember?.name || 'Meu perfil'} />
                   ) : null}
-                  <AvatarFallback className="bg-[#FCA311] text-[#14213D] font-bold text-xs">
+                  <AvatarFallback className="bg-action text-white font-bold text-xs">
                     {userInitial}
                   </AvatarFallback>
                 </Avatar>
@@ -313,13 +313,13 @@ export default function Layout() {
           aria-label="Navegação Principal"
           className="md:hidden fixed bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] inset-x-0 z-40 px-3 sm:px-4 max-w-md mx-auto pointer-events-none"
         >
-          <div className="pointer-events-auto w-full bg-[#14213D] border border-white/10 shadow-elevation-3 rounded-full px-2 py-1.5 flex items-center justify-between transition-all">
+          <div className="pointer-events-auto w-full bg-ink border border-white/10 shadow-elevation-3 rounded-full px-2 py-1.5 flex items-center justify-between transition-all">
             {/* 1. Início */}
             <NavLink
               to="/inicio"
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-[#FCA311] font-semibold' : 'text-white/70 hover:text-white'
+                  isActive ? 'text-action font-semibold' : 'text-white/70 hover:text-white'
                 }`
               }
             >
@@ -327,7 +327,7 @@ export default function Layout() {
                 <>
                   <div
                     className={`p-1 rounded-full transition-all duration-200 ${
-                      isActive ? 'bg-[#FCA311]/20 scale-105 text-[#FCA311]' : ''
+                      isActive ? 'bg-action/20 scale-105 text-action' : ''
                     }`}
                   >
                     <Home className="w-5 h-5" strokeWidth={1.5} />
@@ -342,7 +342,7 @@ export default function Layout() {
               to="/carteira"
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-[#FCA311] font-semibold' : 'text-white/70 hover:text-white'
+                  isActive ? 'text-action font-semibold' : 'text-white/70 hover:text-white'
                 }`
               }
             >
@@ -350,7 +350,7 @@ export default function Layout() {
                 <>
                   <div
                     className={`p-1 rounded-full transition-all duration-200 ${
-                      isActive ? 'bg-[#FCA311]/20 scale-105 text-[#FCA311]' : ''
+                      isActive ? 'bg-action/20 scale-105 text-action' : ''
                     }`}
                   >
                     <Wallet className="w-5 h-5" strokeWidth={1.5} />
@@ -366,7 +366,7 @@ export default function Layout() {
                 type="button"
                 onClick={() => openNewTransaction()}
                 data-testid="dock-new-transaction"
-                className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#FCA311] via-[#fba825] to-[#ffb845] text-[#14213D] flex items-center justify-center shadow-lg shadow-[#FCA311]/30 border-2 border-[#14213D] active:scale-90 hover:scale-105 transition-all duration-200 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCA311]"
+                className="w-11 h-11 rounded-full bg-action text-white flex items-center justify-center shadow-lg shadow-action/30 border-2 border-ink active:scale-90 hover:scale-105 transition-all duration-200 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
                 aria-label="Nova Transação"
                 title="Nova Transação"
               >
@@ -383,7 +383,7 @@ export default function Layout() {
               data-testid="dock-patrimony"
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-[#FCA311] font-semibold' : 'text-white/70 hover:text-white'
+                  isActive ? 'text-action font-semibold' : 'text-white/70 hover:text-white'
                 }`
               }
             >
@@ -391,7 +391,7 @@ export default function Layout() {
                 <>
                   <div
                     className={`p-1 rounded-full transition-all duration-200 ${
-                      isActive ? 'bg-[#FCA311]/20 scale-105 text-[#FCA311]' : ''
+                      isActive ? 'bg-action/20 scale-105 text-action' : ''
                     }`}
                   >
                     <TrendingUp className="w-5 h-5" strokeWidth={1.5} />
@@ -407,7 +407,7 @@ export default function Layout() {
               data-testid="dock-metas"
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-[#FCA311] font-semibold' : 'text-white/70 hover:text-white'
+                  isActive ? 'text-action font-semibold' : 'text-white/70 hover:text-white'
                 }`
               }
             >
@@ -415,7 +415,7 @@ export default function Layout() {
                 <>
                   <div
                     className={`p-1 rounded-full transition-all duration-200 ${
-                      isActive ? 'bg-[#FCA311]/20 scale-105 text-[#FCA311]' : ''
+                      isActive ? 'bg-action/20 scale-105 text-action' : ''
                     }`}
                   >
                     <Target className="w-5 h-5" strokeWidth={1.5} />

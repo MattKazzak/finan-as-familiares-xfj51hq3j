@@ -35,7 +35,7 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md w-[95vw] rounded-3xl p-6 bg-card/95 backdrop-blur-sm border border-border/40 shadow-curiango">
+      <DialogContent className="max-w-md w-[95vw] rounded-3xl p-6 bg-card/95 backdrop-blur-sm border border-border/40 shadow-cds">
         <DialogHeader className="text-left">
           <div className="flex items-center gap-3">
             <CategoryIconBox
@@ -47,11 +47,11 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
             />
             <div className="overflow-hidden">
               <div className="flex items-center gap-2 flex-wrap">
-                <DialogTitle className="text-base sm:text-lg font-semibold text-[#14213D] dark:text-white leading-tight">
+                <DialogTitle className="text-base sm:text-lg font-semibold text-ink dark:text-white leading-tight">
                   <span>{formatTransactionTitle(transaction)}</span>
                 </DialogTitle>
                 {transaction.is_recurring ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-100 text-[#059669] border border-emerald-300/70 px-2 py-0.5 rounded-full">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-100 text-income border border-emerald-300/70 px-2 py-0.5 rounded-full">
                     <Sparkles className="w-3 h-3" />
                     <span>Fixa</span>
                   </span>
@@ -75,7 +75,7 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
                 {transaction.subcategory && (
                   <span className="inline-flex items-center gap-1.5">
                     <span className="text-xs text-slate-300">·</span>
-                    <span className="text-xs font-medium text-[#14213D] dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-border/40">
+                    <span className="text-xs font-medium text-ink dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-border/40">
                       {transaction.subcategory.name}
                     </span>
                   </span>
@@ -89,20 +89,20 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
         <div className="my-4 p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-border/40 flex flex-col items-center justify-center">
           <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider mb-1 text-muted-foreground">
             {isIncome ? (
-              <span className="inline-flex items-center gap-1.5 text-[#059669]">
-                <ArrowUpRight className="w-4 h-4 text-[#059669]" strokeWidth={1.5} />
+              <span className="inline-flex items-center gap-1.5 text-income">
+                <ArrowUpRight className="w-4 h-4 text-income" strokeWidth={1.5} />
                 <span>Receita</span>
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 text-[#E11D48]">
-                <ArrowDownRight className="w-4 h-4 text-[#E11D48]" strokeWidth={1.5} />
+              <span className="inline-flex items-center gap-1.5 text-expense">
+                <ArrowDownRight className="w-4 h-4 text-expense" strokeWidth={1.5} />
                 <span>Despesa</span>
               </span>
             )}
           </div>
           <span
             className={`text-2xl sm:text-3xl font-semibold tracking-tight tabular-nums ${
-              isIncome ? 'text-[#059669]' : 'text-[#E11D48]'
+              isIncome ? 'text-income' : 'text-expense'
             }`}
           >
             <span>
@@ -118,7 +118,7 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
               <User className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
               <span>Responsável</span>
             </span>
-            <span className="font-medium text-xs sm:text-sm text-[#14213D] dark:text-white">
+            <span className="font-medium text-xs sm:text-sm text-ink dark:text-white">
               {transaction.member?.name || 'Família'}
             </span>
           </div>
@@ -128,7 +128,7 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
               <Calendar className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
               <span>Data da transação</span>
             </span>
-            <span className="font-medium text-xs sm:text-sm text-[#14213D] dark:text-white">
+            <span className="font-medium text-xs sm:text-sm text-ink dark:text-white">
               {formatRelativeDate(transaction.transaction_date)}
             </span>
           </div>
@@ -140,12 +140,12 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
         {transaction.category &&
         transaction.ai_confidence != null &&
         transaction.ai_confidence < 1.0 ? (
-          <div className="mt-3 flex items-start gap-2.5 rounded-2xl border border-[rgba(20,33,61,0.08)] bg-slate-50/80 p-3">
+          <div className="mt-3 flex items-start gap-2.5 rounded-2xl border border-line bg-slate-50/80 p-3">
             <div className="shrink-0 pt-0.5">
               <CuriangoLogo size={28} />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold text-[#14213D] leading-snug">
+              <p className="text-[11px] font-semibold text-ink leading-snug">
                 {transaction.ai_reasoning || `Categorizei como ${transaction.category.name}.`}
               </p>
               <p className="text-[10px] text-slate-400 mt-0.5">
@@ -163,7 +163,7 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
               onOpenChange(false)
               onDelete(transaction)
             }}
-            className="flex-1 text-[#E11D48] hover:text-[#be123c] hover:bg-rose-50 border-rose-200/60 rounded-xl text-xs"
+            className="flex-1 text-expense hover:text-expense hover:bg-rose-50 border-rose-200/60 rounded-xl text-xs"
           >
             <span className="flex items-center justify-center gap-2">
               <Trash2 className="w-4 h-4" />
@@ -177,7 +177,7 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
               onOpenChange(false)
               onEdit(transaction)
             }}
-            className="flex-1 bg-[#14213D] hover:bg-[#1f2f54] text-white font-semibold rounded-xl text-xs border-0"
+            className="flex-1 bg-ink hover:bg-ink/90 text-white font-semibold rounded-xl text-xs border-0"
           >
             <span className="flex items-center justify-center gap-2">
               <Edit3 className="w-4 h-4" />

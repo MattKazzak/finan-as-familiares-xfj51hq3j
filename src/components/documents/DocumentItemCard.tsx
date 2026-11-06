@@ -337,10 +337,10 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
         }}
         className={`group relative flex flex-col bg-white rounded-2xl border transition-all overflow-hidden select-none document-card-touch-suppress ${
           isSelected
-            ? 'border-[#FCA311] ring-2 ring-[#FCA311]/50 shadow-md bg-amber-50/20'
+            ? 'border-action ring-2 ring-action/50 shadow-md bg-amber-50/20'
             : isSelectionMode
-              ? 'border-slate-300 hover:border-[#FCA311]/60 shadow-[0_4px_20px_-4px_rgba(20,33,61,0.05)]'
-              : 'border-[rgba(20,33,61,0.08)] shadow-[0_4px_20px_-4px_rgba(20,33,61,0.05)] hover:shadow-md hover:border-slate-300'
+              ? 'border-slate-300 hover:border-action/60 shadow-cds'
+              : 'border-line shadow-cds hover:shadow-md hover:border-slate-300'
         }`}
         data-testid={`doc-card-${doc.id}`}
         data-selected={isSelected}
@@ -358,10 +358,10 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
           }}
           className={`absolute top-2 left-2 z-20 w-7 h-7 rounded-full flex items-center justify-center transition-all ${
             isSelected
-              ? 'bg-[#FCA311] text-[#14213D] shadow-md ring-2 ring-white scale-105'
+              ? 'bg-action text-white shadow-md ring-2 ring-white scale-105'
               : isSelectionMode
-                ? 'bg-white/90 text-slate-400 border border-slate-300 hover:border-[#FCA311] shadow-xs'
-                : 'opacity-0 group-hover:opacity-100 bg-white/90 text-slate-400 border border-slate-300 hover:text-[#14213D] shadow-xs'
+                ? 'bg-white/90 text-slate-400 border border-slate-300 hover:border-action shadow-xs'
+                : 'opacity-0 group-hover:opacity-100 bg-white/90 text-slate-400 border border-slate-300 hover:text-ink shadow-xs'
           }`}
           title={isSelected ? 'Desmarcar documento' : 'Selecionar documento'}
           aria-label={isSelected ? `Desmarcar ${doc.title}` : `Selecionar ${doc.title}`}
@@ -391,7 +391,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
             <span
               className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-xs ${
                 expiration.isExpired
-                  ? 'bg-rose-100 text-[#E11D48] border border-rose-200'
+                  ? 'bg-rose-100 text-expense border border-rose-200'
                   : 'bg-amber-100 text-[#B45309] border border-amber-200'
               }`}
             >
@@ -410,7 +410,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
             WebkitUserSelect: 'none',
             userSelect: 'none',
           }}
-          className="relative w-full aspect-[4/3] bg-gradient-to-b from-slate-50 to-slate-100/90 flex items-center justify-center overflow-hidden focus:outline-hidden focus:ring-2 focus:ring-[#FCA311] focus:ring-inset text-left cursor-pointer select-none document-card-touch-suppress"
+          className="relative w-full aspect-[4/3] bg-gradient-to-b from-slate-50 to-slate-100/90 flex items-center justify-center overflow-hidden focus:outline-hidden focus:ring-2 focus:ring-action focus:ring-inset text-left cursor-pointer select-none document-card-touch-suppress"
           title={isSelectionMode ? (isSelected ? 'Desmarcar' : 'Selecionar') : `Abrir ${doc.title}`}
           aria-label={
             isSelectionMode
@@ -422,7 +422,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
         >
           {thumbLoading ? (
             <div className="flex flex-col items-center justify-center gap-1 text-slate-400">
-              <Loader2 className="w-5 h-5 animate-spin text-[#FCA311]" />
+              <Loader2 className="w-5 h-5 animate-spin text-action" />
               <span className="text-[10px]">Carregando...</span>
             </div>
           ) : thumbnailUrl ? (
@@ -459,7 +459,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
           ) : isPdf || pdfRenderFailed ? (
             // Fallback gracioso para PDF: ícone clássico elegante caso a renderização falhe
             <div className="flex flex-col items-center justify-center gap-1.5 p-3 text-center">
-              <div className="w-12 h-12 rounded-xl bg-rose-50 text-[#E11D48] border border-rose-100 flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 rounded-xl bg-rose-50 text-expense border border-rose-100 flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
                 <FileText className="w-6 h-6" strokeWidth={1.75} />
               </div>
               <span className="text-[10px] font-bold tracking-wider text-rose-700 uppercase bg-rose-50 px-1.5 py-0.5 rounded-md">
@@ -483,7 +483,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
           )}
 
           {/* Overlay sutil ao hover */}
-          <div className="absolute inset-0 bg-[#14213D]/0 group-hover:bg-[#14213D]/10 transition-colors pointer-events-none" />
+          <div className="absolute inset-0 bg-ink/0 group-hover:bg-ink/10 transition-colors pointer-events-none" />
         </button>
 
         {/* Rodapé do cartão: Nome e ações embaixo */}
@@ -502,12 +502,12 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
             }}
           >
             <p
-              className="text-xs font-semibold text-[#14213D] line-clamp-2 leading-snug break-words"
+              className="text-xs font-semibold text-ink line-clamp-2 leading-snug break-words"
               title={doc.title}
             >
               {doc.title}
             </p>
-            <p className="text-[10px] text-[#64748B] truncate mt-0.5">
+            <p className="text-[10px] text-body2 truncate mt-0.5">
               {formatDocumentSubtitle(doc.mime_type, doc.file_size_bytes, doc.file_name)}
             </p>
           </div>
@@ -526,11 +526,11 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                 }}
                 className={`w-full h-7 text-[11px] font-semibold rounded-lg gap-1.5 transition-colors ${
                   isSelected
-                    ? 'bg-[#14213D] text-white hover:bg-[#1f3159]'
+                    ? 'bg-ink text-white hover:opacity-90'
                     : 'text-slate-700 border-slate-200 hover:bg-slate-50'
                 }`}
               >
-                <Check className={`w-3 h-3 ${isSelected ? 'text-[#FCA311]' : 'text-slate-400'}`} />
+                <Check className={`w-3 h-3 ${isSelected ? 'text-action' : 'text-slate-400'}`} />
                 <span>{isSelected ? 'Selecionado' : 'Selecionar'}</span>
               </Button>
             ) : (
@@ -542,7 +542,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={() => onOpenViewer(doc)}
-                    className="h-7 w-7 p-0 rounded-lg text-slate-600 hover:text-[#14213D] hover:bg-slate-100"
+                    className="h-7 w-7 p-0 rounded-lg text-slate-600 hover:text-ink hover:bg-slate-100"
                     title="Visualizar documento"
                     aria-label={`Visualizar ${doc.title}`}
                   >
@@ -554,7 +554,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                     size="sm"
                     onClick={handleDirectShare}
                     disabled={isSharing}
-                    className="h-7 w-7 p-0 rounded-lg text-slate-600 hover:text-[#14213D] hover:bg-slate-100"
+                    className="h-7 w-7 p-0 rounded-lg text-slate-600 hover:text-ink hover:bg-slate-100"
                     title="Compartilhar documento"
                     aria-label={`Compartilhar ${doc.title}`}
                   >
@@ -573,7 +573,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={() => setActionSheetOpen(true)}
-                    className="h-7 w-7 p-0 rounded-lg text-slate-500 hover:text-[#14213D] hover:bg-slate-100"
+                    className="h-7 w-7 p-0 rounded-lg text-slate-500 hover:text-ink hover:bg-slate-100"
                     title="Mais opções"
                     aria-label={`Mais opções para ${doc.title}`}
                   >
@@ -586,7 +586,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-7 w-7 p-0 rounded-lg text-slate-500 hover:text-[#14213D] hover:bg-slate-100"
+                        className="h-7 w-7 p-0 rounded-lg text-slate-500 hover:text-ink hover:bg-slate-100"
                         title="Mais opções"
                         aria-label={`Mais opções para ${doc.title}`}
                       >
@@ -604,7 +604,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                         }}
                         className="text-xs rounded-xl cursor-pointer"
                       >
-                        <CheckSquare className="w-3.5 h-3.5 mr-2 text-[#FCA311]" />
+                        <CheckSquare className="w-3.5 h-3.5 mr-2 text-action" />
                         Selecionar
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -647,10 +647,10 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
           >
             <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-4 -mt-1" />
             <SheetHeader className="text-left space-y-1 mb-4">
-              <SheetTitle className="text-base font-bold text-[#14213D] leading-tight truncate">
+              <SheetTitle className="text-base font-bold text-ink leading-tight truncate">
                 {doc.title}
               </SheetTitle>
-              <SheetDescription className="text-xs text-[#64748B]">
+              <SheetDescription className="text-xs text-body2">
                 {formatDocumentSubtitle(doc.mime_type, doc.file_size_bytes, doc.file_name)} • por{' '}
                 {doc.uploaded_by_name}
               </SheetDescription>
@@ -664,14 +664,14 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                   if (onLongPressSelect) onLongPressSelect(doc)
                   else onToggleSelect?.(doc)
                 }}
-                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-amber-50/60 text-left transition-colors text-xs font-semibold text-[#14213D]"
+                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-amber-50/60 text-left transition-colors text-xs font-semibold text-ink"
               >
-                <div className="w-8 h-8 rounded-xl bg-amber-50 text-[#FCA311] flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-amber-50 text-action flex items-center justify-center">
                   <CheckSquare className="w-4 h-4" />
                 </div>
                 <div>
                   <p className="leading-tight">Selecionar vários</p>
-                  <p className="text-[10px] text-[#64748B] font-normal">
+                  <p className="text-[10px] text-body2 font-normal">
                     Entra no modo para compartilhar múltiplos arquivos
                   </p>
                 </div>
@@ -683,14 +683,14 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                   setActionSheetOpen(false)
                   onOpenViewer(doc)
                 }}
-                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 text-left transition-colors text-xs font-semibold text-[#14213D]"
+                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 text-left transition-colors text-xs font-semibold text-ink"
               >
                 <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700">
                   <Eye className="w-4 h-4" />
                 </div>
                 <div>
                   <p className="leading-tight">Visualizar documento</p>
-                  <p className="text-[10px] text-[#64748B] font-normal">
+                  <p className="text-[10px] text-body2 font-normal">
                     Abrir arquivo em tela cheia e editar metadados
                   </p>
                 </div>
@@ -709,7 +709,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                 </div>
                 <div>
                   <p className="leading-tight">Compartilhar</p>
-                  <p className="text-[10px] text-[#64748B] font-normal">
+                  <p className="text-[10px] text-body2 font-normal">
                     Enviar arquivo via WhatsApp, Telegram ou copiar link
                   </p>
                 </div>

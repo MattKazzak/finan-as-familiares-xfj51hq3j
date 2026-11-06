@@ -467,7 +467,7 @@ export function ContextualSubcategorySelector({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
       <PopoverContent
-        className="w-[340px] p-0 rounded-2xl shadow-curiango border border-border/60 bg-white"
+        className="w-[340px] p-0 rounded-2xl shadow-cds border border-line bg-white"
         align="start"
       >
         {content}

@@ -602,7 +602,7 @@
   /* Sparkle do Copilot (16/10): estrelinha âmbar pulsando no canto do pássaro —
      o convite sutil "clica aqui" que o Matheus pediu. 4 pontas via clip-path. */
   .animate-copilot-sparkle {
-    background-color: #fca311;
+    background-color: var(--action);
     clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
     animation: copilot-sparkle-pulse 2.4s ease-in-out infinite;
   }
@@ -630,12 +630,12 @@
   .shadow-elevation-1 {
     box-shadow:
       0 2px 8px -2px rgba(20, 33, 61, 0.04),
-      0 12px 28px -10px rgba(20, 33, 61, 0.06);
+      0 12px 28px -10px var(--line);
   }
 
   .shadow-elevation-2 {
     box-shadow:
-      0 4px 12px -2px rgba(20, 33, 61, 0.05),
+      0 4px 12px -2px var(--shadow-card),
       0 16px 36px -10px rgba(20, 33, 61, 0.08);
   }
 

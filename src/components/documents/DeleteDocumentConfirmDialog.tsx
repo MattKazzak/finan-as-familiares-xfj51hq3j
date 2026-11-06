@@ -78,13 +78,11 @@ export const DeleteDocumentConfirmDialog: React.FC<DeleteDocumentConfirmDialogPr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xs w-[90vw] rounded-3xl p-5 bg-white">
         <DialogHeader className="text-left">
-          <div className="w-10 h-10 rounded-2xl bg-rose-50 text-[#E11D48] flex items-center justify-center mb-1">
+          <div className="w-10 h-10 rounded-2xl bg-expense-subtle text-expense flex items-center justify-center mb-1">
             <AlertTriangle className="w-5 h-5" />
           </div>
-          <DialogTitle className="text-base font-semibold text-[#14213D]">
-            Excluir Documento?
-          </DialogTitle>
-          <DialogDescription className="text-xs text-[#64748B]">
+          <DialogTitle className="text-base font-semibold text-ink">Excluir Documento?</DialogTitle>
+          <DialogDescription className="text-xs text-body2">
             Esta ação apaga &quot;{doc.title}&quot; permanentemente do cofre da família.
           </DialogDescription>
         </DialogHeader>
@@ -121,7 +119,7 @@ export const DeleteDocumentConfirmDialog: React.FC<DeleteDocumentConfirmDialogPr
             size="sm"
             onClick={handleDelete}
             disabled={deleting}
-            className="w-full text-xs font-semibold bg-[#E11D48] text-white hover:bg-rose-700 rounded-xl h-10"
+            className="w-full text-xs font-semibold bg-expense text-white hover:opacity-90 rounded-xl h-10"
           >
             {deleting ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : null}
             Sim, Excluir Documento
@@ -132,7 +130,7 @@ export const DeleteDocumentConfirmDialog: React.FC<DeleteDocumentConfirmDialogPr
             size="sm"
             onClick={() => onOpenChange(false)}
             disabled={deleting}
-            className="w-full text-xs text-[#64748B] hover:text-[#14213D] rounded-xl h-9"
+            className="w-full text-xs text-body2 hover:text-ink rounded-xl h-9"
           >
             Cancelar
           </Button>

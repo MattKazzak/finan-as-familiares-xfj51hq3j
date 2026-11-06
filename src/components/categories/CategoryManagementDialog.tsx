@@ -348,7 +348,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                 type="button"
                 onClick={() => setIsAddingCategory((prev) => !prev)}
                 size="sm"
-                className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] text-xs rounded-xl gap-1.5 h-8 font-bold shadow-xs border-0"
+                className="bg-action hover:opacity-90 text-white text-xs rounded-xl gap-1.5 h-8 font-bold shadow-xs border-0"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>{isAddingCategory ? 'Cancelar cadastro' : 'Nova Categoria'}</span>
@@ -525,7 +525,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                   type="submit"
                   disabled={savingCat || !newCatName.trim()}
                   size="sm"
-                  className="bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] text-xs h-8 rounded-xl font-bold border-0"
+                  className="bg-action hover:opacity-90 text-white text-xs h-8 rounded-xl font-bold border-0"
                 >
                   <span className="flex items-center gap-1.5">
                     {savingCat ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
@@ -672,7 +672,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                           type="submit"
                           size="sm"
                           disabled={savingSub || !newSubName.trim()}
-                          className="h-8 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] text-xs rounded-xl px-3 shrink-0 font-bold border-0"
+                          className="h-8 bg-action hover:opacity-90 text-white text-xs rounded-xl px-3 shrink-0 font-bold border-0"
                         >
                           <span className="flex items-center gap-1">
                             {savingSub ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}

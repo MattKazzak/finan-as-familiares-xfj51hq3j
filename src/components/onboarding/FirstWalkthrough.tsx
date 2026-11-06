@@ -379,8 +379,8 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
           )}
 
           <div className="flex-1 min-w-0 relative">
-            <div className="rounded-xl bg-white shadow-elevation-3 px-4 py-3.5 border border-[rgba(20,33,61,0.08)]">
-              <p className="text-[14px] font-bold text-[#14213D] leading-tight">{step.title}</p>
+            <div className="rounded-xl bg-white shadow-elevation-3 px-4 py-3.5 border border-line">
+              <p className="text-[14px] font-bold text-ink leading-tight">{step.title}</p>
               <p className="text-[12.5px] text-slate-600 leading-relaxed mt-1">{step.text}</p>
 
               {/* Rodapé: avançar MINIMALISTA (Matheus 19/10: Continuar ocupava
@@ -391,7 +391,7 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
                   type="button"
                   onClick={advance}
                   aria-label={isFirstStep ? 'Começar tour' : 'Próximo passo'}
-                  className="w-8 h-8 rounded-full bg-[#FCA311] hover:bg-[#E08A00] text-white flex items-center justify-center transition-colors shadow-sm"
+                  className="w-8 h-8 rounded-full bg-action hover:opacity-90 text-white flex items-center justify-center transition-colors shadow-sm"
                 >
                   <ArrowDown className="w-4 h-4" />
                 </button>

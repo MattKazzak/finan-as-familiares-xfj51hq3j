@@ -363,25 +363,25 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md w-[94vw] sm:w-[92vw] rounded-3xl p-4 sm:p-6 bg-white max-h-[92vh] overflow-y-auto border border-[rgba(20,33,61,0.08)] shadow-curiango">
+      <DialogContent className="max-w-md w-[94vw] sm:w-[92vw] rounded-3xl p-4 sm:p-6 bg-white max-h-[92vh] overflow-y-auto border border-line shadow-cds">
         <DialogHeader className="text-left pb-1">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-base font-semibold text-[#14213D] flex items-center gap-2">
-              <span className="w-8 h-8 rounded-xl bg-amber-50 text-[#FCA311] flex items-center justify-center shrink-0">
+            <DialogTitle className="text-base font-semibold text-ink flex items-center gap-2">
+              <span className="w-8 h-8 rounded-xl bg-amber-50 text-action flex items-center justify-center shrink-0">
                 <Sparkles className="w-4 h-4" />
               </span>
               Digitalizar Documento
             </DialogTitle>
 
             {/* Badge de páginas */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-[11px] font-medium text-[#14213D]">
-              <Layers className="w-3.5 h-3.5 text-[#FCA311]" />
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-[11px] font-medium text-ink">
+              <Layers className="w-3.5 h-3.5 text-action" />
               <span>
                 Pág. {currentPageIndex + 1} de {pages.length}
               </span>
             </div>
           </div>
-          <DialogDescription className="text-xs text-[#64748B] pt-0.5">
+          <DialogDescription className="text-xs text-body2 pt-0.5">
             {step === 'crop'
               ? 'Ajuste os 4 cantos para alinhar as bordas do papel.'
               : 'Escolha o melhoramento e confira o resultado antes de salvar.'}
@@ -408,8 +408,8 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
                 onClick={() => setCurrentPageIndex(idx)}
                 className={`relative group shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-medium cursor-pointer border transition-all ${
                   isSelected
-                    ? 'bg-[#14213D] text-white border-[#14213D] shadow-xs'
-                    : 'bg-[#F8F9FB] text-slate-700 border-slate-200 hover:bg-slate-100'
+                    ? 'bg-ink text-white border-ink shadow-xs'
+                    : 'bg-bg text-slate-700 border-slate-200 hover:bg-slate-100'
                 }`}
               >
                 <span>Página {idx + 1}</span>
@@ -441,7 +441,7 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
             onClick={() => addPageInputRef.current?.click()}
             className="shrink-0 h-7 text-[11px] px-2.5 rounded-xl border-dashed border-amber-300 text-amber-800 bg-amber-50/50 hover:bg-amber-100/60"
           >
-            <Plus className="w-3 h-3 mr-1 text-[#FCA311]" />+ Página
+            <Plus className="w-3 h-3 mr-1 text-action" />+ Página
           </Button>
         </div>
 
@@ -458,14 +458,14 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-2">
-                  <Loader2 className="w-6 h-6 animate-spin text-[#FCA311]" />
+                  <Loader2 className="w-6 h-6 animate-spin text-action" />
                   <span className="text-xs">Detectando bordas do documento...</span>
                 </div>
               )}
 
               {isDetecting && (
                 <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center gap-2 text-white text-xs z-30">
-                  <Loader2 className="w-4 h-4 animate-spin text-[#FCA311]" />
+                  <Loader2 className="w-4 h-4 animate-spin text-action" />
                   <span>Detectando papel automaticamente...</span>
                 </div>
               )}
@@ -478,7 +478,7 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => handleConfirmCrop(true)}
-                className="text-xs text-[#64748B] hover:text-[#14213D] rounded-xl h-9 px-2.5"
+                className="text-xs text-body2 hover:text-ink rounded-xl h-9 px-2.5"
               >
                 Pular recorte
               </Button>
@@ -498,12 +498,12 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
                   size="sm"
                   onClick={() => handleConfirmCrop(false)}
                   disabled={processing || !currentPage?.corners}
-                  className="text-xs font-semibold bg-[#14213D] text-white hover:bg-[#1f3159] rounded-xl h-9 gap-1.5 px-4 shadow-sm"
+                  className="text-xs font-semibold bg-ink text-white hover:opacity-90 rounded-xl h-9 gap-1.5 px-4 shadow-sm"
                 >
                   {processing ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (
-                    <Crop className="w-3.5 h-3.5 text-[#FCA311]" />
+                    <Crop className="w-3.5 h-3.5 text-action" />
                   )}
                   Ajustar e avançar
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -515,7 +515,7 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
           /* ETAPA 2: FILTROS E MELHORAMENTO COM 1 TOQUE */
           <div className="space-y-3 pt-1">
             {/* Preview do documento corrigido */}
-            <div className="relative rounded-2xl bg-slate-100 overflow-hidden border border-[rgba(20,33,61,0.08)] flex items-center justify-center min-h-[230px] max-h-[300px]">
+            <div className="relative rounded-2xl bg-slate-100 overflow-hidden border border-line flex items-center justify-center min-h-[230px] max-h-[300px]">
               {currentPage?.previewUrl ? (
                 <img
                   src={currentPage.previewUrl}
@@ -524,22 +524,22 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center py-10 text-slate-400 gap-2">
-                  <Loader2 className="w-6 h-6 animate-spin text-[#FCA311]" />
+                  <Loader2 className="w-6 h-6 animate-spin text-action" />
                   <span className="text-xs">Aplicando aprimoramento...</span>
                 </div>
               )}
 
               {processing && currentPage?.previewUrl && (
                 <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] flex items-center justify-center">
-                  <Loader2 className="w-5 h-5 animate-spin text-[#14213D]" />
+                  <Loader2 className="w-5 h-5 animate-spin text-ink" />
                 </div>
               )}
             </div>
 
             {/* SELETORES DE MODO COM 1 TOQUE: Colorido / Cinza / P&B Alto Contraste */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#14213D] flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-[#FCA311]" />
+              <Label className="text-xs font-semibold text-ink flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-action" />
                 Modo de aprimoramento
               </Label>
               <div className="grid grid-cols-3 gap-2">
@@ -548,8 +548,8 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
                   onClick={() => setFilterMode('color')}
                   className={`p-2.5 rounded-2xl border text-center transition-all ${
                     filterMode === 'color'
-                      ? 'bg-[#14213D] text-white border-[#14213D] shadow-xs'
-                      : 'bg-[#F8F9FB] text-slate-700 border-slate-200 hover:bg-slate-100'
+                      ? 'bg-ink text-white border-ink shadow-xs'
+                      : 'bg-bg text-slate-700 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
                   <p className="text-xs font-semibold leading-tight">Colorido</p>
@@ -567,8 +567,8 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
                   onClick={() => setFilterMode('grayscale')}
                   className={`p-2.5 rounded-2xl border text-center transition-all ${
                     filterMode === 'grayscale'
-                      ? 'bg-[#14213D] text-white border-[#14213D] shadow-xs'
-                      : 'bg-[#F8F9FB] text-slate-700 border-slate-200 hover:bg-slate-100'
+                      ? 'bg-ink text-white border-ink shadow-xs'
+                      : 'bg-bg text-slate-700 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
                   <p className="text-xs font-semibold leading-tight">Cinza</p>
@@ -586,8 +586,8 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
                   onClick={() => setFilterMode('bw')}
                   className={`p-2.5 rounded-2xl border text-center transition-all ${
                     filterMode === 'bw'
-                      ? 'bg-[#14213D] text-white border-[#14213D] shadow-xs'
-                      : 'bg-[#F8F9FB] text-slate-700 border-slate-200 hover:bg-slate-100'
+                      ? 'bg-ink text-white border-ink shadow-xs'
+                      : 'bg-bg text-slate-700 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
                   <p className="text-xs font-semibold leading-tight">P&B Alto Contraste</p>
@@ -607,9 +607,9 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
               <button
                 type="button"
                 onClick={() => setShowAdvancedSliders(!showAdvancedSliders)}
-                className="text-xs font-medium text-[#14213D] hover:text-[#FCA311] flex items-center gap-1.5 transition-colors"
+                className="text-xs font-medium text-ink hover:text-action flex items-center gap-1.5 transition-colors"
               >
-                <SlidersHorizontal className="w-3.5 h-3.5 text-[#64748B]" />
+                <SlidersHorizontal className="w-3.5 h-3.5 text-body2" />
                 <span>
                   {showAdvancedSliders
                     ? 'Ocultar ajuste fino'
@@ -618,17 +618,15 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
               </button>
 
               {showAdvancedSliders && (
-                <div className="space-y-3 pt-2.5 pb-1 px-3 rounded-2xl bg-[#F8F9FB] border border-[rgba(20,33,61,0.06)] mt-2">
+                <div className="space-y-3 pt-2.5 pb-1 px-3 rounded-2xl bg-bg border border-line mt-2">
                   {/* Nitidez */}
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-medium text-[#14213D] flex items-center gap-1">
-                        <Zap className="w-3 h-3 text-[#FCA311]" />
+                      <p className="text-xs font-medium text-ink flex items-center gap-1">
+                        <Zap className="w-3 h-3 text-action" />
                         Nitidez extra (Unsharp Mask)
                       </p>
-                      <p className="text-[10px] text-[#64748B]">
-                        Realça letras pequenas e carimbos
-                      </p>
+                      <p className="text-[10px] text-body2">Realça letras pequenas e carimbos</p>
                     </div>
                     <Switch checked={sharpen} onCheckedChange={setSharpen} />
                   </div>
@@ -636,8 +634,8 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
                   {/* Contraste */}
                   <div className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
-                      <Label className="text-[#14213D] text-[11px] font-medium">Contraste</Label>
-                      <span className="text-[11px] text-[#64748B] font-mono">
+                      <Label className="text-ink text-[11px] font-medium">Contraste</Label>
+                      <span className="text-[11px] text-body2 font-mono">
                         {Math.round(contrast * 100)}%
                       </span>
                     </div>
@@ -654,10 +652,8 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
                   {/* Brilho */}
                   <div className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
-                      <Label className="text-[#14213D] text-[11px] font-medium">
-                        Brilho do papel
-                      </Label>
-                      <span className="text-[11px] text-[#64748B] font-mono">
+                      <Label className="text-ink text-[11px] font-medium">Brilho do papel</Label>
+                      <span className="text-[11px] text-body2 font-mono">
                         {Math.round(brightness * 100)}%
                       </span>
                     </div>
@@ -682,7 +678,7 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => setStep('crop')}
-                  className="text-xs text-[#64748B] hover:text-[#14213D] rounded-xl h-9 px-2"
+                  className="text-xs text-body2 hover:text-ink rounded-xl h-9 px-2"
                 >
                   <ArrowLeft className="w-3.5 h-3.5 mr-1" />
                   Voltar ao corte
@@ -692,7 +688,7 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={handleResetFilters}
-                  className="text-xs text-[#64748B] hover:text-[#14213D] rounded-xl h-9 px-2"
+                  className="text-xs text-body2 hover:text-ink rounded-xl h-9 px-2"
                 >
                   <RotateCcw className="w-3.5 h-3.5 mr-1" />
                   Restaurar
@@ -704,12 +700,12 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
                 size="sm"
                 onClick={handleFinalSave}
                 disabled={processing || !currentPage?.previewUrl}
-                className="text-xs font-semibold bg-[#14213D] text-white hover:bg-[#1f3159] rounded-xl h-9 gap-1.5 px-4 shadow-sm"
+                className="text-xs font-semibold bg-ink text-white hover:opacity-90 rounded-xl h-9 gap-1.5 px-4 shadow-sm"
               >
                 {processing ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : (
-                  <Check className="w-3.5 h-3.5 text-[#FCA311]" />
+                  <Check className="w-3.5 h-3.5 text-action" />
                 )}
                 {pages.length > 1 ? (
                   <span className="flex items-center gap-1">

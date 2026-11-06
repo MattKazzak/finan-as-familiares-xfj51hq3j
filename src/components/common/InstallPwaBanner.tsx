@@ -69,7 +69,7 @@ export function InstallPwaBanner({
         aria-label="Instalação do Curiangoo"
         className={`${positionClasses} ${className} animate-in fade-in slide-in-from-bottom-4 duration-300`}
       >
-        <div className="bg-[#14213D] text-white shadow-2xl shadow-[#14213D]/40 rounded-2xl p-3.5 ring-1 ring-white/10">
+        <div className="bg-ink text-white shadow-2xl shadow-black/40 rounded-2xl p-3.5 ring-1 ring-white/10">
           <div className="flex items-center gap-3">
             {/* Ícone oficial Curiangoo */}
             <div
@@ -98,7 +98,7 @@ export function InstallPwaBanner({
                   size="sm"
                   onClick={handleBannerActionClick}
                   disabled={installing}
-                  className="h-8 px-4 text-xs bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition-all active:scale-95 border-0"
+                  className="h-8 px-4 text-xs bg-action hover:opacity-90 text-white font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition-all active:scale-95 border-0"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>{installing ? 'Instalando…' : 'Instalar'}</span>

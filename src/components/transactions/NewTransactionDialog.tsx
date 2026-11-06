@@ -793,10 +793,10 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
       {members.length > 1 && (
         <div
           data-testid="transaction-member-block"
-          className="rounded-2xl border border-[rgba(20,33,61,0.06)] bg-[#F8F9FB]/90 p-2.5 sm:p-3 transition-all space-y-2 shadow-curiango"
+          className="rounded-2xl border border-line bg-bg/90 p-2.5 sm:p-3 transition-all space-y-2 shadow-cds"
         >
           <div className="flex items-center justify-between gap-2 min-w-0">
-            <span className="text-xs font-medium text-[#64748B] shrink-0">
+            <span className="text-xs font-medium text-body2 shrink-0">
               {type === 'expense' ? 'Quem pagou:' : 'Quem recebeu:'}
             </span>
 
@@ -805,9 +805,9 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
               data-testid="member-summary-trigger"
               onClick={() => setIsMemberExpanded((prev) => !prev)}
               aria-expanded={isMemberExpanded}
-              className="inline-flex items-center gap-1.5 min-w-0 max-w-[70%] py-1 px-2.5 rounded-full bg-white border border-[rgba(20,33,61,0.08)] hover:border-slate-300 hover:bg-slate-50 text-xs text-[#14213D] font-medium transition-all cursor-pointer shadow-2xs group"
+              className="inline-flex items-center gap-1.5 min-w-0 max-w-[70%] py-1 px-2.5 rounded-full bg-white border border-line hover:border-slate-300 hover:bg-slate-50 text-xs text-ink font-medium transition-all cursor-pointer shadow-2xs group"
             >
-              <span className="w-4 h-4 rounded-full bg-slate-200 text-[10px] font-bold text-[#14213D] flex items-center justify-center shrink-0">
+              <span className="w-4 h-4 rounded-full bg-slate-200 text-[10px] font-bold text-ink flex items-center justify-center shrink-0">
                 {selectedMemberObj?.name?.charAt(0).toUpperCase() || '?'}
               </span>
               <span className="truncate">
@@ -816,7 +816,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
               </span>
               <Check className="w-3 h-3 text-emerald-600 shrink-0" />
               <ChevronDown
-                className={`w-3.5 h-3.5 text-[#64748B] transition-transform duration-200 shrink-0 ${
+                className={`w-3.5 h-3.5 text-body2 transition-transform duration-200 shrink-0 ${
                   isMemberExpanded ? 'rotate-180' : ''
                 }`}
               />
@@ -827,7 +827,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           {isMemberExpanded && (
             <div
               data-testid="member-chips-container"
-              className="pt-2 border-t border-[rgba(20,33,61,0.06)] flex flex-wrap gap-1.5 animate-in fade-in-50 duration-150"
+              className="pt-2 border-t border-line flex flex-wrap gap-1.5 animate-in fade-in-50 duration-150"
             >
               {members.map((m) => {
                 const isSelected = memberId === m.id
@@ -839,13 +839,13 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                     onClick={() => handleMemberSelect(m.id)}
                     className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5 cursor-pointer ${
                       isSelected
-                        ? 'bg-[#14213D] text-white border-[#14213D] shadow-xs scale-[1.01]'
-                        : 'bg-white text-[#14213D] border-[rgba(20,33,61,0.1)] hover:border-slate-300 hover:bg-slate-50'
+                        ? 'bg-ink text-white border-ink shadow-xs scale-[1.01]'
+                        : 'bg-white text-ink border-line hover:border-slate-300 hover:bg-slate-50'
                     }`}
                   >
                     <span
                       className={`w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 ${
-                        isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-[#14213D]'
+                        isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-ink'
                       }`}
                     >
                       {m.name.charAt(0).toUpperCase()}
@@ -854,7 +854,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                     {isYou && (
                       <span
                         className={`text-[10px] font-normal ${
-                          isSelected ? 'text-slate-300' : 'text-[#64748B]'
+                          isSelected ? 'text-slate-300' : 'text-body2'
                         }`}
                       >
                         (Você)
@@ -875,12 +875,12 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
       {type === 'expense' && members.length > 1 && (
         <div
           data-testid="transaction-split-block"
-          className="rounded-2xl border border-[rgba(20,33,61,0.06)] bg-[#F8F9FB]/90 p-2.5 sm:p-3 transition-all space-y-2 shadow-curiango"
+          className="rounded-2xl border border-line bg-bg/90 p-2.5 sm:p-3 transition-all space-y-2 shadow-cds"
         >
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 min-w-0">
-              <UsersRound className="w-3.5 h-3.5 text-[#64748B] shrink-0" />
-              <span className="text-xs font-medium text-[#64748B]">Dividir com alguém</span>
+              <UsersRound className="w-3.5 h-3.5 text-body2 shrink-0" />
+              <span className="text-xs font-medium text-body2">Dividir com alguém</span>
             </div>
             <Switch
               checked={isSplitEnabled}
@@ -916,13 +916,13 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                       }}
                       className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5 cursor-pointer ${
                         isSelected
-                          ? 'bg-[#FCA311] text-[#14213D] border-[#FCA311] shadow-xs scale-[1.01]'
-                          : 'bg-white text-[#14213D] border-[rgba(20,33,61,0.1)] hover:border-slate-300 hover:bg-slate-50'
+                          ? 'bg-action text-white border-action shadow-xs scale-[1.01]'
+                          : 'bg-white text-ink border-line hover:border-slate-300 hover:bg-slate-50'
                       }`}
                     >
                       <span
                         className={`w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 ${
-                          isSelected ? 'bg-[#14213D] text-[#FCA311]' : 'bg-slate-200 text-[#14213D]'
+                          isSelected ? 'bg-ink text-white' : 'bg-slate-200 text-ink'
                         }`}
                       >
                         {m.name.charAt(0).toUpperCase()}
@@ -955,16 +955,16 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           5. SELETOR DE CATEGORIA RECOLHIDO E ORGANIZADO
           - Linha discreta inicial coerente com o seletor de membro
           - Mostra ícone + nome selecionado (ou "Selecionar categoria")
-          - Destaque sutil com âmbar #FCA311 apenas no detalhe ativo
+          - Destaque sutil com ação apenas no detalhe ativo
           - Expande em grade ordenada de 2 colunas no mobile
           - Opção "Sem categoria" dentro do bloco expandido
           ======================================================== */}
       <div
         data-testid="transaction-category-block"
-        className="rounded-2xl border border-[rgba(20,33,61,0.06)] bg-[#F8F9FB]/90 p-2.5 sm:p-3 transition-all space-y-2 shadow-curiango"
+        className="rounded-2xl border border-line bg-bg/90 p-2.5 sm:p-3 transition-all space-y-2 shadow-cds"
       >
         <div className="flex items-center justify-between gap-2 min-w-0">
-          <span className="text-xs font-medium text-[#64748B] shrink-0">Categoria:</span>
+          <span className="text-xs font-medium text-body2 shrink-0">Categoria:</span>
 
           <div className="flex items-center gap-1.5 min-w-0 max-w-[70%]">
             <button
@@ -974,19 +974,16 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
               aria-expanded={isCategoryExpanded}
               className={`inline-flex items-center gap-1.5 min-w-0 py-1 px-2.5 rounded-full bg-white border text-xs font-medium transition-all cursor-pointer shadow-2xs group ${
                 selectedCategoryObj
-                  ? 'border-[#FCA311]/50 text-[#14213D]'
-                  : 'border-[rgba(20,33,61,0.08)] text-[#64748B] hover:text-[#14213D] hover:border-slate-300 hover:bg-slate-50'
+                  ? 'border-action/50 text-ink'
+                  : 'border-line text-body2 hover:text-ink hover:border-slate-300 hover:bg-slate-50'
               }`}
             >
               {selectedCategoryObj ? (
                 <>
-                  <span className="w-4 h-4 rounded-md bg-[#FCA311]/15 text-[#14213D] flex items-center justify-center shrink-0">
-                    <CategoryIcon
-                      name={selectedCategoryObj.icon}
-                      className="w-3 h-3 text-[#14213D]"
-                    />
+                  <span className="w-4 h-4 rounded-md bg-action/15 text-ink flex items-center justify-center shrink-0">
+                    <CategoryIcon name={selectedCategoryObj.icon} className="w-3 h-3 text-ink" />
                   </span>
-                  <span className="truncate text-[#14213D] font-semibold">
+                  <span className="truncate text-ink font-semibold">
                     {selectedCategoryObj.name}
                   </span>
                 </>
@@ -996,7 +993,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                 </span>
               )}
               <ChevronDown
-                className={`w-3.5 h-3.5 text-[#64748B] transition-transform duration-200 shrink-0 ${
+                className={`w-3.5 h-3.5 text-body2 transition-transform duration-200 shrink-0 ${
                   isCategoryExpanded ? 'rotate-180' : ''
                 }`}
               />
@@ -1009,7 +1006,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                   setCategoryId('none')
                   setSubcategoryId('none')
                 }}
-                className="text-[11px] text-[#64748B] hover:text-rose-600 px-1 cursor-pointer transition-colors shrink-0"
+                className="text-[11px] text-body2 hover:text-rose-600 px-1 cursor-pointer transition-colors shrink-0"
                 title="Limpar categoria"
               >
                 Limpar
@@ -1022,7 +1019,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
         {isCategoryExpanded && (
           <div
             data-testid="category-expanded-grid"
-            className="pt-2 border-t border-[rgba(20,33,61,0.06)] space-y-2 animate-in fade-in-50 duration-150"
+            className="pt-2 border-t border-line space-y-2 animate-in fade-in-50 duration-150"
           >
             {/* Opção "Sem categoria" */}
             <div className="flex items-center justify-between pb-1">
@@ -1031,8 +1028,8 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                 onClick={() => handleCategorySelect('none')}
                 className={`w-full py-2 px-3 rounded-xl text-xs font-medium border transition-all flex items-center justify-between cursor-pointer ${
                   categoryId === 'none'
-                    ? 'bg-slate-100 text-[#14213D] border-[#14213D]/30 font-semibold shadow-2xs'
-                    : 'bg-white text-[#64748B] border-[rgba(20,33,61,0.08)] hover:bg-slate-50 hover:text-[#14213D]'
+                    ? 'bg-slate-100 text-ink border-ink/30 font-semibold shadow-2xs'
+                    : 'bg-white text-body2 border-line hover:bg-slate-50 hover:text-ink'
                 }`}
               >
                 <div className="flex items-center gap-2">
@@ -1041,7 +1038,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                   </div>
                   <span>Sem categoria</span>
                 </div>
-                {categoryId === 'none' && <Check className="w-3.5 h-3.5 text-[#14213D]" />}
+                {categoryId === 'none' && <Check className="w-3.5 h-3.5 text-ink" />}
               </button>
             </div>
 
@@ -1056,27 +1053,25 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                     onClick={() => handleCategorySelect(c.id)}
                     className={`py-2 px-2.5 rounded-xl text-xs font-medium border transition-all flex items-center gap-2 min-w-0 cursor-pointer text-left ${
                       isSelected
-                        ? 'bg-white text-[#14213D] border-[#FCA311] shadow-xs ring-1 ring-[#FCA311]/40'
-                        : 'bg-white text-[#14213D] border-[rgba(20,33,61,0.08)] hover:border-slate-300 hover:bg-slate-50'
+                        ? 'bg-white text-ink border-action shadow-xs ring-1 ring-action/40'
+                        : 'bg-white text-ink border-line hover:border-slate-300 hover:bg-slate-50'
                     }`}
                   >
                     <div
                       className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                        isSelected
-                          ? 'bg-[#FCA311]/20 text-[#14213D]'
-                          : 'bg-slate-100 text-slate-600'
+                        isSelected ? 'bg-action/20 text-ink' : 'bg-slate-100 text-slate-600'
                       }`}
                     >
                       <CategoryIcon
                         name={c.icon}
-                        className={`w-3.5 h-3.5 ${isSelected ? 'text-[#14213D]' : 'text-slate-600'}`}
+                        className={`w-3.5 h-3.5 ${isSelected ? 'text-ink' : 'text-slate-600'}`}
                       />
                     </div>
                     <span className="truncate flex-1 font-medium text-[11px] sm:text-xs">
                       {c.name}
                     </span>
                     {isSelected && (
-                      <Check className="w-3.5 h-3.5 text-[#FCA311] shrink-0" strokeWidth={2.5} />
+                      <Check className="w-3.5 h-3.5 text-action shrink-0" strokeWidth={2.5} />
                     )}
                   </button>
                 )

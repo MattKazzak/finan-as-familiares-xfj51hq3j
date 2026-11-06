@@ -370,7 +370,7 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
         <div className="flex items-center gap-2 shrink-0">
           <span
             className={`font-semibold tracking-tight text-xs sm:text-sm tabular-nums whitespace-nowrap ${
-              isOriginalIncome ? 'text-[#059669]' : 'text-[#E11D48]'
+              isOriginalIncome ? 'text-income' : 'text-expense'
             }`}
           >
             {isOriginalIncome ? '+' : '−'} {formatBRL(transaction.amount_cents)}
@@ -620,10 +620,10 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
                   checked={rememberRule}
                   onCheckedChange={(checked) => setRememberRule(!!checked)}
                   disabled={disabled || saving || savingBatch}
-                  className="data-[state=checked]:bg-[#059669] data-[state=checked]:border-[#059669] rounded-md"
+                  className="data-[state=checked]:bg-income data-[state=checked]:border-income rounded-md"
                 />
                 <span className="flex items-center gap-1.5 leading-tight">
-                  <Sparkles className="w-3.5 h-3.5 text-[#059669] shrink-0" />
+                  <Sparkles className="w-3.5 h-3.5 text-income shrink-0" />
                   <span>Lembrar para compras futuras com este nome</span>
                 </span>
               </label>
@@ -680,7 +680,7 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
                   type="submit"
                   size="sm"
                   disabled={!selectedCatId || saving || savingBatch}
-                  className="rounded-xl text-xs font-bold gap-1.5 bg-[#FCA311] hover:bg-[#e08e08] text-[#14213D] shadow-sm h-9 px-4 min-w-[100px] border-0"
+                  className="rounded-xl text-xs font-bold gap-1.5 bg-action hover:bg-action/90 text-white shadow-sm h-9 px-4 min-w-[100px] border-0"
                 >
                   {saving ? (
                     <>

@@ -275,7 +275,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                 <span
                   className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                     expirationStatus.isExpired
-                      ? 'bg-rose-100 text-[#E11D48]'
+                      ? 'bg-rose-100 text-expense'
                       : 'bg-amber-100 text-[#B45309]'
                   }`}
                 >
@@ -284,10 +284,10 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
               </div>
             )}
 
-            <DialogTitle className="text-base font-semibold text-[#14213D] leading-snug break-words">
+            <DialogTitle className="text-base font-semibold text-ink leading-snug break-words">
               {document.title}
             </DialogTitle>
-            <DialogDescription className="text-xs text-[#64748B]">
+            <DialogDescription className="text-xs text-body2">
               Enviado por {document.uploaded_by_name} •{' '}
               {formatDocumentSubtitle(
                 document.mime_type,
@@ -298,10 +298,10 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
           </DialogHeader>
 
           {/* Área de Visualização do Arquivo */}
-          <div className="relative mt-2 rounded-2xl bg-slate-100 overflow-hidden border border-[rgba(20,33,61,0.08)] flex items-center justify-center min-h-[220px] max-h-[340px]">
+          <div className="relative mt-2 rounded-2xl bg-slate-100 overflow-hidden border border-line flex items-center justify-center min-h-[220px] max-h-[340px]">
             {loadingUrl ? (
               <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-2">
-                <Loader2 className="w-6 h-6 animate-spin text-[#FCA311]" />
+                <Loader2 className="w-6 h-6 animate-spin text-action" />
                 <span className="text-xs">Carregando visualização segura...</span>
               </div>
             ) : signedUrl ? (
@@ -313,12 +313,12 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                 />
               ) : isPdf ? (
                 <div className="p-6 flex flex-col items-center justify-center text-center gap-3 w-full">
-                  <div className="w-14 h-14 rounded-2xl bg-rose-50 text-[#E11D48] flex items-center justify-center shadow-xs">
+                  <div className="w-14 h-14 rounded-2xl bg-rose-50 text-expense flex items-center justify-center shadow-xs">
                     <FileText className="w-7 h-7" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-[#14213D]">{document.file_name}</p>
-                    <p className="text-[11px] text-[#64748B] mt-0.5">
+                    <p className="text-xs font-semibold text-ink">{document.file_name}</p>
+                    <p className="text-[11px] text-body2 mt-0.5">
                       Documento digital em formato PDF
                     </p>
                   </div>
@@ -326,16 +326,16 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                     href={signedUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#14213D] text-white text-xs font-semibold hover:bg-[#1f3159] transition-colors"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-ink text-white text-xs font-semibold hover:opacity-90 transition-colors"
                   >
                     <span>Abrir PDF Completo</span>
-                    <ExternalLink className="w-3.5 h-3.5 text-[#FCA311]" />
+                    <ExternalLink className="w-3.5 h-3.5 text-action" />
                   </a>
                 </div>
               ) : (
                 <div className="p-6 flex flex-col items-center justify-center text-center gap-2">
                   <FileText className="w-8 h-8 text-slate-400" />
-                  <p className="text-xs text-[#14213D]">{document.file_name}</p>
+                  <p className="text-xs text-ink">{document.file_name}</p>
                   <a
                     href={signedUrl}
                     download={document.file_name}
@@ -352,7 +352,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
 
           {/* Badges de Metadados e Status */}
           <div className="grid grid-cols-2 gap-2 pt-2 text-[11px]">
-            <div className="p-2.5 rounded-xl bg-[#F8F9FB] border border-[rgba(20,33,61,0.06)] flex items-center gap-2">
+            <div className="p-2.5 rounded-xl bg-bg border border-line flex items-center gap-2">
               <div
                 className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
                   document.is_shared_with_family
@@ -367,33 +367,33 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                 )}
               </div>
               <div className="min-w-0">
-                <span className="font-semibold text-[#14213D] block truncate">
+                <span className="font-semibold text-ink block truncate">
                   {document.is_shared_with_family ? 'Família toda' : 'Apenas você'}
                 </span>
-                <span className="text-[10px] text-[#64748B]">Visibilidade</span>
+                <span className="text-[10px] text-body2">Visibilidade</span>
               </div>
             </div>
 
-            <div className="p-2.5 rounded-xl bg-[#F8F9FB] border border-[rgba(20,33,61,0.06)] flex items-center gap-2">
+            <div className="p-2.5 rounded-xl bg-bg border border-line flex items-center gap-2">
               <div className="w-6 h-6 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
                 <Calendar className="w-3.5 h-3.5" />
               </div>
               <div className="min-w-0">
-                <span className="font-semibold text-[#14213D] block truncate">
+                <span className="font-semibold text-ink block truncate">
                   {document.expires_at
                     ? new Date(`${document.expires_at}T12:00:00`).toLocaleDateString('pt-BR')
                     : 'Sem validade'}
                 </span>
-                <span className="text-[10px] text-[#64748B]">Validade</span>
+                <span className="text-[10px] text-body2">Validade</span>
               </div>
             </div>
           </div>
 
           {/* Formulário de Edição inline (se aberto) */}
           {isEditing && (
-            <div className="p-4 rounded-2xl bg-[#F8F9FB] border border-[rgba(20,33,61,0.08)] space-y-3 mt-1">
+            <div className="p-4 rounded-2xl bg-bg border border-line space-y-3 mt-1">
               <div className="space-y-1">
-                <Label className="text-xs font-semibold text-[#14213D]">Nome do documento</Label>
+                <Label className="text-xs font-semibold text-ink">Nome do documento</Label>
                 <Input
                   type="text"
                   value={editTitle}
@@ -404,12 +404,10 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
 
               <div className="flex items-center justify-between pt-1">
                 <div>
-                  <span className="text-xs text-[#14213D] font-medium block">
+                  <span className="text-xs text-ink font-medium block">
                     Visível para toda a família
                   </span>
-                  <span className="text-[10px] text-[#64748B]">
-                    Desative para torná-lo privado seu
-                  </span>
+                  <span className="text-[10px] text-body2">Desative para torná-lo privado seu</span>
                 </div>
                 <Switch checked={editShared} onCheckedChange={setEditShared} />
               </div>
@@ -429,7 +427,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                   size="sm"
                   onClick={handleSaveEdit}
                   disabled={savingEdit || !editTitle.trim()}
-                  className="text-xs bg-[#14213D] text-white hover:bg-[#1f3159] h-8 rounded-xl"
+                  className="text-xs bg-ink text-white hover:opacity-90 h-8 rounded-xl"
                 >
                   {savingEdit && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
                   Salvar
@@ -459,7 +457,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                     onClick={() => setSelectedDuration(dur)}
                     className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-semibold border transition-all ${
                       selectedDuration === dur
-                        ? 'bg-[#14213D] text-white border-[#14213D]'
+                        ? 'bg-ink text-white border-ink'
                         : 'bg-white text-slate-700 border-amber-200 hover:bg-slate-50'
                     }`}
                   >
@@ -507,7 +505,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                             <p className="font-mono text-[10px] text-slate-700 truncate">
                               .../doc/{share.token.slice(0, 10)}...
                             </p>
-                            <p className="text-[10px] text-[#64748B]">
+                            <p className="text-[10px] text-body2">
                               Expira{' '}
                               {new Date(share.expires_at).toLocaleTimeString('pt-BR', {
                                 hour: '2-digit',
@@ -574,7 +572,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
               className={`flex flex-col items-center justify-center p-2 rounded-xl border text-center transition-colors ${
                 isEditing
                   ? 'bg-blue-50 text-blue-700 border-blue-300'
-                  : 'bg-[#F8F9FB] text-slate-700 border-slate-200 hover:bg-slate-100'
+                  : 'bg-bg text-slate-700 border-slate-200 hover:bg-slate-100'
               }`}
             >
               <Edit2 className="w-4 h-4 mb-1" />
@@ -586,10 +584,10 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
               type="button"
               onClick={handleBackupDownload}
               disabled={backingUp}
-              className="flex flex-col items-center justify-center p-2 rounded-xl border bg-[#F8F9FB] text-slate-700 border-slate-200 hover:bg-slate-100 text-center transition-colors"
+              className="flex flex-col items-center justify-center p-2 rounded-xl border bg-bg text-slate-700 border-slate-200 hover:bg-slate-100 text-center transition-colors"
             >
               {backingUp ? (
-                <Loader2 className="w-4 h-4 mb-1 animate-spin text-[#14213D]" />
+                <Loader2 className="w-4 h-4 mb-1 animate-spin text-ink" />
               ) : (
                 <Download className="w-4 h-4 mb-1" />
               )}
@@ -600,7 +598,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
             <button
               type="button"
               onClick={() => setIsDeleteConfirmOpen(true)}
-              className="flex flex-col items-center justify-center p-2 rounded-xl border bg-rose-50 text-[#E11D48] border-rose-200 hover:bg-rose-100 text-center transition-colors"
+              className="flex flex-col items-center justify-center p-2 rounded-xl border bg-rose-50 text-expense border-rose-200 hover:bg-rose-100 text-center transition-colors"
             >
               <Trash2 className="w-4 h-4 mb-1" />
               <span className="text-[10px] font-semibold leading-tight">Excluir</span>
@@ -613,13 +611,13 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
       <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
         <DialogContent className="max-w-xs w-[90vw] rounded-3xl p-5 bg-white">
           <DialogHeader className="text-left">
-            <div className="w-10 h-10 rounded-2xl bg-rose-50 text-[#E11D48] flex items-center justify-center mb-1">
+            <div className="w-10 h-10 rounded-2xl bg-rose-50 text-expense flex items-center justify-center mb-1">
               <AlertTriangle className="w-5 h-5" />
             </div>
-            <DialogTitle className="text-base font-semibold text-[#14213D]">
+            <DialogTitle className="text-base font-semibold text-ink">
               Excluir Documento?
             </DialogTitle>
-            <DialogDescription className="text-xs text-[#64748B]">
+            <DialogDescription className="text-xs text-body2">
               Esta ação apaga o documento da pasta familiar de forma permanente.
             </DialogDescription>
           </DialogHeader>
@@ -656,7 +654,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
               size="sm"
               onClick={handleDelete}
               disabled={deleting}
-              className="w-full text-xs font-semibold bg-[#E11D48] text-white hover:bg-rose-700 rounded-xl h-10"
+              className="w-full text-xs font-semibold bg-rose-600 text-white hover:bg-rose-700 rounded-xl h-10"
             >
               {deleting ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : null}
               Sim, Excluir Documento
@@ -667,7 +665,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
               size="sm"
               onClick={() => setIsDeleteConfirmOpen(false)}
               disabled={deleting}
-              className="w-full text-xs text-[#64748B] hover:text-[#14213D] rounded-xl h-9"
+              className="w-full text-xs text-body2 hover:text-ink rounded-xl h-9"
             >
               Cancelar
             </Button>
