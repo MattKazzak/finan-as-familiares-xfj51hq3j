@@ -127,6 +127,50 @@ export default {
           4: 'hsl(var(--chart-4))',
           5: 'hsl(var(--chart-5))',
         },
+        // CDS v2.0 — ponte de utilitários para os tokens de src/main.css (Etapa 1C).
+        // Não substituem os canais HSL do shadcn acima.
+        ink: {
+          DEFAULT: 'var(--ink)',
+          hover: 'var(--ink-hover)',
+          subtle: 'var(--ink-subtle)',
+        },
+        action: {
+          DEFAULT: 'var(--action)',
+          hover: 'var(--action-hover)',
+          subtle: 'var(--action-subtle)',
+        },
+        line: {
+          DEFAULT: 'var(--line)',
+          strong: 'var(--line-strong)',
+        },
+        surface: {
+          DEFAULT: 'var(--surface)',
+          2: 'var(--surface-2)',
+        },
+        bg: 'var(--bg)',
+        body: 'var(--text)',
+        body2: 'var(--text-2)',
+        body3: 'var(--text-3)',
+        income: {
+          DEFAULT: 'var(--income)',
+          subtle: 'var(--income-subtle)',
+        },
+        expense: {
+          DEFAULT: 'var(--expense)',
+          subtle: 'var(--expense-subtle)',
+        },
+        warning: {
+          DEFAULT: 'var(--warning)',
+          subtle: 'var(--warning-subtle)',
+        },
+        data: {
+          1: 'var(--data-1)',
+          2: 'var(--data-2)',
+          3: 'var(--data-3)',
+          4: 'var(--data-4)',
+          5: 'var(--data-5)',
+          6: 'var(--data-6)',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -149,6 +193,10 @@ export default {
           '0 4px 12px -2px rgba(20, 33, 61, 0.05), 0 16px 36px -10px rgba(20, 33, 61, 0.08)',
         'elevation-3':
           '0 8px 24px -4px rgba(20, 33, 61, 0.08), 0 24px 48px -12px rgba(20, 33, 61, 0.14)',
+        // CDS v2.0 — sombras por token (src/main.css)
+        cds: 'var(--shadow-card)',
+        'cds-float': 'var(--shadow-float)',
+        'cds-dock': 'var(--shadow-dock)',
       },
       transitionTimingFunction: {
         apple: 'cubic-bezier(0.42, 0, 0.58, 1)',
