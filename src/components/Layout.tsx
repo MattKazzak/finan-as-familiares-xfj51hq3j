@@ -325,8 +325,7 @@ export default function Layout() {
                 + (Nova Transação), Patrimônio, Metas — 5 itens IGUAIS. O + entra
                 no meio da lista (entre Carteira e Patrimônio), mesmo tamanho e
                 traço dos demais; ativo é destacado por COR (text-action), nunca
-                por elevação. O rótulo invisível "." alinha o + na mesma altura
-                dos outros ícones (eles têm rótulo de texto embaixo). */}
+                por elevação. O + tem rótulo "Nova" no mesmo estilo dos demais. */}
             {navItems.slice(0, 4).map((item, idx) => {
               const Icon = item.icon
               return (
@@ -343,12 +342,9 @@ export default function Layout() {
                       title="Nova Transação"
                     >
                       <Plus className="w-5 h-5" strokeWidth={1.5} />
-                      <span
-                        className="text-[10px] leading-none mt-0.5 invisible select-none"
-                        aria-hidden="true"
-                      >
-                        .
-                      </span>
+                      {/* Rótulo "Nova" visível (pedido do Matheus): mesma
+                          tipografia dos rótulos dos demais itens da pílula. */}
+                      <span className="text-[10px] tracking-tight mt-0.5 leading-none">Nova</span>
                     </button>
                   )}
                   <NavLink

@@ -39,17 +39,21 @@ vi.mock('@/contexts/ActiveMonthContext', () => ({
 }))
 
 describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () => {
-  it('exibe o + como item comum da pílula: sem círculo, sem sombra, sem borda e sem rótulo "Nova"', () => {
+  it('exibe o + como item comum da pílula: sem círculo, sem sombra, sem borda, com rótulo "Nova" visível', () => {
     render(
       <MemoryRouter initialEntries={['/inicio']}>
         <Layout />
       </MemoryRouter>,
     )
 
-    // O rótulo "Nova" NÃO existe mais
-    expect(screen.queryByText('Nova')).toBeNull()
+    // Rótulo "Nova" visível embaixo do ícone (pedido do Matheus), igual aos demais
+    const novaLabel = screen.getByText('Nova')
+    expect(novaLabel.className).toContain('text-[10px]')
+    expect(novaLabel.className).toContain('leading-none')
+    expect(novaLabel.className).toContain('mt-0.5')
+    expect(novaLabel.className).not.toContain('invisible')
 
-    // Botão central acessível por aria-label (texto sumiu, acessibilidade fica)
+    // Botão central acessível por aria-label (acessibilidade fica) e mantém o teste
     const centralBtn = screen.getByRole('button', { name: /Nova Transação/i })
     expect(centralBtn).toBeDefined()
     expect(centralBtn.getAttribute('aria-label')).toBe('Nova Transação')
@@ -65,9 +69,8 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
     const plusIcon = centralBtn.querySelector('svg')
     expect(plusIcon).not.toBeNull()
 
-    // Espaçador invisível mantém o + na mesma altura dos ícones com rótulo
-    const spacer = centralBtn.querySelector('span.invisible')
-    expect(spacer).not.toBeNull()
+    // Sem espaçador invisível: o + tem rótulo de verdade como os outros itens
+    expect(centralBtn.querySelector('span.invisible')).toBeNull()
 
     // Dock inferior plano: pílula navy (bg-ink) com sombra de dock CDS v2.0
     const navBar = screen.getByRole('navigation', { name: /Navegação Principal/i })
