@@ -46,9 +46,9 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
 
   if (items.length === 0) {
     return (
-      <div className="p-8 text-center text-slate-500 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
-        <p className="text-sm font-semibold text-slate-700">Nenhum lançamento encontrado</p>
-        <p className="text-xs text-slate-500 mt-1">
+      <div className="p-8 text-center text-body2 bg-surface rounded-2xl border border-line shadow-xs">
+        <p className="text-sm font-semibold text-ink">Nenhum lançamento encontrado</p>
+        <p className="text-xs text-body2 mt-1">
           Nenhum lançamento corresponde ao filtro selecionado. Tente mudar os filtros rápidos no
           topo.
         </p>
@@ -76,8 +76,8 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
               isSelected
                 ? 'bg-emerald-50/70 border-emerald-500/80 shadow-md ring-2 ring-emerald-500/20'
                 : item.selected
-                  ? 'bg-white border-slate-200/90 shadow-2xs hover:border-slate-300 hover:bg-slate-50/60'
-                  : 'bg-slate-100/60 border-slate-200/70 opacity-60'
+                  ? 'bg-surface border-line shadow-2xs hover:border-line-strong hover:bg-surface-2'
+                  : 'bg-surface-2 border-line opacity-60'
             }`}
           >
             {/* Checkbox de inclusão na importação */}
@@ -92,7 +92,7 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
                 type="checkbox"
                 checked={item.selected}
                 onChange={() => onToggleItem(item.id)}
-                className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                className="w-4 h-4 rounded border-line text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                 title={item.selected ? 'Desmarcar da importação' : 'Marcar para importação'}
                 aria-label={`Incluir ${item.description}`}
               />
@@ -110,11 +110,11 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
             {/* Dados Centrais */}
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="font-bold text-xs sm:text-sm text-slate-900 truncate max-w-[200px] sm:max-w-[320px]">
+                <span className="font-bold text-xs sm:text-sm text-ink truncate max-w-[200px] sm:max-w-[320px]">
                   {item.description || 'Lançamento sem descrição'}
                 </span>
                 {item.isInstallment && (
-                  <span className="text-[10px] font-semibold bg-muted/70 text-slate-700 border border-border/40 px-1.5 py-0.2 rounded-md shrink-0">
+                  <span className="text-[10px] font-semibold bg-muted/70 text-body border border-border/40 px-1.5 py-0.2 rounded-md shrink-0">
                     {item.installmentCurrent}/{item.installmentTotal}
                   </span>
                 )}
@@ -136,7 +136,7 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
                   </span>
                 ) : null}
                 {item.isNonExpense && (
-                  <span className="text-[10px] font-medium bg-muted/70 text-slate-600 border border-border/30 px-1.5 py-0.2 rounded-md shrink-0">
+                  <span className="text-[10px] font-medium bg-muted/70 text-body2 border border-border/30 px-1.5 py-0.2 rounded-md shrink-0">
                     Não é despesa
                   </span>
                 )}
@@ -148,14 +148,14 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
               </div>
 
               {/* Linha de Metadados: Categoria, Subcategoria, Membro, Confiança da IA */}
-              <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5 flex-wrap">
-                <span className="font-mono text-slate-600">{item.date}</span>
+              <div className="flex items-center gap-2 text-[11px] text-body2 mt-0.5 flex-wrap">
+                <span className="font-mono text-body">{item.date}</span>
 
                 {cat ? (
-                  <span className="font-semibold text-slate-700 flex items-center gap-1">
+                  <span className="font-semibold text-body flex items-center gap-1">
                     <span>• {cat.name}</span>
                     {subcategory && (
-                      <span className="text-slate-400 font-normal">/ {subcategory.name}</span>
+                      <span className="text-body3 font-normal">/ {subcategory.name}</span>
                     )}
                   </span>
                 ) : (
@@ -170,7 +170,7 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
                       item.isUncertain ||
                       (typeof item.aiConfidence === 'number' && item.aiConfidence < 0.6)
                         ? 'text-amber-900 bg-amber-50 border border-amber-300'
-                        : 'text-slate-700 bg-muted/60 border border-border/40'
+                        : 'text-body bg-muted/60 border border-border/40'
                     }`}
                     title={item.aiReasoning || 'Sugerido pela IA'}
                   >
@@ -200,7 +200,7 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
                       placeholder="Contar o que foi (ex: fralda do bebê)..."
                       value={item.userNote || ''}
                       onChange={(e) => onUpdateUserNote?.(item.id, e.target.value)}
-                      className="text-[11px] px-2 py-1 rounded-lg border border-amber-200 bg-amber-50/60 focus:bg-white text-slate-800 placeholder:text-slate-400 w-full max-w-[260px] outline-none focus:ring-1 focus:ring-amber-400 transition-all"
+                      className="text-[11px] px-2 py-1 rounded-lg border border-amber-200 bg-amber-50/60 focus:bg-white text-ink placeholder:text-body3 w-full max-w-[260px] outline-none focus:ring-1 focus:ring-amber-400 transition-all"
                     />
                     {item.userNote ? (
                       <span className="text-[10px] text-emerald-700 font-semibold shrink-0">
@@ -211,9 +211,7 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
                 )}
 
                 {member && (
-                  <span className="text-slate-400 text-[10px] hidden sm:inline">
-                    ({member.name})
-                  </span>
+                  <span className="text-body3 text-[10px] hidden sm:inline">({member.name})</span>
                 )}
               </div>
             </div>
@@ -222,7 +220,7 @@ export const ImportItemList: React.FC<ImportItemListProps> = ({
             <div className="text-right shrink-0">
               <span
                 className={`font-semibold text-xs sm:text-sm tabular-nums whitespace-nowrap block ${
-                  isIncome ? 'text-income' : 'text-slate-900'
+                  isIncome ? 'text-income' : 'text-ink'
                 }`}
               >
                 {isIncome ? '+' : '−'} {formatBRL(item.amount_cents)}

@@ -325,13 +325,13 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 animate-pulse" />
               <p
-                className="font-bold text-xs sm:text-sm text-slate-900 truncate leading-tight"
+                className="font-bold text-xs sm:text-sm text-ink truncate leading-tight"
                 title={transaction.description || 'Transação sem descrição'}
               >
                 {transaction.description || 'Transação sem descrição'}
               </p>
             </div>
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5 min-w-0 flex-wrap">
+            <div className="flex items-center gap-1.5 text-[11px] text-body2 mt-0.5 min-w-0 flex-wrap">
               <span className="font-semibold text-[10px] bg-amber-100 text-amber-900 border border-amber-300/80 px-1.5 py-0.2 rounded font-mono shrink-0">
                 Pendente
               </span>
@@ -358,9 +358,7 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
                 </span>
               )}
               {transaction.member?.name && (
-                <span className="truncate text-slate-500 text-[10px]">
-                  • {transaction.member.name}
-                </span>
+                <span className="truncate text-body2 text-[10px]">• {transaction.member.name}</span>
               )}
             </div>
           </div>
@@ -375,7 +373,7 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
           >
             {isOriginalIncome ? '+' : '−'} {formatBRL(transaction.amount_cents)}
           </span>
-          <div className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0">
+          <div className="w-6 h-6 rounded-lg bg-surface-2 text-body flex items-center justify-center shrink-0">
             {isExpanded ? (
               <ChevronUp className="w-4 h-4 transition-transform duration-200" />
             ) : (
@@ -402,7 +400,7 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 pt-1">
               {/* Descrição */}
               <div className="sm:col-span-5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-body2 block mb-1">
                   Descrição
                 </label>
                 <Input
@@ -410,13 +408,13 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Nome da transação"
                   disabled={saving || savingBatch}
-                  className="h-8 text-xs font-semibold bg-white border-slate-300 focus:border-emerald-600 rounded-xl"
+                  className="h-8 text-xs font-semibold bg-surface border-line focus:border-emerald-600 rounded-xl"
                 />
               </div>
 
               {/* Data */}
               <div className="sm:col-span-3">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-body2 block mb-1">
                   Data
                 </label>
                 <input
@@ -424,13 +422,13 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
                   value={txDate}
                   onChange={(e) => setTxDate(e.target.value)}
                   disabled={saving || savingBatch}
-                  className="h-8 w-full text-xs text-slate-800 bg-white border border-slate-300 rounded-xl px-2.5 font-medium focus:outline-none focus:border-emerald-600"
+                  className="h-8 w-full text-xs text-ink bg-surface border border-line rounded-xl px-2.5 font-medium focus:outline-none focus:border-emerald-600"
                 />
               </div>
 
               {/* Toggle Receita / Despesa */}
               <div className="sm:col-span-2">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-body2 block mb-1">
                   Tipo
                 </label>
                 <button
@@ -458,7 +456,7 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
               {/* Membro */}
               {members.length > 0 && (
                 <div className="sm:col-span-2">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-body2 block mb-1">
                     Membro
                   </label>
                   <Select
@@ -466,7 +464,7 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
                     onValueChange={setMemberId}
                     disabled={saving || savingBatch}
                   >
-                    <SelectTrigger className="h-8 text-xs bg-white border-slate-300 rounded-xl">
+                    <SelectTrigger className="h-8 text-xs bg-surface border-line rounded-xl">
                       <SelectValue placeholder="Membro" />
                     </SelectTrigger>
                     <SelectContent>
@@ -485,7 +483,7 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
               {/* Select de Categoria */}
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block mb-1 flex items-center gap-1">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-body block mb-1 flex items-center gap-1">
                   <span>Categoria *</span>
                   {!selectedCatId && (
                     <span className="text-amber-700 font-normal normal-case">
@@ -499,10 +497,10 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
                   disabled={disabled || saving || savingBatch}
                 >
                   <SelectTrigger
-                    className={`h-9 text-xs bg-white rounded-xl shadow-2xs font-medium border-2 ${
+                    className={`h-9 text-xs bg-surface rounded-xl shadow-2xs font-medium border-2 ${
                       !selectedCatId
                         ? 'text-amber-900 border-amber-400 bg-amber-50/40 animate-pulse'
-                        : 'text-slate-900 border-slate-300'
+                        : 'text-ink border-line'
                     }`}
                   >
                     <SelectValue placeholder="Escolher categoria..." />
@@ -531,7 +529,7 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
                                 className="w-2.5 h-2.5"
                               />
                             </div>
-                            <span className="font-semibold text-slate-800">
+                            <span className="font-semibold text-ink">
                               {aiAlternativeCategory.name}
                             </span>
                           </span>
@@ -544,7 +542,7 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
                           if (list.length === 0) return null
                           return (
                             <SelectGroup key={bucket}>
-                              <SelectLabel className="text-[10px] uppercase font-bold text-slate-500 tracking-wider flex items-center gap-1 px-2.5 py-1.5 bg-slate-100/90 rounded-md my-0.5">
+                              <SelectLabel className="text-[10px] uppercase font-bold text-body2 tracking-wider flex items-center gap-1 px-2.5 py-1.5 bg-surface-2 rounded-md my-0.5">
                                 <span>{label}</span>
                               </SelectLabel>
                               {list.map((c) => (
@@ -559,7 +557,7 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
                                     >
                                       <CategoryIcon name={c.icon} className="w-2.5 h-2.5" />
                                     </div>
-                                    <span className="font-semibold text-slate-800">{c.name}</span>
+                                    <span className="font-semibold text-ink">{c.name}</span>
                                   </span>
                                 </SelectItem>
                               ))}
@@ -578,7 +576,7 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
                               >
                                 <CategoryIcon name={c.icon} className="w-2.5 h-2.5" />
                               </div>
-                              <span className="font-semibold text-slate-800">{c.name}</span>
+                              <span className="font-semibold text-ink">{c.name}</span>
                             </span>
                           </SelectItem>
                         ))}
@@ -588,7 +586,7 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
 
               {/* Select de Subcategoria */}
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block mb-1">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-body block mb-1">
                   Subcategoria
                 </label>
                 <ContextualSubcategorySelector
@@ -615,7 +613,7 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
 
             {/* Checkbox "Lembrar para compras futuras com este nome" (Marcado por padrão) */}
             <div className="pt-1 space-y-1">
-              <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 font-medium cursor-pointer select-none">
+              <label className="flex items-center gap-2 text-xs text-body font-medium cursor-pointer select-none">
                 <Checkbox
                   checked={rememberRule}
                   onCheckedChange={(checked) => setRememberRule(!!checked)}
@@ -671,7 +669,7 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
                   size="sm"
                   onClick={onToggleExpand}
                   disabled={saving || savingBatch}
-                  className="rounded-xl text-xs text-slate-600 hover:text-slate-900 h-9 px-3"
+                  className="rounded-xl text-xs text-body hover:text-ink h-9 px-3"
                 >
                   Recolher
                 </Button>

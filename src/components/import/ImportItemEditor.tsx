@@ -75,9 +75,9 @@ export const ImportItemEditor: React.FC<ImportItemEditorProps> = ({
   }
 
   return (
-    <div className="flex flex-col h-full bg-white sm:rounded-2xl border-slate-200/80 sm:border shadow-sm p-4 sm:p-5 overflow-y-auto">
+    <div className="flex flex-col h-full bg-surface sm:rounded-2xl border-line sm:border shadow-sm p-4 sm:p-5 overflow-y-auto">
       {/* Header do editor */}
-      <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100 shrink-0">
+      <div className="flex items-start justify-between gap-3 pb-3 border-b border-line shrink-0">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span
@@ -100,7 +100,7 @@ export const ImportItemEditor: React.FC<ImportItemEditorProps> = ({
                   item.isUncertain ||
                   (typeof item.aiConfidence === 'number' && item.aiConfidence < 0.6)
                     ? 'text-amber-900 bg-amber-50 border border-amber-300'
-                    : 'text-slate-700 bg-muted/60 border border-border/40'
+                    : 'text-body bg-muted/60 border border-border/40'
                 }`}
               >
                 <Sparkles className="w-3 h-3 text-action" strokeWidth={1.5} />
@@ -112,12 +112,10 @@ export const ImportItemEditor: React.FC<ImportItemEditorProps> = ({
               </span>
             )}
           </div>
-          <p className="text-base sm:text-lg font-semibold text-slate-900 mt-1 truncate">
+          <p className="text-base sm:text-lg font-semibold text-ink mt-1 truncate">
             {formatBRL(item.amount_cents)}
           </p>
-          <p className="text-xs text-slate-500 font-mono mt-0.5">
-            FITID: {item.fitid || 'Sem código'}
-          </p>
+          <p className="text-xs text-body2 font-mono mt-0.5">FITID: {item.fitid || 'Sem código'}</p>
         </div>
 
         {onClose && (
@@ -126,7 +124,7 @@ export const ImportItemEditor: React.FC<ImportItemEditorProps> = ({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="h-8 w-8 p-0 rounded-full text-slate-400 hover:text-slate-700 sm:hidden"
+            className="h-8 w-8 p-0 rounded-full text-body2 hover:text-ink sm:hidden"
             aria-label="Fechar painel de edição"
           >
             <X className="w-4 h-4" />
@@ -138,13 +136,13 @@ export const ImportItemEditor: React.FC<ImportItemEditorProps> = ({
       <div className="space-y-4 pt-4 flex-1">
         {/* Descrição */}
         <div className="space-y-1.5">
-          <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+          <Label className="text-xs font-bold text-body uppercase tracking-wider">
             Descrição do lançamento
           </Label>
           <Input
             value={item.description}
             onChange={(e) => onUpdateField(item.id, 'description', e.target.value)}
-            className="h-9 text-xs sm:text-sm font-semibold bg-white border-slate-300 focus:border-emerald-600 rounded-xl"
+            className="h-9 text-xs sm:text-sm font-semibold bg-surface border-line focus:border-emerald-600 rounded-xl"
             placeholder="Ex.: iFood Restaurante"
           />
         </div>
@@ -152,21 +150,17 @@ export const ImportItemEditor: React.FC<ImportItemEditorProps> = ({
         {/* Data e Tipo */}
         <div className="grid grid-cols-2 gap-2.5">
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Data
-            </Label>
+            <Label className="text-xs font-bold text-body uppercase tracking-wider">Data</Label>
             <input
               type="date"
               value={item.date}
               onChange={(e) => onUpdateField(item.id, 'date', e.target.value)}
-              className="h-9 w-full text-xs sm:text-sm text-slate-800 bg-white border border-slate-300 rounded-xl px-2.5 font-medium focus:outline-none focus:border-emerald-600"
+              className="h-9 w-full text-xs sm:text-sm text-ink bg-surface border border-line rounded-xl px-2.5 font-medium focus:outline-none focus:border-emerald-600"
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Tipo
-            </Label>
+            <Label className="text-xs font-bold text-body uppercase tracking-wider">Tipo</Label>
             <button
               type="button"
               onClick={() => onUpdateField(item.id, 'type', isIncome ? 'expense' : 'income')}
@@ -191,14 +185,14 @@ export const ImportItemEditor: React.FC<ImportItemEditorProps> = ({
 
         {/* Membro responsável */}
         <div className="space-y-1.5">
-          <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+          <Label className="text-xs font-bold text-body uppercase tracking-wider">
             Membro responsável
           </Label>
           <Select
             value={item.member_id}
             onValueChange={(val) => onUpdateField(item.id, 'member_id', val)}
           >
-            <SelectTrigger className="h-9 text-xs sm:text-sm bg-white border-slate-300 rounded-xl font-medium">
+            <SelectTrigger className="h-9 text-xs sm:text-sm bg-surface border-line rounded-xl font-medium">
               <SelectValue placeholder="Selecione o membro" />
             </SelectTrigger>
             <SelectContent>
@@ -214,7 +208,7 @@ export const ImportItemEditor: React.FC<ImportItemEditorProps> = ({
         {/* Categoria */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+            <Label className="text-xs font-bold text-body uppercase tracking-wider">
               Categoria
             </Label>
             <Button
@@ -239,10 +233,10 @@ export const ImportItemEditor: React.FC<ImportItemEditorProps> = ({
             }}
           >
             <SelectTrigger
-              className={`h-10 text-xs sm:text-sm bg-white rounded-xl shadow-2xs font-medium border-2 ${
+              className={`h-10 text-xs sm:text-sm bg-surface rounded-xl shadow-2xs font-medium border-2 ${
                 !item.category_id
                   ? 'text-amber-900 border-amber-400 bg-amber-50/40'
-                  : 'text-slate-900 border-slate-300'
+                  : 'text-ink border-line'
               }`}
             >
               <SelectValue placeholder="Sem categoria">
@@ -268,7 +262,7 @@ export const ImportItemEditor: React.FC<ImportItemEditorProps> = ({
               </SelectValue>
             </SelectTrigger>
             <SelectContent className="max-h-64">
-              <SelectItem value="none" className="text-xs text-slate-500">
+              <SelectItem value="none" className="text-xs text-body2">
                 Sem categoria (pendente)
               </SelectItem>
               {filteredCategories.map((c) => (
@@ -297,14 +291,14 @@ export const ImportItemEditor: React.FC<ImportItemEditorProps> = ({
         {/* Subcategoria com Seletor Contextual Progressivo */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+            <Label className="text-xs font-bold text-body uppercase tracking-wider">
               Subcategoria
             </Label>
             {item.subcategory_id && (
               <button
                 type="button"
                 onClick={() => onUpdateField(item.id, 'subcategory_id', null)}
-                className="text-[11px] text-slate-400 hover:text-slate-600"
+                className="text-[11px] text-body2 hover:text-body"
               >
                 Limpar
               </button>
@@ -335,18 +329,16 @@ export const ImportItemEditor: React.FC<ImportItemEditorProps> = ({
             <div className="flex items-start gap-2">
               <CopyCheck className="w-4 h-4 text-income shrink-0 mt-0.5" strokeWidth={1.5} />
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-slate-900">
+                <p className="text-xs font-semibold text-ink">
                   {eligibleSimilarCount}{' '}
                   {eligibleSimilarCount === 1
                     ? 'outro lançamento semelhante'
                     : 'outros lançamentos semelhantes'}{' '}
                   nesta fatura
                 </p>
-                <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
+                <p className="text-[11px] text-body mt-0.5 leading-snug">
                   Identificamos lançamentos de{' '}
-                  <strong className="text-slate-800">
-                    {merchantSig || 'mesmo estabelecimento'}
-                  </strong>{' '}
+                  <strong className="text-ink">{merchantSig || 'mesmo estabelecimento'}</strong>{' '}
                   ainda sem esta categoria.
                 </p>
               </div>
@@ -376,10 +368,10 @@ export const ImportItemEditor: React.FC<ImportItemEditorProps> = ({
               type="checkbox"
               checked={item.rememberRule ?? true}
               onChange={(e) => onUpdateField(item.id, 'rememberRule', e.target.checked)}
-              className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4"
+              className="mt-0.5 rounded border-line text-emerald-600 focus:ring-emerald-500 w-4 h-4"
             />
-            <span className="text-slate-700 font-medium text-[11px] leading-snug">
-              <strong className="font-semibold text-slate-900 flex items-center gap-1">
+            <span className="text-body font-medium text-[11px] leading-snug">
+              <strong className="font-semibold text-ink flex items-center gap-1">
                 <Sparkles className="w-3.5 h-3.5 text-action inline" strokeWidth={1.5} />
                 Lembrar para compras futuras
               </strong>
@@ -390,16 +382,16 @@ export const ImportItemEditor: React.FC<ImportItemEditorProps> = ({
 
         {/* Motivo da IA (se houver) */}
         {item.source === 'ai_suggestion' && item.aiReasoning && (
-          <div className="p-2.5 rounded-xl bg-muted/60 border border-border/40 text-[11px] text-slate-700">
-            <span className="font-semibold block text-slate-900">Análise da Inteligência:</span>
+          <div className="p-2.5 rounded-xl bg-muted/60 border border-border/40 text-[11px] text-body">
+            <span className="font-semibold block text-ink">Análise da Inteligência:</span>
             <span className="italic mt-0.5 block">{item.aiReasoning}</span>
           </div>
         )}
 
         {/* Se for parcela ou conciliação manual */}
         {item.isInstallment && (
-          <div className="p-2.5 rounded-xl bg-muted/60 border border-border/40 text-[11px] text-slate-700 space-y-1">
-            <span className="font-semibold text-slate-900">
+          <div className="p-2.5 rounded-xl bg-muted/60 border border-border/40 text-[11px] text-body space-y-1">
+            <span className="font-semibold text-ink">
               Despesa Parcelada ({item.installmentCurrent}/{item.installmentTotal})
             </span>
             {item.installmentCurrent === 1 && (item.installmentTotal || 1) > 1 && (
@@ -410,7 +402,7 @@ export const ImportItemEditor: React.FC<ImportItemEditorProps> = ({
                   onChange={(e) =>
                     onUpdateField(item.id, 'generateFutureInstallments', e.target.checked)
                   }
-                  className="rounded border-slate-300 text-slate-700 focus:ring-slate-500 w-3.5 h-3.5"
+                  className="rounded border-line text-body focus:ring-line w-3.5 h-3.5"
                 />
                 <span>Gerar parcelas futuras automáticas</span>
               </label>
@@ -420,7 +412,7 @@ export const ImportItemEditor: React.FC<ImportItemEditorProps> = ({
       </div>
 
       {/* Ação destrutiva: Remover da revisão */}
-      <div className="pt-4 mt-auto border-t border-slate-100 flex items-center justify-between gap-2 shrink-0">
+      <div className="pt-4 mt-auto border-t border-line flex items-center justify-between gap-2 shrink-0">
         <Button
           type="button"
           variant="ghost"
@@ -437,7 +429,7 @@ export const ImportItemEditor: React.FC<ImportItemEditorProps> = ({
             type="button"
             size="sm"
             onClick={onClose}
-            className="text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-xl h-8 px-4"
+            className="text-xs font-bold bg-ink hover:bg-ink/90 text-white rounded-xl h-8 px-4"
           >
             Concluir
           </Button>

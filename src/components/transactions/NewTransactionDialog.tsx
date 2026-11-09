@@ -681,7 +681,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           ======================================================== */}
       <div
         data-testid="transaction-type-toggle"
-        className="relative p-1.5 bg-slate-100 rounded-2xl flex items-center gap-1.5 border border-slate-200/80 shadow-inner"
+        className="relative p-1.5 bg-surface-2 rounded-2xl flex items-center gap-1.5 border border-line shadow-inner"
       >
         <button
           type="button"
@@ -690,7 +690,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none ${
             type === 'income'
               ? 'bg-finance-income text-white shadow-md shadow-finance-income/30 scale-[1.01]'
-              : 'bg-white/60 text-slate-600 hover:text-slate-900 hover:bg-white'
+              : 'bg-surface/60 text-body hover:text-ink hover:bg-surface'
           }`}
         >
           <div
@@ -709,7 +709,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none ${
             type === 'expense'
               ? 'bg-finance-expense text-white shadow-md shadow-finance-expense/30 scale-[1.01]'
-              : 'bg-white/60 text-slate-600 hover:text-slate-900 hover:bg-white'
+              : 'bg-surface/60 text-body hover:text-ink hover:bg-surface'
           }`}
         >
           <div
@@ -727,7 +727,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           2. VALOR HERÓI (Tipografia imponente sem caixa cinza pesada)
           ======================================================== */}
       <div className="text-center py-2 sm:py-3 space-y-1">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-body3 block">
           {type === 'expense' ? 'Quanto você gastou?' : 'Quanto você recebeu?'}
         </span>
         <div className="inline-flex items-baseline justify-center gap-1 max-w-full">
@@ -745,7 +745,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
             placeholder="0,00"
             value={amountStr}
             onChange={(e) => setAmountStr(e.target.value)}
-            className={`bg-transparent text-3xl sm:text-4xl font-semibold tracking-tight text-slate-900 tabular-nums text-center focus:outline-hidden placeholder:text-slate-300 w-full min-w-0 max-w-[280px] sm:max-w-xs transition-colors ${
+            className={`bg-transparent text-3xl sm:text-4xl font-semibold tracking-tight text-ink tabular-nums text-center focus:outline-hidden placeholder:text-body3 w-full min-w-0 max-w-[280px] sm:max-w-xs transition-colors ${
               amountStr ? (type === 'expense' ? 'text-finance-expense' : 'text-finance-income') : ''
             }`}
             autoFocus={!isMobile}
@@ -758,7 +758,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           ======================================================== */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between px-1">
-          <Label htmlFor="tx-desc" className="text-xs font-semibold text-slate-700">
+          <Label htmlFor="tx-desc" className="text-xs font-semibold text-body">
             Descrição
           </Label>
           {suggestedCategoryInfo && (
@@ -779,7 +779,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
             }
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="rounded-2xl bg-slate-50/70 border-slate-200/80 hover:border-slate-300 focus:bg-white focus:border-emerald-500 h-11 text-sm transition-all"
+            className="rounded-2xl bg-surface-2 border-line hover:border-line-strong focus:bg-surface focus:border-emerald-500 h-11 text-sm transition-all"
           />
         </div>
       </div>
@@ -805,9 +805,9 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
               data-testid="member-summary-trigger"
               onClick={() => setIsMemberExpanded((prev) => !prev)}
               aria-expanded={isMemberExpanded}
-              className="inline-flex items-center gap-1.5 min-w-0 max-w-[70%] py-1 px-2.5 rounded-full bg-white border border-line hover:border-slate-300 hover:bg-slate-50 text-xs text-ink font-medium transition-all cursor-pointer shadow-2xs group"
+              className="inline-flex items-center gap-1.5 min-w-0 max-w-[70%] py-1 px-2.5 rounded-full bg-surface border border-line hover:border-line-strong hover:bg-surface-2 text-xs text-ink font-medium transition-all cursor-pointer shadow-2xs group"
             >
-              <span className="w-4 h-4 rounded-full bg-slate-200 text-[10px] font-bold text-ink flex items-center justify-center shrink-0">
+              <span className="w-4 h-4 rounded-full bg-surface-2 text-[10px] font-bold text-ink flex items-center justify-center shrink-0">
                 {selectedMemberObj?.name?.charAt(0).toUpperCase() || '?'}
               </span>
               <span className="truncate">
@@ -840,12 +840,12 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                     className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5 cursor-pointer ${
                       isSelected
                         ? 'bg-ink text-white border-ink shadow-xs scale-[1.01]'
-                        : 'bg-white text-ink border-line hover:border-slate-300 hover:bg-slate-50'
+                        : 'bg-surface text-ink border-line hover:border-line-strong hover:bg-surface-2'
                     }`}
                   >
                     <span
                       className={`w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 ${
-                        isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-ink'
+                        isSelected ? 'bg-white/20 text-white' : 'bg-surface-2 text-ink'
                       }`}
                     >
                       {m.name.charAt(0).toUpperCase()}
@@ -854,7 +854,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                     {isYou && (
                       <span
                         className={`text-[10px] font-normal ${
-                          isSelected ? 'text-slate-300' : 'text-body2'
+                          isSelected ? 'text-body3' : 'text-body2'
                         }`}
                       >
                         (Você)
@@ -898,7 +898,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
 
           {isSplitEnabled && (
             <div className="pt-1 space-y-2 animate-in fade-in-50 duration-150">
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-body2">
                 Toque nos membros que dividem este gasto. O valor é dividido igualmente entre todos
                 (você incluso).
               </p>
@@ -917,12 +917,12 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                       className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5 cursor-pointer ${
                         isSelected
                           ? 'bg-action text-white border-action shadow-xs scale-[1.01]'
-                          : 'bg-white text-ink border-line hover:border-slate-300 hover:bg-slate-50'
+                          : 'bg-surface text-ink border-line hover:border-line-strong hover:bg-surface-2'
                       }`}
                     >
                       <span
                         className={`w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 ${
-                          isSelected ? 'bg-ink text-white' : 'bg-slate-200 text-ink'
+                          isSelected ? 'bg-ink text-white' : 'bg-surface-2 text-ink'
                         }`}
                       >
                         {m.name.charAt(0).toUpperCase()}
@@ -936,7 +936,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
               {splitMemberIds.length > 0 && (
                 <div className="pt-1 flex items-center gap-2">
                   <Users className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <p className="text-[11px] font-medium text-slate-600">
+                  <p className="text-[11px] font-medium text-body">
                     {splitEqually(parseBRLToCents(amountStr) || 0, splitMemberIds)
                       .map((s) => {
                         const m = members.find((mm) => mm.id === s.member_id)
@@ -972,10 +972,10 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
               data-testid="category-summary-trigger"
               onClick={() => setIsCategoryExpanded((prev) => !prev)}
               aria-expanded={isCategoryExpanded}
-              className={`inline-flex items-center gap-1.5 min-w-0 py-1 px-2.5 rounded-full bg-white border text-xs font-medium transition-all cursor-pointer shadow-2xs group ${
+              className={`inline-flex items-center gap-1.5 min-w-0 py-1 px-2.5 rounded-full bg-surface border text-xs font-medium transition-all cursor-pointer shadow-2xs group ${
                 selectedCategoryObj
                   ? 'border-action/50 text-ink'
-                  : 'border-line text-body2 hover:text-ink hover:border-slate-300 hover:bg-slate-50'
+                  : 'border-line text-body2 hover:text-ink hover:border-line-strong hover:bg-surface-2'
               }`}
             >
               {selectedCategoryObj ? (
@@ -1028,12 +1028,12 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                 onClick={() => handleCategorySelect('none')}
                 className={`w-full py-2 px-3 rounded-xl text-xs font-medium border transition-all flex items-center justify-between cursor-pointer ${
                   categoryId === 'none'
-                    ? 'bg-slate-100 text-ink border-ink/30 font-semibold shadow-2xs'
-                    : 'bg-white text-body2 border-line hover:bg-slate-50 hover:text-ink'
+                    ? 'bg-surface-2 text-ink border-ink/30 font-semibold shadow-2xs'
+                    : 'bg-surface text-body2 border-line hover:bg-surface-2 hover:text-ink'
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-lg bg-slate-200/80 flex items-center justify-center shrink-0 text-slate-500">
+                  <div className="w-5 h-5 rounded-lg bg-surface-2 flex items-center justify-center shrink-0 text-body2">
                     <Minus className="w-3 h-3" />
                   </div>
                   <span>Sem categoria</span>
@@ -1053,18 +1053,18 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                     onClick={() => handleCategorySelect(c.id)}
                     className={`py-2 px-2.5 rounded-xl text-xs font-medium border transition-all flex items-center gap-2 min-w-0 cursor-pointer text-left ${
                       isSelected
-                        ? 'bg-white text-ink border-action shadow-xs ring-1 ring-action/40'
-                        : 'bg-white text-ink border-line hover:border-slate-300 hover:bg-slate-50'
+                        ? 'bg-surface text-ink border-action shadow-xs ring-1 ring-action/40'
+                        : 'bg-surface text-ink border-line hover:border-line-strong hover:bg-surface-2'
                     }`}
                   >
                     <div
                       className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                        isSelected ? 'bg-action/20 text-ink' : 'bg-slate-100 text-slate-600'
+                        isSelected ? 'bg-action/20 text-ink' : 'bg-surface-2 text-body'
                       }`}
                     >
                       <CategoryIcon
                         name={c.icon}
-                        className={`w-3.5 h-3.5 ${isSelected ? 'text-ink' : 'text-slate-600'}`}
+                        className={`w-3.5 h-3.5 ${isSelected ? 'text-ink' : 'text-body'}`}
                       />
                     </div>
                     <span className="truncate flex-1 font-medium text-[11px] sm:text-xs">
@@ -1085,14 +1085,14 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
       {categoryId !== 'none' ? (
         <div className="space-y-1.5 pt-0.5 animate-in fade-in-50">
           <div className="flex items-center justify-between px-1">
-            <Label className="text-[11px] font-semibold text-slate-600">
-              Subcategoria <span className="text-slate-400 font-normal">(opcional)</span>
+            <Label className="text-[11px] font-semibold text-body">
+              Subcategoria <span className="text-body3 font-normal">(opcional)</span>
             </Label>
             {subcategoryId !== 'none' && (
               <button
                 type="button"
                 onClick={() => setSubcategoryId('none')}
-                className="text-[11px] text-slate-400 hover:text-slate-600 cursor-pointer"
+                className="text-[11px] text-body3 hover:text-body cursor-pointer"
               >
                 Limpar
               </button>
@@ -1123,7 +1123,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           ======================================================== */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label htmlFor="tx-date" className="text-xs font-semibold text-slate-700 px-1">
+          <Label htmlFor="tx-date" className="text-xs font-semibold text-body px-1">
             Data
           </Label>
           <Input
@@ -1131,14 +1131,14 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
             type="date"
             value={transactionDate}
             onChange={(e) => handleDateChange(e.target.value)}
-            className="rounded-2xl bg-slate-50/70 border-slate-200/80 hover:border-slate-300 focus:bg-white h-10 text-xs sm:text-sm"
+            className="rounded-2xl bg-surface-2 border-line hover:border-line-strong focus:bg-surface h-10 text-xs sm:text-sm"
           />
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs font-semibold text-slate-700 px-1">Forma de Pagamento</Label>
+          <Label className="text-xs font-semibold text-body px-1">Forma de Pagamento</Label>
           <Select value={paymentMethod} onValueChange={(val: any) => setPaymentMethod(val)}>
-            <SelectTrigger className="h-10 text-xs sm:text-sm rounded-2xl bg-slate-50/70 border-slate-200/80">
+            <SelectTrigger className="h-10 text-xs sm:text-sm rounded-2xl bg-surface-2 border-line">
               <SelectValue placeholder="Forma de pagamento" />
             </SelectTrigger>
             <SelectContent>
@@ -1158,10 +1158,10 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           ======================================================== */}
       {editingRecurringRule ? (
         <div className="bg-emerald-50/50 p-3.5 rounded-2xl border border-emerald-200/70 space-y-3">
-          <div className="flex items-center justify-between gap-3 bg-white p-2.5 rounded-xl border border-emerald-200/70">
+          <div className="flex items-center justify-between gap-3 bg-surface p-2.5 rounded-xl border border-emerald-200/70">
             <div className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-emerald-700" />
-              <span className="text-xs font-semibold text-slate-800">Dia do mês</span>
+              <span className="text-xs font-semibold text-ink">Dia do mês</span>
             </div>
 
             <div className="w-36">
@@ -1169,7 +1169,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                 value={String(dayOfMonth)}
                 onValueChange={(val) => setDayOfMonth(parseInt(val, 10))}
               >
-                <SelectTrigger className="h-8 text-xs font-bold rounded-lg bg-slate-50 border-slate-200">
+                <SelectTrigger className="h-8 text-xs font-bold rounded-lg bg-surface-2 border-line">
                   <SelectValue placeholder="Dia" />
                 </SelectTrigger>
                 <SelectContent className="max-h-60 max-w-[calc(100vw-2rem)]">
@@ -1190,7 +1190,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           </p>
         </div>
       ) : (
-        <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-2.5">
+        <div className="bg-surface-2 p-3.5 rounded-2xl border border-line space-y-2.5">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 border border-emerald-200/60">
@@ -1199,11 +1199,11 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
               <div className="min-w-0">
                 <Label
                   htmlFor="tx-repeat-switch"
-                  className="text-xs font-bold text-slate-900 cursor-pointer block leading-tight"
+                  className="text-xs font-bold text-ink cursor-pointer block leading-tight"
                 >
                   Repetir todo mês (Fixo)
                 </Label>
-                <p className="text-[11px] text-slate-500 leading-tight mt-0.5 truncate">
+                <p className="text-[11px] text-body2 leading-tight mt-0.5 truncate">
                   {editingTransaction
                     ? 'Marque para virar lançamento fixo mensal'
                     : 'Alimenta o planejamento fixo do orçamento'}
@@ -1237,11 +1237,11 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           </div>
           {/* Seção expandida quando "Repetir todo mês" ativado */}
           {isRecurring && (
-            <div className="pt-2.5 border-t border-slate-200/70 space-y-2 animate-in fade-in-50">
-              <div className="flex items-center justify-between gap-3 bg-white p-2.5 rounded-xl border border-slate-200/90">
+            <div className="pt-2.5 border-t border-line space-y-2 animate-in fade-in-50">
+              <div className="flex items-center justify-between gap-3 bg-surface p-2.5 rounded-xl border border-line">
                 <div className="flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-emerald-700" />
-                  <span className="text-xs font-semibold text-slate-800">Dia do mês</span>
+                  <span className="text-xs font-semibold text-ink">Dia do mês</span>
                 </div>
 
                 <div className="w-36">
@@ -1249,7 +1249,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                     value={String(dayOfMonth)}
                     onValueChange={(val) => setDayOfMonth(parseInt(val, 10))}
                   >
-                    <SelectTrigger className="h-8 text-xs font-bold rounded-lg bg-slate-50 border-slate-200">
+                    <SelectTrigger className="h-8 text-xs font-bold rounded-lg bg-surface-2 border-line">
                       <SelectValue placeholder="Dia" />
                     </SelectTrigger>
                     <SelectContent className="max-h-60 max-w-[calc(100vw-2rem)]">
@@ -1278,11 +1278,11 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           8. SEÇÃO DE PARCELAMENTO (APENAS PARA DESPESAS AVULSAS NÃO RECORRENTES)
           ======================================================== */}
       {!editingRecurringRule && !editingTransaction && type === 'expense' && !isRecurring && (
-        <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-2.5">
+        <div className="bg-surface-2 p-3.5 rounded-2xl border border-line space-y-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <Layers className="w-4 h-4 text-purple-600" />
-              <Label className="text-xs font-bold text-slate-800">Parcelamento</Label>
+              <Label className="text-xs font-bold text-ink">Parcelamento</Label>
             </div>
             {installmentsCount > 1 && (
               <span className="text-[11px] font-bold text-purple-800 bg-purple-100 px-2.5 py-0.5 rounded-full">
@@ -1296,8 +1296,8 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
             )}
           </div>
 
-          <div className="flex items-center justify-between gap-3 bg-white p-2 rounded-xl border border-slate-200">
-            <span className="text-xs text-slate-600 font-medium pl-1">
+          <div className="flex items-center justify-between gap-3 bg-surface p-2 rounded-xl border border-line">
+            <span className="text-xs text-body font-medium pl-1">
               {installmentsCount === 1 ? 'À vista (1x)' : `Parcelar em ${installmentsCount}x`}
             </span>
 
@@ -1306,13 +1306,13 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                 type="button"
                 onClick={() => setInstallmentsCount((prev) => Math.max(1, prev - 1))}
                 disabled={installmentsCount <= 1}
-                className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:hover:bg-slate-100 flex items-center justify-center text-slate-700 transition-colors font-bold cursor-pointer"
+                className="w-8 h-8 rounded-lg bg-surface-2 hover:bg-surface-3 disabled:opacity-40 disabled:hover:bg-surface-2 flex items-center justify-center text-body transition-colors font-bold cursor-pointer"
                 title="Diminuir parcelas"
               >
                 <Minus className="w-3.5 h-3.5" />
               </button>
 
-              <span className="w-8 text-center font-bold text-sm text-slate-900 tabular-nums">
+              <span className="w-8 text-center font-bold text-sm text-ink tabular-nums">
                 {installmentsCount}x
               </span>
 
@@ -1329,17 +1329,17 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           </div>
 
           {installmentsCount > 1 && (
-            <div className="space-y-2 pt-1 border-t border-slate-200/70 animate-in fade-in-50">
+            <div className="space-y-2 pt-1 border-t border-line space-y-2 animate-in fade-in-50">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-600">O valor digitado acima é:</span>
-                <div className="flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-lg text-[11px] font-semibold">
+                <span className="text-body">O valor digitado acima é:</span>
+                <div className="flex items-center gap-1 bg-surface-2 p-0.5 rounded-lg text-[11px] font-semibold">
                   <button
                     type="button"
                     onClick={() => setAmountMode('per_installment')}
                     className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
                       amountMode === 'per_installment'
-                        ? 'bg-white text-purple-950 shadow-2xs'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'bg-surface text-purple-950 shadow-2xs'
+                        : 'text-body hover:text-ink'
                     }`}
                   >
                     Por parcela
@@ -1349,8 +1349,8 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                     onClick={() => setAmountMode('total')}
                     className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
                       amountMode === 'total'
-                        ? 'bg-white text-purple-950 shadow-2xs'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'bg-surface text-purple-950 shadow-2xs'
+                        : 'text-body hover:text-ink'
                     }`}
                   >
                     Total da compra
@@ -1358,7 +1358,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
                 </div>
               </div>
 
-              <p className="text-[11px] text-slate-500 leading-relaxed">
+              <p className="text-[11px] text-body2 leading-relaxed">
                 💡 A 1ª parcela será confirmada no mês da transação. As outras{' '}
                 <strong>{installmentsCount - 1} parcelas</strong> serão criadas automaticamente como{' '}
                 <em>projetadas</em> nos próximos meses.
@@ -1376,7 +1376,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
           className={`p-3 rounded-2xl border transition-colors ${
             isEditingUncategorized
               ? 'bg-purple-50/70 border-purple-200'
-              : 'bg-slate-50/70 border-slate-200/80'
+              : 'bg-surface-2 border-line'
           }`}
         >
           <label className="flex items-start gap-2.5 cursor-pointer text-xs select-none">
@@ -1384,13 +1384,13 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
               type="checkbox"
               checked={rememberRule}
               onChange={(e) => setRememberRule(e.target.checked)}
-              className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+              className="mt-0.5 rounded border-line text-emerald-600 focus:ring-emerald-500"
             />
             <div className="space-y-0.5">
-              <span className="font-semibold text-slate-800 flex items-center gap-1.5">
+              <span className="font-semibold text-ink flex items-center gap-1.5">
                 <span>Lembrar categoria para nomes semelhantes</span>
               </span>
-              <p className="text-[11px] text-slate-500 leading-relaxed">
+              <p className="text-[11px] text-body2 leading-relaxed">
                 Auto-categorizar lançamentos futuros semelhantes a &quot;
                 {extractPatternFromDescription(description) || description || '...'}&quot;.
               </p>
@@ -1434,7 +1434,7 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
             if (setVoiceTransactionData) setVoiceTransactionData(null)
           }}
           disabled={loading}
-          className="w-full text-xs text-slate-500 hover:text-slate-800 h-9 rounded-xl cursor-pointer"
+          className="w-full text-xs text-body2 hover:text-ink h-9 rounded-xl cursor-pointer"
         >
           Cancelar
         </Button>
@@ -1448,20 +1448,20 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent
           side="bottom"
-          className="rounded-t-3xl border-t border-slate-200/90 bg-white p-5 pb-8 max-h-[92vh] overflow-y-auto overflow-x-hidden min-w-0"
+          className="rounded-t-3xl border-t border-line bg-surface p-5 pb-8 max-h-[92vh] overflow-y-auto overflow-x-hidden min-w-0"
         >
           {/* Puxador suave no topo (drag handle) */}
-          <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-3 -mt-1 shrink-0" />
+          <div className="w-12 h-1.5 bg-surface-2 rounded-full mx-auto mb-3 -mt-1 shrink-0" />
 
           <SheetHeader className="text-left space-y-0.5 mb-2">
-            <SheetTitle className="text-lg font-bold text-slate-900 tracking-tight">
+            <SheetTitle className="text-lg font-bold text-ink tracking-tight">
               {editingRecurringRule
                 ? 'Editar Regra Recorrente'
                 : editingTransaction
                   ? 'Editar Transação'
                   : 'Nova Transação'}
             </SheetTitle>
-            <SheetDescription className="text-xs text-slate-500">
+            <SheetDescription className="text-xs text-body2">
               {editingRecurringRule
                 ? 'Atualize os dados da regra recorrente mensal.'
                 : editingTransaction
@@ -1479,16 +1479,16 @@ export const NewTransactionDialog: React.FC<NewTransactionDialogProps> = ({
   // Em desktop (>= sm), abre como DIALOG centralizado elegante com rounded-3xl
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg w-[95vw] rounded-3xl p-6 sm:p-7 max-h-[92vh] overflow-y-auto overflow-x-hidden min-w-0 border-slate-200 shadow-2xl">
+      <DialogContent className="max-w-lg w-[95vw] rounded-3xl p-6 sm:p-7 max-h-[92vh] overflow-y-auto overflow-x-hidden min-w-0 border-line shadow-2xl">
         <DialogHeader className="text-left">
-          <DialogTitle className="text-xl font-bold text-slate-900 tracking-tight">
+          <DialogTitle className="text-xl font-bold text-ink tracking-tight">
             {editingRecurringRule
               ? 'Editar Regra Recorrente'
               : editingTransaction
                 ? 'Editar Transação'
                 : 'Nova Transação'}
           </DialogTitle>
-          <DialogDescription className="text-xs text-slate-500 mt-0.5">
+          <DialogDescription className="text-xs text-body2 mt-0.5">
             {editingRecurringRule
               ? 'Atualize os dados da regra recorrente mensal.'
               : editingTransaction

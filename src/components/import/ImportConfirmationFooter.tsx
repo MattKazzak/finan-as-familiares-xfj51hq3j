@@ -30,16 +30,16 @@ export const ImportConfirmationFooter: React.FC<ImportConfirmationFooterProps> =
     grossExpenseCents !== expenseSumCents
 
   return (
-    <footer className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] px-3 sm:px-6 py-2.5 sm:py-3 transition-all">
+    <footer className="fixed bottom-0 inset-x-0 z-40 bg-surface/95 backdrop-blur-md border-t border-line shadow-[0_-4px_16px_rgba(0,0,0,0.06)] px-3 sm:px-6 py-2.5 sm:py-3 transition-all">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-4">
         {/* Metadados e Totais (Entradas, Saídas e Seleção) */}
         <div className="flex items-center justify-between sm:justify-start gap-2.5 sm:gap-4 min-w-0 flex-wrap">
           <div className="min-w-0">
-            <span className="text-xs font-bold text-slate-900 block truncate">
+            <span className="text-xs font-bold text-ink block truncate">
               {selectedCount} de {totalCount}{' '}
               {totalCount === 1 ? 'lançamento selecionado' : 'lançamentos selecionados'}
             </span>
-            <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5 flex-wrap">
+            <div className="flex items-center gap-2 text-[11px] text-body2 mt-0.5 flex-wrap">
               {declaredTotalCents ? (
                 <span className="inline-flex items-center gap-1 font-semibold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/70">
                   <ShieldCheck className="w-3 h-3 text-emerald-600" />
@@ -50,7 +50,7 @@ export const ImportConfirmationFooter: React.FC<ImportConfirmationFooterProps> =
               )}
 
               {showGrossVsNet ? (
-                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded">
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-body bg-surface-2 px-1.5 py-0.2 rounded">
                   Bruto: {formatBRL(grossExpenseCents)} • Líquido: {formatBRL(expenseSumCents)}
                 </span>
               ) : null}

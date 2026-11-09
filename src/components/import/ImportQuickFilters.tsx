@@ -90,7 +90,7 @@ export const ImportQuickFilters: React.FC<ImportQuickFiltersProps> = ({
   ]
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-slate-200/70">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-line">
       {/* Scroll horizontal de chips de filtros rápidos (mobile-first sem scrollbar feia) */}
       <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full">
         {filters.map((f) => {
@@ -102,8 +102,8 @@ export const ImportQuickFilters: React.FC<ImportQuickFiltersProps> = ({
               onClick={() => onSelectFilter(f.id)}
               className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 cursor-pointer ${
                 isActive
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200/90'
+                  ? 'bg-ink text-white shadow-xs'
+                  : 'bg-surface text-body hover:bg-surface-2 border border-line'
               }`}
             >
               {f.icon}
@@ -114,7 +114,7 @@ export const ImportQuickFilters: React.FC<ImportQuickFiltersProps> = ({
                     ? 'bg-white/25 text-white'
                     : f.badgeVariant === 'amber'
                       ? 'bg-amber-50 text-amber-900 border border-action/30'
-                      : 'bg-muted/70 text-slate-600 border border-border/30'
+                      : 'bg-muted/70 text-body2 border border-border/30'
                 }`}
               >
                 {f.count}
@@ -132,9 +132,7 @@ export const ImportQuickFilters: React.FC<ImportQuickFiltersProps> = ({
           size="sm"
           onClick={onToggleSortByConfidence}
           className={`h-7 px-2.5 rounded-xl text-xs font-semibold gap-1.5 ${
-            sortByConfidence
-              ? 'bg-muted/80 text-slate-900 border-slate-300'
-              : 'text-slate-600 border-slate-200'
+            sortByConfidence ? 'bg-muted/80 text-ink border-line' : 'text-body border-line'
           }`}
           title="Itens com menor certeza ou sem categoria aparecem primeiro"
         >

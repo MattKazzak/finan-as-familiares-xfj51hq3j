@@ -74,8 +74,8 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
                 </span>
                 {transaction.subcategory && (
                   <span className="inline-flex items-center gap-1.5">
-                    <span className="text-xs text-slate-300">·</span>
-                    <span className="text-xs font-medium text-ink dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-border/40">
+                    <span className="text-xs text-body3">·</span>
+                    <span className="text-xs font-medium text-ink bg-surface-2 px-2 py-0.5 rounded-md border border-border/40">
                       {transaction.subcategory.name}
                     </span>
                   </span>
@@ -86,7 +86,7 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
         </DialogHeader>
 
         {/* Bloco de Valor em Destaque CDS */}
-        <div className="my-4 p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-border/40 flex flex-col items-center justify-center">
+        <div className="my-4 p-4 rounded-2xl bg-surface-2/80 border border-border/40 flex flex-col items-center justify-center">
           <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider mb-1 text-muted-foreground">
             {isIncome ? (
               <span className="inline-flex items-center gap-1.5 text-income">
@@ -140,7 +140,7 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
         {transaction.category &&
         transaction.ai_confidence != null &&
         transaction.ai_confidence < 1.0 ? (
-          <div className="mt-3 flex items-start gap-2.5 rounded-2xl border border-line bg-slate-50/80 p-3">
+          <div className="mt-3 flex items-start gap-2.5 rounded-2xl border border-line bg-surface-2/80 p-3">
             <div className="shrink-0 pt-0.5">
               <CuriangoLogo size={28} />
             </div>
@@ -148,7 +148,7 @@ export const TransactionDetailDialog: React.FC<TransactionDetailDialogProps> = (
               <p className="text-[11px] font-semibold text-ink leading-snug">
                 {transaction.ai_reasoning || `Categorizei como ${transaction.category.name}.`}
               </p>
-              <p className="text-[10px] text-slate-400 mt-0.5">
+              <p className="text-[10px] text-body2 mt-0.5">
                 Curiango · toque em Editar se eu errei
               </p>
             </div>
