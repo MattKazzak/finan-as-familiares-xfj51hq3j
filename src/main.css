@@ -58,7 +58,7 @@
        Semântica Financeira: Receita #059669 (160 84% 36%), Despesa #E11D48 (347 77% 50% bordeaux)
        Baldes: Essenciais #14213D, Estilo de Vida #FCA311, Metas #10B981
     */
-    --background: 220 20% 98%;
+    --background: 214 33% 97%;
     --foreground: 226 38% 13%;
 
     --card: 0 0% 100%;
@@ -68,7 +68,7 @@
     --popover-foreground: 221 51% 16%;
 
     /* Brand Primary = #14213D (azul-marinho profundo para autoridade e textos principais) */
-    --primary: 221 51% 16%;
+    --primary: 225 33% 15%;
     --primary-foreground: 0 0% 100%;
 
     /* Brand Accent = #FCA311 (âmbar do Curiango para micro-destaques e Copilot ativo) */
@@ -76,19 +76,19 @@
     --accent-brand-foreground: 221 51% 16%;
 
     /* Secondary = #FCA311 ou slate suave */
-    --secondary: 220 14% 96%;
+    --secondary: 216 31% 95%;
     --secondary-foreground: 221 51% 16%;
 
     /* Muted = #64748B suave */
-    --muted: 220 14% 96%;
+    --muted: 216 31% 95%;
     --muted-foreground: 214 21% 44%;
 
     /* Accent = suave com hover elegante */
-    --accent: 220 14% 94%;
-    --accent-foreground: 221 51% 16%;
+    --accent: 226 81% 55%;
+    --accent-foreground: 0 0% 100%;
 
     /* Destructive = #E11D48 (bordeaux/rubi fosco oficial CDS v1.0) */
-    --destructive: 347 77% 50%;
+    --destructive: 348 55% 50%;
     --destructive-foreground: 0 0% 100%;
 
     /* Sucesso/Receita financeiro semântico = #059669 */
@@ -96,8 +96,8 @@
     --success-foreground: 0 0% 100%;
 
     /* Bordas estruturais sutis CDS v1.0: rgba(20, 33, 61, 0.06) */
-    --border: 221 20% 90%;
-    --input: 221 20% 90%;
+    --border: 214 27% 91%;
+    --input: 212 21% 83%;
     --ring: 226 81% 55%;
 
     --radius: 0.75rem;
@@ -120,31 +120,31 @@
 
   .dark {
     /* Curiango Night (CDS v1.0 futuro): fundo #0B111E, cards #14213D */
-    --background: 222 45% 8%;
+    --background: 221 47% 8%;
     --foreground: 216 33% 96%;
 
-    --card: 221 51% 16%;
+    --card: 218 34% 13%;
     --card-foreground: 216 33% 96%;
 
-    --popover: 221 51% 16%;
+    --popover: 218 34% 13%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 37 97% 53%;
-    --primary-foreground: 221 51% 16%;
+    --primary: 216 33% 96%;
+    --primary-foreground: 225 33% 15%;
 
     --accent-brand: 37 97% 53%;
     --accent-brand-foreground: 221 51% 16%;
 
-    --secondary: 221 35% 25%;
+    --secondary: 218 30% 17%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 221 35% 20%;
+    --muted: 218 30% 17%;
     --muted-foreground: 214 18% 68%;
 
-    --accent: 221 35% 22%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 226 89% 66%;
+    --accent-foreground: 225 33% 15%;
 
-    --destructive: 347 77% 50%;
+    --destructive: 351 68% 65%;
     --destructive-foreground: 0 0% 100%;
 
     --success: 160 84% 36%;
@@ -156,8 +156,8 @@
     --expense: 342 76% 49%; /* #E11D48 — igual ao claro */
     --error: 0 72% 51%; /* #DC2626 — igual ao claro */
 
-    --border: 218 35% 24%; /* CDS v2.0 */
-    --input: 221 35% 24%;
+    --border: 219 30% 22%;
+    --input: 218 27% 29%;
 
     /* CDS v2.0: foco precisa ser visível sobre fundo escuro. */
     --ring: 226 89% 66%;
