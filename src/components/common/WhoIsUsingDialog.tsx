@@ -38,8 +38,8 @@ export function WhoIsUsingDialog({ open, onOpenChange }: WhoIsUsingDialogProps) 
           <div className="w-12 h-12 rounded-2xl bg-surface-2 text-ink flex items-center justify-center mx-auto mb-2 shadow-inner">
             <Sparkles className="w-6 h-6 stroke-[2]" />
           </div>
-          <DialogTitle className="text-lg font-bold text-slate-900">Quem está usando?</DialogTitle>
-          <DialogDescription className="text-xs text-slate-500">
+          <DialogTitle className="text-lg font-bold text-ink">Quem está usando?</DialogTitle>
+          <DialogDescription className="text-xs text-body2">
             Selecione seu perfil para personalizar a experiência e saudações neste aparelho.
           </DialogDescription>
         </DialogHeader>
@@ -55,7 +55,7 @@ export function WhoIsUsingDialog({ open, onOpenChange }: WhoIsUsingDialogProps) 
                 className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all duration-150 ${
                   isSelected
                     ? 'border-action bg-action/10 shadow-sm ring-2 ring-action/25'
-                    : 'border-[#E5E5E5] hover:bg-[#E5E5E5]/40 hover:border-slate-300'
+                    : 'border-line hover:bg-surface-2 hover:border-line'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -66,16 +66,16 @@ export function WhoIsUsingDialog({ open, onOpenChange }: WhoIsUsingDialogProps) 
                   </Avatar>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm text-slate-900">
+                      <span className="font-bold text-sm text-ink">
                         <span>{member.name}</span>
                       </span>
                       {member.is_admin ? (
-                        <span className="text-[10px] bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] bg-surface-2 text-body font-semibold px-2 py-0.5 rounded-full">
                           <span>Admin</span>
                         </span>
                       ) : null}
                     </div>
-                    <span className="text-[11px] text-slate-500">
+                    <span className="text-[11px] text-body2">
                       <span>
                         {isSelected
                           ? 'Perfil ativo neste aparelho'

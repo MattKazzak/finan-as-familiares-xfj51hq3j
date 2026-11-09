@@ -91,7 +91,7 @@ export default function NotificationsPanel({ onClose }: { onClose: () => void })
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl hover:bg-slate-100 text-slate-500"
+            className="p-2 rounded-xl hover:bg-surface-2 text-body2"
             aria-label="Fechar notificações"
           >
             <X className="w-5 h-5" />
@@ -137,7 +137,7 @@ export default function NotificationsPanel({ onClose }: { onClose: () => void })
               type="button"
               onClick={handleDisable}
               disabled={loading}
-              className="w-full py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-xl border border-line text-sm font-semibold text-body hover:bg-surface-2 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -170,7 +170,7 @@ export default function NotificationsPanel({ onClose }: { onClose: () => void })
                         <strong className="text-ink">3. Não perturbe:</strong> Ajustes → Não
                         Perturbe / Modos de Foco → verifique se o Curiangoo não está silenciado.
                       </p>
-                      <p className="text-[10px] text-slate-400">
+                      <p className="text-[10px] text-body3">
                         No iOS o som do Curiango toca com o app aberto; com o app fechado, o som é o
                         configurado no Ajustes (o iOS não permite som custom de app web fechado).
                       </p>
@@ -222,11 +222,11 @@ export default function NotificationsPanel({ onClose }: { onClose: () => void })
               )}
               Ativar notificações
             </button>
-            <p className="text-[11px] text-slate-400 text-center leading-relaxed">
+            <p className="text-[11px] text-body3 text-center leading-relaxed">
               Você escolhe o que receber e pode desativar quando quiser. Sem spam — só o que
               acontece na sua família.
             </p>
-            <p className="text-[10px] text-slate-300 text-center leading-relaxed">
+            <p className="text-[10px] text-body3 text-center leading-relaxed">
               Som do Curiango: gravação de Dante Buzzetti (xeno-canto.org, XC668769), licença CC
               BY-NC-SA.
             </p>

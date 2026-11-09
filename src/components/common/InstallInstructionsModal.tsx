@@ -33,7 +33,7 @@ export function InstallInstructionsModal({
 }: InstallInstructionsModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm w-[92vw] rounded-3xl p-6 bg-white border border-slate-100 shadow-2xl">
+      <DialogContent className="max-w-sm w-[92vw] rounded-3xl p-6 bg-white border border-line shadow-2xl">
         <DialogHeader className="text-center sm:text-center">
           {/* Logo oficial do Curiangoo */}
           <div
@@ -44,10 +44,10 @@ export function InstallInstructionsModal({
             <CuriangoLogo size={40} color="#FCA311" />
           </div>
 
-          <DialogTitle className="text-lg font-semibold text-slate-900 tracking-tight flex items-center justify-center gap-1.5">
+          <DialogTitle className="text-lg font-semibold text-ink tracking-tight flex items-center justify-center gap-1.5">
             {isIos ? (
               <span className="inline-flex items-center gap-1.5">
-                <AppleIcon className="w-4 h-4 text-slate-800 shrink-0" />
+                <AppleIcon className="w-4 h-4 text-ink shrink-0" />
                 <span>Instalar no iPhone / iPad</span>
               </span>
             ) : (
@@ -58,7 +58,7 @@ export function InstallInstructionsModal({
             )}
           </DialogTitle>
 
-          <DialogDescription className="text-xs text-slate-500 mt-1">
+          <DialogDescription className="text-xs text-body2 mt-1">
             {isIos
               ? 'Siga os passos abaixo no Safari para adicionar à tela inicial do seu dispositivo Apple:'
               : 'Seu navegador não oferece instalação direta em 1 clique. Siga as instruções do menu:'}
@@ -68,13 +68,13 @@ export function InstallInstructionsModal({
         {isIos ? (
           /* CENÁRIO B: Instruções para iOS / iPhone / iPad */
           <div className="space-y-3 py-2 text-left">
-            <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
-              <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+            <div className="flex items-start gap-3 p-3 rounded-2xl bg-surface-2 border border-line">
+              <div className="w-8 h-8 rounded-xl bg-ink text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
                 <AppleIcon className="w-3.5 h-3.5 fill-white" />
               </div>
-              <div className="text-xs text-slate-700 leading-relaxed">
+              <div className="text-xs text-body leading-relaxed">
                 Toque no botão{' '}
-                <strong className="text-slate-900 font-semibold inline-flex items-center gap-1 bg-white px-1.5 py-0.5 rounded-lg border border-slate-200">
+                <strong className="text-ink font-semibold inline-flex items-center gap-1 bg-white px-1.5 py-0.5 rounded-lg border border-line">
                   <Share className="w-3.5 h-3.5 text-emerald-700 inline" /> Compartilhar
                 </strong>{' '}
                 (ícone com seta na barra inferior do Safari).
@@ -85,7 +85,7 @@ export function InstallInstructionsModal({
               <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
                 2
               </div>
-              <div className="text-xs text-slate-700 leading-relaxed">
+              <div className="text-xs text-body leading-relaxed">
                 Role o menu de compartilhamento para baixo e selecione a opção{' '}
                 <strong className="text-emerald-900 font-semibold inline-flex items-center gap-1 bg-white px-1.5 py-0.5 rounded-lg border border-emerald-300">
                   <PlusSquare className="w-3.5 h-3.5 text-emerald-700 inline" /> Adicionar à Tela de
@@ -95,27 +95,27 @@ export function InstallInstructionsModal({
               </div>
             </div>
 
-            <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
-              <div className="w-8 h-8 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+            <div className="flex items-start gap-3 p-3 rounded-2xl bg-surface-2 border border-line">
+              <div className="w-8 h-8 rounded-xl bg-surface-2 text-body flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
                 3
               </div>
-              <div className="text-xs text-slate-700 leading-relaxed">
+              <div className="text-xs text-body leading-relaxed">
                 No canto superior direito, confirme tocando em{' '}
-                <strong className="text-slate-900 font-semibold">Adicionar</strong>. O ícone oficial
-                do Curiangoo aparecerá na sua tela de início!
+                <strong className="text-ink font-semibold">Adicionar</strong>. O ícone oficial do
+                Curiangoo aparecerá na sua tela de início!
               </div>
             </div>
           </div>
         ) : (
           /* CENÁRIO C: Outros navegadores sem suporte ao prompt nativo direto */
           <div className="space-y-3 py-2 text-left">
-            <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+            <div className="flex items-start gap-3 p-3 rounded-2xl bg-surface-2 border border-line">
               <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
                 1
               </div>
-              <div className="text-xs text-slate-700 leading-relaxed">
+              <div className="text-xs text-body leading-relaxed">
                 Toque no ícone de menu com{' '}
-                <strong className="text-slate-900 font-semibold inline-flex items-center gap-1 bg-white px-1.5 py-0.5 rounded-lg border border-slate-200">
+                <strong className="text-ink font-semibold inline-flex items-center gap-1 bg-white px-1.5 py-0.5 rounded-lg border border-line">
                   <MoreVertical className="w-3.5 h-3.5 text-emerald-700 inline" /> 3 pontinhos
                 </strong>{' '}
                 no canto superior ou inferior do navegador.
@@ -126,7 +126,7 @@ export function InstallInstructionsModal({
               <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
                 2
               </div>
-              <div className="text-xs text-slate-700 leading-relaxed">
+              <div className="text-xs text-body leading-relaxed">
                 Procure e selecione a opção{' '}
                 <strong className="text-emerald-900 font-semibold inline-flex items-center gap-1 bg-white px-1.5 py-0.5 rounded-lg border border-emerald-300">
                   &ldquo;Instalar aplicativo&rdquo;
@@ -139,11 +139,11 @@ export function InstallInstructionsModal({
               </div>
             </div>
 
-            <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
-              <div className="w-8 h-8 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+            <div className="flex items-start gap-3 p-3 rounded-2xl bg-surface-2 border border-line">
+              <div className="w-8 h-8 rounded-xl bg-surface-2 text-body flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
                 3
               </div>
-              <div className="text-xs text-slate-700 leading-relaxed">
+              <div className="text-xs text-body leading-relaxed">
                 Confirme no diálogo do sistema para fixar o atalho com abertura em tela cheia.
               </div>
             </div>

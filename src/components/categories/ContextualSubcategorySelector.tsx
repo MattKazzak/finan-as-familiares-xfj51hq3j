@@ -174,7 +174,7 @@ export function ContextualSubcategorySelector({
   const content = (
     <div className="flex flex-col h-full max-h-[82vh] sm:max-h-[460px] text-foreground">
       {/* Campo de Busca com filtro instantâneo */}
-      <div className="p-3 border-b border-border/50 bg-slate-50/50">
+      <div className="p-3 border-b border-border/50 bg-surface-2/50">
         <div className="relative flex items-center">
           <Search className="absolute left-3 w-4 h-4 text-muted-foreground pointer-events-none" />
           <Input
@@ -202,7 +202,7 @@ export function ContextualSubcategorySelector({
         {search.trim().length > 0 ? (
           searchResults.length === 0 ? (
             <div className="p-6 text-center text-xs text-muted-foreground space-y-1">
-              <p className="font-semibold text-slate-700">Nenhuma subcategoria encontrada</p>
+              <p className="font-semibold text-body">Nenhuma subcategoria encontrada</p>
               <p className="text-[11px]">Tente buscar por outro termo ou sinônimo.</p>
             </div>
           ) : (
@@ -221,8 +221,8 @@ export function ContextualSubcategorySelector({
                     className={cn(
                       'w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs transition-colors',
                       isSelected
-                        ? 'bg-amber-500/15 text-slate-900 font-semibold border border-amber-300'
-                        : 'hover:bg-slate-100 text-slate-800',
+                        ? 'bg-amber-500/15 text-ink font-semibold border border-amber-300'
+                        : 'hover:bg-surface-2 text-ink',
                     )}
                   >
                     <div className="min-w-0 flex-1 flex flex-col">
@@ -243,7 +243,7 @@ export function ContextualSubcategorySelector({
         ) : showAllGrouped ? (
           /* CASO 2: "VER TODAS" - LISTA COMPLETA AGRUPADA POR CATEGORIA */
           <div className="space-y-3 pt-1">
-            <div className="flex items-center justify-between px-3 py-1 text-[11px] font-bold text-slate-700 border-b border-border/40 pb-2">
+            <div className="flex items-center justify-between px-3 py-1 text-[11px] font-bold text-body border-b border-border/40 pb-2">
               <div className="flex items-center gap-1.5">
                 <FolderTree className="w-3.5 h-3.5 text-amber-600" />
                 <span>Todas as 117 subcategorias agrupadas</span>
@@ -262,23 +262,21 @@ export function ContextualSubcategorySelector({
               type="button"
               onClick={() => handleSelect(null)}
               className={cn(
-                'w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs transition-colors text-muted-foreground hover:bg-slate-100',
-                !selectedSubcategoryId && 'bg-slate-100 font-semibold text-slate-900',
+                'w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs transition-colors text-muted-foreground hover:bg-surface-2',
+                !selectedSubcategoryId && 'bg-surface-2 font-semibold text-ink',
               )}
             >
               <span className="italic">Geral (sem subcategoria)</span>
-              {!selectedSubcategoryId && (
-                <Check className="w-3.5 h-3.5 shrink-0 ml-2 text-slate-700" />
-              )}
+              {!selectedSubcategoryId && <Check className="w-3.5 h-3.5 shrink-0 ml-2 text-body" />}
             </button>
 
             {fullCatalogByCat.length > 0 ? (
               fullCatalogByCat.map(({ category, subcategories: catSubs }) => (
                 <div
                   key={category.id}
-                  className="space-y-1 bg-slate-50/60 p-2 rounded-2xl border border-slate-100"
+                  className="space-y-1 bg-surface-2/60 p-2 rounded-2xl border border-line"
                 >
-                  <div className="flex items-center gap-1.5 px-2 py-1 text-xs font-bold text-slate-800">
+                  <div className="flex items-center gap-1.5 px-2 py-1 text-xs font-bold text-ink">
                     <div
                       className="w-2.5 h-2.5 rounded-full shrink-0"
                       style={{ backgroundColor: category.color || '#64748B' }}
@@ -299,8 +297,8 @@ export function ContextualSubcategorySelector({
                           className={cn(
                             'flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs transition-colors',
                             isSelected
-                              ? 'bg-amber-500/15 text-slate-900 font-semibold border border-amber-300'
-                              : 'hover:bg-white text-slate-700 bg-white/70 border border-transparent',
+                              ? 'bg-amber-500/15 text-ink font-semibold border border-amber-300'
+                              : 'hover:bg-white text-body bg-white/70 border border-transparent',
                           )}
                         >
                           <span className="truncate">{sub.name}</span>
@@ -326,8 +324,8 @@ export function ContextualSubcategorySelector({
                       className={cn(
                         'w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs transition-colors',
                         isSelected
-                          ? 'bg-amber-500/15 text-slate-900 font-semibold'
-                          : 'hover:bg-slate-100 text-slate-700',
+                          ? 'bg-amber-500/15 text-ink font-semibold'
+                          : 'hover:bg-surface-2 text-body',
                       )}
                     >
                       <span className="truncate">{sub.name}</span>
@@ -348,14 +346,12 @@ export function ContextualSubcategorySelector({
               type="button"
               onClick={() => handleSelect(null)}
               className={cn(
-                'w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs transition-colors text-muted-foreground hover:bg-slate-100',
-                !selectedSubcategoryId && 'bg-slate-100 font-semibold text-slate-900',
+                'w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs transition-colors text-muted-foreground hover:bg-surface-2',
+                !selectedSubcategoryId && 'bg-surface-2 font-semibold text-ink',
               )}
             >
               <span className="italic">Geral (sem subcategoria)</span>
-              {!selectedSubcategoryId && (
-                <Check className="w-3.5 h-3.5 shrink-0 ml-2 text-slate-700" />
-              )}
+              {!selectedSubcategoryId && <Check className="w-3.5 h-3.5 shrink-0 ml-2 text-body" />}
             </button>
 
             {/* 3-4 SUGESTÕES CONTEXTUAIS */}
@@ -378,8 +374,8 @@ export function ContextualSubcategorySelector({
                       className={cn(
                         'w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left text-xs sm:text-sm transition-colors',
                         isSelected
-                          ? 'bg-amber-500/15 text-slate-900 font-semibold border border-amber-300'
-                          : 'hover:bg-slate-100 text-slate-800',
+                          ? 'bg-amber-500/15 text-ink font-semibold border border-amber-300'
+                          : 'hover:bg-surface-2 text-ink',
                       )}
                     >
                       <span className="truncate">{item.name}</span>
@@ -400,7 +396,7 @@ export function ContextualSubcategorySelector({
                   variant="outline"
                   size="sm"
                   onClick={() => setShowAllGrouped(true)}
-                  className="w-full text-xs font-bold rounded-xl h-9 border-dashed border-border/80 hover:bg-slate-100 hover:text-slate-900 flex items-center justify-center gap-1.5"
+                  className="w-full text-xs font-bold rounded-xl h-9 border-dashed border-border/80 hover:bg-surface-2 hover:text-ink flex items-center justify-center gap-1.5"
                 >
                   <FolderTree className="w-3.5 h-3.5 text-amber-600" />
                   <span>
@@ -427,7 +423,7 @@ export function ContextualSubcategorySelector({
       aria-expanded={open}
       disabled={disabled}
       className={cn(
-        'w-full justify-between rounded-xl h-10 px-3 text-xs sm:text-sm font-normal text-left truncate bg-white border-border/80 shadow-2xs hover:bg-slate-50',
+        'w-full justify-between rounded-xl h-10 px-3 text-xs sm:text-sm font-normal text-left truncate bg-white border-border/80 shadow-2xs hover:bg-surface-2',
         !selectedSubcategory && 'text-muted-foreground',
         className,
       )}
@@ -451,7 +447,7 @@ export function ContextualSubcategorySelector({
             className="p-0 rounded-t-3xl max-h-[85vh] flex flex-col border-t border-border/40"
           >
             <SheetHeader className="p-4 pb-2 border-b border-border/40 text-left">
-              <SheetTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <SheetTitle className="text-sm font-bold text-ink flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-amber-500" />
                 <span>Escolher Subcategoria</span>
               </SheetTitle>

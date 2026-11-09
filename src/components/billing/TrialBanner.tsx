@@ -84,7 +84,7 @@ export function TrialBanner({ daysLeft }: TrialBannerProps) {
           type="button"
           onClick={handleDismiss}
           aria-label="Fechar aviso"
-          className="shrink-0 text-slate-400 hover:text-slate-700 text-sm px-1 -mt-0.5"
+          className="shrink-0 text-body3 hover:text-body text-sm px-1 -mt-0.5"
         >
           ✕
         </button>

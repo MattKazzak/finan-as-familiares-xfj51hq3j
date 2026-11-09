@@ -47,15 +47,15 @@ export const DeleteCategoryConfirmDialog: React.FC<DeleteCategoryConfirmDialogPr
         <AlertDialogHeader>
           <div className="flex items-center gap-2 text-amber-600 mb-1">
             <AlertTriangle className="w-5 h-5 shrink-0" />
-            <AlertDialogTitle className="text-base font-bold text-slate-900">
+            <AlertDialogTitle className="text-base font-bold text-ink">
               <span>Excluir categoria?</span>
             </AlertDialogTitle>
           </div>
           <AlertDialogDescription asChild>
-            <div className="text-xs text-slate-600 space-y-2">
+            <div className="text-xs text-body2 space-y-2">
               <p>
                 <span>Tem certeza que deseja excluir a categoria </span>
-                <strong className="text-slate-900">{category?.name}</strong>?
+                <strong className="text-ink">{category?.name}</strong>?
               </p>
 
               {subCount > 0 ? (
@@ -71,7 +71,7 @@ export const DeleteCategoryConfirmDialog: React.FC<DeleteCategoryConfirmDialogPr
               ) : null}
 
               {loadingUsage ? (
-                <div className="flex items-center gap-2 text-slate-400 py-1">
+                <div className="flex items-center gap-2 text-body3 py-1">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   <span>Verificando lançamentos associados...</span>
                 </div>
@@ -84,7 +84,7 @@ export const DeleteCategoryConfirmDialog: React.FC<DeleteCategoryConfirmDialogPr
                   </span>
                 </div>
               ) : (
-                <p className="text-slate-400 text-[11px]">
+                <p className="text-body3 text-[11px]">
                   <span>Nenhum lançamento está utilizando esta categoria atualmente.</span>
                 </p>
               )}
@@ -149,26 +149,26 @@ export const DeleteSubcategoryConfirmDialog: React.FC<DeleteSubcategoryConfirmDi
         <AlertDialogHeader>
           <div className="flex items-center gap-2 text-amber-600 mb-1">
             <AlertTriangle className="w-5 h-5 shrink-0" />
-            <AlertDialogTitle className="text-base font-bold text-slate-900">
+            <AlertDialogTitle className="text-base font-bold text-ink">
               <span>Excluir subcategoria?</span>
             </AlertDialogTitle>
           </div>
           <AlertDialogDescription asChild>
-            <div className="text-xs text-slate-600 space-y-2">
+            <div className="text-xs text-body2 space-y-2">
               <p>
                 <span>Tem certeza que deseja excluir a subcategoria </span>
-                <strong className="text-slate-900">{subcategory?.name}</strong>
+                <strong className="text-ink">{subcategory?.name}</strong>
                 {parentCategoryName ? (
                   <span>
                     {' '}
-                    da categoria <strong className="text-slate-900">{parentCategoryName}</strong>
+                    da categoria <strong className="text-ink">{parentCategoryName}</strong>
                   </span>
                 ) : null}
                 <span>?</span>
               </p>
 
               {loadingUsage ? (
-                <div className="flex items-center gap-2 text-slate-400 py-1">
+                <div className="flex items-center gap-2 text-body3 py-1">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   <span>Verificando lançamentos associados...</span>
                 </div>
@@ -181,7 +181,7 @@ export const DeleteSubcategoryConfirmDialog: React.FC<DeleteSubcategoryConfirmDi
                   </span>
                 </div>
               ) : (
-                <p className="text-slate-400 text-[11px]">
+                <p className="text-body3 text-[11px]">
                   <span>Nenhum lançamento está utilizando esta subcategoria atualmente.</span>
                 </p>
               )}

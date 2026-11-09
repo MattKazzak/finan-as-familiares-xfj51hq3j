@@ -130,12 +130,12 @@ export const SubcategoryEditorPopover: React.FC<SubcategoryEditorPopoverProps> =
   const renderFormContent = (isInSheet = false) => (
     <form onSubmit={handleSubmit} className="space-y-3.5">
       {!isInSheet && (
-        <div className="flex flex-col pb-1 border-b border-slate-100">
-          <span className="font-bold text-xs text-slate-900">
+        <div className="flex flex-col pb-1 border-b border-line">
+          <span className="font-bold text-xs text-ink">
             {title || (isEditing ? 'Editar Subcategoria' : 'Nova Subcategoria')}
           </span>
           {parentCategoryName ? (
-            <span className="text-[11px] text-slate-400 truncate">
+            <span className="text-[11px] text-body3 truncate">
               <span>em {parentCategoryName}</span>
             </span>
           ) : null}
@@ -143,7 +143,7 @@ export const SubcategoryEditorPopover: React.FC<SubcategoryEditorPopoverProps> =
       )}
 
       <div className="space-y-1.5">
-        <Label className="text-xs font-semibold text-slate-700">Nome da Subcategoria</Label>
+        <Label className="text-xs font-semibold text-body">Nome da Subcategoria</Label>
         <Input
           type="text"
           placeholder="Ex.: Mercado, Farmácia..."
@@ -164,23 +164,23 @@ export const SubcategoryEditorPopover: React.FC<SubcategoryEditorPopoverProps> =
       </div>
 
       {showBudgetFields ? (
-        <div className="space-y-2.5 pt-1 border-t border-slate-100">
+        <div className="space-y-2.5 pt-1 border-t border-line">
           {/* Seletor de escopo do teto */}
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-700">Teto Orçamentário</span>
+            <span className="text-xs font-semibold text-body">Teto Orçamentário</span>
             {currentMonthLabel ? (
-              <span className="text-[11px] text-slate-400 font-medium">{currentMonthLabel}</span>
+              <span className="text-[11px] text-body3 font-medium">{currentMonthLabel}</span>
             ) : null}
           </div>
 
-          <div className="grid grid-cols-2 gap-1 p-0.5 bg-slate-100 rounded-xl">
+          <div className="grid grid-cols-2 gap-1 p-0.5 bg-surface-2 rounded-xl">
             <button
               type="button"
               onClick={() => setIsEditingOnlyThisMonth(false)}
               className={`flex items-center justify-center gap-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
                 !isEditingOnlyThisMonth
                   ? 'bg-white text-emerald-800 shadow-2xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
+                  : 'text-body2 hover:text-ink'
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
@@ -197,7 +197,7 @@ export const SubcategoryEditorPopover: React.FC<SubcategoryEditorPopoverProps> =
               className={`flex items-center justify-center gap-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
                 isEditingOnlyThisMonth
                   ? 'bg-white text-emerald-800 shadow-2xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
+                  : 'text-body2 hover:text-ink'
               }`}
             >
               <Calendar className="w-3.5 h-3.5" />
@@ -210,14 +210,14 @@ export const SubcategoryEditorPopover: React.FC<SubcategoryEditorPopoverProps> =
               <div className="flex items-center justify-between">
                 <Label
                   htmlFor="sub-bg-default"
-                  className="text-[10px] font-bold text-slate-700 uppercase tracking-wider"
+                  className="text-[10px] font-bold text-body uppercase tracking-wider"
                 >
                   Teto Padrão Recorrente
                 </Label>
                 <span className="text-[10px] text-emerald-700 font-medium">Todos os meses</span>
               </div>
               <div className="relative">
-                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-body3 text-xs font-bold">
                   R$
                 </span>
                 <Input
@@ -230,7 +230,7 @@ export const SubcategoryEditorPopover: React.FC<SubcategoryEditorPopoverProps> =
                   className="h-8 pl-8 text-xs font-bold tabular-nums bg-white rounded-lg"
                 />
               </div>
-              <p className="text-[10px] text-slate-500 leading-tight">
+              <p className="text-[10px] text-body2 leading-tight">
                 Soma-se ao teto da categoria pai em todos os meses.
               </p>
             </div>
@@ -239,7 +239,7 @@ export const SubcategoryEditorPopover: React.FC<SubcategoryEditorPopoverProps> =
               <div className="flex items-center justify-between">
                 <Label
                   htmlFor="sub-bg-month"
-                  className="text-[10px] font-bold text-slate-700 uppercase tracking-wider"
+                  className="text-[10px] font-bold text-body uppercase tracking-wider"
                 >
                   Ajuste para este mês
                 </Label>
@@ -248,7 +248,7 @@ export const SubcategoryEditorPopover: React.FC<SubcategoryEditorPopoverProps> =
                 </span>
               </div>
               <div className="relative">
-                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-body3 text-xs font-bold">
                   R$
                 </span>
                 <Input
@@ -262,9 +262,9 @@ export const SubcategoryEditorPopover: React.FC<SubcategoryEditorPopoverProps> =
                 />
               </div>
               {defaultAmountStr ? (
-                <p className="text-[10px] text-slate-500 leading-tight">
+                <p className="text-[10px] text-body2 leading-tight">
                   <span>Padrão atual: </span>
-                  <strong className="text-slate-700">R$ {defaultAmountStr}</strong>
+                  <strong className="text-body">R$ {defaultAmountStr}</strong>
                   <span>. Volta ao normal nos próximos meses.</span>
                 </p>
               ) : null}
@@ -273,7 +273,7 @@ export const SubcategoryEditorPopover: React.FC<SubcategoryEditorPopoverProps> =
         </div>
       ) : null}
 
-      <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+      <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
         <Button
           type="button"
           variant="outline"
@@ -320,18 +320,18 @@ export const SubcategoryEditorPopover: React.FC<SubcategoryEditorPopoverProps> =
         <Sheet open={open} onOpenChange={handleOpenChange}>
           <SheetContent
             side="bottom"
-            className="rounded-t-3xl border-t border-slate-200/90 bg-white p-5 pb-7 max-h-[90vh] overflow-y-auto text-slate-800"
+            className="rounded-t-3xl border-t border-line bg-white p-5 pb-7 max-h-[90vh] overflow-y-auto text-ink"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Barra superior de arraste suave para mobile */}
-            <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-4 -mt-1" />
+            <div className="w-12 h-1.5 bg-surface-2 rounded-full mx-auto mb-4 -mt-1" />
 
             <SheetHeader className="text-left space-y-1 mb-4">
-              <SheetTitle className="text-base font-bold text-slate-900 tracking-tight">
+              <SheetTitle className="text-base font-bold text-ink tracking-tight">
                 {title || (isEditing ? 'Editar Subcategoria' : 'Nova Subcategoria')}
               </SheetTitle>
               {parentCategoryName ? (
-                <SheetDescription className="text-xs text-slate-500">
+                <SheetDescription className="text-xs text-body2">
                   <span>em {parentCategoryName}</span>
                 </SheetDescription>
               ) : null}
@@ -358,8 +358,8 @@ export const SubcategoryEditorPopover: React.FC<SubcategoryEditorPopoverProps> =
         collisionPadding={12}
         className={
           showBudgetFields
-            ? 'w-[calc(100vw-2rem)] max-w-80 p-4 rounded-2xl shadow-xl border border-slate-200 bg-white z-50 text-slate-800'
-            : 'w-[calc(100vw-2rem)] max-w-72 p-3.5 rounded-2xl shadow-xl border border-slate-200 bg-white z-50 text-slate-800'
+            ? 'w-[calc(100vw-2rem)] max-w-80 p-4 rounded-2xl shadow-xl border border-line bg-white z-50 text-ink'
+            : 'w-[calc(100vw-2rem)] max-w-72 p-3.5 rounded-2xl shadow-xl border border-line bg-white z-50 text-ink'
         }
         onClick={(e) => e.stopPropagation()}
       >

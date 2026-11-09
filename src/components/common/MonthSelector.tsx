@@ -49,7 +49,7 @@ export function MonthSelector({
           className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-2xl touch-manipulation max-w-full transition-colors ${
             isDark
               ? 'bg-white/10 border border-white/15 text-white shadow-sm'
-              : 'bg-white border border-slate-200/80 text-ink shadow-2xs'
+              : 'bg-white border border-line text-ink shadow-2xs'
           }`}
           role="group"
           aria-label="Seletor de mês"
@@ -61,7 +61,7 @@ export function MonthSelector({
             className={`p-1 active:scale-95 rounded-xl transition-all cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
               isDark
                 ? 'text-white/80 hover:text-white hover:bg-white/15'
-                : 'text-slate-500 hover:text-ink hover:bg-slate-100'
+                : 'text-body2 hover:text-ink hover:bg-surface-2'
             }`}
             title="Mês anterior"
             aria-label="Mês anterior"
@@ -87,10 +87,10 @@ export function MonthSelector({
               isNextMonthDisabled
                 ? isDark
                   ? 'text-white/20 cursor-not-allowed opacity-40'
-                  : 'text-slate-300 cursor-not-allowed opacity-40'
+                  : 'text-body3 cursor-not-allowed opacity-40'
                 : isDark
                   ? 'text-white/80 hover:text-white hover:bg-white/15 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action'
-                  : 'text-slate-500 hover:text-ink hover:bg-slate-100 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action'
+                  : 'text-body2 hover:text-ink hover:bg-surface-2 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action'
             }`}
             title={isNextMonthDisabled ? 'Limite atingido (+24 meses)' : 'Próximo mês'}
             aria-label="Próximo mês"
@@ -107,7 +107,7 @@ export function MonthSelector({
   return (
     <div className={`flex flex-col items-center justify-center gap-1.5 ${className}`}>
       <div
-        className="inline-flex items-center gap-1 sm:gap-2 bg-white px-2 sm:px-3 py-1.5 rounded-2xl border border-slate-200/80 shadow-2xs touch-manipulation max-w-full"
+        className="inline-flex items-center gap-1 sm:gap-2 bg-white px-2 sm:px-3 py-1.5 rounded-2xl border border-line shadow-2xs touch-manipulation max-w-full"
         role="group"
         aria-label="Seletor de mês"
       >
@@ -115,7 +115,7 @@ export function MonthSelector({
         <button
           type="button"
           onClick={prevMonth}
-          className="p-1.5 hover:bg-slate-100 active:scale-95 rounded-xl text-slate-600 hover:text-ink transition-all cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+          className="p-1.5 hover:bg-surface-2 active:scale-95 rounded-xl text-body hover:text-ink transition-all cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
           title="Mês anterior"
           aria-label="Mês anterior"
         >
@@ -136,8 +136,8 @@ export function MonthSelector({
           disabled={isNextMonthDisabled}
           className={`p-1.5 rounded-xl transition-all touch-manipulation ${
             isNextMonthDisabled
-              ? 'text-slate-300 cursor-not-allowed opacity-40'
-              : 'text-slate-600 hover:text-ink hover:bg-slate-100 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action'
+              ? 'text-body3 cursor-not-allowed opacity-40'
+              : 'text-body hover:text-ink hover:bg-surface-2 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action'
           }`}
           title={isNextMonthDisabled ? 'Limite atingido (+24 meses)' : 'Próximo mês'}
           aria-label="Próximo mês"

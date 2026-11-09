@@ -20,7 +20,7 @@ export const CopilotTypingBubble: React.FC<CopilotTypingBubbleProps> = ({ classN
       {/* Avatar compacto Curiango - ícone do pássaro com respiração sutil */}
       <div
         data-testid="copilot-typing-avatar"
-        className="w-7 h-7 rounded-xl bg-white border border-slate-200/90 flex items-center justify-center shrink-0 shadow-2xs p-1 animate-pulse"
+        className="w-7 h-7 rounded-xl bg-white border border-line flex items-center justify-center shrink-0 shadow-2xs p-1 animate-pulse"
       >
         <div className="transition-transform duration-700 ease-in-out hover:scale-105">
           <CuriangoLogo size={18} color="#FCA311" />
@@ -30,7 +30,7 @@ export const CopilotTypingBubble: React.FC<CopilotTypingBubbleProps> = ({ classN
       {/* Bolha limpa com apenas 3 reticências animadas (sem texto e sem fundo azul) */}
       <div
         data-testid="copilot-typing-dots"
-        className="bg-white border border-slate-200/90 text-slate-800 rounded-2xl rounded-tl-xs px-2.5 py-1.5 flex items-center shadow-cds"
+        className="bg-white border border-line text-ink rounded-2xl rounded-tl-xs px-2.5 py-1.5 flex items-center shadow-cds"
       >
         <div className="flex items-center gap-1 py-0.5" aria-label="digitando...">
           <span

@@ -35,7 +35,7 @@ export function PwaUpdateBanner({ className = '' }: PwaUpdateBannerProps) {
           <p className="text-xs font-semibold text-white tracking-tight leading-snug">
             Nova versão disponível
           </p>
-          <p className="text-[11px] text-slate-300 leading-tight">
+          <p className="text-[11px] text-white/70 leading-tight">
             Atualize para carregar as melhorias recentes.
           </p>
         </div>
@@ -55,7 +55,7 @@ export function PwaUpdateBanner({ className = '' }: PwaUpdateBannerProps) {
           <button
             type="button"
             onClick={dismissUpdate}
-            className="text-slate-400 hover:text-slate-200 text-xs p-1 rounded-md transition-colors"
+            className="text-white/70 hover:text-white text-xs p-1 rounded-md transition-colors"
             title="Lembrar mais tarde"
             aria-label="Dispensar aviso de atualização"
           >

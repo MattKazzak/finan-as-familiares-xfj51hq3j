@@ -381,7 +381,7 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
           <div className="flex-1 min-w-0 relative">
             <div className="rounded-xl bg-white shadow-elevation-3 px-4 py-3.5 border border-line">
               <p className="text-[14px] font-bold text-ink leading-tight">{step.title}</p>
-              <p className="text-[12.5px] text-slate-600 leading-relaxed mt-1">{step.text}</p>
+              <p className="text-[12.5px] text-body2 leading-relaxed mt-1">{step.text}</p>
 
               {/* Rodapé: avançar MINIMALISTA (Matheus 19/10: Continuar ocupava
                   espaço demais, pontinhos desnecessários). Só a flechinha âmbar;

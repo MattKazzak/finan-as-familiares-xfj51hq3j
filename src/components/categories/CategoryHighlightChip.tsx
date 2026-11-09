@@ -81,7 +81,7 @@ export const CategoryHighlightChip: React.FC<CategoryHighlightChipProps> = ({
   return (
     <div
       data-testid="category-highlight-chip"
-      className={`inline-flex flex-wrap items-center gap-1.5 p-1 rounded-2xl bg-white border border-slate-200/90 shadow-2xs max-w-full text-xs ${className}`}
+      className={`inline-flex flex-wrap items-center gap-1.5 p-1 rounded-2xl bg-white border border-line shadow-2xs max-w-full text-xs ${className}`}
     >
       {/* Pílula da Categoria com Ícone e Cor CDS */}
       <span
@@ -101,7 +101,7 @@ export const CategoryHighlightChip: React.FC<CategoryHighlightChipProps> = ({
       {/* Subcategoria (se existir ou se o seletor estiver habilitado) */}
       {onSelectSubcategory && !disabled ? (
         <>
-          <span className="text-slate-400 text-[10px] select-none shrink-0">›</span>
+          <span className="text-body3 text-[10px] select-none shrink-0">›</span>
           <div className="inline-flex items-center shrink-0 max-w-[180px]">
             <ContextualSubcategorySelector
               subcategories={subcategoryList}
@@ -112,15 +112,15 @@ export const CategoryHighlightChip: React.FC<CategoryHighlightChipProps> = ({
               onSelect={(subId, catId) => {
                 onSelectSubcategory(subId, catId)
               }}
-              className="h-7 text-[11px] sm:text-xs font-semibold px-2 rounded-xl bg-slate-50 border-slate-200 hover:bg-slate-100 hover:border-slate-300 text-slate-800"
+              className="h-7 text-[11px] sm:text-xs font-semibold px-2 rounded-xl bg-surface-2 border-line hover:bg-surface-2 hover:border-line text-ink"
             />
           </div>
         </>
       ) : subcategoryName ? (
         <>
-          <span className="text-slate-400 text-[10px] select-none shrink-0">›</span>
+          <span className="text-body3 text-[10px] select-none shrink-0">›</span>
           <span
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-medium text-[11px] truncate max-w-[140px]"
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-surface-2 text-body font-medium text-[11px] truncate max-w-[140px]"
             title={subcategoryName}
           >
             {subcategoryName}

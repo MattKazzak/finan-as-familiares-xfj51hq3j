@@ -1754,10 +1754,10 @@ export default function ProfilePage() {
       <Dialog open={isEditFamilyOpen} onOpenChange={setIsEditFamilyOpen}>
         <DialogContent className="max-w-sm w-[92vw] rounded-3xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-900">
+            <DialogTitle className="text-base font-bold text-ink">
               Editar Dados da Família
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
+            <DialogDescription className="text-xs text-body2">
               Altere o sobrenome da família e adicione uma foto ou logotipo personalizado.
             </DialogDescription>
           </DialogHeader>
@@ -1765,7 +1765,7 @@ export default function ProfilePage() {
           {/* Área do Avatar e Upload */}
           <div className="flex flex-col items-center justify-center py-2 space-y-3">
             <div className="relative">
-              <Avatar className="w-24 h-24 rounded-3xl border-2 border-emerald-500/30 shadow-md overflow-hidden bg-slate-100">
+              <Avatar className="w-24 h-24 rounded-3xl border-2 border-emerald-500/30 shadow-md overflow-hidden bg-surface-2">
                 {family?.avatar_url && (
                   <AvatarImage
                     src={family.avatar_url}
@@ -1820,7 +1820,7 @@ export default function ProfilePage() {
                 </Button>
               )}
             </div>
-            <p className="text-[10px] text-slate-400 text-center">
+            <p className="text-[10px] text-body3 text-center">
               Formatos aceitos: JPG, PNG, WEBP até 5MB. Se não enviar foto, exibiremos a inicial "
               {familyInitial}".
             </p>
@@ -1828,11 +1828,11 @@ export default function ProfilePage() {
 
           <form onSubmit={handleSaveFamily} className="space-y-4 pt-2">
             <div>
-              <Label htmlFor="family-name-input" className="text-xs font-semibold text-slate-700">
+              <Label htmlFor="family-name-input" className="text-xs font-semibold text-body">
                 Nome da família
               </Label>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-2 rounded-xl border border-slate-200 shrink-0">
+                <span className="text-xs font-bold text-body2 bg-surface-2 px-2.5 py-2 rounded-xl border border-line shrink-0">
                   Família
                 </span>
                 <Input
@@ -1845,7 +1845,7 @@ export default function ProfilePage() {
                   required
                 />
               </div>
-              <p className="text-[11px] text-slate-400 mt-1">
+              <p className="text-[11px] text-body3 mt-1">
                 O nome atualizado aparecerá imediatamente no cabeçalho e na tela inicial.
               </p>
             </div>
@@ -1878,20 +1878,20 @@ export default function ProfilePage() {
       <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
         <DialogContent className="max-w-xs w-[90vw] rounded-2xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-900">
+            <DialogTitle className="text-base font-bold text-ink">
               {editingMember ? 'Renomear Membro' : 'Adicionar Membro da Família'}
             </DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSaveMember} className="space-y-4">
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-body2">
               {editingMember
                 ? 'Atualize o nome de identificação.'
                 : 'Adiciona um novo familiar para vincular gastos e receitas. Não cria um novo usuário de login.'}
             </p>
 
             <div>
-              <Label htmlFor="mbr-name" className="text-xs font-semibold text-slate-700">
+              <Label htmlFor="mbr-name" className="text-xs font-semibold text-body">
                 Nome do Membro
               </Label>
               <Input
@@ -1958,25 +1958,25 @@ export default function ProfilePage() {
       <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
         <DialogContent className="max-w-md w-[92vw] rounded-3xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <DialogTitle className="text-base font-bold text-ink flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-emerald-700" />
               <span>Convidar Cônjuge ou Familiar</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
+            <DialogDescription className="text-xs text-body2">
               Envie o código ou o link mágico para seu parceiro(a) entrar nesta mesma família.
             </DialogDescription>
           </DialogHeader>
 
           {generatingInvite ? (
-            <div className="py-8 flex flex-col items-center justify-center gap-2 text-slate-500">
+            <div className="py-8 flex flex-col items-center justify-center gap-2 text-body2">
               <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
               <p className="text-xs">Gerando código seguro...</p>
             </div>
           ) : currentInvite ? (
             <div className="space-y-4 pt-1">
               {/* Código de Convite */}
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                <span className="text-[11px] font-semibold text-slate-500 block mb-1">
+              <div className="p-4 bg-surface-2 rounded-2xl border border-line">
+                <span className="text-[11px] font-semibold text-body2 block mb-1">
                   Código de Convite (6–8 caracteres)
                 </span>
                 <div className="flex items-center justify-between gap-2">
@@ -2010,7 +2010,7 @@ export default function ProfilePage() {
                 <span className="text-[11px] font-semibold text-emerald-900 block mb-1">
                   Link Mágico (Ideal para WhatsApp)
                 </span>
-                <p className="text-[11px] text-slate-600 mb-2 leading-relaxed">
+                <p className="text-[11px] text-body mb-2 leading-relaxed">
                   Quem abrir este link já se cadastra ou entra diretamente na sua família, sem
                   precisar digitar código.
                 </p>
@@ -2018,7 +2018,7 @@ export default function ProfilePage() {
                   <Input
                     readOnly
                     value={`${window.location.origin}/convite/${currentInvite.code}`}
-                    className="text-xs bg-white text-slate-700 h-9 rounded-xl font-mono"
+                    className="text-xs bg-white text-body h-9 rounded-xl font-mono"
                   />
                   <Button
                     type="button"
@@ -2044,7 +2044,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Validade de 7 dias e Regras */}
-              <div className="flex items-center gap-2 text-[11px] text-slate-500 bg-amber-50/60 border border-amber-200/60 p-2.5 rounded-xl">
+              <div className="flex items-center gap-2 text-[11px] text-body2 bg-amber-50/60 border border-amber-200/60 p-2.5 rounded-xl">
                 <Clock className="w-4 h-4 text-amber-600 shrink-0" />
                 <span>
                   <strong>Validade de 7 dias:</strong> expira em{' '}
@@ -2053,21 +2053,21 @@ export default function ProfilePage() {
                 </span>
               </div>
 
-              <div className="pt-2 flex items-center justify-between border-t border-slate-100">
+              <div className="pt-2 flex items-center justify-between border-t border-line">
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   onClick={handleRegenerateInvite}
                   disabled={generatingInvite}
-                  className="text-xs text-slate-600 hover:text-slate-900"
+                  className="text-xs text-body hover:text-ink"
                 >
                   Regerar novo convite
                 </Button>
                 <Button
                   type="button"
                   onClick={() => setIsInviteModalOpen(false)}
-                  className="bg-slate-900 hover:bg-slate-800 text-white text-xs rounded-xl h-9 px-4 font-semibold"
+                  className="bg-ink hover:bg-ink/90 text-white text-xs rounded-xl h-9 px-4 font-semibold"
                 >
                   Fechar
                 </Button>
@@ -2081,18 +2081,18 @@ export default function ProfilePage() {
       <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
         <DialogContent className="max-w-sm w-[92vw] rounded-3xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <DialogTitle className="text-base font-bold text-ink flex items-center gap-2">
               <KeyRound className="w-5 h-5 text-emerald-700" />
               <span>Entrar em uma Família</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
+            <DialogDescription className="text-xs text-body2">
               Cole o código de convite (ex: CURI-7K2X) enviado pelo cônjuge ou administrador.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleJoinFamilySubmit} className="space-y-4 pt-2">
             <div>
-              <Label htmlFor="join-code-input" className="text-xs font-semibold text-slate-700">
+              <Label htmlFor="join-code-input" className="text-xs font-semibold text-body">
                 Código de Convite
               </Label>
               <Input
@@ -2105,7 +2105,7 @@ export default function ProfilePage() {
                 autoFocus
                 required
               />
-              <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+              <p className="text-[11px] text-body3 mt-1.5 leading-relaxed">
                 Ao entrar, você terá acesso imediato aos lançamentos e categorias desta família.
               </p>
             </div>
@@ -2146,7 +2146,7 @@ export default function ProfilePage() {
               <ShieldAlert className="w-5 h-5 text-red-600" />
               <span>Sair da família?</span>
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs text-slate-600 space-y-2">
+            <AlertDialogDescription className="text-xs text-body space-y-2">
               <p>
                 Você deixará de ter acesso às despesas, receitas, orçamentos e relatórios de{' '}
                 <strong>{family?.name}</strong>.
@@ -2177,10 +2177,10 @@ export default function ProfilePage() {
       >
         <AlertDialogContent className="rounded-3xl max-w-sm w-[92vw] p-6">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-base font-bold text-slate-900">
+            <AlertDialogTitle className="text-base font-bold text-ink">
               Remover familiar?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs text-slate-500">
+            <AlertDialogDescription className="text-xs text-body2">
               Deseja remover <strong>{memberToDelete?.name}</strong> da família? O usuário perderá o
               acesso imediato ao aplicativo compartilhado.
             </AlertDialogDescription>
@@ -2204,10 +2204,10 @@ export default function ProfilePage() {
       >
         <AlertDialogContent className="rounded-3xl max-w-sm w-[92vw] p-6">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-base font-bold text-slate-900">
+            <AlertDialogTitle className="text-base font-bold text-ink">
               Sair da conta?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs text-slate-500">
+            <AlertDialogDescription className="text-xs text-body2">
               Você precisará entrar com e-mail e senha novamente para acessar as finanças da
               família.
             </AlertDialogDescription>
@@ -2237,11 +2237,11 @@ export default function ProfilePage() {
             <DialogTitle className="text-base text-ink text-left">
               Como liberar as notificações
             </DialogTitle>
-            <DialogDescription className="text-left text-xs text-slate-500">
+            <DialogDescription className="text-left text-xs text-body2">
               As notificações foram bloqueadas pelo navegador. Para liberar:
             </DialogDescription>
           </DialogHeader>
-          <div className="text-xs text-slate-600 leading-relaxed space-y-2">
+          <div className="text-xs text-body leading-relaxed space-y-2">
             <p>
               <strong>1.</strong> Toque no ícone de cadeado à esquerda do endereço do navegador.
             </p>
@@ -2279,7 +2279,7 @@ export default function ProfilePage() {
               <ShieldAlert className="w-5 h-5 text-red-600" />
               <span>Excluir minha conta?</span>
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs text-slate-600 space-y-2">
+            <AlertDialogDescription className="text-xs text-body space-y-2">
               <p>
                 Esta ação é <strong>permanente</strong>: suas famílias exclusivas, lançamentos,
                 metas e o histórico do Copilot serão apagados para sempre.
@@ -2326,18 +2326,18 @@ export default function ProfilePage() {
       >
         <DialogContent className="max-w-sm w-[92vw] rounded-3xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <DialogTitle className="text-base font-bold text-ink flex items-center gap-2">
               <KeyRound className="w-5 h-5 text-emerald-700" />
               <span>Alterar minha senha</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
+            <DialogDescription className="text-xs text-body2">
               Confirme sua senha atual e escolha uma nova (mín. 8 caracteres, 1 maiúscula, 1
               número).
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleChangePassword} className="space-y-3 pt-1">
             <div>
-              <Label htmlFor="cur-pass" className="text-xs font-semibold text-slate-700">
+              <Label htmlFor="cur-pass" className="text-xs font-semibold text-body">
                 Senha atual
               </Label>
               <Input
@@ -2351,7 +2351,7 @@ export default function ProfilePage() {
               />
             </div>
             <div>
-              <Label htmlFor="new-pass" className="text-xs font-semibold text-slate-700">
+              <Label htmlFor="new-pass" className="text-xs font-semibold text-body">
                 Nova senha
               </Label>
               <div className="relative mt-1">
@@ -2367,7 +2367,7 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => setShowNewPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-body3"
                   aria-label={showNewPassword ? 'Ocultar senha' : 'Mostrar senha'}
                 >
                   {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -2375,7 +2375,7 @@ export default function ProfilePage() {
               </div>
               {newPassword && (
                 <div className="mt-1.5">
-                  <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                  <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-300 ${
                         [
@@ -2389,12 +2389,12 @@ export default function ProfilePage() {
                       style={{ width: `${(newPasswordStrength.score / 4) * 100}%` }}
                     />
                   </div>
-                  <p className="text-[10px] text-slate-500 mt-0.5">{newPasswordStrength.label}</p>
+                  <p className="text-[10px] text-body2 mt-0.5">{newPasswordStrength.label}</p>
                 </div>
               )}
             </div>
             <div>
-              <Label htmlFor="conf-pass" className="text-xs font-semibold text-slate-700">
+              <Label htmlFor="conf-pass" className="text-xs font-semibold text-body">
                 Confirmar nova senha
               </Label>
               <Input
@@ -2435,13 +2435,11 @@ export default function ProfilePage() {
       <Dialog open={isAccountNameOpen} onOpenChange={setIsAccountNameOpen}>
         <DialogContent className="max-w-xs w-[90vw] rounded-2xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-900">
-              Editar meu nome
-            </DialogTitle>
+            <DialogTitle className="text-base font-bold text-ink">Editar meu nome</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSaveUserName} className="space-y-4">
             <div>
-              <Label htmlFor="acct-name" className="text-xs font-semibold text-slate-700">
+              <Label htmlFor="acct-name" className="text-xs font-semibold text-body">
                 Meu nome
               </Label>
               <Input
@@ -2489,7 +2487,7 @@ export default function ProfilePage() {
           </DialogHeader>
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="flex-1 min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-600 truncate">
+              <div className="flex-1 min-w-0 rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-xs text-body truncate">
                 {referralLink ?? 'Gerando seu link…'}
               </div>
               <Button

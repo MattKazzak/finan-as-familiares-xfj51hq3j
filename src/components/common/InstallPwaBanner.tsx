@@ -85,7 +85,7 @@ export function InstallPwaBanner({
               <p className="text-sm font-semibold text-white leading-snug">
                 Instalar o Curiangoo no celular
               </p>
-              <p className="text-[11px] text-slate-300 leading-snug mt-0.5">
+              <p className="text-[11px] text-white/70 leading-snug mt-0.5">
                 {hasNativePrompt
                   ? 'Abre em tela cheia, como um app nativo.'
                   : isIos
@@ -107,7 +107,7 @@ export function InstallPwaBanner({
                 <button
                   type="button"
                   onClick={dismiss}
-                  className="text-xs text-slate-400 hover:text-white font-medium px-2 py-1 rounded-md transition-colors"
+                  className="text-xs text-white/70 hover:text-white font-medium px-2 py-1 rounded-md transition-colors"
                 >
                   Agora não
                 </button>
@@ -118,7 +118,7 @@ export function InstallPwaBanner({
             <button
               type="button"
               onClick={dismiss}
-              className="self-start text-slate-400 hover:text-white p-1 -m-1 rounded-md transition-colors shrink-0"
+              className="self-start text-white/60 hover:text-white p-1 -m-1 rounded-md transition-colors shrink-0"
               title="Dispensar"
               aria-label="Dispensar aviso de instalação"
             >
