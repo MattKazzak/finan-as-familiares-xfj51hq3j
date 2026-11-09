@@ -204,24 +204,24 @@ export function InviteAcceptPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-slate-100/40 to-slate-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-white via-surface-2/40 to-surface-2 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-ink/10 border border-line p-6 sm:p-8">
         {/* Cabeçalho */}
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-slate-100 p-3 shadow-inner mb-3 flex items-center justify-center text-ink">
+          <div className="w-14 h-14 rounded-2xl bg-surface-2 p-3 shadow-inner mb-3 flex items-center justify-center text-ink">
             <Users className="w-8 h-8" />
           </div>
           <h1 className="text-xl sm:text-2xl font-semibold text-ink tracking-tight">
             Convite para Família
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          <p className="text-xs sm:text-sm text-body2 mt-1">
             Participe do planejamento e finanças no Curiangoo
           </p>
         </div>
 
         {/* Loading Preview */}
         {loadingPreview ? (
-          <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-500">
+          <div className="py-12 flex flex-col items-center justify-center gap-3 text-body2">
             <Loader2 className="w-7 h-7 animate-spin text-emerald-600" />
             <p className="text-xs">Consultando dados do convite...</p>
           </div>
@@ -266,8 +266,8 @@ export function InviteAcceptPage() {
             {/* SE O USUÁRIO JÁ ESTÁ LOGADO */}
             {user ? (
               <div className="space-y-4 pt-2">
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600">
-                  Conectado como <strong className="text-slate-900">{user.email}</strong>
+                <div className="p-3 bg-surface-2 rounded-xl border border-line text-xs text-body2">
+                  Conectado como <strong className="text-ink">{user.email}</strong>
                 </div>
 
                 {errorMessage && (
@@ -295,7 +295,7 @@ export function InviteAcceptPage() {
               /* SE O USUÁRIO NÃO ESTÁ LOGADO (CADASTRO OU LOGIN) */
               <div className="space-y-4">
                 {/* Abas Criar Conta / Entrar */}
-                <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-2xl">
+                <div className="grid grid-cols-2 p-1 bg-surface-2 rounded-2xl">
                   <button
                     type="button"
                     onClick={() => {
@@ -307,7 +307,7 @@ export function InviteAcceptPage() {
                     className={`py-2 text-xs font-bold rounded-xl transition-all ${
                       mode === 'signup'
                         ? 'bg-white text-emerald-950 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
+                        : 'text-body2 hover:text-ink'
                     }`}
                   >
                     Criar Conta
@@ -323,7 +323,7 @@ export function InviteAcceptPage() {
                     className={`py-2 text-xs font-bold rounded-xl transition-all ${
                       mode === 'login'
                         ? 'bg-white text-emerald-950 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
+                        : 'text-body2 hover:text-ink'
                     }`}
                   >
                     Já tenho conta
@@ -346,14 +346,11 @@ export function InviteAcceptPage() {
                 <form onSubmit={handleAuthSubmit} className="space-y-3.5">
                   {mode === 'signup' && (
                     <div>
-                      <Label
-                        htmlFor="convite-nome"
-                        className="text-xs font-semibold text-slate-700"
-                      >
+                      <Label htmlFor="convite-nome" className="text-xs font-semibold text-body">
                         Seu Nome
                       </Label>
                       <div className="relative mt-1">
-                        <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <UserIcon className="w-4 h-4 text-body3 absolute left-3 top-1/2 -translate-y-1/2" />
                         <Input
                           id="convite-nome"
                           type="text"
@@ -369,11 +366,11 @@ export function InviteAcceptPage() {
                   )}
 
                   <div>
-                    <Label htmlFor="convite-email" className="text-xs font-semibold text-slate-700">
+                    <Label htmlFor="convite-email" className="text-xs font-semibold text-body">
                       Seu E-mail
                     </Label>
                     <div className="relative mt-1">
-                      <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <Mail className="w-4 h-4 text-body3 absolute left-3 top-1/2 -translate-y-1/2" />
                       <Input
                         id="convite-email"
                         type="email"
@@ -387,11 +384,11 @@ export function InviteAcceptPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="convite-senha" className="text-xs font-semibold text-slate-700">
+                    <Label htmlFor="convite-senha" className="text-xs font-semibold text-body">
                       Senha
                     </Label>
                     <div className="relative mt-1">
-                      <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <Lock className="w-4 h-4 text-body3 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                       <Input
                         id="convite-senha"
                         type={showPassword ? 'text' : 'password'}
@@ -404,7 +401,7 @@ export function InviteAcceptPage() {
                       <button
                         type="button"
                         onClick={() => setShowPassword((prev) => !prev)}
-                        className="absolute right-0 top-0 h-10 w-10 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-r-xl"
+                        className="absolute right-0 top-0 h-10 w-10 flex items-center justify-center text-body3 hover:text-body transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-r-xl"
                         aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                       >
                         {showPassword ? (
@@ -420,12 +417,12 @@ export function InviteAcceptPage() {
                     <div>
                       <Label
                         htmlFor="convite-confirma-senha"
-                        className="text-xs font-semibold text-slate-700"
+                        className="text-xs font-semibold text-body"
                       >
                         Confirmar Senha
                       </Label>
                       <div className="relative mt-1">
-                        <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <Lock className="w-4 h-4 text-body3 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                         <Input
                           id="convite-confirma-senha"
                           type={showConfirmPassword ? 'text' : 'password'}
@@ -438,7 +435,7 @@ export function InviteAcceptPage() {
                         <button
                           type="button"
                           onClick={() => setShowConfirmPassword((prev) => !prev)}
-                          className="absolute right-0 top-0 h-10 w-10 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-r-xl"
+                          className="absolute right-0 top-0 h-10 w-10 flex items-center justify-center text-body3 hover:text-body transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-r-xl"
                           aria-label={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
                         >
                           {showConfirmPassword ? (
@@ -475,8 +472,8 @@ export function InviteAcceptPage() {
           </div>
         )}
 
-        <div className="mt-6 pt-4 border-t border-slate-100 text-center">
-          <p className="text-[11px] text-slate-400">
+        <div className="mt-6 pt-4 border-t border-line text-center">
+          <p className="text-[11px] text-body3">
             Validade de 7 dias • Acesso com isolamento por família (RLS)
           </p>
         </div>

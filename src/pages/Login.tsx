@@ -472,7 +472,7 @@ export default function Login() {
                   Credenciais
                 </span>
               </div>
-              <div className="h-px bg-slate-200 flex-1 mx-3" />
+              <div className="h-px bg-line flex-1 mx-3" />
               <div className="flex items-center gap-2">
                 <span
                   className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-semibold tabular-nums transition-colors ${
@@ -599,7 +599,7 @@ export default function Login() {
                 <div>
                   <Label
                     htmlFor="signup-name"
-                    className="text-xs font-light text-slate-600 mb-1 block tracking-wide"
+                    className="text-xs font-light text-body2 mb-1 block tracking-wide"
                   >
                     Seu Nome
                   </Label>
@@ -619,7 +619,7 @@ export default function Login() {
                       autoFocus
                     />
                   </div>
-                  <p className="text-[11px] text-slate-500 font-light mt-1.5 leading-normal">
+                  <p className="text-[11px] text-body2 font-light mt-1.5 leading-normal">
                     Seu nome será exibido para identificar quem registrou os lançamentos. O nome da
                     família será definido no próximo passo.
                   </p>
@@ -722,12 +722,12 @@ export default function Login() {
                                   : passwordStrength.score === 3
                                     ? 'bg-emerald-500'
                                     : 'bg-emerald-600'
-                              : 'bg-slate-200'
+                              : 'bg-surface-2'
                           }`}
                         />
                       ))}
                     </div>
-                    <p className="text-[11px] font-medium text-slate-500">
+                    <p className="text-[11px] font-medium text-body2">
                       {passwordStrength.label}
                       {passwordStrength.score < 3 &&
                         ' — use 8+ caracteres, com letra maiúscula, número e símbolo.'}
@@ -740,7 +740,7 @@ export default function Login() {
                   <div className="animate-fade-in">
                     <Label
                       htmlFor="auth-pass-confirm"
-                      className="text-xs font-light text-slate-600 mb-1 block tracking-wide"
+                      className="text-xs font-light text-body2 mb-1 block tracking-wide"
                     >
                       Confirmar Senha
                     </Label>
@@ -810,7 +810,7 @@ export default function Login() {
                     variant="outline"
                     onClick={() => setSignupStep('credentials')}
                     disabled={loading}
-                    className="h-12 px-4 rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold"
+                    className="h-12 px-4 rounded-xl border-line text-body hover:bg-surface-2 text-xs font-semibold"
                   >
                     <ArrowLeft className="w-4 h-4 mr-1.5" />
                     Voltar
@@ -900,31 +900,28 @@ export default function Login() {
         </main>
 
         {/* Rodapé de Segurança e Confiança Fintech */}
-        <footer className="mt-8 flex flex-col items-center gap-2 text-slate-500 text-xs text-center max-w-xs font-light">
+        <footer className="mt-8 flex flex-col items-center gap-2 text-body2 text-xs text-center max-w-xs font-light">
           <div className="flex items-center justify-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-slate-500 shrink-0" strokeWidth={1.5} />
+            <ShieldCheck className="w-4 h-4 text-body2 shrink-0" strokeWidth={1.5} />
             <span>Seus dados protegidos com criptografia e isolamento por família.</span>
           </div>
           <nav
-            className="flex items-center justify-center gap-3 text-[11px] text-slate-400"
+            className="flex items-center justify-center gap-3 text-[11px] text-body3"
             aria-label="Links legais"
           >
-            <Link
-              to="/privacidade"
-              className="hover:text-slate-600 underline-offset-2 hover:underline"
-            >
+            <Link to="/privacidade" className="hover:text-body underline-offset-2 hover:underline">
               Privacidade
             </Link>
             <span aria-hidden="true">·</span>
-            <Link to="/termos" className="hover:text-slate-600 underline-offset-2 hover:underline">
+            <Link to="/termos" className="hover:text-body underline-offset-2 hover:underline">
               Termos
             </Link>
             <span aria-hidden="true">·</span>
-            <Link to="/faq" className="hover:text-slate-600 underline-offset-2 hover:underline">
+            <Link to="/faq" className="hover:text-body underline-offset-2 hover:underline">
               FAQ
             </Link>
             <span aria-hidden="true">·</span>
-            <Link to="/contato" className="hover:text-slate-600 underline-offset-2 hover:underline">
+            <Link to="/contato" className="hover:text-body underline-offset-2 hover:underline">
               Fale conosco
             </Link>
           </nav>

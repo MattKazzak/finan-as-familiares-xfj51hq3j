@@ -693,8 +693,8 @@ export default function ImportPage() {
         <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-3xl mx-auto">
           📥
         </div>
-        <h2 className="text-xl font-bold text-slate-900">Nenhuma revisão pendente</h2>
-        <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
+        <h2 className="text-xl font-bold text-ink">Nenhuma revisão pendente</h2>
+        <p className="text-xs sm:text-sm text-body2 max-w-md mx-auto">
           Para importar uma fatura em PDF ou extrato OFX, abra a Carteira e toque em "Importar
           Extrato".
         </p>
@@ -713,7 +713,7 @@ export default function ImportPage() {
   return (
     <div className="w-full max-w-full overflow-x-hidden min-h-[calc(100vh-8rem)] pb-28 sm:pb-24">
       {/* HEADER DA TELA DE REVISÃO DEDICADA */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pt-1 pb-3 mb-3 border-b border-slate-200/60">
+      <div className="sticky top-0 z-20 bg-surface/95 backdrop-blur-md pt-1 pb-3 mb-3 border-b border-line">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             <Button
@@ -721,14 +721,14 @@ export default function ImportPage() {
               variant="ghost"
               size="sm"
               onClick={handleCancelAndLeave}
-              className="h-8 w-8 p-0 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-200/60"
+              className="h-8 w-8 p-0 rounded-xl text-body2 hover:text-ink hover:bg-surface-2"
               title="Voltar e descartar revisão"
             >
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-base sm:text-lg font-bold text-slate-900 truncate">
+                <h1 className="text-base sm:text-lg font-bold text-ink truncate">
                   Revisão de Importação
                 </h1>
                 {session?.fileInfo && (
@@ -738,7 +738,7 @@ export default function ImportPage() {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 truncate">
+              <p className="text-xs text-body2 truncate">
                 {items.length} lançamentos extraídos • Ajuste categorias e confirme
               </p>
             </div>
@@ -750,7 +750,7 @@ export default function ImportPage() {
               variant="outline"
               size="sm"
               onClick={handleCancelAndLeave}
-              className="text-xs h-8 rounded-xl text-slate-600 hover:text-slate-900"
+              className="text-xs h-8 rounded-xl text-body2 hover:text-ink border-line"
             >
               Cancelar
             </Button>
@@ -789,20 +789,20 @@ export default function ImportPage() {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
         {/* COLUNA ESQUERDA: LISTA DE LANÇAMENTOS (MD:COL-SPAN-7 / LG:COL-SPAN-7) */}
         <div className="md:col-span-7 space-y-2 min-w-0">
-          <div className="flex items-center justify-between pb-1 text-xs text-slate-500">
-            <label className="flex items-center gap-2 font-semibold text-slate-700 cursor-pointer">
+          <div className="flex items-center justify-between pb-1 text-xs text-body2">
+            <label className="flex items-center gap-2 font-semibold text-body cursor-pointer">
               <input
                 type="checkbox"
                 checked={selectedCount === items.length && items.length > 0}
                 onChange={(e) => handleToggleSelectAll(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                className="w-4 h-4 rounded border-line text-emerald-600 focus:ring-emerald-500 cursor-pointer"
               />
               <span>
                 Selecionar todos ({selectedCount}/{items.length})
               </span>
             </label>
 
-            <span className="text-[11px] text-slate-500">
+            <span className="text-[11px] text-body2">
               Exibindo {filteredItems.length} de {items.length}
             </span>
           </div>
@@ -831,7 +831,7 @@ export default function ImportPage() {
               onApplyToSimilar={handleApplyToSimilar}
             />
           ) : (
-            <div className="p-8 text-center text-slate-400 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+            <div className="p-8 text-center text-body3 bg-white rounded-2xl border border-line shadow-xs">
               <p className="text-xs">
                 Selecione um lançamento à esquerda para editar seus detalhes.
               </p>
@@ -844,10 +844,10 @@ export default function ImportPage() {
       <Sheet open={isMobile && isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
         <SheetContent
           side="bottom"
-          className="rounded-t-3xl max-h-[90dvh] p-0 flex flex-col bg-white border-slate-200 overflow-hidden shadow-2xl"
+          className="rounded-t-3xl max-h-[90dvh] p-0 flex flex-col bg-white border-line overflow-hidden shadow-2xl"
         >
-          <SheetHeader className="px-5 pt-4 pb-2 border-b border-slate-100 text-left shrink-0">
-            <SheetTitle className="text-sm font-bold text-slate-900">Editar Lançamento</SheetTitle>
+          <SheetHeader className="px-5 pt-4 pb-2 border-b border-line text-left shrink-0">
+            <SheetTitle className="text-sm font-bold text-ink">Editar Lançamento</SheetTitle>
           </SheetHeader>
           <div className="flex-1 overflow-y-auto min-h-0">
             {activeSelectedItem && (
@@ -883,12 +883,12 @@ export default function ImportPage() {
       <Dialog open={isQuickCatOpen} onOpenChange={setIsQuickCatOpen}>
         <DialogContent className="max-w-sm w-[calc(100vw-2rem)] rounded-2xl p-5 mx-auto">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-900">Nova Categoria</DialogTitle>
+            <DialogTitle className="text-base font-bold text-ink">Nova Categoria</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleCreateQuickCategory} className="space-y-3 pt-1">
             <div>
-              <Label className="text-xs font-semibold text-slate-700">Nome da categoria</Label>
+              <Label className="text-xs font-semibold text-body">Nome da categoria</Label>
               <Input
                 type="text"
                 placeholder="Ex.: Padaria, Streaming, Pet Shop"
@@ -902,7 +902,7 @@ export default function ImportPage() {
 
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label className="text-xs font-semibold text-slate-700">Tipo</Label>
+                <Label className="text-xs font-semibold text-body">Tipo</Label>
                 <Select
                   value={quickCatType}
                   onValueChange={(v) => setQuickCatType(v as TransactionType)}
@@ -918,7 +918,7 @@ export default function ImportPage() {
               </div>
 
               <div>
-                <Label className="text-xs font-semibold text-slate-700">Ícone</Label>
+                <Label className="text-xs font-semibold text-body">Ícone</Label>
                 <Select value={quickCatIcon} onValueChange={setQuickCatIcon}>
                   <SelectTrigger className="mt-1 text-xs rounded-xl">
                     <SelectValue />
@@ -938,7 +938,7 @@ export default function ImportPage() {
             </div>
 
             <div>
-              <Label className="text-xs font-semibold text-slate-700">Cor</Label>
+              <Label className="text-xs font-semibold text-body">Cor</Label>
               <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                 {CATEGORY_COLORS.map((c) => (
                   <button
@@ -946,7 +946,7 @@ export default function ImportPage() {
                     key={c}
                     onClick={() => setQuickCatColor(c)}
                     className={`w-5 h-5 rounded-full transition-transform ${
-                      quickCatColor === c ? 'ring-2 ring-slate-900 scale-110' : ''
+                      quickCatColor === c ? 'ring-2 ring-ink scale-110' : ''
                     }`}
                     style={{ backgroundColor: c }}
                   />
@@ -983,37 +983,34 @@ export default function ImportPage() {
       <Dialog open={conflictModalOpen} onOpenChange={(open) => !open && handleKeepOldRules()}>
         <DialogContent className="max-w-md w-[calc(100vw-2rem)] rounded-2xl p-5 mx-auto">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-900">
+            <DialogTitle className="text-base font-bold text-ink">
               Atualizar regras existentes?
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-3 pt-2 text-xs text-slate-600">
+          <div className="space-y-3 pt-2 text-xs text-body2">
             <p>
               Encontramos regras existentes para estes estabelecimentos. Deseja atualizar para as
               novas categorias escolhidas?
             </p>
 
-            <div className="max-h-48 overflow-y-auto space-y-2 border border-slate-200/80 rounded-xl p-2.5 bg-slate-50/70">
+            <div className="max-h-48 overflow-y-auto space-y-2 border border-line rounded-xl p-2.5 bg-surface-2/70">
               {conflictingRules.map((c) => (
                 <div
                   key={c.ruleId}
-                  className="flex items-center justify-between gap-2 text-[11px] bg-white p-2 rounded-lg border border-slate-100 shadow-2xs"
+                  className="flex items-center justify-between gap-2 text-[11px] bg-white p-2 rounded-lg border border-line shadow-2xs"
                 >
-                  <span
-                    className="font-semibold text-slate-800 truncate max-w-[140px]"
-                    title={c.pattern}
-                  >
+                  <span className="font-semibold text-ink truncate max-w-[140px]" title={c.pattern}>
                     {c.pattern}
                   </span>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <span
-                      className="text-slate-400 line-through truncate max-w-[80px]"
+                      className="text-body3 line-through truncate max-w-[80px]"
                       title={c.oldCategoryName}
                     >
                       {c.oldCategoryName}
                     </span>
-                    <span className="text-slate-400">→</span>
+                    <span className="text-body3">→</span>
                     <span
                       className="text-emerald-700 font-semibold truncate max-w-[90px]"
                       title={c.newCategoryName}

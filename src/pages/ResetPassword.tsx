@@ -204,7 +204,7 @@ export default function ResetPassword() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="8+ caracteres, maiúscula e número"
-                  className="pl-8 pr-9 h-11 border-0 rounded-none bg-transparent placeholder:text-slate-400 placeholder:font-light text-slate-900 font-normal focus-visible:ring-0 focus-visible:ring-offset-0 text-sm shadow-none"
+                  className="pl-8 pr-9 h-11 border-0 rounded-none bg-transparent placeholder:text-body3 placeholder:font-light text-ink font-normal focus-visible:ring-0 focus-visible:ring-offset-0 text-sm shadow-none"
                   required
                   autoFocus
                   disabled={submitting || Boolean(successMessage)}
@@ -212,7 +212,7 @@ export default function ResetPassword() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-0 top-0 h-11 w-8 flex items-center justify-end text-slate-400 hover:text-slate-700 transition-colors focus:outline-none"
+                  className="absolute right-0 top-0 h-11 w-8 flex items-center justify-end text-body3 hover:text-ink transition-colors focus:outline-none"
                   aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                 >
                   {showPassword ? (
@@ -238,12 +238,12 @@ export default function ResetPassword() {
                             : passwordStrength.score === 2
                               ? 'bg-amber-500'
                               : 'bg-emerald-500'
-                          : 'bg-slate-200'
+                          : 'bg-surface-2'
                       }`}
                     />
                   ))}
                 </div>
-                <p className="text-[11px] font-medium text-slate-500">
+                <p className="text-[11px] font-medium text-body2">
                   {passwordStrength.label}
                   {passwordStrength.score < 3 &&
                     ' — use 8+ caracteres, com letra maiúscula, número e símbolo.'}
@@ -270,14 +270,14 @@ export default function ResetPassword() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Repita a nova senha"
-                  className="pl-8 pr-9 h-11 border-0 rounded-none bg-transparent placeholder:text-slate-400 placeholder:font-light text-slate-900 font-normal focus-visible:ring-0 focus-visible:ring-offset-0 text-sm shadow-none"
+                  className="pl-8 pr-9 h-11 border-0 rounded-none bg-transparent placeholder:text-body3 placeholder:font-light text-ink font-normal focus-visible:ring-0 focus-visible:ring-offset-0 text-sm shadow-none"
                   required
                   disabled={submitting || Boolean(successMessage)}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-0 top-0 h-11 w-8 flex items-center justify-end text-slate-400 hover:text-slate-700 transition-colors focus:outline-none"
+                  className="absolute right-0 top-0 h-11 w-8 flex items-center justify-end text-body3 hover:text-ink transition-colors focus:outline-none"
                   aria-label={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
                 >
                   {showConfirmPassword ? (
@@ -329,8 +329,8 @@ export default function ResetPassword() {
         </main>
 
         {/* Rodapé de Segurança */}
-        <footer className="mt-8 flex items-center justify-center gap-2 text-slate-500 text-xs text-center max-w-xs font-light">
-          <ShieldCheck className="w-4 h-4 text-slate-500 shrink-0" strokeWidth={1.5} />
+        <footer className="mt-8 flex items-center justify-center gap-2 text-body2 text-xs text-center max-w-xs font-light">
+          <ShieldCheck className="w-4 h-4 text-body2 shrink-0" strokeWidth={1.5} />
           <span>Curiangoo &bull; Gestão Financeira Familiar com isolamento e segurança.</span>
         </footer>
       </div>

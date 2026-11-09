@@ -205,10 +205,10 @@ export default function GoalsPage() {
       {/* Header com respiro */}
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold text-ink tracking-tight">
             Metas Financeiras
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+          <p className="text-xs sm:text-sm text-body2 mt-0.5">
             Planejamento familiar para objetivos de curto, médio e longo prazo
           </p>
         </div>
@@ -226,7 +226,7 @@ export default function GoalsPage() {
 
       {/* Lista de Metas */}
       {loading ? (
-        <div className="py-12 text-center text-xs text-slate-400">Carregando metas...</div>
+        <div className="py-12 text-center text-xs text-body3">Carregando metas...</div>
       ) : goals.length === 0 ? (
         /* Empty State */
         <div className="bg-surface/95 backdrop-blur-sm rounded-3xl p-12 text-center border border-line shadow-cds">
@@ -291,14 +291,14 @@ export default function GoalsPage() {
                     <div className="flex items-center gap-1 opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => openEditDialog(goal)}
-                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="p-1.5 text-body3 hover:text-action hover:bg-action-subtle rounded-lg transition-colors"
                         title="Editar"
                       >
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => setGoalToDelete(goal)}
-                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-1.5 text-body3 hover:text-expense hover:bg-expense-subtle rounded-lg transition-colors"
                         title="Excluir"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -309,14 +309,14 @@ export default function GoalsPage() {
                   {/* Informações Financeiras da Meta */}
                   <div className="space-y-1.5 mb-4">
                     <div className="flex items-baseline justify-between text-xs">
-                      <span className="text-slate-500 font-medium">Meta Total:</span>
+                      <span className="text-body2 font-medium">Meta Total:</span>
                       <span className="font-semibold tracking-tight text-ink tabular-nums">
                         {formatBRL(goal.target_amount_cents)}
                       </span>
                     </div>
 
                     <div className="flex items-baseline justify-between text-xs">
-                      <span className="text-slate-500 font-medium">Valor Guardado:</span>
+                      <span className="text-body2 font-medium">Valor Guardado:</span>
                       <span className="font-bold text-income tabular-nums">
                         {formatBRL(savedCents)} ({percent}%)
                       </span>
@@ -335,13 +335,13 @@ export default function GoalsPage() {
                 </div>
 
                 {/* Prazo e Sugestão de Contribuição Mensal */}
-                <div className="pt-3 border-t border-slate-100 space-y-2">
-                  <div className="flex items-center justify-between text-xs text-slate-500">
+                <div className="pt-3 border-t border-line space-y-2">
+                  <div className="flex items-center justify-between text-xs text-body2">
                     <span className="flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      <Calendar className="w-3.5 h-3.5 text-body3" />
                       Prazo:
                     </span>
-                    <span className="font-semibold text-slate-800 capitalize">
+                    <span className="font-semibold text-ink capitalize">
                       {formatDeadline(goal.deadline)}
                     </span>
                   </div>
@@ -374,21 +374,21 @@ export default function GoalsPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-md w-[95vw] rounded-2xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-900">
+            <DialogTitle className="text-lg font-bold text-ink">
               {editingGoal ? 'Editar Meta Financeira' : 'Nova Meta Financeira'}
             </DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSaveGoal} className="space-y-4">
             {validationError && (
-              <div className="p-3 text-xs bg-red-50 border border-red-200 text-red-700 rounded-xl">
+              <div className="p-3 text-xs bg-expense-subtle border border-expense/30 text-expense rounded-xl">
                 {validationError}
               </div>
             )}
 
             {/* Nome */}
             <div>
-              <Label htmlFor="goal-name" className="text-xs font-semibold text-slate-700">
+              <Label htmlFor="goal-name" className="text-xs font-semibold text-body">
                 Nome da Meta
               </Label>
               <Input
@@ -404,7 +404,7 @@ export default function GoalsPage() {
 
             {/* Categoria */}
             <div>
-              <Label className="text-xs font-semibold text-slate-700">Categoria Vinculada</Label>
+              <Label className="text-xs font-semibold text-body">Categoria Vinculada</Label>
               <Select value={goalCategoryId} onValueChange={setGoalCategoryId}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Selecione uma categoria" />
@@ -422,11 +422,11 @@ export default function GoalsPage() {
 
             {/* Valor da Meta */}
             <div>
-              <Label htmlFor="goal-amount" className="text-xs font-semibold text-slate-700">
+              <Label htmlFor="goal-amount" className="text-xs font-semibold text-body">
                 Valor da Meta (R$)
               </Label>
               <div className="relative mt-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-body3 font-medium">
                   R$
                 </span>
                 <Input
@@ -444,7 +444,7 @@ export default function GoalsPage() {
 
             {/* Prazo */}
             <div>
-              <Label htmlFor="goal-deadline" className="text-xs font-semibold text-slate-700">
+              <Label htmlFor="goal-deadline" className="text-xs font-semibold text-body">
                 Prazo Estimado
               </Label>
               <Input
@@ -483,10 +483,10 @@ export default function GoalsPage() {
       <AlertDialog open={!!goalToDelete} onOpenChange={(open) => !open && setGoalToDelete(null)}>
         <AlertDialogContent className="rounded-2xl max-w-sm">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-base font-bold text-slate-900">
+            <AlertDialogTitle className="text-base font-bold text-ink">
               Excluir meta financeira?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs text-slate-500">
+            <AlertDialogDescription className="text-xs text-body2">
               O objetivo será excluído permanentemente do painel da família.
             </AlertDialogDescription>
           </AlertDialogHeader>

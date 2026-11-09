@@ -242,7 +242,7 @@ export default function SharedDocumentPage() {
       </main>
 
       {/* Rodapé simples */}
-      <footer className="max-w-md mx-auto w-full pt-4 pb-2 text-center text-[11px] text-slate-400">
+      <footer className="max-w-md mx-auto w-full pt-4 pb-2 text-center text-[11px] text-body3">
         Curiangoo • Finanças Familiares com Proteção de Dados
       </footer>
     </div>

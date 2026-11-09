@@ -38,18 +38,18 @@ function LegalShell({
         </div>
       </header>
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-4">{children}</main>
-      <footer className="max-w-2xl mx-auto px-4 pb-10 pt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+      <footer className="max-w-2xl mx-auto px-4 pb-10 pt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-body3">
         <span>© {new Date().getFullYear()} Curiangoo</span>
-        <Link to="/privacidade" className="hover:text-slate-600">
+        <Link to="/privacidade" className="hover:text-body">
           Privacidade
         </Link>
-        <Link to="/termos" className="hover:text-slate-600">
+        <Link to="/termos" className="hover:text-body">
           Termos
         </Link>
-        <Link to="/faq" className="hover:text-slate-600">
+        <Link to="/faq" className="hover:text-body">
           FAQ
         </Link>
-        <Link to="/contato" className="hover:text-slate-600">
+        <Link to="/contato" className="hover:text-body">
           Fale conosco
         </Link>
       </footer>
@@ -129,7 +129,7 @@ export function PrivacyPage() {
           são removidos em até 30 dias.
         </p>
       </Section>
-      <p className="text-[11px] text-slate-400 px-1">Última atualização: outubro de 2026.</p>
+      <p className="text-[11px] text-body3 px-1">Última atualização: outubro de 2026.</p>
     </LegalShell>
   )
 }
@@ -189,7 +189,7 @@ export function TermsPage() {
           , sob licença Creative Commons BY-NC-SA 4.0.
         </p>
       </Section>
-      <p className="text-[11px] text-slate-400 px-1">Última atualização: outubro de 2026.</p>
+      <p className="text-[11px] text-body3 px-1">Última atualização: outubro de 2026.</p>
     </LegalShell>
   )
 }
@@ -250,7 +250,7 @@ export function FaqPage() {
             >
               <span className="text-sm font-semibold text-ink">{item.q}</span>
               <ChevronDown
-                className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${
+                className={`w-4 h-4 text-body3 shrink-0 transition-transform duration-200 ${
                   openIndex === i ? 'rotate-180' : ''
                 }`}
               />
