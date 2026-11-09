@@ -172,10 +172,10 @@ export function WalletBudgetsTab() {
                   ? 'Clique para recolher nota de metodologia'
                   : 'Clique para expandir nota de metodologia completa'
               }
-              className="group flex items-start gap-1.5 text-left text-[11px] leading-relaxed cursor-pointer select-none max-w-full w-full rounded-md p-0.5 -m-0.5 hover:bg-slate-50/80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-300 transition-colors"
+              className="group flex items-start gap-1.5 text-left text-[11px] leading-relaxed cursor-pointer select-none max-w-full w-full rounded-md p-0.5 -m-0.5 hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-line-strong transition-colors"
             >
               <span
-                className="inline-flex items-center justify-center w-4 h-4 rounded-full text-slate-400 group-hover:text-slate-600 group-hover:bg-slate-200/60 shrink-0 mt-0.5 transition-colors"
+                className="inline-flex items-center justify-center w-4 h-4 rounded-full text-body3 group-hover:text-body2 group-hover:bg-surface-2 shrink-0 mt-0.5 transition-colors"
                 aria-hidden="true"
                 title={
                   isMethodologyExpanded
@@ -186,7 +186,7 @@ export function WalletBudgetsTab() {
                 <Info className="w-3.5 h-3.5" />
               </span>
               <span
-                className={`min-w-0 flex-1 transition-all duration-200 text-slate-500/90 group-hover:text-slate-700 ${
+                className={`min-w-0 flex-1 transition-all duration-200 text-body2 group-hover:text-ink ${
                   isMethodologyExpanded ? 'break-words whitespace-normal' : 'truncate block'
                 }`}
               >
@@ -199,11 +199,11 @@ export function WalletBudgetsTab() {
 
         <div className="space-y-3">
           {categoryBudgetData.list.length === 0 ? (
-            <div className="text-center py-12 px-4 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
-              <p className="text-sm font-semibold text-slate-600">
+            <div className="text-center py-12 px-4 border border-dashed border-line rounded-2xl bg-surface-2/50">
+              <p className="text-sm font-semibold text-body2">
                 Nenhuma categoria de despesa cadastrada
               </p>
-              <p className="text-xs text-slate-400 mt-1 mb-3">
+              <p className="text-xs text-body3 mt-1 mb-3">
                 Crie sua primeira categoria para organizar seu orçamento familiar.
               </p>
               <CategoryEditorPopover
@@ -271,10 +271,10 @@ export function WalletBudgetsTab() {
 
               return (
                 <div
-                  className={`border rounded-2xl overflow-hidden bg-white transition-all select-none ${
+                  className={`border rounded-2xl overflow-hidden bg-surface transition-all select-none ${
                     isDragging
                       ? 'border-emerald-500/80 shadow-md ring-1 ring-emerald-500/30'
-                      : 'border-slate-200/80 shadow-2xs hover:border-slate-300'
+                      : 'border-line shadow-2xs hover:border-line-strong'
                   }`}
                   style={{
                     WebkitTouchCallout: 'none',
@@ -286,7 +286,7 @@ export function WalletBudgetsTab() {
                   <div
                     {...catDragHandleProps}
                     onClick={() => openCategoryTransactionsDrawer(item.category, null, 'category')}
-                    className="p-3 sm:p-3.5 hover:bg-slate-50/80 cursor-pointer transition-colors group select-none touch-manipulation"
+                    className="p-3 sm:p-3.5 hover:bg-surface-2 cursor-pointer transition-colors group select-none touch-manipulation"
                   >
                     {/* Top Row: Identificação + Ações */}
                     <div className="flex items-start justify-between gap-2 sm:gap-3">
@@ -308,7 +308,7 @@ export function WalletBudgetsTab() {
                           {/* Nome da categoria completo - quebra em 2 linhas se necessário, nunca truncado */}
                           <div className="flex flex-col">
                             <span
-                              className="font-bold text-sm sm:text-base text-slate-900 group-hover:text-emerald-700 transition-colors break-words leading-snug"
+                              className="font-bold text-sm sm:text-base text-ink group-hover:text-emerald-700 transition-colors break-words leading-snug"
                               title={item.category.name}
                             >
                               {item.category.name}
@@ -320,7 +320,7 @@ export function WalletBudgetsTab() {
                                 <span
                                   className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md shrink-0 leading-none whitespace-nowrap ${
                                     BUCKET_METADATA[item.category.budget_bucket]?.bgLight ||
-                                    'bg-slate-100 text-slate-600'
+                                    'bg-surface-2 text-body2'
                                   }`}
                                 >
                                   {BUCKET_METADATA[item.category.budget_bucket]?.shortLabel}
@@ -346,7 +346,7 @@ export function WalletBudgetsTab() {
                                 }
 
                                 return (
-                                  <span className="text-[9px] sm:text-[10px] font-medium text-slate-500 bg-slate-100 border border-slate-200/80 px-1.5 py-0.5 rounded-md shrink-0 leading-none whitespace-nowrap">
+                                  <span className="text-[9px] sm:text-[10px] font-medium text-body2 bg-surface-2 border border-line px-1.5 py-0.5 rounded-md shrink-0 leading-none whitespace-nowrap">
                                     Sem teto próprio · Cota livre no balde
                                   </span>
                                 )
@@ -366,7 +366,7 @@ export function WalletBudgetsTab() {
                       <div className="flex items-center gap-1 sm:gap-2 shrink-0 self-start mt-0.5">
                         {/* AÇÕES DE GESTÃO: Desktop (barra com 3 botões em cápsula limpa) */}
                         <div
-                          className="hidden md:flex items-center gap-0.5 bg-slate-100/70 p-0.5 rounded-xl border border-slate-200/60 shrink-0"
+                          className="hidden md:flex items-center gap-0.5 bg-surface-2 p-0.5 rounded-xl border border-line shrink-0"
                           onClick={(e) => e.stopPropagation()}
                         >
                           {/* Lápis: Editar categoria */}
@@ -378,7 +378,7 @@ export function WalletBudgetsTab() {
                             trigger={
                               <button
                                 type="button"
-                                className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-white transition-all"
+                                className="w-7 h-7 rounded-lg flex items-center justify-center text-body2 hover:text-ink hover:bg-surface transition-all"
                                 title="Editar categoria (nome, cor, ícone, teto)"
                                 aria-label={`Editar categoria ${item.category.name}`}
                               >
@@ -469,7 +469,7 @@ export function WalletBudgetsTab() {
                             trigger={
                               <button
                                 type="button"
-                                className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-emerald-700 hover:bg-white transition-all"
+                                className="w-7 h-7 rounded-lg flex items-center justify-center text-body2 hover:text-emerald-700 hover:bg-surface transition-all"
                                 title="Adicionar subcategoria"
                                 aria-label={`Adicionar subcategoria em ${item.category.name}`}
                               >
@@ -496,7 +496,7 @@ export function WalletBudgetsTab() {
                           <button
                             type="button"
                             onClick={(e) => handleInitiateDeleteCategory(item.category, e)}
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-white transition-all"
+                            className="w-7 h-7 rounded-lg flex items-center justify-center text-body3 hover:text-red-600 hover:bg-surface transition-all"
                             title="Excluir categoria"
                             aria-label={`Excluir categoria ${item.category.name}`}
                           >
@@ -513,7 +513,7 @@ export function WalletBudgetsTab() {
                             <DropdownMenuTrigger asChild>
                               <button
                                 type="button"
-                                className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+                                className="w-7 h-7 rounded-lg flex items-center justify-center text-body2 hover:text-ink hover:bg-surface-2 transition-colors"
                                 title="Mais opções da categoria"
                                 aria-label={`Opções da categoria ${item.category.name}`}
                               >
@@ -531,9 +531,9 @@ export function WalletBudgetsTab() {
                                     setEditingCategoryFromMenu(item.category)
                                   }, 50)
                                 }}
-                                className="gap-2 py-2 px-2.5 rounded-xl cursor-pointer text-slate-700 focus:bg-slate-100 min-h-[40px]"
+                                className="gap-2 py-2 px-2.5 rounded-xl cursor-pointer text-ink focus:bg-surface-2 min-h-[40px]"
                               >
-                                <Edit3 className="w-4 h-4 text-slate-500 shrink-0" />
+                                <Edit3 className="w-4 h-4 text-body2 shrink-0" />
                                 <span className="font-medium">Editar categoria</span>
                               </DropdownMenuItem>
 
@@ -544,7 +544,7 @@ export function WalletBudgetsTab() {
                                     setAddingSubcatForCategory(item.category)
                                   }, 50)
                                 }}
-                                className="gap-2 py-2 px-2.5 rounded-xl cursor-pointer text-slate-700 focus:bg-slate-100 min-h-[40px]"
+                                className="gap-2 py-2 px-2.5 rounded-xl cursor-pointer text-ink focus:bg-surface-2 min-h-[40px]"
                               >
                                 <Plus className="w-4 h-4 text-emerald-600 shrink-0" />
                                 <span className="font-medium">Nova subcategoria</span>
@@ -571,7 +571,7 @@ export function WalletBudgetsTab() {
                         <button
                           type="button"
                           onClick={(e) => toggleCatBudgetExpand(item.category.id, e)}
-                          className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors shrink-0"
+                          className="w-7 h-7 flex items-center justify-center text-body3 hover:text-ink hover:bg-surface-2 rounded-lg transition-colors shrink-0"
                           title={isExpanded ? 'Recolher subcategorias' : 'Expandir subcategorias'}
                           aria-label={
                             isExpanded ? 'Recolher subcategorias' : 'Expandir subcategorias'
@@ -590,38 +590,38 @@ export function WalletBudgetsTab() {
                     <div className="mt-2.5 sm:mt-2">
                       {/* Linha de Valores: Gasto vs Teto */}
                       <div className="flex items-baseline justify-between gap-2">
-                        <div className="text-xs sm:text-sm text-slate-500 tabular-nums flex items-baseline gap-1.5 flex-wrap">
+                        <div className="text-xs sm:text-sm text-body2 tabular-nums flex items-baseline gap-1.5 flex-wrap">
                           {item.category.budget_bucket === 'future' ||
                           item.category.name.toLowerCase().includes('reserva') ||
                           item.category.name.toLowerCase().includes('invest') ? (
                             <>
-                              <span className="text-slate-600 font-medium">Aportado:</span>
-                              <span className="font-bold text-slate-800 text-sm sm:text-base">
+                              <span className="text-body2 font-medium">Aportado:</span>
+                              <span className="font-bold text-ink text-sm sm:text-base">
                                 {formatBRL(item.spentCents)}
                               </span>
-                              <span className="text-slate-400 text-xs">de</span>
+                              <span className="text-body3 text-xs">de</span>
                               {item.limitCents > 0 ? (
-                                <span className="text-slate-600 font-medium">
+                                <span className="text-body2 font-medium">
                                   {formatBRL(item.limitCents)}
                                 </span>
                               ) : (
-                                <span className="text-slate-400 text-xs">(Sem meta definida)</span>
+                                <span className="text-body3 text-xs">(Sem meta definida)</span>
                               )}
                             </>
                           ) : (
                             <>
-                              <span className="font-bold text-slate-800 text-sm sm:text-base">
+                              <span className="font-bold text-ink text-sm sm:text-base">
                                 {formatBRL(item.spentCents)}
                               </span>
-                              <span className="text-slate-400 text-xs">de</span>
+                              <span className="text-body3 text-xs">de</span>
                               {item.limitCents > 0 ? (
-                                <span className="text-slate-600 font-medium">
+                                <span className="text-body2 font-medium">
                                   {formatBRL(item.limitCents)}
                                 </span>
                               ) : (
                                 <span className="inline-flex items-baseline gap-1 flex-wrap">
-                                  <span className="text-slate-600 font-medium">R$ 0,00</span>
-                                  <span className="text-[11px] text-slate-400 font-normal">
+                                  <span className="text-body2 font-medium">R$ 0,00</span>
+                                  <span className="text-[11px] text-body3 font-normal">
                                     <span>(Sem teto alocado)</span>
                                   </span>
                                 </span>
@@ -649,16 +649,14 @@ export function WalletBudgetsTab() {
                               {item.percent}%
                             </span>
                           ) : (
-                            <span className="text-xs font-medium text-slate-400 tabular-nums">
-                              —
-                            </span>
+                            <span className="text-xs font-medium text-body3 tabular-nums">—</span>
                           )}
                         </div>
                       </div>
 
                       {/* Barra de Progresso em Largura Total (APENAS na categoria pai) */}
                       {item.limitCents > 0 ? (
-                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mt-1.5">
+                        <div className="w-full bg-surface-2 h-2 rounded-full overflow-hidden mt-1.5">
                           <div
                             className={`h-full rounded-full transition-all duration-300 ${
                               item.category.budget_bucket === 'future' ||
@@ -686,7 +684,7 @@ export function WalletBudgetsTab() {
                       onTouchMove={(e) => e.stopPropagation()}
                       onTouchEnd={(e) => e.stopPropagation()}
                       onPointerDown={(e) => e.stopPropagation()}
-                      className="bg-slate-50/70 border-t border-slate-100 divide-y divide-slate-100/80 pl-2.5 sm:pl-6 pr-2.5 sm:pr-4 py-1.5"
+                      className="bg-surface-2/70 border-t border-line divide-y divide-line/80 pl-2.5 sm:pl-6 pr-2.5 sm:pr-4 py-1.5"
                     >
                       {hasSubcats ? (
                         <SortableList
@@ -729,17 +727,17 @@ export function WalletBudgetsTab() {
                                       e.stopPropagation()
                                       e.preventDefault()
                                     }}
-                                    className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-700 active:text-emerald-600 cursor-grab active:cursor-grabbing shrink-0 touch-pan-y rounded-lg hover:bg-slate-100 active:bg-slate-200 transition-colors"
+                                    className="w-7 h-7 flex items-center justify-center text-body3 hover:text-ink active:text-emerald-600 cursor-grab active:cursor-grabbing shrink-0 touch-pan-y rounded-lg hover:bg-surface-2 active:bg-surface-2 transition-colors"
                                     title="Segure e arraste para reordenar subcategoria"
                                     aria-label={`Segure e arraste para reordenar subcategoria ${subItem.subcategory.name}`}
                                   >
                                     <GripVertical className="w-4 h-4" />
                                   </button>
-                                  <span className="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover/sub:bg-emerald-500 transition-colors shrink-0" />
+                                  <span className="w-1.5 h-1.5 rounded-full bg-line-strong group-hover/sub:bg-emerald-500 transition-colors shrink-0" />
                                   <div className="min-w-0 flex-1 flex flex-col justify-center">
                                     <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                                       <span
-                                        className="text-xs sm:text-sm font-semibold text-slate-700 group-hover/sub:text-emerald-700 transition-colors break-words leading-snug"
+                                        className="text-xs sm:text-sm font-semibold text-ink group-hover/sub:text-emerald-700 transition-colors break-words leading-snug"
                                         title={subItem.subcategory.name}
                                       >
                                         {subItem.subcategory.name}
@@ -773,7 +771,7 @@ export function WalletBudgetsTab() {
                                     trigger={
                                       <button
                                         type="button"
-                                        className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-200/70 transition-all"
+                                        className="w-7 h-7 rounded-lg flex items-center justify-center text-body3 hover:text-ink hover:bg-surface-2 transition-all"
                                         title="Editar subcategoria e teto"
                                         aria-label={`Editar subcategoria ${subItem.subcategory.name} e teto`}
                                       >
@@ -842,7 +840,7 @@ export function WalletBudgetsTab() {
                                         e,
                                       )
                                     }
-                                    className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-slate-200/70 transition-all"
+                                    className="w-7 h-7 rounded-lg flex items-center justify-center text-body3 hover:text-red-600 hover:bg-surface-2 transition-all"
                                     title="Excluir subcategoria"
                                     aria-label={`Excluir subcategoria ${subItem.subcategory.name}`}
                                   >
@@ -853,25 +851,25 @@ export function WalletBudgetsTab() {
 
                               {/* Linha de valores: no mobile recuada com a mesma margem do texto (pl-8), no desktop alinhada à direita com ações e espaçador */}
                               <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto shrink-0 pl-8 sm:pl-0">
-                                <div className="text-left sm:text-right text-xs tabular-nums text-slate-500 min-w-0">
+                                <div className="text-left sm:text-right text-xs tabular-nums text-body2 min-w-0">
                                   {subItem.limitCents > 0 ? (
                                     <div className="flex items-baseline gap-1 flex-wrap sm:justify-end">
-                                      <span className="font-semibold text-slate-800">
+                                      <span className="font-semibold text-ink">
                                         {formatBRL(subItem.spentCents)}
                                       </span>
-                                      <span className="text-slate-400 text-[10px]">de</span>
-                                      <span className="text-slate-500">
+                                      <span className="text-body3 text-[10px]">de</span>
+                                      <span className="text-body2">
                                         {formatBRL(subItem.limitCents)}
                                       </span>
                                     </div>
                                   ) : (
                                     <div className="flex items-baseline gap-1 sm:justify-end">
                                       {subItem.spentCents > 0 ? (
-                                        <span className="font-semibold text-slate-800">
+                                        <span className="font-semibold text-ink">
                                           {formatBRL(subItem.spentCents)}
                                         </span>
                                       ) : null}
-                                      <span className="text-slate-400 font-medium">—</span>
+                                      <span className="text-body3 font-medium">—</span>
                                     </div>
                                   )}
                                 </div>
@@ -892,7 +890,7 @@ export function WalletBudgetsTab() {
                                     trigger={
                                       <button
                                         type="button"
-                                        className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-200/70 transition-all"
+                                        className="w-7 h-7 rounded-lg flex items-center justify-center text-body3 hover:text-ink hover:bg-surface-2 transition-all"
                                         title="Editar subcategoria e teto"
                                         aria-label={`Editar subcategoria ${subItem.subcategory.name} e teto`}
                                       >
@@ -961,7 +959,7 @@ export function WalletBudgetsTab() {
                                         e,
                                       )
                                     }
-                                    className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-slate-200/70 transition-all"
+                                    className="w-7 h-7 rounded-lg flex items-center justify-center text-body3 hover:text-red-600 hover:bg-surface-2 transition-all"
                                     title="Excluir subcategoria"
                                     aria-label={`Excluir subcategoria ${subItem.subcategory.name}`}
                                   >
@@ -985,7 +983,7 @@ export function WalletBudgetsTab() {
                           onClick={() =>
                             openCategoryTransactionsDrawer(item.category, null, 'direct')
                           }
-                          className="py-2 px-2 sm:px-2.5 flex flex-col sm:flex-row sm:items-center justify-between rounded-xl cursor-pointer transition-colors hover:bg-white group/direct gap-1.5 sm:gap-3 touch-manipulation border-t border-slate-100"
+                          className="py-2 px-2 sm:px-2.5 flex flex-col sm:flex-row sm:items-center justify-between rounded-xl cursor-pointer transition-colors hover:bg-surface group/direct gap-1.5 sm:gap-3 touch-manipulation border-t border-line"
                         >
                           <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1">
                             <div className="w-5 h-6 flex items-center justify-center shrink-0">
@@ -993,15 +991,15 @@ export function WalletBudgetsTab() {
                             </div>
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
                             <div className="min-w-0 flex-1">
-                              <span className="text-xs sm:text-sm font-medium text-slate-700 group-hover/direct:text-amber-700 transition-colors break-words leading-snug">
+                              <span className="text-xs sm:text-sm font-medium text-ink group-hover/direct:text-amber-700 transition-colors break-words leading-snug">
                                 Direto na categoria / Sem subcategoria
                               </span>
                             </div>
                           </div>
 
                           <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto shrink-0 pl-8 sm:pl-0">
-                            <div className="text-left sm:text-right text-xs tabular-nums text-slate-500 min-w-0">
-                              <span className="font-semibold text-slate-800">
+                            <div className="text-left sm:text-right text-xs tabular-nums text-body2 min-w-0">
+                              <span className="font-semibold text-ink">
                                 {formatBRL(item.directSpentCents)}
                               </span>
                             </div>
@@ -1014,8 +1012,8 @@ export function WalletBudgetsTab() {
                       )}
 
                       {!hasSubcats && item.directSpentCents === 0 ? (
-                        <div className="py-3 px-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500">
-                          <span className="italic text-slate-400">
+                        <div className="py-3 px-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-body2">
+                          <span className="italic text-body3">
                             <span>Nenhuma subcategoria cadastrada</span>
                           </span>
                           <SubcategoryEditorPopover
@@ -1098,7 +1096,7 @@ export function WalletBudgetsTab() {
               trigger={
                 <button
                   type="button"
-                  className="w-full h-11 px-4 border border-dashed border-slate-300/80 bg-slate-50/40 hover:border-emerald-500/60 hover:bg-emerald-50/40 active:scale-[0.99] rounded-2xl flex items-center justify-center gap-2 text-xs font-semibold text-slate-600 hover:text-emerald-700 transition-all shadow-2xs touch-manipulation cursor-pointer"
+                  className="w-full h-11 px-4 border border-dashed border-line-strong bg-surface-2/40 hover:border-emerald-500/60 hover:bg-emerald-50/40 active:scale-[0.99] rounded-2xl flex items-center justify-center gap-2 text-xs font-semibold text-body2 hover:text-emerald-700 transition-all shadow-2xs touch-manipulation cursor-pointer"
                 >
                   <Plus className="w-4 h-4 text-emerald-600" />
                   <span>Nova categoria</span>

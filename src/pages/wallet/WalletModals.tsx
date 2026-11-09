@@ -152,14 +152,14 @@ export function WalletModals() {
 
           <form onSubmit={handleSaveBudgetForm} className="space-y-4 pt-2">
             {/* Seletor de Escopo: Padrão vs Só Este Mês */}
-            <div className="bg-slate-50 p-1.5 rounded-2xl flex gap-1 border border-slate-200/60">
+            <div className="bg-surface-2 p-1.5 rounded-2xl flex gap-1 border border-line">
               <button
                 type="button"
                 onClick={() => setIsEditingOnlyThisMonth(false)}
                 className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
                   !isEditingOnlyThisMonth
-                    ? 'bg-white text-emerald-800 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-800'
+                    ? 'bg-surface text-emerald-800 shadow-xs'
+                    : 'text-body2 hover:text-ink'
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5" />
@@ -170,8 +170,8 @@ export function WalletModals() {
                 onClick={() => setIsEditingOnlyThisMonth(true)}
                 className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
                   isEditingOnlyThisMonth
-                    ? 'bg-white text-emerald-800 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-800'
+                    ? 'bg-surface text-emerald-800 shadow-xs'
+                    : 'text-body2 hover:text-ink'
                 }`}
               >
                 <Calendar className="w-3.5 h-3.5" />
@@ -181,12 +181,12 @@ export function WalletModals() {
 
             {!isEditingOnlyThisMonth ? (
               <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-700">Valor Padrão Mensal (R$)</Label>
-                <p className="text-[11px] text-slate-500">
+                <Label className="text-xs font-bold text-ink">Valor Padrão Mensal (R$)</Label>
+                <p className="text-[11px] text-body2">
                   Esse valor será aplicado como meta padrão em todos os meses futuros.
                 </p>
                 <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-body3 font-bold text-sm">
                     R$
                   </span>
                   <Input
@@ -200,14 +200,14 @@ export function WalletModals() {
               </div>
             ) : (
               <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-700">
+                <Label className="text-xs font-bold text-ink">
                   Ajuste Excepcional para {formatMonthYear(currentDate)} (R$)
                 </Label>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[11px] text-body2">
                   Substitui temporariamente o teto padrão neste mês específico.
                 </p>
                 <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-body3 font-bold text-sm">
                     R$
                   </span>
                   <Input
@@ -242,7 +242,7 @@ export function WalletModals() {
                   <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                   <span>Deseja tornar esse valor o padrão fixo?</span>
                 </p>
-                <p className="text-slate-600">
+                <p className="text-body2">
                   Se esse gasto se tornou recorrente, você pode promover esse valor como novo padrão
                   permanente para todos os meses.
                 </p>
@@ -297,7 +297,7 @@ export function WalletModals() {
           <div className="space-y-6">
             {/* Filtro: Apenas Pendentes */}
             <div className="space-y-2">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              <Label className="text-xs font-bold text-body2 uppercase tracking-wider">
                 Status de Revisão
               </Label>
               <div className="flex gap-2">
@@ -307,7 +307,7 @@ export function WalletModals() {
                   className={`w-full py-2.5 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                     filterOnlyPending
                       ? 'border-amber-600 bg-amber-50 text-amber-900'
-                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                      : 'border-line bg-surface text-ink hover:bg-surface-2'
                   }`}
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-600" />
@@ -318,7 +318,7 @@ export function WalletModals() {
 
             {/* Filtro por Tipo */}
             <div className="space-y-2">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              <Label className="text-xs font-bold text-body2 uppercase tracking-wider">
                 Tipo de Transação
               </Label>
               <div className="grid grid-cols-3 gap-2">
@@ -328,7 +328,7 @@ export function WalletModals() {
                   className={`py-2 text-xs font-bold rounded-xl border transition-all ${
                     filterType === null
                       ? 'border-action bg-action/15 text-ink'
-                      : 'border-slate-200 text-slate-600'
+                      : 'border-line text-body2'
                   }`}
                 >
                   Todos
@@ -339,7 +339,7 @@ export function WalletModals() {
                   className={`py-2 text-xs font-bold rounded-xl border transition-all ${
                     filterType === 'expense'
                       ? 'border-red-600 bg-red-50 text-red-700'
-                      : 'border-slate-200 text-slate-600'
+                      : 'border-line text-body2'
                   }`}
                 >
                   Despesas
@@ -350,7 +350,7 @@ export function WalletModals() {
                   className={`py-2 text-xs font-bold rounded-xl border transition-all ${
                     filterType === 'income'
                       ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
-                      : 'border-slate-200 text-slate-600'
+                      : 'border-line text-body2'
                   }`}
                 >
                   Receitas
@@ -361,7 +361,7 @@ export function WalletModals() {
             {/* Filtro por Membro */}
             {members.length > 0 && (
               <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                <Label className="text-xs font-bold text-body2 uppercase tracking-wider">
                   Membro
                 </Label>
                 <div className="flex flex-wrap gap-1.5">
@@ -379,7 +379,7 @@ export function WalletModals() {
                         className={`text-xs px-3 py-1.5 rounded-xl border font-medium transition-all ${
                           isSelected
                             ? 'bg-ink text-white border-ink'
-                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                            : 'bg-surface text-body2 border-line hover:bg-surface-2'
                         }`}
                       >
                         {m.name}
@@ -392,7 +392,7 @@ export function WalletModals() {
 
             {/* Filtro por Categoria */}
             <div className="space-y-2">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              <Label className="text-xs font-bold text-body2 uppercase tracking-wider">
                 Categoria
               </Label>
               <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto p-1">
@@ -410,7 +410,7 @@ export function WalletModals() {
                       className={`text-xs px-2.5 py-1.5 rounded-xl border font-medium transition-all flex items-center gap-1.5 ${
                         isSelected
                           ? 'bg-ink text-white border-ink'
-                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                          : 'bg-surface text-body2 border-line hover:bg-surface-2'
                       }`}
                     >
                       <span className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color }} />
@@ -488,19 +488,17 @@ export function WalletModals() {
       <Dialog open={Boolean(txToDelete)} onOpenChange={(open) => !open && setTxToDelete(null)}>
         <DialogContent className="max-w-sm rounded-3xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-900">
-              Excluir Transação?
-            </DialogTitle>
+            <DialogTitle className="text-lg font-bold text-ink">Excluir Transação?</DialogTitle>
           </DialogHeader>
-          <div className="py-2 text-xs text-slate-600 space-y-2">
+          <div className="py-2 text-xs text-body2 space-y-2">
             <p>
               Tem certeza que deseja excluir esta transação de{' '}
-              <span className="font-bold text-slate-900">
+              <span className="font-bold text-ink">
                 {txToDelete ? formatBRL(txToDelete.amount_cents) : ''}
               </span>
               ?
             </p>
-            <p className="text-slate-500 italic">
+            <p className="text-body2 italic">
               Esta ação removerá o lançamento do seu extrato e atualizará o total gasto da
               categoria.
             </p>
@@ -599,8 +597,8 @@ export function WalletModals() {
             className="space-y-4 pt-2"
           >
             <div className="space-y-2">
-              <Label className="text-xs font-bold text-slate-700">Pertence à Categoria</Label>
-              <div className="p-2.5 rounded-xl bg-slate-100 flex items-center gap-2 text-xs font-bold text-slate-800">
+              <Label className="text-xs font-bold text-ink">Pertence à Categoria</Label>
+              <div className="p-2.5 rounded-xl bg-surface-2 flex items-center gap-2 text-xs font-bold text-ink">
                 <span
                   className="w-3 h-3 rounded-full shrink-0"
                   style={{ backgroundColor: categoryForNewSubcat?.color || '#10B981' }}
@@ -610,7 +608,7 @@ export function WalletModals() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs font-bold text-slate-700">Nome da Subcategoria</Label>
+              <Label className="text-xs font-bold text-ink">Nome da Subcategoria</Label>
               <Input
                 type="text"
                 placeholder="Ex: Combustível, Açougue..."

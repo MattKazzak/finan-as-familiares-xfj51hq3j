@@ -395,14 +395,14 @@ export default function PatrimonyPage() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-xs uppercase font-semibold tracking-wider text-slate-300">
+                <span className="text-xs uppercase font-semibold tracking-wider text-white/70">
                   Gestão Consolidada de Patrimônio
                 </span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mt-1">
                 Patrimônio Líquido da Família
               </h1>
-              <p className="text-xs sm:text-sm text-slate-300/80 mt-0.5">
+              <p className="text-xs sm:text-sm text-white/70 mt-0.5">
                 O que vocês têm somado, menos o que devem (ativos reais - passivos)
               </p>
             </div>
@@ -418,7 +418,7 @@ export default function PatrimonyPage() {
 
           {/* Valor Principal em Destaque */}
           <div className="pt-2">
-            <span className="text-xs text-slate-400 font-medium block">Total Líquido Estimado</span>
+            <span className="text-xs text-white/60 font-medium block">Total Líquido Estimado</span>
             {loading ? (
               <div className="h-12 w-48 bg-white/10 rounded-xl animate-pulse my-2" />
             ) : (
@@ -426,7 +426,7 @@ export default function PatrimonyPage() {
                 <CountUp end={netWorthCents} formatter={(v) => formatBRL(v)} />
               </div>
             )}
-            <p className="text-xs text-slate-300/80">
+            <p className="text-xs text-white/70">
               {investments.length}{' '}
               {investments.length === 1 ? 'ativo registrado' : 'ativos registrados'} na carteira
             </p>
@@ -436,7 +436,7 @@ export default function PatrimonyPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-white/10">
             {/* 1. Ativos Investidos */}
             <div className="bg-white/5 rounded-2xl p-4 border border-white/10 backdrop-blur-xs">
-              <div className="flex items-center justify-between text-xs text-slate-300 mb-1">
+              <div className="flex items-center justify-between text-xs text-white/70 mb-1">
                 <span className="flex items-center gap-1.5 font-medium">
                   <TrendingUp className="w-4 h-4 text-emerald-400" />
                   Investimentos
@@ -455,29 +455,29 @@ export default function PatrimonyPage() {
               <div className="text-lg font-bold text-white tabular-nums">
                 {formatBRL(totalInvestmentsCurrentCents)}
               </div>
-              <span className="text-[11px] text-slate-400 mt-0.5 block">
+              <span className="text-[11px] text-white/60 mt-0.5 block">
                 Custo: {formatBRL(totalInvestmentsCostCents)}
               </span>
             </div>
 
             {/* 2. Saldo Líquido de Caixa */}
             <div className="bg-white/5 rounded-2xl p-4 border border-white/10 backdrop-blur-xs">
-              <div className="flex items-center justify-between text-xs text-slate-300 mb-1">
+              <div className="flex items-center justify-between text-xs text-white/70 mb-1">
                 <span className="flex items-center gap-1.5 font-medium">
                   <Landmark className="w-4 h-4 text-action" />
                   Caixa & Contas
                 </span>
-                <span className="text-[10px] font-semibold text-slate-400">Liquidez</span>
+                <span className="text-[10px] font-semibold text-white/60">Liquidez</span>
               </div>
               <div className="text-lg font-bold text-white tabular-nums">
                 {formatBRL(cashBalanceCents)}
               </div>
-              <span className="text-[11px] text-slate-400 mt-0.5 block">Disponível nas contas</span>
+              <span className="text-[11px] text-white/60 mt-0.5 block">Disponível nas contas</span>
             </div>
 
             {/* 3. Dívidas & Financiamentos (Passivo) */}
             <div className="bg-white/5 rounded-2xl p-4 border border-white/10 backdrop-blur-xs">
-              <div className="flex items-center justify-between text-xs text-slate-300 mb-1">
+              <div className="flex items-center justify-between text-xs text-white/70 mb-1">
                 <span className="flex items-center gap-1.5 font-medium">
                   <Building2 className="w-4 h-4 text-rose-400" />
                   Dívidas & Passivo
@@ -487,7 +487,7 @@ export default function PatrimonyPage() {
               <div className="text-lg font-bold text-white tabular-nums">
                 {formatBRL(totalLiabilitiesCents)}
               </div>
-              <span className="text-[11px] text-slate-400 mt-0.5 block">
+              <span className="text-[11px] text-white/60 mt-0.5 block">
                 Sem dívidas cadastradas
               </span>
             </div>
@@ -500,21 +500,19 @@ export default function PatrimonyPage() {
         <div className="bg-white/95 rounded-3xl p-5 sm:p-6 border border-line shadow-elevation-1">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
+              <h3 className="font-bold text-base text-ink flex items-center gap-2">
                 <PieChart className="w-4 h-4 text-emerald-600" />
                 Distribuição da Carteira por Classe
               </h3>
-              <p className="text-xs text-slate-500">
-                Divisão real dos seus investimentos cadastrados
-              </p>
+              <p className="text-xs text-body2">Divisão real dos seus investimentos cadastrados</p>
             </div>
-            <span className="text-xs font-semibold text-slate-600 tabular-nums">
+            <span className="text-xs font-semibold text-body2 tabular-nums">
               {formatBRL(totalInvestmentsCurrentCents)}
             </span>
           </div>
 
           {/* Barra de Distribuição Segmentada CDS */}
-          <div className="w-full h-3 rounded-full bg-slate-100 flex overflow-hidden shadow-inner my-3">
+          <div className="w-full h-3 rounded-full bg-surface-2 flex overflow-hidden shadow-inner my-3">
             {assetClassBreakdown.map((item) => (
               <div
                 key={item.type}
@@ -533,20 +531,20 @@ export default function PatrimonyPage() {
             {assetClassBreakdown.map((item) => (
               <div
                 key={item.type}
-                className="p-2.5 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col justify-between"
+                className="p-2.5 rounded-2xl bg-surface-2 border border-line flex flex-col justify-between"
               >
                 <div className="flex items-center gap-1.5">
                   <span
                     className="w-2.5 h-2.5 rounded-full shrink-0"
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-xs font-medium text-slate-700 truncate">{item.label}</span>
+                  <span className="text-xs font-medium text-ink truncate">{item.label}</span>
                 </div>
                 <div className="mt-1">
-                  <span className="text-sm font-bold text-slate-900 block tabular-nums">
+                  <span className="text-sm font-bold text-ink block tabular-nums">
                     {item.percent}%
                   </span>
-                  <span className="text-[10px] text-slate-500 tabular-nums">
+                  <span className="text-[10px] text-body2 tabular-nums">
                     {formatBRL(item.amountCents)}
                   </span>
                 </div>
@@ -560,11 +558,11 @@ export default function PatrimonyPage() {
       <div className="bg-white/95 rounded-3xl border border-line p-5 sm:p-6 shadow-elevation-1">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
           <div>
-            <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
+            <h3 className="font-bold text-base text-ink flex items-center gap-2">
               <Layers className="w-4 h-4 text-blue-600" />
               Carteira de Ativos
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-body2">
               Ações, Fundos Imobiliários, Renda Fixa e Cripto da família
             </p>
           </div>
@@ -582,17 +580,17 @@ export default function PatrimonyPage() {
         </div>
 
         {loading ? (
-          <div className="py-12 text-center text-xs text-slate-400">
+          <div className="py-12 text-center text-xs text-body3">
             Carregando ativos da carteira...
           </div>
         ) : investments.length === 0 ? (
           /* Empty State Amigável CDS */
-          <div className="py-12 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 p-6">
+          <div className="py-12 text-center bg-surface-2/50 rounded-2xl border border-dashed border-line p-6">
             <div className="w-14 h-14 rounded-2xl bg-ink/5 text-ink flex items-center justify-center mx-auto mb-3">
               <PieChart className="w-7 h-7 stroke-[1.5]" />
             </div>
-            <h4 className="font-bold text-slate-800 text-sm">Nenhum investimento registrado</h4>
-            <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto mb-4">
+            <h4 className="font-bold text-ink text-sm">Nenhum investimento registrado</h4>
+            <p className="text-xs text-body2 mt-1 max-w-xs mx-auto mb-4">
               Cadastre suas aplicações de renda fixa, Tesouro, fundos ou ações para acompanhar o
               patrimônio líquido consolidado.
             </p>
@@ -605,7 +603,7 @@ export default function PatrimonyPage() {
             </Button>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-line">
             {investments.map((asset) => {
               const qty = Number(asset.quantity) || 0
               const totalValCents = Math.round(qty * asset.current_price_cents)
@@ -618,7 +616,7 @@ export default function PatrimonyPage() {
               return (
                 <div
                   key={asset.id}
-                  className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 rounded-2xl px-2 transition-colors group"
+                  className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-surface-2/70 rounded-2xl px-2 transition-colors group"
                 >
                   <div className="flex items-start gap-3">
                     <div
@@ -632,34 +630,32 @@ export default function PatrimonyPage() {
 
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors">
+                        <span className="font-bold text-sm text-ink group-hover:text-emerald-700 transition-colors">
                           {asset.name}
                         </span>
                         {asset.ticker && (
-                          <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
+                          <span className="text-[11px] font-semibold text-body2 bg-surface-2 px-1.5 py-0.5 rounded">
                             {asset.ticker}
                           </span>
                         )}
-                        <span className="text-[10px] font-semibold text-slate-500 border border-slate-200 px-1.5 py-0.2 rounded-full">
+                        <span className="text-[10px] font-semibold text-body2 border border-line px-1.5 py-0.2 rounded-full">
                           {ASSET_TYPE_LABELS[asset.asset_type]}
                         </span>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 mt-1">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-body2 mt-1">
                         <span>
-                          Qtd: <strong className="text-slate-800">{asset.quantity}</strong>
+                          Qtd: <strong className="text-ink">{asset.quantity}</strong>
                         </span>
                         <span>•</span>
                         <span>
                           PM:{' '}
-                          <strong className="text-slate-800">
-                            {formatBRL(asset.avg_price_cents)}
-                          </strong>
+                          <strong className="text-ink">{formatBRL(asset.avg_price_cents)}</strong>
                         </span>
                         <span>•</span>
                         <span>
                           Atual:{' '}
-                          <strong className="text-slate-800">
+                          <strong className="text-ink">
                             {formatBRL(asset.current_price_cents)}
                           </strong>
                         </span>
@@ -670,7 +666,7 @@ export default function PatrimonyPage() {
                   {/* Valor Total do Ativo e Rentabilidade */}
                   <div className="flex items-center justify-between sm:justify-end gap-3 pl-13 sm:pl-0">
                     <div className="text-left sm:text-right">
-                      <div className="text-sm sm:text-base font-semibold text-slate-900 tabular-nums">
+                      <div className="text-sm sm:text-base font-semibold text-ink tabular-nums">
                         {formatBRL(totalValCents)}
                       </div>
                       <div
@@ -689,7 +685,7 @@ export default function PatrimonyPage() {
                       <button
                         type="button"
                         onClick={() => openPriceDialog(asset)}
-                        className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-body3 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
                         title="Atualizar cotação"
                       >
                         <RefreshCw className="w-4 h-4" />
@@ -697,7 +693,7 @@ export default function PatrimonyPage() {
                       <button
                         type="button"
                         onClick={() => openEditDialog(asset)}
-                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-body3 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                         title="Editar ativo"
                       >
                         <Edit3 className="w-4 h-4" />
@@ -705,7 +701,7 @@ export default function PatrimonyPage() {
                       <button
                         type="button"
                         onClick={() => setAssetToDelete(asset)}
-                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-body3 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                         title="Excluir ativo"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -723,11 +719,11 @@ export default function PatrimonyPage() {
       <div className="bg-white/95 rounded-3xl border border-line p-5 sm:p-6 shadow-elevation-1">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
+            <h3 className="font-bold text-base text-ink flex items-center gap-2">
               <Target className="w-4 h-4 text-emerald-600" />
               Metas Financeiras (Balde do Futuro)
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-body2">
               Objetivos da família alinhados à reserva de emergência e planos futuros
             </p>
           </div>
@@ -736,7 +732,7 @@ export default function PatrimonyPage() {
             variant="ghost"
             size="sm"
             onClick={() => navigate('/metas')}
-            className="text-xs font-semibold text-ink hover:text-action hover:bg-slate-50 gap-1 rounded-xl"
+            className="text-xs font-semibold text-ink hover:text-action hover:bg-surface-2 gap-1 rounded-xl"
           >
             <span>Ver todas as metas</span>
             <ChevronRight className="w-3.5 h-3.5" />
@@ -774,23 +770,21 @@ export default function PatrimonyPage() {
                 <div
                   key={goal.id}
                   onClick={() => navigate('/metas')}
-                  className="p-4 rounded-2xl bg-slate-50/70 border border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors"
+                  className="p-4 rounded-2xl bg-surface-2/70 border border-line hover:bg-surface-2 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-xs text-slate-900 truncate">
-                      {goal.name}
-                    </span>
+                    <span className="font-semibold text-xs text-ink truncate">{goal.name}</span>
                     <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.5 rounded">
                       {pct}%
                     </span>
                   </div>
-                  <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden my-2">
+                  <div className="w-full bg-surface-2 h-1.5 rounded-full overflow-hidden my-2">
                     <div
                       className="bg-emerald-600 h-full rounded-full transition-all"
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  <div className="flex items-center justify-between text-[11px] text-slate-500">
+                  <div className="flex items-center justify-between text-[11px] text-body2">
                     <span>{formatBRL(savedCents)}</span>
                     <span>de {formatBRL(goal.target_amount_cents)}</span>
                   </div>
@@ -806,27 +800,23 @@ export default function PatrimonyPage() {
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Building2 className="w-4 h-4 text-rose-500" />
-            <h3 className="font-bold text-base text-slate-900">
-              Dívidas & Financiamentos (Passivo)
-            </h3>
+            <h3 className="font-bold text-base text-ink">Dívidas & Financiamentos (Passivo)</h3>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-2 text-body2">
             Em evolução
           </span>
         </div>
-        <p className="text-xs text-slate-500 mb-4">
+        <p className="text-xs text-body2 mb-4">
           Acompanhe empréstimos, financiamento imobiliário ou veicular para abater do patrimônio
           bruto.
         </p>
 
-        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="p-4 rounded-2xl bg-surface-2 border border-line flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-start gap-3">
-            <ShieldAlert className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
+            <ShieldAlert className="w-5 h-5 text-body3 shrink-0 mt-0.5" />
             <div>
-              <p className="text-xs font-semibold text-slate-800">
-                Lado Passivo do Balanço Patrimonial
-              </p>
-              <p className="text-[11px] text-slate-500 leading-relaxed mt-0.5">
+              <p className="text-xs font-semibold text-ink">Lado Passivo do Balanço Patrimonial</p>
+              <p className="text-[11px] text-body2 leading-relaxed mt-0.5">
                 Hoje sua família não possui pendências registradas. Nas próximas rodadas você poderá
                 cadastrar contratos, taxas de juros e amortizações SAC/Price.
               </p>
@@ -837,7 +827,7 @@ export default function PatrimonyPage() {
             variant="outline"
             size="sm"
             onClick={() => setShowDebtExplainer(!showDebtExplainer)}
-            className="text-xs font-semibold text-slate-700 border-slate-200 rounded-xl shrink-0 self-start sm:self-auto"
+            className="text-xs font-semibold text-ink border-line rounded-xl shrink-0 self-start sm:self-auto"
           >
             {showDebtExplainer ? 'Ocultar detalhes' : 'Como vai funcionar?'}
           </Button>
@@ -863,13 +853,13 @@ export default function PatrimonyPage() {
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Scale className="w-4 h-4 text-blue-600" />
-            <h3 className="font-bold text-base text-slate-900">Alocação Ideal vs. Alocação Real</h3>
+            <h3 className="font-bold text-base text-ink">Alocação Ideal vs. Alocação Real</h3>
           </div>
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
             Rebalanceamento
           </span>
         </div>
-        <p className="text-xs text-slate-500 mb-4">
+        <p className="text-xs text-body2 mb-4">
           Compare a distribuição recomendada para seu perfil familiar com a posição atual da
           carteira.
         </p>
@@ -878,7 +868,7 @@ export default function PatrimonyPage() {
           {targetAllocation.map((item) => (
             <div
               key={item.label}
-              className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col justify-between"
+              className="p-3.5 rounded-2xl bg-surface-2 border border-line flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center gap-1.5 mb-1">
@@ -886,18 +876,15 @@ export default function PatrimonyPage() {
                     className="w-2.5 h-2.5 rounded-full shrink-0"
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-xs font-semibold text-slate-800 truncate">
-                    {item.label}
-                  </span>
+                  <span className="text-xs font-semibold text-ink truncate">{item.label}</span>
                 </div>
-                <div className="text-xs text-slate-500 mt-2">
-                  Meta Ideal:{' '}
-                  <strong className="text-slate-800 font-bold">{item.targetPct}%</strong>
+                <div className="text-xs text-body2 mt-2">
+                  Meta Ideal: <strong className="text-ink font-bold">{item.targetPct}%</strong>
                 </div>
               </div>
-              <div className="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[10px] text-slate-400">
+              <div className="mt-3 pt-2 border-t border-line flex items-center justify-between text-[10px] text-body3">
                 <span>Status</span>
-                <span className="font-semibold text-slate-600">Alinhado</span>
+                <span className="font-semibold text-body2">Alinhado</span>
               </div>
             </div>
           ))}
@@ -908,7 +895,7 @@ export default function PatrimonyPage() {
       <Dialog open={isAssetDialogOpen} onOpenChange={setIsAssetDialogOpen}>
         <DialogContent className="max-w-md w-[95vw] rounded-2xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-900">
+            <DialogTitle className="text-lg font-bold text-ink">
               {editingAsset ? 'Editar Ativo' : 'Adicionar Ativo ao Patrimônio'}
             </DialogTitle>
           </DialogHeader>
@@ -921,7 +908,7 @@ export default function PatrimonyPage() {
             )}
 
             <div>
-              <Label htmlFor="asset-name" className="text-xs font-semibold text-slate-700">
+              <Label htmlFor="asset-name" className="text-xs font-semibold text-ink">
                 Nome do Ativo
               </Label>
               <Input
@@ -937,7 +924,7 @@ export default function PatrimonyPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="asset-ticker" className="text-xs font-semibold text-slate-700">
+                <Label htmlFor="asset-ticker" className="text-xs font-semibold text-ink">
                   Ticker / Código
                 </Label>
                 <Input
@@ -951,7 +938,7 @@ export default function PatrimonyPage() {
               </div>
 
               <div>
-                <Label className="text-xs font-semibold text-slate-700">Classe de Ativo</Label>
+                <Label className="text-xs font-semibold text-ink">Classe de Ativo</Label>
                 <Select value={assetType} onValueChange={(v) => setAssetType(v as AssetType)}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Selecione" />
@@ -969,7 +956,7 @@ export default function PatrimonyPage() {
             </div>
 
             <div>
-              <Label htmlFor="asset-qty" className="text-xs font-semibold text-slate-700">
+              <Label htmlFor="asset-qty" className="text-xs font-semibold text-ink">
                 Quantidade
               </Label>
               <Input
@@ -986,7 +973,7 @@ export default function PatrimonyPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="asset-pm" className="text-xs font-semibold text-slate-700">
+                <Label htmlFor="asset-pm" className="text-xs font-semibold text-ink">
                   Preço Médio (R$)
                 </Label>
                 <Input
@@ -1002,7 +989,7 @@ export default function PatrimonyPage() {
               </div>
 
               <div>
-                <Label htmlFor="asset-price" className="text-xs font-semibold text-slate-700">
+                <Label htmlFor="asset-price" className="text-xs font-semibold text-ink">
                   Preço Atual (R$)
                 </Label>
                 <Input
@@ -1043,19 +1030,19 @@ export default function PatrimonyPage() {
       <Dialog open={isPriceDialogOpen} onOpenChange={setIsPriceDialogOpen}>
         <DialogContent className="max-w-xs w-[90vw] rounded-2xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-900">
+            <DialogTitle className="text-base font-bold text-ink">
               Atualizar Cotação Atual
             </DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSavePrice} className="space-y-4">
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-body2">
               Atualize o valor de mercado de <strong>{priceAsset?.name}</strong> para recalcular o
               patrimônio da família.
             </p>
 
             <div>
-              <Label htmlFor="quick-price" className="text-xs font-semibold text-slate-700">
+              <Label htmlFor="quick-price" className="text-xs font-semibold text-ink">
                 Novo Preço Unitário (R$)
               </Label>
               <Input
@@ -1098,10 +1085,10 @@ export default function PatrimonyPage() {
       <AlertDialog open={!!assetToDelete} onOpenChange={(open) => !open && setAssetToDelete(null)}>
         <AlertDialogContent className="rounded-2xl max-w-sm">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-base font-bold text-slate-900">
+            <AlertDialogTitle className="text-base font-bold text-ink">
               Remover ativo da carteira?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs text-slate-500">
+            <AlertDialogDescription className="text-xs text-body2">
               {assetToDelete?.name} será removido do cálculo de patrimônio da família.
             </AlertDialogDescription>
           </AlertDialogHeader>

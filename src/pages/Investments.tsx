@@ -271,10 +271,10 @@ export default function InvestmentsPage() {
       {/* 1. Header com Ação "+ Adicionar Ativo" */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold text-ink tracking-tight">
             Carteira de Investimentos
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500">
+          <p className="text-xs sm:text-sm text-body2">
             Acompanhe o patrimônio da família, custo de aquisição e rentabilidade
           </p>
         </div>
@@ -303,23 +303,23 @@ export default function InvestmentsPage() {
           </div>
 
           {/* Custo de Aquisição */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+          <div className="bg-white rounded-3xl p-6 border border-line shadow-cds flex flex-col justify-between">
             <div>
-              <span className="text-xs uppercase font-bold tracking-wider text-slate-400">
+              <span className="text-xs uppercase font-bold tracking-wider text-body3">
                 Custo de Aquisição
               </span>
-              <div className="text-xl sm:text-2xl font-bold text-slate-800 tabular-nums mt-1.5">
+              <div className="text-xl sm:text-2xl font-bold text-ink tabular-nums mt-1.5">
                 {formatBRL(totalCostCents)}
               </div>
             </div>
-            <p className="text-xs text-slate-500 mt-2">Total investido originalmente</p>
+            <p className="text-xs text-body2 mt-2">Total investido originalmente</p>
           </div>
 
           {/* Lucro / Prejuízo Total */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+          <div className="bg-white rounded-3xl p-6 border border-line shadow-cds flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-xs uppercase font-bold tracking-wider text-slate-400">
+                <span className="text-xs uppercase font-bold tracking-wider text-body3">
                   Lucro / Prejuízo
                 </span>
                 <span
@@ -349,37 +349,35 @@ export default function InvestmentsPage() {
                 </span>
               </div>
             </div>
-            <p className="text-xs text-slate-500 mt-2">Rentabilidade acumulada da carteira</p>
+            <p className="text-xs text-body2 mt-2">Rentabilidade acumulada da carteira</p>
           </div>
         </div>
       )}
 
       {/* 3. Lista de Ativos */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-sm">
+      <div className="bg-white rounded-3xl border border-line p-5 sm:p-6 shadow-cds">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="font-bold text-base text-slate-900">Ativos da Família</h3>
-            <p className="text-xs text-slate-500">
+            <h3 className="font-bold text-base text-ink">Ativos da Família</h3>
+            <p className="text-xs text-body2">
               Ações, Fundos Imobiliários, Renda Fixa e Criptoativos
             </p>
           </div>
-          <span className="text-xs text-slate-400 font-medium">
+          <span className="text-xs text-body3 font-medium">
             {investments.length} {investments.length === 1 ? 'ativo' : 'ativos'}
           </span>
         </div>
 
         {loading ? (
-          <div className="py-12 text-center text-xs text-slate-400">
-            Carregando investimentos...
-          </div>
+          <div className="py-12 text-center text-xs text-body3">Carregando investimentos...</div>
         ) : investments.length === 0 ? (
           /* Empty State */
           <div className="py-12 text-center">
-            <div className="w-16 h-16 rounded-3xl bg-slate-100 flex items-center justify-center text-slate-400 mx-auto mb-3">
+            <div className="w-16 h-16 rounded-3xl bg-surface-2 flex items-center justify-center text-body3 mx-auto mb-3">
               <PieChart className="w-8 h-8 stroke-[1.5]" />
             </div>
-            <h4 className="font-bold text-slate-800 text-base">Nenhum investimento cadastrado</h4>
-            <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto mb-5">
+            <h4 className="font-bold text-ink text-base">Nenhum investimento cadastrado</h4>
+            <p className="text-xs text-body2 mt-1 max-w-xs mx-auto mb-5">
               Comece a registrar os ativos de renda fixa, ações e fundos da família.
             </p>
             <Button
@@ -391,7 +389,7 @@ export default function InvestmentsPage() {
             </Button>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-line">
             {investments.map((asset) => {
               const qty = Number(asset.quantity) || 0
               const totalValCents = Math.round(qty * asset.current_price_cents)
@@ -404,7 +402,7 @@ export default function InvestmentsPage() {
               return (
                 <div
                   key={asset.id}
-                  className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 rounded-2xl px-2 transition-colors group"
+                  className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-surface-2/70 rounded-2xl px-2 transition-colors group"
                 >
                   <div className="flex items-start gap-3">
                     <div
@@ -418,34 +416,32 @@ export default function InvestmentsPage() {
 
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors">
+                        <span className="font-bold text-sm text-ink group-hover:text-emerald-700 transition-colors">
                           {asset.name}
                         </span>
                         {asset.ticker && (
-                          <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
+                          <span className="text-xs font-semibold text-body2 bg-surface-2 px-1.5 py-0.5 rounded">
                             {asset.ticker}
                           </span>
                         )}
-                        <span className="text-[10px] font-semibold text-slate-500 border border-slate-200 px-1.5 py-0.2 rounded-full">
+                        <span className="text-[10px] font-semibold text-body2 border border-line px-1.5 py-0.2 rounded-full">
                           {ASSET_TYPE_LABELS[asset.asset_type]}
                         </span>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 mt-1">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-body2 mt-1">
                         <span>
-                          Qtd: <strong className="text-slate-800">{asset.quantity}</strong>
+                          Qtd: <strong className="text-ink">{asset.quantity}</strong>
                         </span>
                         <span>•</span>
                         <span>
                           PM:{' '}
-                          <strong className="text-slate-800">
-                            {formatBRL(asset.avg_price_cents)}
-                          </strong>
+                          <strong className="text-ink">{formatBRL(asset.avg_price_cents)}</strong>
                         </span>
                         <span>•</span>
                         <span>
                           Atual:{' '}
-                          <strong className="text-slate-800">
+                          <strong className="text-ink">
                             {formatBRL(asset.current_price_cents)}
                           </strong>
                         </span>
@@ -456,7 +452,7 @@ export default function InvestmentsPage() {
                   {/* Valor Total do Ativo e Rentabilidade */}
                   <div className="flex items-center justify-between sm:justify-end gap-4 pl-13 sm:pl-0">
                     <div className="text-left sm:text-right">
-                      <div className="text-sm sm:text-base font-semibold text-slate-900 tabular-nums">
+                      <div className="text-sm sm:text-base font-semibold text-ink tabular-nums">
                         {formatBRL(totalValCents)}
                       </div>
                       <div
@@ -474,21 +470,21 @@ export default function InvestmentsPage() {
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => openPriceDialog(asset)}
-                        className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                        className="p-1.5 text-body3 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
                         title="Atualizar preço atual"
                       >
                         <RefreshCw className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => openEditDialog(asset)}
-                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="p-1.5 text-body3 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                         title="Editar ativo"
                       >
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => setAssetToDelete(asset)}
-                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-1.5 text-body3 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Excluir ativo"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -506,7 +502,7 @@ export default function InvestmentsPage() {
       <Dialog open={isAssetDialogOpen} onOpenChange={setIsAssetDialogOpen}>
         <DialogContent className="max-w-md w-[95vw] rounded-2xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-900">
+            <DialogTitle className="text-lg font-bold text-ink">
               {editingAsset ? 'Editar Ativo' : 'Adicionar Ativo à Carteira'}
             </DialogTitle>
           </DialogHeader>
@@ -519,7 +515,7 @@ export default function InvestmentsPage() {
             )}
 
             <div>
-              <Label htmlFor="asset-name" className="text-xs font-semibold text-slate-700">
+              <Label htmlFor="asset-name" className="text-xs font-semibold text-ink">
                 Nome do Ativo
               </Label>
               <Input
@@ -535,7 +531,7 @@ export default function InvestmentsPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="asset-ticker" className="text-xs font-semibold text-slate-700">
+                <Label htmlFor="asset-ticker" className="text-xs font-semibold text-ink">
                   Ticker (opcional)
                 </Label>
                 <Input
@@ -549,7 +545,7 @@ export default function InvestmentsPage() {
               </div>
 
               <div>
-                <Label className="text-xs font-semibold text-slate-700">Tipo de Ativo</Label>
+                <Label className="text-xs font-semibold text-ink">Tipo de Ativo</Label>
                 <Select value={assetType} onValueChange={(v) => setAssetType(v as AssetType)}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Selecione" />
@@ -567,7 +563,7 @@ export default function InvestmentsPage() {
             </div>
 
             <div>
-              <Label htmlFor="asset-qty" className="text-xs font-semibold text-slate-700">
+              <Label htmlFor="asset-qty" className="text-xs font-semibold text-ink">
                 Quantidade
               </Label>
               <Input
@@ -584,7 +580,7 @@ export default function InvestmentsPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="asset-pm" className="text-xs font-semibold text-slate-700">
+                <Label htmlFor="asset-pm" className="text-xs font-semibold text-ink">
                   Preço Médio (R$)
                 </Label>
                 <Input
@@ -600,7 +596,7 @@ export default function InvestmentsPage() {
               </div>
 
               <div>
-                <Label htmlFor="asset-price" className="text-xs font-semibold text-slate-700">
+                <Label htmlFor="asset-price" className="text-xs font-semibold text-ink">
                   Preço Atual (R$)
                 </Label>
                 <Input
@@ -641,18 +637,18 @@ export default function InvestmentsPage() {
       <Dialog open={isPriceDialogOpen} onOpenChange={setIsPriceDialogOpen}>
         <DialogContent className="max-w-xs w-[90vw] rounded-2xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-900">
+            <DialogTitle className="text-base font-bold text-ink">
               Atualizar Preço Atual
             </DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSavePrice} className="space-y-4">
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-body2">
               Atualize a cotação de <strong>{priceAsset?.name}</strong> para recalcular os ganhos.
             </p>
 
             <div>
-              <Label htmlFor="quick-price" className="text-xs font-semibold text-slate-700">
+              <Label htmlFor="quick-price" className="text-xs font-semibold text-ink">
                 Novo Preço Unitário (R$)
               </Label>
               <Input
@@ -695,10 +691,10 @@ export default function InvestmentsPage() {
       <AlertDialog open={!!assetToDelete} onOpenChange={(open) => !open && setAssetToDelete(null)}>
         <AlertDialogContent className="rounded-2xl max-w-sm">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-base font-bold text-slate-900">
+            <AlertDialogTitle className="text-base font-bold text-ink">
               Remover ativo da carteira?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs text-slate-500">
+            <AlertDialogDescription className="text-xs text-body2">
               {assetToDelete?.name} será removido do portfólio da família.
             </AlertDialogDescription>
           </AlertDialogHeader>

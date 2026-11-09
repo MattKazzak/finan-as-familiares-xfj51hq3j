@@ -79,7 +79,7 @@ export function WalletTransactionsTab() {
         <div className="rounded-3xl border border-line bg-white/95 backdrop-blur-sm p-5 sm:p-6 shadow-elevation-1 space-y-3 animate-in fade-in-50 duration-200">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0 font-semibold text-base">
+              <div className="w-10 h-10 rounded-xl bg-surface-2 dark:bg-surface-2 text-ink dark:text-white flex items-center justify-center shrink-0 font-semibold text-base">
                 {lastImportSummary.pending === 0 ? '✓' : '↓'}
               </div>
               <div className="flex-1">
@@ -129,7 +129,7 @@ export function WalletTransactionsTab() {
               <button
                 type="button"
                 onClick={() => setLastImportSummary(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                className="p-1.5 text-body3 hover:text-ink rounded-lg hover:bg-surface-2 transition-colors"
                 title="Fechar aviso de importação"
               >
                 <X className="w-4 h-4" />
@@ -140,7 +140,7 @@ export function WalletTransactionsTab() {
           {/* Barra de Progresso da Revisão */}
           {lastImportSummary.total > 0 && (
             <div className="space-y-1.5 pt-1">
-              <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-ink dark:text-white">
                 <span>Progresso da categorização</span>
                 <span className="tabular-nums text-income">
                   {lastImportSummary.categorized} de {lastImportSummary.total} revisadas (
@@ -148,7 +148,7 @@ export function WalletTransactionsTab() {
                   %)
                 </span>
               </div>
-              <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+              <div className="w-full bg-surface-2 dark:bg-surface-2 h-2.5 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-emerald-600 rounded-full transition-all duration-500 ease-out"
                   style={{
@@ -166,7 +166,7 @@ export function WalletTransactionsTab() {
         /* Estado de Sucesso quando o usuário estava filtrando pendentes e terminou todas */
         <div className="rounded-3xl border border-border/40 bg-card/90 backdrop-blur-sm p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-cds animate-in fade-in-50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center font-semibold text-base shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-surface-2 dark:bg-surface-2 text-ink dark:text-white flex items-center justify-center font-semibold text-base shrink-0">
               ✓
             </div>
             <div>
@@ -280,7 +280,7 @@ export function WalletTransactionsTab() {
             size="sm"
             onClick={() => setIsFilterSheetOpen(true)}
             className={`rounded-xl text-xs font-semibold gap-1.5 h-8 ${
-              activeFiltersCount > 0 ? 'border-action bg-action/15 text-ink' : 'text-slate-600'
+              activeFiltersCount > 0 ? 'border-action bg-action/15 text-ink' : 'text-body2'
             }`}
           >
             <Filter className="w-3.5 h-3.5" />
@@ -296,12 +296,12 @@ export function WalletTransactionsTab() {
           <button
             type="button"
             onClick={openRecurringIncomes}
-            className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 h-8 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 transition-colors shadow-2xs active:scale-95 shrink-0"
+            className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 h-8 rounded-xl border border-line bg-surface hover:bg-surface-2 text-ink transition-colors shadow-2xs active:scale-95 shrink-0"
             title="Gerenciar regras recorrentes mensais"
           >
             <span>Recorrentes 🔁</span>
             {recurringIncomes.length > 0 && (
-              <span className="text-[10px] text-slate-500 font-normal ml-0.5">
+              <span className="text-[10px] text-body2 font-normal ml-0.5">
                 ({recurringIncomes.length})
               </span>
             )}
@@ -315,7 +315,7 @@ export function WalletTransactionsTab() {
                 setFilterCategoryIds([])
                 setFilterType(null)
               }}
-              className="text-xs text-slate-500 hover:text-slate-800 underline transition-colors"
+              className="text-xs text-body2 hover:text-ink underline transition-colors"
             >
               Limpar filtros
             </button>
@@ -328,7 +328,7 @@ export function WalletTransactionsTab() {
             className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 h-8 rounded-xl border transition-colors shadow-2xs active:scale-95 shrink-0 ${
               selectionMode
                 ? 'border-violet-300 bg-violet-50 text-violet-700'
-                : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900'
+                : 'border-line bg-surface hover:bg-surface-2 text-ink'
             }`}
             title="Selecionar várias transações para categorizar em lote"
           >
@@ -337,7 +337,7 @@ export function WalletTransactionsTab() {
           </button>
         </div>
 
-        <span className="text-xs text-slate-400 font-medium">
+        <span className="text-xs text-body3 font-medium">
           {`${filteredTransactions.length} ${filteredTransactions.length === 1 ? 'transação' : 'transações'}`}
         </span>
       </div>
@@ -349,7 +349,7 @@ export function WalletTransactionsTab() {
         </div>
       ) : groupedTransactions.length === 0 ? (
         <div className="bg-white/95 backdrop-blur-sm rounded-3xl p-10 text-center border border-line shadow-elevation-1">
-          <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 mx-auto flex items-center justify-center shrink-0 mb-2">
+          <div className="w-10 h-10 rounded-xl bg-surface-2 dark:bg-surface-2 text-ink dark:text-white mx-auto flex items-center justify-center shrink-0 mb-2">
             <CategoryIcon name="Tag" className="w-4 h-4" strokeWidth={1.5} />
           </div>
           <p className="font-semibold text-ink dark:text-white text-sm">
@@ -364,7 +364,7 @@ export function WalletTransactionsTab() {
             <Button
               onClick={openImportStatement}
               variant="outline"
-              className="border-border text-ink hover:bg-slate-100 text-xs rounded-xl"
+              className="border-border text-ink hover:bg-surface-2 text-xs rounded-xl"
             >
               <UploadCloud className="w-4 h-4 mr-1.5 text-ink" />
               Importar Extrato (OFX)
@@ -386,7 +386,7 @@ export function WalletTransactionsTab() {
               className="bg-card/90 backdrop-blur-sm rounded-3xl border border-border/40 shadow-cds overflow-hidden"
             >
               {/* Cabeçalho do dia */}
-              <div className="bg-slate-50/80 dark:bg-slate-800/60 px-4 py-2 border-b border-border/40 flex items-center justify-between">
+              <div className="bg-surface-2/80 dark:bg-surface-2/60 px-4 py-2 border-b border-border/40 flex items-center justify-between">
                 <span className="font-semibold text-xs text-ink dark:text-white">
                   {formatDayGroupHeader(dateKey)}
                 </span>
@@ -447,8 +447,10 @@ export function WalletTransactionsTab() {
                         setSelectedTx(tx)
                         setIsDetailOpen(true)
                       }}
-                      className={`flex items-center justify-between p-3.5 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group cursor-pointer ${
-                        isProjected ? 'bg-slate-50/50 border-l-4 border-l-amber-400 opacity-90' : ''
+                      className={`flex items-center justify-between p-3.5 hover:bg-surface-2/80 dark:hover:bg-surface-2/40 transition-colors group cursor-pointer ${
+                        isProjected
+                          ? 'bg-surface-2/50 border-l-4 border-l-amber-400 opacity-90'
+                          : ''
                       }`}
                     >
                       <div className="flex items-center gap-3 flex-1 overflow-hidden">
@@ -458,7 +460,7 @@ export function WalletTransactionsTab() {
                             className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-colors ${
                               selectedTxIds.has(tx.id)
                                 ? 'bg-violet-600 border-violet-600'
-                                : 'border-slate-300 bg-white'
+                                : 'border-line-strong bg-surface'
                             }`}
                           >
                             {selectedTxIds.has(tx.id) && (
@@ -509,14 +511,14 @@ export function WalletTransactionsTab() {
                             ) : null}
                           </div>
                           <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
-                            <span className="inline-flex items-center gap-1 text-[11px] font-normal text-muted-foreground bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-normal text-muted-foreground bg-surface-2 dark:bg-surface-2 px-1.5 py-0.5 rounded">
                               {tx.member?.name || 'Família'}
                             </span>
                             {tx.category ? (
                               <span className="text-xs text-muted-foreground truncate font-normal">
                                 <span>{tx.category.name}</span>
                                 {tx.subcategory && (
-                                  <span className="text-ink dark:text-slate-200 font-medium ml-1">
+                                  <span className="text-ink dark:text-white font-medium ml-1">
                                     · {tx.subcategory.name}
                                   </span>
                                 )}
@@ -554,7 +556,7 @@ export function WalletTransactionsTab() {
                               setEditingTx(tx)
                               setIsEditTxOpen(true)
                             }}
-                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="p-1.5 text-body3 hover:text-action hover:bg-action-subtle rounded-lg transition-colors"
                             title="Editar"
                           >
                             <Edit3 className="w-4 h-4" />
@@ -565,7 +567,7 @@ export function WalletTransactionsTab() {
                               e.stopPropagation()
                               setTxToDelete(tx)
                             }}
-                            className="p-1.5 text-slate-400 hover:text-expense hover:bg-rose-50 rounded-lg transition-colors"
+                            className="p-1.5 text-body3 hover:text-expense hover:bg-rose-50 rounded-lg transition-colors"
                             title="Excluir"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -588,7 +590,7 @@ export function WalletTransactionsTab() {
                 size="sm"
                 onClick={loadMoreTransactions}
                 disabled={loadingMore}
-                className="rounded-full text-xs font-medium border-border/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-ink dark:text-slate-200 px-5 py-2 shadow-sm"
+                className="rounded-full text-xs font-medium border-border/60 hover:bg-surface-2 text-ink dark:text-white px-5 py-2 shadow-sm"
               >
                 {loadingMore ? (
                   <span className="flex items-center gap-2">

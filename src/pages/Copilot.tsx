@@ -2007,7 +2007,7 @@ export function CopilotPage() {
       <div
         ref={scrollContainerRef}
         data-testid="copilot-messages-container"
-        className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50/50"
+        className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-surface-2/50"
       >
         {/* Botão discreto no TOPO: Carregar mensagens mais antigas (CDS v1.0) */}
         {hasMoreOlder && (
@@ -2017,7 +2017,7 @@ export function CopilotPage() {
               data-testid="load-older-messages-button"
               onClick={handleLoadOlderMessages}
               disabled={isLoadingOlder}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium text-slate-600 hover:text-brand bg-white/90 hover:bg-white border border-border/60 hover:border-brand-amber/50 shadow-2xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-wait"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium text-body2 hover:text-brand bg-white/90 hover:bg-white border border-border/60 hover:border-brand-amber/50 shadow-2xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-wait"
               aria-label="Carregar mensagens mais antigas"
             >
               {isLoadingOlder ? (
@@ -2027,7 +2027,7 @@ export function CopilotPage() {
                 </>
               ) : (
                 <>
-                  <RotateCcw className="w-3 h-3 text-slate-400 group-hover:text-brand" />
+                  <RotateCcw className="w-3 h-3 text-body3 group-hover:text-brand" />
                   <span>Carregar mensagens mais antigas</span>
                 </>
               )}
@@ -2067,7 +2067,7 @@ export function CopilotPage() {
                             strokeWidth={1.5}
                           />
                         )}
-                        <span className="font-semibold text-slate-700">Lançamento registrado</span>
+                        <span className="font-semibold text-ink">Lançamento registrado</span>
                       </div>
                       <span className="font-semibold text-brand shrink-0">
                         {formatBRL(m.cardData.amountCents)}
@@ -2115,7 +2115,7 @@ export function CopilotPage() {
                             key={oIdx}
                             type="button"
                             onClick={() => processInput(opt)}
-                            className="text-xs px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-brand-amber/20 hover:text-brand border border-border/60 font-medium transition-colors cursor-pointer text-left break-words"
+                            className="text-xs px-2.5 py-1 rounded-xl bg-surface-2 hover:bg-brand-amber/20 hover:text-brand border border-border/60 font-medium transition-colors cursor-pointer text-left break-words"
                           >
                             {opt}
                           </button>
@@ -2124,7 +2124,7 @@ export function CopilotPage() {
                     </div>
                   )}
               </div>
-              <span className="text-[10px] text-slate-400 mt-1 px-1">
+              <span className="text-[10px] text-body3 mt-1 px-1">
                 {m.timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
@@ -2202,7 +2202,7 @@ export function CopilotPage() {
 
         {/* Status de transição quando transcrevendo áudio */}
         {isTranscribing && !isListening && (
-          <div className="flex items-center gap-2 text-xs text-slate-600 px-1">
+          <div className="flex items-center gap-2 text-xs text-body2 px-1">
             <span className="w-2 h-2 rounded-full bg-action animate-pulse shrink-0" />
             <span className="font-medium text-[11px] text-ink">Transcrevendo áudio</span>
           </div>
@@ -2270,7 +2270,7 @@ export function CopilotPage() {
               <button
                 type="button"
                 onClick={handleToggleListening}
-                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-ink flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 group"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-surface-2 hover:bg-surface-2/80 border border-line text-ink flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 group"
                 aria-label="Parar gravação e transcrever"
                 title="Parar gravação"
               >
@@ -2293,7 +2293,7 @@ export function CopilotPage() {
               onChange={(e) => setInputText(e.target.value)}
               placeholder="Pergunte algo ou lance um gasto..."
               disabled={isProcessing || isTranscribing}
-              className="w-full bg-slate-50 border border-border/60 rounded-2xl h-11 px-3.5 pr-20 text-xs sm:text-sm text-slate-800 placeholder:text-muted-foreground focus:outline-none focus:bg-white focus:border-brand-amber focus:ring-1 focus:ring-brand-amber min-w-0 transition-colors"
+              className="w-full bg-surface-2 border border-border/60 rounded-2xl h-11 px-3.5 pr-20 text-xs sm:text-sm text-ink placeholder:text-muted-foreground focus:outline-none focus:bg-white focus:border-brand-amber focus:ring-1 focus:ring-brand-amber min-w-0 transition-colors"
             />
 
             <div className="absolute right-1.5 flex items-center gap-1">
@@ -2303,7 +2303,7 @@ export function CopilotPage() {
                 aria-label="Falar comando por voz"
                 title="Falar comando por voz"
                 disabled={isProcessing || isTranscribing}
-                className="w-8 h-8 rounded-xl text-slate-600 hover:text-brand hover:bg-slate-200/60 flex items-center justify-center transition-all cursor-pointer shrink-0 disabled:opacity-40"
+                className="w-8 h-8 rounded-xl text-body2 hover:text-brand hover:bg-surface-2 flex items-center justify-center transition-all cursor-pointer shrink-0 disabled:opacity-40"
               >
                 <Mic className="w-4 h-4 text-ink" strokeWidth={1.5} />
               </button>
@@ -2325,19 +2325,19 @@ export function CopilotPage() {
       {showConsentModal && (
         <div
           data-testid="ai-consent-modal"
-          className="absolute inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3.5 sm:p-4 rounded-3xl animate-in fade-in duration-150"
+          className="absolute inset-0 z-50 bg-ink/60 backdrop-blur-xs flex items-center justify-center p-3.5 sm:p-4 rounded-3xl animate-in fade-in duration-150"
         >
-          <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-2xl border border-slate-200/90 max-w-sm w-full space-y-3.5 text-left">
+          <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-2xl border border-line max-w-sm w-full space-y-3.5 text-left">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-brand-amber/20 text-brand flex items-center justify-center shrink-0">
                 <Sparkles className="w-4 h-4 text-brand-amber" strokeWidth={1.5} />
               </div>
-              <h3 className="text-sm font-semibold text-slate-900 leading-snug">
+              <h3 className="text-sm font-semibold text-ink leading-snug">
                 Permitir processamento por IA?
               </h3>
             </div>
 
-            <p className="text-xs text-slate-600 leading-relaxed">
+            <p className="text-xs text-body2 leading-relaxed">
               O Curiangoo Copilot utiliza inteligência artificial para transcrever sua gravação de
               voz, interpretar sua fala ou texto e sugerir categorias e valores automaticamente. O
               áudio é processado exclusivamente para transcrição e nenhum dado é compartilhado para
@@ -2348,7 +2348,7 @@ export function CopilotPage() {
               <button
                 type="button"
                 onClick={handleConsentDismiss}
-                className="h-9 px-3 text-xs font-semibold rounded-xl text-slate-700 border border-slate-300 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="h-9 px-3 text-xs font-semibold rounded-xl text-ink border border-line-strong hover:bg-surface-2 transition-colors cursor-pointer"
               >
                 Agora não
               </button>
