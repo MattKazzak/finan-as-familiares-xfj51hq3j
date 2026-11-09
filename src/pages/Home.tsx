@@ -715,7 +715,7 @@ export default function Home() {
                     {timeGreeting.fullGreetingWithName ? (
                       <span className="truncate">{timeGreeting.fullGreetingWithName}</span>
                     ) : isLongLoading ? (
-                      <span className="text-sm font-medium text-slate-300 animate-pulse">
+                      <span className="text-sm font-medium text-white/70 animate-pulse">
                         Carregando seus dados...
                       </span>
                     ) : (
@@ -725,23 +725,23 @@ export default function Home() {
                       </span>
                     )}
                     {timeGreeting.period === 'morning' ? (
-                      <Coffee className="w-4 h-4 text-slate-300 shrink-0" strokeWidth={1.5} />
+                      <Coffee className="w-4 h-4 text-white/70 shrink-0" strokeWidth={1.5} />
                     ) : timeGreeting.period === 'afternoon' ? (
-                      <SunMedium className="w-4 h-4 text-slate-300 shrink-0" strokeWidth={1.5} />
+                      <SunMedium className="w-4 h-4 text-white/70 shrink-0" strokeWidth={1.5} />
                     ) : (
-                      <Moon className="w-4 h-4 text-slate-300 shrink-0" strokeWidth={1.5} />
+                      <Moon className="w-4 h-4 text-white/70 shrink-0" strokeWidth={1.5} />
                     )}
                   </h1>
                 </div>
                 {family?.name?.trim() ? (
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <p className="text-[11px] sm:text-xs text-slate-300/80 font-medium leading-none truncate">
+                    <p className="text-[11px] sm:text-xs text-white/80 font-medium leading-none truncate">
                       {formatFamilyDisplayName(family.name)}
                     </p>
                   </div>
                 ) : isLongLoading ? (
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="text-[10px] text-slate-400 italic leading-none truncate">
+                    <span className="text-[10px] text-white/60 italic leading-none truncate">
                       Carregando seus dados...
                     </span>
                   </div>
@@ -754,7 +754,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={toggleHideValues}
-                className="p-1.5 sm:p-2 rounded-2xl text-slate-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+                className="p-1.5 sm:p-2 rounded-2xl text-white/80 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
                 aria-label={hideValues ? 'Mostrar valores' : 'Ocultar valores'}
                 title={
                   hideValues
@@ -772,7 +772,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setShowNotifications(true)}
-                className="relative p-1.5 sm:p-2 rounded-2xl text-slate-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+                className="relative p-1.5 sm:p-2 rounded-2xl text-white/80 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-all active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
                 aria-label="Notificações"
                 title="Notificações da família"
               >
@@ -804,7 +804,7 @@ export default function Home() {
             >
               <Users
                 className={`w-3.5 h-3.5 shrink-0 ${
-                  selectedMemberId === null ? 'text-white' : 'text-slate-300'
+                  selectedMemberId === null ? 'text-white' : 'text-white/70'
                 }`}
               />
               <span>Todos</span>
@@ -869,7 +869,7 @@ export default function Home() {
             className="pt-2 sm:pt-4"
           >
             <div className="flex items-center justify-between gap-2 mb-1.5">
-              <span className="text-xs uppercase font-medium tracking-wider text-slate-300">
+              <span className="text-xs uppercase font-medium tracking-wider text-white/70">
                 {selectedMemberId
                   ? `Saldo de ${members.find((m) => m.id === selectedMemberId)?.name || 'membro'}`
                   : 'Saldo Total da Família'}
@@ -888,7 +888,7 @@ export default function Home() {
               </div>
             )}
 
-            <p className="text-[11px] sm:text-xs text-slate-300/80 mb-5">
+            <p className="text-[11px] sm:text-xs text-white/80 mb-5">
               {selectedMemberId
                 ? `Filtrado por: ${members.find((m) => m.id === selectedMemberId)?.name}`
                 : 'Consolidado de todos os membros'}
@@ -901,7 +901,7 @@ export default function Home() {
                   <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <span className="text-[11px] text-slate-300 font-normal block leading-tight">
+                  <span className="text-[11px] text-white/70 font-normal block leading-tight">
                     Receitas
                   </span>
                   <span className="text-sm sm:text-base font-semibold text-white tabular-nums block leading-tight mt-0.5 truncate">
@@ -917,7 +917,7 @@ export default function Home() {
                   <ArrowDownRight className="w-4 h-4" strokeWidth={1.5} />
                 </div>
                 <div className="min-w-0 flex-1 text-right sm:text-left">
-                  <span className="text-[11px] text-slate-300 font-normal block leading-tight">
+                  <span className="text-[11px] text-white/70 font-normal block leading-tight">
                     Despesas
                   </span>
                   <span className="text-sm sm:text-base font-semibold text-white tabular-nums block leading-tight mt-0.5 truncate">
@@ -983,7 +983,7 @@ export default function Home() {
                       danger: 'border-l-rose-400',
                       warning: 'border-l-amber-400',
                       success: 'border-l-emerald-400',
-                      info: 'border-l-slate-300',
+                      info: 'border-l-line-strong',
                     }[insights[0].severity]
                   : 'border-l-emerald-400'
             }`}
@@ -1060,7 +1060,7 @@ export default function Home() {
           <div>
             <div className="flex items-center justify-between gap-2 mb-4 min-w-0">
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <div className="w-9 h-9 rounded-xl bg-slate-100 text-ink flex items-center justify-center shrink-0 border border-line/40">
+                <div className="w-9 h-9 rounded-xl bg-surface-2 text-ink flex items-center justify-center shrink-0 border border-line/40">
                   <Scale className="w-4 h-4" strokeWidth={1.5} />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -1130,14 +1130,11 @@ export default function Home() {
                 return (
                   <div
                     key={bucket.key}
-                    className="p-3.5 rounded-2xl bg-slate-50/70 border border-slate-100 space-y-1.5"
+                    className="p-3.5 rounded-2xl bg-surface-2/70 border border-line space-y-1.5"
                   >
                     <div className="flex items-baseline justify-between gap-2 min-w-0">
-                      <span className="font-semibold text-slate-800 text-xs flex items-center gap-1.5 min-w-0">
-                        <BucketIcon
-                          className="w-3.5 h-3.5 text-muted-foreground shrink-0"
-                          strokeWidth={1.5}
-                        />
+                      <span className="font-semibold text-ink text-xs flex items-center gap-1.5 min-w-0">
+                        <BucketIcon className="w-3.5 h-3.5 text-body2 shrink-0" strokeWidth={1.5} />
                         <span className="font-semibold break-words">{bucket.name}</span>
                         {bucket.percentIncome !== null && (
                           <span className="text-[10px] text-body3 font-medium shrink-0">
@@ -1155,12 +1152,12 @@ export default function Home() {
                               estourou {maskValue(formatBRL(Math.abs(remaining)))}
                             </span>
                           ) : !hasSpent ? (
-                            <span className="font-semibold text-slate-700">
+                            <span className="font-semibold text-body">
                               resta {maskValue(formatBRL(remaining))}{' '}
                               <span className="text-[10px] text-body3 font-normal">(intacto)</span>
                             </span>
                           ) : (
-                            <span className="font-bold text-slate-700">
+                            <span className="font-bold text-body">
                               resta {maskValue(formatBRL(remaining))}
                             </span>
                           )
@@ -1170,7 +1167,7 @@ export default function Home() {
                       </span>
                     </div>
 
-                    <div className="w-full bg-slate-200/70 h-2 rounded-full overflow-hidden shadow-inner">
+                    <div className="w-full bg-surface-2 h-2 rounded-full overflow-hidden shadow-inner">
                       <div
                         className={`h-full rounded-full transition-all duration-700 ${
                           isOver ? 'bg-gradient-to-r from-expense to-[#f43f5e]' : bucket.barGradient
@@ -1195,7 +1192,7 @@ export default function Home() {
         >
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-slate-100 text-ink flex items-center justify-center shrink-0 border border-line/40">
+              <div className="w-9 h-9 rounded-xl bg-surface-2 text-ink flex items-center justify-center shrink-0 border border-line/40">
                 <BarChart3 className="w-4 h-4" strokeWidth={1.5} />
               </div>
               <div>
@@ -1209,7 +1206,7 @@ export default function Home() {
             </div>
 
             {categoryExpenses.totalExpensesInMonth > 0 && (
-              <span className="text-xs font-semibold text-slate-700 tabular-nums">
+              <span className="text-xs font-semibold text-body tabular-nums">
                 Total: {maskValue(formatBRL(categoryExpenses.totalExpensesInMonth))}
               </span>
             )}
@@ -1226,12 +1223,10 @@ export default function Home() {
             </div>
           ) : categoryExpenses.list.length === 0 ? (
             <div className="py-8 flex flex-col items-center justify-center text-center">
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-body3 mb-2">
+              <div className="w-12 h-12 rounded-2xl bg-surface-2 flex items-center justify-center text-body3 mb-2">
                 <BarChart3 className="w-6 h-6 stroke-[1.5]" />
               </div>
-              <p className="text-xs font-semibold text-slate-700">
-                Nenhum gasto registrado neste mês
-              </p>
+              <p className="text-xs font-semibold text-body">Nenhum gasto registrado neste mês</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 Suas despesas aparecerão organizadas por categorias aqui.
               </p>
@@ -1255,7 +1250,7 @@ export default function Home() {
                         {item.name}
                       </span>
                       <div className="flex items-center gap-2 shrink-0 tabular-nums">
-                        <span className="font-semibold text-slate-700">
+                        <span className="font-semibold text-body">
                           {maskValue(formatBRL(item.amountCents))}
                         </span>
                         <span className="text-[10px] text-body3 font-medium">
@@ -1265,7 +1260,7 @@ export default function Home() {
                     </div>
 
                     {/* Barra de progresso CDS: azul-marinho ink com cantos suaves */}
-                    <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                    <div className="w-full bg-surface-2 h-2.5 rounded-full overflow-hidden">
                       <div
                         className="bg-ink h-full rounded-full transition-all duration-500 ease-out"
                         style={{ width: `${barWidth}%` }}
@@ -1294,7 +1289,7 @@ export default function Home() {
             <Button
               variant="ghost"
               onClick={() => navigate('/carteira')}
-              className="text-xs font-semibold text-ink hover:text-ink hover:bg-slate-100 rounded-xl px-2.5 py-1.5 shrink-0 h-auto"
+              className="text-xs font-semibold text-ink hover:text-ink hover:bg-surface-2 rounded-xl px-2.5 py-1.5 shrink-0 h-auto"
             >
               <span>Ver todas</span>
               <ChevronRight className="w-4 h-4 ml-1 text-action" />
@@ -1318,10 +1313,10 @@ export default function Home() {
             </div>
           ) : recentItems.length === 0 ? (
             <div className="py-12 flex flex-col items-center text-center">
-              <div className="w-16 h-16 rounded-3xl bg-slate-100 flex items-center justify-center text-body3 mb-3">
+              <div className="w-16 h-16 rounded-3xl bg-surface-2 flex items-center justify-center text-body3 mb-3">
                 <WalletCards className="w-8 h-8 stroke-[1.5]" />
               </div>
-              <h4 className="font-semibold text-slate-800 text-sm">Nenhuma transação ainda</h4>
+              <h4 className="font-semibold text-ink text-sm">Nenhuma transação ainda</h4>
               <p className="text-xs text-muted-foreground mt-1 max-w-xs mb-4">
                 Comece adicionando receitas ou despesas compartilhadas pela família.
               </p>
@@ -1349,7 +1344,7 @@ export default function Home() {
                       setSelectedTx(tx)
                       setIsDetailOpen(true)
                     }}
-                    className="flex items-start sm:items-center justify-between gap-3 py-3 px-2 sm:px-2.5 hover:bg-slate-50/90 rounded-2xl cursor-pointer transition-colors group"
+                    className="flex items-start sm:items-center justify-between gap-3 py-3 px-2 sm:px-2.5 hover:bg-surface-2/90 rounded-2xl cursor-pointer transition-colors group"
                   >
                     <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
                       <CategoryIconBox
@@ -1385,7 +1380,7 @@ export default function Home() {
 
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 min-w-0 text-xs text-muted-foreground">
                           <span
-                            className="inline-flex items-center gap-1 font-normal text-muted-foreground bg-slate-100/80 px-1.5 py-0.5 rounded-md shrink-0 text-xs capitalize"
+                            className="inline-flex items-center gap-1 font-normal text-muted-foreground bg-surface-2/80 px-1.5 py-0.5 rounded-md shrink-0 text-xs capitalize"
                             title={`Data: ${item.transactionDate}`}
                           >
                             <Calendar
@@ -1395,16 +1390,16 @@ export default function Home() {
                             <span>{formatRelativeDate(item.transactionDate)}</span>
                           </span>
 
-                          <span className="text-slate-300 shrink-0 hidden xs:inline">•</span>
+                          <span className="text-body3 shrink-0 hidden xs:inline">•</span>
 
-                          <span className="inline-flex items-center gap-1 font-normal text-muted-foreground bg-slate-100 px-1.5 py-0.5 rounded-md shrink-0 text-xs">
+                          <span className="inline-flex items-center gap-1 font-normal text-muted-foreground bg-surface-2 px-1.5 py-0.5 rounded-md shrink-0 text-xs">
                             <span className="w-2.5 h-2.5 rounded-full bg-ink text-white flex items-center justify-center text-[7px] font-bold shrink-0">
                               {tx.member?.name?.charAt(0).toUpperCase() || 'M'}
                             </span>
                             <span className="break-words">{tx.member?.name || 'Membro'}</span>
                           </span>
 
-                          <span className="text-slate-300 shrink-0 hidden xs:inline">•</span>
+                          <span className="text-body3 shrink-0 hidden xs:inline">•</span>
 
                           {tx.category ? (
                             <span className="font-normal text-muted-foreground text-xs break-words">

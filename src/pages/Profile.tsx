@@ -863,7 +863,7 @@ export default function ProfilePage() {
           ================================================ */}
       <div className="bg-white/95 rounded-3xl p-5 shadow-elevation-1 border border-line flex items-center justify-between gap-3">
         <div className="flex items-center gap-3.5 min-w-0 flex-1">
-          <Avatar className="w-12 h-12 rounded-full border border-line text-slate-700 font-semibold text-lg shadow-sm overflow-hidden shrink-0">
+          <Avatar className="w-12 h-12 rounded-full border border-line text-body font-semibold text-lg shadow-sm overflow-hidden shrink-0">
             {family?.avatar_url && (
               <AvatarImage
                 src={family.avatar_url}
@@ -878,18 +878,18 @@ export default function ProfilePage() {
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold tracking-tight text-slate-900 leading-tight break-words [text-wrap:balance] min-h-[1.4rem] flex items-center">
+            <h2 className="text-base font-semibold tracking-tight text-ink leading-tight break-words [text-wrap:balance] min-h-[1.4rem] flex items-center">
               {family?.name ? (
                 formatFamilyDisplayName(family.name)
               ) : isLongLoading ? (
-                <span className="text-sm font-medium text-slate-400 animate-pulse">
+                <span className="text-sm font-medium text-body3 animate-pulse">
                   Carregando seus dados...
                 </span>
               ) : (
-                <span className="inline-block h-5 w-32 bg-slate-100 rounded-lg animate-pulse" />
+                <span className="inline-block h-5 w-32 bg-surface-2 rounded-lg animate-pulse" />
               )}
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5 truncate">{user?.email || 'Usuário'}</p>
+            <p className="text-xs text-body2 mt-0.5 truncate">{user?.email || 'Usuário'}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -912,7 +912,7 @@ export default function ProfilePage() {
             type="button"
             onClick={openEditFamilyDialog}
             aria-label="Editar família"
-            className="w-9 h-9 rounded-full border border-line bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-50 flex items-center justify-center transition-colors shadow-sm"
+            className="w-9 h-9 rounded-full border border-line bg-surface text-body2 hover:text-ink hover:bg-surface-2 flex items-center justify-center transition-colors shadow-sm"
           >
             <Pencil className="w-4 h-4" />
           </button>
@@ -930,20 +930,18 @@ export default function ProfilePage() {
         <button
           type="button"
           onClick={() => toggleSection('familia')}
-          className="w-full flex items-center gap-3.5 px-5 py-4 text-left hover:bg-slate-50/60 transition-colors"
+          className="w-full flex items-center gap-3.5 px-5 py-4 text-left hover:bg-surface-2 transition-colors"
           aria-expanded={openSection === 'familia'}
         >
           <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
             <Users className="w-5 h-5" strokeWidth={1.75} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-slate-900 leading-tight">Família</p>
-            <p className="text-[11px] text-slate-500 truncate">
-              Membros, convites e acerto de contas
-            </p>
+            <p className="text-sm font-semibold text-ink leading-tight">Família</p>
+            <p className="text-[11px] text-body2 truncate">Membros, convites e acerto de contas</p>
           </div>
           <ChevronRight
-            className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${openSection === 'familia' ? 'rotate-90' : ''}`}
+            className={`w-4 h-4 text-body3 shrink-0 transition-transform duration-200 ${openSection === 'familia' ? 'rotate-90' : ''}`}
           />
         </button>
         {openSection === 'familia' && (
@@ -958,11 +956,11 @@ export default function ProfilePage() {
             {/* Auditoria 16/10: "Acerto de contas do mês" MIGROU pra aba Orçamentos da
             Carteira — é operação do dia a dia (rateio), não configuração de conta. */}
             {/* Membros da família */}{' '}
-            <div className="px-5 py-3.5 border-t border-slate-100">
+            <div className="px-5 py-3.5 border-t border-line">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-sm font-semibold text-slate-900">Membros da família</span>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 shrink-0">
+                  <span className="text-sm font-semibold text-ink">Membros da família</span>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-surface-2 text-body shrink-0">
                     {members.length}/5 membros
                   </span>
                 </div>
@@ -988,14 +986,14 @@ export default function ProfilePage() {
                   <Button
                     onClick={() => setIsJoinDialogOpen(true)}
                     variant="outline"
-                    className="text-xs font-semibold text-slate-700 border-slate-200 hover:bg-slate-50 rounded-xl h-8 gap-1 px-3"
+                    className="text-xs font-semibold text-body border-line hover:bg-surface-2 rounded-xl h-8 gap-1 px-3"
                   >
                     <KeyRound className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Entrar com código</span>
                   </Button>
                 </div>
               </div>
-              <div className="divide-y divide-slate-100 mt-1">
+              <div className="divide-y divide-line mt-1">
                 {members.map((member) => (
                   <div key={member.id} className="py-2.5 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -1006,11 +1004,9 @@ export default function ProfilePage() {
                       </Avatar>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-bold text-xs text-slate-900 truncate">
-                            {member.name}
-                          </span>
+                          <span className="font-bold text-xs text-ink truncate">{member.name}</span>
                           <span
-                            className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${member.is_admin ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}
+                            className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${member.is_admin ? 'bg-emerald-100 text-emerald-800' : 'bg-surface-2 text-body'}`}
                           >
                             {member.is_admin ? 'Admin' : 'Membro'}
                           </span>
@@ -1022,7 +1018,7 @@ export default function ProfilePage() {
                         <button
                           type="button"
                           onClick={() => openEditMemberDialog(member)}
-                          className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                          className="p-1.5 text-body3 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
                           title="Renomear membro"
                           aria-label={`Renomear ${member.name}`}
                         >
@@ -1033,7 +1029,7 @@ export default function ProfilePage() {
                         <button
                           type="button"
                           onClick={() => setMemberToDelete(member)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-1.5 text-body3 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Remover membro"
                           aria-label={`Remover ${member.name}`}
                         >
@@ -1060,20 +1056,20 @@ export default function ProfilePage() {
         <button
           type="button"
           onClick={() => toggleSection('assinatura')}
-          className="w-full flex items-center gap-3.5 px-5 py-4 text-left hover:bg-slate-50/60 transition-colors"
+          className="w-full flex items-center gap-3.5 px-5 py-4 text-left hover:bg-surface-2 transition-colors"
           aria-expanded={openSection === 'assinatura'}
         >
           <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
             <CreditCard className="w-5 h-5" strokeWidth={1.75} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-slate-900 leading-tight">Assinatura</p>
-            <p className="text-[11px] text-slate-500 truncate">Plano e cobrança</p>
+            <p className="text-sm font-semibold text-ink leading-tight">Assinatura</p>
+            <p className="text-[11px] text-body2 truncate">Plano e cobrança</p>
           </div>
           <span
             className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
               subscriptionLoading || accessLoading
-                ? 'bg-slate-100 text-slate-400'
+                ? 'bg-surface-2 text-body3'
                 : isSubscriptionActive(subscription)
                   ? 'bg-emerald-100 text-emerald-700'
                   : accessStatus.status === 'trial'
@@ -1092,13 +1088,13 @@ export default function ProfilePage() {
                   : 'Inativo'}
           </span>
           <ChevronRight
-            className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${openSection === 'assinatura' ? 'rotate-90' : ''}`}
+            className={`w-4 h-4 text-body3 shrink-0 transition-transform duration-200 ${openSection === 'assinatura' ? 'rotate-90' : ''}`}
           />
         </button>
         {openSection === 'assinatura' && (
-          <div className="px-5 py-3.5 border-t border-slate-100">
+          <div className="px-5 py-3.5 border-t border-line">
             {subscriptionLoading ? (
-              <div className="py-3 flex items-center justify-center gap-2 text-xs text-slate-500">
+              <div className="py-3 flex items-center justify-center gap-2 text-xs text-body2">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Carregando assinatura...
               </div>
@@ -1123,7 +1119,7 @@ export default function ProfilePage() {
                     </p>
                   </div>
                 )}
-                <p className="text-xs text-slate-600">
+                <p className="text-xs text-body">
                   Você ainda não tem assinatura ativa. Escolha um plano para desbloquear tudo:
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1135,9 +1131,9 @@ export default function ProfilePage() {
                   >
                     <span className="flex flex-col leading-tight">
                       <span className="font-semibold">R$ 19,90/mês</span>
-                      <span className="text-[10px] font-medium text-slate-500">Pix ou cartão</span>
+                      <span className="text-[10px] font-medium text-body2">Pix ou cartão</span>
                     </span>
-                    <ExternalLink className="w-4 h-4 text-slate-400" />
+                    <ExternalLink className="w-4 h-4 text-body3" />
                   </a>{' '}
                   <a
                     href={CHECKOUT_URLS.yearly}
@@ -1154,7 +1150,7 @@ export default function ProfilePage() {
                     <ExternalLink className="w-4 h-4" />
                   </a>{' '}
                 </div>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[11px] text-body2">
                   Pagamento processado com segurança. Após assinar, o acesso é liberado
                   automaticamente no e-mail da sua conta.
                 </p>
@@ -1162,7 +1158,7 @@ export default function ProfilePage() {
             ) : (
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-semibold text-slate-900">
+                  <span className="text-sm font-semibold text-ink">
                     Plano {subscription.plan === 'yearly' ? 'Anual' : 'Mensal'}
                   </span>
                   <span
@@ -1178,13 +1174,13 @@ export default function ProfilePage() {
                   </span>
                 </div>
                 {subscription.current_period_end && (
-                  <p className="text-xs text-slate-600">
+                  <p className="text-xs text-body">
                     {isSubscriptionActive(subscription)
                       ? `Próxima renovação em ${new Date(subscription.current_period_end).toLocaleDateString('pt-BR')}`
                       : `Acesso válido até ${new Date(subscription.current_period_end).toLocaleDateString('pt-BR')}`}
                   </p>
                 )}
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[11px] text-body2">
                   O cartão é cobrado automaticamente. Você pode cancelar quando quiser — sem multa,
                   sem burocracia.
                 </p>
@@ -1235,16 +1231,16 @@ export default function ProfilePage() {
               }
             }
           }}
-          className="w-full flex items-center gap-3.5 px-5 py-4 text-left hover:bg-slate-50/60 transition-colors"
+          className="w-full flex items-center gap-3.5 px-5 py-4 text-left hover:bg-surface-2 transition-colors"
         >
           <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
             <Share className="w-5 h-5" strokeWidth={1.75} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-slate-900 leading-tight">
+            <p className="text-sm font-semibold text-ink leading-tight">
               Convide amigos, ganhe dias grátis
             </p>
-            <p className="text-[11px] text-slate-500 truncate">
+            <p className="text-[11px] text-body2 truncate">
               Cada amigo que usar o app te dá +7 dias de Curiango
             </p>
           </div>
@@ -1257,7 +1253,7 @@ export default function ProfilePage() {
               +{referral.bonus_days} dias
             </span>
           ) : (
-            <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+            <ChevronRight className="w-4 h-4 text-body3 shrink-0" />
           )}
         </button>
       </section>
@@ -1276,15 +1272,15 @@ export default function ProfilePage() {
               toggleSection('documentos')
               navigate('/perfil/documentos')
             }}
-            className="w-full flex items-center gap-3.5 px-5 py-4 text-left hover:bg-slate-50/60 transition-colors"
+            className="w-full flex items-center gap-3.5 px-5 py-4 text-left hover:bg-surface-2 transition-colors"
             aria-expanded={openSection === 'documentos'}
           >
             <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
               <Folder className="w-5 h-5" strokeWidth={1.75} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-slate-900 leading-tight">Documentos</p>
-              <p className="text-[11px] text-slate-500 truncate">
+              <p className="text-sm font-semibold text-ink leading-tight">Documentos</p>
+              <p className="text-[11px] text-body2 truncate">
                 {docsCount === null
                   ? 'Cofre de arquivos da família'
                   : docsCount === 0
@@ -1299,12 +1295,12 @@ export default function ProfilePage() {
                 Atenção
               </span>
             ) : docsCount !== null && docsCount > 0 ? (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 shrink-0">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-2 text-body shrink-0">
                 {docsCount}
               </span>
             ) : null}
             <ChevronRight
-              className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${openSection === 'documentos' ? 'rotate-90' : ''}`}
+              className={`w-4 h-4 text-body3 shrink-0 transition-transform duration-200 ${openSection === 'documentos' ? 'rotate-90' : ''}`}
             />
           </button>
         </section>
@@ -1321,24 +1317,24 @@ export default function ProfilePage() {
         <button
           type="button"
           onClick={() => toggleSection('conta')}
-          className="w-full flex items-center gap-3.5 px-5 py-4 text-left hover:bg-slate-50/60 transition-colors"
+          className="w-full flex items-center gap-3.5 px-5 py-4 text-left hover:bg-surface-2 transition-colors"
           aria-expanded={openSection === 'conta'}
         >
           <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
             <UserIcon className="w-5 h-5" strokeWidth={1.75} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-slate-900 leading-tight">Minha conta</p>
-            <p className="text-[11px] text-slate-500 truncate">Nome, senha, sair e excluir</p>
+            <p className="text-sm font-semibold text-ink leading-tight">Minha conta</p>
+            <p className="text-[11px] text-body2 truncate">Nome, senha, sair e excluir</p>
           </div>
           <ChevronRight
-            className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${openSection === 'conta' ? 'rotate-90' : ''}`}
+            className={`w-4 h-4 text-body3 shrink-0 transition-transform duration-200 ${openSection === 'conta' ? 'rotate-90' : ''}`}
           />
         </button>
         {openSection === 'conta' && (
           <div>
             {/* Identidade: avatar + nome */}
-            <div className="px-5 py-3.5 border-t border-slate-100 flex items-center gap-3">
+            <div className="px-5 py-3.5 border-t border-line flex items-center gap-3">
               {' '}
               <div className="relative shrink-0">
                 <Avatar className="w-11 h-11 border border-action/40">
@@ -1375,8 +1371,8 @@ export default function ProfilePage() {
                 />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-slate-900 truncate">{userDisplayName}</p>
-                <p className="text-[11px] text-slate-500 truncate">{user?.email}</p>
+                <p className="text-sm font-bold text-ink truncate">{userDisplayName}</p>
+                <p className="text-[11px] text-body2 truncate">{user?.email}</p>
               </div>
               <Button
                 type="button"
@@ -1396,36 +1392,36 @@ export default function ProfilePage() {
             <button
               type="button"
               onClick={() => setIsPasswordDialogOpen(true)}
-              className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors text-left"
+              className="w-full px-5 py-3.5 border-t border-line flex items-center justify-between gap-3 hover:bg-surface-2 transition-colors text-left"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-surface-2 text-body flex items-center justify-center shrink-0">
                   <KeyRound className="w-4 h-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-900">Alterar senha</p>
-                  <p className="text-[11px] text-slate-500">Troque sem sair do aplicativo</p>
+                  <p className="text-sm font-semibold text-ink">Alterar senha</p>
+                  <p className="text-[11px] text-body2">Troque sem sair do aplicativo</p>
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+              <ChevronRight className="w-4 h-4 text-body3 shrink-0" />
             </button>
 
             {/* Sair da conta */}
             <button
               type="button"
               onClick={() => setIsSignOutConfirmOpen(true)}
-              className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors text-left"
+              className="w-full px-5 py-3.5 border-t border-line flex items-center justify-between gap-3 hover:bg-surface-2 transition-colors text-left"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-surface-2 text-body flex items-center justify-center shrink-0">
                   <LogOut className="w-4 h-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-900">Sair da conta</p>
-                  <p className="text-[11px] text-slate-500">No dispositivo, sem apagar dados</p>
+                  <p className="text-sm font-semibold text-ink">Sair da conta</p>
+                  <p className="text-[11px] text-body2">No dispositivo, sem apagar dados</p>
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+              <ChevronRight className="w-4 h-4 text-body3 shrink-0" />
             </button>
 
             {/* EXPORTAR MEUS DADOS (movido p/ Minha Conta 22/10): par LGPD do
@@ -1434,23 +1430,21 @@ export default function ProfilePage() {
               type="button"
               onClick={handleExportCsv}
               disabled={exporting}
-              className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-50/60 transition-colors"
+              className="w-full px-5 py-3.5 border-t border-line flex items-center justify-between gap-3 hover:bg-surface-2 transition-colors"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
                   <Download className="w-4 h-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-900">Exportar meus dados</p>
-                  <p className="text-[11px] text-slate-500">
-                    Baixa todos os lançamentos em CSV (LGPD)
-                  </p>
+                  <p className="text-sm font-semibold text-ink">Exportar meus dados</p>
+                  <p className="text-[11px] text-body2">Baixa todos os lançamentos em CSV (LGPD)</p>
                 </div>
               </div>
               {exporting ? (
-                <Loader2 className="w-4 h-4 text-slate-400 shrink-0 animate-spin" />
+                <Loader2 className="w-4 h-4 text-body3 shrink-0 animate-spin" />
               ) : (
-                <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+                <ChevronRight className="w-4 h-4 text-body3 shrink-0" />
               )}
             </button>
 
@@ -1461,7 +1455,7 @@ export default function ProfilePage() {
                 setDeleteConfirmText('')
                 setIsDeleteAccountOpen(true)
               }}
-              className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-red-50/50 transition-colors text-left"
+              className="w-full px-5 py-3.5 border-t border-line flex items-center justify-between gap-3 hover:bg-red-50/50 transition-colors text-left"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-9 h-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0">
@@ -1469,10 +1463,10 @@ export default function ProfilePage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-red-700">Excluir minha conta</p>
-                  <p className="text-[11px] text-slate-500">Apaga seus dados para sempre (LGPD)</p>
+                  <p className="text-[11px] text-body2">Apaga seus dados para sempre (LGPD)</p>
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+              <ChevronRight className="w-4 h-4 text-body3 shrink-0" />
             </button>
           </div>
         )}
@@ -1488,22 +1482,22 @@ export default function ProfilePage() {
         <button
           type="button"
           onClick={() => toggleSection('preferencias')}
-          className="w-full flex items-center gap-3.5 px-5 py-4 text-left hover:bg-slate-50/60 transition-colors"
+          className="w-full flex items-center gap-3.5 px-5 py-4 text-left hover:bg-surface-2 transition-colors"
           aria-expanded={openSection === 'preferencias'}
         >
           <div className="w-10 h-10 rounded-2xl bg-violet-50 text-violet-700 flex items-center justify-center shrink-0">
             <Settings className="w-5 h-5" strokeWidth={1.75} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-slate-900 leading-tight">Preferências</p>
-            <p className="text-[11px] text-slate-500 truncate">
+            <p className="text-sm font-semibold text-ink leading-tight">Preferências</p>
+            <p className="text-[11px] text-body2 truncate">
               Notificações{' '}
               {pushStatus === 'granted' ? 'ativas' : pushStatus === 'denied' ? 'bloqueadas' : ''} ·
               catálogo e instalar app
             </p>
           </div>
           <ChevronRight
-            className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${openSection === 'preferencias' ? 'rotate-90' : ''}`}
+            className={`w-4 h-4 text-body3 shrink-0 transition-transform duration-200 ${openSection === 'preferencias' ? 'rotate-90' : ''}`}
           />
         </button>
         {openSection === 'preferencias' && (
@@ -1515,7 +1509,7 @@ export default function ProfilePage() {
                 type="button"
                 onClick={handleInstallShortcutClick}
                 disabled={isInstalling}
-                className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors text-left"
+                className="w-full px-5 py-3.5 border-t border-line flex items-center justify-between gap-3 hover:bg-surface-2 transition-colors text-left"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div
@@ -1526,10 +1520,10 @@ export default function ProfilePage() {
                     <CuriangoLogo size={20} color="#FCA311" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-900">
+                    <p className="text-sm font-semibold text-ink">
                       📲 Instalar aplicativo no celular
                     </p>
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-[11px] text-body2">
                       Tenha acesso rápido direto da sua tela inicial
                     </p>
                   </div>
@@ -1564,34 +1558,34 @@ export default function ProfilePage() {
             <button
               type="button"
               onClick={() => setIsCategoryManagementOpen(true)}
-              className="w-full px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors text-left"
+              className="w-full px-5 py-3.5 border-t border-line flex items-center justify-between gap-3 hover:bg-surface-2 transition-colors text-left"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-surface-2 text-body flex items-center justify-center shrink-0">
                   <Edit3 className="w-4 h-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-900">Catálogo de Categorias</p>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-sm font-semibold text-ink">Catálogo de Categorias</p>
+                  <p className="text-[11px] text-body2">
                     Gerencie gavetas ou restaure o catálogo padrão canônico
                   </p>
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+              <ChevronRight className="w-4 h-4 text-body3 shrink-0" />
             </button>
 
             {/* Moeda */}
-            <div className="px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3">
+            <div className="px-5 py-3.5 border-t border-line flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-surface-2 text-body flex items-center justify-center shrink-0">
                   <DollarSign className="w-4 h-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-900">Formato de Moeda</p>
-                  <p className="text-[11px] text-slate-500">Padrão nacional do sistema</p>
+                  <p className="text-sm font-semibold text-ink">Formato de Moeda</p>
+                  <p className="text-[11px] text-body2">Padrão nacional do sistema</p>
                 </div>
               </div>
-              <span className="text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-full shrink-0">
+              <span className="text-xs font-bold text-body bg-surface-2 px-3 py-1 rounded-full shrink-0">
                 BRL (R$)
               </span>
             </div>
@@ -1599,14 +1593,14 @@ export default function ProfilePage() {
             {/* Reiniciar tour (19/10, Matheus): o usuário pode rever o walkthrough
                 quando quiser — padrão Duolingo (revisitar onboarding). Limpa o
                 progresso e recarrega: a Home mostra o tour de novo. */}
-            <div className="px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3">
+            <div className="px-5 py-3.5 border-t border-line flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
                   <RotateCcw className="w-4 h-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-900">Reiniciar tour</p>
-                  <p className="text-[11px] text-slate-500">Rever a apresentação do Curiango</p>
+                  <p className="text-sm font-semibold text-ink">Reiniciar tour</p>
+                  <p className="text-[11px] text-body2">Rever a apresentação do Curiango</p>
                 </div>
               </div>
               <button
@@ -1643,14 +1637,14 @@ export default function ProfilePage() {
             {/* NOTIFICAÇÕES (21/10, Matheus): o app depende de push (piu da família,
                 deep-link) e o usuário não tinha onde gerenciar. Estado real do
                 browser + guia de desbloqueio quando o canal foi negado. */}
-            <div className="px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-3">
+            <div className="px-5 py-3.5 border-t border-line flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
                   <Bell className="w-4 h-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-900">Notificações</p>
-                  <p className="text-[11px] text-slate-500" data-testid="push-status-label">
+                  <p className="text-sm font-semibold text-ink">Notificações</p>
+                  <p className="text-[11px] text-body2" data-testid="push-status-label">
                     {pushStatus === 'granted'
                       ? 'Ativas — você recebe o piu da família'
                       : pushStatus === 'denied'
@@ -1674,7 +1668,7 @@ export default function ProfilePage() {
                   Ativas
                 </span>
               ) : pushStatus === 'unsupported' ? (
-                <span className="shrink-0 text-[11px] font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                <span className="shrink-0 text-[11px] font-bold text-body2 bg-surface-2 px-3 py-1 rounded-full">
                   Indisponível
                 </span>
               ) : (
@@ -1701,50 +1695,50 @@ export default function ProfilePage() {
         <button
           type="button"
           onClick={() => toggleSection('sobre')}
-          className="w-full flex items-center gap-3.5 px-5 py-4 text-left hover:bg-slate-50/60 transition-colors"
+          className="w-full flex items-center gap-3.5 px-5 py-4 text-left hover:bg-surface-2 transition-colors"
           aria-expanded={openSection === 'sobre'}
         >
-          <div className="w-10 h-10 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-2xl bg-surface-2 text-body flex items-center justify-center shrink-0">
             <Shield className="w-5 h-5" strokeWidth={1.75} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-slate-900 leading-tight">Sobre o Curiangoo</p>
-            <p className="text-[11px] text-slate-500 truncate">Privacidade, termos e FAQ</p>
+            <p className="text-sm font-semibold text-ink leading-tight">Sobre o Curiangoo</p>
+            <p className="text-[11px] text-body2 truncate">Privacidade, termos e FAQ</p>
           </div>
           <ChevronRight
-            className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${openSection === 'sobre' ? 'rotate-90' : ''}`}
+            className={`w-4 h-4 text-body3 shrink-0 transition-transform duration-200 ${openSection === 'sobre' ? 'rotate-90' : ''}`}
           />
         </button>
         {openSection === 'sobre' && (
           <div>
             <Link
               to="/privacidade"
-              className="px-5 py-3 border-t border-slate-100 flex items-center justify-between hover:bg-slate-50/70"
+              className="px-5 py-3 border-t border-line flex items-center justify-between hover:bg-surface-2"
             >
               {' '}
-              <span className="text-sm font-medium text-slate-800">Privacidade</span>
-              <ChevronRight className="w-4 h-4 text-slate-300" />
+              <span className="text-sm font-medium text-ink">Privacidade</span>
+              <ChevronRight className="w-4 h-4 text-body3" />
             </Link>
             <Link
               to="/termos"
-              className="px-5 py-3 border-t border-slate-100 flex items-center justify-between hover:bg-slate-50/70 transition-colors"
+              className="px-5 py-3 border-t border-line flex items-center justify-between hover:bg-surface-2 transition-colors"
             >
-              <span className="text-sm font-medium text-slate-800">Termos de Uso</span>
-              <ChevronRight className="w-4 h-4 text-slate-300" />
+              <span className="text-sm font-medium text-ink">Termos de Uso</span>
+              <ChevronRight className="w-4 h-4 text-body3" />
             </Link>
             <Link
               to="/faq"
-              className="px-5 py-3 border-t border-slate-100 flex items-center justify-between hover:bg-slate-50/70 transition-colors"
+              className="px-5 py-3 border-t border-line flex items-center justify-between hover:bg-surface-2 transition-colors"
             >
-              <span className="text-sm font-medium text-slate-800">Perguntas frequentes</span>
-              <ChevronRight className="w-4 h-4 text-slate-300" />
+              <span className="text-sm font-medium text-ink">Perguntas frequentes</span>
+              <ChevronRight className="w-4 h-4 text-body3" />
             </Link>
             <Link
               to="/contato"
-              className="px-5 py-3 border-t border-slate-100 flex items-center justify-between hover:bg-slate-50/70 transition-colors"
+              className="px-5 py-3 border-t border-line flex items-center justify-between hover:bg-surface-2 transition-colors"
             >
-              <span className="text-sm font-medium text-slate-800">Fale conosco</span>
-              <ChevronRight className="w-4 h-4 text-slate-300" />
+              <span className="text-sm font-medium text-ink">Fale conosco</span>
+              <ChevronRight className="w-4 h-4 text-body3" />
             </Link>
           </div>
         )}
@@ -1752,11 +1746,10 @@ export default function ProfilePage() {
 
       {/* Rodapé de Versão com versão dinâmica sincronizada */}
       <div className="text-center pt-1 pb-4">
-        <span className="text-[11px] text-slate-400 font-medium">
+        <span className="text-[11px] text-body3 font-medium">
           Versão {appVersion} • Finanças Familiares
         </span>
       </div>
-
       {/* DIÁLOGO EDITAR FAMÍLIA (NOME E FOTO) */}
       <Dialog open={isEditFamilyOpen} onOpenChange={setIsEditFamilyOpen}>
         <DialogContent className="max-w-sm w-[92vw] rounded-3xl p-6">
