@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { Home, Wallet, Plus, Target, User, TrendingUp, LogOut, ChevronRight } from 'lucide-react'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
@@ -308,122 +309,71 @@ export default function Layout() {
         {/* BANNER EDUCATIVO DE INSTALAÇÃO PWA (POSICIONADO ACIMA DO DOCK FLUTUANTE) */}
         <InstallPwaBanner variant="bottom-nav" />
 
-        {/* DOCK FLUTUANTE EM PÍLULA (MOBILE APENAS < 768px, 360–412px SAFE) — R58: Fundo Azul-Marinho #14213D espelhando o herói sangrado do topo. REVERTIDO 18/10 (decisão do Matheus: barra cheia sem rótulos ficou estranho — a pílula é a identidade do Curiangoo) */}
+        {/* DOCK FLUTUANTE EM PÍLULA (MOBILE APENAS < 768px, 360–412px SAFE) —
+            ESTILO INSTAGRAM/PINTEREST/SPOTIFY (pedido do Matheus): pílula plana,
+            5 itens IGUAIS — o + central é só mais um item (sem FAB erguido, sem
+            círculo colorido, sem sombra de flutuação, sem borda, sem rótulo
+            "Nova"). Ícones de traço fino (strokeWidth 1.5) e estado ativo
+            destacado por PREENCHIMENTO sutil (bg-action/20 + texto branco),
+            nunca por elevação. Tokens CDS v2.0: bg-ink, shadow-cds-dock, action. */}
         <nav
           aria-label="Navegação Principal"
           className="md:hidden fixed bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] inset-x-0 z-40 px-3 sm:px-4 max-w-md mx-auto pointer-events-none"
         >
-          <div className="pointer-events-auto w-full bg-ink border border-white/10 shadow-elevation-3 rounded-full px-2 py-1.5 flex items-center justify-between transition-all">
-            {/* 1. Início */}
-            <NavLink
-              to="/inicio"
-              className={({ isActive }) =>
-                `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-action font-semibold' : 'text-white/70 hover:text-white'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <div
-                    className={`p-1 rounded-full transition-all duration-200 ${
-                      isActive ? 'bg-action/20 scale-105 text-action' : ''
-                    }`}
+          <div className="pointer-events-auto w-full bg-ink border border-line shadow-cds-dock rounded-full px-1.5 py-1.5 flex items-center justify-between">
+            {/* Pílula plana estilo Instagram/Pinterest/Spotify: Início, Carteira,
+                + (Nova Transação), Patrimônio, Metas — 5 itens IGUAIS. O + entra
+                no meio da lista (entre Carteira e Patrimônio), mesmo tamanho e
+                traço dos demais; ativo é destacado por COR (text-action), nunca
+                por elevação. O rótulo invisível "." alinha o + na mesma altura
+                dos outros ícones (eles têm rótulo de texto embaixo). */}
+            {navItems.slice(0, 4).map((item, idx) => {
+              const Icon = item.icon
+              return (
+                <Fragment key={item.to}>
+                  {/* + Nova Transação: abre a MESMA folha de Nova Transação de
+                      sempre; aria-label cobre a ausência do texto "Nova". */}
+                  {idx === 2 && (
+                    <button
+                      type="button"
+                      onClick={() => openNewTransaction()}
+                      data-testid="dock-new-transaction"
+                      className="flex flex-col items-center justify-center flex-1 py-1 rounded-2xl text-white/70 transition-colors duration-200 hover:text-white active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+                      aria-label="Nova Transação"
+                      title="Nova Transação"
+                    >
+                      <Plus className="w-5 h-5" strokeWidth={1.5} />
+                      <span
+                        className="text-[10px] leading-none mt-0.5 invisible select-none"
+                        aria-hidden="true"
+                      >
+                        .
+                      </span>
+                    </button>
+                  )}
+                  <NavLink
+                    to={item.to}
+                    data-testid={
+                      item.to === '/patrimonio'
+                        ? 'dock-patrimony'
+                        : item.to === '/metas'
+                          ? 'dock-metas'
+                          : undefined
+                    }
+                    className={({ isActive }) =>
+                      `flex flex-col items-center justify-center flex-1 py-1 rounded-2xl transition-colors duration-200 active:scale-95 ${
+                        isActive ? 'text-action' : 'text-white/60 hover:text-white/90'
+                      }`
+                    }
                   >
-                    <Home className="w-5 h-5" strokeWidth={1.5} />
-                  </div>
-                  <span className="text-[10px] tracking-tight mt-0.5 leading-none">Início</span>
-                </>
-              )}
-            </NavLink>
-
-            {/* 2. Carteira */}
-            <NavLink
-              to="/carteira"
-              className={({ isActive }) =>
-                `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-action font-semibold' : 'text-white/70 hover:text-white'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <div
-                    className={`p-1 rounded-full transition-all duration-200 ${
-                      isActive ? 'bg-action/20 scale-105 text-action' : ''
-                    }`}
-                  >
-                    <Wallet className="w-5 h-5" strokeWidth={1.5} />
-                  </div>
-                  <span className="text-[10px] tracking-tight mt-0.5 leading-none">Carteira</span>
-                </>
-              )}
-            </NavLink>
-
-            {/* 3. BOTÃO CENTRAL "Nova" (AÇÃO ERGUIDA COM RÓTULO + ÍCONE — PADRÃO OURO R54/R55/R58) */}
-            <div className="flex-1 flex flex-col items-center justify-center py-0.5 -mt-3.5">
-              <button
-                type="button"
-                onClick={() => openNewTransaction()}
-                data-testid="dock-new-transaction"
-                className="w-11 h-11 rounded-full bg-action text-white flex items-center justify-center shadow-lg shadow-action/30 border-2 border-ink active:scale-90 hover:scale-105 transition-all duration-200 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
-                aria-label="Nova Transação"
-                title="Nova Transação"
-              >
-                <Plus className="w-5 h-5 stroke-[2.5]" />
-              </button>
-              <span className="text-[10px] font-semibold text-white tracking-tight mt-0.5 leading-none">
-                Nova
-              </span>
-            </div>
-
-            {/* 4. Patrimônio (FRENTE 2 — substitui o slot da pílula) */}
-            <NavLink
-              to="/patrimonio"
-              data-testid="dock-patrimony"
-              className={({ isActive }) =>
-                `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-action font-semibold' : 'text-white/70 hover:text-white'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <div
-                    className={`p-1 rounded-full transition-all duration-200 ${
-                      isActive ? 'bg-action/20 scale-105 text-action' : ''
-                    }`}
-                  >
-                    <TrendingUp className="w-5 h-5" strokeWidth={1.5} />
-                  </div>
-                  <span className="text-[10px] tracking-tight mt-0.5 leading-none">Patrimônio</span>
-                </>
-              )}
-            </NavLink>
-
-            {/* 5. Metas */}
-            <NavLink
-              to="/metas"
-              data-testid="dock-metas"
-              className={({ isActive }) =>
-                `flex flex-col items-center justify-center flex-1 py-1 rounded-full transition-all duration-200 active:scale-95 ${
-                  isActive ? 'text-action font-semibold' : 'text-white/70 hover:text-white'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <div
-                    className={`p-1 rounded-full transition-all duration-200 ${
-                      isActive ? 'bg-action/20 scale-105 text-action' : ''
-                    }`}
-                  >
-                    <Target className="w-5 h-5" strokeWidth={1.5} />
-                  </div>
-                  <span className="text-[10px] tracking-tight mt-0.5 leading-none">Metas</span>
-                </>
-              )}
-            </NavLink>
+                    <Icon className="w-5 h-5" strokeWidth={1.5} />
+                    <span className="text-[10px] tracking-tight mt-0.5 leading-none">
+                      {item.label}
+                    </span>
+                  </NavLink>
+                </Fragment>
+              )
+            })}
           </div>
         </nav>
       </div>

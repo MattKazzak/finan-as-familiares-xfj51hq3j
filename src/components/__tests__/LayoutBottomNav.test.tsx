@@ -38,42 +38,52 @@ vi.mock('@/contexts/ActiveMonthContext', () => ({
   }),
 }))
 
-describe('Layout - Bottom Navigation R54/R58', () => {
-  it('exibe dock com fundo azul-marinho #14213D, rótulo "Nova" e botão central erguido com sombra e destaque', () => {
+describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () => {
+  it('exibe o + como item comum da pílula: sem círculo, sem sombra, sem borda e sem rótulo "Nova"', () => {
     render(
       <MemoryRouter initialEntries={['/inicio']}>
         <Layout />
       </MemoryRouter>,
     )
 
-    // Rótulo "Nova" abaixo do +
-    const newTxLabel = screen.getByText('Nova')
-    expect(newTxLabel).toBeDefined()
-    expect(newTxLabel.className).toContain('text-white')
+    // O rótulo "Nova" NÃO existe mais
+    expect(screen.queryByText('Nova')).toBeNull()
 
-    // Botão central com aria-label "Nova Transação" e elevação (-mt-3.5)
+    // Botão central acessível por aria-label (texto sumiu, acessibilidade fica)
     const centralBtn = screen.getByRole('button', { name: /Nova Transação/i })
     expect(centralBtn).toBeDefined()
-    expect(centralBtn.className).toContain('w-11 h-11')
-    expect(centralBtn.className).toContain('shadow-lg')
+    expect(centralBtn.getAttribute('aria-label')).toBe('Nova Transação')
 
-    // Container erguido
-    const centralContainer = centralBtn.closest('div')
-    expect(centralContainer?.className).toContain('-mt-3.5')
+    // Sem FAB erguido: sem fundo colorido, sem sombra de flutuação, sem borda
+    // e sem a margem negativa que o erguia (-mt-3.5)
+    expect(centralBtn.className).not.toContain('bg-action')
+    expect(centralBtn.className).not.toContain('shadow-lg')
+    expect(centralBtn.className).not.toContain('border-2')
+    expect(centralBtn.className).not.toContain('-mt-3.5')
 
-    // Dock inferior tem fundo marinho #14213D
+    // Ícone de linha igual aos demais (w-5 h-5, strokeWidth 1.5 via lucide)
+    const plusIcon = centralBtn.querySelector('svg')
+    expect(plusIcon).not.toBeNull()
+
+    // Espaçador invisível mantém o + na mesma altura dos ícones com rótulo
+    const spacer = centralBtn.querySelector('span.invisible')
+    expect(spacer).not.toBeNull()
+
+    // Dock inferior plano: pílula navy (bg-ink) com sombra de dock CDS v2.0
     const navBar = screen.getByRole('navigation', { name: /Navegação Principal/i })
-    const navContainer = navBar.querySelector('.bg-\\[\\#14213D\\]')
+    const navContainer = navBar.querySelector('.bg-ink')
     expect(navContainer).not.toBeNull()
+    expect(navContainer?.className).toContain('shadow-cds-dock')
+    expect(navContainer?.className).toContain('rounded-full')
 
-    // Rótulos consistentes dos itens da pílula (Perfil foi pro topo; Patrimônio entrou)
+    // Rótulos dos 4 itens de navegação da pílula
     expect(screen.getByText('Início')).toBeDefined()
     expect(screen.getByText('Carteira')).toBeDefined()
     expect(screen.getByText('Patrimônio')).toBeDefined()
     expect(screen.getByText('Metas')).toBeDefined()
   })
 
-  it('aciona openNewTransaction("income") ao clicar no FAB central "Nova Transação" (R67)', () => {
+  it('aciona openNewTransaction() ao clicar no item + da pílula', () => {
     mockOpenNewTransaction.mockClear()
 
     render(
@@ -86,6 +96,7 @@ describe('Layout - Bottom Navigation R54/R58', () => {
     fireEvent.click(centralBtn)
 
     expect(mockOpenNewTransaction).toHaveBeenCalledTimes(1)
-    expect(mockOpenNewTransaction).toHaveBeenCalledWith('income')
+    // Sem argumentos: o hook aplica o padrão de criação (despesa) como antes
+    expect(mockOpenNewTransaction).toHaveBeenCalledWith()
   })
 })
