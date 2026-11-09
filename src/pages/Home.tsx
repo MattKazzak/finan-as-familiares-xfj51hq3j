@@ -645,7 +645,7 @@ export default function Home() {
   if (isFamilyIncomplete) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center max-w-md mx-auto">
-        <div className="w-16 h-16 rounded-3xl bg-ink text-action flex items-center justify-center shadow-lg shadow-ink/20 mb-4 animate-pulse">
+        <div className="w-16 h-16 rounded-3xl bg-ink text-white flex items-center justify-center shadow-lg shadow-ink/20 mb-4 animate-pulse">
           <Sparkles className="w-8 h-8" />
         </div>
         <h2 className="text-xl font-bold text-ink tracking-tight">

@@ -12,7 +12,7 @@ describe('CuriangoLogo', () => {
     expect(svg?.getAttribute('height')).toBe('28')
     expect(svg?.getAttribute('viewBox')).toBe('0 0 100 100')
     const bodyPath = container.querySelector('path')
-    expect(bodyPath?.getAttribute('fill')).toBe('#14213D')
+    expect(bodyPath?.getAttribute('fill')).toBe('var(--brand-ink)')
     const eyeCircle = container.querySelector('circle')
     expect(eyeCircle?.getAttribute('fill')).toBe('#FFFFFF')
   })

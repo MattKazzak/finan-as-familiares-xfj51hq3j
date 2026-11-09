@@ -358,7 +358,7 @@ export default function Layout() {
                     }
                     className={({ isActive }) =>
                       `flex flex-col items-center justify-center flex-1 py-1 rounded-2xl transition-colors duration-200 active:scale-95 ${
-                        isActive ? 'text-action' : 'text-white/60 hover:text-white/90'
+                        isActive ? 'text-white bg-action/25' : 'text-white/60 hover:text-white/90'
                       }`
                     }
                   >

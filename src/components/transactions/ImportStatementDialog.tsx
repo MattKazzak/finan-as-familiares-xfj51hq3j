@@ -1592,7 +1592,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
           <DialogHeader className="shrink-0 px-3.5 sm:px-6 py-3 border-b border-slate-100 bg-white/95 backdrop-blur-md z-10">
             <div className="flex items-center justify-between gap-2 pr-7 sm:pr-8">
               <div className="flex items-center gap-2 min-w-0">
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-ink text-action flex items-center justify-center shrink-0 shadow-2xs">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-ink text-white flex items-center justify-center shrink-0 shadow-2xs">
                   <UploadCloud className="w-4.5 h-4.5 stroke-[1.8]" />
                 </div>
                 <div className="min-w-0">
@@ -1938,7 +1938,7 @@ export const ImportStatementDialog: React.FC<ImportStatementDialogProps> = ({
                   className="hidden"
                 />
 
-                <div className="w-16 h-16 rounded-2xl bg-ink text-action flex items-center justify-center mx-auto mb-4 shadow-sm">
+                <div className="w-16 h-16 rounded-2xl bg-ink text-white flex items-center justify-center mx-auto mb-4 shadow-sm">
                   {parsing ? (
                     <Loader2 className="w-8 h-8 animate-spin" />
                   ) : (

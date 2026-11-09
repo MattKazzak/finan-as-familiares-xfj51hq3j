@@ -8,7 +8,7 @@ export interface CuriangoLogoProps extends React.SVGProps<SVGSVGElement> {
    * Mantido por retrocompatibilidade: a nova silhueta agora é nativamente sólida/preenchida.
    */
   filled?: boolean
-  /** Cor do olho — padrão #FFFFFF (retrocompatível). Use #14213D p/ olho azul-marinho. */
+  /** Cor do olho — padrão #FFFFFF (retrocompatível). Use var(--brand-ink) p/ olho azul-marinho. */
   eyeColor?: string
   /** Raio do olho — padrão 2.25 (retrocompatível). Use 3.4 p/ olho expressivo. */
   eyeRadius?: number
@@ -21,11 +21,11 @@ export interface CuriangoLogoProps extends React.SVGProps<SVGSVGElement> {
  * Silhueta sólida e minimalista do pássaro Curiango virado para a esquerda,
  * com corpo arredondado, cauda longa e elegante afinando para a direita,
  * olho circular branco na cabeça e linha curva branca sugerindo a dobra da asa.
- * Cores padrão: #14213D (azul-marinho oficial) ou currentColor, com suporte total a #FCA311.
+ * Cores padrão: var(--brand-ink) (#1D2535, azul-marinho do logo atual) ou currentColor, com suporte total a #FCA311.
  */
 export const CuriangoLogo: React.FC<CuriangoLogoProps> = ({
   size = 28,
-  color = '#14213D',
+  color = 'var(--brand-ink)',
   className = '',
   // filled é mantido na assinatura para compatibilidade retroativa
   filled: _filled,
@@ -95,7 +95,7 @@ export const CuriangoLogo: React.FC<CuriangoLogoProps> = ({
 export interface CuriangoHeadLogoProps extends React.SVGProps<SVGSVGElement> {
   size?: number | string
   color?: string
-  /** Cor do olho — padrão #14213D (azul-marinho CDS) para destacar sobre o âmbar */
+  /** Cor do olho — padrão var(--brand-ink) (azul-marinho do logo) para destacar sobre o âmbar */
   eyeColor?: string
   className?: string
 }
@@ -104,12 +104,12 @@ export interface CuriangoHeadLogoProps extends React.SVGProps<SVGSVGElement> {
  * CuriangoHeadLogo — Retrato da cabecinha do Curiango (16/10, pedido do Matheus):
  * recorte da cabeça do pássaro (bico + olho grande) para assinaturas compactas
  * onde o pássaro inteiro ficaria ilegível (ex.: card de insight da Home).
- * Olho grande em #14213D (azul-marinho) sobre o corpo âmbar — expressivo e legível.
+ * Olho grande em var(--brand-ink) (azul-marinho) sobre o corpo âmbar — expressivo e legível.
  */
 export const CuriangoHeadLogo: React.FC<CuriangoHeadLogoProps> = ({
   size = 28,
   color = '#FCA311',
-  eyeColor = '#14213D',
+  eyeColor = 'var(--brand-ink)',
   className = '',
   ...props
 }) => {
@@ -174,8 +174,8 @@ export const CuriangoChatBust: React.FC<CuriangoChatBustProps> = ({
       <circle cx="16.5" cy="37" r="3.4" fill="#FFD9A6" />
       <circle cx="47.5" cy="37" r="3.4" fill="#FFD9A6" />
       {/* Olhos frontais grandes + brilho */}
-      <circle cx="23" cy="29" r="4.8" fill="#14213D" />
-      <circle cx="41" cy="29" r="4.8" fill="#14213D" />
+      <circle cx="23" cy="29" r="4.8" fill="var(--brand-ink)" />
+      <circle cx="41" cy="29" r="4.8" fill="var(--brand-ink)" />
       <circle cx="24.6" cy="27.4" r="1.5" fill="#FFFFFF" />
       <circle cx="42.6" cy="27.4" r="1.5" fill="#FFFFFF" />
       {/* Pálpebras — piscar DUPLO nos 2 olhos (assinatura da marca, 4,8s) */}
@@ -199,7 +199,7 @@ export const CuriangoChatBust: React.FC<CuriangoChatBustProps> = ({
       </circle>
       {/* Bico aberto sorrindo (rindo) */}
       <path d="M26 36.5 L38 36.5 L32 41.5 Z" fill="#E08A00" />
-      <path d="M28.5 41.5 L35.5 41.5 L32 45 Z" fill="#14213D" />
+      <path d="M28.5 41.5 L35.5 41.5 L32 45 Z" fill="var(--brand-ink)" />
     </svg>
   )
 }
