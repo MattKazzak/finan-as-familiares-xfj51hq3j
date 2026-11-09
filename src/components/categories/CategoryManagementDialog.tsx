@@ -281,11 +281,11 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
           <DialogHeader>
             <div className="flex items-center justify-between">
               <div>
-                <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <DialogTitle className="text-xl font-bold text-ink flex items-center gap-2">
                   <Tag className="w-5 h-5 text-emerald-700" />
                   <span>Gerenciar Categorias</span>
                 </DialogTitle>
-                <DialogDescription className="text-xs text-slate-500 mt-0.5">
+                <DialogDescription className="text-xs text-body2 mt-0.5">
                   Crie e organize categorias e subcategorias. Os orçamentos vinculados refletirão
                   esta estrutura.
                 </DialogDescription>
@@ -294,15 +294,13 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
           </DialogHeader>
 
           {/* Filtros rápidos, Ações & Botão Nova Categoria */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2 border-b border-slate-100 pb-3">
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl self-start">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2 border-b border-line pb-3">
+            <div className="flex items-center gap-1 bg-surface-2 p-1 rounded-xl self-start">
               <button
                 type="button"
                 onClick={() => setFilterType('all')}
                 className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                  filterType === 'all'
-                    ? 'bg-white text-slate-900 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                  filterType === 'all' ? 'bg-white text-ink shadow-2xs' : 'text-body hover:text-ink'
                 }`}
               >
                 <span>Todas</span>
@@ -313,7 +311,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                 className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                   filterType === 'expense'
                     ? 'bg-white text-red-600 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    : 'text-body hover:text-ink'
                 }`}
               >
                 <span>Despesas</span>
@@ -324,7 +322,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                 className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                   filterType === 'income'
                     ? 'bg-white text-emerald-700 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    : 'text-body hover:text-ink'
                 }`}
               >
                 <span>Receitas</span>
@@ -338,7 +336,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                 variant="outline"
                 size="sm"
                 onClick={() => setShowRestoreMenu(true)}
-                className="text-xs rounded-xl gap-1.5 h-8 border-slate-200 text-slate-700 hover:bg-slate-50 font-medium"
+                className="text-xs rounded-xl gap-1.5 h-8 border-line text-body hover:bg-surface-2 font-medium"
               >
                 <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
                 <span>Restaurar padrão</span>
@@ -363,7 +361,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
               className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-200/60 space-y-3 animate-in fade-in-50"
             >
               <div className="flex items-center justify-between">
-                <span className="font-bold text-xs text-slate-800">Nova Categoria</span>
+                <span className="font-bold text-xs text-ink">Nova Categoria</span>
                 <span className="text-[10px] text-emerald-800 font-semibold uppercase">
                   Personalizada
                 </span>
@@ -415,10 +413,10 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
               {newCatType === 'expense' && (
                 <div className="space-y-1 pt-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-700">
+                    <span className="text-xs font-semibold text-body">
                       Balde Orçamentário <span className="text-rose-500">*</span>
                     </span>
-                    <span className="text-[10px] text-slate-500">Obrigatório</span>
+                    <span className="text-[10px] text-body2">Obrigatório</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {BUCKET_OPTIONS.map((opt) => {
@@ -432,16 +430,14 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                           className={`p-2 rounded-xl border text-left flex flex-col gap-1 transition-all ${
                             isSelected
                               ? opt.activeBorderClass
-                              : 'border-slate-200 bg-white hover:border-slate-300 text-slate-600'
+                              : 'border-line bg-white hover:border-line-strong text-body'
                           }`}
                         >
                           <div className="flex items-center gap-1.5">
                             <IconComp className="w-3.5 h-3.5 shrink-0" />
                             <span className="text-xs font-bold truncate">{opt.label}</span>
                           </div>
-                          <p className="text-[10px] text-slate-500 leading-tight">
-                            {opt.description}
-                          </p>
+                          <p className="text-[10px] text-body2 leading-tight">{opt.description}</p>
                         </button>
                       )
                     })}
@@ -453,14 +449,14 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
               {newCatType === 'expense' && (
                 <div className="space-y-1.5 pt-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-700">
+                    <span className="text-xs font-semibold text-body">
                       Teto orçamentário mensal (R$)
                     </span>
-                    <span className="text-[10px] text-slate-400 font-medium">Opcional</span>
+                    <span className="text-[10px] text-body3 font-medium">Opcional</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div className="relative">
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-body3 font-bold text-xs">
                         R$
                       </span>
                       <Input
@@ -472,8 +468,8 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                         className="bg-white pl-8 text-xs font-bold tabular-nums h-9 rounded-xl"
                       />
                     </div>
-                    <div className="h-9 px-3 rounded-xl border border-slate-200 bg-white flex items-center justify-between text-xs font-semibold tabular-nums text-slate-700">
-                      <span className="text-slate-400 text-[11px] font-normal">% renda:</span>
+                    <div className="h-9 px-3 rounded-xl border border-line bg-white flex items-center justify-between text-xs font-semibold tabular-nums text-body">
+                      <span className="text-body3 text-[11px] font-normal">% renda:</span>
                       <span className="text-xs text-emerald-800">
                         {(() => {
                           const netIncome = family?.monthly_net_income_cents || 0
@@ -485,7 +481,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                       </span>
                     </div>
                   </div>
-                  <p className="text-[10px] text-slate-500 leading-tight">
+                  <p className="text-[10px] text-body2 leading-tight">
                     {parseBRLToCents(newCatLimitStr) > 0
                       ? `Teto individual fixado em ${formatBRL(parseBRLToCents(newCatLimitStr))}.`
                       : 'Consumo livre do saldo do balde (sem teto individual). Esta categoria consumirá o saldo livre do balde orçamentário sem limite individual.'}
@@ -495,7 +491,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
 
               {/* Seletor de Cores */}
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500 font-medium">Cor:</span>
+                <span className="text-xs text-body2 font-medium">Cor:</span>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {CATEGORY_COLORS.map((c) => (
                     <button
@@ -503,7 +499,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                       key={c}
                       onClick={() => setNewCatColor(c)}
                       className={`w-5 h-5 rounded-full transition-transform ${
-                        newCatColor === c ? 'ring-2 ring-slate-900 scale-110' : ''
+                        newCatColor === c ? 'ring-2 ring-ink scale-110' : ''
                       }`}
                       style={{ backgroundColor: c }}
                     />
@@ -539,7 +535,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
           {/* Lista de Categorias com Rolagem Suave */}
           <div className="flex-1 overflow-y-auto pr-1 py-2 space-y-2.5">
             {filteredCategories.length === 0 ? (
-              <div className="text-center py-8 text-xs text-slate-400">
+              <div className="text-center py-8 text-xs text-body3">
                 <span>Nenhuma categoria encontrada para este filtro.</span>
               </div>
             ) : null}
@@ -551,7 +547,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
               return (
                 <div
                   key={cat.id}
-                  className="rounded-2xl border border-slate-200/80 bg-white p-3 space-y-2 shadow-2xs hover:border-slate-300 transition-colors"
+                  className="rounded-2xl border border-line bg-white p-3 space-y-2 shadow-2xs hover:border-line-strong transition-colors"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-3 overflow-hidden">
@@ -564,14 +560,12 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                       />
                       <div className="overflow-hidden">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-slate-800 truncate">
-                            {cat.name}
-                          </span>
+                          <span className="text-sm font-bold text-ink truncate">{cat.name}</span>
                           <span
                             className={`text-[10px] font-semibold px-2 py-0.2 rounded-full ${
                               cat.type === 'income'
                                 ? 'bg-emerald-100 text-emerald-800'
-                                : 'bg-slate-100 text-slate-600'
+                                : 'bg-surface-2 text-body'
                             }`}
                           >
                             <span>{cat.type === 'income' ? 'Receita' : 'Despesa'}</span>
@@ -595,7 +589,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                                   : 'Futuro & Metas'}
                             </span>
                           ) : null}
-                          <span className="text-[11px] text-slate-400">
+                          <span className="text-[11px] text-body3">
                             <span>
                               {subCount} {subCount === 1 ? 'subcategoria' : 'subcategorias'}
                             </span>
@@ -621,7 +615,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                         type="button"
                         onClick={() => handleInitiateDeleteCategory(cat)}
                         disabled={checkingCatUsage}
-                        className="text-slate-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                        className="text-body3 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
                         title="Excluir categoria"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -634,20 +628,20 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                     <div className="mt-2 pl-3 border-l-2 border-emerald-500/40 space-y-2 pt-1 animate-in fade-in-50">
                       <div className="flex flex-wrap gap-1.5">
                         {(!cat.subcategories || cat.subcategories.length === 0) && (
-                          <p className="text-[11px] text-slate-400 py-1">
+                          <p className="text-[11px] text-body3 py-1">
                             Nenhuma subcategoria cadastrada ainda.
                           </p>
                         )}
                         {cat.subcategories?.map((sub) => (
                           <div
                             key={sub.id}
-                            className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 px-2.5 py-1 rounded-xl text-xs text-slate-700 shadow-2xs"
+                            className="inline-flex items-center gap-1.5 bg-surface-2 border border-line px-2.5 py-1 rounded-xl text-xs text-body shadow-2xs"
                           >
                             <span>{sub.name}</span>
                             <button
                               type="button"
                               onClick={() => handleInitiateDeleteSubcategory(sub)}
-                              className="text-slate-400 hover:text-red-600 transition-colors ml-0.5 p-0.5 rounded"
+                              className="text-body3 hover:text-red-600 transition-colors ml-0.5 p-0.5 rounded"
                               title="Remover subcategoria"
                             >
                               <Trash2 className="w-3 h-3" />
@@ -666,7 +660,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                           placeholder={`Nova subcategoria em ${cat.name}...`}
                           value={newSubName}
                           onChange={(e) => setNewSubName(e.target.value)}
-                          className="h-8 text-xs bg-slate-50/50 rounded-xl"
+                          className="h-8 text-xs bg-surface-2/50 rounded-xl"
                         />
                         <Button
                           type="submit"
@@ -690,14 +684,14 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                 com 1 toque. O app inteiro as esconde; só aqui elas aparecem. */}
             {hiddenCategories.length > 0 ? (
               <div className="pt-2">
-                <p className="text-[10px] font-bold uppercase text-slate-400 tracking-wider px-1 py-1">
+                <p className="text-[10px] font-bold uppercase text-body3 tracking-wider px-1 py-1">
                   Ocultas ({hiddenCategories.length})
                 </p>
                 <div className="space-y-1.5">
                   {hiddenCategories.map((cat) => (
                     <div
                       key={cat.id}
-                      className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-slate-50/80 border border-slate-200/70"
+                      className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-surface-2/80 border border-line"
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <span
@@ -706,10 +700,10 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                         >
                           <Tag className="w-3 h-3" />
                         </span>
-                        <span className="text-xs font-semibold text-slate-500 truncate">
+                        <span className="text-xs font-semibold text-body2 truncate">
                           {cat.name}
                         </span>
-                        <span className="text-[10px] text-slate-400 shrink-0">oculta</span>
+                        <span className="text-[10px] text-body3 shrink-0">oculta</span>
                       </div>
                       <Button
                         type="button"
@@ -737,7 +731,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
             ) : null}
           </div>
 
-          <DialogFooter className="pt-2 border-t border-slate-100">
+          <DialogFooter className="pt-2 border-t border-line">
             <Button
               type="button"
               variant="outline"
@@ -758,7 +752,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
               <RotateCcw className="w-5 h-5 text-amber-500" />
               <span>Restaurar Catálogo Padrão</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500 pt-1">
+            <DialogDescription className="text-xs text-body2 pt-1">
               Escolha como deseja sincronizar o catálogo com as 19 categorias e 117 subcategorias
               oficiais do Curiangoo:
             </DialogDescription>
@@ -771,17 +765,15 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                 setShowRestoreMenu(false)
                 setShowAddMissingConfirm(true)
               }}
-              className="p-4 rounded-2xl border border-slate-200 hover:border-emerald-500/80 hover:bg-emerald-50/30 cursor-pointer transition-all space-y-1 shadow-2xs"
+              className="p-4 rounded-2xl border border-line hover:border-action/60 hover:bg-action-subtle cursor-pointer transition-all space-y-1 shadow-2xs"
             >
               <div className="flex items-center justify-between">
-                <span className="font-bold text-sm text-slate-900">
-                  Modo 1: Restaurar o que falta
-                </span>
+                <span className="font-bold text-sm text-ink">Modo 1: Restaurar o que falta</span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
                   Recomendado
                 </span>
               </div>
-              <p className="text-xs text-slate-600 leading-relaxed">
+              <p className="text-xs text-body leading-relaxed">
                 Adiciona apenas as categorias e subcategorias canônicas que a família não possui.
                 Suas personalizações e transações continuam 100% intactas.
               </p>
@@ -803,7 +795,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                   Destrutivo
                 </span>
               </div>
-              <p className="text-xs text-slate-600 leading-relaxed">
+              <p className="text-xs text-body leading-relaxed">
                 Volta o catálogo 100% ao padrão canônico. Remove categorias customizadas remanejando
                 antes as transações para não deixar nenhuma transação órfã.
               </p>
@@ -827,11 +819,11 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
       <AlertDialog open={showAddMissingConfirm} onOpenChange={setShowAddMissingConfirm}>
         <AlertDialogContent className="rounded-3xl max-w-md p-6">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <AlertDialogTitle className="text-base font-bold text-ink flex items-center gap-2">
               <RefreshCw className="w-5 h-5 text-emerald-600" />
               <span>Restaurar categorias que faltam?</span>
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs text-slate-600 leading-relaxed">
+            <AlertDialogDescription className="text-xs text-body leading-relaxed">
               O sistema irá comparar seu catálogo com o padrão canônico (19 categorias e 117
               subcategorias) e inserir apenas as gavetas que ainda não existem. Nada existente será
               alterado ou excluído.
@@ -893,7 +885,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
               <AlertTriangle className="w-5 h-5 text-rose-600" />
               <span>Passo 1/2: Redefinição Completa</span>
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs text-slate-600 leading-relaxed space-y-2">
+            <AlertDialogDescription className="text-xs text-body leading-relaxed space-y-2">
               <p>
                 Esta ação é <strong>destrutiva</strong> para categorias e subcategorias customizadas
                 criadas por você.
@@ -929,7 +921,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
               <AlertTriangle className="w-5 h-5 text-rose-600" />
               <span>Passo 2/2: Confirmar redefinição total?</span>
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs text-slate-700 leading-relaxed">
+            <AlertDialogDescription className="text-xs text-body leading-relaxed">
               Você tem certeza absoluta de que deseja redefinir todo o catálogo para o padrão
               canônico oficial (19 categorias / 117 subcategorias)?
             </AlertDialogDescription>
@@ -990,32 +982,28 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
             <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-2">
               <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
             </div>
-            <DialogTitle className="text-center text-lg font-bold text-slate-900">
+            <DialogTitle className="text-center text-lg font-bold text-ink">
               {restoreSummary?.mode === 'missing'
                 ? 'Catálogo Sincronizado!'
                 : 'Catálogo Redefinido com Sucesso!'}
             </DialogTitle>
-            <DialogDescription className="text-center text-xs text-slate-600 pt-1">
+            <DialogDescription className="text-center text-xs text-body pt-1">
               A estrutura canônica de categorias e subcategorias foi aplicada à sua família.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2 text-xs">
+          <div className="bg-surface-2 p-3.5 rounded-2xl border border-line space-y-2 text-xs">
             <div className="flex items-center justify-between">
-              <span className="text-slate-600">Categorias adicionadas:</span>
-              <span className="font-bold text-slate-900">
-                {restoreSummary?.categoriesAdded || 0}
-              </span>
+              <span className="text-body">Categorias adicionadas:</span>
+              <span className="font-bold text-ink">{restoreSummary?.categoriesAdded || 0}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-slate-600">Subcategorias adicionadas:</span>
-              <span className="font-bold text-slate-900">
-                {restoreSummary?.subcategoriesAdded || 0}
-              </span>
+              <span className="text-body">Subcategorias adicionadas:</span>
+              <span className="font-bold text-ink">{restoreSummary?.subcategoriesAdded || 0}</span>
             </div>
             {restoreSummary?.mode === 'reset' && (
-              <div className="flex items-center justify-between pt-1 border-t border-slate-200">
-                <span className="text-slate-600">Transações remanejadas:</span>
+              <div className="flex items-center justify-between pt-1 border-t border-line">
+                <span className="text-body">Transações remanejadas:</span>
                 <span className="font-bold text-emerald-800">
                   {restoreSummary?.reassignedCount || 0} (zero órfãos)
                 </span>
@@ -1027,7 +1015,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
             <Button
               type="button"
               onClick={() => setRestoreSummary(null)}
-              className="w-full text-xs font-bold rounded-xl bg-slate-900 hover:bg-slate-800 text-white"
+              className="w-full text-xs font-bold rounded-xl bg-ink hover:opacity-90 text-white"
             >
               Concluir
             </Button>
@@ -1044,14 +1032,14 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
           <AlertDialogHeader>
             <div className="flex items-center gap-2 text-amber-600 mb-1">
               <AlertTriangle className="w-5 h-5 shrink-0" />
-              <AlertDialogTitle className="text-base font-bold text-slate-900">
+              <AlertDialogTitle className="text-base font-bold text-ink">
                 <span>Excluir categoria?</span>
               </AlertDialogTitle>
             </div>
-            <AlertDialogDescription className="text-xs text-slate-600 space-y-2">
+            <AlertDialogDescription className="text-xs text-body space-y-2">
               <p>
                 <span>Tem certeza que deseja excluir a categoria </span>
-                <strong className="text-slate-900">{catToDelete?.name}</strong>?
+                <strong className="text-ink">{catToDelete?.name}</strong>?
               </p>
               {catUsageCount > 0 ? (
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-xs">
@@ -1062,7 +1050,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                   </span>
                 </div>
               ) : (
-                <p className="text-slate-400 text-[11px]">
+                <p className="text-body3 text-[11px]">
                   Nenhum lançamento está utilizando esta categoria atualmente.
                 </p>
               )}
@@ -1091,14 +1079,14 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
           <AlertDialogHeader>
             <div className="flex items-center gap-2 text-amber-600 mb-1">
               <AlertTriangle className="w-5 h-5 shrink-0" />
-              <AlertDialogTitle className="text-base font-bold text-slate-900">
+              <AlertDialogTitle className="text-base font-bold text-ink">
                 <span>Excluir subcategoria?</span>
               </AlertDialogTitle>
             </div>
-            <AlertDialogDescription className="text-xs text-slate-600 space-y-2">
+            <AlertDialogDescription className="text-xs text-body space-y-2">
               <p>
                 <span>Tem certeza que deseja excluir a subcategoria </span>
-                <strong className="text-slate-900">{subToDelete?.name}</strong>?
+                <strong className="text-ink">{subToDelete?.name}</strong>?
               </p>
               {subUsageCount > 0 ? (
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-xs">
@@ -1109,7 +1097,7 @@ export const CategoryManagementDialog: React.FC<CategoryManagementDialogProps> =
                   </span>
                 </div>
               ) : (
-                <p className="text-slate-400 text-[11px]">
+                <p className="text-body3 text-[11px]">
                   Nenhum lançamento está utilizando esta subcategoria atualmente.
                 </p>
               )}

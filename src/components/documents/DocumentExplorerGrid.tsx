@@ -185,7 +185,7 @@ export const DocumentExplorerGrid: React.FC<DocumentExplorerGridProps> = ({
               <p className="text-xs sm:text-sm font-bold tracking-tight">
                 {selectedDocIds.size} {selectedDocIds.size === 1 ? 'selecionado' : 'selecionados'}
               </p>
-              <p className="text-[10px] text-slate-300 hidden sm:block">
+              <p className="text-[10px] text-white/70 hidden sm:block">
                 Toque nos cartões para marcar ou desmarcar
               </p>
             </div>
@@ -199,7 +199,7 @@ export const DocumentExplorerGrid: React.FC<DocumentExplorerGridProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={handleSelectAll}
-                className="h-8 px-2.5 text-xs text-slate-200 hover:text-white hover:bg-white/10 rounded-xl font-medium"
+                className="h-8 px-2.5 text-xs text-white/80 hover:text-white hover:bg-white/10 rounded-xl font-medium"
               >
                 {selectedDocIds.size === documents.length ? 'Desmarcar tudo' : 'Selecionar tudo'}
               </Button>
@@ -222,12 +222,12 @@ export const DocumentExplorerGrid: React.FC<DocumentExplorerGridProps> = ({
           </div>
         </div>
       ) : (
-        <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-100">
+        <div className="flex items-center justify-between gap-3 pb-3 border-b border-line">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="text-base sm:text-lg font-bold text-ink tracking-tight">Documentos</h3>
               {documents.length > 0 && (
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-surface-2 text-body">
                   {documents.length}
                 </span>
               )}
@@ -251,13 +251,13 @@ export const DocumentExplorerGrid: React.FC<DocumentExplorerGridProps> = ({
 
       {/* Grade de Documentos estilo explorador */}
       {loading ? (
-        <div className="py-16 flex flex-col items-center justify-center text-slate-400 gap-2.5">
+        <div className="py-16 flex flex-col items-center justify-center text-body3 gap-2.5">
           <Loader2 className="w-6 h-6 animate-spin text-action" />
           <p className="text-xs font-medium">Carregando documentos...</p>
         </div>
       ) : documents.length === 0 ? (
         /* Estado vazio limpo */
-        <div className="py-12 px-4 text-center rounded-2xl bg-bg border border-dashed border-slate-200 space-y-3">
+        <div className="py-12 px-4 text-center rounded-2xl bg-bg border border-dashed border-line space-y-3">
           <div className="w-14 h-14 rounded-2xl bg-amber-50 text-action flex items-center justify-center mx-auto shadow-xs">
             <FolderOpen className="w-7 h-7" />
           </div>

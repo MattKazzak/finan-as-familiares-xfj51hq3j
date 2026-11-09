@@ -2897,7 +2897,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
   // Micro-link discreto [Desfazer] para reverter lançamento estilo WhatsApp
   const renderConfirmationMicroLinks = (msg: ChatMessage) => {
     return (
-      <div className="mt-1.5 pt-1.5 border-t border-slate-200/70 flex items-center gap-2.5 text-[11px]">
+      <div className="mt-1.5 pt-1.5 border-t border-line flex items-center gap-2.5 text-[11px]">
         <button
           type="button"
           onClick={() => handleUndoLastTransaction(msg.confirmedTxId)}
@@ -2905,11 +2905,11 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
         >
           [Desfazer]
         </button>
-        <span className="text-slate-300">|</span>
+        <span className="text-body3">|</span>
         <button
           type="button"
           onClick={() => handleEditLastTransaction(msg.cardData)}
-          className="text-slate-500 hover:text-slate-700 font-medium transition-colors cursor-pointer"
+          className="text-body2 hover:text-body font-medium transition-colors cursor-pointer"
         >
           Alterar
         </button>
@@ -2942,7 +2942,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 Itens Heterogêneos (Classe 5)
               </span>
             </div>
-            <p className="text-xs font-semibold text-slate-800 leading-snug">
+            <p className="text-xs font-semibold text-ink leading-snug">
               {data.clarificationQuestion ||
                 'Proposta de categorias por item (confirme ou ajuste):'}
             </p>
@@ -2957,11 +2957,11 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 <div
                   key={idx}
                   data-testid={`heterogeneous-item-row-${idx}`}
-                  className="p-2 rounded-xl bg-white/90 border border-slate-200/80 flex items-center justify-between gap-2 text-xs"
+                  className="p-2 rounded-xl bg-white/90 border border-line flex items-center justify-between gap-2 text-xs"
                 >
                   <div className="flex flex-col min-w-0">
-                    <span className="font-semibold text-slate-900 truncate">{item.descricao}</span>
-                    <span className="text-[11px] text-slate-600">
+                    <span className="font-semibold text-ink truncate">{item.descricao}</span>
+                    <span className="text-[11px] text-body">
                       {item.categoria_proposta ? (
                         <>
                           <span className="font-medium text-emerald-700">
@@ -2993,7 +2993,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             })}
           </div>
 
-          <p className="text-[10px] text-slate-500 italic">
+          <p className="text-[10px] text-body2 italic">
             Fale ou digite como prefere categorizar os itens incertos e os valores de cada um.
           </p>
         </div>
@@ -3045,7 +3045,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
             </span>
           </div>
 
-          <p className="text-xs font-semibold text-slate-800 leading-snug">{titleText}</p>
+          <p className="text-xs font-semibold text-ink leading-snug">{titleText}</p>
         </div>
 
         {/* Pílulas interativas clicáveis com sugestões da IA e distinção visual existente vs nova */}
@@ -3095,7 +3095,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           </div>
         )}
 
-        <p className="text-[10px] text-slate-500 italic">
+        <p className="text-[10px] text-body2 italic">
           Toque em uma opção ou fale/digite outra categoria abaixo.
         </p>
       </div>
@@ -3110,7 +3110,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-3xl border border-slate-200/90 bg-white p-3.5 sm:p-5 sm:max-w-md md:max-w-lg shadow-2xl flex flex-col max-h-[92vh] h-[640px] w-[calc(100vw-1.5rem)] max-w-[calc(100vw-1.5rem)] sm:w-full overflow-hidden">
+      <DialogContent className="rounded-3xl border border-line bg-white p-3.5 sm:p-5 sm:max-w-md md:max-w-lg shadow-2xl flex flex-col max-h-[92vh] h-[640px] w-[calc(100vw-1.5rem)] max-w-[calc(100vw-1.5rem)] sm:w-full overflow-hidden">
         {/* PAYWALL (17/10): o Copilot de voz é Premium — free vê o teaser do gate
             dentro do diálogo (o diálogo continua abrindo, sem quebra de fluxo). */}
         <PremiumGate
@@ -3118,7 +3118,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           description="Fale com o Curiango para lançar e consultar suas finanças — Premium."
         >
           {/* Header Elegante do Copilot estilo Apple Intelligence */}
-          <DialogHeader className="text-left space-y-0.5 pb-2 border-b border-slate-100 shrink-0">
+          <DialogHeader className="text-left space-y-0.5 pb-2 border-b border-line shrink-0">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2.5 min-w-0">
                 {/* Avatar do Curiango com status verde ativo */}
@@ -3133,13 +3133,13 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 </div>
 
                 <div className="min-w-0">
-                  <DialogTitle className="text-sm sm:text-base font-semibold text-slate-900 tracking-tight flex items-center gap-1.5">
+                  <DialogTitle className="text-sm sm:text-base font-semibold text-ink tracking-tight flex items-center gap-1.5">
                     <span>Curiango Copilot</span>
                     <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
                       IA Ativa
                     </span>
                   </DialogTitle>
-                  <DialogDescription className="text-[11px] sm:text-xs text-slate-500 break-words">
+                  <DialogDescription className="text-[11px] sm:text-xs text-body2 break-words">
                     Assistente financeiro da família
                   </DialogDescription>
                 </div>
@@ -3150,7 +3150,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                 <select
                   value={selectedMemberId}
                   onChange={(e) => setSelectedMemberId(e.target.value)}
-                  className="text-[11px] font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg px-2 py-1 cursor-pointer transition-colors max-w-[110px]"
+                  className="text-[11px] font-medium text-body bg-surface-2 hover:bg-surface-2/80 border border-line rounded-lg px-2 py-1 cursor-pointer transition-colors max-w-[110px]"
                   title="Membro responsável"
                 >
                   {members.map((m) => (
@@ -3244,7 +3244,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                     className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 shadow-xs ${
                       isUser
                         ? 'bg-[#064E3B] text-white rounded-br-xs'
-                        : 'bg-slate-100 text-slate-900 rounded-bl-xs border border-slate-200/80'
+                        : 'bg-surface-2 text-ink rounded-bl-xs border border-line'
                     }`}
                   >
                     <p className="text-xs sm:text-[13px] leading-relaxed whitespace-pre-wrap">
@@ -3255,7 +3255,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                     {!isUser &&
                       (msg.confirmedTxId || msg.cardType === 'sucesso') &&
                       msg.cardData && (
-                        <div className="mt-2 pt-2 border-t border-slate-200/70">
+                        <div className="mt-2 pt-2 border-t border-line">
                           <CategoryHighlightChip
                             categoryName={
                               msg.cardData.categoryNameSuggestion ||
@@ -3302,7 +3302,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                           key={pIdx}
                           type="button"
                           onClick={() => handleStopAndProcess(prompt.text)}
-                          className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-900 border border-slate-200 text-slate-700 transition-all active:scale-95 shadow-2xs"
+                          className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-xl bg-surface-2 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-900 border border-line text-body transition-all active:scale-95 shadow-2xs"
                         >
                           {prompt.label}
                         </button>
@@ -3338,19 +3338,19 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           {showConsentPrompt && (
             <div
               data-testid="ai-consent-modal"
-              className="absolute inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3.5 sm:p-4 rounded-3xl animate-in fade-in duration-150"
+              className="absolute inset-0 z-50 bg-ink/60 backdrop-blur-xs flex items-center justify-center p-3.5 sm:p-4 rounded-3xl animate-in fade-in duration-150"
             >
-              <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-2xl border border-slate-200/90 max-w-sm w-full space-y-3.5 text-left">
+              <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-2xl border border-line max-w-sm w-full space-y-3.5 text-left">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 flex items-center justify-center shrink-0">
                     <Sparkles className="w-4 h-4" />
                   </div>
-                  <h3 className="text-sm font-bold text-slate-900 leading-snug">
+                  <h3 className="text-sm font-bold text-ink leading-snug">
                     Permitir processamento por IA?
                   </h3>
                 </div>
 
-                <p className="text-xs text-slate-600 leading-relaxed">
+                <p className="text-xs text-body leading-relaxed">
                   O Curiangoo Copilot utiliza inteligência artificial para transcrever sua gravação
                   de voz, interpretar falas ou textos e sugerir categorias e valores
                   automaticamente. O áudio é processado exclusivamente para transcrição e nenhum
@@ -3362,7 +3362,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                     type="button"
                     variant="outline"
                     onClick={handleDeclineAiConsent}
-                    className="h-9 px-3 text-xs font-semibold rounded-xl text-slate-700 border-slate-300 hover:bg-slate-100"
+                    className="h-9 px-3 text-xs font-semibold rounded-xl text-body border-line-strong hover:bg-surface-2"
                   >
                     Agora não
                   </Button>
@@ -3379,10 +3379,10 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
           )}
 
           {/* ================= RODAPÉ FIXO: CONTROLES DE ENTRADA (CALMA VISUAL CDS v1.0) ================= */}
-          <div className="pt-2 border-t border-slate-100 shrink-0 max-w-full">
+          <div className="pt-2 border-t border-line shrink-0 max-w-full">
             {/* Linha de status de transição quando transcrevendo ou processando com IA */}
             {(isTranscribingAudio || isProcessingAi) && !isListening && (
-              <div className="mb-2 flex items-center gap-2 text-xs text-slate-600 px-1">
+              <div className="mb-2 flex items-center gap-2 text-xs text-body px-1">
                 <span className="w-2 h-2 rounded-full bg-brand-amber animate-pulse shrink-0" />
                 <span className="font-medium text-[11px] text-ink">
                   {isTranscribingAudio ? 'Transcrevendo áudio' : 'Processando com IA'}
@@ -3454,7 +3454,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                   <button
                     type="button"
                     onClick={handleStopRecordingAndProcess}
-                    className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-ink flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 group"
+                    className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-surface-2 hover:bg-surface-2/80 border border-line text-ink flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 group"
                     aria-label="Parar gravação e processar"
                     title="Parar gravação"
                   >
@@ -3473,7 +3473,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                   onChange={(e) => setInputVal(e.target.value)}
                   placeholder="Mensagem ou fale..."
                   disabled={isProcessingAi || isTranscribingAudio}
-                  className="w-full rounded-2xl h-11 text-xs sm:text-sm bg-slate-50 border-border/60 text-ink placeholder:text-muted-foreground focus:bg-white focus:border-brand-amber focus:ring-1 focus:ring-brand-amber transition-colors min-w-0 pr-20"
+                  className="w-full rounded-2xl h-11 text-xs sm:text-sm bg-surface-2 border-border/60 text-ink placeholder:text-muted-foreground focus:bg-white focus:border-brand-amber focus:ring-1 focus:ring-brand-amber transition-colors min-w-0 pr-20"
                 />
 
                 <div className="absolute right-1.5 flex items-center gap-1">
@@ -3490,7 +3490,7 @@ export const VoiceTransactionDialog: React.FC<VoiceTransactionDialogProps> = ({
                     disabled={isProcessingAi || isTranscribingAudio}
                     aria-label="Falar comando por voz"
                     title="Falar comando por voz"
-                    className="w-8 h-8 rounded-xl text-slate-600 hover:text-brand hover:bg-slate-200/60 flex items-center justify-center transition-all cursor-pointer disabled:opacity-40"
+                    className="w-8 h-8 rounded-xl text-body hover:text-brand hover:bg-surface-2/60 flex items-center justify-center transition-all cursor-pointer disabled:opacity-40"
                   >
                     <Mic className="w-4 h-4 text-ink" strokeWidth={1.5} />
                   </button>

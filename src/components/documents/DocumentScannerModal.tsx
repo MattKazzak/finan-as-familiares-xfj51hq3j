@@ -374,7 +374,7 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
             </DialogTitle>
 
             {/* Badge de páginas */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-[11px] font-medium text-ink">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-2 text-[11px] font-medium text-ink">
               <Layers className="w-3.5 h-3.5 text-action" />
               <span>
                 Pág. {currentPageIndex + 1} de {pages.length}
@@ -409,7 +409,7 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
                 className={`relative group shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-medium cursor-pointer border transition-all ${
                   isSelected
                     ? 'bg-ink text-white border-ink shadow-xs'
-                    : 'bg-bg text-slate-700 border-slate-200 hover:bg-slate-100'
+                    : 'bg-bg text-body border-line hover:bg-surface-2'
                 }`}
               >
                 <span>Página {idx + 1}</span>
@@ -422,18 +422,17 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
                     }}
                     className={`p-0.5 rounded-full hover:bg-red-500/20 ${
                       isSelected
-                        ? 'text-slate-300 hover:text-white'
-                        : 'text-slate-400 hover:text-red-600'
+                        ? 'text-white/70 hover:text-white'
+                        : 'text-body3 hover:text-red-600'
                     }`}
                     title="Excluir esta página"
                   >
-                    <Trash2 className="w-3 h-3" />
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
             )
           })}
-
           <Button
             type="button"
             variant="outline"
@@ -449,7 +448,7 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
         {step === 'crop' ? (
           <div className="space-y-3 pt-1">
             {/* Visualizador de corte com cantos arrastáveis */}
-            <div className="relative rounded-2xl bg-slate-900 overflow-hidden min-h-[260px] max-h-[340px] flex items-center justify-center">
+            <div className="relative rounded-2xl bg-ink overflow-hidden min-h-[260px] max-h-[340px] flex items-center justify-center">
               {currentPage && currentPage.corners ? (
                 <DocumentCropCanvas
                   imageSrc={currentPage.rawUrl}
@@ -457,7 +456,7 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
                   onChangeCorners={handleCornersChange}
                 />
               ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-2">
+                <div className="flex flex-col items-center justify-center py-12 text-white/50 gap-2">
                   <Loader2 className="w-6 h-6 animate-spin text-action" />
                   <span className="text-xs">Detectando bordas do documento...</span>
                 </div>
@@ -489,7 +488,7 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={() => onOpenChange(false)}
-                  className="text-xs rounded-xl h-9 border-slate-200"
+                  className="text-xs rounded-xl h-9 border-line"
                 >
                   Cancelar
                 </Button>
@@ -515,7 +514,7 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
           /* ETAPA 2: FILTROS E MELHORAMENTO COM 1 TOQUE */
           <div className="space-y-3 pt-1">
             {/* Preview do documento corrigido */}
-            <div className="relative rounded-2xl bg-slate-100 overflow-hidden border border-line flex items-center justify-center min-h-[230px] max-h-[300px]">
+            <div className="relative rounded-2xl bg-surface-2 overflow-hidden border border-line flex items-center justify-center min-h-[230px] max-h-[300px]">
               {currentPage?.previewUrl ? (
                 <img
                   src={currentPage.previewUrl}
@@ -523,7 +522,7 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
                   className="w-full h-full object-contain max-h-[290px]"
                 />
               ) : (
-                <div className="flex flex-col items-center justify-center py-10 text-slate-400 gap-2">
+                <div className="flex flex-col items-center justify-center py-10 text-body3 gap-2">
                   <Loader2 className="w-6 h-6 animate-spin text-action" />
                   <span className="text-xs">Aplicando aprimoramento...</span>
                 </div>
@@ -549,13 +548,13 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
                   className={`p-2.5 rounded-2xl border text-center transition-all ${
                     filterMode === 'color'
                       ? 'bg-ink text-white border-ink shadow-xs'
-                      : 'bg-bg text-slate-700 border-slate-200 hover:bg-slate-100'
+                      : 'bg-bg text-body border-line hover:bg-surface-2'
                   }`}
                 >
                   <p className="text-xs font-semibold leading-tight">Colorido</p>
                   <p
                     className={`text-[9px] mt-0.5 ${
-                      filterMode === 'color' ? 'text-slate-300' : 'text-slate-500'
+                      filterMode === 'color' ? 'text-white/70' : 'text-body2'
                     }`}
                   >
                     Cores vivas
@@ -568,13 +567,13 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
                   className={`p-2.5 rounded-2xl border text-center transition-all ${
                     filterMode === 'grayscale'
                       ? 'bg-ink text-white border-ink shadow-xs'
-                      : 'bg-bg text-slate-700 border-slate-200 hover:bg-slate-100'
+                      : 'bg-bg text-body border-line hover:bg-surface-2'
                   }`}
                 >
                   <p className="text-xs font-semibold leading-tight">Cinza</p>
                   <p
                     className={`text-[9px] mt-0.5 ${
-                      filterMode === 'grayscale' ? 'text-slate-300' : 'text-slate-500'
+                      filterMode === 'grayscale' ? 'text-white/70' : 'text-body2'
                     }`}
                   >
                     Tons neutros
@@ -587,13 +586,13 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
                   className={`p-2.5 rounded-2xl border text-center transition-all ${
                     filterMode === 'bw'
                       ? 'bg-ink text-white border-ink shadow-xs'
-                      : 'bg-bg text-slate-700 border-slate-200 hover:bg-slate-100'
+                      : 'bg-bg text-body border-line hover:bg-surface-2'
                   }`}
                 >
                   <p className="text-xs font-semibold leading-tight">P&B Alto Contraste</p>
                   <p
                     className={`text-[9px] mt-0.5 ${
-                      filterMode === 'bw' ? 'text-slate-300' : 'text-slate-500'
+                      filterMode === 'bw' ? 'text-white/70' : 'text-body2'
                     }`}
                   >
                     Binarizado limpo
@@ -671,7 +670,7 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
             </div>
 
             {/* Rodapé da Etapa 2 */}
-            <DialogFooter className="flex-row items-center justify-between gap-2 pt-2 border-t border-slate-100 sm:justify-between">
+            <DialogFooter className="flex-row items-center justify-between gap-2 pt-2 border-t border-line sm:justify-between">
               <div className="flex items-center gap-2">
                 <Button
                   type="button"

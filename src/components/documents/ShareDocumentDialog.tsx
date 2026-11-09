@@ -117,7 +117,7 @@ export const ShareDocumentDialog: React.FC<ShareDocumentDialogProps> = ({
                   className={`py-2 px-2 rounded-xl text-xs font-semibold border transition-all text-center ${
                     selectedDuration === dur
                       ? 'bg-ink text-white border-ink'
-                      : 'bg-bg text-slate-700 border-slate-200 hover:bg-slate-100'
+                      : 'bg-bg text-body border-line hover:bg-surface-2'
                   }`}
                 >
                   {dur === '15m' ? '15 min' : dur === '1h' ? '1 hora' : '24 horas'}
@@ -146,8 +146,8 @@ export const ShareDocumentDialog: React.FC<ShareDocumentDialogProps> = ({
 
           {/* Links ativos */}
           {activeShares.length > 0 && (
-            <div className="space-y-1.5 pt-2 border-t border-slate-100">
-              <span className="text-[10px] font-bold text-slate-500 uppercase">
+            <div className="space-y-1.5 pt-2 border-t border-line">
+              <span className="text-[10px] font-bold text-body2 uppercase">
                 Links ativos ({activeShares.length}):
               </span>
               <div className="space-y-1.5 max-h-32 overflow-y-auto">
@@ -159,10 +159,10 @@ export const ShareDocumentDialog: React.FC<ShareDocumentDialogProps> = ({
                   return (
                     <div
                       key={share.id}
-                      className="p-2 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2 text-[11px]"
+                      className="p-2 rounded-xl bg-surface-2 border border-line flex items-center justify-between gap-2 text-[11px]"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="font-mono text-[10px] text-slate-700 truncate">
+                        <p className="font-mono text-[10px] text-body truncate">
                           .../doc/{share.token.slice(0, 10)}...
                         </p>
                         <p className="text-[10px] text-body2">
@@ -181,7 +181,7 @@ export const ShareDocumentDialog: React.FC<ShareDocumentDialogProps> = ({
                             navigator.clipboard.writeText(shareUrl)
                             toast({ title: 'Link copiado!' })
                           }}
-                          className="p-1 rounded-lg text-slate-600 hover:bg-slate-200"
+                          className="p-1 rounded-lg text-body hover:bg-surface-2"
                           title="Copiar link"
                         >
                           <Copy className="w-3.5 h-3.5" />
@@ -209,7 +209,7 @@ export const ShareDocumentDialog: React.FC<ShareDocumentDialogProps> = ({
             variant="outline"
             size="sm"
             onClick={() => onOpenChange(false)}
-            className="w-full text-xs rounded-xl h-9 border-slate-200 text-slate-700"
+            className="w-full text-xs rounded-xl h-9 border-line text-body"
           >
             Fechar
           </Button>

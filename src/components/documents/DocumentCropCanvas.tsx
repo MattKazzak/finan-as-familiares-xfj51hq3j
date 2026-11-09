@@ -165,7 +165,7 @@ export const DocumentCropCanvas: React.FC<DocumentCropCanvasProps> = ({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
-      className="relative w-full h-full min-h-[250px] max-h-[340px] select-none touch-none overflow-hidden bg-slate-900 rounded-2xl flex items-center justify-center border border-line"
+      className="relative w-full h-full min-h-[250px] max-h-[340px] select-none touch-none overflow-hidden bg-ink rounded-2xl flex items-center justify-center border border-line"
       style={{ touchAction: 'none' }}
     >
       {/* Imagem de fundo */}

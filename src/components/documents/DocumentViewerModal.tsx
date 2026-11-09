@@ -298,9 +298,9 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
           </DialogHeader>
 
           {/* Área de Visualização do Arquivo */}
-          <div className="relative mt-2 rounded-2xl bg-slate-100 overflow-hidden border border-line flex items-center justify-center min-h-[220px] max-h-[340px]">
+          <div className="relative mt-2 rounded-2xl bg-surface-2 overflow-hidden border border-line flex items-center justify-center min-h-[220px] max-h-[340px]">
             {loadingUrl ? (
-              <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-2">
+              <div className="py-12 flex flex-col items-center justify-center text-body3 gap-2">
                 <Loader2 className="w-6 h-6 animate-spin text-action" />
                 <span className="text-xs">Carregando visualização segura...</span>
               </div>
@@ -334,7 +334,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                 </div>
               ) : (
                 <div className="p-6 flex flex-col items-center justify-center text-center gap-2">
-                  <FileText className="w-8 h-8 text-slate-400" />
+                  <FileText className="w-8 h-8 text-body3" />
                   <p className="text-xs text-ink">{document.file_name}</p>
                   <a
                     href={signedUrl}
@@ -346,7 +346,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                 </div>
               )
             ) : (
-              <p className="text-xs text-slate-400">Não foi possível carregar o arquivo.</p>
+              <p className="text-xs text-body3">Não foi possível carregar o arquivo.</p>
             )}
           </div>
 
@@ -357,7 +357,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                 className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
                   document.is_shared_with_family
                     ? 'bg-blue-50 text-blue-700'
-                    : 'bg-slate-100 text-slate-600'
+                    : 'bg-surface-2 text-body'
                 }`}
               >
                 {document.is_shared_with_family ? (
@@ -412,7 +412,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                 <Switch checked={editShared} onCheckedChange={setEditShared} />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
                 <Button
                   type="button"
                   variant="ghost"
@@ -443,7 +443,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                 <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
                 <p className="text-xs font-semibold">Link Temporário Seguro</p>
               </div>
-              <p className="text-[11px] text-slate-600 leading-relaxed">
+              <p className="text-[11px] text-body leading-relaxed">
                 Gere um link com expiração curta para enviar a banco, escola ou terceiro. O link
                 abre sem login apenas enquanto estiver no prazo.
               </p>
@@ -458,7 +458,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                     className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-semibold border transition-all ${
                       selectedDuration === dur
                         ? 'bg-ink text-white border-ink'
-                        : 'bg-white text-slate-700 border-amber-200 hover:bg-slate-50'
+                        : 'bg-white text-body border-amber-200 hover:bg-surface-2'
                     }`}
                   >
                     {dur === '15m' ? '15 min' : dur === '1h' ? '1 hora' : '24 horas'}
@@ -502,7 +502,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                           className="p-2 rounded-xl bg-white border border-amber-200/80 flex items-center justify-between gap-2 text-[11px]"
                         >
                           <div className="min-w-0 flex-1">
-                            <p className="font-mono text-[10px] text-slate-700 truncate">
+                            <p className="font-mono text-[10px] text-body truncate">
                               .../doc/{share.token.slice(0, 10)}...
                             </p>
                             <p className="text-[10px] text-body2">
@@ -521,7 +521,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                                 navigator.clipboard.writeText(shareUrl)
                                 toast({ title: 'Link copiado!' })
                               }}
-                              className="p-1 rounded-lg text-slate-600 hover:bg-slate-100"
+                              className="p-1 rounded-lg text-body hover:bg-surface-2"
                               title="Copiar link"
                             >
                               <Copy className="w-3.5 h-3.5" />
@@ -545,7 +545,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
           )}
 
           {/* Barra de Ações Principais */}
-          <div className="grid grid-cols-4 gap-2 pt-3 border-t border-slate-100">
+          <div className="grid grid-cols-4 gap-2 pt-3 border-t border-line">
             {/* Compartilhar direto (folha nativa ou link copiado) */}
             <button
               type="button"
@@ -572,7 +572,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
               className={`flex flex-col items-center justify-center p-2 rounded-xl border text-center transition-colors ${
                 isEditing
                   ? 'bg-blue-50 text-blue-700 border-blue-300'
-                  : 'bg-bg text-slate-700 border-slate-200 hover:bg-slate-100'
+                  : 'bg-bg text-body border-line hover:bg-surface-2'
               }`}
             >
               <Edit2 className="w-4 h-4 mb-1" />
@@ -584,7 +584,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
               type="button"
               onClick={handleBackupDownload}
               disabled={backingUp}
-              className="flex flex-col items-center justify-center p-2 rounded-xl border bg-bg text-slate-700 border-slate-200 hover:bg-slate-100 text-center transition-colors"
+              className="flex flex-col items-center justify-center p-2 rounded-xl border bg-bg text-body border-line hover:bg-surface-2 text-center transition-colors"
             >
               {backingUp ? (
                 <Loader2 className="w-4 h-4 mb-1 animate-spin text-ink" />

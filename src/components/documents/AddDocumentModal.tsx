@@ -218,7 +218,7 @@ export const AddDocumentModal: React.FC<AddDocumentModalProps> = ({
                 <button
                   type="button"
                   onClick={() => cameraInputRef.current?.click()}
-                  className="flex flex-col items-center justify-center p-3 rounded-2xl border border-line bg-bg hover:bg-slate-100 transition-colors text-center group"
+                  className="flex flex-col items-center justify-center p-3 rounded-2xl border border-line bg-bg hover:bg-surface-2 transition-colors text-center group"
                 >
                   <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
                     <Camera className="w-5 h-5" strokeWidth={1.75} />
@@ -231,7 +231,7 @@ export const AddDocumentModal: React.FC<AddDocumentModalProps> = ({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex flex-col items-center justify-center p-3 rounded-2xl border border-line bg-bg hover:bg-slate-100 transition-colors text-center group"
+                  className="flex flex-col items-center justify-center p-3 rounded-2xl border border-line bg-bg hover:bg-surface-2 transition-colors text-center group"
                 >
                   <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
                     <Upload className="w-5 h-5" strokeWidth={1.75} />
@@ -244,7 +244,7 @@ export const AddDocumentModal: React.FC<AddDocumentModalProps> = ({
                 <button
                   type="button"
                   onClick={() => scanInputRef.current?.click()}
-                  className="flex flex-col items-center justify-center p-3 rounded-2xl border border-line bg-bg hover:bg-slate-100 transition-colors text-center group"
+                  className="flex flex-col items-center justify-center p-3 rounded-2xl border border-line bg-bg hover:bg-surface-2 transition-colors text-center group"
                 >
                   <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
                     <Sparkles className="w-5 h-5" strokeWidth={1.75} />
@@ -254,7 +254,7 @@ export const AddDocumentModal: React.FC<AddDocumentModalProps> = ({
                 </button>
               </div>
 
-              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-2.5 text-[11px] text-body2">
+              <div className="p-3 rounded-2xl bg-surface-2 border border-line flex items-start gap-2.5 text-[11px] text-body2">
                 <AlertCircle className="w-4 h-4 text-action shrink-0 mt-0.5" />
                 <span>
                   <strong>Aviso de segurança:</strong> o app armazena apenas o arquivo e metadados.
@@ -304,7 +304,7 @@ export const AddDocumentModal: React.FC<AddDocumentModalProps> = ({
                 placeholder="Ex.: RG Matheus, Comprovante de Luz, Certidão de Casamento"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="h-10 text-xs rounded-xl border-slate-200"
+                className="h-10 text-xs rounded-xl border-line"
                 required
               />
             </div>
@@ -314,7 +314,7 @@ export const AddDocumentModal: React.FC<AddDocumentModalProps> = ({
               <div className="flex items-center gap-2.5 min-w-0">
                 <div
                   className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                    isSharedWithFamily ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600'
+                    isSharedWithFamily ? 'bg-blue-50 text-blue-700' : 'bg-surface-2 text-body'
                   }`}
                 >
                   {isSharedWithFamily ? <Eye className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
@@ -340,7 +340,7 @@ export const AddDocumentModal: React.FC<AddDocumentModalProps> = ({
                 size="sm"
                 onClick={() => onOpenChange(false)}
                 disabled={loading}
-                className="text-xs rounded-xl h-10 border-slate-200"
+                className="text-xs rounded-xl h-10 border-line"
               >
                 Cancelar
               </Button>

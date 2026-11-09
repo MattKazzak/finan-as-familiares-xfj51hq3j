@@ -339,8 +339,8 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
           isSelected
             ? 'border-action ring-2 ring-action/50 shadow-md bg-amber-50/20'
             : isSelectionMode
-              ? 'border-slate-300 hover:border-action/60 shadow-cds'
-              : 'border-line shadow-cds hover:shadow-md hover:border-slate-300'
+              ? 'border-line-strong hover:border-action/60 shadow-cds'
+              : 'border-line shadow-cds hover:shadow-md hover:border-line-strong'
         }`}
         data-testid={`doc-card-${doc.id}`}
         data-selected={isSelected}
@@ -360,8 +360,8 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
             isSelected
               ? 'bg-action text-white shadow-md ring-2 ring-white scale-105'
               : isSelectionMode
-                ? 'bg-white/90 text-slate-400 border border-slate-300 hover:border-action shadow-xs'
-                : 'opacity-0 group-hover:opacity-100 bg-white/90 text-slate-400 border border-slate-300 hover:text-ink shadow-xs'
+                ? 'bg-white/90 text-body3 border border-line-strong hover:border-action shadow-xs'
+                : 'opacity-0 group-hover:opacity-100 bg-white/90 text-body3 border border-line-strong hover:text-ink shadow-xs'
           }`}
           title={isSelected ? 'Desmarcar documento' : 'Selecionar documento'}
           aria-label={isSelected ? `Desmarcar ${doc.title}` : `Selecionar ${doc.title}`}
@@ -369,7 +369,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
           {isSelected ? (
             <Check className="w-4 h-4 stroke-[3]" />
           ) : (
-            <span className="w-3.5 h-3.5 rounded-full border border-slate-400" />
+            <span className="w-3.5 h-3.5 rounded-full border border-body3" />
           )}
         </button>
 
@@ -378,7 +378,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
           {/* Badge Privado se não compartilhado com a família */}
           {!doc.is_shared_with_family && (
             <span
-              className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-slate-900/80 text-white backdrop-blur-xs shadow-xs"
+              className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-ink/80 text-white backdrop-blur-xs shadow-xs"
               title="Visível apenas para você"
             >
               <Lock className="w-2.5 h-2.5" />
@@ -410,7 +410,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
             WebkitUserSelect: 'none',
             userSelect: 'none',
           }}
-          className="relative w-full aspect-[4/3] bg-gradient-to-b from-slate-50 to-slate-100/90 flex items-center justify-center overflow-hidden focus:outline-hidden focus:ring-2 focus:ring-action focus:ring-inset text-left cursor-pointer select-none document-card-touch-suppress"
+          className="relative w-full aspect-[4/3] bg-gradient-to-b from-surface-2 to-surface-2/90 flex items-center justify-center overflow-hidden focus:outline-hidden focus:ring-2 focus:ring-action focus:ring-inset text-left cursor-pointer select-none document-card-touch-suppress"
           title={isSelectionMode ? (isSelected ? 'Desmarcar' : 'Selecionar') : `Abrir ${doc.title}`}
           aria-label={
             isSelectionMode
@@ -421,7 +421,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
           }
         >
           {thumbLoading ? (
-            <div className="flex flex-col items-center justify-center gap-1 text-slate-400">
+            <div className="flex flex-col items-center justify-center gap-1 text-body3">
               <Loader2 className="w-5 h-5 animate-spin text-action" />
               <span className="text-[10px]">Carregando...</span>
             </div>
@@ -467,16 +467,16 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
               </span>
             </div>
           ) : isImage ? (
-            <div className="flex flex-col items-center justify-center gap-1 text-slate-400">
+            <div className="flex flex-col items-center justify-center gap-1 text-body3">
               <FileImage className="w-8 h-8 text-blue-500" strokeWidth={1.5} />
-              <span className="text-[10px] font-medium text-slate-500">Imagem</span>
+              <span className="text-[10px] font-medium text-body2">Imagem</span>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center gap-1.5 p-3 text-center">
-              <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-600 border border-slate-200 flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 rounded-xl bg-surface-2 text-body border border-line flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
                 <FileText className="w-6 h-6" strokeWidth={1.75} />
               </div>
-              <span className="text-[10px] font-bold text-slate-600 uppercase">
+              <span className="text-[10px] font-bold text-body uppercase">
                 {doc.file_name.split('.').pop() || 'ARQUIVO'}
               </span>
             </div>
@@ -513,7 +513,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
           </div>
 
           {/* Barra de ações embaixo do cartão */}
-          <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between gap-1">
+          <div className="pt-1.5 border-t border-line flex items-center justify-between gap-1">
             {isSelectionMode ? (
               /* No modo de seleção: botão grande e direto para alternar a seleção */
               <Button
@@ -527,10 +527,10 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                 className={`w-full h-7 text-[11px] font-semibold rounded-lg gap-1.5 transition-colors ${
                   isSelected
                     ? 'bg-ink text-white hover:opacity-90'
-                    : 'text-slate-700 border-slate-200 hover:bg-slate-50'
+                    : 'text-body border-line hover:bg-surface-2'
                 }`}
               >
-                <Check className={`w-3 h-3 ${isSelected ? 'text-action' : 'text-slate-400'}`} />
+                <Check className={`w-3 h-3 ${isSelected ? 'text-action' : 'text-body3'}`} />
                 <span>{isSelected ? 'Selecionado' : 'Selecionar'}</span>
               </Button>
             ) : (
@@ -542,7 +542,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={() => onOpenViewer(doc)}
-                    className="h-7 w-7 p-0 rounded-lg text-slate-600 hover:text-ink hover:bg-slate-100"
+                    className="h-7 w-7 p-0 rounded-lg text-body hover:text-ink hover:bg-surface-2"
                     title="Visualizar documento"
                     aria-label={`Visualizar ${doc.title}`}
                   >
@@ -554,7 +554,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                     size="sm"
                     onClick={handleDirectShare}
                     disabled={isSharing}
-                    className="h-7 w-7 p-0 rounded-lg text-slate-600 hover:text-ink hover:bg-slate-100"
+                    className="h-7 w-7 p-0 rounded-lg text-body hover:text-ink hover:bg-surface-2"
                     title="Compartilhar documento"
                     aria-label={`Compartilhar ${doc.title}`}
                   >
@@ -573,7 +573,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={() => setActionSheetOpen(true)}
-                    className="h-7 w-7 p-0 rounded-lg text-slate-500 hover:text-ink hover:bg-slate-100"
+                    className="h-7 w-7 p-0 rounded-lg text-body2 hover:text-ink hover:bg-surface-2"
                     title="Mais opções"
                     aria-label={`Mais opções para ${doc.title}`}
                   >
@@ -586,7 +586,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-7 w-7 p-0 rounded-lg text-slate-500 hover:text-ink hover:bg-slate-100"
+                        className="h-7 w-7 p-0 rounded-lg text-body2 hover:text-ink hover:bg-surface-2"
                         title="Mais opções"
                         aria-label={`Mais opções para ${doc.title}`}
                       >
@@ -611,7 +611,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                         onClick={() => onOpenViewer(doc)}
                         className="text-xs rounded-xl cursor-pointer"
                       >
-                        <Eye className="w-3.5 h-3.5 mr-2 text-slate-500" />
+                        <Eye className="w-3.5 h-3.5 mr-2 text-body2" />
                         Visualizar / Detalhes
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -643,9 +643,9 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
         <Sheet open={actionSheetOpen} onOpenChange={setActionSheetOpen}>
           <SheetContent
             side="bottom"
-            className="rounded-t-3xl border-t border-slate-200/90 bg-white p-5 pb-7 text-slate-800"
+            className="rounded-t-3xl border-t border-line bg-white p-5 pb-7 text-ink"
           >
-            <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-4 -mt-1" />
+            <div className="w-12 h-1.5 bg-surface-2 rounded-full mx-auto mb-4 -mt-1" />
             <SheetHeader className="text-left space-y-1 mb-4">
               <SheetTitle className="text-base font-bold text-ink leading-tight truncate">
                 {doc.title}
@@ -683,9 +683,9 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                   setActionSheetOpen(false)
                   onOpenViewer(doc)
                 }}
-                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 text-left transition-colors text-xs font-semibold text-ink"
+                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-surface-2 text-left transition-colors text-xs font-semibold text-ink"
               >
-                <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700">
+                <div className="w-8 h-8 rounded-xl bg-surface-2 flex items-center justify-center text-body">
                   <Eye className="w-4 h-4" />
                 </div>
                 <div>
@@ -715,7 +715,7 @@ export const DocumentItemCard: React.FC<DocumentItemCardProps> = ({
                 </div>
               </button>
 
-              <div className="pt-2 border-t border-slate-100 mt-2">
+              <div className="pt-2 border-t border-line mt-2">
                 <button
                   type="button"
                   onClick={() => {
