@@ -325,13 +325,13 @@ export default function Layout() {
                 + (Nova Transação), Patrimônio, Metas — 5 itens IGUAIS. O + entra
                 no meio da lista (entre Carteira e Patrimônio), mesmo tamanho e
                 traço dos demais; ativo é destacado por COR (text-action), nunca
-                por elevação. O + tem rótulo "Nova" no mesmo estilo dos demais. */}
+                por elevação. O + tem rótulo "Criar" no mesmo estilo dos demais. */}
             {navItems.slice(0, 4).map((item, idx) => {
               const Icon = item.icon
               return (
                 <Fragment key={item.to}>
                   {/* + Nova Transação: abre a MESMA folha de Nova Transação de
-                      sempre; aria-label cobre a ausência do texto "Nova". */}
+                      sempre; o rótulo visível é "Criar" e aria-label segue "Nova Transação". */}
                   {idx === 2 && (
                     <button
                       type="button"
@@ -342,9 +342,9 @@ export default function Layout() {
                       title="Nova Transação"
                     >
                       <Plus className="w-5 h-5" strokeWidth={1.5} />
-                      {/* Rótulo "Nova" visível (pedido do Matheus): mesma
-                          tipografia dos rótulos dos demais itens da pílula. */}
-                      <span className="text-[10px] tracking-tight mt-0.5 leading-none">Nova</span>
+                      {/* Rótulo "Criar" visível: mesma tipografia dos rótulos
+                          dos demais itens da pílula. */}
+                      <span className="text-[10px] tracking-tight mt-0.5 leading-none">Criar</span>
                     </button>
                   )}
                   <NavLink

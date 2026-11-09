@@ -39,19 +39,19 @@ vi.mock('@/contexts/ActiveMonthContext', () => ({
 }))
 
 describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () => {
-  it('exibe o + como item comum da pílula: sem círculo, sem sombra, sem borda, com rótulo "Nova" visível', () => {
+  it('exibe o + como item comum da pílula: sem círculo, sem sombra, sem borda, com rótulo "Criar" visível', () => {
     render(
       <MemoryRouter initialEntries={['/inicio']}>
         <Layout />
       </MemoryRouter>,
     )
 
-    // Rótulo "Nova" visível embaixo do ícone (pedido do Matheus), igual aos demais
-    const novaLabel = screen.getByText('Nova')
-    expect(novaLabel.className).toContain('text-[10px]')
-    expect(novaLabel.className).toContain('leading-none')
-    expect(novaLabel.className).toContain('mt-0.5')
-    expect(novaLabel.className).not.toContain('invisible')
+    // Rótulo "Criar" visível embaixo do ícone, igual aos demais itens da pílula
+    const criarLabel = screen.getByText('Criar')
+    expect(criarLabel.className).toContain('text-[10px]')
+    expect(criarLabel.className).toContain('leading-none')
+    expect(criarLabel.className).toContain('mt-0.5')
+    expect(criarLabel.className).not.toContain('invisible')
 
     // Botão central acessível por aria-label (acessibilidade fica) e mantém o teste
     const centralBtn = screen.getByRole('button', { name: /Nova Transação/i })
