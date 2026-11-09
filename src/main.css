@@ -59,10 +59,10 @@
        Baldes: Essenciais #14213D, Estilo de Vida #FCA311, Metas #10B981
     */
     --background: 220 20% 98%;
-    --foreground: 221 51% 16%;
+    --foreground: 226 38% 13%;
 
     --card: 0 0% 100%;
-    --card-foreground: 221 51% 16%;
+    --card-foreground: 226 38% 13%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 221 51% 16%;
@@ -81,7 +81,7 @@
 
     /* Muted = #64748B suave */
     --muted: 220 14% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted-foreground: 214 21% 44%;
 
     /* Accent = suave com hover elegante */
     --accent: 220 14% 94%;
@@ -98,7 +98,7 @@
     /* Bordas estruturais sutis CDS v1.0: rgba(20, 33, 61, 0.06) */
     --border: 221 20% 90%;
     --input: 221 20% 90%;
-    --ring: 37 97% 53%;
+    --ring: 226 81% 55%;
 
     --radius: 0.75rem;
 
@@ -121,10 +121,10 @@
   .dark {
     /* Curiango Night (CDS v1.0 futuro): fundo #0B111E, cards #14213D */
     --background: 222 45% 8%;
-    --foreground: 0 0% 98%;
+    --foreground: 216 33% 96%;
 
     --card: 221 51% 16%;
-    --card-foreground: 0 0% 98%;
+    --card-foreground: 216 33% 96%;
 
     --popover: 221 51% 16%;
     --popover-foreground: 0 0% 98%;
@@ -139,7 +139,7 @@
     --secondary-foreground: 0 0% 100%;
 
     --muted: 221 35% 20%;
-    --muted-foreground: 215 20% 65%;
+    --muted-foreground: 214 18% 68%;
 
     --accent: 221 35% 22%;
     --accent-foreground: 0 0% 100%;
@@ -160,7 +160,7 @@
     --input: 221 35% 24%;
 
     /* CDS v2.0: foco precisa ser visível sobre fundo escuro. */
-    --ring: 0 0% 100%;
+    --ring: 226 89% 66%;
     --ring-accent: 38 98% 53%;
 
     --sidebar-background: 221 51% 12%;
