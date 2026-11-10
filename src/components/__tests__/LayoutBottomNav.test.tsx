@@ -86,8 +86,8 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
     expect(screen.getByText('Metas')).toBeDefined()
   })
 
-  it('destaca o item ativo com fundo preenchedor animado estilo Instagram/Pinterest (animate-dock-pill)', () => {
-    const { container } = render(
+  it('destaca o item ativo com preenchimento total sólido (bg-white/15), cobrindo ícone e rótulo sem balãozinho', () => {
+    render(
       <MemoryRouter initialEntries={['/inicio']}>
         <Layout />
       </MemoryRouter>,
@@ -95,17 +95,66 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
 
     const inicioLink = screen.getByText('Início').closest('a')
     expect(inicioLink).not.toBeNull()
+    expect(inicioLink?.className).toContain('bg-white/15')
     expect(inicioLink?.className).toContain('text-white')
+    expect(inicioLink?.className).toContain('rounded-2xl')
 
-    // Elemento span interno que preenche o item inteiro com animação dock-pill
-    const activePill = inicioLink?.querySelector('.animate-dock-pill')
-    expect(activePill).not.toBeNull()
-    expect(activePill?.className).toContain('bg-white/10')
-    expect(activePill?.className).toContain('rounded-2xl')
+    // Não há balãozinho/halo separado (sem span .animate-dock-pill)
+    expect(inicioLink?.querySelector('.animate-dock-pill')).toBeNull()
 
-    // Item inativo não possui o fundo animado
+    // Item inativo não possui o preenchimento bg-white/15
     const carteiraLink = screen.getByText('Carteira').closest('a')
-    expect(carteiraLink?.querySelector('.animate-dock-pill')).toBeNull()
+    expect(carteiraLink?.className).not.toContain('bg-white/15')
+    expect(carteiraLink?.className).toContain('text-white/60')
+  })
+
+  it('aplica preenchimento total consistente quando outras rotas estão ativas (Carteira, Patrimônio, Metas)', () => {
+    const { unmount } = render(
+      <MemoryRouter initialEntries={['/carteira']}>
+        <Layout />
+      </MemoryRouter>,
+    )
+
+    const carteiraLink = screen.getByText('Carteira').closest('a')
+    expect(carteiraLink?.className).toContain('bg-white/15')
+    expect(carteiraLink?.className).toContain('text-white')
+
+    const inicioInativo = screen.getByText('Início').closest('a')
+    expect(inicioInativo?.className).not.toContain('bg-white/15')
+    unmount()
+
+    const { unmount: unmountPatrimonio } = render(
+      <MemoryRouter initialEntries={['/patrimonio']}>
+        <Layout />
+      </MemoryRouter>,
+    )
+    const patrimonioLink = screen.getByText('Patrimônio').closest('a')
+    expect(patrimonioLink?.className).toContain('bg-white/15')
+    unmountPatrimonio()
+
+    const { unmount: unmountMetas } = render(
+      <MemoryRouter initialEntries={['/metas']}>
+        <Layout />
+      </MemoryRouter>,
+    )
+    const metasLink = screen.getByText('Metas').closest('a')
+    expect(metasLink?.className).toContain('bg-white/15')
+    unmountMetas()
+  })
+
+  it('o botão Criar (+) possui a mesma estrutura e preenchimento sólido ao toque ou quando o modal está aberto', () => {
+    render(
+      <MemoryRouter initialEntries={['/inicio']}>
+        <Layout />
+      </MemoryRouter>,
+    )
+
+    const centralBtn = screen.getByRole('button', { name: /Nova Transação/i })
+    expect(centralBtn.className).toContain('rounded-2xl')
+    expect(centralBtn.className).toContain('flex-1')
+    expect(centralBtn.className).toContain('py-1.5')
+    // Tem preenchimento ao toque (active:bg-white/15) e hover sutil
+    expect(centralBtn.className).toContain('active:bg-white/15')
   })
 
   it('aciona openNewTransaction() ao clicar no item + da pílula', () => {

@@ -118,6 +118,26 @@ export default function Layout() {
     { to: '/perfil', label: 'Perfil', icon: User },
   ]
 
+  // Verificação de rota ativa para o dock inferior mobile e sidebar desktop
+  const isDockItemActive = (to: string) => {
+    if (to === '/inicio') {
+      return location.pathname === '/inicio'
+    }
+    if (to === '/carteira') {
+      return location.pathname === '/carteira' || location.pathname === '/orcamentos'
+    }
+    if (to === '/patrimonio') {
+      return location.pathname === '/patrimonio' || location.pathname === '/investimentos'
+    }
+    if (to === '/metas') {
+      return location.pathname === '/metas'
+    }
+    if (to === '/perfil') {
+      return location.pathname.startsWith('/perfil')
+    }
+    return location.pathname === to
+  }
+
   const userInitial = currentMember?.name?.charAt(0).toUpperCase() || 'F'
 
   return (
@@ -153,7 +173,7 @@ export default function Layout() {
         <nav className="flex-1 px-3 py-2 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon
-            const isActive = location.pathname === item.to
+            const isActive = isDockItemActive(item.to)
             return (
               <NavLink
                 key={item.to}
@@ -310,40 +330,37 @@ export default function Layout() {
         <InstallPwaBanner variant="bottom-nav" />
 
         {/* DOCK FLUTUANTE EM PÍLULA (MOBILE APENAS < 768px, 360–412px SAFE) —
-            ESTILO INSTAGRAM/PINTEREST/SPOTIFY (pedido do Matheus): pílula plana,
-            5 itens IGUAIS — o + central é só mais um item (sem FAB erguido, sem
-            círculo colorido, sem sombra de flutuação, sem borda, sem rótulo
-            "Nova"). Ícones de traço fino (strokeWidth 1.5) e estado ativo
-            destacado por PREENCHIMENTO sutil (bg-action/20 + texto branco),
-            nunca por elevação. Tokens CDS v2.0: bg-ink, shadow-cds-dock, action. */}
+            ESTILO INSTAGRAM/PINTEREST/SPOTIFY: pílula plana, 5 itens IGUAIS —
+            Início, Carteira, Criar (+), Patrimônio e Metas.
+            Item ativo = PREENCHIMENTO TOTAL sólido cobrindo ícone e rótulo (bg-white/15),
+            sem balãozinho ou halo, com contraste nítido e consistente em todos os itens.
+            Tokens CDS v2.0: bg-ink, border-line, shadow-cds-dock. */}
         <nav
           aria-label="Navegação Principal"
           className="md:hidden fixed bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] inset-x-0 z-40 px-3 sm:px-4 max-w-md mx-auto pointer-events-none"
         >
           <div className="pointer-events-auto w-full bg-ink border border-line shadow-cds-dock rounded-full px-1.5 py-1.5 flex items-center justify-between">
-            {/* Pílula plana estilo Instagram/Pinterest/Spotify: Início, Carteira,
-                + (Nova Transação), Patrimônio, Metas — 5 itens IGUAIS. O + entra
-                no meio da lista (entre Carteira e Patrimônio), mesmo tamanho e
-                traço dos demais; ativo é destacado por COR (text-action), nunca
-                por elevação. O + tem rótulo "Criar" no mesmo estilo dos demais. */}
             {navItems.slice(0, 4).map((item, idx) => {
               const Icon = item.icon
+              const isItemActive = isDockItemActive(item.to)
               return (
                 <Fragment key={item.to}>
-                  {/* + Nova Transação: abre a MESMA folha de Nova Transação de
-                      sempre; o rótulo visível é "Criar" e aria-label segue "Nova Transação". */}
+                  {/* + Nova Transação: abre a folha de Nova Transação;
+                      possui o MESMO preenchimento e visual dos demais itens. */}
                   {idx === 2 && (
                     <button
                       type="button"
                       onClick={() => openNewTransaction()}
                       data-testid="dock-new-transaction"
-                      className="flex flex-col items-center justify-center flex-1 py-1 rounded-2xl text-white/70 transition-colors duration-200 hover:text-white active:scale-95 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+                      className={`flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-2xl transition-colors duration-150 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+                        isNewTransactionOpen
+                          ? 'bg-white/15 text-white font-semibold'
+                          : 'text-white/60 hover:text-white/90 hover:bg-white/5 active:bg-white/15'
+                      }`}
                       aria-label="Nova Transação"
                       title="Nova Transação"
                     >
-                      <Plus className="w-5 h-5" strokeWidth={1.5} />
-                      {/* Rótulo "Criar" visível: mesma tipografia dos rótulos
-                          dos demais itens da pílula. */}
+                      <Plus className="w-5 h-5 shrink-0" strokeWidth={1.5} />
                       <span className="text-[10px] tracking-tight mt-0.5 leading-none">Criar</span>
                     </button>
                   )}
@@ -356,26 +373,16 @@ export default function Layout() {
                           ? 'dock-metas'
                           : undefined
                     }
-                    className={({ isActive }) =>
-                      `relative flex flex-col items-center justify-center flex-1 py-1 rounded-2xl transition-colors duration-200 active:scale-95 overflow-hidden ${
-                        isActive ? 'text-white font-semibold' : 'text-white/60 hover:text-white/90'
-                      }`
-                    }
+                    className={`flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-2xl transition-colors duration-150 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+                      isItemActive
+                        ? 'bg-white/15 text-white font-semibold'
+                        : 'text-white/60 hover:text-white/90 hover:bg-white/5 active:bg-white/15'
+                    }`}
                   >
-                    {({ isActive }) => (
-                      <>
-                        {isActive && (
-                          <span
-                            aria-hidden="true"
-                            className="absolute inset-0 bg-white/10 rounded-2xl animate-dock-pill pointer-events-none"
-                          />
-                        )}
-                        <Icon className="relative z-10 w-5 h-5" strokeWidth={1.5} />
-                        <span className="relative z-10 text-[10px] tracking-tight mt-0.5 leading-none">
-                          {item.label}
-                        </span>
-                      </>
-                    )}
+                    <Icon className="w-5 h-5 shrink-0" strokeWidth={1.5} />
+                    <span className="text-[10px] tracking-tight mt-0.5 leading-none">
+                      {item.label}
+                    </span>
                   </NavLink>
                 </Fragment>
               )
