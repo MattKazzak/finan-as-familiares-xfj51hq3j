@@ -7,19 +7,15 @@ import { startRealtimePiu, initPiuUnlock, playPiu } from './services/realtime-pi
 // @skip-protected: Do not remove. Required for React rendering.
 import { registerAppServiceWorker } from './hooks/use-service-worker'
 
-// BLINDAGEM ANTI-DARK-MODE (antes do primeiro paint): remove a classe dark,
-// limpa preferências de tema persistidas e fixa o color-scheme em light.
-// O app é light-only por decisão de produto — comportamento idêntico em qualquer navegador.
-;(function forceLightTheme() {
+// CDS v3.0: app dark fixo estilo Spotify (antes do primeiro paint)
+// Fixa a classe dark e color-scheme em dark no documentElement e body
+;(function forceDarkTheme() {
   try {
-    document.documentElement.classList.remove('dark')
-    document.documentElement.style.colorScheme = 'light'
-    document.body?.style.setProperty('color-scheme', 'light')
-    localStorage.removeItem('theme')
-    localStorage.removeItem('next-themes')
-    localStorage.removeItem('next-themes-prefers-color-scheme')
+    document.documentElement.classList.add('dark')
+    document.documentElement.style.colorScheme = 'dark'
+    document.body?.style.setProperty('color-scheme', 'dark')
   } catch {
-    // localStorage indisponível — segue o fluxo
+    // DOM indisponível — segue o fluxo
   }
 })()
 

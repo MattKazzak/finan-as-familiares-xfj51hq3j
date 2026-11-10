@@ -30,17 +30,10 @@ describe('R60 — Service Worker, Manifest e Blindagem de Tema Claro', () => {
     })
   })
 
-  describe('TAREFA 2 & 5 — Manifest do PWA Blindado com Cores Claras', () => {
-    it('o manifest tem theme_color e background_color com a cor de fundo clara oficial do CDS v1.0 (#F8F9FB)', () => {
-      expect(manifest.theme_color).toBe('#F8F9FB')
-      expect(manifest.background_color).toBe('#F8F9FB')
-    })
-
-    it('as cores do manifest NUNCA são escuras (não utiliza marinho #14213D ou preto)', () => {
-      expect(manifest.theme_color).not.toBe('#14213D')
-      expect(manifest.background_color).not.toBe('#14213D')
-      expect(manifest.theme_color).not.toBe('#000000')
-      expect(manifest.background_color).not.toBe('#000000')
+  describe('TAREFA 2 & 5 — Manifest do PWA Blindado com Cores Dark CDS v3.0', () => {
+    it('o manifest tem theme_color e background_color com a cor navy canônica oficial do CDS v3.0 (#0B111E)', () => {
+      expect(manifest.theme_color).toBe('#0B111E')
+      expect(manifest.background_color).toBe('#0B111E')
     })
 
     it('o manifest define name e short_name oficiais com a grafia Curiangoo', () => {
@@ -50,15 +43,10 @@ describe('R60 — Service Worker, Manifest e Blindagem de Tema Claro', () => {
     })
   })
 
-  describe('TAREFA 3 & 5 — Declaração de Tema Claro Reforçada & Nenhuma media query prefers-color-scheme', () => {
-    it('index.html declara meta color-scheme="light" e theme-color claro #F8F9FB', () => {
-      expect(indexHtmlRaw).toContain('<meta name="color-scheme" content="light"')
-      expect(indexHtmlRaw).toContain('<meta name="theme-color" content="#F8F9FB"')
-    })
-
-    it('main.css declara color-scheme: light only na raiz html, body e #root com !important no fundo', () => {
-      expect(mainCssRaw).toContain('color-scheme: light only')
-      expect(mainCssRaw).toContain('background-color: #f8f9fb !important')
+  describe('TAREFA 3 & 5 — Declaração de Tema Dark Reforçada & Nenhuma media query prefers-color-scheme em conflito', () => {
+    it('index.html declara meta color-scheme="dark" e theme-color #0B111E', () => {
+      expect(indexHtmlRaw).toContain('<meta name="color-scheme" content="dark"')
+      expect(indexHtmlRaw).toContain('<meta name="theme-color" content="#0B111E"')
     })
 
     it('CSS não possui nenhuma regra @media (prefers-color-scheme: dark) que altere o visual', () => {
