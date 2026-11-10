@@ -86,6 +86,28 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
     expect(screen.getByText('Metas')).toBeDefined()
   })
 
+  it('destaca o item ativo com fundo preenchedor animado estilo Instagram/Pinterest (animate-dock-pill)', () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={['/inicio']}>
+        <Layout />
+      </MemoryRouter>,
+    )
+
+    const inicioLink = screen.getByText('Início').closest('a')
+    expect(inicioLink).not.toBeNull()
+    expect(inicioLink?.className).toContain('text-white')
+
+    // Elemento span interno que preenche o item inteiro com animação dock-pill
+    const activePill = inicioLink?.querySelector('.animate-dock-pill')
+    expect(activePill).not.toBeNull()
+    expect(activePill?.className).toContain('bg-white/10')
+    expect(activePill?.className).toContain('rounded-2xl')
+
+    // Item inativo não possui o fundo animado
+    const carteiraLink = screen.getByText('Carteira').closest('a')
+    expect(carteiraLink?.querySelector('.animate-dock-pill')).toBeNull()
+  })
+
   it('aciona openNewTransaction() ao clicar no item + da pílula', () => {
     mockOpenNewTransaction.mockClear()
 

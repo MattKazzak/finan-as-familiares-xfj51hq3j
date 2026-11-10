@@ -537,6 +537,33 @@
     animation: spotlight 2s ease forwards;
   }
 
+  /* Dock inferior (pílula estilo Instagram/Pinterest): animação spring/pop no fundo do item ativo */
+  @keyframes dock-pill-pop {
+    0% {
+      transform: scale(0.82);
+      opacity: 0.3;
+    }
+    60% {
+      transform: scale(1.04);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  .animate-dock-pill {
+    animation: dock-pill-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-dock-pill {
+      animation: none !important;
+      transform: none !important;
+    }
+  }
+
   /* R55: Pulso/respiração sutil do Copilot respeitando prefers-reduced-motion */
   @media (prefers-reduced-motion: reduce) {
     .animate-fab-breathe {

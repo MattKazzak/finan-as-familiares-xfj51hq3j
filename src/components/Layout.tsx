@@ -357,15 +357,25 @@ export default function Layout() {
                           : undefined
                     }
                     className={({ isActive }) =>
-                      `flex flex-col items-center justify-center flex-1 py-1 rounded-2xl transition-colors duration-200 active:scale-95 ${
-                        isActive ? 'text-white bg-action/25' : 'text-white/60 hover:text-white/90'
+                      `relative flex flex-col items-center justify-center flex-1 py-1 rounded-2xl transition-colors duration-200 active:scale-95 overflow-hidden ${
+                        isActive ? 'text-white font-semibold' : 'text-white/60 hover:text-white/90'
                       }`
                     }
                   >
-                    <Icon className="w-5 h-5" strokeWidth={1.5} />
-                    <span className="text-[10px] tracking-tight mt-0.5 leading-none">
-                      {item.label}
-                    </span>
+                    {({ isActive }) => (
+                      <>
+                        {isActive && (
+                          <span
+                            aria-hidden="true"
+                            className="absolute inset-0 bg-white/10 rounded-2xl animate-dock-pill pointer-events-none"
+                          />
+                        )}
+                        <Icon className="relative z-10 w-5 h-5" strokeWidth={1.5} />
+                        <span className="relative z-10 text-[10px] tracking-tight mt-0.5 leading-none">
+                          {item.label}
+                        </span>
+                      </>
+                    )}
                   </NavLink>
                 </Fragment>
               )
