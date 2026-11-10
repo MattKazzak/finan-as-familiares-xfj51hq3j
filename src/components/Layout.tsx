@@ -1,7 +1,8 @@
 import { Fragment } from 'react'
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { Home, Wallet, Plus, Target, User, TrendingUp, LogOut, ChevronRight } from 'lucide-react'
+import { Home, Wallet, Target, User, TrendingUp, LogOut, ChevronRight } from 'lucide-react'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
+import { DockIcon, type DockIconName } from '@/components/common/DockIcon'
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { useFamily } from '@/hooks/use-family'
@@ -111,11 +112,16 @@ export default function Layout() {
   }
 
   const navItems = [
-    { to: '/inicio', label: 'Início', icon: Home },
-    { to: '/carteira', label: 'Carteira', icon: Wallet },
-    { to: '/patrimonio', label: 'Patrimônio', icon: TrendingUp },
-    { to: '/metas', label: 'Metas', icon: Target },
-    { to: '/perfil', label: 'Perfil', icon: User },
+    { to: '/inicio', label: 'Início', icon: Home, dockIcon: 'home' as DockIconName },
+    { to: '/carteira', label: 'Carteira', icon: Wallet, dockIcon: 'wallet' as DockIconName },
+    {
+      to: '/patrimonio',
+      label: 'Patrimônio',
+      icon: TrendingUp,
+      dockIcon: 'patrimony' as DockIconName,
+    },
+    { to: '/metas', label: 'Metas', icon: Target, dockIcon: 'metas' as DockIconName },
+    { to: '/perfil', label: 'Perfil', icon: User, dockIcon: 'home' as DockIconName },
   ]
 
   // Verificação de rota ativa para o dock inferior mobile e sidebar desktop
@@ -369,7 +375,12 @@ export default function Layout() {
                       aria-label="Nova Transação"
                       title="Nova Transação"
                     >
-                      <Plus className="w-5 h-5 shrink-0" strokeWidth={1.5} />
+                      <DockIcon
+                        name="plus"
+                        active={isNewTransactionOpen}
+                        className="w-5 h-5 shrink-0"
+                        strokeWidth={1.75}
+                      />
                       <span className="text-[10px] tracking-tight mt-0.5 leading-none">Criar</span>
                     </button>
                   )}
@@ -388,7 +399,12 @@ export default function Layout() {
                         : 'text-white/60 hover:text-white/90 hover:bg-white/5 active:bg-white/15'
                     }`}
                   >
-                    <Icon className="w-5 h-5 shrink-0" strokeWidth={1.5} />
+                    <DockIcon
+                      name={item.dockIcon}
+                      active={isItemActive}
+                      className="w-5 h-5 shrink-0"
+                      strokeWidth={1.75}
+                    />
                     <span className="text-[10px] tracking-tight mt-0.5 leading-none">
                       {item.label}
                     </span>

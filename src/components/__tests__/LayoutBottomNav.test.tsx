@@ -89,9 +89,10 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
     expect(centralBtn.className).not.toContain('border-2')
     expect(centralBtn.className).not.toContain('-mt-3.5')
 
-    // Ícone de linha igual aos demais (w-5 h-5, strokeWidth 1.5 via lucide)
+    // Ícone de linha igual aos demais (w-5 h-5, DockIcon variante plus)
     const plusIcon = centralBtn.querySelector('svg')
     expect(plusIcon).not.toBeNull()
+    expect(plusIcon?.getAttribute('stroke-width')).toBe('1.75')
 
     // Sem espaçador invisível: o + tem rótulo de verdade como os outros itens
     expect(centralBtn.querySelector('span.invisible')).toBeNull()
@@ -126,10 +127,19 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
     // Não há balãozinho/halo separado (sem span .animate-dock-pill)
     expect(inicioLink?.querySelector('.animate-dock-pill')).toBeNull()
 
-    // Item inativo não possui o preenchimento bg-white/15
+    // Ícone ativo do Início deve usar variante sólida (fill="currentColor", stroke="none")
+    const inicioIcon = inicioLink?.querySelector('svg')
+    expect(inicioIcon?.getAttribute('fill')).toBe('currentColor')
+    expect(inicioIcon?.getAttribute('stroke')).toBe('none')
+
+    // Item inativo não possui o preenchimento bg-white/15 e tem ícone outline (fill="none")
     const carteiraLink = screen.getByText('Carteira').closest('a')
     expect(carteiraLink?.className).not.toContain('bg-white/15')
     expect(carteiraLink?.className).toContain('text-white/60')
+
+    const carteiraIcon = carteiraLink?.querySelector('svg')
+    expect(carteiraIcon?.getAttribute('fill')).toBe('none')
+    expect(carteiraIcon?.getAttribute('stroke')).toBe('currentColor')
   })
 
   it('aplica preenchimento total consistente quando outras rotas estão ativas (Carteira, Patrimônio, Metas)', () => {
@@ -142,9 +152,11 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
     const carteiraLink = screen.getByText('Carteira').closest('a')
     expect(carteiraLink?.className).toContain('bg-white/15')
     expect(carteiraLink?.className).toContain('text-white')
+    expect(carteiraLink?.querySelector('svg')?.getAttribute('fill')).toBe('currentColor')
 
     const inicioInativo = screen.getByText('Início').closest('a')
     expect(inicioInativo?.className).not.toContain('bg-white/15')
+    expect(inicioInativo?.querySelector('svg')?.getAttribute('fill')).toBe('none')
     unmount()
 
     const { unmount: unmountPatrimonio } = render(
@@ -154,6 +166,7 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
     )
     const patrimonioLink = screen.getByText('Patrimônio').closest('a')
     expect(patrimonioLink?.className).toContain('bg-white/15')
+    expect(patrimonioLink?.querySelector('svg')?.getAttribute('fill')).toBe('currentColor')
     unmountPatrimonio()
 
     const { unmount: unmountMetas } = render(
@@ -163,6 +176,7 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
     )
     const metasLink = screen.getByText('Metas').closest('a')
     expect(metasLink?.className).toContain('bg-white/15')
+    expect(metasLink?.querySelector('svg')?.getAttribute('fill')).toBe('currentColor')
     unmountMetas()
   })
 
