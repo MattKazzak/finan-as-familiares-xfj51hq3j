@@ -152,11 +152,9 @@ export function WalletBudgetsTab() {
         onOpenModelDialog={() => setIsApplyModelOpen(true)}
       />
       {/* Lista de Orçamentos com Hierarquia Categoria Pai -> Subcategorias e Gestão Inline com Ícones */}
-      <div className="bg-white/95 backdrop-blur-sm rounded-3xl border border-line p-6 sm:p-7 shadow-elevation-1 space-y-4">
+      <div className="bg-surface/95 backdrop-blur-sm rounded-3xl border border-line p-6 sm:p-7 shadow-elevation-1 space-y-4">
         <div>
-          <h3 className="font-semibold text-base text-foreground dark:text-white">
-            Categorias e Subcategorias
-          </h3>
+          <h3 className="font-semibold text-base text-white">Categorias e Subcategorias</h3>
           <div className="mt-1.5 max-w-full">
             <button
               type="button"
@@ -172,7 +170,7 @@ export function WalletBudgetsTab() {
                   ? 'Clique para recolher nota de metodologia'
                   : 'Clique para expandir nota de metodologia completa'
               }
-              className="group flex items-start gap-1.5 text-left text-[11px] leading-relaxed cursor-pointer select-none max-w-full w-full rounded-md p-0.5 -m-0.5 hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-line-strong transition-colors"
+              className="group flex items-start gap-1.5 text-left text-[11px] leading-relaxed cursor-pointer select-none max-w-full w-full rounded-md p-0.5 -m-0.5 hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-line transition-colors"
             >
               <span
                 className="inline-flex items-center justify-center w-4 h-4 rounded-full text-body3 group-hover:text-body2 group-hover:bg-surface-2 shrink-0 mt-0.5 transition-colors"
@@ -186,7 +184,7 @@ export function WalletBudgetsTab() {
                 <Info className="w-3.5 h-3.5" />
               </span>
               <span
-                className={`min-w-0 flex-1 transition-all duration-200 text-body2 group-hover:text-ink ${
+                className={`min-w-0 flex-1 transition-all duration-200 text-body2 group-hover:text-white ${
                   isMethodologyExpanded ? 'break-words whitespace-normal' : 'truncate block'
                 }`}
               >
@@ -308,7 +306,7 @@ export function WalletBudgetsTab() {
                           {/* Nome da categoria completo - quebra em 2 linhas se necessário, nunca truncado */}
                           <div className="flex flex-col">
                             <span
-                              className="font-bold text-sm sm:text-base text-ink group-hover:text-emerald-700 transition-colors break-words leading-snug"
+                              className="font-bold text-sm sm:text-base text-white group-hover:text-income transition-colors break-words leading-snug"
                               title={item.category.name}
                             >
                               {item.category.name}
@@ -320,7 +318,7 @@ export function WalletBudgetsTab() {
                                 <span
                                   className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md shrink-0 leading-none whitespace-nowrap ${
                                     BUCKET_METADATA[item.category.budget_bucket]?.bgLight ||
-                                    'bg-surface-2 text-body2'
+                                    'bg-surface-2 text-white/80'
                                   }`}
                                 >
                                   {BUCKET_METADATA[item.category.budget_bucket]?.shortLabel}
@@ -337,7 +335,7 @@ export function WalletBudgetsTab() {
 
                                 if (item.limitCents > 0) {
                                   return (
-                                    <span className="text-[9px] sm:text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/70 px-1.5 py-0.5 rounded-md tabular-nums shrink-0 leading-none whitespace-nowrap">
+                                    <span className="text-[9px] sm:text-[10px] font-semibold text-income bg-income-subtle border border-income/40 px-1.5 py-0.5 rounded-md tabular-nums shrink-0 leading-none whitespace-nowrap">
                                       {family?.monthly_net_income_cents
                                         ? `${dynamicPercent}% da renda`
                                         : '—'}
@@ -353,7 +351,7 @@ export function WalletBudgetsTab() {
                               })()}
 
                               {item.hasOverride ? (
-                                <span className="text-[9px] font-semibold bg-amber-100/90 text-amber-900 border border-amber-200/80 px-1.5 py-0.5 rounded-md leading-none shrink-0 whitespace-nowrap">
+                                <span className="text-[9px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.5 rounded-md leading-none shrink-0 whitespace-nowrap">
                                   ajustado
                                 </span>
                               ) : null}

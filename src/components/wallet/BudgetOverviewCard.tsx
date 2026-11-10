@@ -69,10 +69,10 @@ const BUCKETS_CONFIG: BucketMetaInfo[] = [
     colorName: 'slate',
     barColor: 'bg-ink',
     barHoverColor: 'hover:opacity-90',
-    bgLight: 'bg-slate-50/90',
-    borderLight: 'border-slate-200',
-    textDark: 'text-slate-900',
-    badgeBg: 'bg-slate-200/80 text-slate-800',
+    bgLight: 'bg-surface-2/60',
+    borderLight: 'border-line',
+    textDark: 'text-white',
+    badgeBg: 'bg-surface-2 text-white',
     accentDot: 'bg-ink',
     icon: Shield,
   },
@@ -166,12 +166,12 @@ export function BudgetOverviewCard({
   const isOverIncome = totalBudgetPercentOfIncome > 100
 
   return (
-    <section className="bg-white/95 backdrop-blur-sm rounded-3xl p-6 sm:p-8 border border-line shadow-card relative overflow-hidden transition-all">
+    <section className="bg-surface/95 backdrop-blur-sm rounded-3xl p-6 sm:p-8 border border-line shadow-card relative overflow-hidden transition-all">
       {/* Sutil detalhe superior fluido com a paleta oficial */}
       <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[var(--ink)] via-[var(--action)] to-[var(--data-3)]" />
 
       {/* CABEÇALHO DO PAINEL FLUÍDO: Renda Líquida + anel de previsto (migrado da Home 16/10) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-line">
         <div className="flex items-center gap-4 min-w-0">
           {/* Anel: % da renda líquida já recebida no mês (Receitas Previstas) */}
           {netIncomeCents > 0 && (
@@ -188,7 +188,7 @@ export function BudgetOverviewCard({
                   cx="50"
                   cy="50"
                   r="40"
-                  className="text-slate-100 stroke-current"
+                  className="text-white/10 stroke-current"
                   strokeWidth="10"
                   fill="transparent"
                 />
@@ -205,26 +205,26 @@ export function BudgetOverviewCard({
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-sm sm:text-base font-bold text-ink dark:text-white tabular-nums leading-none">
+                <span className="text-sm sm:text-base font-bold text-white tabular-nums leading-none">
                   {incomeProgressPercent}%
                 </span>
-                <span className="text-[8px] text-slate-400 font-medium mt-0.5">da renda</span>
+                <span className="text-[8px] text-body3 font-medium mt-0.5">da renda</span>
               </div>
             </div>
           )}
 
           <div className="space-y-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-body3">
                 Receitas Previstas
               </span>
               {isOverIncome ? (
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-expense-subtle text-expense border border-rose-200/60">
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-expense-subtle text-expense border border-rose-500/40">
                   <span className="w-1.5 h-1.5 rounded-full bg-expense animate-pulse" />
                   Tetos acima da renda
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-income-subtle text-income border border-emerald-200/60">
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-income-subtle text-income border border-income/40">
                   <CheckCircle2 className="w-3 h-3 text-income" />
                   Tetos saudáveis
                 </span>
@@ -232,11 +232,11 @@ export function BudgetOverviewCard({
             </div>
 
             <div className="flex items-baseline gap-2 flex-wrap pt-0.5">
-              <span className="text-xs text-muted-foreground font-medium">Recebido:</span>
-              <span className="text-xl sm:text-2xl font-semibold text-ink dark:text-white tracking-tight tabular-nums">
+              <span className="text-xs text-body2 font-medium">Recebido:</span>
+              <span className="text-xl sm:text-2xl font-semibold text-white tracking-tight tabular-nums">
                 {formatBRL(monthIncomeCents)}
               </span>
-              <span className="text-xs text-muted-foreground font-normal">
+              <span className="text-xs text-body3 font-normal">
                 de {formatBRL(netIncomeCents)} previstos
               </span>
             </div>
@@ -249,14 +249,17 @@ export function BudgetOverviewCard({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-md transition-colors"
+                className="text-body2 hover:text-white p-1.5 rounded-md transition-colors"
                 aria-label="Sobre a metodologia de orçamento"
                 title="Sobre a metodologia"
               >
                 <Info className="w-4 h-4" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="max-w-xs p-3 text-xs leading-relaxed">
+            <DropdownMenuContent
+              align="end"
+              className="max-w-xs p-3 text-xs leading-relaxed bg-surface border-line text-white"
+            >
               Tetos baseados em percentuais da renda líquida familiar. Os modelos seguem
               metodologias consagradas como a 50/30/20 (Elizabeth Warren) e variações para perfis de
               família — com liberdade total de personalização.
@@ -265,7 +268,7 @@ export function BudgetOverviewCard({
           <button
             type="button"
             onClick={onOpenModelDialog}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink bg-slate-100 hover:bg-slate-200/70 border border-border/60 px-3 py-1.5 rounded-xl transition-all shadow-2xs hover:shadow-xs active:scale-95"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-surface-2 hover:bg-surface-2/80 border border-line px-3 py-1.5 rounded-xl transition-all shadow-2xs hover:shadow-xs active:scale-95"
             title="Ajustar renda líquida familiar ou trocar modelo de distribuição"
           >
             <Sparkles className="w-3.5 h-3.5 text-action" />
@@ -278,10 +281,8 @@ export function BudgetOverviewCard({
       <div className="pt-6 space-y-3.5">
         <div className="flex items-center justify-between text-xs flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-slate-700 dark:text-slate-300">
-              Distribuição Proporcional dos Baldes
-            </span>
-            <span className="text-[11px] text-muted-foreground hidden xs:inline">
+            <span className="font-semibold text-white">Distribuição Proporcional dos Baldes</span>
+            <span className="text-[11px] text-body3 hidden xs:inline">
               (toque no balde para filtrar alertas)
             </span>
           </div>
@@ -289,7 +290,7 @@ export function BudgetOverviewCard({
 
         {/* A BARRA ÚNICA MULTI-SEGMENTADA COM GRADIENTES SUTIS */}
         <div className="relative">
-          <div className="h-5 sm:h-6 w-full rounded-2xl p-1 bg-slate-100/90 flex items-center gap-1 overflow-hidden shadow-inner border border-line">
+          <div className="h-5 sm:h-6 w-full rounded-2xl p-1 bg-surface-2 flex items-center gap-1 overflow-hidden shadow-inner border border-line">
             {/* Segmento Essenciais */}
             <button
               type="button"
@@ -356,16 +357,13 @@ export function BudgetOverviewCard({
                   cfg.bgLight
                 } ${
                   isSelected
-                    ? `${cfg.borderLight} ring-2 ring-ink/20 shadow-xs`
-                    : `${cfg.borderLight} hover:border-slate-300`
+                    ? `${cfg.borderLight} ring-2 ring-white/30 shadow-xs`
+                    : `${cfg.borderLight} hover:border-white/20`
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <Icon
-                      className="w-3.5 h-3.5 text-muted-foreground shrink-0"
-                      strokeWidth={1.5}
-                    />
+                    <Icon className="w-3.5 h-3.5 text-white/70 shrink-0" strokeWidth={1.5} />
                     <span className={`text-xs font-semibold truncate ${cfg.textDark}`}>
                       {cfg.label}
                     </span>
@@ -379,15 +377,15 @@ export function BudgetOverviewCard({
 
                 <div className="mt-2 flex items-baseline justify-between gap-1 flex-wrap">
                   <div className="tabular-nums">
-                    <span className="text-sm sm:text-base font-bold text-slate-900">
+                    <span className="text-sm sm:text-base font-bold text-white">
                       {formatBRL(data.spentCents)}
                     </span>
-                    <span className="text-xs font-normal text-slate-500 ml-1">
+                    <span className="text-xs font-normal text-body2 ml-1">
                       / {formatBRL(data.budgetCents)}
                     </span>
                   </div>
                   {data.budgetCents > 0 && (
-                    <span className="text-[11px] font-semibold text-slate-500 tabular-nums">
+                    <span className="text-[11px] font-semibold text-body2 tabular-nums">
                       {Math.round((data.spentCents / data.budgetCents) * 100)}% consumido
                     </span>
                   )}
@@ -405,7 +403,7 @@ export function BudgetOverviewCard({
                   if (diff > 0) {
                     return (
                       <div className="mt-1.5 flex items-center">
-                        <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 leading-tight break-words">
+                        <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-income-subtle text-income border border-income/30 leading-tight break-words">
                           <span>✨ + {formatBRL(diff)} livres para alocar</span>
                         </span>
                       </div>
@@ -415,7 +413,7 @@ export function BudgetOverviewCard({
                   if (diff === 0) {
                     return (
                       <div className="mt-1.5 flex items-center">
-                        <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200/80 leading-tight">
+                        <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-surface-2 text-white/80 border border-line leading-tight">
                           <span>✓ Cota 100% alocada</span>
                         </span>
                       </div>
@@ -424,7 +422,7 @@ export function BudgetOverviewCard({
 
                   return (
                     <div className="mt-1.5 flex items-center">
-                      <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/80 leading-tight break-words">
+                      <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-warning-subtle text-warning border border-warning/30 leading-tight break-words">
                         <span>⚠️ {formatBRL(Math.abs(diff))} acima da meta sugerida</span>
                       </span>
                     </div>
@@ -432,7 +430,7 @@ export function BudgetOverviewCard({
                 })()}
 
                 {/* Subtítulo informativo leve sobre as categorias que compõem o balde */}
-                <p className="text-[10px] text-slate-500 mt-1 line-clamp-1 leading-normal">
+                <p className="text-[10px] text-body3 mt-1 line-clamp-1 leading-normal">
                   {cfg.sublabel}
                 </p>
               </div>
@@ -441,16 +439,16 @@ export function BudgetOverviewCard({
         </div>
 
         {/* Resumo do Total Comprometido em formato discreto e fluido */}
-        <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs text-slate-500 border-t border-slate-100">
+        <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs text-body2 border-t border-line">
           <div className="flex items-center gap-2 flex-wrap">
             <span>
               Total cadastrado em tetos:{' '}
-              <strong className="text-slate-800 tabular-nums">{formatBRL(totalBudget)}</strong>
+              <strong className="text-white tabular-nums">{formatBRL(totalBudget)}</strong>
             </span>
-            <span className="text-slate-300">·</span>
+            <span className="text-body3">·</span>
             <span>
               Total já gasto no mês:{' '}
-              <strong className="text-slate-700 tabular-nums">{formatBRL(totalSpent)}</strong>
+              <strong className="text-white/90 tabular-nums">{formatBRL(totalSpent)}</strong>
             </span>
           </div>
 
@@ -459,7 +457,7 @@ export function BudgetOverviewCard({
               <button
                 type="button"
                 onClick={() => setSelectedBucket('all')}
-                className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 underline"
+                className="text-xs font-semibold text-income hover:underline"
               >
                 Limpar filtro do balde
               </button>

@@ -76,14 +76,14 @@ export function WalletTransactionsTab() {
     <div className="space-y-6 sm:space-y-7 mt-0 animate-in fade-in-50 duration-200 min-w-0">
       {/* 1. VISÃO DE RESUMO PÓS-IMPORTAÇÃO & SEÇÃO DE REVISÃO DE PENDENTES (Com Barra de Progresso) */}
       {lastImportSummary ? (
-        <div className="rounded-3xl border border-line bg-white/95 backdrop-blur-sm p-5 sm:p-6 shadow-elevation-1 space-y-3 animate-in fade-in-50 duration-200">
+        <div className="rounded-3xl border border-line bg-surface/95 backdrop-blur-sm p-5 sm:p-6 shadow-elevation-1 space-y-3 animate-in fade-in-50 duration-200">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-surface-2 dark:bg-surface-2 text-ink dark:text-white flex items-center justify-center shrink-0 font-semibold text-base">
+              <div className="w-10 h-10 rounded-xl bg-surface-2 text-white flex items-center justify-center shrink-0 font-semibold text-base">
                 {lastImportSummary.pending === 0 ? '✓' : '↓'}
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold text-sm sm:text-base text-ink dark:text-white leading-tight">
+                <h4 className="font-semibold text-sm sm:text-base text-white leading-tight">
                   {lastImportSummary.pending === 0 ? (
                     'Tudo categorizado!'
                   ) : (
@@ -93,7 +93,7 @@ export function WalletTransactionsTab() {
                     </>
                   )}
                 </h4>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-body2 mt-1">
                   {lastImportSummary.pending === 0
                     ? 'Todas as transações do extrato estão devidamente classificadas nos 3 Baldes.'
                     : `${lastImportSummary.pending} transações pendentes de revisão. Toque em qualquer linha para abrir e categorizar.`}
@@ -121,7 +121,7 @@ export function WalletTransactionsTab() {
                   </span>
                 </Button>
               ) : (
-                <span className="text-xs font-semibold text-income bg-income-subtle dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 px-2.5 py-1 rounded-xl">
+                <span className="text-xs font-semibold text-income bg-income-subtle border border-income/30 px-2.5 py-1 rounded-xl">
                   100% revisado
                 </span>
               )}
@@ -129,7 +129,7 @@ export function WalletTransactionsTab() {
               <button
                 type="button"
                 onClick={() => setLastImportSummary(null)}
-                className="p-1.5 text-body3 hover:text-ink rounded-lg hover:bg-surface-2 transition-colors"
+                className="p-1.5 text-body3 hover:text-white rounded-lg hover:bg-surface-2 transition-colors"
                 title="Fechar aviso de importação"
               >
                 <X className="w-4 h-4" />
@@ -140,7 +140,7 @@ export function WalletTransactionsTab() {
           {/* Barra de Progresso da Revisão */}
           {lastImportSummary.total > 0 && (
             <div className="space-y-1.5 pt-1">
-              <div className="flex items-center justify-between text-[11px] font-semibold text-ink dark:text-white">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-white">
                 <span>Progresso da categorização</span>
                 <span className="tabular-nums text-income">
                   {lastImportSummary.categorized} de {lastImportSummary.total} revisadas (
@@ -148,9 +148,9 @@ export function WalletTransactionsTab() {
                   %)
                 </span>
               </div>
-              <div className="w-full bg-surface-2 dark:bg-surface-2 h-2.5 rounded-full overflow-hidden">
+              <div className="w-full bg-surface-2 h-2.5 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-emerald-600 rounded-full transition-all duration-500 ease-out"
+                  className="h-full bg-emerald-500 rounded-full transition-all duration-500 ease-out"
                   style={{
                     width: `${Math.min(
                       100,
@@ -164,16 +164,14 @@ export function WalletTransactionsTab() {
         </div>
       ) : filterOnlyPending && pendingTransactionsCount === 0 ? (
         /* Estado de Sucesso quando o usuário estava filtrando pendentes e terminou todas */
-        <div className="rounded-3xl border border-border/40 bg-card/90 backdrop-blur-sm p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-cds animate-in fade-in-50">
+        <div className="rounded-3xl border border-line bg-surface/95 backdrop-blur-sm p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-cds animate-in fade-in-50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-surface-2 dark:bg-surface-2 text-ink dark:text-white flex items-center justify-center font-semibold text-base shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-surface-2 text-white flex items-center justify-center font-semibold text-base shrink-0">
               ✓
             </div>
             <div>
-              <h4 className="font-semibold text-sm sm:text-base text-ink dark:text-white">
-                Tudo categorizado!
-              </h4>
-              <p className="text-xs text-muted-foreground">
+              <h4 className="font-semibold text-sm sm:text-base text-white">Tudo categorizado!</h4>
+              <p className="text-xs text-body2">
                 Não há transações pendentes de categorização neste mês.
               </p>
             </div>
@@ -193,18 +191,18 @@ export function WalletTransactionsTab() {
 
       {/* ===== Barra de seleção (bulk edit P1 — padrão Monarch) ===== */}
       {selectionMode ? (
-        <div className="rounded-3xl border-2 border-violet-300 bg-violet-50/80 backdrop-blur-sm p-3.5 flex items-center justify-between gap-3 shadow-cds sticky top-14 z-10">
+        <div className="rounded-3xl border border-violet-500/40 bg-violet-950/40 backdrop-blur-sm p-3.5 flex items-center justify-between gap-3 shadow-cds sticky top-14 z-10">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-9 h-9 rounded-xl bg-violet-600 text-white flex items-center justify-center shrink-0 font-bold text-sm">
               {selectedTxIds.size}
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-bold text-violet-900">
+              <p className="text-xs font-bold text-violet-200">
                 {selectedTxIds.size === 1
                   ? '1 transação selecionada'
                   : `${selectedTxIds.size} transações selecionadas`}
               </p>
-              <p className="text-[11px] text-violet-700">Toque nas linhas para marcar</p>
+              <p className="text-[11px] text-violet-300">Toque nas linhas para marcar</p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -213,7 +211,7 @@ export function WalletTransactionsTab() {
               variant="ghost"
               size="sm"
               onClick={clearSelection}
-              className="rounded-xl text-xs text-violet-700 hover:text-violet-900 h-8 px-2"
+              className="rounded-xl text-xs text-violet-300 hover:text-white hover:bg-violet-900/40 h-8 px-2"
             >
               Cancelar
             </Button>
@@ -237,7 +235,7 @@ export function WalletTransactionsTab() {
 
       {/* Summary Strip (3 Mini Cards com elevação e respiro) */}
       <div className="grid grid-cols-3 gap-3 sm:gap-4">
-        <div className="bg-white/95 backdrop-blur-sm p-3.5 sm:p-4 rounded-2xl border border-line shadow-elevation-1 flex flex-col justify-between">
+        <div className="bg-surface/95 backdrop-blur-sm p-3.5 sm:p-4 rounded-2xl border border-line shadow-elevation-1 flex flex-col justify-between">
           <div className="flex items-center gap-1.5 text-income text-[11px] font-semibold uppercase tracking-wider">
             <ArrowUpRight className="w-3.5 h-3.5" strokeWidth={1.5} />
             <span>Receitas</span>
@@ -247,7 +245,7 @@ export function WalletTransactionsTab() {
           </span>
         </div>
 
-        <div className="bg-white/95 backdrop-blur-sm p-3.5 sm:p-4 rounded-2xl border border-line shadow-elevation-1 flex flex-col justify-between">
+        <div className="bg-surface/95 backdrop-blur-sm p-3.5 sm:p-4 rounded-2xl border border-line shadow-elevation-1 flex flex-col justify-between">
           <div className="flex items-center gap-1.5 text-expense text-[11px] font-semibold uppercase tracking-wider">
             <ArrowDownRight className="w-3.5 h-3.5" strokeWidth={1.5} />
             <span>Despesas</span>
@@ -257,8 +255,8 @@ export function WalletTransactionsTab() {
           </span>
         </div>
 
-        <div className="bg-white/95 backdrop-blur-sm p-3.5 sm:p-4 rounded-2xl border border-line shadow-elevation-1 flex flex-col justify-between">
-          <div className="flex items-center gap-1.5 text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
+        <div className="bg-surface/95 backdrop-blur-sm p-3.5 sm:p-4 rounded-2xl border border-line shadow-elevation-1 flex flex-col justify-between">
+          <div className="flex items-center gap-1.5 text-body2 text-[11px] font-semibold uppercase tracking-wider">
             <Scale className="w-3.5 h-3.5" strokeWidth={1.5} />
             <span>Saldo Mês</span>
           </div>
@@ -348,14 +346,12 @@ export function WalletTransactionsTab() {
           Carregando transações...
         </div>
       ) : groupedTransactions.length === 0 ? (
-        <div className="bg-white/95 backdrop-blur-sm rounded-3xl p-10 text-center border border-line shadow-elevation-1">
-          <div className="w-10 h-10 rounded-xl bg-surface-2 dark:bg-surface-2 text-ink dark:text-white mx-auto flex items-center justify-center shrink-0 mb-2">
+        <div className="bg-surface/95 backdrop-blur-sm rounded-3xl p-10 text-center border border-line shadow-elevation-1">
+          <div className="w-10 h-10 rounded-xl bg-surface-2 text-white mx-auto flex items-center justify-center shrink-0 mb-2">
             <CategoryIcon name="Tag" className="w-4 h-4" strokeWidth={1.5} />
           </div>
-          <p className="font-semibold text-ink dark:text-white text-sm">
-            Nenhuma transação encontrada
-          </p>
-          <p className="text-xs text-muted-foreground mt-1 mb-4">
+          <p className="font-semibold text-white text-sm">Nenhuma transação encontrada</p>
+          <p className="text-xs text-body2 mt-1 mb-4">
             {activeFiltersCount > 0
               ? 'Tente remover os filtros selecionados.'
               : 'Nenhum lançamento registrado neste mês. Você pode lançar manualmente ou importar seu extrato bancário.'}
@@ -364,9 +360,9 @@ export function WalletTransactionsTab() {
             <Button
               onClick={openImportStatement}
               variant="outline"
-              className="border-border text-ink hover:bg-surface-2 text-xs rounded-xl"
+              className="border-line bg-surface hover:bg-surface-2 text-white text-xs rounded-xl"
             >
-              <UploadCloud className="w-4 h-4 mr-1.5 text-ink" />
+              <UploadCloud className="w-4 h-4 mr-1.5 text-white" />
               Importar Extrato (OFX)
             </Button>
             <Button

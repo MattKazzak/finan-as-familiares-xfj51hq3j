@@ -252,20 +252,20 @@ export function BudgetAlertsFarol({
       {criticalAlerts.map((crit) => (
         <div
           key={crit.id}
-          className="rounded-2xl border border-red-300 bg-red-50/90 p-3.5 sm:p-4 text-red-950 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in-50 duration-200"
+          className="rounded-2xl border border-rose-500/40 bg-rose-950/40 p-3.5 sm:p-4 text-white shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in-50 duration-200"
         >
           <div className="flex items-start gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-red-500 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+            <div className="w-8 h-8 rounded-xl bg-expense text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
               <ShieldAlert className="w-4 h-4 animate-pulse" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-red-200/80 text-red-900">
+                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-rose-500/30 text-rose-200">
                   Aviso Crítico
                 </span>
-                <span className="font-bold text-xs sm:text-sm text-red-950">{crit.title}</span>
+                <span className="font-bold text-xs sm:text-sm text-white">{crit.title}</span>
               </div>
-              <p className="text-xs text-red-900/90 mt-1 leading-relaxed">{crit.detail}</p>
+              <p className="text-xs text-white/80 mt-1 leading-relaxed">{crit.detail}</p>
             </div>
           </div>
 
@@ -286,35 +286,35 @@ export function BudgetAlertsFarol({
       {/* ============================================================== */}
       {!hasRegularAlerts ? (
         /* Estado calmo quando NÃO houver nenhum alerta: linha discreta de ~32px */
-        <div className="h-8 sm:h-9 px-3.5 rounded-xl bg-slate-50/80 border border-slate-200/60 flex items-center justify-center gap-2 text-slate-500 select-none">
+        <div className="h-8 sm:h-9 px-3.5 rounded-xl bg-surface-2/60 border border-line flex items-center justify-center gap-2 text-income select-none">
           <span className="text-xs">✨</span>
-          <span className="text-xs font-medium text-slate-600 truncate">
+          <span className="text-xs font-medium text-white truncate">
             Tudo dentro das metas este mês
           </span>
         </div>
       ) : (
         /* Barra de resumo fina com accordion suave */
-        <div className="rounded-2xl border border-slate-200/80 bg-white overflow-hidden shadow-2xs transition-all">
+        <div className="rounded-2xl border border-line bg-surface overflow-hidden shadow-2xs transition-all">
           {/* BARRA RECOLHIDA / BOTÃO TOGGLE DO ACCORDION */}
           <button
             type="button"
             onClick={() => setIsExpanded((prev) => !prev)}
             aria-expanded={isExpanded}
-            className="w-full h-11 sm:h-12 px-3.5 sm:px-4 flex items-center justify-between gap-2.5 text-left hover:bg-slate-50/70 active:bg-slate-100/60 transition-colors select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
+            className="w-full h-11 sm:h-12 px-3.5 sm:px-4 flex items-center justify-between gap-2.5 text-left hover:bg-surface-2/70 active:bg-surface-2 transition-colors select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-income/50"
           >
             {/* Esquerda: Ícone de farol dinâmico */}
             <div className="flex items-center gap-2 shrink-0">
               <div
                 className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs shrink-0 ${
                   categoryOverCount > 0
-                    ? 'bg-amber-100 text-amber-800'
-                    : 'bg-amber-50 text-amber-700'
+                    ? 'bg-amber-500/20 text-amber-300'
+                    : 'bg-amber-500/15 text-amber-300'
                 }`}
                 aria-hidden="true"
               >
                 ⚠️
               </div>
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 hidden xs:inline">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-body3 hidden xs:inline">
                 Farol
               </span>
             </div>
@@ -322,7 +322,7 @@ export function BudgetAlertsFarol({
             {/* Centro: Resumo inteligente em UMA linha, truncado com ellipsis */}
             <div className="min-w-0 flex-1 px-1">
               <span
-                className="block text-xs sm:text-sm font-semibold text-slate-800 truncate leading-none"
+                className="block text-xs sm:text-sm font-semibold text-white truncate leading-none"
                 title={summaryText}
               >
                 {summaryText}
@@ -331,11 +331,11 @@ export function BudgetAlertsFarol({
 
             {/* Direita: Chevron + Badge numérico */}
             <div className="flex items-center gap-2 shrink-0">
-              <span className="inline-flex items-center justify-center text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 tabular-nums">
+              <span className="inline-flex items-center justify-center text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 tabular-nums">
                 {totalRegularCount}
               </span>
               <div
-                className={`w-6 h-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 transition-transform duration-200 ${
+                className={`w-6 h-6 rounded-lg flex items-center justify-center text-body2 hover:text-white transition-transform duration-200 ${
                   isExpanded ? 'rotate-180' : ''
                 }`}
               >
@@ -346,7 +346,7 @@ export function BudgetAlertsFarol({
 
           {/* ITENS EXPANDIDOS (DENTRO DO CARD, NÃO SOLTOS NA PÁGINA) */}
           {isExpanded ? (
-            <div className="border-t border-slate-100 divide-y divide-slate-100/90 bg-white p-2 sm:p-2.5 space-y-1 animate-in fade-in-50 duration-200">
+            <div className="border-t border-line divide-y divide-line/60 bg-surface p-2 sm:p-2.5 space-y-1 animate-in fade-in-50 duration-200">
               {regularAlerts.map((alert) => {
                 const isCrit = alert.severity === 'critical'
                 const hasCategoryAction = alert.type === 'category' && alert.category
@@ -373,8 +373,10 @@ export function BudgetAlertsFarol({
                         }
                       }
                     }}
-                    className={`w-full group text-left px-3 py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-between gap-2.5 hover:bg-slate-50/90 border-l-[3px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-300 ${
-                      isCrit ? 'border-l-red-500 bg-red-50/20' : 'border-l-amber-500 bg-amber-50/20'
+                    className={`w-full group text-left px-3 py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-between gap-2.5 hover:bg-surface-2/90 border-l-[3px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-line ${
+                      isCrit
+                        ? 'border-l-rose-500 bg-rose-950/20'
+                        : 'border-l-amber-500 bg-amber-950/20'
                     }`}
                     title={
                       hasCategoryAction
@@ -388,15 +390,15 @@ export function BudgetAlertsFarol({
                         {isCrit ? (
                           <AlertCircle className="w-4 h-4 text-expense" />
                         ) : (
-                          <AlertTriangle className="w-4 h-4 text-amber-600" />
+                          <AlertTriangle className="w-4 h-4 text-warning" />
                         )}
                       </div>
 
                       <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-center sm:gap-2 leading-tight">
-                        <span className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition-colors shrink-0">
+                        <span className="text-xs sm:text-sm font-bold text-white group-hover:text-income transition-colors shrink-0">
                           {alert.categoryName}
                         </span>
-                        <span className="text-[11px] sm:text-xs text-slate-500 truncate">
+                        <span className="text-[11px] sm:text-xs text-body2 truncate">
                           <span>{alert.detail}</span>
                         </span>
                       </div>
@@ -407,7 +409,9 @@ export function BudgetAlertsFarol({
                       {alert.metric && (
                         <span
                           className={`text-xs font-bold tabular-nums px-2 py-0.5 rounded-md ${
-                            isCrit ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-900'
+                            isCrit
+                              ? 'bg-rose-500/20 text-rose-300'
+                              : 'bg-amber-500/20 text-amber-300'
                           }`}
                         >
                           {alert.metric}
@@ -415,7 +419,7 @@ export function BudgetAlertsFarol({
                       )}
                       {hasCategoryAction ? (
                         <div
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 group-hover:text-slate-700 group-hover:bg-slate-200/60 transition-colors shrink-0"
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-body2 group-hover:text-white group-hover:bg-surface-2 transition-colors shrink-0"
                           aria-label={`Editar ${alert.categoryName}`}
                         >
                           <Edit3 className="w-3.5 h-3.5" />

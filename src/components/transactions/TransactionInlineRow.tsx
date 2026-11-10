@@ -291,8 +291,8 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
     <div
       className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
         isExpanded
-          ? 'bg-amber-50/40 border-amber-300 shadow-md ring-2 ring-amber-400/40'
-          : 'bg-white hover:bg-amber-50/30 border-amber-200/90 shadow-2xs'
+          ? 'bg-amber-950/30 border-amber-500/60 shadow-md ring-2 ring-amber-500/30'
+          : 'bg-surface hover:bg-surface-2 border-line shadow-2xs'
       } ${saving || savingBatch ? 'opacity-70 pointer-events-none' : ''}`}
     >
       {/* ================= 1. LINHA RECOLHIDA (TAP-TO-EXPAND HEADER) ================= */}
@@ -302,7 +302,7 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
         aria-expanded={isExpanded}
         onClick={onToggleExpand}
         disabled={disabled || saving || savingBatch}
-        className="w-full text-left p-3 sm:p-3.5 flex items-center justify-between gap-2.5 min-h-[44px] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-2xl transition-colors select-none"
+        className="w-full text-left p-3 sm:p-3.5 flex items-center justify-between gap-2.5 min-h-[44px] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-income rounded-2xl transition-colors select-none"
       >
         {/* Lado esquerdo: Ícone + Descrição + Tag Pendente */}
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -323,16 +323,16 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0 animate-pulse" />
               <p
-                className="font-bold text-xs sm:text-sm text-ink truncate leading-tight"
+                className="font-bold text-xs sm:text-sm text-white truncate leading-tight"
                 title={transaction.description || 'Transação sem descrição'}
               >
                 {transaction.description || 'Transação sem descrição'}
               </p>
             </div>
             <div className="flex items-center gap-1.5 text-[11px] text-body2 mt-0.5 min-w-0 flex-wrap">
-              <span className="font-semibold text-[10px] bg-amber-100 text-amber-900 border border-amber-300/80 px-1.5 py-0.2 rounded font-mono shrink-0">
+              <span className="font-semibold text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.2 rounded font-mono shrink-0">
                 Pendente
               </span>
               {aiSuggestion && activeCategory && (
@@ -342,18 +342,18 @@ export const TransactionInlineRow: React.FC<TransactionInlineRowProps> = ({
                       ? `IA: ${aiSuggestion.reasoning}`
                       : 'Classificação sugerida pela IA'
                   }
-                  className="inline-flex items-center gap-1 text-[10px] font-bold text-violet-700 bg-violet-50 border border-violet-200/90 px-1.5 py-0.2 rounded-full shrink-0"
+                  className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-300 bg-purple-500/20 border border-purple-500/30 px-1.5 py-0.2 rounded-full shrink-0"
                 >
                   <span>✨ Sugestão IA ({activeCategory.name})</span>
                 </span>
               )}
               {transaction.is_installment && (
-                <span className="font-bold text-[10px] bg-purple-100 text-purple-900 border border-purple-300/80 px-1.5 py-0.2 rounded shrink-0">
+                <span className="font-bold text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/30 px-1.5 py-0.2 rounded shrink-0">
                   {transaction.installment_number || 1}/{transaction.installment_total || 1}
                 </span>
               )}
               {transaction.status === 'projected' && (
-                <span className="font-semibold text-[10px] bg-blue-100 text-blue-900 border border-blue-300/80 px-1.5 py-0.2 rounded shrink-0">
+                <span className="font-semibold text-[10px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-1.5 py-0.2 rounded shrink-0">
                   Previsto
                 </span>
               )}

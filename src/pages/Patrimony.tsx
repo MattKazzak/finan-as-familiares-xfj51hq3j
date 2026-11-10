@@ -497,7 +497,7 @@ export default function PatrimonyPage() {
 
       {/* 2. DISTRIBUIÇÃO POR CLASSE DE ATIVO */}
       {assetClassBreakdown.length > 0 && (
-        <div className="bg-white/95 rounded-3xl p-5 sm:p-6 border border-line shadow-elevation-1">
+        <div className="bg-surface/95 rounded-3xl p-5 sm:p-6 border border-line shadow-elevation-1">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-bold text-base text-ink flex items-center gap-2">
@@ -630,9 +630,9 @@ export default function PatrimonyPage() {
 
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-sm text-ink group-hover:text-emerald-700 transition-colors">
+                        <span className="font-bold text-sm text-white group-hover:text-income transition-colors">
                           {asset.name}
-                        </span>
+                        </span>{' '}
                         {asset.ticker && (
                           <span className="text-[11px] font-semibold text-body2 bg-surface-2 px-1.5 py-0.5 rounded">
                             {asset.ticker}
@@ -685,7 +685,7 @@ export default function PatrimonyPage() {
                       <button
                         type="button"
                         onClick={() => openPriceDialog(asset)}
-                        className="p-1.5 text-body3 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-body3 hover:text-income hover:bg-surface-2 rounded-lg transition-colors cursor-pointer"
                         title="Atualizar cotação"
                       >
                         <RefreshCw className="w-4 h-4" />
@@ -796,7 +796,7 @@ export default function PatrimonyPage() {
       </div>
 
       {/* 5. SEÇÃO DÍVIDAS E FINANCIAMENTOS (LADO PASSIVO — PREPARADA PARA EVOLUIR) */}
-      <div className="bg-white/95 rounded-3xl border border-line p-5 sm:p-6 shadow-elevation-1">
+      <div className="bg-surface/95 rounded-3xl border border-line p-5 sm:p-6 shadow-elevation-1">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Building2 className="w-4 h-4 text-rose-500" />

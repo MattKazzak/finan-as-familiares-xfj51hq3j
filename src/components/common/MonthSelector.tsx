@@ -107,7 +107,7 @@ export function MonthSelector({
   return (
     <div className={`flex flex-col items-center justify-center gap-1.5 ${className}`}>
       <div
-        className="inline-flex items-center gap-1 sm:gap-2 bg-white px-2 sm:px-3 py-1.5 rounded-2xl border border-line shadow-2xs touch-manipulation max-w-full"
+        className="inline-flex items-center gap-1 sm:gap-2 bg-surface px-2 sm:px-3 py-1.5 rounded-2xl border border-line shadow-2xs touch-manipulation max-w-full"
         role="group"
         aria-label="Seletor de mês"
       >
@@ -115,7 +115,7 @@ export function MonthSelector({
         <button
           type="button"
           onClick={prevMonth}
-          className="p-1.5 hover:bg-surface-2 active:scale-95 rounded-xl text-body hover:text-ink transition-all cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+          className="p-1.5 hover:bg-surface-2 active:scale-95 rounded-xl text-white/80 hover:text-white transition-all cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
           title="Mês anterior"
           aria-label="Mês anterior"
         >
@@ -124,7 +124,7 @@ export function MonthSelector({
 
         {/* Mês em destaque */}
         <div className="flex flex-col items-center justify-center px-1 sm:px-2 min-w-[120px] sm:min-w-[130px] text-center select-none">
-          <span className="font-bold text-xs sm:text-sm text-ink tracking-tight leading-tight">
+          <span className="font-bold text-xs sm:text-sm text-white tracking-tight leading-tight">
             {formattedMonth}
           </span>
         </div>
@@ -136,8 +136,8 @@ export function MonthSelector({
           disabled={isNextMonthDisabled}
           className={`p-1.5 rounded-xl transition-all touch-manipulation ${
             isNextMonthDisabled
-              ? 'text-body3 cursor-not-allowed opacity-40'
-              : 'text-body hover:text-ink hover:bg-surface-2 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action'
+              ? 'text-white/20 cursor-not-allowed opacity-40'
+              : 'text-white/80 hover:text-white hover:bg-surface-2 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action'
           }`}
           title={isNextMonthDisabled ? 'Limite atingido (+24 meses)' : 'Próximo mês'}
           aria-label="Próximo mês"
