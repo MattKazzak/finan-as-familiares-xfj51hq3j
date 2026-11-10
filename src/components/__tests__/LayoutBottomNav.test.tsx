@@ -39,6 +39,30 @@ vi.mock('@/contexts/ActiveMonthContext', () => ({
 }))
 
 describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () => {
+  it('não renderiza o header top navy na rota /perfil, mas renderiza em /carteira', () => {
+    const { unmount } = render(
+      <MemoryRouter initialEntries={['/perfil']}>
+        <Layout />
+      </MemoryRouter>,
+    )
+
+    // Na rota /perfil, o header com a barra navy sticky NÃO deve existir
+    expect(screen.queryByTestId('header-profile-avatar')).toBeNull()
+    expect(screen.queryByLabelText('Falar com o Curiango')).toBeNull()
+
+    unmount()
+
+    render(
+      <MemoryRouter initialEntries={['/carteira']}>
+        <Layout />
+      </MemoryRouter>,
+    )
+
+    // Em /carteira o header sticky navy permanece normal
+    expect(screen.getByTestId('header-profile-avatar')).toBeDefined()
+    expect(screen.getByLabelText('Falar com o Curiango')).toBeDefined()
+  })
+
   it('exibe o + como item comum da pílula: sem círculo, sem sombra, sem borda, com rótulo "Criar" visível', () => {
     render(
       <MemoryRouter initialEntries={['/inicio']}>

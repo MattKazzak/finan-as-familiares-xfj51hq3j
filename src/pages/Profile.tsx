@@ -858,6 +858,43 @@ export default function ProfilePage() {
   return (
     <div className="space-y-5 max-w-4xl mx-auto w-full min-w-0">
       {/* ================================================
+          TOPO MINIMALISTA INTEGRADO — Estilo Instagram / Spotify / Pinterest
+          Sem a top bar navy externa, a própria tela traz o título grande "Perfil"
+          e o acesso direto a "Minha conta" via avatar pessoal no canto superior.
+          ================================================ */}
+      <div className="flex items-center justify-between gap-3 pt-1 pb-1">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink leading-tight">
+            Perfil
+          </h1>
+          <p className="text-xs sm:text-sm text-body2 mt-0.5">Preferências pessoais e da família</p>
+        </div>
+
+        {/* Avatar pessoal no canto superior: atalho rápido que rola e expande "Minha conta" */}
+        <button
+          type="button"
+          onClick={() => {
+            setOpenSection('conta')
+            const el = document.getElementById('section-minha-conta')
+            el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }}
+          data-testid="profile-top-avatar"
+          aria-label="Minha conta"
+          title={`Minha conta (${userDisplayName})`}
+          className="group relative flex items-center rounded-full p-0.5 ring-2 ring-line hover:ring-action active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action shrink-0"
+        >
+          <Avatar className="w-10 h-10 shrink-0">
+            {userAvatarUrl ? (
+              <AvatarImage src={userAvatarUrl} alt={userDisplayName} className="object-cover" />
+            ) : null}
+            <AvatarFallback className="bg-surface-2 text-ink font-bold text-xs sm:text-sm group-hover:bg-action-subtle group-hover:text-action transition-colors">
+              {userDisplayName.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+        </button>
+      </div>
+
+      {/* ================================================
           HERO — Família (versão calma, auditoria 16/10): card branco igual ao resto
           da página, sem selo, sem botão chamativo. Editar = ícone de lápis discreto.
           Premium = badge sutil. A ação de assinatura vive na linha Assinatura do hub.
@@ -1252,7 +1289,7 @@ export default function ProfilePage() {
         )}
 
         {/* Linha 2: Minha conta (nome, senha, sair, exportar, excluir) */}
-        <div>
+        <div id="section-minha-conta">
           <SettingsRow
             icon={<UserIcon className="w-5 h-5 text-body" strokeWidth={1.75} />}
             title="Minha conta"

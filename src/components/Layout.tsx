@@ -260,8 +260,10 @@ export default function Layout() {
       </aside>
 
       <div className="flex-1 md:ml-60 flex flex-col min-h-screen bg-white">
-        {/* HEADER TOP (visível em desktop e nas demais páginas; na Home (/inicio) o header moderno fintech já assume o topo no mobile e desktop, evitando cabeçalho duplicado ou barra cinza rígida) */}
-        {location.pathname !== '/inicio' && (
+        {/* HEADER TOP (visível em desktop e nas demais páginas; na Home (/inicio) e no Perfil (/perfil) o cabeçalho é dispensado:
+            a Home possui hero sangrado próprio e o Perfil adota o padrão Instagram/Spotify/Pinterest de telas de configurações
+            com título grande integrado na página e sem a top bar navy fixa). */}
+        {location.pathname !== '/inicio' && location.pathname !== '/perfil' && (
           <header className="sticky top-0 z-30 bg-[#14213D] text-white pl-4 pr-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 sm:px-6 flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0">
               {/* FIX 25/10 (Matheus): o pássaro agora é CAMINHO PRO COPILOT em toda
@@ -311,12 +313,15 @@ export default function Layout() {
           </header>
         )}
 
-        {/* CONTEÚDO PRINCIPAL: Na Home (/inicio), o topo sangra sem padding superior e lateral para encostar nas bordas, e o miolo fica responsivo */}
+        {/* CONTEÚDO PRINCIPAL: Na Home (/inicio), o topo sangra sem padding superior e lateral para encostar nas bordas;
+            no Perfil (/perfil), sem a top bar navy, aplica-se safe-area no topo para proteger o notch e o miolo fica responsivo */}
         <main
           className={`flex-1 w-full overflow-x-hidden min-w-0 ${
             location.pathname === '/inicio'
               ? 'p-0 pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-8'
-              : 'max-w-[1200px] mx-auto p-4 sm:p-6 pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-8'
+              : location.pathname === '/perfil'
+                ? 'max-w-[1200px] mx-auto p-4 sm:p-6 pt-[calc(env(safe-area-inset-top)+1rem)] sm:pt-6 pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-8'
+                : 'max-w-[1200px] mx-auto p-4 sm:p-6 pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-8'
           }`}
         >
           <Outlet />

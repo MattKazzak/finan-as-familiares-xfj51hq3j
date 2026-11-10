@@ -238,6 +238,26 @@ describe('ProfilePage PWA Install Shortcut - 3 Cenários de Clique', () => {
     // Deve existir apenas UM botão "Editar Família" no card
     const editFamilyButtons = screen.getAllByRole('button', { name: /Editar Família/i })
     expect(editFamilyButtons.length).toBe(1)
+  })
+
+  it('renderiza o cabeçalho minimalista integrado com título "Perfil" e avatar no canto (estilo Instagram/Spotify)', () => {
+    render(
+      <MemoryRouter>
+        <ProfilePage />
+      </MemoryRouter>,
+    )
+
+    // Título grande "Perfil" dentro da página
+    const perfilHeading = screen.getByRole('heading', { level: 1, name: 'Perfil' })
+    expect(perfilHeading).toBeDefined()
+    expect(perfilHeading.className).toContain('text-2xl')
+    expect(perfilHeading.className).toContain('font-semibold')
+    expect(screen.getByText('Preferências pessoais e da família')).toBeDefined()
+
+    // Avatar de atalho no canto superior direito da página
+    const topAvatarBtn = screen.getByTestId('profile-top-avatar')
+    expect(topAvatarBtn).toBeDefined()
+    expect(topAvatarBtn.getAttribute('aria-label')).toBe('Minha conta')
 
     // Não deve existir lápis inline duplicado com title "Editar nome da família"
     expect(screen.queryByTitle('Editar nome da família')).toBeNull()
