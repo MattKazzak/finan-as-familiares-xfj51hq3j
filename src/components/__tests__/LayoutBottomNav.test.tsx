@@ -63,14 +63,14 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
     expect(screen.getByLabelText('Falar com o Curiango')).toBeDefined()
   })
 
-  it('exibe o + como item comum da pílula: sem círculo, sem sombra, sem borda, com rótulo "Criar" visível', () => {
+  it('exibe o + como item comum da barra: sem círculo, sem sombra, sem borda, com rótulo "Criar" visível', () => {
     render(
       <MemoryRouter initialEntries={['/inicio']}>
         <Layout />
       </MemoryRouter>,
     )
 
-    // Rótulo "Criar" visível embaixo do ícone, igual aos demais itens da pílula
+    // Rótulo "Criar" visível embaixo do ícone, igual aos demais itens da barra
     const criarLabel = screen.getByText('Criar')
     expect(criarLabel.className).toContain('text-[10px]')
     expect(criarLabel.className).toContain('leading-none')
@@ -97,14 +97,20 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
     // Sem espaçador invisível: o + tem rótulo de verdade como os outros itens
     expect(centralBtn.querySelector('span.invisible')).toBeNull()
 
-    // Dock inferior plano: pílula navy (bg-ink) com sombra de dock CDS v2.0
-    const navBar = screen.getByRole('navigation', { name: /Navegação Principal/i })
-    const navContainer = navBar.querySelector('.bg-ink')
-    expect(navContainer).not.toBeNull()
-    expect(navContainer?.className).toContain('shadow-cds-dock')
-    expect(navContainer?.className).toContain('rounded-full')
+    // Barra inferior EDGE-TO-EDGE (estilo Instagram/Spotify): container com fundo
+    // navy (bg-ink), largura total, SEM cantos arredondados, sem borda lateral e
+    // com separador superior sutil translúcido
+    const navBar = screen.getByTestId('bottom-nav-bar')
+    expect(navBar.className).toContain('bg-ink')
+    expect(navBar.className).toContain('inset-x-0')
+    expect(navBar.className).toContain('bottom-0')
+    expect(navBar.className).not.toContain('rounded-full')
+    expect(navBar.className).not.toContain('border-line')
+    expect(navBar.className).toContain('border-t')
+    expect(navBar.className).toContain('border-white/10')
+    expect(navBar.getAttribute('style')).toContain('safe-area-inset-bottom')
 
-    // Rótulos dos 4 itens de navegação da pílula
+    // Rótulos dos 4 itens de navegação da barra
     expect(screen.getByText('Início')).toBeDefined()
     expect(screen.getByText('Carteira')).toBeDefined()
     expect(screen.getByText('Patrimônio')).toBeDefined()
@@ -207,7 +213,7 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
     expect(centralBtn.className).toContain('active:scale-95')
   })
 
-  it('aciona openNewTransaction() ao clicar no item + da pílula', () => {
+  it('aciona openNewTransaction() ao clicar no item + da barra', () => {
     mockOpenNewTransaction.mockClear()
 
     render(

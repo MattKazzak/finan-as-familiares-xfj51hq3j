@@ -151,14 +151,6 @@ export default function Layout() {
       {/* EDGE-TO-EDGE (18/10, Matheus): pinta o fundo POR BAIXO das barras do sistema
           (barra de status wifi/bateria em cima, barra de gestos embaixo) — sensação
           de unidade que apps como Nubank/Pinterest/Instagram têm. */}
-      <div
-        aria-hidden="true"
-        className="md:hidden fixed inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-[#14213D] z-[60]"
-      />
-      <div
-        aria-hidden="true"
-        className="md:hidden fixed inset-x-0 bottom-0 h-[env(safe-area-inset-bottom)] bg-[#14213D] z-[60]"
-      />
       {/* SIDEBAR DESKTOP (>= 768px) com identidade profunda #14213D */}
       <aside className="hidden md:flex w-60 shrink-0 flex-col bg-[#14213D] text-white sticky top-0 h-screen">
         {/* Logo + Nome */}
@@ -328,10 +320,10 @@ export default function Layout() {
         <main
           className={`flex-1 w-full overflow-x-hidden min-w-0 ${
             location.pathname === '/inicio'
-              ? 'p-0 pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-8'
+              ? 'p-0 pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-8'
               : location.pathname === '/perfil'
-                ? 'max-w-[1200px] mx-auto p-4 sm:p-6 pt-[calc(env(safe-area-inset-top)+1rem)] sm:pt-6 pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-8 bg-[#0B111E]'
-                : 'max-w-[1200px] mx-auto p-4 sm:p-6 pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-8'
+                ? 'max-w-[1200px] mx-auto p-4 sm:p-6 pt-[calc(env(safe-area-inset-top)+1rem)] sm:pt-6 pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-8 bg-[#0B111E]'
+                : 'max-w-[1200px] mx-auto p-4 sm:p-6 pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-8'
           }`}
         >
           <Outlet />
@@ -344,18 +336,23 @@ export default function Layout() {
         {/* BANNER EDUCATIVO DE INSTALAÇÃO PWA (POSICIONADO ACIMA DO DOCK FLUTUANTE) */}
         <InstallPwaBanner variant="bottom-nav" />
 
-        {/* DOCK FLUTUANTE EM PÍLULA (MOBILE APENAS < 768px, 360–412px SAFE) —
-            ESTILO INSTAGRAM/PINTEREST/SPOTIFY: pílula plana, 5 itens IGUAIS —
-            Início, Carteira, Criar (+), Patrimônio e Metas.
+        {/* DOCK EDGE-TO-EDGE (MOBILE APENAS < 768px, 360–412px SAFE) —
+            ESTILO INSTAGRAM/SPOTIFY: barra full-width COLADA na borda inferior,
+            sem pílula, sem cantos arredondados, sem borda e sem margem lateral.
+            Fundo navy bg-ink cobrindo TAMBÉM o safe-area-inset-bottom (padding com
+            env()), para nenhuma faixa clara aparecer sob a barra em iPhones com notch.
             Item ativo = SEM NENHUM fundo (nem permanente, nem hover/press, zero bg-white/*):
             o destaque vem só do ícone na variante SÓLIDA em branco pleno + rótulo branco
             (font-semibold), exatamente como no Spotify. Item inativo mantém ícone outline
-            e rótulo translúcido. Tokens CDS v2.0: bg-ink, border-line, shadow-cds-dock. */}
+            e rótulo translúcido. Separador superior sutil translúcido (border-white/10),
+            como Instagram/Spotify. Token CDS v2.0: bg-ink. */}
         <nav
           aria-label="Navegação Principal"
-          className="md:hidden fixed bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] inset-x-0 z-40 px-3 sm:px-4 max-w-md mx-auto pointer-events-none"
+          data-testid="bottom-nav-bar"
+          className="md:hidden fixed inset-x-0 bottom-0 z-40 pointer-events-auto w-full bg-ink border-t border-white/10"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         >
-          <div className="pointer-events-auto w-full bg-ink border border-line shadow-cds-dock rounded-full px-1.5 py-1.5 flex items-center justify-between">
+          <div className="w-full max-w-md mx-auto flex items-center justify-between px-1 py-1.5">
             {navItems.slice(0, 4).map((item, idx) => {
               const Icon = item.icon
               const isItemActive = isDockItemActive(item.to)
