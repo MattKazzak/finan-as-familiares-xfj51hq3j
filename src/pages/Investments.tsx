@@ -271,7 +271,7 @@ export default function InvestmentsPage() {
       {/* 1. Header com Ação "+ Adicionar Ativo" */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-ink tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
             Carteira de Investimentos
           </h1>
           <p className="text-xs sm:text-sm text-body2">
@@ -292,23 +292,23 @@ export default function InvestmentsPage() {
       {investments.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Valor Total da Carteira - Hero Ink */}
-          <div className="bg-gradient-to-br from-ink via-ink/90 to-ink text-white rounded-3xl p-6 shadow-cds border border-line">
+          <div className="bg-surface text-white rounded-3xl p-6 shadow-cds border border-line">
             <span className="text-xs uppercase font-semibold tracking-wider text-action">
               Valor Total da Carteira
             </span>
             <div className="text-2xl sm:text-3xl font-semibold tabular-nums mt-1.5 text-white">
               {formatBRL(totalCurrentValueCents)}
             </div>
-            <p className="text-xs text-white/70 mt-1">Soma de todos os ativos atuais</p>
+            <p className="text-xs text-body2 mt-1">Soma de todos os ativos atuais</p>
           </div>
 
           {/* Custo de Aquisição */}
-          <div className="bg-white rounded-3xl p-6 border border-line shadow-cds flex flex-col justify-between">
+          <div className="bg-surface rounded-3xl p-6 border border-line shadow-cds flex flex-col justify-between">
             <div>
               <span className="text-xs uppercase font-bold tracking-wider text-body3">
                 Custo de Aquisição
               </span>
-              <div className="text-xl sm:text-2xl font-bold text-ink tabular-nums mt-1.5">
+              <div className="text-xl sm:text-2xl font-bold text-white tabular-nums mt-1.5">
                 {formatBRL(totalCostCents)}
               </div>
             </div>
@@ -316,7 +316,7 @@ export default function InvestmentsPage() {
           </div>
 
           {/* Lucro / Prejuízo Total */}
-          <div className="bg-white rounded-3xl p-6 border border-line shadow-cds flex flex-col justify-between">
+          <div className="bg-surface rounded-3xl p-6 border border-line shadow-cds flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">
                 <span className="text-xs uppercase font-bold tracking-wider text-body3">
@@ -325,8 +325,8 @@ export default function InvestmentsPage() {
                 <span
                   className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                     totalProfitCents >= 0
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-red-100 text-red-700'
+                      ? 'bg-emerald-500/20 text-emerald-300'
+                      : 'bg-rose-500/20 text-rose-300'
                   }`}
                 >
                   {Number(totalProfitPercent) >= 0 ? '+' : ''}
@@ -335,7 +335,7 @@ export default function InvestmentsPage() {
               </div>
               <div
                 className={`text-xl sm:text-2xl font-semibold tabular-nums mt-1.5 flex items-center gap-1.5 ${
-                  totalProfitCents >= 0 ? 'text-emerald-600' : 'text-red-600'
+                  totalProfitCents >= 0 ? 'text-emerald-400' : 'text-rose-400'
                 }`}
               >
                 {totalProfitCents >= 0 ? (
@@ -355,10 +355,10 @@ export default function InvestmentsPage() {
       )}
 
       {/* 3. Lista de Ativos */}
-      <div className="bg-white rounded-3xl border border-line p-5 sm:p-6 shadow-cds">
+      <div className="bg-surface rounded-3xl border border-line p-5 sm:p-6 shadow-cds">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="font-bold text-base text-ink">Ativos da Família</h3>
+            <h3 className="font-bold text-base text-white">Ativos da Família</h3>
             <p className="text-xs text-body2">
               Ações, Fundos Imobiliários, Renda Fixa e Criptoativos
             </p>
@@ -372,17 +372,17 @@ export default function InvestmentsPage() {
           <div className="py-12 text-center text-xs text-body3">Carregando investimentos...</div>
         ) : investments.length === 0 ? (
           /* Empty State */
-          <div className="py-12 text-center">
-            <div className="w-16 h-16 rounded-3xl bg-surface-2 flex items-center justify-center text-body3 mx-auto mb-3">
+          <div className="py-12 text-center bg-surface-2/50 rounded-2xl border border-dashed border-line p-6">
+            <div className="w-16 h-16 rounded-3xl bg-surface-2 flex items-center justify-center text-white mx-auto mb-3 border border-line">
               <PieChart className="w-8 h-8 stroke-[1.5]" />
             </div>
-            <h4 className="font-bold text-ink text-base">Nenhum investimento cadastrado</h4>
+            <h4 className="font-bold text-white text-base">Nenhum investimento cadastrado</h4>
             <p className="text-xs text-body2 mt-1 max-w-xs mx-auto mb-5">
               Comece a registrar os ativos de renda fixa, ações e fundos da família.
             </p>
             <Button
               onClick={openCreateDialog}
-              className="bg-action hover:bg-action-hover text-white text-xs font-bold rounded-xl shadow-cds"
+              className="bg-action hover:bg-action-hover text-white text-xs font-bold rounded-xl shadow-cds border-0"
             >
               <Plus className="w-4 h-4 mr-1.5 stroke-[2.5]" />
               Adicionar primeiro ativo
@@ -416,7 +416,7 @@ export default function InvestmentsPage() {
 
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-ink group-hover:text-emerald-700 transition-colors">
+                        <span className="font-bold text-sm text-white group-hover:text-action transition-colors">
                           {asset.name}
                         </span>
                         {asset.ticker && (
@@ -431,17 +431,17 @@ export default function InvestmentsPage() {
 
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-body2 mt-1">
                         <span>
-                          Qtd: <strong className="text-ink">{asset.quantity}</strong>
+                          Qtd: <strong className="text-white">{asset.quantity}</strong>
                         </span>
                         <span>•</span>
                         <span>
                           PM:{' '}
-                          <strong className="text-ink">{formatBRL(asset.avg_price_cents)}</strong>
+                          <strong className="text-white">{formatBRL(asset.avg_price_cents)}</strong>
                         </span>
                         <span>•</span>
                         <span>
                           Atual:{' '}
-                          <strong className="text-ink">
+                          <strong className="text-white">
                             {formatBRL(asset.current_price_cents)}
                           </strong>
                         </span>
@@ -452,12 +452,12 @@ export default function InvestmentsPage() {
                   {/* Valor Total do Ativo e Rentabilidade */}
                   <div className="flex items-center justify-between sm:justify-end gap-4 pl-13 sm:pl-0">
                     <div className="text-left sm:text-right">
-                      <div className="text-sm sm:text-base font-semibold text-ink tabular-nums">
+                      <div className="text-sm sm:text-base font-semibold text-white tabular-nums">
                         {formatBRL(totalValCents)}
                       </div>
                       <div
                         className={`text-xs font-bold tabular-nums flex items-center sm:justify-end gap-1 ${
-                          isPositive ? 'text-emerald-600' : 'text-red-600'
+                          isPositive ? 'text-emerald-400' : 'text-rose-400'
                         }`}
                       >
                         {isPositive ? '+' : ''}
@@ -470,21 +470,21 @@ export default function InvestmentsPage() {
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => openPriceDialog(asset)}
-                        className="p-1.5 text-body3 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                        className="p-1.5 text-body3 hover:text-white hover:bg-surface-2 rounded-lg transition-colors"
                         title="Atualizar preço atual"
                       >
                         <RefreshCw className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => openEditDialog(asset)}
-                        className="p-1.5 text-body3 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="p-1.5 text-body3 hover:text-white hover:bg-surface-2 rounded-lg transition-colors"
                         title="Editar ativo"
                       >
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => setAssetToDelete(asset)}
-                        className="p-1.5 text-body3 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-1.5 text-body3 hover:text-rose-400 hover:bg-surface-2 rounded-lg transition-colors"
                         title="Excluir ativo"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -502,20 +502,20 @@ export default function InvestmentsPage() {
       <Dialog open={isAssetDialogOpen} onOpenChange={setIsAssetDialogOpen}>
         <DialogContent className="max-w-md w-[95vw] rounded-2xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-ink">
+            <DialogTitle className="text-lg font-bold text-white">
               {editingAsset ? 'Editar Ativo' : 'Adicionar Ativo à Carteira'}
             </DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSaveAsset} className="space-y-3.5">
             {errorMsg && (
-              <div className="p-3 text-xs bg-red-50 border border-red-200 text-red-700 rounded-xl">
+              <div className="p-3 text-xs bg-rose-500/10 border border-rose-500/30 text-rose-300 rounded-xl">
                 {errorMsg}
               </div>
             )}
 
             <div>
-              <Label htmlFor="asset-name" className="text-xs font-semibold text-ink">
+              <Label htmlFor="asset-name" className="text-xs font-semibold text-white">
                 Nome do Ativo
               </Label>
               <Input
@@ -531,13 +531,13 @@ export default function InvestmentsPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="asset-ticker" className="text-xs font-semibold text-ink">
-                  Ticker (opcional)
+                <Label htmlFor="asset-ticker" className="text-xs font-semibold text-white">
+                  Código / Ticker
                 </Label>
                 <Input
                   id="asset-ticker"
                   type="text"
-                  placeholder="ITUB4, MXRF11"
+                  placeholder="Ex.: PETR4, HGLG11"
                   value={ticker}
                   onChange={(e) => setTicker(e.target.value)}
                   className="mt-1 uppercase"
@@ -545,8 +545,9 @@ export default function InvestmentsPage() {
               </div>
 
               <div>
-                <Label className="text-xs font-semibold text-ink">Tipo de Ativo</Label>
+                <Label className="text-xs font-semibold text-white">Tipo de Ativo</Label>
                 <Select value={assetType} onValueChange={(v) => setAssetType(v as AssetType)}>
+                  {' '}
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
@@ -563,14 +564,14 @@ export default function InvestmentsPage() {
             </div>
 
             <div>
-              <Label htmlFor="asset-qty" className="text-xs font-semibold text-ink">
+              <Label htmlFor="asset-qty" className="text-xs font-semibold text-white">
                 Quantidade
               </Label>
               <Input
                 id="asset-qty"
                 type="text"
                 inputMode="decimal"
-                placeholder="100 ou 2.5"
+                placeholder="Ex.: 100 ou 12.5"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
                 className="mt-1"
@@ -580,7 +581,7 @@ export default function InvestmentsPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="asset-pm" className="text-xs font-semibold text-ink">
+                <Label htmlFor="asset-pm" className="text-xs font-semibold text-white">
                   Preço Médio (R$)
                 </Label>
                 <Input
@@ -596,9 +597,9 @@ export default function InvestmentsPage() {
               </div>
 
               <div>
-                <Label htmlFor="asset-price" className="text-xs font-semibold text-ink">
+                <Label htmlFor="asset-price" className="text-xs font-semibold text-white">
                   Preço Atual (R$)
-                </Label>
+                </Label>{' '}
                 <Input
                   id="asset-price"
                   type="text"
@@ -637,18 +638,19 @@ export default function InvestmentsPage() {
       <Dialog open={isPriceDialogOpen} onOpenChange={setIsPriceDialogOpen}>
         <DialogContent className="max-w-xs w-[90vw] rounded-2xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-ink">
+            <DialogTitle className="text-base font-bold text-white">
               Atualizar Preço Atual
             </DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSavePrice} className="space-y-4">
             <p className="text-xs text-body2">
-              Atualize a cotação de <strong>{priceAsset?.name}</strong> para recalcular os ganhos.
+              Atualize a cotação de <strong className="text-white">{priceAsset?.name}</strong> para
+              recalcular os ganhos.
             </p>
 
             <div>
-              <Label htmlFor="quick-price" className="text-xs font-semibold text-ink">
+              <Label htmlFor="quick-price" className="text-xs font-semibold text-white">
                 Novo Preço Unitário (R$)
               </Label>
               <Input
@@ -691,7 +693,7 @@ export default function InvestmentsPage() {
       <AlertDialog open={!!assetToDelete} onOpenChange={(open) => !open && setAssetToDelete(null)}>
         <AlertDialogContent className="rounded-2xl max-w-sm">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-base font-bold text-ink">
+            <AlertDialogTitle className="text-base font-bold text-white">
               Remover ativo da carteira?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs text-body2">

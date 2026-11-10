@@ -500,8 +500,8 @@ export default function PatrimonyPage() {
         <div className="bg-surface/95 rounded-3xl p-5 sm:p-6 border border-line shadow-elevation-1">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-bold text-base text-ink flex items-center gap-2">
-                <PieChart className="w-4 h-4 text-emerald-600" />
+              <h3 className="font-bold text-base text-white flex items-center gap-2">
+                <PieChart className="w-4 h-4 text-emerald-400" />
                 Distribuição da Carteira por Classe
               </h3>
               <p className="text-xs text-body2">Divisão real dos seus investimentos cadastrados</p>
@@ -538,10 +538,10 @@ export default function PatrimonyPage() {
                     className="w-2.5 h-2.5 rounded-full shrink-0"
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-xs font-medium text-ink truncate">{item.label}</span>
+                  <span className="text-xs font-medium text-white truncate">{item.label}</span>
                 </div>
                 <div className="mt-1">
-                  <span className="text-sm font-bold text-ink block tabular-nums">
+                  <span className="text-sm font-bold text-white block tabular-nums">
                     {item.percent}%
                   </span>
                   <span className="text-[10px] text-body2 tabular-nums">
@@ -555,11 +555,11 @@ export default function PatrimonyPage() {
       )}
 
       {/* 3. SEÇÃO PRINCIPAL — CARTEIRA DE INVESTIMENTOS (DADOS REAIS FUNCIONAIS) */}
-      <div className="bg-white/95 rounded-3xl border border-line p-5 sm:p-6 shadow-elevation-1">
+      <div className="bg-surface/95 rounded-3xl border border-line p-5 sm:p-6 shadow-elevation-1">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
           <div>
-            <h3 className="font-bold text-base text-ink flex items-center gap-2">
-              <Layers className="w-4 h-4 text-blue-600" />
+            <h3 className="font-bold text-base text-white flex items-center gap-2">
+              <Layers className="w-4 h-4 text-action" />
               Carteira de Ativos
             </h3>
             <p className="text-xs text-body2">
@@ -586,17 +586,17 @@ export default function PatrimonyPage() {
         ) : investments.length === 0 ? (
           /* Empty State Amigável CDS */
           <div className="py-12 text-center bg-surface-2/50 rounded-2xl border border-dashed border-line p-6">
-            <div className="w-14 h-14 rounded-2xl bg-ink/5 text-ink flex items-center justify-center mx-auto mb-3">
+            <div className="w-14 h-14 rounded-2xl bg-surface-2 text-white flex items-center justify-center mx-auto mb-3 border border-line">
               <PieChart className="w-7 h-7 stroke-[1.5]" />
             </div>
-            <h4 className="font-bold text-ink text-sm">Nenhum investimento registrado</h4>
+            <h4 className="font-bold text-white text-sm">Nenhum investimento registrado</h4>
             <p className="text-xs text-body2 mt-1 max-w-xs mx-auto mb-4">
               Cadastre suas aplicações de renda fixa, Tesouro, fundos ou ações para acompanhar o
               patrimônio líquido consolidado.
             </p>
             <Button
               onClick={openCreateDialog}
-              className="bg-action hover:bg-action-hover text-white text-xs font-bold rounded-xl shadow-xs"
+              className="bg-action hover:bg-action-hover text-white text-xs font-bold rounded-xl shadow-xs border-0"
             >
               <Plus className="w-4 h-4 mr-1.5 stroke-[2.5]" />
               Adicionar primeiro ativo
@@ -645,17 +645,17 @@ export default function PatrimonyPage() {
 
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-body2 mt-1">
                         <span>
-                          Qtd: <strong className="text-ink">{asset.quantity}</strong>
+                          Qtd: <strong className="text-white">{asset.quantity}</strong>
                         </span>
                         <span>•</span>
                         <span>
                           PM:{' '}
-                          <strong className="text-ink">{formatBRL(asset.avg_price_cents)}</strong>
+                          <strong className="text-white">{formatBRL(asset.avg_price_cents)}</strong>
                         </span>
                         <span>•</span>
                         <span>
                           Atual:{' '}
-                          <strong className="text-ink">
+                          <strong className="text-white">
                             {formatBRL(asset.current_price_cents)}
                           </strong>
                         </span>
@@ -666,7 +666,7 @@ export default function PatrimonyPage() {
                   {/* Valor Total do Ativo e Rentabilidade */}
                   <div className="flex items-center justify-between sm:justify-end gap-3 pl-13 sm:pl-0">
                     <div className="text-left sm:text-right">
-                      <div className="text-sm sm:text-base font-semibold text-ink tabular-nums">
+                      <div className="text-sm sm:text-base font-semibold text-white tabular-nums">
                         {formatBRL(totalValCents)}
                       </div>
                       <div
@@ -693,7 +693,7 @@ export default function PatrimonyPage() {
                       <button
                         type="button"
                         onClick={() => openEditDialog(asset)}
-                        className="p-1.5 text-body3 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-body3 hover:text-white hover:bg-surface-2 rounded-lg transition-colors cursor-pointer"
                         title="Editar ativo"
                       >
                         <Edit3 className="w-4 h-4" />
@@ -701,7 +701,7 @@ export default function PatrimonyPage() {
                       <button
                         type="button"
                         onClick={() => setAssetToDelete(asset)}
-                        className="p-1.5 text-body3 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-body3 hover:text-rose-400 hover:bg-surface-2 rounded-lg transition-colors cursor-pointer"
                         title="Excluir ativo"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -716,11 +716,11 @@ export default function PatrimonyPage() {
       </div>
 
       {/* 4. SEÇÃO METAS CONECTADAS AOS BALDES (ESTRUTURADA COM DADOS REAIS EXISTENTES) */}
-      <div className="bg-white/95 rounded-3xl border border-line p-5 sm:p-6 shadow-elevation-1">
+      <div className="bg-surface/95 rounded-3xl border border-line p-5 sm:p-6 shadow-elevation-1">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="font-bold text-base text-ink flex items-center gap-2">
-              <Target className="w-4 h-4 text-emerald-600" />
+            <h3 className="font-bold text-base text-white flex items-center gap-2">
+              <Target className="w-4 h-4 text-emerald-400" />
               Metas Financeiras (Balde do Futuro)
             </h3>
             <p className="text-xs text-body2">
@@ -732,7 +732,7 @@ export default function PatrimonyPage() {
             variant="ghost"
             size="sm"
             onClick={() => navigate('/metas')}
-            className="text-xs font-semibold text-ink hover:text-action hover:bg-surface-2 gap-1 rounded-xl"
+            className="text-xs font-semibold text-white hover:text-action hover:bg-surface-2 gap-1 rounded-xl"
           >
             <span>Ver todas as metas</span>
             <ChevronRight className="w-3.5 h-3.5" />
@@ -740,14 +740,12 @@ export default function PatrimonyPage() {
         </div>
 
         {goals.length === 0 ? (
-          <div className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-100 flex items-center justify-between gap-3">
+          <div className="p-4 rounded-2xl bg-surface-2 border border-line flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <Sparkles className="w-5 h-5 text-emerald-600 shrink-0" />
+              <Sparkles className="w-5 h-5 text-emerald-400 shrink-0" />
               <div>
-                <p className="text-xs font-semibold text-emerald-950">
-                  Planeje os sonhos da família
-                </p>
-                <p className="text-[11px] text-emerald-700">
+                <p className="text-xs font-semibold text-white">Planeje os sonhos da família</p>
+                <p className="text-[11px] text-body2">
                   Crie metas de curto e longo prazo (reserva, viagem, estudos) para acompanhar o
                   progresso.
                 </p>
@@ -756,7 +754,7 @@ export default function PatrimonyPage() {
             <Button
               size="sm"
               onClick={() => navigate('/metas')}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shrink-0"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shrink-0 border-0"
             >
               Criar Meta
             </Button>
@@ -773,8 +771,8 @@ export default function PatrimonyPage() {
                   className="p-4 rounded-2xl bg-surface-2/70 border border-line hover:bg-surface-2 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-xs text-ink truncate">{goal.name}</span>
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.5 rounded">
+                    <span className="font-semibold text-xs text-white truncate">{goal.name}</span>
+                    <span className="text-[10px] font-bold text-emerald-300 bg-emerald-500/20 px-1.5 py-0.5 rounded">
                       {pct}%
                     </span>
                   </div>
@@ -799,8 +797,8 @@ export default function PatrimonyPage() {
       <div className="bg-surface/95 rounded-3xl border border-line p-5 sm:p-6 shadow-elevation-1">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-rose-500" />
-            <h3 className="font-bold text-base text-ink">Dívidas & Financiamentos (Passivo)</h3>
+            <Building2 className="w-4 h-4 text-rose-400" />
+            <h3 className="font-bold text-base text-white">Dívidas & Financiamentos (Passivo)</h3>
           </div>
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-2 text-body2">
             Em evolução
@@ -815,7 +813,9 @@ export default function PatrimonyPage() {
           <div className="flex items-start gap-3">
             <ShieldAlert className="w-5 h-5 text-body3 shrink-0 mt-0.5" />
             <div>
-              <p className="text-xs font-semibold text-ink">Lado Passivo do Balanço Patrimonial</p>
+              <p className="text-xs font-semibold text-white">
+                Lado Passivo do Balanço Patrimonial
+              </p>
               <p className="text-[11px] text-body2 leading-relaxed mt-0.5">
                 Hoje sua família não possui pendências registradas. Nas próximas rodadas você poderá
                 cadastrar contratos, taxas de juros e amortizações SAC/Price.
@@ -827,19 +827,19 @@ export default function PatrimonyPage() {
             variant="outline"
             size="sm"
             onClick={() => setShowDebtExplainer(!showDebtExplainer)}
-            className="text-xs font-semibold text-ink border-line rounded-xl shrink-0 self-start sm:self-auto"
+            className="text-xs font-semibold text-white border-line rounded-xl shrink-0 self-start sm:self-auto bg-surface-2 hover:bg-surface"
           >
             {showDebtExplainer ? 'Ocultar detalhes' : 'Como vai funcionar?'}
           </Button>
         </div>
 
         {showDebtExplainer && (
-          <div className="mt-3 p-3.5 rounded-2xl bg-amber-50/60 border border-amber-100 text-xs text-amber-900 leading-relaxed animate-in fade-in duration-200">
-            <p className="font-semibold mb-1 flex items-center gap-1.5">
-              <Info className="w-3.5 h-3.5 text-amber-600" />
+          <div className="mt-3 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200 leading-relaxed animate-in fade-in duration-200">
+            <p className="font-semibold mb-1 flex items-center gap-1.5 text-amber-300">
+              <Info className="w-3.5 h-3.5 text-amber-400" />
               Gestão Ativa de Dívidas Curiangoo:
             </p>
-            <ul className="list-disc pl-5 space-y-1 text-[11px] text-amber-800">
+            <ul className="list-disc pl-5 space-y-1 text-[11px] text-amber-200/90">
               <li>Cálculo automático de saldo devedor e impacto no patrimônio líquido</li>
               <li>Estratégias de quitação inteligente (Bola de Neve vs Avalanche)</li>
               <li>Simulador de amortização antecipada com economia real de juros</li>
@@ -849,13 +849,13 @@ export default function PatrimonyPage() {
       </div>
 
       {/* 6. ALOCAÇÃO IDEAL VS REAL (PREPARADA PARA EVOLUIR) */}
-      <div className="bg-white/95 rounded-3xl border border-line p-5 sm:p-6 shadow-elevation-1">
+      <div className="bg-surface/95 rounded-3xl border border-line p-5 sm:p-6 shadow-elevation-1">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <Scale className="w-4 h-4 text-blue-600" />
-            <h3 className="font-bold text-base text-ink">Alocação Ideal vs. Alocação Real</h3>
+            <Scale className="w-4 h-4 text-action" />
+            <h3 className="font-bold text-base text-white">Alocação Ideal vs. Alocação Real</h3>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-2 text-action border border-line">
             Rebalanceamento
           </span>
         </div>
@@ -876,10 +876,10 @@ export default function PatrimonyPage() {
                     className="w-2.5 h-2.5 rounded-full shrink-0"
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-xs font-semibold text-ink truncate">{item.label}</span>
+                  <span className="text-xs font-semibold text-white truncate">{item.label}</span>
                 </div>
                 <div className="text-xs text-body2 mt-2">
-                  Meta Ideal: <strong className="text-ink font-bold">{item.targetPct}%</strong>
+                  Meta Ideal: <strong className="text-white font-bold">{item.targetPct}%</strong>
                 </div>
               </div>
               <div className="mt-3 pt-2 border-t border-line flex items-center justify-between text-[10px] text-body3">
@@ -895,20 +895,20 @@ export default function PatrimonyPage() {
       <Dialog open={isAssetDialogOpen} onOpenChange={setIsAssetDialogOpen}>
         <DialogContent className="max-w-md w-[95vw] rounded-2xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-ink">
+            <DialogTitle className="text-lg font-bold text-white">
               {editingAsset ? 'Editar Ativo' : 'Adicionar Ativo ao Patrimônio'}
             </DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSaveAsset} className="space-y-3.5">
             {errorMsg && (
-              <div className="p-3 text-xs bg-red-50 border border-red-200 text-red-700 rounded-xl">
+              <div className="p-3 text-xs bg-rose-500/10 border border-rose-500/30 text-rose-300 rounded-xl">
                 {errorMsg}
               </div>
             )}
 
             <div>
-              <Label htmlFor="asset-name" className="text-xs font-semibold text-ink">
+              <Label htmlFor="asset-name" className="text-xs font-semibold text-white">
                 Nome do Ativo
               </Label>
               <Input
@@ -924,7 +924,7 @@ export default function PatrimonyPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="asset-ticker" className="text-xs font-semibold text-ink">
+                <Label htmlFor="asset-ticker" className="text-xs font-semibold text-white">
                   Ticker / Código
                 </Label>
                 <Input
@@ -938,7 +938,7 @@ export default function PatrimonyPage() {
               </div>
 
               <div>
-                <Label className="text-xs font-semibold text-ink">Classe de Ativo</Label>
+                <Label className="text-xs font-semibold text-white">Classe de Ativo</Label>
                 <Select value={assetType} onValueChange={(v) => setAssetType(v as AssetType)}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Selecione" />
@@ -956,7 +956,7 @@ export default function PatrimonyPage() {
             </div>
 
             <div>
-              <Label htmlFor="asset-qty" className="text-xs font-semibold text-ink">
+              <Label htmlFor="asset-qty" className="text-xs font-semibold text-white">
                 Quantidade
               </Label>
               <Input
@@ -973,7 +973,7 @@ export default function PatrimonyPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="asset-pm" className="text-xs font-semibold text-ink">
+                <Label htmlFor="asset-pm" className="text-xs font-semibold text-white">
                   Preço Médio (R$)
                 </Label>
                 <Input
@@ -989,7 +989,7 @@ export default function PatrimonyPage() {
               </div>
 
               <div>
-                <Label htmlFor="asset-price" className="text-xs font-semibold text-ink">
+                <Label htmlFor="asset-price" className="text-xs font-semibold text-white">
                   Preço Atual (R$)
                 </Label>
                 <Input
@@ -1030,19 +1030,20 @@ export default function PatrimonyPage() {
       <Dialog open={isPriceDialogOpen} onOpenChange={setIsPriceDialogOpen}>
         <DialogContent className="max-w-xs w-[90vw] rounded-2xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-ink">
+            <DialogTitle className="text-base font-bold text-white">
               Atualizar Cotação Atual
             </DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSavePrice} className="space-y-4">
             <p className="text-xs text-body2">
-              Atualize o valor de mercado de <strong>{priceAsset?.name}</strong> para recalcular o
+              Atualize o valor de mercado de{' '}
+              <strong className="text-white">{priceAsset?.name}</strong> para recalcular o
               patrimônio da família.
             </p>
 
             <div>
-              <Label htmlFor="quick-price" className="text-xs font-semibold text-ink">
+              <Label htmlFor="quick-price" className="text-xs font-semibold text-white">
                 Novo Preço Unitário (R$)
               </Label>
               <Input
@@ -1085,7 +1086,7 @@ export default function PatrimonyPage() {
       <AlertDialog open={!!assetToDelete} onOpenChange={(open) => !open && setAssetToDelete(null)}>
         <AlertDialogContent className="rounded-2xl max-w-sm">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-base font-bold text-ink">
+            <AlertDialogTitle className="text-base font-bold text-white">
               Remover ativo da carteira?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs text-body2">

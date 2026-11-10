@@ -205,7 +205,7 @@ export default function GoalsPage() {
       {/* Header com respiro */}
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-ink tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
             Metas Financeiras
           </h1>
           <p className="text-xs sm:text-sm text-body2 mt-0.5">
@@ -230,10 +230,10 @@ export default function GoalsPage() {
       ) : goals.length === 0 ? (
         /* Empty State */
         <div className="bg-surface/95 backdrop-blur-sm rounded-3xl p-12 text-center border border-line shadow-cds">
-          <div className="w-16 h-16 rounded-3xl bg-surface-2 text-ink flex items-center justify-center mx-auto mb-3 shadow-2xs border border-line">
+          <div className="w-16 h-16 rounded-3xl bg-surface-2 text-white flex items-center justify-center mx-auto mb-3 shadow-2xs border border-line">
             <Target className="w-8 h-8 stroke-[1.5]" />
           </div>
-          <h3 className="font-bold text-ink text-base">Nenhuma meta definida</h3>
+          <h3 className="font-bold text-white text-base">Nenhuma meta definida</h3>
           <p className="text-xs text-body2 mt-1 max-w-xs mx-auto mb-5">
             Defina sonhos como viagem de férias, troca de carro ou reserva de emergência.
           </p>
@@ -277,12 +277,12 @@ export default function GoalsPage() {
                         />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-sm sm:text-base text-ink leading-tight">
+                        <h4 className="font-semibold text-sm sm:text-base text-white leading-tight">
                           {goal.name}
                         </h4>
                         {goal.deadline && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                            <Calendar className="w-3 h-3 text-muted-foreground" strokeWidth={1.5} />
+                          <div className="flex items-center gap-1 text-xs text-body2 mt-0.5">
+                            <Calendar className="w-3 h-3 text-body2" strokeWidth={1.5} />
                             <span>Até {formatDeadline(goal.deadline)}</span>
                           </div>
                         )}
@@ -310,7 +310,7 @@ export default function GoalsPage() {
                   <div className="space-y-1.5 mb-4">
                     <div className="flex items-baseline justify-between text-xs">
                       <span className="text-body2 font-medium">Meta Total:</span>
-                      <span className="font-semibold tracking-tight text-ink tabular-nums">
+                      <span className="font-semibold tracking-tight text-white tabular-nums">
                         {formatBRL(goal.target_amount_cents)}
                       </span>
                     </div>
@@ -341,25 +341,27 @@ export default function GoalsPage() {
                       <Calendar className="w-3.5 h-3.5 text-body3" />
                       Prazo:
                     </span>
-                    <span className="font-semibold text-ink capitalize">
+                    <span className="font-semibold text-white capitalize">
                       {formatDeadline(goal.deadline)}
                     </span>
                   </div>
 
                   {percent < 100 && (
-                    <div className="flex items-center gap-2 p-2.5 bg-emerald-50/60 rounded-xl text-xs text-emerald-900">
-                      <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <div className="flex items-center gap-2 p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-300">
+                      <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
                       <span className="font-medium">
                         Guarde{' '}
-                        <strong className="font-bold">{formatBRL(suggestionCents)}/mês</strong> para
-                        alcançar.
+                        <strong className="font-bold text-white">
+                          {formatBRL(suggestionCents)}/mês
+                        </strong>{' '}
+                        para alcançar.
                       </span>
                     </div>
                   )}
 
                   {percent >= 100 && (
-                    <div className="flex items-center gap-2 p-2.5 bg-emerald-100 rounded-xl text-xs text-emerald-900 font-bold">
-                      <TrendingUp className="w-4 h-4 text-emerald-700 shrink-0" />
+                    <div className="flex items-center gap-2 p-2.5 bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-xs text-emerald-300 font-bold">
+                      <TrendingUp className="w-4 h-4 text-emerald-400 shrink-0" />
                       <span>Parabéns! Meta 100% atingida 🎉</span>
                     </div>
                   )}
@@ -374,21 +376,21 @@ export default function GoalsPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-md w-[95vw] rounded-2xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-ink">
+            <DialogTitle className="text-lg font-bold text-white">
               {editingGoal ? 'Editar Meta Financeira' : 'Nova Meta Financeira'}
             </DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSaveGoal} className="space-y-4">
             {validationError && (
-              <div className="p-3 text-xs bg-expense-subtle border border-expense/30 text-expense rounded-xl">
+              <div className="p-3 text-xs bg-rose-500/10 border border-rose-500/30 text-rose-300 rounded-xl">
                 {validationError}
               </div>
             )}
 
             {/* Nome */}
             <div>
-              <Label htmlFor="goal-name" className="text-xs font-semibold text-body">
+              <Label htmlFor="goal-name" className="text-xs font-semibold text-white">
                 Nome da Meta
               </Label>
               <Input
@@ -404,7 +406,7 @@ export default function GoalsPage() {
 
             {/* Categoria */}
             <div>
-              <Label className="text-xs font-semibold text-body">Categoria Vinculada</Label>
+              <Label className="text-xs font-semibold text-white">Categoria Vinculada</Label>
               <Select value={goalCategoryId} onValueChange={setGoalCategoryId}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Selecione uma categoria" />
@@ -422,7 +424,7 @@ export default function GoalsPage() {
 
             {/* Valor da Meta */}
             <div>
-              <Label htmlFor="goal-amount" className="text-xs font-semibold text-body">
+              <Label htmlFor="goal-amount" className="text-xs font-semibold text-white">
                 Valor da Meta (R$)
               </Label>
               <div className="relative mt-1">
@@ -444,7 +446,7 @@ export default function GoalsPage() {
 
             {/* Prazo */}
             <div>
-              <Label htmlFor="goal-deadline" className="text-xs font-semibold text-body">
+              <Label htmlFor="goal-deadline" className="text-xs font-semibold text-white">
                 Prazo Estimado
               </Label>
               <Input
@@ -483,7 +485,7 @@ export default function GoalsPage() {
       <AlertDialog open={!!goalToDelete} onOpenChange={(open) => !open && setGoalToDelete(null)}>
         <AlertDialogContent className="rounded-2xl max-w-sm">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-base font-bold text-ink">
+            <AlertDialogTitle className="text-base font-bold text-white">
               Excluir meta financeira?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs text-body2">

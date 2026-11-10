@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest'
 import indexHtmlRaw from '../../index.html?raw'
 import mainCssRaw from '../main.css?raw'
 import manifest from '../../public/manifest.json'
+import patrimonyRaw from '../pages/Patrimony.tsx?raw'
+import goalsRaw from '../pages/Goals.tsx?raw'
+import investmentsRaw from '../pages/Investments.tsx?raw'
 
 describe('CDS v3.0 - Consistência de Tema Dark Spotify e Piso Navy Canônico', () => {
   it('declara meta tag color-scheme="dark" no index.html', () => {
@@ -26,5 +29,19 @@ describe('CDS v3.0 - Consistência de Tema Dark Spotify e Piso Navy Canônico', 
   it('declara tokens text-ink mapeando para alto contraste branco no CDS v3.0', () => {
     expect(mainCssRaw).toContain('--ink-text: #ffffff')
     expect(mainCssRaw).toContain('color: var(--ink-text, #ffffff) !important')
+  })
+
+  it('páginas secundárias Patrimony, Goals e Investments não possuem cartões brancos literais nem text-ink ilegíveis', () => {
+    // Nenhuma dessas páginas deve ter text-ink nem bg-white puro em cards
+    expect(patrimonyRaw).not.toContain('text-ink')
+    expect(patrimonyRaw).not.toContain('bg-white ')
+    expect(patrimonyRaw).not.toContain('bg-white"')
+    expect(patrimonyRaw).not.toContain('bg-white/95')
+
+    expect(goalsRaw).not.toContain('text-ink')
+    expect(goalsRaw).not.toContain('bg-white')
+
+    expect(investmentsRaw).not.toContain('text-ink')
+    expect(investmentsRaw).not.toContain('bg-white')
   })
 })
