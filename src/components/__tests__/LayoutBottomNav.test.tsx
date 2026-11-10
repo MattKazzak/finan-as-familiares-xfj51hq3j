@@ -111,7 +111,7 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
     expect(screen.getByText('Metas')).toBeDefined()
   })
 
-  it('destaca o item ativo com preenchimento total sólido (bg-white/15), cobrindo ícone e rótulo sem balãozinho', () => {
+  it('destaca o item ativo SEM fundo (estilo Spotify): ícone sólido branco + rótulo branco, sem mancha bg-white', () => {
     render(
       <MemoryRouter initialEntries={['/inicio']}>
         <Layout />
@@ -120,19 +120,27 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
 
     const inicioLink = screen.getByText('Início').closest('a')
     expect(inicioLink).not.toBeNull()
-    expect(inicioLink?.className).toContain('bg-white/15')
+    // NENHUM fundo no item ativo (nem permanente, nem hover/press)
+    expect(inicioLink?.className).not.toContain('bg-white/15')
+    expect(inicioLink?.className).not.toContain('bg-white/10')
+    expect(inicioLink?.className).not.toContain('bg-white/5')
+    expect(inicioLink?.className).not.toContain('hover:bg-white')
+    expect(inicioLink?.className).not.toContain('active:bg-white')
+    // Destaque vem da cor do texto (branco + semibold) e do ícone sólido
     expect(inicioLink?.className).toContain('text-white')
+    expect(inicioLink?.className).toContain('font-semibold')
     expect(inicioLink?.className).toContain('rounded-2xl')
 
-    // Não há balãozinho/halo separado (sem span .animate-dock-pill)
+    // Não há balãozinho/halo/camada de fundo separada (sem span .animate-dock-pill)
     expect(inicioLink?.querySelector('.animate-dock-pill')).toBeNull()
+    expect(inicioLink?.querySelector('span.absolute')).toBeNull()
 
     // Ícone ativo do Início deve usar variante sólida (fill="currentColor", stroke="none")
     const inicioIcon = inicioLink?.querySelector('svg')
     expect(inicioIcon?.getAttribute('fill')).toBe('currentColor')
     expect(inicioIcon?.getAttribute('stroke')).toBe('none')
 
-    // Item inativo não possui o preenchimento bg-white/15 e tem ícone outline (fill="none")
+    // Item inativo mantém ícone outline e rótulo translúcido, sem fundo
     const carteiraLink = screen.getByText('Carteira').closest('a')
     expect(carteiraLink?.className).not.toContain('bg-white/15')
     expect(carteiraLink?.className).toContain('text-white/60')
@@ -142,7 +150,7 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
     expect(carteiraIcon?.getAttribute('stroke')).toBe('currentColor')
   })
 
-  it('aplica preenchimento total consistente quando outras rotas estão ativas (Carteira, Patrimônio, Metas)', () => {
+  it('aplica destaque sem fundo de forma consistente nas outras rotas ativas (Carteira, Patrimônio, Metas)', () => {
     const { unmount } = render(
       <MemoryRouter initialEntries={['/carteira']}>
         <Layout />
@@ -150,7 +158,7 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
     )
 
     const carteiraLink = screen.getByText('Carteira').closest('a')
-    expect(carteiraLink?.className).toContain('bg-white/15')
+    expect(carteiraLink?.className).not.toContain('bg-white/15')
     expect(carteiraLink?.className).toContain('text-white')
     expect(carteiraLink?.querySelector('svg')?.getAttribute('fill')).toBe('currentColor')
 
@@ -165,7 +173,7 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
       </MemoryRouter>,
     )
     const patrimonioLink = screen.getByText('Patrimônio').closest('a')
-    expect(patrimonioLink?.className).toContain('bg-white/15')
+    expect(patrimonioLink?.className).not.toContain('bg-white/15')
     expect(patrimonioLink?.querySelector('svg')?.getAttribute('fill')).toBe('currentColor')
     unmountPatrimonio()
 
@@ -175,12 +183,12 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
       </MemoryRouter>,
     )
     const metasLink = screen.getByText('Metas').closest('a')
-    expect(metasLink?.className).toContain('bg-white/15')
+    expect(metasLink?.className).not.toContain('bg-white/15')
     expect(metasLink?.querySelector('svg')?.getAttribute('fill')).toBe('currentColor')
     unmountMetas()
   })
 
-  it('o botão Criar (+) possui a mesma estrutura e preenchimento sólido ao toque ou quando o modal está aberto', () => {
+  it('o botão Criar (+) mantém a mesma estrutura e NÃO pinta fundo ao toque nem com o modal aberto', () => {
     render(
       <MemoryRouter initialEntries={['/inicio']}>
         <Layout />
@@ -191,8 +199,12 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
     expect(centralBtn.className).toContain('rounded-2xl')
     expect(centralBtn.className).toContain('flex-1')
     expect(centralBtn.className).toContain('py-1.5')
-    // Tem preenchimento ao toque (active:bg-white/15) e hover sutil
-    expect(centralBtn.className).toContain('active:bg-white/15')
+    // Sem NENHUM fundo: nem no estado aberto, nem hover, nem press
+    expect(centralBtn.className).not.toContain('bg-white/15')
+    expect(centralBtn.className).not.toContain('hover:bg-white')
+    expect(centralBtn.className).not.toContain('active:bg-white')
+    // Reforço ao toque fica só no scale (sem pintura)
+    expect(centralBtn.className).toContain('active:scale-95')
   })
 
   it('aciona openNewTransaction() ao clicar no item + da pílula', () => {

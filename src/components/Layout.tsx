@@ -347,9 +347,10 @@ export default function Layout() {
         {/* DOCK FLUTUANTE EM PÍLULA (MOBILE APENAS < 768px, 360–412px SAFE) —
             ESTILO INSTAGRAM/PINTEREST/SPOTIFY: pílula plana, 5 itens IGUAIS —
             Início, Carteira, Criar (+), Patrimônio e Metas.
-            Item ativo = PREENCHIMENTO TOTAL sólido cobrindo ícone e rótulo (bg-white/15),
-            sem balãozinho ou halo, com contraste nítido e consistente em todos os itens.
-            Tokens CDS v2.0: bg-ink, border-line, shadow-cds-dock. */}
+            Item ativo = SEM NENHUM fundo (nem permanente, nem hover/press, zero bg-white/*):
+            o destaque vem só do ícone na variante SÓLIDA em branco pleno + rótulo branco
+            (font-semibold), exatamente como no Spotify. Item inativo mantém ícone outline
+            e rótulo translúcido. Tokens CDS v2.0: bg-ink, border-line, shadow-cds-dock. */}
         <nav
           aria-label="Navegação Principal"
           className="md:hidden fixed bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] inset-x-0 z-40 px-3 sm:px-4 max-w-md mx-auto pointer-events-none"
@@ -361,7 +362,7 @@ export default function Layout() {
               return (
                 <Fragment key={item.to}>
                   {/* + Nova Transação: abre a folha de Nova Transação;
-                      possui o MESMO preenchimento e visual dos demais itens. */}
+                      MESMO visual dos demais itens (sem fundo, só reforço do ícone/rótulo). */}
                   {idx === 2 && (
                     <button
                       type="button"
@@ -369,8 +370,8 @@ export default function Layout() {
                       data-testid="dock-new-transaction"
                       className={`flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-2xl transition-colors duration-150 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
                         isNewTransactionOpen
-                          ? 'bg-white/15 text-white font-semibold'
-                          : 'text-white/60 hover:text-white/90 hover:bg-white/5 active:bg-white/15'
+                          ? 'text-white font-semibold'
+                          : 'text-white/60 hover:text-white/90 active:scale-95'
                       }`}
                       aria-label="Nova Transação"
                       title="Nova Transação"
@@ -395,8 +396,8 @@ export default function Layout() {
                     }
                     className={`flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-2xl transition-colors duration-150 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
                       isItemActive
-                        ? 'bg-white/15 text-white font-semibold'
-                        : 'text-white/60 hover:text-white/90 hover:bg-white/5 active:bg-white/15'
+                        ? 'text-white font-semibold'
+                        : 'text-white/60 hover:text-white/90 active:scale-95'
                     }`}
                   >
                     <DockIcon
