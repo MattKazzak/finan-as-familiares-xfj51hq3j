@@ -75,20 +75,20 @@ export default {
           foreground: 'hsl(var(--secondary-foreground))',
         },
         brand: {
-          DEFAULT: '#14213D',
-          dark: '#0e172a',
-          light: '#1f3159',
+          DEFAULT: '#0B111E',
+          dark: '#070B14',
+          light: '#131A2B',
           amber: '#FCA311',
-          gray: '#E5E5E5',
+          gray: '#1A2233',
         },
         buckets: {
-          essentials: '#14213D',
+          essentials: '#0B111E',
           lifestyle: '#FCA311',
-          goals: '#10B981',
+          goals: '#34B88A',
         },
         finance: {
-          income: '#059669',
-          expense: '#E11D48',
+          income: '#34B88A',
+          expense: '#E5677D',
         },
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',

@@ -13,10 +13,10 @@
 
     <!-- PWA & Mobile Web App Manifest -->
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#14213D" />
-    <meta name="color-scheme" content="light" />
-    <!-- ANTI-DARK: sempre claro, mesmo com o navegador em modo escuro -->
-    <meta name="supported-color-schemes" content="light" />
+    <meta name="theme-color" content="#0B111E" />
+    <meta name="color-scheme" content="dark" />
+    <!-- CDS v3.0: app dark fixo estilo Spotify -->
+    <meta name="supported-color-schemes" content="dark" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <!-- iOS: impede zoom acidental em inputs e cortes de borda -->
     <meta name="format-detection" content="telephone=no" />
@@ -41,7 +41,7 @@
     <!-- SPLASH DO CURIANGO (19/10, Matheus): pássaro surge suave + nome enquanto o
          React carrega. Puro HTML/CSS inline (zero JS): some quando o app monta
          (main.tsx remove #splash). Fundo navy = mesma cor da barra de status. -->
-    <div id="splash" style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:#14213D;transition:opacity .45s ease;">
+    <div id="splash" style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:#0B111E;transition:opacity .45s ease;">
       <svg id="splash-bird" width="96" height="96" viewBox="0 0 100 100" style="opacity:0;transform:scale(.85);animation:splash-bird-in .7s cubic-bezier(.2,.7,.3,1) .15s forwards;">
         <!-- Silhueta OFICIAL do CuriangoLogo (mesmo path do app) — splash 22/10:
              o pássaro da splash era outro desenho, off-brand. Agora idêntico à marca. -->
@@ -77,10 +77,10 @@
     </style>
     <div id="root"></div>
     <script>
-      // Anti-flash: aplica light antes do React montar (evita fundo escuro em 1 frame)
+      // Anti-flash CDS v3.0: aplica dark fixo estilo Spotify antes do React montar
       try {
-        document.documentElement.classList.remove('dark')
-        document.documentElement.style.colorScheme = 'light'
+        document.documentElement.classList.add('dark')
+        document.documentElement.style.colorScheme = 'dark'
       } catch (e) {}
     </script>
     <script>

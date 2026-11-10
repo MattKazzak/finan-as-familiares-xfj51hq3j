@@ -147,19 +147,17 @@ export default function Layout() {
   const userInitial = currentMember?.name?.charAt(0).toUpperCase() || 'F'
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-white flex flex-col md:flex-row text-foreground font-sans antialiased">
-      {/* EDGE-TO-EDGE (18/10, Matheus): pinta o fundo POR BAIXO das barras do sistema
-          (barra de status wifi/bateria em cima, barra de gestos embaixo) — sensação
-          de unidade que apps como Nubank/Pinterest/Instagram têm. */}
-      {/* SIDEBAR DESKTOP (>= 768px) com identidade profunda navy (bg-ink) */}
-      <aside className="hidden md:flex w-60 shrink-0 flex-col bg-ink text-white sticky top-0 h-screen">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#0B111E] flex flex-col md:flex-row text-foreground font-sans antialiased">
+      {/* EDGE-TO-EDGE: pinta o fundo navy #0B111E por baixo de todas as barras */}
+      {/* SIDEBAR DESKTOP (>= 768px) com identidade profunda navy #0B111E (bg-ink) */}
+      <aside className="hidden md:flex w-60 shrink-0 flex-col bg-ink text-white sticky top-0 h-screen border-r border-white/10">
         {/* Logo + Nome */}
         <div className="p-5 border-b border-white/10">
           <div className="flex items-center gap-2.5">
             <CuriangoLogo
               size={28}
               color="#FCA311"
-              eyeColor="#14213D"
+              eyeColor="#0B111E"
               eyeRadius={3.4}
               eyeHighlight
             />
@@ -257,21 +255,15 @@ export default function Layout() {
         </div>
       </aside>
 
-      <div
-        className={`flex-1 md:ml-60 flex flex-col min-h-screen transition-colors ${
-          location.pathname.startsWith('/perfil') ? 'bg-[#0B111E]' : 'bg-white'
-        }`}
-      >
+      <div className="flex-1 md:ml-60 flex flex-col min-h-screen transition-colors bg-[#0B111E]">
         {/* HEADER TOP (visível em desktop e nas demais páginas; na Home (/inicio) e no Perfil (/perfil) o cabeçalho é dispensado:
             a Home possui hero sangrado próprio e o Perfil adota o padrão Instagram/Spotify/Pinterest de telas de configurações
             com título grande integrado na página e sem a top bar navy fixa). */}
         {location.pathname !== '/inicio' && location.pathname !== '/perfil' && (
-          <header className="sticky top-0 z-30 bg-ink text-white pl-4 pr-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 sm:px-6 flex items-center justify-between">
+          <header className="sticky top-0 z-30 bg-ink text-white pl-4 pr-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 sm:px-6 flex items-center justify-between border-b border-white/10">
             <div className="flex items-center gap-2 min-w-0">
               {/* FIX 25/10 (Matheus): o pássaro agora é CAMINHO PRO COPILOT em toda
-                  tela interna — padrão Duolingo (mascote = atalho da feature de IA).
-                  40px (era 32px): alinhado ao card de insight da Home e ao toque
-                  confortável (44px de área com padding). */}
+                  tela interna — padrão Duolingo (mascote = atalho da feature de IA). */}
               <button
                 type="button"
                 onClick={() => navigate('/copilot')}
@@ -282,7 +274,7 @@ export default function Layout() {
                 <CuriangoLogo
                   size={40}
                   color="#FCA311"
-                  eyeColor="#14213D"
+                  eyeColor="#0B111E"
                   eyeRadius={3.4}
                   eyeHighlight
                 />
@@ -318,11 +310,11 @@ export default function Layout() {
         {/* CONTEÚDO PRINCIPAL: Na Home (/inicio), o topo sangra sem padding superior e lateral para encostar nas bordas;
             no Perfil (/perfil), sem a top bar navy, aplica-se safe-area no topo para proteger o notch e o miolo fica responsivo */}
         <main
-          className={`flex-1 w-full overflow-x-hidden min-w-0 ${
+          className={`flex-1 w-full overflow-x-hidden min-w-0 bg-[#0B111E] ${
             location.pathname === '/inicio'
               ? 'p-0 pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-8'
               : location.pathname === '/perfil'
-                ? 'max-w-[1200px] mx-auto p-4 sm:p-6 pt-[calc(env(safe-area-inset-top)+1rem)] sm:pt-6 pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-8 bg-[#0B111E]'
+                ? 'max-w-[1200px] mx-auto p-4 sm:p-6 pt-[calc(env(safe-area-inset-top)+1rem)] sm:pt-6 pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-8'
                 : 'max-w-[1200px] mx-auto p-4 sm:p-6 pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-8'
           }`}
         >

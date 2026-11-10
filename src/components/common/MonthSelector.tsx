@@ -49,7 +49,7 @@ export function MonthSelector({
           className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-2xl touch-manipulation max-w-full transition-colors ${
             isDark
               ? 'bg-white/10 border border-white/15 text-white shadow-sm'
-              : 'bg-white border border-line text-ink shadow-2xs'
+              : 'bg-surface border border-white/10 text-white shadow-2xs'
           }`}
           role="group"
           aria-label="Seletor de mês"
