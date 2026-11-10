@@ -331,18 +331,21 @@ export default function Layout() {
         {/* DOCK EDGE-TO-EDGE (MOBILE APENAS < 768px, 360–412px SAFE) —
             ESTILO INSTAGRAM/SPOTIFY: barra full-width COLADA na borda inferior,
             sem pílula, sem cantos arredondados, sem borda e sem margem lateral.
-            Fundo navy bg-ink cobrindo TAMBÉM o safe-area-inset-bottom (padding com
-            env()), para nenhuma faixa clara aparecer sob a barra em iPhones com notch.
+            Fundo navy #0B111E (bg-ink / bg-[#0B111E]) cobrindo TAMBÉM o safe-area-inset-bottom (padding com
+            env()), para nenhuma faixa clara ou emenda de tom aparecer sob a barra.
             Item ativo = SEM NENHUM fundo (nem permanente, nem hover/press, zero bg-white/*):
             o destaque vem só do ícone na variante SÓLIDA em branco pleno + rótulo branco
             (font-semibold), exatamente como no Spotify. Item inativo mantém ícone outline
             e rótulo translúcido. Separador superior sutil translúcido (border-white/10),
-            como Instagram/Spotify. Token CDS v2.0: bg-ink. */}
+            como Instagram/Spotify. */}
         <nav
           aria-label="Navegação Principal"
           data-testid="bottom-nav-bar"
-          className="md:hidden fixed inset-x-0 bottom-0 z-40 pointer-events-auto w-full bg-ink border-t border-white/10"
-          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+          className="md:hidden fixed inset-x-0 bottom-0 z-40 pointer-events-auto w-full bg-ink bg-[#0B111E] border-t border-white/10"
+          style={{
+            backgroundColor: '#0B111E',
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          }}
         >
           <div className="w-full max-w-md mx-auto flex items-center justify-between px-1 py-1.5">
             {navItems.slice(0, 4).map((item, idx) => {

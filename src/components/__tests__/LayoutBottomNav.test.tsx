@@ -98,10 +98,11 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
     expect(centralBtn.querySelector('span.invisible')).toBeNull()
 
     // Barra inferior EDGE-TO-EDGE (estilo Instagram/Spotify): container com fundo
-    // navy (bg-ink), largura total, SEM cantos arredondados, sem borda lateral e
+    // navy (bg-ink / #0B111E), largura total, SEM cantos arredondados, sem borda lateral e
     // com separador superior sutil translúcido
     const navBar = screen.getByTestId('bottom-nav-bar')
     expect(navBar.className).toContain('bg-ink')
+    expect(navBar.className).toContain('bg-[#0B111E]')
     expect(navBar.className).toContain('inset-x-0')
     expect(navBar.className).toContain('bottom-0')
     expect(navBar.className).not.toContain('rounded-full')
@@ -109,6 +110,7 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
     expect(navBar.className).toContain('border-t')
     expect(navBar.className).toContain('border-white/10')
     expect(navBar.getAttribute('style')).toContain('safe-area-inset-bottom')
+    expect(navBar.getAttribute('style')).toContain('#0B111E')
 
     // Rótulos dos 4 itens de navegação da barra
     expect(screen.getByText('Início')).toBeDefined()
