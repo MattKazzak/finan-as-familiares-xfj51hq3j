@@ -149,7 +149,7 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
     // Item inativo mantém ícone outline e rótulo translúcido, sem fundo
     const carteiraLink = screen.getByText('Carteira').closest('a')
     expect(carteiraLink?.className).not.toContain('bg-white/15')
-    expect(carteiraLink?.className).toContain('text-white/60')
+    expect(carteiraLink?.className).toContain('text-white/80')
 
     const carteiraIcon = carteiraLink?.querySelector('svg')
     expect(carteiraIcon?.getAttribute('fill')).toBe('none')

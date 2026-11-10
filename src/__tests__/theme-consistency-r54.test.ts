@@ -22,4 +22,9 @@ describe('CDS v3.0 - Consistência de Tema Dark Spotify e Piso Navy Canônico', 
   it('não possui media queries @media (prefers-color-scheme: dark) ativas no CSS', () => {
     expect(mainCssRaw).not.toContain('@media (prefers-color-scheme')
   })
+
+  it('declara tokens text-ink mapeando para alto contraste branco no CDS v3.0', () => {
+    expect(mainCssRaw).toContain('--ink-text: #ffffff')
+    expect(mainCssRaw).toContain('color: var(--ink-text, #ffffff) !important')
+  })
 })

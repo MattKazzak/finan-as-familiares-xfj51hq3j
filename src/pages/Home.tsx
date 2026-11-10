@@ -1003,23 +1003,23 @@ export default function Home() {
             <span key={isNewToCopilot ? 'convite' : 'fala'} className="min-w-0 flex-1">
               {isNewToCopilot ? (
                 <>
-                  <span className="block text-[13px] font-semibold leading-tight text-ink animate-in fade-in duration-300">
+                  <span className="block text-[13px] font-bold leading-tight text-white animate-in fade-in duration-300">
                     Oi! Eu sou o Curiango 🪶
                   </span>
-                  <span className="block text-[11px] text-body2 leading-snug mt-0.5 animate-in fade-in duration-300">
+                  <span className="block text-[11px] text-white/80 leading-snug mt-0.5 animate-in fade-in duration-300">
                     Toque aqui e me diga o que você gastou ou recebeu — eu anoto e organizo tudo pra
                     você.
                   </span>
                 </>
               ) : (
-                <span className="block text-[13px] leading-snug text-ink animate-in fade-in duration-300">
+                <span className="block text-[13px] font-medium leading-snug text-white animate-in fade-in duration-300">
                   {insights.length > 0
                     ? insights[0].detail
                     : 'Tudo em ordem por aqui! Toque pra conversar comigo.'}
                 </span>
               )}
             </span>
-            <ChevronRight className="w-4 h-4 text-body3 shrink-0 self-center" />
+            <ChevronRight className="w-4 h-4 text-white/70 shrink-0 self-center" />
           </button>
         ) : (
           <button
@@ -1031,7 +1031,7 @@ export default function Home() {
               <CuriangoLogo
                 size={40}
                 color="#FCA311"
-                eyeColor="#14213D"
+                eyeColor="#0B111E"
                 eyeRadius={3.4}
                 eyeHighlight
                 className="animate-copilot-bird"
@@ -1039,10 +1039,10 @@ export default function Home() {
               <span className="absolute -top-1 -right-1 w-2 h-2 animate-copilot-sparkle" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[13px] font-semibold leading-snug text-ink">
+              <span className="block text-[13px] font-bold leading-snug text-white">
                 O Curiango analisa suas finanças e fala com você
               </span>
-              <span className="block text-[11px] text-body2 mt-0.5">
+              <span className="block text-[11px] text-white/80 mt-0.5">
                 Desbloqueie o Copilot com o Premium — toque pra ver os planos
               </span>
             </span>
@@ -1060,15 +1060,15 @@ export default function Home() {
           <div>
             <div className="flex items-center justify-between gap-2 mb-4 min-w-0">
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <div className="w-9 h-9 rounded-xl bg-surface-2 text-ink flex items-center justify-center shrink-0 border border-line/40">
-                  <Scale className="w-4 h-4" strokeWidth={1.5} />
+                <div className="w-9 h-9 rounded-xl bg-surface-2 text-white flex items-center justify-center shrink-0 border border-line/40">
+                  <Scale className="w-4 h-4 text-white" strokeWidth={1.75} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-sm text-ink leading-tight">
+                  <h3 className="font-bold text-sm text-white leading-tight">
                     Orçamento em 3 Baldes
                   </h3>
                   {budgetModelLabel && (
-                    <span className="text-[10px] text-body3 font-medium block">
+                    <span className="text-[10px] text-white/70 font-medium block">
                       {budgetModelLabel}
                     </span>
                   )}
@@ -1078,7 +1078,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => navigate('/orcamentos')}
-                className="text-xs font-semibold text-ink hover:text-ink flex items-center gap-1 cursor-pointer"
+                className="text-xs font-semibold text-white/90 hover:text-white flex items-center gap-1 cursor-pointer"
               >
                 <span>Ajustar</span>
                 <ChevronRight className="w-3.5 h-3.5 text-action" />
@@ -1097,7 +1097,7 @@ export default function Home() {
                   limit: bucketsData.essentials.limitCents,
                   percent: bucketsData.essentials.percent,
                   isOver: bucketsData.essentials.isOver,
-                  barGradient: 'bg-gradient-to-r from-ink to-[#1f3159]',
+                  barGradient: 'bg-gradient-to-r from-blue-600 to-indigo-500',
                 },
                 {
                   key: 'lifestyle',
@@ -1133,54 +1133,56 @@ export default function Home() {
                     className="p-3.5 rounded-2xl bg-surface-2/70 border border-line space-y-1.5"
                   >
                     <div className="flex items-baseline justify-between gap-2 min-w-0">
-                      <span className="font-semibold text-ink text-xs flex items-center gap-1.5 min-w-0">
-                        <BucketIcon className="w-3.5 h-3.5 text-body2 shrink-0" strokeWidth={1.5} />
-                        <span className="font-semibold break-words">{bucket.name}</span>
+                      <span className="font-bold text-white text-xs flex items-center gap-1.5 min-w-0">
+                        <BucketIcon
+                          className="w-3.5 h-3.5 text-white/80 shrink-0"
+                          strokeWidth={1.75}
+                        />
+                        <span className="font-bold break-words">{bucket.name}</span>
                         {bucket.percentIncome !== null && (
-                          <span className="text-[10px] text-body3 font-medium shrink-0">
+                          <span className="text-[10px] text-white/70 font-medium shrink-0">
                             ({bucket.percentIncome}%)
                           </span>
                         )}
                       </span>
-                    </div>
-
-                    <div className="flex items-baseline justify-between text-right tabular-nums">
-                      <span className="text-[11px] text-body2">
-                        {bucket.limit > 0 ? (
-                          isOver ? (
-                            <span className="font-bold text-rose-600">
-                              estourou {maskValue(formatBRL(Math.abs(remaining)))}
-                            </span>
-                          ) : !hasSpent ? (
-                            <span className="font-semibold text-body">
-                              resta {maskValue(formatBRL(remaining))}{' '}
-                              <span className="text-[10px] text-body3 font-normal">(intacto)</span>
-                            </span>
-                          ) : (
-                            <span className="font-bold text-body">
-                              resta {maskValue(formatBRL(remaining))}
-                            </span>
-                          )
+                      <span className="text-[11px] font-semibold tabular-nums shrink-0 text-right">
+                        {isOver ? (
+                          <span className="text-expense font-bold">Estourou</span>
                         ) : (
-                          <span>{maskValue(formatBRL(bucket.spent))}</span>
+                          <span className="text-white/90">
+                            {maskValue(formatBRL(Math.max(0, remaining)))}{' '}
+                            <span className="text-[10px] font-normal text-white/70">livres</span>
+                          </span>
                         )}
                       </span>
                     </div>
-
-                    <div className="w-full bg-surface-2 h-2 rounded-full overflow-hidden shadow-inner">
-                      <div
-                        className={`h-full rounded-full transition-all duration-700 ${
-                          isOver ? 'bg-gradient-to-r from-expense to-[#f43f5e]' : bucket.barGradient
-                        }`}
-                        style={{ width: `${Math.min(bucket.percent, 100)}%` }}
-                      />
-                    </div>
+                    <div className="flex items-center justify-between text-[11px] tabular-nums">
+                      <span className="text-white/80">
+                        Gasto:{' '}
+                        {bucket.spent === 0 ? (
+                          <span className="font-semibold text-white">
+                            R$ 0,00{' '}
+                            <span className="text-[10px] text-white/70 font-normal">(intacto)</span>
+                          </span>
+                        ) : (
+                          <span className="font-bold text-white">
+                            {maskValue(formatBRL(bucket.spent))}
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-white/80">
+                        Meta:{' '}
+                        <span className="font-bold text-white">
+                          {maskValue(formatBRL(bucket.limit))}
+                        </span>
+                      </span>
+                    </div>{' '}
                   </div>
                 )
               })}
             </div>
 
-            <p className="mt-3 text-[10px] text-body3 font-medium leading-relaxed text-center sm:text-left">
+            <p className="mt-3 text-[10px] text-white/70 font-medium leading-relaxed text-center sm:text-left">
               Necessidades: moradia e mercado · Estilo: lazer e refeições · Futuro: reserva e metas
             </p>
           </div>
@@ -1192,21 +1194,21 @@ export default function Home() {
         >
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-surface-2 text-ink flex items-center justify-center shrink-0 border border-line/40">
-                <BarChart3 className="w-4 h-4" strokeWidth={1.5} />
+              <div className="w-9 h-9 rounded-xl bg-surface-2 text-white flex items-center justify-center shrink-0 border border-line/40">
+                <BarChart3 className="w-4 h-4 text-white" strokeWidth={1.75} />
               </div>
               <div>
-                <h3 className="font-semibold text-sm sm:text-base text-ink leading-tight">
+                <h3 className="font-bold text-sm sm:text-base text-white leading-tight">
                   Gastos por Categoria
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-xs text-white/70 mt-0.5">
                   Principais despesas realizadas no mês
                 </p>
               </div>
             </div>
 
             {categoryExpenses.totalExpensesInMonth > 0 && (
-              <span className="text-xs font-semibold text-body tabular-nums">
+              <span className="text-xs font-bold text-white tabular-nums">
                 Total: {maskValue(formatBRL(categoryExpenses.totalExpensesInMonth))}
               </span>
             )}
@@ -1262,7 +1264,7 @@ export default function Home() {
                     {/* Barra de progresso CDS: azul-marinho ink com cantos suaves */}
                     <div className="w-full bg-surface-2 h-2.5 rounded-full overflow-hidden">
                       <div
-                        className="bg-ink h-full rounded-full transition-all duration-500 ease-out"
+                        className="bg-blue-600 h-full rounded-full transition-all duration-500 ease-out"
                         style={{ width: `${barWidth}%` }}
                         role="progressbar"
                         aria-label={`Gastos na categoria ${item.name}`}
@@ -1281,15 +1283,15 @@ export default function Home() {
         <div className="bg-surface backdrop-blur-sm rounded-3xl border border-line p-5 sm:p-7 shadow-elevation-1">
           <div className="flex items-center justify-between mb-4 gap-2">
             <div className="min-w-0">
-              <h3 className="font-semibold text-base text-ink break-words">Últimas Transações</h3>
-              <p className="text-xs text-muted-foreground break-words mt-0.5">
+              <h3 className="font-bold text-base text-white break-words">Últimas Transações</h3>
+              <p className="text-xs text-white/70 break-words mt-0.5">
                 Histórico recente de receitas e despesas
               </p>
             </div>
             <Button
               variant="ghost"
               onClick={() => navigate('/carteira')}
-              className="text-xs font-semibold text-ink hover:text-ink hover:bg-surface-2 rounded-xl px-2.5 py-1.5 shrink-0 h-auto"
+              className="text-xs font-semibold text-white/90 hover:text-white hover:bg-surface-2 rounded-xl px-2.5 py-1.5 shrink-0 h-auto"
             >
               <span>Ver todas</span>
               <ChevronRight className="w-4 h-4 ml-1 text-action" />
@@ -1316,8 +1318,8 @@ export default function Home() {
               <div className="w-16 h-16 rounded-3xl bg-surface-2 flex items-center justify-center text-body3 mb-3">
                 <WalletCards className="w-8 h-8 stroke-[1.5]" />
               </div>
-              <h4 className="font-semibold text-ink text-sm">Nenhuma transação ainda</h4>
-              <p className="text-xs text-muted-foreground mt-1 max-w-xs mb-4">
+              <h4 className="font-bold text-white text-sm">Nenhuma transação ainda</h4>
+              <p className="text-xs text-white/70 mt-1 max-w-xs mb-4">
                 Comece adicionando receitas ou despesas compartilhadas pela família.
               </p>
               <Button
@@ -1358,7 +1360,7 @@ export default function Home() {
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-1.5 min-w-0">
                           <p
-                            className="font-medium text-xs sm:text-sm text-ink group-hover:text-ink transition-colors break-words leading-tight"
+                            className="font-semibold text-xs sm:text-sm text-white transition-colors break-words leading-tight"
                             title={displayTitle}
                           >
                             {displayTitle}

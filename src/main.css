@@ -184,16 +184,18 @@
     --bg: #0b111e;
     --surface: #131a2b;
     --surface-2: #1a2233;
-    --line: rgba(255, 255, 255, 0.08);
-    --line-strong: rgba(255, 255, 255, 0.16);
-    --border-strong: rgba(255, 255, 255, 0.16);
-    --text: #f5f7fa;
-    --text-2: #8a94a6;
-    --text-3: #5c667a;
+    --line: rgba(255, 255, 255, 0.1);
+    --line-strong: rgba(255, 255, 255, 0.2);
+    --border-strong: rgba(255, 255, 255, 0.2);
+    --text: #ffffff;
+    --text-2: #cbd5e1;
+    --text-3: #94a3b8;
     --text-inverse: #0b111e;
 
     /* --- Marca --- */
     --brand-ink: #0b111e; /* azul-marinho canônico oficial Curiangoo CDS v3.0 */
+    /* text-ink em tema dark Spotify deve renderizar em branco pleno para títulos e elementos de destaque */
+    --ink-text: #ffffff;
     --ink: #0b111e;
     --ink-hover: #131a2b;
     --ink-subtle: #1a2233;
@@ -230,16 +232,17 @@
     --bg: #0b111e;
     --surface: #131a2b;
     --surface-2: #1a2233;
-    --line: rgba(255, 255, 255, 0.08);
-    --line-strong: rgba(255, 255, 255, 0.16);
-    --border-strong: rgba(255, 255, 255, 0.16);
-    --text: #f5f7fa;
-    --text-2: #8a94a6;
-    --text-3: #5c667a;
+    --line: rgba(255, 255, 255, 0.1);
+    --line-strong: rgba(255, 255, 255, 0.2);
+    --border-strong: rgba(255, 255, 255, 0.2);
+    --text: #ffffff;
+    --text-2: #cbd5e1;
+    --text-3: #94a3b8;
     --text-inverse: #0b111e;
 
     /* --- Marca --- */
     --brand-ink: #0b111e;
+    --ink-text: #ffffff;
     --ink: #0b111e;
     --ink-hover: #131a2b;
     --ink-subtle: #1a2233;
@@ -266,8 +269,13 @@
     --data-6: #fca311;
   }
 
+  /* Em Dark Spotify (CDS v3.0), utilitário .text-ink mapeia para branco de alto contraste */
+  .text-ink {
+    color: var(--ink-text, #ffffff) !important;
+  }
+
   /* Garantia estrutural GLOBAL: impede rolagem horizontal em qualquer tela do app.
-     PISO NAVY: navy canônico oficial (#0B111E / var(--ink)) de ponta a ponta. */
+   PISO NAVY: navy canônico oficial (#0B111E / var(--ink)) de ponta a ponta. */
   html {
     background-color: var(--ink, #0b111e) !important;
     color: #f5f7fa;

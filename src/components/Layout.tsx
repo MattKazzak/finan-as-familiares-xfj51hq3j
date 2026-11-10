@@ -359,8 +359,8 @@ export default function Layout() {
                       data-testid="dock-new-transaction"
                       className={`flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-2xl transition-colors duration-150 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
                         isNewTransactionOpen
-                          ? 'text-white font-semibold'
-                          : 'text-white/60 hover:text-white/90 active:scale-95'
+                          ? 'text-white font-bold'
+                          : 'text-white/80 hover:text-white active:scale-95'
                       }`}
                       aria-label="Nova Transação"
                       title="Nova Transação"
@@ -369,9 +369,13 @@ export default function Layout() {
                         name="plus"
                         active={isNewTransactionOpen}
                         className="w-5 h-5 shrink-0"
-                        strokeWidth={1.75}
+                        strokeWidth={isNewTransactionOpen ? 2.5 : 2}
                       />
-                      <span className="text-[10px] tracking-tight mt-0.5 leading-none">Criar</span>
+                      <span
+                        className={`text-[10px] tracking-tight mt-0.5 leading-none ${isNewTransactionOpen ? 'font-bold text-white' : 'font-medium text-white/85'}`}
+                      >
+                        Criar
+                      </span>
                     </button>
                   )}
                   <NavLink
@@ -385,17 +389,19 @@ export default function Layout() {
                     }
                     className={`flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-2xl transition-colors duration-150 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
                       isItemActive
-                        ? 'text-white font-semibold'
-                        : 'text-white/60 hover:text-white/90 active:scale-95'
+                        ? 'text-white font-bold'
+                        : 'text-white/80 hover:text-white active:scale-95'
                     }`}
                   >
                     <DockIcon
                       name={item.dockIcon}
                       active={isItemActive}
                       className="w-5 h-5 shrink-0"
-                      strokeWidth={1.75}
+                      strokeWidth={isItemActive ? 2.5 : 2}
                     />
-                    <span className="text-[10px] tracking-tight mt-0.5 leading-none">
+                    <span
+                      className={`text-[10px] tracking-tight mt-0.5 leading-none ${isItemActive ? 'font-bold text-white' : 'font-medium text-white/85'}`}
+                    >
                       {item.label}
                     </span>
                   </NavLink>

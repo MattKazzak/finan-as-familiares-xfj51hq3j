@@ -127,10 +127,12 @@ export default {
           4: 'hsl(var(--chart-4))',
           5: 'hsl(var(--chart-5))',
         },
-        // CDS v2.0 — ponte de utilitários para os tokens de src/main.css (Etapa 1C).
-        // Não substituem os canais HSL do shadcn acima.
+        // CDS v2.0 / v3.0 — ponte de utilitários para os tokens de src/main.css
+        // Em dark total, `text-ink` precisa de alto contraste (#ffffff via --ink-text),
+        // enquanto `bg-ink` permanece o navy #0B111E canônico oficial do Curiangoo.
         ink: {
           DEFAULT: 'var(--ink)',
+          text: 'var(--ink-text, #ffffff)',
           hover: 'var(--ink-hover)',
           subtle: 'var(--ink-subtle)',
         },
