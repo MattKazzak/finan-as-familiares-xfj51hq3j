@@ -27,6 +27,7 @@ import { supabase } from '@/lib/supabase/client'
 import {
   Users,
   Plus,
+  ArrowLeft,
   Edit3,
   Trash2,
   LogOut,
@@ -855,43 +856,67 @@ export default function ProfilePage() {
   const familyInitial = family?.name?.charAt(0).toUpperCase() || 'F'
   const appVersion = APP_VERSION
 
+  const handleGoBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      navigate(-1)
+    } else {
+      navigate('/inicio')
+    }
+  }
+
   return (
     <div className="space-y-5 max-w-4xl mx-auto w-full min-w-0">
       {/* ================================================
-          TOPO MINIMALISTA INTEGRADO — Estilo Instagram / Spotify / Pinterest
-          Sem a top bar navy externa, a própria tela traz o título grande "Perfil"
-          e o acesso direto a "Minha conta" via avatar pessoal no canto superior.
+          TOPO MINIMALISTA INTEGRADO — Estilo Instagram / Spotify
+          Sem a top bar navy externa, o usuário sai pelo botão de voltar (seta)
+          no estilo Spotify. A tela traz o título grande "Perfil" e o acesso direto
+          a "Minha conta" via avatar pessoal no canto superior.
           ================================================ */}
-      <div className="flex items-center justify-between gap-3 pt-1 pb-1">
+      <div className="space-y-2 pt-1 pb-1">
+        {/* Linha superior: Botão Voltar (estilo Spotify) e Atalho Minha Conta */}
+        <div className="flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={handleGoBack}
+            data-testid="profile-back-button"
+            aria-label="Voltar"
+            title="Voltar"
+            className="w-11 h-11 -ml-2 rounded-full flex items-center justify-center text-ink hover:text-ink bg-transparent hover:bg-surface-2 active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action shrink-0"
+          >
+            <ArrowLeft className="w-6 h-6" strokeWidth={1.75} />
+          </button>
+
+          {/* Avatar pessoal no canto superior: atalho rápido que rola e expande "Minha conta" */}
+          <button
+            type="button"
+            onClick={() => {
+              setOpenSection('conta')
+              const el = document.getElementById('section-minha-conta')
+              el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }}
+            data-testid="profile-top-avatar"
+            aria-label="Minha conta"
+            title={`Minha conta (${userDisplayName})`}
+            className="group relative flex items-center rounded-full p-0.5 ring-2 ring-line hover:ring-action active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action shrink-0"
+          >
+            <Avatar className="w-10 h-10 shrink-0">
+              {userAvatarUrl ? (
+                <AvatarImage src={userAvatarUrl} alt={userDisplayName} className="object-cover" />
+              ) : null}
+              <AvatarFallback className="bg-surface-2 text-ink font-bold text-xs sm:text-sm group-hover:bg-action-subtle group-hover:text-action transition-colors">
+                {userDisplayName.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          </button>
+        </div>
+
+        {/* Linha do título */}
         <div>
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink leading-tight">
             Perfil
           </h1>
           <p className="text-xs sm:text-sm text-body2 mt-0.5">Preferências pessoais e da família</p>
         </div>
-
-        {/* Avatar pessoal no canto superior: atalho rápido que rola e expande "Minha conta" */}
-        <button
-          type="button"
-          onClick={() => {
-            setOpenSection('conta')
-            const el = document.getElementById('section-minha-conta')
-            el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          }}
-          data-testid="profile-top-avatar"
-          aria-label="Minha conta"
-          title={`Minha conta (${userDisplayName})`}
-          className="group relative flex items-center rounded-full p-0.5 ring-2 ring-line hover:ring-action active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action shrink-0"
-        >
-          <Avatar className="w-10 h-10 shrink-0">
-            {userAvatarUrl ? (
-              <AvatarImage src={userAvatarUrl} alt={userDisplayName} className="object-cover" />
-            ) : null}
-            <AvatarFallback className="bg-surface-2 text-ink font-bold text-xs sm:text-sm group-hover:bg-action-subtle group-hover:text-action transition-colors">
-              {userDisplayName.charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-        </button>
       </div>
 
       {/* ================================================

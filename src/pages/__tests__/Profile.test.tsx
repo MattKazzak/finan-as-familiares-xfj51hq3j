@@ -240,6 +240,18 @@ describe('ProfilePage PWA Install Shortcut - 3 Cenários de Clique', () => {
     expect(editFamilyButtons.length).toBe(1)
   })
 
+  it('ao clicar no botão de voltar navega para a tela anterior com fallback', () => {
+    render(
+      <MemoryRouter>
+        <ProfilePage />
+      </MemoryRouter>,
+    )
+
+    const backBtn = screen.getByRole('button', { name: 'Voltar' })
+    expect(backBtn).toBeDefined()
+    expect(() => fireEvent.click(backBtn)).not.toThrow()
+  })
+
   it('renderiza o cabeçalho minimalista integrado com título "Perfil" e avatar no canto (estilo Instagram/Spotify)', () => {
     render(
       <MemoryRouter>
@@ -253,6 +265,11 @@ describe('ProfilePage PWA Install Shortcut - 3 Cenários de Clique', () => {
     expect(perfilHeading.className).toContain('text-2xl')
     expect(perfilHeading.className).toContain('font-semibold')
     expect(screen.getByText('Preferências pessoais e da família')).toBeDefined()
+
+    // Botão de voltar no canto superior esquerdo (estilo Spotify)
+    const backBtn = screen.getByRole('button', { name: 'Voltar' })
+    expect(backBtn).toBeDefined()
+    expect(screen.getByTestId('profile-back-button')).toBe(backBtn)
 
     // Avatar de atalho no canto superior direito da página
     const topAvatarBtn = screen.getByTestId('profile-top-avatar')
