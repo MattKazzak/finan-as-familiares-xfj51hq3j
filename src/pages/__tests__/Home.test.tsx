@@ -156,7 +156,7 @@ describe('Home Page - R58 Nova Home Completa', () => {
 
     const bleedingHero = screen.getByTestId('hero-bleeding-top')
     expect(bleedingHero).toBeDefined()
-    expect(bleedingHero.className).toContain('bg-[#14213D]')
+    expect(bleedingHero.className).toContain('bg-ink')
 
     // Saudação, seletor de mês e saldo moram dentro do fundo sangrado marinho
     const greetingRow = screen.getByTestId('header-greeting-row')

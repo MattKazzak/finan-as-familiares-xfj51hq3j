@@ -671,7 +671,7 @@ export default function Home() {
       {/* 1. FUNDO MARINHO SANGRADO NO TOPO */}
       <div
         data-testid="hero-bleeding-top"
-        className="w-full bg-ink text-white pt-5 sm:pt-7 pb-10 sm:pb-12 px-4 sm:px-6 relative overflow-hidden"
+        className="w-full bg-ink text-white pt-[calc(env(safe-area-inset-top)+1.25rem)] sm:pt-7 pb-10 sm:pb-12 px-4 sm:px-6 relative overflow-hidden"
       >
         {/* Efeitos de luz sutis */}
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />

@@ -16,24 +16,23 @@
 
   /* BLINDAGEM ANTI-DARK-MODE: o app é light-only por decisão de produto.
      Mesmo com o navegador em dark, todas as superfícies de conteúdo ficam claras.
-     PISO NAVY (v0.0.646): html/body/#root pintam o MESMO navy do dock inferior
-     (var(--ink) #1a2234) — essa camada só aparece no overscroll/elástico e nas
-     regiões atrás da barra edge-to-edge, eliminando a emenda de tom duplo que
-     aparecia (piso claro #f8f9fb logo abaixo/atrás do dock navy). As superfícies
-     de conteúdo continuam claras: cada página/pinta o próprio fundo. */
+     PISO NAVY: html/body/#root pintam o MESMO azul-marinho canônico do dock inferior,
+     do header e do hero (#14213D / var(--ink)) — essa camada só aparece no overscroll/elástico
+     e nas regiões atrás da barra edge-to-edge, garantindo continuidade perfeita sem emenda
+     de tom duplo. As superfícies de conteúdo continuam claras: cada página pinta o próprio fundo. */
   html,
   body,
   #root {
-    background-color: var(--ink, #1a2234) !important;
+    background-color: var(--ink, #14213d) !important;
     color: #14213d !important;
   }
 
   /* Neutraliza a classe .dark se algo a aplicar (Radix, extensão, next-themes).
-     Piso navy var(--ink) também no escuro: mesma cor do dock (v0.0.646). */
+     Piso navy var(--ink) também no escuro: mesma cor canônica. */
   html.dark,
   html.dark body,
   html.dark #root {
-    background-color: var(--ink, #1a2234) !important;
+    background-color: var(--ink, #14213d) !important;
     color: #14213d !important;
   }
 
@@ -207,9 +206,9 @@
     --text-inverse: #ffffff;
 
     /* --- Marca --- */
-    --brand-ink: #1d2535; /* hex exato do logo */
-    --ink: #1a2234;
-    --ink-hover: #232e45;
+    --brand-ink: #14213d; /* azul-marinho canônico oficial Curiangoo */
+    --ink: #14213d;
+    --ink-hover: #1c2e54;
     --ink-subtle: #e8edf5;
 
     /* --- Ação (única cor viva do sistema) --- */
@@ -226,7 +225,7 @@
     --warning-subtle: #fbf1dc;
 
     /* --- Dados / baldes --- */
-    --data-1: #1a2234; /* Essenciais */
+    --data-1: #14213d; /* Essenciais */
     --data-2: #2f5bea; /* Estilo de Vida */
     --data-3: #0f7a5a; /* Metas */
     --data-4: #7c8ca6;
@@ -283,15 +282,15 @@
   }
 
   /* Garantia estrutural GLOBAL: impede rolagem horizontal em qualquer tela do app.
-     PISO NAVY (v0.0.646): mesma cor do dock edge-to-edge — sem emenda de tom duplo. */
+     PISO NAVY: mesma cor canônica (#14213D / var(--ink)) de ponta a ponta. */
   html {
-    background-color: var(--ink, #1a2234) !important;
+    background-color: var(--ink, #14213d) !important;
     color: #14213d;
     color-scheme: light only;
   }
 
   body {
-    background-color: var(--ink, #1a2234) !important;
+    background-color: var(--ink, #14213d) !important;
     color: #14213d;
     color-scheme: light only;
     overflow-x: clip !important;
@@ -317,7 +316,7 @@
     overflow-x: clip;
     max-width: 100%;
     min-height: 100vh;
-    background-color: var(--ink, #1a2234) !important;
+    background-color: var(--ink, #14213d) !important;
     color: #14213d;
     color-scheme: light only;
   }

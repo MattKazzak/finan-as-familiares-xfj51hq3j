@@ -151,8 +151,8 @@ export default function Layout() {
       {/* EDGE-TO-EDGE (18/10, Matheus): pinta o fundo POR BAIXO das barras do sistema
           (barra de status wifi/bateria em cima, barra de gestos embaixo) — sensação
           de unidade que apps como Nubank/Pinterest/Instagram têm. */}
-      {/* SIDEBAR DESKTOP (>= 768px) com identidade profunda #14213D */}
-      <aside className="hidden md:flex w-60 shrink-0 flex-col bg-[#14213D] text-white sticky top-0 h-screen">
+      {/* SIDEBAR DESKTOP (>= 768px) com identidade profunda navy (bg-ink) */}
+      <aside className="hidden md:flex w-60 shrink-0 flex-col bg-ink text-white sticky top-0 h-screen">
         {/* Logo + Nome */}
         <div className="p-5 border-b border-white/10">
           <div className="flex items-center gap-2.5">
@@ -266,7 +266,7 @@ export default function Layout() {
             a Home possui hero sangrado próprio e o Perfil adota o padrão Instagram/Spotify/Pinterest de telas de configurações
             com título grande integrado na página e sem a top bar navy fixa). */}
         {location.pathname !== '/inicio' && location.pathname !== '/perfil' && (
-          <header className="sticky top-0 z-30 bg-[#14213D] text-white pl-4 pr-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 sm:px-6 flex items-center justify-between">
+          <header className="sticky top-0 z-30 bg-ink text-white pl-4 pr-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 sm:px-6 flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0">
               {/* FIX 25/10 (Matheus): o pássaro agora é CAMINHO PRO COPILOT em toda
                   tela interna — padrão Duolingo (mascote = atalho da feature de IA).
