@@ -259,7 +259,11 @@ export default function Layout() {
         </div>
       </aside>
 
-      <div className="flex-1 md:ml-60 flex flex-col min-h-screen bg-white">
+      <div
+        className={`flex-1 md:ml-60 flex flex-col min-h-screen transition-colors ${
+          location.pathname.startsWith('/perfil') ? 'bg-[#0B111E]' : 'bg-white'
+        }`}
+      >
         {/* HEADER TOP (visível em desktop e nas demais páginas; na Home (/inicio) e no Perfil (/perfil) o cabeçalho é dispensado:
             a Home possui hero sangrado próprio e o Perfil adota o padrão Instagram/Spotify/Pinterest de telas de configurações
             com título grande integrado na página e sem a top bar navy fixa). */}
@@ -320,7 +324,7 @@ export default function Layout() {
             location.pathname === '/inicio'
               ? 'p-0 pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-8'
               : location.pathname === '/perfil'
-                ? 'max-w-[1200px] mx-auto p-4 sm:p-6 pt-[calc(env(safe-area-inset-top)+1rem)] sm:pt-6 pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-8'
+                ? 'max-w-[1200px] mx-auto p-4 sm:p-6 pt-[calc(env(safe-area-inset-top)+1rem)] sm:pt-6 pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-8 bg-[#0B111E]'
                 : 'max-w-[1200px] mx-auto p-4 sm:p-6 pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-8'
           }`}
         >

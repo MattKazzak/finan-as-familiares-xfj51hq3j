@@ -865,7 +865,10 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="space-y-5 max-w-4xl mx-auto w-full min-w-0">
+    <div
+      data-testid="profile-dark-wrapper"
+      className="dark bg-background text-foreground space-y-5 max-w-4xl mx-auto w-full min-w-0 min-h-full rounded-2xl sm:p-2"
+    >
       {/* ================================================
           TOPO MINIMALISTA INTEGRADO — Estilo Instagram / Spotify
           Sem a top bar navy externa, o usuário sai pelo botão de voltar (seta)

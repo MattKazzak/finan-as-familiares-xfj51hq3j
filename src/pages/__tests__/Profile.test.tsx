@@ -282,6 +282,20 @@ describe('ProfilePage PWA Install Shortcut - 3 Cenários de Clique', () => {
     expect(screen.queryByTitle('Editar foto ou nome da família')).toBeNull()
   })
 
+  it('renderiza o perfil encapsulado no escopo dark com fundo escuro estilo Spotify independente do tema global', () => {
+    render(
+      <MemoryRouter>
+        <ProfilePage />
+      </MemoryRouter>,
+    )
+
+    const darkWrapper = screen.getByTestId('profile-dark-wrapper')
+    expect(darkWrapper).toBeDefined()
+    expect(darkWrapper.className).toContain('dark')
+    expect(darkWrapper.className).toContain('bg-background')
+    expect(darkWrapper.className).toContain('text-foreground')
+  })
+
   it('renderiza o título da família sem classe truncate e com quebra responsiva', () => {
     render(
       <MemoryRouter>
