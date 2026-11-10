@@ -15,19 +15,25 @@
   }
 
   /* BLINDAGEM ANTI-DARK-MODE: o app é light-only por decisão de produto.
-     Mesmo com o navegador em dark, todas as superfícies ficam claras. */
+     Mesmo com o navegador em dark, todas as superfícies de conteúdo ficam claras.
+     PISO NAVY (v0.0.646): html/body/#root pintam o MESMO navy do dock inferior
+     (var(--ink) #1a2234) — essa camada só aparece no overscroll/elástico e nas
+     regiões atrás da barra edge-to-edge, eliminando a emenda de tom duplo que
+     aparecia (piso claro #f8f9fb logo abaixo/atrás do dock navy). As superfícies
+     de conteúdo continuam claras: cada página/pinta o próprio fundo. */
   html,
   body,
   #root {
-    background-color: #f8f9fb !important;
+    background-color: var(--ink, #1a2234) !important;
     color: #14213d !important;
   }
 
-  /* Neutraliza a classe .dark se algo a aplicar (Radix, extensão, next-themes) */
+  /* Neutraliza a classe .dark se algo a aplicar (Radix, extensão, next-themes).
+     Piso navy var(--ink) também no escuro: mesma cor do dock (v0.0.646). */
   html.dark,
   html.dark body,
   html.dark #root {
-    background-color: #f8f9fb !important;
+    background-color: var(--ink, #1a2234) !important;
     color: #14213d !important;
   }
 
@@ -276,15 +282,16 @@
     --data-6: #e0a83c;
   }
 
-  /* Garantia estrutural GLOBAL: impede rolagem horizontal em qualquer tela do app e fixa visual claro */
+  /* Garantia estrutural GLOBAL: impede rolagem horizontal em qualquer tela do app.
+     PISO NAVY (v0.0.646): mesma cor do dock edge-to-edge — sem emenda de tom duplo. */
   html {
-    background-color: #f8f9fb !important;
+    background-color: var(--ink, #1a2234) !important;
     color: #14213d;
     color-scheme: light only;
   }
 
   body {
-    background-color: #f8f9fb !important;
+    background-color: var(--ink, #1a2234) !important;
     color: #14213d;
     color-scheme: light only;
     overflow-x: clip !important;
@@ -310,7 +317,7 @@
     overflow-x: clip;
     max-width: 100%;
     min-height: 100vh;
-    background-color: #f8f9fb !important;
+    background-color: var(--ink, #1a2234) !important;
     color: #14213d;
     color-scheme: light only;
   }
@@ -377,7 +384,7 @@
 
   @keyframes accordion-up {
     from {
-      height: var(--radix-accordion-content-height);
+      height: 0;
     }
     to {
       height: 0;
@@ -405,7 +412,7 @@
   @keyframes fade-in-up {
     from {
       transform: translateY(10px);
-      opacity: 0;
+      opacity: 1;
     }
     to {
       transform: translateY(0);
@@ -413,10 +420,19 @@
     }
   }
 
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
   @keyframes fade-in-down {
     from {
       transform: translateY(-10px);
-      opacity: 0;
+      opacity: 1;
     }
     to {
       transform: translateY(0);
@@ -431,7 +447,7 @@
     }
     to {
       transform: translateY(-10px);
-      opacity: 0;
+      opacity: 1;
     }
   }
 
@@ -442,14 +458,14 @@
     }
     to {
       transform: translateY(10px);
-      opacity: 0;
+      opacity: 1;
     }
   }
 
   @keyframes slide-up {
     from {
       transform: translateY(10px);
-      opacity: 0;
+      opacity: 1;
     }
     to {
       transform: translateY(0);
@@ -460,7 +476,7 @@
   @keyframes slide-down {
     from {
       transform: translateY(-10px);
-      opacity: 0;
+      opacity: 1;
     }
     to {
       transform: translateY(0);
@@ -507,6 +523,10 @@
 
   .animate-fade-in-up {
     animation: fade-in-up 0.6s ease-out;
+  }
+
+  .animate-fade-out {
+    animation: fade-out 0.5s ease-out;
   }
 
   .animate-fade-in-down {
