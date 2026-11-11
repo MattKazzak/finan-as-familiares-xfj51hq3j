@@ -664,4 +664,198 @@
     user-select: none !important;
     -webkit-tap-highlight-color: transparent;
   }
+
+  /* ==========================================================================
+     CDS v3.0 — PONTE DE CONTRASTE DARK (varredura de legibilidade)
+     Remapeia classes utilitárias do padrão claro que sobreviveram em
+     componentes (Carteira, Perfil, folha "Criar") para os tokens dark do
+     Curiangoo. Só cores: NÃO altera estrutura/layout. App é dark fixo
+     (main.tsx força .dark), então o escopo .dark cobre o app inteiro.
+     ========================================================================== */
+
+  /* --- Fundos claros → superfícies dark --- */
+  .dark [class~='bg-white'],
+  .dark [class~='bg-white/90'],
+  .dark [class~='bg-white/95'] {
+    background-color: #131a2b;
+  }
+  /* Aba/seção ATIVA de Tabs — só no estado ativo, nunca incondicional */
+  .dark [data-state='active'][class~='data-[state=active]:bg-white'] {
+    background-color: #1a2233;
+  }
+  .dark [data-state='active'][class~='data-[state=active]:text-slate-900'] {
+    color: #ffffff;
+  }
+  .dark [data-state='active'][class~='data-[state=active]:text-emerald-700'] {
+    color: #4ade80;
+  }
+  .dark [data-state='active'][class~='data-[state=active]:text-rose-700'] {
+    color: #fb7185;
+  }
+  .dark [class~='bg-slate-50'],
+  .dark [class~='bg-slate-50/50'],
+  .dark [class~='bg-slate-50/60'] {
+    background-color: rgba(255, 255, 255, 0.04);
+  }
+  .dark [class~='bg-slate-100'],
+  .dark [class~='bg-slate-100/70'],
+  .dark [class~='bg-slate-100/80'],
+  .dark [class~='bg-slate-100/90'],
+  .dark [class~='bg-gray-100'] {
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+  .dark [class~='bg-slate-200'],
+  .dark [class~='bg-slate-200/70'],
+  .dark [class~='bg-gray-200'] {
+    background-color: rgba(255, 255, 255, 0.12);
+  }
+  .dark [class~='bg-slate-300'],
+  .dark [class~='bg-gray-300'] {
+    background-color: rgba(255, 255, 255, 0.16);
+  }
+  .dark [class~='hover:bg-slate-50']:hover,
+  .dark [class~='hover:bg-slate-100']:hover,
+  .dark [class~='hover:bg-slate-50/50']:hover,
+  .dark [class~='hover:bg-gray-100']:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  .dark [class~='hover:bg-amber-100']:hover {
+    background-color: rgba(252, 163, 17, 0.15);
+  }
+  .dark [class~='hover:bg-blue-50']:hover,
+  .dark [class~='hover:bg-blue-50/80']:hover {
+    background-color: rgba(47, 91, 234, 0.18);
+  }
+  .dark [class~='hover:bg-red-50']:hover,
+  .dark [class~='hover:bg-rose-50']:hover {
+    background-color: rgba(229, 103, 125, 0.15);
+  }
+
+  /* Ambers de aviso/detalhe → âmbar translúcido (brand #FCA311) */
+  .dark [class~='bg-amber-50'],
+  .dark [class~='bg-amber-50/80'],
+  .dark [class~='bg-amber-100'],
+  .dark [class~='bg-amber-100/80'] {
+    background-color: rgba(252, 163, 17, 0.1);
+  }
+  .dark [class~='bg-amber-200/70'],
+  .dark [class~='bg-amber-200'] {
+    background-color: rgba(252, 163, 17, 0.22);
+  }
+
+  /* --- Textos escuros → branco / branco translúcido --- */
+  .dark [class~='text-slate-900'],
+  .dark [class~='text-slate-800'],
+  .dark [class~='text-slate-700'],
+  .dark [class~='text-slate-600'],
+  .dark [class~='text-gray-900'],
+  .dark [class~='text-gray-800'],
+  .dark [class~='text-gray-700'],
+  .dark [class~='text-gray-600'] {
+    color: #ffffff;
+  }
+  .dark [class~='text-slate-500'],
+  .dark [class~='text-gray-500'] {
+    color: rgba(255, 255, 255, 0.62);
+  }
+  .dark [class~='text-slate-400'],
+  .dark [class~='text-gray-400'] {
+    color: rgba(255, 255, 255, 0.45);
+  }
+  .dark [class~='text-slate-300'],
+  .dark [class~='text-gray-300'] {
+    color: rgba(255, 255, 255, 0.35);
+  }
+  .dark [class~='hover:text-slate-600']:hover,
+  .dark [class~='hover:text-slate-700']:hover,
+  .dark [class~='hover:text-slate-800']:hover,
+  .dark [class~='hover:text-slate-900']:hover {
+    color: #ffffff;
+  }
+  .dark [class~='hover:text-emerald-600']:hover,
+  .dark [class~='hover:text-emerald-700']:hover {
+    color: #4ade80;
+  }
+  .dark [class~='hover:text-blue-600']:hover {
+    color: #7da2ff;
+  }
+  .dark [class~='hover:text-red-600']:hover {
+    color: #f87171;
+  }
+
+  /* Verde = receita, vermelho/rosa = despesa — tons claros legíveis no dark */
+  .dark [class~='text-emerald-600'],
+  .dark [class~='text-emerald-700'] {
+    color: #4ade80;
+  }
+  .dark [class~='text-rose-600'],
+  .dark [class~='text-rose-700'],
+  .dark [class~='text-red-600'],
+  .dark [class~='text-red-700'] {
+    color: #fb7185;
+  }
+  .dark [class~='text-blue-600'],
+  .dark [class~='text-blue-700'] {
+    color: #7da2ff;
+  }
+
+  /* Âmbar (brand) — textos escuros de badge/aviso → âmbar claro legível */
+  .dark [class~='text-amber-600'],
+  .dark [class~='text-amber-700'],
+  .dark [class~='text-amber-700/90'],
+  .dark [class~='text-amber-800'],
+  .dark [class~='text-amber-900'],
+  .dark [class~='text-amber-950'] {
+    color: #fca311;
+  }
+
+  /* --- Textos auxiliares / muted com contraste garantido --- */
+  .dark [class~='text-body'] {
+    color: rgba(255, 255, 255, 0.88);
+  }
+  .dark [class~='text-body2'] {
+    color: rgba(255, 255, 255, 0.72);
+  }
+  .dark [class~='text-body3'] {
+    color: rgba(255, 255, 255, 0.55);
+  }
+  .dark [class~='text-muted-foreground'] {
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  /* Placeholders de input sempre visíveis no dark */
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: rgba(255, 255, 255, 0.38);
+  }
+
+  /* --- Bordas claras → linhas dark visíveis --- */
+  .dark [class~='border-slate-100/80'],
+  .dark [class~='border-slate-200'],
+  .dark [class~='border-slate-200/60'],
+  .dark [class~='border-slate-200/70'],
+  .dark [class~='border-slate-200/80'],
+  .dark [class~='border-slate-200/90'],
+  .dark [class~='border-gray-200'] {
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+  .dark [class~='border-slate-300'],
+  .dark [class~='border-slate-300/80'],
+  .dark [class~='border-gray-300'] {
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+  .dark [class~='hover:border-slate-300']:hover,
+  .dark [class~='hover:border-slate-300/80']:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+  }
+  .dark [class~='border-amber-100'],
+  .dark [class~='border-amber-200'],
+  .dark [class~='border-amber-200/90'],
+  .dark [class~='border-amber-300'] {
+    border-color: rgba(252, 163, 17, 0.3);
+  }
+  .dark [class~='border-violet-200'],
+  .dark [class~='border-violet-200/80'] {
+    border-color: rgba(139, 92, 246, 0.35);
+  }
 }
