@@ -13,6 +13,7 @@ import { processAutoRecurringIncomes } from '@/services/recurring-incomes'
 import { formatBRL, formatFamilyDisplayName, formatRelativeDate } from '@/lib/formatters'
 import { CountUp } from '@/components/common/CountUp'
 import { CategoryIconBox } from '@/components/common/CategoryIcon'
+import { CategoryExpensesDonut } from '@/components/home/CategoryExpensesDonut'
 import { CuriangoLogo } from '@/components/brand/CuriangoLogo'
 
 import { TrialBanner } from '@/components/billing/TrialBanner'
@@ -1228,90 +1229,18 @@ export default function Home() {
                 </p>
               </div>
             </div>
-
-            {categoryExpenses.totalExpensesInMonth > 0 && (
-              <div className="flex flex-col items-end shrink-0 text-right">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-white/50">
-                  Total
-                </span>
-                <span className="text-base sm:text-lg font-bold text-white tabular-nums leading-tight mt-0.5">
-                  {maskValue(formatBRL(categoryExpenses.totalExpensesInMonth))}
-                </span>
-              </div>
-            )}
           </div>
 
-          {loading ? (
-            <div className="space-y-3 pt-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="space-y-1.5">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-3 w-full rounded-full" />
-                </div>
-              ))}
-            </div>
-          ) : categoryExpenses.list.length === 0 ? (
-            <div className="py-8 flex flex-col items-center justify-center text-center">
-              <div className="w-12 h-12 rounded-2xl bg-surface-2 flex items-center justify-center text-body3 mb-2">
-                <BarChart3 className="w-6 h-6 stroke-[1.5]" />
-              </div>
-              <p className="text-xs font-semibold text-body">Nenhum gasto registrado neste mês</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                Suas despesas aparecerão organizadas por categorias aqui.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4 pt-3 border-t border-line/60">
-              {categoryExpenses.list.map((item) => {
-                const percentOfTotal =
-                  categoryExpenses.totalExpensesInMonth > 0
-                    ? Math.round((item.amountCents / categoryExpenses.totalExpensesInMonth) * 100)
-                    : 0
-                const barWidth =
-                  categoryExpenses.maxAmount > 0
-                    ? Math.round((item.amountCents / categoryExpenses.maxAmount) * 100)
-                    : 0
-
-                return (
-                  <div key={item.id} className="min-w-0 space-y-2">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <CategoryIconBox
-                        icon={item.icon}
-                        color={item.color}
-                        className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-                        iconClassName="w-3.5 h-3.5"
-                        strokeWidth={1.75}
-                      />
-                      <span className="flex-1 min-w-0 truncate text-sm font-medium text-ink">
-                        {item.name}
-                      </span>
-                      <span className="shrink-0 text-sm font-semibold text-ink tabular-nums">
-                        {maskValue(formatBRL(item.amountCents))}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-3 min-w-0">
-                      {/* Barra de progresso CDS: trilha suave e preenchimento arredondado */}
-                      <div className="flex-1 min-w-0 bg-surface-2/60 h-2 rounded-full overflow-hidden">
-                        <div
-                          className="bg-data-4 h-full rounded-full transition-all duration-500 ease-out"
-                          style={{ width: `${barWidth}%` }}
-                          role="progressbar"
-                          aria-label={`Gastos na categoria ${item.name}`}
-                          aria-valuenow={barWidth}
-                          aria-valuemin={0}
-                          aria-valuemax={100}
-                        />
-                      </div>
-                      <span className="shrink-0 w-9 text-right text-[11px] font-medium text-body3 tabular-nums">
-                        {percentOfTotal}%
-                      </span>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+          <CategoryExpensesDonut
+            items={categoryExpenses.list.map((item) => ({
+              id: item.id,
+              name: item.name,
+              amountCents: item.amountCents,
+            }))}
+            totalCents={categoryExpenses.totalExpensesInMonth}
+            loading={loading}
+            formatValue={(cents) => maskValue(formatBRL(cents))}
+          />
         </div>
         {/* 4. SEÇÃO ÚLTIMAS TRANSAÇÕES */}
         <div className="bg-surface backdrop-blur-sm rounded-3xl border border-line p-5 sm:p-7 shadow-elevation-1">

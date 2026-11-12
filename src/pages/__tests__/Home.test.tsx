@@ -231,12 +231,9 @@ describe('Home Page - R58 Nova Home Completa', () => {
     expect(screen.getByText('Lazer')).toBeDefined()
     expect(screen.getByText('Reserva')).toBeDefined()
 
-    const progressBarMoradia = screen.getByRole('progressbar', {
-      name: /gastos na categoria moradia/i,
-    })
-    expect(progressBarMoradia).toBeDefined()
-    // Moradia é o valor máximo, então sua barra preenche 100%
-    expect(progressBarMoradia.getAttribute('aria-valuenow')).toBe('100')
+    // Donut com o total do mês no centro e legenda com porcentagem
+    expect(screen.getByRole('img', { name: /gráfico de rosca dos gastos/i })).toBeDefined()
+    expect(screen.getByText('Total do mês')).toBeDefined()
   })
 
   it('T3 (b): gráfico de barras exibe estado vazio amigável quando não houver despesas no mês', async () => {
