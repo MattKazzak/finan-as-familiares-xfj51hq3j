@@ -31,9 +31,9 @@ describe('R60 — Service Worker, Manifest e Blindagem de Tema Claro', () => {
   })
 
   describe('TAREFA 2 & 5 — Manifest do PWA Blindado com Cores Dark CDS v3.0', () => {
-    it('o manifest tem theme_color e background_color com o preto quente canônico oficial do CDS v3.0 (#221D1B)', () => {
-      expect(manifest.theme_color).toBe('#221D1B')
-      expect(manifest.background_color).toBe('#221D1B')
+    it('o manifest tem theme_color e background_color com o preto neutro canônico oficial do CDS v3.0 (#161616)', () => {
+      expect(manifest.theme_color).toBe('#161616')
+      expect(manifest.background_color).toBe('#161616')
     })
 
     it('o manifest define name e short_name oficiais com a grafia Curiangoo', () => {
@@ -44,9 +44,9 @@ describe('R60 — Service Worker, Manifest e Blindagem de Tema Claro', () => {
   })
 
   describe('TAREFA 3 & 5 — Declaração de Tema Dark Reforçada & Nenhuma media query prefers-color-scheme em conflito', () => {
-    it('index.html declara meta color-scheme="dark" e theme-color #221D1B', () => {
+    it('index.html declara meta color-scheme="dark" e theme-color #161616', () => {
       expect(indexHtmlRaw).toContain('<meta name="color-scheme" content="dark"')
-      expect(indexHtmlRaw).toContain('<meta name="theme-color" content="#221D1B"')
+      expect(indexHtmlRaw).toContain('<meta name="theme-color" content="#161616"')
     })
 
     it('CSS não possui nenhuma regra @media (prefers-color-scheme: dark) que altere o visual', () => {

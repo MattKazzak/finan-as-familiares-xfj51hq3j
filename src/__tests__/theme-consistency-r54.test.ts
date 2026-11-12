@@ -6,23 +6,30 @@ import patrimonyRaw from '../pages/Patrimony.tsx?raw'
 import goalsRaw from '../pages/Goals.tsx?raw'
 import investmentsRaw from '../pages/Investments.tsx?raw'
 
-describe('CDS v3.0 - Consistência de Tema Dark Spotify e Piso Navy Canônico', () => {
+describe('CDS v3.0 - Consistência de Tema Dark Spotify e Piso Preto Neutro Canônico', () => {
   it('declara meta tag color-scheme="dark" no index.html', () => {
     expect(indexHtmlRaw).toContain('<meta name="color-scheme" content="dark"')
   })
 
-  it('declara theme-color e background_color preto quente #221D1B no index.html e manifest.json para navegadores móveis', () => {
-    expect(indexHtmlRaw).toContain('<meta name="theme-color" content="#221D1B"')
-    expect(manifest.theme_color).toBe('#221D1B')
-    expect(manifest.background_color).toBe('#221D1B')
+  it('declara theme-color e background_color preto neutro #161616 no index.html e manifest.json para navegadores móveis', () => {
+    expect(indexHtmlRaw).toContain('<meta name="theme-color" content="#161616"')
+    expect(manifest.theme_color).toBe('#161616')
+    expect(manifest.background_color).toBe('#161616')
   })
 
-  it('declara color-scheme: dark no CSS raiz (main.css) com piso preto quente #221D1B explícito', () => {
+  it('declara color-scheme: dark no CSS raiz (main.css) com piso preto neutro #161616 explícito', () => {
     expect(mainCssRaw).toMatch(/color-scheme:\s*dark/i)
-    expect(mainCssRaw).toMatch(/background-color:\s*var\(--ink,\s*#221d1b\)\s*!important/i)
+    expect(mainCssRaw).toMatch(/background-color:\s*var\(--ink,\s*#161616\)\s*!important/i)
   })
+
   it('não possui media queries @media (prefers-color-scheme: dark) ativas no CSS', () => {
     expect(mainCssRaw).not.toContain('@media (prefers-color-scheme')
+  })
+
+  it('nenhum resquício do preto quente antigo (#221D1B) nem dos derivados marrons (#2B2523/#342E2B) no index.html, manifest e main.css', () => {
+    expect(indexHtmlRaw).not.toMatch(/221d1b|2b2523|342e2b/i)
+    expect(JSON.stringify(manifest)).not.toMatch(/221d1b|2b2523|342e2b/i)
+    expect(mainCssRaw).not.toMatch(/221d1b|2b2523|342e2b/i)
   })
 
   it('declara tokens text-ink mapeando para alto contraste branco no CDS v3.0', () => {
