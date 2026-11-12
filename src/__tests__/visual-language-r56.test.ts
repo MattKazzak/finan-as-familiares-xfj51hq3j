@@ -16,7 +16,7 @@ describe('R56 — Sistema de Profundidade, Respiro e Refinamento Visual', () => 
     expect(shadows['elevation-3']).toContain('rgba(20, 33, 61, 0.08)')
   })
 
-  it('package.json tem versão de release em andamento (>= 0.0.659, bump automático por commit)', () => {
+  it('package.json tem versão de release em andamento (>= 0.0.661, bump automático por commit)', () => {
     const [a, b, c] = (pkg.version as string).split('.').map(Number)
     expect(a).toBeGreaterThanOrEqual(0)
     expect(b).toBeGreaterThanOrEqual(0)

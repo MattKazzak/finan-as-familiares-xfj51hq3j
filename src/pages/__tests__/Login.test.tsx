@@ -166,9 +166,9 @@ describe('Login / Cadastro Page Brand Header & WCAG Contrast (R57)', () => {
     expect(passContainer).not.toBeNull()
     expect(passContainer?.className).toContain('focus-within:border-action')
 
-    // Botão de submissão com elevação sutil tokenizada R56
-    const submitBtn = screen.getByRole('button', { name: /^Entrar$/i })
-    expect(submitBtn.className).toContain('shadow-elevation-1')
+    // Botão de submissão com sombra de card tokenizada (shadow-cds, CDS v4.0)
+    const submitBtn = screen.getByRole('button', { name: /Entrar na minha conta/i })
+    expect(submitBtn.className).toContain('shadow-cds')
   })
 })
 
@@ -200,7 +200,7 @@ describe('Fluxo de Erros e Reenvio de E-mail de Confirmação', () => {
       target: { value: 'senha123' },
     })
 
-    fireEvent.click(screen.getByRole('button', { name: /^Entrar$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Entrar na minha conta/i }))
 
     await waitFor(() => {
       expect(screen.getByText('E-mail ou senha incorretos.')).toBeDefined()
@@ -232,7 +232,7 @@ describe('Fluxo de Erros e Reenvio de E-mail de Confirmação', () => {
       target: { value: 'minhasenha' },
     })
 
-    fireEvent.click(screen.getByRole('button', { name: /^Entrar$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Entrar na minha conta/i }))
 
     await waitFor(() => {
       expect(
@@ -269,7 +269,7 @@ describe('Fluxo de Erros e Reenvio de E-mail de Confirmação', () => {
       target: { value: '123456' },
     })
 
-    fireEvent.click(screen.getByRole('button', { name: /^Entrar$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Entrar na minha conta/i }))
 
     await act(async () => {
       await Promise.resolve()
