@@ -45,10 +45,29 @@ export async function deleteUserAccount(): Promise<{
   return data as { success: boolean; families_deleted: number; families_left: number }
 }
 
-/** Atualiza o nome do usuário nos metadados de autenticação. */
+/**
+ * Atualiza o nome do usuário nos metadados de autenticação E na linha do
+ * próprio membro em family_members (fonte de verdade das demais telas:
+ * saudação da Home, chips de membros, Layout, Copilot). A RPC self-service
+ * atualiza apenas linhas com user_id = auth.uid() — isolamento multi-família
+ * preservado, sem exigir ser admin da família.
+ */
 export async function updateUserName(name: string): Promise<void> {
-  const { error } = await supabase.auth.updateUser({ data: { name: name.trim() } })
+  const cleanName = name.trim()
+  // 1) Fonte de verdade do app: family_members (via RPC self-service)
+  const { data, error } = await (supabase as any).rpc('update_my_member_name', {
+    p_new_name: cleanName,
+  })
   if (error) throw error
+  if (data && data.success === false) {
+    throw new Error('Nenhum membro da família encontrado para atualizar o nome.')
+  }
+  // 2) Metadados de autenticação (mantidos em sincronia)
+  const { error: metaError } = await supabase.auth.updateUser({ data: { name: cleanName } })
+  if (metaError) {
+    // Nome já propagado no app; falha de metadados não deve bloquear o save
+    console.warn('[user-account] Falha ao sync de auth.user_metadata.name:', metaError)
+  }
 }
 
 /** Envia a foto do usuário para o Storage e salva a URL nos metadados. */

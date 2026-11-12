@@ -163,6 +163,15 @@ export default function ProfilePage() {
     try {
       setSavingUserName(true)
       await updateUserName(trimmed)
+      // FIX NOME NÃO PROPAGA (12/11): o nome novo precisa aparecer em TODAS as
+      // telas (saudação da Home, chips de membros, Carteira, Copilot) sem logout.
+      // Essas telas leem family_members do contexto useFamily — recarrega agora,
+      // no mesmo save, para o contexto não ficar com o nome velho em memória.
+      try {
+        await reloadFamily()
+      } catch {
+        // Falha no reload não invalida o save (o banco já está atualizado)
+      }
       setIsAccountNameOpen(false)
       toast({ title: 'Nome atualizado!', description: 'Seu nome foi salvo com sucesso.' })
     } catch {
