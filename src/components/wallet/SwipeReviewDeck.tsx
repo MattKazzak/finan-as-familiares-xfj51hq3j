@@ -175,7 +175,7 @@ export function SwipeReviewDeck() {
         <p className="text-xs text-emerald-700">
           Você revisou {resolvedCount} {resolvedCount === 1 ? 'transação' : 'transações'}.
         </p>
-        <CuriangoLogo size={24} eyeColor="#14213D" eyeHighlight />
+        <CuriangoLogo size={24} eyeColor="#101217" eyeHighlight />
       </div>
     )
   }

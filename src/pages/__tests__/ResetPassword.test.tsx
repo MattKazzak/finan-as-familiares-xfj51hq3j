@@ -22,7 +22,7 @@ describe('ResetPassword Page (R57 Refined UI & WCAG Contrast)', () => {
     vi.clearAllMocks()
   })
 
-  it('renders brand header, inputs with underline style, linear icon and amber focus #FCA311 (R58)', () => {
+  it('renders brand header, inputs with underline style, linear icon and yellow action focus (token --action, CDS v4.0)', () => {
     render(
       <MemoryRouter>
         <ResetPassword />
@@ -41,11 +41,11 @@ describe('ResetPassword Page (R57 Refined UI & WCAG Contrast)', () => {
 
     const newPassContainer = newPassInput.closest('div.border-b')
     expect(newPassContainer).not.toBeNull()
-    expect(newPassContainer?.className).toContain('focus-within:border-[#FCA311]')
+    expect(newPassContainer?.className).toContain('focus-within:border-action')
 
     const confirmPassContainer = confirmPassInput.closest('div.border-b')
     expect(confirmPassContainer).not.toBeNull()
-    expect(confirmPassContainer?.className).toContain('focus-within:border-[#FCA311]')
+    expect(confirmPassContainer?.className).toContain('focus-within:border-action')
 
     const submitBtn = screen.getByRole('button', { name: /Salvar Nova Senha/i })
     expect(submitBtn.className).toContain('shadow-elevation-1')

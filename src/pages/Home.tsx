@@ -1097,7 +1097,7 @@ export default function Home() {
                   limit: bucketsData.essentials.limitCents,
                   percent: bucketsData.essentials.percent,
                   isOver: bucketsData.essentials.isOver,
-                  barGradient: 'bg-gradient-to-r from-blue-600 to-indigo-500',
+                  barGradient: 'bg-gradient-to-r from-data-4 to-data-5',
                 },
                 {
                   key: 'lifestyle',
@@ -1261,10 +1261,10 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Barra de progresso CDS: azul-marinho ink com cantos suaves */}
+                    {/* Barra de progresso CDS: cinza-azulado de dados v4.0 com cantos suaves */}
                     <div className="w-full bg-surface-2 h-2.5 rounded-full overflow-hidden">
                       <div
-                        className="bg-blue-600 h-full rounded-full transition-all duration-500 ease-out"
+                        className="bg-data-4 h-full rounded-full transition-all duration-500 ease-out"
                         style={{ width: `${barWidth}%` }}
                         role="progressbar"
                         aria-label={`Gastos na categoria ${item.name}`}
@@ -1367,7 +1367,7 @@ export default function Home() {
                           </p>
                           {item.isGroup ? (
                             <span
-                              className="inline-flex items-center text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200/70 px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap"
+                              className="inline-flex items-center text-[10px] font-medium bg-info-subtle text-info border border-info/30 px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap"
                               title={`Compra parcelada: parcela ${item.currentInstallment} de ${item.totalInstallments}`}
                             >
                               Parcelado • {item.currentInstallment}/{item.totalInstallments}

@@ -31,7 +31,7 @@ describe('CategoryIcon helpers & CategoryIconBox (CDS v1.0 Soft Tint)', () => {
     it('mantém cores hex sóbrias já compatíveis', () => {
       expect(getHarmonizedCategoryColor('#10B981')).toBe('#10B981')
       expect(getHarmonizedCategoryColor('#14213D')).toBe('#14213D')
-      expect(getHarmonizedCategoryColor('#FCA311')).toBe('#FCA311')
+      expect(getHarmonizedCategoryColor('#FFC629')).toBe('#FFC629')
     })
   })
 

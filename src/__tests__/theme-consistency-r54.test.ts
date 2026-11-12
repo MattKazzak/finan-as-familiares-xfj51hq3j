@@ -6,20 +6,20 @@ import patrimonyRaw from '../pages/Patrimony.tsx?raw'
 import goalsRaw from '../pages/Goals.tsx?raw'
 import investmentsRaw from '../pages/Investments.tsx?raw'
 
-describe('CDS v3.0 - Consistência de Tema Dark Spotify e Piso Preto Neutro Canônico', () => {
+describe('CDS v4.0 - Consistência de Tema Dark Preto Profundo e Piso Canônico', () => {
   it('declara meta tag color-scheme="dark" no index.html', () => {
     expect(indexHtmlRaw).toContain('<meta name="color-scheme" content="dark"')
   })
 
-  it('declara theme-color e background_color preto neutro #161616 no index.html e manifest.json para navegadores móveis', () => {
-    expect(indexHtmlRaw).toContain('<meta name="theme-color" content="#161616"')
-    expect(manifest.theme_color).toBe('#161616')
-    expect(manifest.background_color).toBe('#161616')
+  it('declara theme-color e background_color preto de produto #101217 (CDS v4.0) no index.html e manifest.json para navegadores móveis', () => {
+    expect(indexHtmlRaw).toContain('<meta name="theme-color" content="#101217"')
+    expect(manifest.theme_color).toBe('#101217')
+    expect(manifest.background_color).toBe('#101217')
   })
 
-  it('declara color-scheme: dark no CSS raiz (main.css) com piso preto neutro #161616 explícito', () => {
+  it('declara color-scheme: dark no CSS raiz (main.css) com piso preto de produto #101217 explícito (CDS v4.0)', () => {
     expect(mainCssRaw).toMatch(/color-scheme:\s*dark/i)
-    expect(mainCssRaw).toMatch(/background-color:\s*var\(--ink,\s*#161616\)\s*!important/i)
+    expect(mainCssRaw).toMatch(/background-color:\s*var\(--ink,\s*#101217\)\s*!important/i)
   })
 
   it('não possui media queries @media (prefers-color-scheme: dark) ativas no CSS', () => {

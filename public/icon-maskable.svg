@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Fundo azul-marinho #14213D sem cantos arredondados (zona de segurança total PWA maskable) -->
-  <rect width="512" height="512" fill="#14213D" />
+  <!-- Fundo preto de produto #101217 CDS v4.0, sem cantos arredondados (zona de segurança total PWA maskable) -->
+  <rect width="512" height="512" fill="#101217" />
 
   <!-- Pássaro Curiangoo oficial dentro da zona de segurança (~50% do container = 250px, escala 2.5) -->
   <g transform="translate(131, 131) scale(2.5)">
     <path
       d="M 11.6 22.3 C 12.8 22.8 14.6 23.6 16.4 22.8 C 19.8 21.4 24.6 21.6 29.6 24.8 C 36.8 29.8 44.8 40.2 53.2 49.8 C 61.2 58.8 70.8 67.8 82.8 76.6 C 86.8 79.5 88.6 80.6 88.2 79.6 C 87.2 78.2 83.4 74.2 78.2 69.5 C 69.8 62.4 61.4 56.6 52.8 53.6 C 47.4 51.8 44.5 52.2 41.2 53.2 C 45.4 60.2 47.8 65.4 47.8 67.2 C 47.8 68.4 45.6 69.2 42.8 69.4 C 36.4 69.6 28.6 67.2 22.8 61.4 C 18.2 56.8 16.8 50.8 17.2 41.5 C 17.5 34.2 16.8 29.8 14.8 26.2 C 13.6 24.2 12.2 23.2 11.6 22.3 Z"
-      fill="#FCA311"
+      fill="#FFC629"
     />
     <!-- Olho redondo branco expressivo (r3.4, padrão da marca 17/10) -->
     <circle cx="22.2" cy="27.2" r="3.4" fill="#FFFFFF" />

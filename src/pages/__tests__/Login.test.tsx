@@ -138,7 +138,7 @@ describe('Login / Cadastro Page Brand Header & WCAG Contrast (R57)', () => {
     })
   })
 
-  it('assegura contraste nos placeholders e labels e campos em estilo underline com foco acentuado #FCA311 (R58)', () => {
+  it('assegura contraste nos placeholders e labels e campos em estilo underline com foco acentuado no amarelo de ação (token --action, CDS v4.0)', () => {
     render(
       <MemoryRouter>
         <Login />
@@ -151,11 +151,11 @@ describe('Login / Cadastro Page Brand Header & WCAG Contrast (R57)', () => {
     expect(emailInput.className).toContain('bg-transparent')
     expect(emailInput.className).toContain('text-slate-900')
 
-    // Container com estilo underline e acento âmbar #FCA311 no foco
+    // Container com estilo underline e acento amarelo de ação (#FFC629) no foco
     const emailContainer = emailInput.closest('div.border-b')
     expect(emailContainer).not.toBeNull()
     expect(emailContainer?.className).toContain('border-b')
-    expect(emailContainer?.className).toContain('focus-within:border-[#FCA311]')
+    expect(emailContainer?.className).toContain('focus-within:border-action')
 
     const passInput = screen.getByLabelText(/^Senha$/i)
     expect(passInput.className).toContain('placeholder:text-slate-400')
@@ -164,7 +164,7 @@ describe('Login / Cadastro Page Brand Header & WCAG Contrast (R57)', () => {
 
     const passContainer = passInput.closest('div.border-b')
     expect(passContainer).not.toBeNull()
-    expect(passContainer?.className).toContain('focus-within:border-[#FCA311]')
+    expect(passContainer?.className).toContain('focus-within:border-action')
 
     // Botão de submissão com elevação sutil tokenizada R56
     const submitBtn = screen.getByRole('button', { name: /^Entrar$/i })

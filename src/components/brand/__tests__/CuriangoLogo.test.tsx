@@ -17,17 +17,17 @@ describe('CuriangoLogo', () => {
     expect(eyeCircle?.getAttribute('fill')).toBe('#FFFFFF')
   })
 
-  it('respeita propriedades de tamanho e cor personalizadas', () => {
-    const { container } = render(<CuriangoLogo size={36} color="#FCA311" />)
+  it('respeita propriedades de tamanho e cor personalizadas (amarelo marca CDS v4.0)', () => {
+    const { container } = render(<CuriangoLogo size={36} color="#FFC629" />)
     const svg = container.querySelector('svg')
     expect(svg?.getAttribute('width')).toBe('36')
     expect(svg?.getAttribute('height')).toBe('36')
     const bodyPath = container.querySelector('path')
-    expect(bodyPath?.getAttribute('fill')).toBe('#FCA311')
+    expect(bodyPath?.getAttribute('fill')).toBe('#FFC629')
   })
 
   it('mantém compatibilidade com a prop filled sem quebrar renderização', () => {
-    const { container } = render(<CuriangoLogo filled color="#FCA311" />)
+    const { container } = render(<CuriangoLogo filled color="#FFC629" />)
     const svg = container.querySelector('svg')
     expect(svg).toBeDefined()
     const paths = container.querySelectorAll('path')

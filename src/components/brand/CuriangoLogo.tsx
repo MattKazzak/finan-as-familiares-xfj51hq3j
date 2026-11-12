@@ -95,7 +95,7 @@ export const CuriangoLogo: React.FC<CuriangoLogoProps> = ({
 export interface CuriangoHeadLogoProps extends React.SVGProps<SVGSVGElement> {
   size?: number | string
   color?: string
-  /** Cor do olho — padrão var(--brand-ink) (azul-marinho do logo) para destacar sobre o âmbar */
+  /** Cor do olho — padrão var(--brand-ink) (preto de produto #101217) para destacar sobre o amarelo */
   eyeColor?: string
   className?: string
 }

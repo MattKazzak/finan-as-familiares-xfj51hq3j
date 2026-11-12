@@ -84,7 +84,7 @@ describe('R58 — Auditoria dos 7 Atributos de Referência na Tela de Login & Re
     expect(passInput.className).toContain('rounded-none')
   })
 
-  it('Atributo 4: Campo ATIVO ganha linha de destaque na cor de acento da marca (#FCA311)', () => {
+  it('Atributo 4: Campo ATIVO ganha linha de destaque na cor de acento da marca (amarelo de ação --action, CDS v4.0)', () => {
     render(
       <MemoryRouter>
         <Login />
@@ -93,13 +93,11 @@ describe('R58 — Auditoria dos 7 Atributos de Referência na Tela de Login & Re
 
     const emailInput = screen.getByLabelText(/E-mail/i)
     const emailWrapper = emailInput.closest('div.border-b')
-    expect(emailWrapper?.className).toContain('focus-within:border-[#FCA311]')
-    expect(emailWrapper?.className).toContain('focus-within:ring-[#FCA311]')
+    expect(emailWrapper?.className).toContain('focus-within:border-action')
 
     const passInput = screen.getByLabelText(/^Senha$/i)
     const passWrapper = passInput.closest('div.border-b')
-    expect(passWrapper?.className).toContain('focus-within:border-[#FCA311]')
-    expect(passWrapper?.className).toContain('focus-within:ring-[#FCA311]')
+    expect(passWrapper?.className).toContain('focus-within:border-action')
   })
 
   it('Atributo 5: Botão principal com elevação sutil (sombra tokenizada R56)', () => {
@@ -172,6 +170,6 @@ describe('R58 — Auditoria dos 7 Atributos de Referência na Tela de Login & Re
     expect(newPassInput.className).toContain('placeholder:font-light')
 
     const wrapper = newPassInput.closest('div.border-b')
-    expect(wrapper?.className).toContain('focus-within:border-[#FCA311]')
+    expect(wrapper?.className).toContain('focus-within:border-action')
   })
 })

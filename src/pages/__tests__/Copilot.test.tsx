@@ -19,7 +19,7 @@ vi.mock('@hooks/use-family', () => ({
       {
         id: 'cat-1',
         name: 'Alimentação',
-        color: '#FCA311',
+        color: '#FFC629',
         icon: 'Utensils',
         subcategories: [
           { id: 'sub-1', name: 'Restaurante', category_id: 'cat-1' },

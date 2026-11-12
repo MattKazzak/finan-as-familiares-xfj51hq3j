@@ -67,7 +67,7 @@ export const BUCKET_METADATA: Record<
   lifestyle: {
     name: 'Estilo de Vida (Desejos & Conforto)',
     shortLabel: 'Estilo de Vida',
-    color: '#FCA311', // amber suave / ocre oficial
+    color: '#FFC629', // amarelo marca CDS v4.0 (âmbar #FCA311 eliminado)
     bgLight: 'bg-amber-50/70 text-amber-900 border-amber-200/80',
     borderColor: 'border-amber-500',
     textColor: 'text-amber-800',
