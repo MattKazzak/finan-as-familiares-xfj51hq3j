@@ -802,11 +802,17 @@ export default function Home() {
                   : 'bg-white/10 text-white/80 border-white/10 hover:bg-white/15 hover:text-white'
               }`}
             >
-              <Users
-                className={`w-3.5 h-3.5 shrink-0 ${
-                  selectedMemberId === null ? 'text-white' : 'text-white/70'
+              <span
+                className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
+                  selectedMemberId === null ? 'bg-ink' : 'bg-white/20'
                 }`}
-              />
+              >
+                <Users
+                  className={`w-3.5 h-3.5 shrink-0 ${
+                    selectedMemberId === null ? 'text-white' : 'text-white/70'
+                  }`}
+                />
+              </span>
               <span>Todos</span>
             </button>
             {members.map((m) => {
