@@ -54,7 +54,11 @@ describe('Login / Cadastro Page Brand Header & WCAG Contrast (R57)', () => {
     expect(brandLogo.getAttribute('aria-label')).toBe('Curiangoo')
 
     expect(screen.getByRole('heading', { level: 1, name: 'Curiangoo' })).toBeDefined()
-    expect(screen.getByText('Finanças Familiares no Prumo')).toBeDefined()
+    expect(
+      screen.getByText(
+        'Acesse sua conta familiar para acompanhar despesas, receitas e investimentos.',
+      ),
+    ).toBeDefined()
     expect(screen.getByText('Entrar na Conta')).toBeDefined()
   })
 
@@ -73,7 +77,7 @@ describe('Login / Cadastro Page Brand Header & WCAG Contrast (R57)', () => {
     expect(brandLogo.getAttribute('aria-label')).toBe('Curiangoo')
 
     expect(screen.getByRole('heading', { level: 1, name: 'Curiangoo' })).toBeDefined()
-    expect(screen.getByText('Finanças Familiares no Prumo')).toBeDefined()
+    expect(screen.getByText('Passo 1 de 2: Crie suas credenciais de acesso seguro.')).toBeDefined()
   })
 
   it('no modo cadastro, organiza em passos focados: Passo 1 (Credenciais) → Passo 2 (Seu Nome)', async () => {
@@ -146,10 +150,10 @@ describe('Login / Cadastro Page Brand Header & WCAG Contrast (R57)', () => {
     )
 
     const emailInput = screen.getByLabelText(/E-mail/i)
-    expect(emailInput.className).toContain('placeholder:text-slate-400')
+    expect(emailInput.className).toContain('placeholder:text-body3')
     expect(emailInput.className).toContain('border-0')
     expect(emailInput.className).toContain('bg-transparent')
-    expect(emailInput.className).toContain('text-slate-900')
+    expect(emailInput.className).toContain('text-ink')
 
     // Container com estilo underline e acento amarelo de ação (#FFC629) no foco
     const emailContainer = emailInput.closest('div.border-b')
@@ -158,7 +162,7 @@ describe('Login / Cadastro Page Brand Header & WCAG Contrast (R57)', () => {
     expect(emailContainer?.className).toContain('focus-within:border-action')
 
     const passInput = screen.getByLabelText(/^Senha$/i)
-    expect(passInput.className).toContain('placeholder:text-slate-400')
+    expect(passInput.className).toContain('placeholder:text-body3')
     expect(passInput.className).toContain('border-0')
     expect(passInput.className).toContain('bg-transparent')
 

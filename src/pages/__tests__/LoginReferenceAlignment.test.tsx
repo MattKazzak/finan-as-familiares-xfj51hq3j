@@ -76,7 +76,7 @@ describe('R58 — Auditoria dos 7 Atributos de Referência na Tela de Login & Re
     // Contêiner underline com borda inferior
     const underlineWrapper = emailInput.closest('div.border-b')
     expect(underlineWrapper).not.toBeNull()
-    expect(underlineWrapper?.className).toContain('border-slate-300')
+    expect(underlineWrapper?.className).toContain('border-line')
 
     const passInput = screen.getByLabelText(/^Senha$/i)
     expect(passInput.className).toContain('border-0')
@@ -107,19 +107,20 @@ describe('R58 — Auditoria dos 7 Atributos de Referência na Tela de Login & Re
       </MemoryRouter>,
     )
 
-    const submitBtn = screen.getByRole('button', { name: /^Entrar$/i })
-    expect(submitBtn.className).toContain('shadow-elevation-1')
+    const submitBtn = screen.getByRole('button', { name: /Entrar na minha conta/i })
+    expect(submitBtn.className).toContain('shadow-cds')
   })
 
-  it('Atributo 6: Tipografia: título em peso forte, rótulos e placeholder em peso leve', () => {
+  it('Atributo 6: Tipografia: título sr-only (wordmark vive na imagem), rótulos e placeholder em peso leve', () => {
     render(
       <MemoryRouter>
         <Login />
       </MemoryRouter>,
     )
 
+    // O wordmark vive dentro da própria imagem da logo; o h1 é sr-only (semântica/acessibilidade)
     const heading = screen.getByRole('heading', { level: 1, name: 'Curiangoo' })
-    expect(heading.className).toContain('font-semibold')
+    expect(heading.className).toContain('sr-only')
 
     const emailLabel = screen.getByText('E-mail')
     expect(emailLabel.className).toContain('font-light')
@@ -127,7 +128,6 @@ describe('R58 — Auditoria dos 7 Atributos de Referência na Tela de Login & Re
     const emailInput = screen.getByLabelText(/E-mail/i)
     expect(emailInput.className).toContain('placeholder:font-light')
   })
-
   it('Atributo 7: Mensagens de erro discretas abaixo do campo, legíveis e com contraste WCAG', () => {
     render(
       <MemoryRouter>
