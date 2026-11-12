@@ -13,10 +13,10 @@
 
     <!-- PWA & Mobile Web App Manifest -->
     <link rel="manifest" href="/manifest.json" />
-    <!-- CDS v3.0: theme-color #0B111E para Android Chrome, Samsung Internet, Edge e status bar do sistema -->
-    <meta name="theme-color" content="#0B111E" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#0B111E" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0B111E" />
+    <!-- CDS v3.0: theme-color #221D1B (preto quente da faixa da logo) para Android Chrome, Samsung Internet, Edge e status bar do sistema -->
+    <meta name="theme-color" content="#221D1B" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#221D1B" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#221D1B" />
     <meta name="color-scheme" content="dark" />
     <!-- CDS v3.0: app dark fixo estilo Spotify -->
     <meta name="supported-color-schemes" content="dark" />
@@ -43,8 +43,8 @@
   <body>
     <!-- SPLASH DO CURIANGO (19/10, Matheus): pássaro surge suave + nome enquanto o
          React carrega. Puro HTML/CSS inline (zero JS): some quando o app monta
-         (main.tsx remove #splash). Fundo navy = mesma cor da barra de status. -->
-    <div id="splash" style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:#0B111E;transition:opacity .45s ease;">
+         (main.tsx remove #splash). Fundo preto quente = mesma cor da barra de status. -->
+    <div id="splash" style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:#221D1B;transition:opacity .45s ease;">
       <svg id="splash-bird" width="96" height="96" viewBox="0 0 100 100" style="opacity:0;transform:scale(.85);animation:splash-bird-in .7s cubic-bezier(.2,.7,.3,1) .15s forwards;">
         <!-- Silhueta OFICIAL do CuriangoLogo (mesmo path do app) — splash 22/10:
              o pássaro da splash era outro desenho, off-brand. Agora idêntico à marca. -->

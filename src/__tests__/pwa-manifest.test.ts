@@ -5,8 +5,8 @@ describe('PWA Manifest & Metadata', () => {
   it('valida propriedades essenciais do manifest.json', () => {
     expect(manifest.name).toBe('Curiangoo — Finanças Familiares')
     expect(manifest.short_name).toBe('Curiangoo')
-    expect(manifest.theme_color).toBe('#0B111E')
-    expect(manifest.background_color).toBe('#0B111E')
+    expect(manifest.theme_color).toBe('#221D1B')
+    expect(manifest.background_color).toBe('#221D1B')
     expect(manifest.display).toBe('standalone')
     expect(manifest.start_url).toBe('/')
   })

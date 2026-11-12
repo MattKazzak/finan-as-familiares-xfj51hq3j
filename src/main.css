@@ -15,20 +15,21 @@
   }
 
   /* CDS v3.0: App inteiro dark fixo estilo Spotify.
-     NAVY CANÔNICO OFICIAL: #0B111E em todo o piso, dock, header e fundos estruturais.
-     PISO NAVY: html/body/#root pintam o navy #0B111E para cobrir safe-areas, notch e overscroll
+     PRETO QUENTE CANÔNICO OFICIAL: #221D1B (faixa preta da logo Curiangoo) em todo o piso,
+     dock, header e fundos estruturais — charcoal quase-preto levemente quente, SEM tom azul.
+     PISO PRETO QUENTE: html/body/#root pintam #221D1B para cobrir safe-areas, notch e overscroll
      sem emendas visuais. */
   html,
   body,
   #root {
-    background-color: var(--ink, #0b111e) !important;
+    background-color: var(--ink, #221d1b) !important;
     color: #f5f7fa !important;
   }
 
   html.dark,
   html.dark body,
   html.dark #root {
-    background-color: var(--ink, #0b111e) !important;
+    background-color: var(--ink, #221d1b) !important;
     color: #f5f7fa !important;
   }
 
@@ -43,45 +44,45 @@
   input:-webkit-autofill:hover,
   input:-webkit-autofill:focus {
     -webkit-text-fill-color: #f5f7fa;
-    -webkit-box-shadow: 0 0 0 1000px #131a2b inset;
+    -webkit-box-shadow: 0 0 0 1000px #2b2523 inset;
     transition: background-color 9999s ease-out 0s;
   }
 
   :root {
-    /* Curiangoo Design System (CDS v3.0) Tokens — Spotify Dark:
-       Fundo Navy Canônico: #0B111E (221 47% 8%)
-       Superfícies/Cards: #131A2B (221 38% 12%) e #1A2233 (221 33% 15%)
+    /* Curiangoo Design System (CDS v3.0) Tokens — Dark "Preto Quente" (faixa preta da logo):
+       Fundo Canônico: #221D1B (18 11% 12%) — charcoal quase-preto levemente quente, SEM tom azul
+       Superfícies/Cards: #2B2523 (17 10% 15%) e #342E2B (20 10% 19%)
        Texto Primário: #F5F7FA (216 33% 97%)
        Texto Secundário: #8A94A6 (218 14% 60%)
        Texto Terciário: #5C667A (220 14% 42%)
        Brand Accent: #FCA311 (37 97% 53% âmbar do Curiango)
-       Bordas Estruturais: rgba(255, 255, 255, 0.08) / 221 28% 18%
+       Bordas Estruturais: rgba(255, 255, 255, 0.08) / 18 12% 18%
        Semântica Financeira: Receita #34B88A (160 56% 46%), Despesa #E5677D (351 68% 65%)
-       Baldes: Essenciais #0B111E, Estilo de Vida #FCA311, Metas #34B88A
+       Baldes: Essenciais #221D1B, Estilo de Vida #FCA311, Metas #34B88A
     */
-    --background: 221 47% 8%; /* #0B111E */
+    --background: 18 11% 12%; /* #221D1B */
     --foreground: 216 33% 97%; /* #F5F7FA */
 
-    --card: 221 38% 12%; /* #131A2B */
+    --card: 17 10% 15%; /* #2B2523 */
     --card-foreground: 216 33% 97%;
 
-    --popover: 221 38% 12%;
+    --popover: 17 10% 15%;
     --popover-foreground: 216 33% 97%;
 
     /* Brand Primary = texto principal claro no dark */
     --primary: 216 33% 97%;
-    --primary-foreground: 221 47% 8%;
+    --primary-foreground: 18 11% 12%;
 
     /* Brand Accent = #FCA311 (âmbar do Curiango) */
     --accent-brand: 37 97% 53%;
-    --accent-brand-foreground: 221 47% 8%;
+    --accent-brand-foreground: 18 11% 12%;
 
     /* Secondary */
-    --secondary: 221 33% 15%; /* #1A2233 */
+    --secondary: 20 10% 19%; /* #342E2B */
     --secondary-foreground: 216 33% 97%;
 
     /* Muted */
-    --muted: 221 33% 15%;
+    --muted: 20 10% 19%;
     --muted-foreground: 218 14% 60%; /* #8A94A6 */
 
     /* Accent */
@@ -97,19 +98,19 @@
     --success-foreground: 0 0% 100%;
 
     /* Bordas estruturais sutis CDS v3.0: rgba(255, 255, 255, 0.08) */
-    --border: 221 28% 18%;
-    --input: 221 28% 18%;
+    --border: 18 12% 18%;
+    --input: 18 12% 18%;
     --ring: 37 97% 53%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 221 47% 8%;
+    --sidebar-background: 18 11% 12%;
     --sidebar-foreground: 216 33% 97%;
     --sidebar-primary: 37 97% 53%;
-    --sidebar-primary-foreground: 221 47% 8%;
-    --sidebar-accent: 221 38% 12%;
+    --sidebar-primary-foreground: 18 11% 12%;
+    --sidebar-accent: 17 10% 15%;
     --sidebar-accent-foreground: 216 33% 97%;
-    --sidebar-border: 221 28% 18%;
+    --sidebar-border: 18 12% 18%;
     --sidebar-ring: 37 97% 53%;
 
     --chart-1: 37 97% 53%;
@@ -121,29 +122,29 @@
   }
 
   .dark {
-    --background: 221 47% 8%;
+    --background: 18 11% 12%;
     --foreground: 216 33% 97%;
 
-    --card: 221 38% 12%;
+    --card: 17 10% 15%;
     --card-foreground: 216 33% 97%;
 
-    --popover: 221 38% 12%;
+    --popover: 17 10% 15%;
     --popover-foreground: 216 33% 97%;
 
     --primary: 216 33% 97%;
-    --primary-foreground: 221 47% 8%;
+    --primary-foreground: 18 11% 12%;
 
     --accent-brand: 37 97% 53%;
-    --accent-brand-foreground: 221 47% 8%;
+    --accent-brand-foreground: 18 11% 12%;
 
-    --secondary: 221 33% 15%;
+    --secondary: 20 10% 19%;
     --secondary-foreground: 216 33% 97%;
 
-    --muted: 221 33% 15%;
+    --muted: 20 10% 19%;
     --muted-foreground: 218 14% 60%;
 
     --accent: 226 89% 66%;
-    --accent-foreground: 221 47% 8%;
+    --accent-foreground: 18 11% 12%;
 
     --destructive: 351 68% 65%;
     --destructive-foreground: 0 0% 100%;
@@ -155,19 +156,19 @@
     --expense: 351 68% 65%;
     --error: 0 72% 51%;
 
-    --border: 221 28% 18%;
-    --input: 221 28% 18%;
+    --border: 18 12% 18%;
+    --input: 18 12% 18%;
 
     --ring: 226 89% 66%;
     --ring-accent: 38 98% 53%;
 
-    --sidebar-background: 221 47% 8%;
+    --sidebar-background: 18 11% 12%;
     --sidebar-foreground: 216 33% 97%;
     --sidebar-primary: 37 97% 53%;
-    --sidebar-primary-foreground: 221 47% 8%;
-    --sidebar-accent: 221 38% 12%;
+    --sidebar-primary-foreground: 18 11% 12%;
+    --sidebar-accent: 17 10% 15%;
     --sidebar-accent-foreground: 216 33% 97%;
-    --sidebar-border: 221 28% 18%;
+    --sidebar-border: 18 12% 18%;
     --sidebar-ring: 37 97% 53%;
 
     --chart-1: 37 97% 53%;
@@ -181,24 +182,24 @@
   /* ── CDS v3.0 · Camada de tokens hex (Dark Spotify) ───────────────────────── */
   :root {
     /* --- Estrutura --- */
-    --bg: #0b111e;
-    --surface: #131a2b;
-    --surface-2: #1a2233;
+    --bg: #221d1b;
+    --surface: #2b2523;
+    --surface-2: #342e2b;
     --line: rgba(255, 255, 255, 0.1);
     --line-strong: rgba(255, 255, 255, 0.2);
     --border-strong: rgba(255, 255, 255, 0.2);
     --text: #ffffff;
     --text-2: #cbd5e1;
     --text-3: #94a3b8;
-    --text-inverse: #0b111e;
+    --text-inverse: #221d1b;
 
     /* --- Marca --- */
-    --brand-ink: #0b111e; /* azul-marinho canônico oficial Curiangoo CDS v3.0 */
+    --brand-ink: #221d1b; /* preto quente da faixa da logo — canônico oficial Curiangoo CDS v3.0 */
     /* text-ink em tema dark Spotify deve renderizar em branco pleno para títulos e elementos de destaque */
     --ink-text: #ffffff;
-    --ink: #0b111e;
-    --ink-hover: #131a2b;
-    --ink-subtle: #1a2233;
+    --ink: #221d1b;
+    --ink-hover: #2b2523;
+    --ink-subtle: #342e2b;
 
     /* --- Ação --- */
     --action: #2f5bea;
@@ -214,7 +215,7 @@
     --warning-subtle: rgba(252, 163, 17, 0.15);
 
     /* --- Dados / baldes --- */
-    --data-1: #0b111e; /* Essenciais */
+    --data-1: #221d1b; /* Essenciais */
     --data-2: #2f5bea; /* Estilo de Vida */
     --data-3: #34b88a; /* Metas */
     --data-4: #8a94a6;
@@ -229,23 +230,23 @@
 
   .dark {
     /* --- Estrutura --- */
-    --bg: #0b111e;
-    --surface: #131a2b;
-    --surface-2: #1a2233;
+    --bg: #221d1b;
+    --surface: #2b2523;
+    --surface-2: #342e2b;
     --line: rgba(255, 255, 255, 0.1);
     --line-strong: rgba(255, 255, 255, 0.2);
     --border-strong: rgba(255, 255, 255, 0.2);
     --text: #ffffff;
     --text-2: #cbd5e1;
     --text-3: #94a3b8;
-    --text-inverse: #0b111e;
+    --text-inverse: #221d1b;
 
     /* --- Marca --- */
-    --brand-ink: #0b111e;
+    --brand-ink: #221d1b;
     --ink-text: #ffffff;
-    --ink: #0b111e;
-    --ink-hover: #131a2b;
-    --ink-subtle: #1a2233;
+    --ink: #221d1b;
+    --ink-hover: #2b2523;
+    --ink-subtle: #342e2b;
 
     /* --- Ação --- */
     --action: #2f5bea;
@@ -261,7 +262,7 @@
     --warning-subtle: rgba(252, 163, 17, 0.15);
 
     /* --- Dados / baldes --- */
-    --data-1: #0b111e;
+    --data-1: #221d1b;
     --data-2: #2f5bea;
     --data-3: #34b88a;
     --data-4: #8a94a6;
@@ -275,15 +276,15 @@
   }
 
   /* Garantia estrutural GLOBAL: impede rolagem horizontal em qualquer tela do app.
-   PISO NAVY: navy canônico oficial (#0B111E / var(--ink)) de ponta a ponta. */
+   PISO PRETO QUENTE: preto quente canônico oficial (#221D1B / var(--ink)) de ponta a ponta. */
   html {
-    background-color: var(--ink, #0b111e) !important;
+    background-color: var(--ink, #221d1b) !important;
     color: #f5f7fa;
     color-scheme: dark;
   }
 
   body {
-    background-color: var(--ink, #0b111e) !important;
+    background-color: var(--ink, #221d1b) !important;
     color: #f5f7fa;
     color-scheme: dark;
     overflow-x: clip !important;
@@ -309,7 +310,7 @@
     overflow-x: clip;
     max-width: 100%;
     min-height: 100vh;
-    background-color: var(--ink, #0b111e) !important;
+    background-color: var(--ink, #221d1b) !important;
     color: #f5f7fa;
     color-scheme: dark;
   }
@@ -677,11 +678,11 @@
   .dark [class~='bg-white'],
   .dark [class~='bg-white/90'],
   .dark [class~='bg-white/95'] {
-    background-color: #131a2b;
+    background-color: #2b2523;
   }
   /* Aba/seção ATIVA de Tabs — só no estado ativo, nunca incondicional */
   .dark [data-state='active'][class~='data-[state=active]:bg-white'] {
-    background-color: #1a2233;
+    background-color: #342e2b;
   }
   .dark [data-state='active'][class~='data-[state=active]:text-slate-900'] {
     color: #ffffff;

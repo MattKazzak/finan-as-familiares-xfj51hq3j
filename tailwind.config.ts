@@ -75,14 +75,14 @@ export default {
           foreground: 'hsl(var(--secondary-foreground))',
         },
         brand: {
-          DEFAULT: '#0B111E',
-          dark: '#070B14',
-          light: '#131A2B',
+          DEFAULT: '#221D1B',
+          dark: '#191514',
+          light: '#2B2523',
           amber: '#FCA311',
-          gray: '#1A2233',
+          gray: '#342E2B',
         },
         buckets: {
-          essentials: '#0B111E',
+          essentials: '#221D1B',
           lifestyle: '#FCA311',
           goals: '#34B88A',
         },
@@ -129,7 +129,7 @@ export default {
         },
         // CDS v2.0 / v3.0 — ponte de utilitários para os tokens de src/main.css
         // Em dark total, `text-ink` precisa de alto contraste (#ffffff via --ink-text),
-        // enquanto `bg-ink` permanece o navy #0B111E canônico oficial do Curiangoo.
+        // enquanto `bg-ink` permanece o preto quente #221D1B canônico oficial do Curiangoo.
         ink: {
           DEFAULT: 'var(--ink)',
           text: 'var(--ink-text, #ffffff)',

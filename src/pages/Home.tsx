@@ -993,7 +993,7 @@ export default function Home() {
               <CuriangoLogo
                 size={40}
                 color="#FCA311"
-                eyeColor="#0B111E"
+                eyeColor="#221D1B"
                 eyeRadius={3.4}
                 eyeHighlight
                 className="animate-copilot-bird"
@@ -1031,7 +1031,7 @@ export default function Home() {
               <CuriangoLogo
                 size={40}
                 color="#FCA311"
-                eyeColor="#0B111E"
+                eyeColor="#221D1B"
                 eyeRadius={3.4}
                 eyeHighlight
                 className="animate-copilot-bird"

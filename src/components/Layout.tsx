@@ -147,9 +147,9 @@ export default function Layout() {
   const userInitial = currentMember?.name?.charAt(0).toUpperCase() || 'F'
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#0B111E] flex flex-col md:flex-row text-foreground font-sans antialiased">
-      {/* EDGE-TO-EDGE: pinta o fundo navy #0B111E por baixo de todas as barras */}
-      {/* SIDEBAR DESKTOP (>= 768px) com identidade profunda navy #0B111E (bg-ink) */}
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#221D1B] flex flex-col md:flex-row text-foreground font-sans antialiased">
+      {/* EDGE-TO-EDGE: pinta o fundo preto quente #221D1B por baixo de todas as barras */}
+      {/* SIDEBAR DESKTOP (>= 768px) com identidade profunda preto quente #221D1B (bg-ink) */}
       <aside className="hidden md:flex w-60 shrink-0 flex-col bg-ink text-white sticky top-0 h-screen border-r border-white/10">
         {/* Logo + Nome */}
         <div className="p-5 border-b border-white/10">
@@ -157,7 +157,7 @@ export default function Layout() {
             <CuriangoLogo
               size={28}
               color="#FCA311"
-              eyeColor="#0B111E"
+              eyeColor="#221D1B"
               eyeRadius={3.4}
               eyeHighlight
             />
@@ -255,7 +255,7 @@ export default function Layout() {
         </div>
       </aside>
 
-      <div className="flex-1 md:ml-60 flex flex-col min-h-screen transition-colors bg-[#0B111E]">
+      <div className="flex-1 md:ml-60 flex flex-col min-h-screen transition-colors bg-[#221D1B]">
         {/* HEADER TOP (visível em desktop e nas demais páginas; na Home (/inicio) e no Perfil (/perfil) o cabeçalho é dispensado:
             a Home possui hero sangrado próprio e o Perfil adota o padrão Instagram/Spotify/Pinterest de telas de configurações
             com título grande integrado na página e sem a top bar navy fixa). */}
@@ -274,7 +274,7 @@ export default function Layout() {
                 <CuriangoLogo
                   size={40}
                   color="#FCA311"
-                  eyeColor="#0B111E"
+                  eyeColor="#221D1B"
                   eyeRadius={3.4}
                   eyeHighlight
                 />
@@ -310,7 +310,7 @@ export default function Layout() {
         {/* CONTEÚDO PRINCIPAL: Na Home (/inicio), o topo sangra sem padding superior e lateral para encostar nas bordas;
             no Perfil (/perfil), sem a top bar navy, aplica-se safe-area no topo para proteger o notch e o miolo fica responsivo */}
         <main
-          className={`flex-1 w-full overflow-x-hidden min-w-0 bg-[#0B111E] ${
+          className={`flex-1 w-full overflow-x-hidden min-w-0 bg-[#221D1B] ${
             location.pathname === '/inicio'
               ? 'p-0 pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-8'
               : location.pathname === '/perfil'
@@ -331,7 +331,7 @@ export default function Layout() {
         {/* DOCK EDGE-TO-EDGE (MOBILE APENAS < 768px, 360–412px SAFE) —
             ESTILO INSTAGRAM/SPOTIFY: barra full-width COLADA na borda inferior,
             sem pílula, sem cantos arredondados, sem borda e sem margem lateral.
-            Fundo navy #0B111E (bg-ink / bg-[#0B111E]) cobrindo TAMBÉM o safe-area-inset-bottom (padding com
+            Fundo preto quente #221D1B (bg-ink / bg-[#221D1B]) cobrindo TAMBÉM o safe-area-inset-bottom (padding com
             env()), para nenhuma faixa clara ou emenda de tom aparecer sob a barra.
             Item ativo = SEM NENHUM fundo (nem permanente, nem hover/press, zero bg-white/*):
             o destaque vem só do ícone na variante SÓLIDA em branco pleno + rótulo branco
@@ -341,9 +341,9 @@ export default function Layout() {
         <nav
           aria-label="Navegação Principal"
           data-testid="bottom-nav-bar"
-          className="md:hidden fixed inset-x-0 bottom-0 z-40 pointer-events-auto w-full bg-ink bg-[#0B111E] border-t border-white/10"
+          className="md:hidden fixed inset-x-0 bottom-0 z-40 pointer-events-auto w-full bg-ink bg-[#221D1B] border-t border-white/10"
           style={{
-            backgroundColor: '#0B111E',
+            backgroundColor: '#221D1B',
             paddingBottom: 'env(safe-area-inset-bottom, 0px)',
           }}
         >

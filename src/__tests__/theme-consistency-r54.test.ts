@@ -11,17 +11,16 @@ describe('CDS v3.0 - Consistência de Tema Dark Spotify e Piso Navy Canônico', 
     expect(indexHtmlRaw).toContain('<meta name="color-scheme" content="dark"')
   })
 
-  it('declara theme-color e background_color navy #0B111E no index.html e manifest.json para navegadores móveis', () => {
-    expect(indexHtmlRaw).toContain('<meta name="theme-color" content="#0B111E"')
-    expect(manifest.theme_color).toBe('#0B111E')
-    expect(manifest.background_color).toBe('#0B111E')
+  it('declara theme-color e background_color preto quente #221D1B no index.html e manifest.json para navegadores móveis', () => {
+    expect(indexHtmlRaw).toContain('<meta name="theme-color" content="#221D1B"')
+    expect(manifest.theme_color).toBe('#221D1B')
+    expect(manifest.background_color).toBe('#221D1B')
   })
 
-  it('declara color-scheme: dark no CSS raiz (main.css) com piso navy #0B111E explícito', () => {
-    expect(mainCssRaw).toContain('color-scheme: dark')
-    expect(mainCssRaw).toMatch(/background-color:\s*var\(--ink,\s*#0b111e\)\s*!important/i)
+  it('declara color-scheme: dark no CSS raiz (main.css) com piso preto quente #221D1B explícito', () => {
+    expect(mainCssRaw).toMatch(/color-scheme:\s*dark/i)
+    expect(mainCssRaw).toMatch(/background-color:\s*var\(--ink,\s*#221d1b\)\s*!important/i)
   })
-
   it('não possui media queries @media (prefers-color-scheme: dark) ativas no CSS', () => {
     expect(mainCssRaw).not.toContain('@media (prefers-color-scheme')
   })
