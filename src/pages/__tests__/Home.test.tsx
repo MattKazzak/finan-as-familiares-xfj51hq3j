@@ -251,6 +251,32 @@ describe('Home Page - R58 Nova Home Completa', () => {
     expect(screen.getByText('Nenhum gasto registrado neste mês')).toBeDefined()
   })
 
+  it('T4 (b): blocos Receitas/Despesas do herói navegam ao Extrato com o filtro correspondente', async () => {
+    renderWithProviders(<Home />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Saldo Total da Família')).toBeDefined()
+    })
+
+    // Blocos viraram botões navegáveis (sem botão "+" dentro — criação é do FAB)
+    const receitas = screen.getByTestId('summary-receitas')
+    const despesas = screen.getByTestId('summary-despesas')
+    expect(receitas.tagName).toBe('BUTTON')
+    expect(despesas.tagName).toBe('BUTTON')
+
+    // "Receitas" → /carteira com filtro de entradas
+    fireEvent.click(receitas)
+    expect(mockNavigate).toHaveBeenCalledWith('/carteira', {
+      state: { filterType: 'income' },
+    })
+
+    // "Despesas" → /carteira com filtro de saídas
+    fireEvent.click(despesas)
+    expect(mockNavigate).toHaveBeenCalledWith('/carteira', {
+      state: { filterType: 'expense' },
+    })
+  })
+
   it('T4: orçamento em 3 baldes mantém cálculos com tetos reais e links', async () => {
     renderWithProviders(<Home />)
 

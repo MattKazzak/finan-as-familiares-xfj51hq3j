@@ -146,7 +146,17 @@ export function WalletPage() {
   const [filterMemberIds, setFilterMemberIds] = useState<string[]>([])
   const [filterCategoryIds, setFilterCategoryIds] = useState<string[]>([])
   const [filterSubcategoryIds, setFilterSubcategoryIds] = useState<string[]>([])
-  const [filterType, setFilterType] = useState<'income' | 'expense' | null>(null)
+  // Filtro Entradas/Saídas (12/11): pode chegar via location.state.filterType —
+  // canal existente de navegação com estado (mesmo do filterOnlyPending /
+  // importSummary). Vem dos blocos Receitas/Despesas da Home e PERMANECE ativo
+  // enquanto o usuário está no Extrato; ao navegar para fora a tela desmonta e
+  // o estado some naturalmente (voltar pelo dock reabre sem filtro).
+  const [filterType, setFilterType] = useState<'income' | 'expense' | null>(() => {
+    const state = location.state as any
+    return state?.filterType === 'income' || state?.filterType === 'expense'
+      ? state.filterType
+      : null
+  })
   const [filterOnlyPending, setFilterOnlyPending] = useState<boolean>(() => {
     const state = location.state as any
     return Boolean(state?.filterOnlyPending)

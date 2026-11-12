@@ -894,9 +894,19 @@ export default function Home() {
                 : 'Consolidado de todos os membros'}
             </p>
 
-            {/* Linha de Receitas e Despesas do Mês */}
+            {/* Linha de Receitas e Despesas do Mês.
+                Interação (12/11): cada bloco navega ao Extrato (/carteira) com o
+                filtro correspondente ativo via location.state.filterType — mesmo
+                canal do filterOnlyPending. Criação continua EXCLUSIVA do FAB "+"
+                do dock (decisão do usuário: "não precisa colocar o +"). */}
             <div className="pt-3 border-t border-white/15 flex items-center justify-between gap-3 sm:gap-6">
-              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <button
+                type="button"
+                data-testid="summary-receitas"
+                aria-label="Receitas do mês — ver entradas no Extrato"
+                onClick={() => navigate('/carteira', { state: { filterType: 'income' } })}
+                className="flex items-center gap-2.5 min-w-0 flex-1 text-left rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 active:scale-[0.97] active:opacity-80"
+              >
                 <div className="w-7 h-7 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-300 shrink-0">
                   <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
                 </div>
@@ -908,11 +918,17 @@ export default function Home() {
                     {maskValue(formatBRL(monthIncomeCents))}
                   </span>
                 </div>
-              </div>
+              </button>
 
               <div className="w-px h-8 bg-white/15 shrink-0" aria-hidden="true" />
 
-              <div className="flex items-center gap-2.5 min-w-0 flex-1 justify-end sm:justify-start">
+              <button
+                type="button"
+                data-testid="summary-despesas"
+                aria-label="Despesas do mês — ver saídas no Extrato"
+                onClick={() => navigate('/carteira', { state: { filterType: 'expense' } })}
+                className="flex items-center gap-2.5 min-w-0 flex-1 justify-end sm:justify-start text-left rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 active:scale-[0.97] active:opacity-80"
+              >
                 <div className="w-7 h-7 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-300 shrink-0">
                   <ArrowDownRight className="w-4 h-4" strokeWidth={1.5} />
                 </div>
@@ -924,7 +940,7 @@ export default function Home() {
                     {maskValue(formatBRL(monthExpenseCents))}
                   </span>
                 </div>
-              </div>
+              </button>
             </div>
           </div>
 
