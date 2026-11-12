@@ -348,7 +348,7 @@ export const ImportItemEditor: React.FC<ImportItemEditorProps> = ({
               type="button"
               size="sm"
               onClick={handleApplySimilarClick}
-              className="w-full h-8 text-xs font-bold bg-action hover:bg-[#e08e08] text-white rounded-xl shadow-xs gap-1.5 border-0"
+              className="w-full h-8 text-xs font-bold bg-action hover:bg-action-hover text-action-on rounded-xl shadow-xs gap-1.5 border-0"
             >
               <CopyCheck className="w-3.5 h-3.5" strokeWidth={1.5} />
               <span>Aplicar a todos os {eligibleSimilarCount} semelhantes</span>

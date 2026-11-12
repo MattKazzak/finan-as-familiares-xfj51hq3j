@@ -77,7 +77,7 @@ export function InstallPwaBanner({
               aria-label="Curiangoo"
               className="w-10 h-10 rounded-xl bg-white/5 p-1 shrink-0 flex items-center justify-center overflow-hidden ring-1 ring-white/10"
             >
-              <CuriangoLogo size={26} color="#FCA311" />
+              <CuriangoLogo size={26} color="#FFC629" />
             </div>
 
             {/* Conteúdo: título + 1 linha, sem badges — sóbrio e confiante */}

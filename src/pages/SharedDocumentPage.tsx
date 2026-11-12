@@ -110,7 +110,7 @@ export default function SharedDocumentPage() {
       <header className="max-w-md mx-auto w-full pt-2 pb-4 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-xl bg-ink flex items-center justify-center shadow-xs">
-            <CuriangoLogo size={18} color="#FCA311" />
+            <CuriangoLogo size={18} color="#FFC629" />
           </div>
           <span className="text-sm font-bold tracking-tight text-ink">Curiangoo</span>
         </Link>

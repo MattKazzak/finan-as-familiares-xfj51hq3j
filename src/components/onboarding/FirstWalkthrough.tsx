@@ -355,8 +355,8 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
         {effectivePos === 'top' && (
           <CuriangoLogo
             size={64}
-            color="#FCA311"
-            eyeColor="#14213D"
+            color="#FFC629"
+            eyeColor="#101217"
             eyeRadius={3.4}
             eyeHighlight
             className="block mx-auto -mb-2 relative z-10"
@@ -369,8 +369,8 @@ export function FirstWalkthrough({ stepsDone, onCompleteStep, onSkip }: FirstWal
           {(effectivePos === 'bottom' || isCenter) && (
             <CuriangoLogo
               size={64}
-              color="#FCA311"
-              eyeColor="#14213D"
+              color="#FFC629"
+              eyeColor="#101217"
               eyeRadius={3.4}
               eyeHighlight
               className="shrink-0 -mb-1"

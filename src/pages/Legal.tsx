@@ -28,7 +28,7 @@ function LegalShell({
           </button>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center p-1.5">
-              <CuriangoLogo size={24} color="#FCA311" />
+              <CuriangoLogo size={24} color="#FFC629" />
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight">{title}</h1>

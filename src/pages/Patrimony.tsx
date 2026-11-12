@@ -385,7 +385,7 @@ export default function PatrimonyPage() {
   return (
     <div className="space-y-6 sm:space-y-8 max-w-5xl mx-auto w-full min-w-0 pb-12">
       {/* 1. HERO — VISÃO CONSOLIDADA DO PATRIMÔNIO LÍQUIDO */}
-      <div className="bg-gradient-to-br from-ink via-[#1a2b4e] to-[#0f192e] text-white rounded-3xl p-6 sm:p-8 shadow-elevation-2 border border-white/10 relative overflow-hidden">
+      <div className="bg-gradient-to-br from-surface via-surface-2 to-brand-dark text-white rounded-3xl p-6 sm:p-8 shadow-elevation-2 border border-line relative overflow-hidden">
         {/* Luzes decorativas de fundo CDS */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-action/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-60 h-60 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />

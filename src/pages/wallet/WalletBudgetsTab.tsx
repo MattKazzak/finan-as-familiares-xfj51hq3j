@@ -94,7 +94,7 @@ export function WalletBudgetsTab() {
           A metodologia (50/30/20, Elizabeth Warren) agora vive no ℹ️ do card de Receitas. */}
       {/* CARD DE ONBOARDING LEVE (QUANDO A RENDA LÍQUIDA AINDA NÃO FOI DEFINIDA) */}
       {(!family?.monthly_net_income_cents || family.monthly_net_income_cents <= 0) && (
-        <div className="bg-gradient-to-br from-brand via-[#192a4f] to-brand-dark text-white rounded-3xl p-5 shadow-sm border border-brand flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in-50 duration-200">
+        <div className="bg-gradient-to-br from-surface via-surface-2 to-brand-dark text-white rounded-3xl p-5 shadow-sm border border-line flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in-50 duration-200">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-brand-amber shrink-0 mt-0.5">
               <Sparkles className="w-5 h-5" />
@@ -113,9 +113,9 @@ export function WalletBudgetsTab() {
 
           <Button
             onClick={() => setIsApplyModelOpen(true)}
-            className="bg-brand-amber hover:bg-[#e08e08] text-brand font-bold text-xs rounded-xl shadow-md self-start sm:self-center shrink-0 gap-1.5 border-0"
+            className="bg-brand-amber hover:bg-brand-press text-brand-ink font-bold text-xs rounded-xl shadow-md self-start sm:self-center shrink-0 gap-1.5 border-0"
           >
-            <Sparkles className="w-3.5 h-3.5 text-brand" />
+            <Sparkles className="w-3.5 h-3.5 text-brand-ink" />
             <span>Configurar em 3 passos</span>
           </Button>
         </div>
@@ -212,7 +212,7 @@ export function WalletBudgetsTab() {
                 trigger={
                   <Button
                     size="sm"
-                    className="bg-brand-amber hover:bg-[#e08e08] text-brand font-bold rounded-xl text-xs gap-1.5 border-0"
+                    className="bg-brand-amber hover:bg-brand-press text-brand-ink font-bold rounded-xl text-xs gap-1.5 border-0"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Criar categoria</span>

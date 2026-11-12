@@ -750,6 +750,86 @@
     background-color: rgba(214, 69, 69, 0.16);
   }
 
+  /* CDS v4.0 — botões de ação: sobre o amarelo #FFC629 o conteúdo é SEMPRE escuro
+     (--on-action #101217), nunca branco; herança cobre texto e ícones (currentColor). */
+  .dark [class~='bg-action'] {
+    color: var(--on-action, #101217);
+  }
+  .dark [class~='bg-action'][class~='text-white'],
+  .dark [class~='bg-action'][class*='text-white'] {
+    color: var(--on-action, #101217);
+  }
+  /* Painéis claros herdados (era v1) → tokens dark v4 */
+  .dark [class~='bg-[#FEF7E6]'] {
+    background-color: var(--action-subtle, rgba(255, 198, 41, 0.14));
+  }
+  .dark [class~='text-[#B87700]'] {
+    color: var(--warning, #e8a020);
+  }
+  .dark [class~='text-[#4B5563]'] {
+    color: var(--text-2, #f4f4f4);
+  }
+  .dark [class~='bg-emerald-50'] {
+    background-color: var(--income-subtle, rgba(46, 158, 107, 0.16));
+  }
+  .dark [class~='border-emerald-200'] {
+    border-color: rgba(46, 158, 107, 0.4);
+  }
+  .dark [class~='text-emerald-800'],
+  .dark [class~='text-emerald-900'] {
+    color: #ffffff;
+  }
+  /* Hovers verdes legados (#059669/#047857/#065F46) → verdes v4 legíveis */
+  .dark [class~='hover:bg-emerald-900']:hover {
+    background-color: #1d5c40;
+  }
+  .dark [class~='hover:bg-emerald-50']:hover {
+    background-color: rgba(46, 158, 107, 0.18);
+  }
+  .dark [class~='hover:border-emerald-300']:hover {
+    border-color: rgba(46, 158, 107, 0.45);
+  }
+  .dark [class~='hover:text-emerald-900']:hover {
+    color: #ffffff;
+  }
+  /* Bolhas do chat de voz: usuário em verde escuro legível, transcrição em verde v4 */
+  .dark [class~='bg-[#064E3B]'] {
+    background-color: #1d5c40;
+  }
+  .dark [class~='bg-emerald-900/90'] {
+    background-color: rgba(29, 92, 64, 0.9);
+  }
+  .dark [class~='text-emerald-100'] {
+    color: #d1fae5;
+  }
+  .dark [class~='border-emerald-700'] {
+    border-color: rgba(46, 158, 107, 0.5);
+  }
+  /* Hovers âmbar legados (#e08e08 da era v1/v3) → press v4.0 */
+  .dark [class~='hover:bg-[#e08e08]']:hover {
+    background-color: var(--action-press, #e8b01d);
+  }
+  /* Painéis claros herdados (era v1) → tokens dark v4 */
+  .dark [class~='bg-[#FEF7E6]'] {
+    background-color: var(--action-subtle, rgba(255, 198, 41, 0.14));
+  }
+  .dark [class~='text-[#B87700]'] {
+    color: var(--warning, #e8a020);
+  }
+  .dark [class~='text-[#4B5563]'] {
+    color: var(--text-2, #f4f4f4);
+  }
+  .dark [class~='bg-emerald-50'] {
+    background-color: var(--income-subtle, rgba(46, 158, 107, 0.16));
+  }
+  .dark [class~='border-emerald-200'] {
+    border-color: rgba(46, 158, 107, 0.4);
+  }
+  .dark [class~='text-emerald-800'],
+  .dark [class~='text-emerald-900'] {
+    color: #ffffff;
+  }
+
   /* Ambers de aviso/detalhe → amarelo translúcido (brand #FFC629) */
   .dark [class~='bg-amber-50'],
   .dark [class~='bg-amber-50/80'],

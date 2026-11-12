@@ -512,7 +512,7 @@ export function OnboardingWizardDialog({
                 type="button"
                 onClick={handleNextFromStep1}
                 disabled={!familyNameInput.trim()}
-                className="w-full h-12 bg-brand-amber hover:bg-[#e08e08] text-brand font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-black/10 flex items-center justify-center gap-2 transition-all cursor-pointer border-0"
+                className="w-full h-12 bg-brand-amber hover:bg-brand-press text-brand-ink font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-black/10 flex items-center justify-center gap-2 transition-all cursor-pointer border-0"
               >
                 <span>Continuar para a Renda</span>
                 <ArrowRight className="w-4 h-4 shrink-0" />
@@ -573,7 +573,7 @@ export function OnboardingWizardDialog({
                 type="button"
                 onClick={handleNextFromStep2}
                 disabled={parsedNetIncomeCents <= 0}
-                className="w-full flex-1 h-12 bg-brand-amber hover:bg-[#e08e08] text-brand font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-black/10 flex items-center justify-center gap-2 transition-all cursor-pointer border-0"
+                className="w-full flex-1 h-12 bg-brand-amber hover:bg-brand-press text-brand-ink font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-black/10 flex items-center justify-center gap-2 transition-all cursor-pointer border-0"
               >
                 <span>Continuar para as 3 Caixas</span>
                 <ArrowRight className="w-4 h-4 shrink-0" />
@@ -682,7 +682,7 @@ export function OnboardingWizardDialog({
                 type="button"
                 onClick={handleNextFromStep3}
                 disabled={isActivating}
-                className="w-full flex-1 h-12 bg-brand-amber hover:bg-[#e08e08] text-brand font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-black/10 flex items-center justify-center gap-2 transition-all cursor-pointer min-w-0 px-4 disabled:opacity-75 disabled:cursor-not-allowed border-0"
+                className="w-full flex-1 h-12 bg-brand-amber hover:bg-brand-press text-brand-ink font-bold text-sm sm:text-base rounded-2xl shadow-md shadow-black/10 flex items-center justify-center gap-2 transition-all cursor-pointer min-w-0 px-4 disabled:opacity-75 disabled:cursor-not-allowed border-0"
               >
                 <span className="flex items-center justify-center gap-2 break-words text-center">
                   <span>Continuar</span>

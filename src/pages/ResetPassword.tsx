@@ -158,8 +158,8 @@ export default function ResetPassword() {
           >
             <CuriangoLogo
               size={36}
-              color="#FCA311"
-              eyeColor="#14213D"
+              color="#FFC629"
+              eyeColor="#101217"
               eyeRadius={3.4}
               eyeHighlight
             />

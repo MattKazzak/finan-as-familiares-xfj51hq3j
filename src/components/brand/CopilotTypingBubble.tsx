@@ -23,7 +23,7 @@ export const CopilotTypingBubble: React.FC<CopilotTypingBubbleProps> = ({ classN
         className="w-7 h-7 rounded-xl bg-white border border-line flex items-center justify-center shrink-0 shadow-2xs p-1 animate-pulse"
       >
         <div className="transition-transform duration-700 ease-in-out hover:scale-105">
-          <CuriangoLogo size={18} color="#FCA311" />
+          <CuriangoLogo size={18} color="#FFC629" />
         </div>
       </div>
 

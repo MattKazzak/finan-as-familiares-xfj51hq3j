@@ -539,7 +539,7 @@ export function ApplyBudgetModelDialog({
               type="button"
               size="sm"
               onClick={handleNext}
-              className="bg-brand-amber hover:bg-[#e08e08] text-brand font-bold rounded-xl text-xs gap-1.5 border-0"
+              className="bg-brand-amber hover:bg-brand-press text-brand-ink font-bold rounded-xl text-xs gap-1.5 border-0"
             >
               <span>Avançar</span>
               <ChevronRight className="w-3.5 h-3.5" />
@@ -550,7 +550,7 @@ export function ApplyBudgetModelDialog({
               size="sm"
               onClick={handleApply}
               disabled={isApplying}
-              className="bg-brand-amber hover:bg-[#e08e08] text-brand font-bold rounded-xl text-xs gap-1.5 shadow-sm border-0"
+              className="bg-brand-amber hover:bg-brand-press text-brand-ink font-bold rounded-xl text-xs gap-1.5 shadow-sm border-0"
             >
               {isApplying ? (
                 <span className="flex items-center gap-1.5">

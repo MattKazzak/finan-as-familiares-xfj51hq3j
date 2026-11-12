@@ -41,7 +41,7 @@ export function InstallInstructionsModal({
             aria-label="Curiangoo"
             className="mx-auto w-16 h-16 rounded-2xl bg-ink p-2 shadow-lg shadow-black/25 mb-3 flex items-center justify-center border border-ink"
           >
-            <CuriangoLogo size={40} color="#FCA311" />
+            <CuriangoLogo size={40} color="#FFC629" />
           </div>
 
           <DialogTitle className="text-lg font-semibold text-ink tracking-tight flex items-center justify-center gap-1.5">

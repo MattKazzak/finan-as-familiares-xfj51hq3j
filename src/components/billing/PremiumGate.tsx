@@ -40,7 +40,7 @@ export function PremiumGate({
     <div className="rounded-2xl border border-line bg-surface/95 px-4 py-4 shadow-cds">
       <div className="flex items-center gap-3">
         <span className="shrink-0 relative">
-          <CuriangoLogo size={32} color="#FCA311" eyeColor="#14213D" eyeRadius={2.8} eyeHighlight />
+          <CuriangoLogo size={32} color="#FFC629" eyeColor="#101217" eyeRadius={2.8} eyeHighlight />
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-semibold text-ink leading-tight">{title}</p>

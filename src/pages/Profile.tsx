@@ -1456,7 +1456,7 @@ export default function ProfilePage() {
                       aria-label="Curiangoo"
                       className="w-full h-full rounded-lg bg-ink flex items-center justify-center"
                     >
-                      <CuriangoLogo size={18} color="#FCA311" />
+                      <CuriangoLogo size={18} color="#FFC629" />
                     </div>
                   }
                   iconClassName="w-8 h-8 rounded-lg p-0 bg-transparent"
