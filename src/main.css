@@ -288,8 +288,15 @@
     --data-6: #ffc629;
   }
 
-  /* Em tema dark, utilitário .text-ink mapeia para branco de alto contraste */
-  .text-ink {
+  /* CDS v4.0 (tema dark fixo): TODO utilitário *text-ink* mapeia para texto CLARO.
+     O token `ink` (#101217) é a cor de PRODUTO (fundos, pisos, dock) — usada como TEXTO
+     sobre o fundo escuro ela deixa rótulos pequenos ("· Calçados", títulos, strongs)
+     pretos e ilegíveis. A regra por atributo pega a classe pura E todas as variantes
+     geradas pelo Tailwind (hover:text-ink, group-hover:text-ink, active:/focus:,
+     text-ink/60 etc.) de uma vez, na fonte do problema. Elementos que combinam
+     text-ink com bg-white são seguros: o tema já remapeia bg-white para superfície
+     escura (ver bloco .dark [class~='bg-white'] abaixo). */
+  [class*='text-ink'] {
     color: var(--ink-text, #ffffff) !important;
   }
 
