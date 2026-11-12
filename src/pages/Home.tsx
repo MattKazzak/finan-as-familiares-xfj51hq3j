@@ -808,7 +808,7 @@ export default function Home() {
                 }`}
               >
                 <Users
-                  className={`w-3.5 h-3.5 shrink-0 ${
+                  className={`w-2.5 h-2.5 shrink-0 ${
                     selectedMemberId === null ? 'text-white' : 'text-white/70'
                   }`}
                 />
