@@ -133,7 +133,7 @@ export interface WalletContextType {
   // Bulk edit por seleção (P1 — padrão Monarch/Actual)
   selectionMode: boolean
   selectedTxIds: Set<string>
-  toggleSelectionMode: () => void
+  enterSelectionMode: (id: string) => void
   toggleTxSelection: (id: string) => void
   clearSelection: () => void
   bulkCategoryDialogOpen: boolean

@@ -1,6 +1,5 @@
 import {
   Sparkles,
-  X,
   Loader2,
   ArrowUpRight,
   ArrowDownRight,
@@ -12,6 +11,7 @@ import {
   Trash2,
   Check,
   ListChecks,
+  X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatBRL, formatDayGroupHeader } from '@/lib/formatters'
@@ -21,6 +21,7 @@ import { TransactionInlineRow } from '@/components/transactions/TransactionInlin
 import { SwipeReviewDeck } from '@/components/wallet/SwipeReviewDeck'
 import { extractPatternFromDescription, normalizeText } from '@/services/import/categorization'
 import { useFamily } from '@/hooks/use-family'
+import { useLongPress } from '@/hooks/use-long-press'
 import { useWallet } from './WalletContext'
 
 export function WalletTransactionsTab() {
@@ -58,12 +59,10 @@ export function WalletTransactionsTab() {
     aiPendingSuggestions,
     selectionMode,
     selectedTxIds,
-    toggleSelectionMode,
+    enterSelectionMode,
     toggleTxSelection,
     clearSelection,
-    bulkCategoryDialogOpen,
     setBulkCategoryDialogOpen,
-    handleBulkApplyCategory,
     bulkApplying,
     setSelectedTx,
     setIsDetailOpen,
@@ -71,6 +70,25 @@ export function WalletTransactionsTab() {
     setIsEditTxOpen,
     setTxToDelete,
   } = useWallet()
+
+  // ===== Seleção por long-press (padrão de mercado — e-mails/fotos) =====
+  // UM hook para a lista inteira, com DELEGAÇÃO de eventos: o container das
+  // linhas (data-tx-id em cada linha) entrega os handlers; o hook resolve
+  // qual transação foi segurada via closest('[data-tx-id]'). Assim não há
+  // hook por linha (seria ilegal dentro do .map) nem timer por linha.
+  const { handlers: listPressHandlers, consumeClickIfLongPress } = useLongPress({
+    onLongPress: (target) => {
+      const row = target?.closest('[data-tx-id]')
+      const txId = row?.getAttribute('data-tx-id')
+      if (!txId) return
+      if (!selectionMode) {
+        // Entra no modo e já marca a transação segurada
+        enterSelectionMode(txId)
+      } else {
+        toggleTxSelection(txId)
+      }
+    },
+  })
 
   return (
     <div className="space-y-6 sm:space-y-7 mt-0 animate-in fade-in-50 duration-200 min-w-0">
@@ -189,20 +207,20 @@ export function WalletTransactionsTab() {
       {/* ===== Deck de revisão em swipe (P2 — padrão Rocket Money) ===== */}
       {!selectionMode && pendingTransactionsCount > 0 ? <SwipeReviewDeck /> : null}
 
-      {/* ===== Barra de seleção (bulk edit P1 — padrão Monarch) ===== */}
+      {/* ===== Barra de seleção (bulk edit P1): SÓ existe no modo ativo ===== */}
       {selectionMode ? (
-        <div className="rounded-3xl border border-violet-500/40 bg-violet-950/40 backdrop-blur-sm p-3.5 flex items-center justify-between gap-3 shadow-cds sticky top-14 z-10">
+        <div className="rounded-3xl border border-action/40 bg-action-subtle backdrop-blur-sm p-3.5 flex items-center justify-between gap-3 shadow-cds sticky top-14 z-10">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-violet-600 text-white flex items-center justify-center shrink-0 font-bold text-sm">
+            <div className="w-9 h-9 rounded-xl bg-action text-on-action flex items-center justify-center shrink-0 font-bold text-sm">
               {selectedTxIds.size}
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-bold text-violet-200">
+              <p className="text-xs font-bold text-ink">
                 {selectedTxIds.size === 1
                   ? '1 transação selecionada'
                   : `${selectedTxIds.size} transações selecionadas`}
               </p>
-              <p className="text-[11px] text-violet-300">Toque nas linhas para marcar</p>
+              <p className="text-[11px] text-body2">Toque para marcar · Concluído para sair</p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -211,16 +229,16 @@ export function WalletTransactionsTab() {
               variant="ghost"
               size="sm"
               onClick={clearSelection}
-              className="rounded-xl text-xs text-violet-300 hover:text-white hover:bg-violet-900/40 h-8 px-2"
+              className="rounded-xl text-xs text-body2 hover:text-ink hover:bg-surface-2 h-8 px-2"
             >
-              Cancelar
+              Concluído
             </Button>
             <Button
               type="button"
               size="sm"
               onClick={() => setBulkCategoryDialogOpen(true)}
               disabled={selectedTxIds.size === 0 || bulkApplying}
-              className="rounded-xl text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white h-8 px-3 gap-1.5"
+              className="rounded-xl text-xs font-bold bg-action hover:bg-action-hover text-on-action h-8 px-3 gap-1.5 border-0"
             >
               {bulkApplying ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -319,20 +337,8 @@ export function WalletTransactionsTab() {
             </button>
           )}
 
-          {/* Bulk edit por seleção (P1 — padrão Monarch/Actual) */}
-          <button
-            type="button"
-            onClick={toggleSelectionMode}
-            className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 h-8 rounded-xl border transition-colors shadow-2xs active:scale-95 shrink-0 ${
-              selectionMode
-                ? 'border-violet-300 bg-violet-50 text-violet-700'
-                : 'border-line bg-surface hover:bg-surface-2 text-ink'
-            }`}
-            title="Selecionar várias transações para categorizar em lote"
-          >
-            <ListChecks className="w-3.5 h-3.5" />
-            <span>{selectionMode ? 'Sair da seleção' : 'Selecionar'}</span>
-          </button>
+          {/* Botão "Selecionar/Sair da seleção" REMOVIDO (despoluição): entrar no modo
+              agora é por long-press numa transação; sair é pelo "Concluído" da barra. */}
         </div>
 
         <span className="text-xs text-body3 font-medium">
@@ -394,7 +400,7 @@ export function WalletTransactionsTab() {
               </div>
 
               {/* Lista de itens do dia */}
-              <div className="divide-y divide-border/40">
+              <div className="divide-y divide-border/40" {...listPressHandlers}>
                 {dayTxs.map((tx) => {
                   const isPending = !tx.category_id
 
@@ -409,7 +415,43 @@ export function WalletTransactionsTab() {
                     )
 
                     return (
-                      <div key={tx.id} className="p-2 sm:p-2.5">
+                      <div
+                        key={tx.id}
+                        data-tx-id={tx.id}
+                        onClick={(e) => {
+                          // Long-press acabou de disparar? Engole o click de soltar o dedo
+                          if (consumeClickIfLongPress()) return
+                          // No modo seleção, toque na linha marca/desmarca —
+                          // mas cliques em controles internos (botões, seletores
+                          // de categoria do editor inline) continuam funcionando
+                          if (
+                            selectionMode &&
+                            !(e.target as Element).closest(
+                              'button, input, textarea, select, [role="combobox"], [role="listbox"], [role="option"]',
+                            )
+                          ) {
+                            toggleTxSelection(tx.id)
+                          }
+                        }}
+                        className={`p-2 sm:p-2.5 rounded-2xl transition-colors cursor-pointer ${
+                          selectionMode && selectedTxIds.has(tx.id) ? 'bg-action-subtle' : ''
+                        }`}
+                      >
+                        {selectionMode ? (
+                          <div className="flex justify-end pb-1">
+                            <div
+                              className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${
+                                selectedTxIds.has(tx.id)
+                                  ? 'bg-action border-action'
+                                  : 'border-line-strong bg-surface'
+                              }`}
+                            >
+                              {selectedTxIds.has(tx.id) && (
+                                <Check className="w-3.5 h-3.5 text-on-action stroke-[3]" />
+                              )}
+                            </div>
+                          </div>
+                        ) : null}
                         <TransactionInlineRow
                           transaction={tx}
                           categories={categories}
@@ -430,12 +472,17 @@ export function WalletTransactionsTab() {
 
                   const isIncome = tx.type === 'income'
                   const isProjected = tx.status === 'projected'
+                  const isSelected = selectedTxIds.has(tx.id)
 
                   return (
                     <div
                       key={tx.id}
+                      data-tx-id={tx.id}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => {
-                        // Modo seleção (bulk edit P1): toque marca/desmarca em vez de abrir detalhe
+                        // Long-press acabou de disparar? Engole o click de soltar o dedo
+                        if (consumeClickIfLongPress()) return
                         if (selectionMode) {
                           toggleTxSelection(tx.id)
                           return
@@ -443,25 +490,25 @@ export function WalletTransactionsTab() {
                         setSelectedTx(tx)
                         setIsDetailOpen(true)
                       }}
-                      className={`flex items-center justify-between p-3.5 hover:bg-surface-2/80 dark:hover:bg-surface-2/40 transition-colors group cursor-pointer ${
-                        isProjected
-                          ? 'bg-surface-2/50 border-l-4 border-l-amber-400 opacity-90'
-                          : ''
+                      className={`flex items-center justify-between p-3.5 hover:bg-surface-2/80 dark:hover:bg-surface-2/40 transition-colors group cursor-pointer select-none ${
+                        selectionMode && isSelected
+                          ? 'bg-action-subtle ring-1 ring-inset ring-action/60'
+                          : isProjected
+                            ? 'bg-surface-2/50 border-l-4 border-l-amber-400 opacity-90'
+                            : ''
                       }`}
                     >
                       <div className="flex items-center gap-3 flex-1 overflow-hidden">
-                        {/* Checkbox no modo seleção (bulk edit P1) */}
+                        {/* Checkbox no modo seleção: aparece SÓ quando ativo */}
                         {selectionMode ? (
                           <div
                             className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-colors ${
-                              selectedTxIds.has(tx.id)
-                                ? 'bg-violet-600 border-violet-600'
+                              isSelected
+                                ? 'bg-action border-action'
                                 : 'border-line-strong bg-surface'
                             }`}
                           >
-                            {selectedTxIds.has(tx.id) && (
-                              <Check className="w-4 h-4 text-white stroke-[3]" />
-                            )}
+                            {isSelected && <Check className="w-4 h-4 text-on-action stroke-[3]" />}
                           </div>
                         ) : null}
                         <CategoryIconBox
@@ -544,31 +591,33 @@ export function WalletTransactionsTab() {
                         </span>
 
                         {/* Botões de Ação Rápida (visíveis no hover apenas em telas sm+) */}
-                        <div className="hidden sm:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setEditingTx(tx)
-                              setIsEditTxOpen(true)
-                            }}
-                            className="p-1.5 text-body3 hover:text-action hover:bg-action-subtle rounded-lg transition-colors"
-                            title="Editar"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setTxToDelete(tx)
-                            }}
-                            className="p-1.5 text-body3 hover:text-expense hover:bg-rose-50 rounded-lg transition-colors"
-                            title="Excluir"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                        {!selectionMode && (
+                          <div className="hidden sm:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setEditingTx(tx)
+                                setIsEditTxOpen(true)
+                              }}
+                              className="p-1.5 text-body3 hover:text-action hover:bg-action-subtle rounded-lg transition-colors"
+                              title="Editar"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setTxToDelete(tx)
+                              }}
+                              className="p-1.5 text-body3 hover:text-expense hover:bg-rose-50 rounded-lg transition-colors"
+                              title="Excluir"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )

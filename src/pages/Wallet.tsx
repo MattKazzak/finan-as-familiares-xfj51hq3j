@@ -556,6 +556,17 @@ export function WalletPage() {
     setSelectedTxIds(new Set())
   }
 
+  /** Entrada no modo de seleção por long-press: liga o modo E já marca a
+      transação segurada (padrão de mercado — e-mails/fotos). */
+  const enterSelectionMode = (id: string) => {
+    setSelectionMode(true)
+    setSelectedTxIds((prev) => {
+      const next = new Set(prev)
+      next.add(id)
+      return next
+    })
+  }
+
   const toggleTxSelection = (id: string) => {
     setSelectedTxIds((prev) => {
       const next = new Set(prev)
@@ -1218,7 +1229,7 @@ export function WalletPage() {
     handleSaveBatchSameName,
     selectionMode,
     selectedTxIds,
-    toggleSelectionMode,
+    enterSelectionMode,
     toggleTxSelection,
     clearSelection,
     bulkCategoryDialogOpen,
