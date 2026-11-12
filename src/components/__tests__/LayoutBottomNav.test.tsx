@@ -89,10 +89,10 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
     expect(centralBtn.className).not.toContain('border-2')
     expect(centralBtn.className).not.toContain('-mt-3.5')
 
-    // Ícone de linha igual aos demais (w-5 h-5, DockIcon variante plus)
+    // Ícone de linha igual aos demais (w-5 h-5, DockIcon variante plus, traço 2 no estado inativo)
     const plusIcon = centralBtn.querySelector('svg')
     expect(plusIcon).not.toBeNull()
-    expect(plusIcon?.getAttribute('stroke-width')).toBe('1.75')
+    expect(plusIcon?.getAttribute('stroke-width')).toBe('2')
 
     // Sem espaçador invisível: o + tem rótulo de verdade como os outros itens
     expect(centralBtn.querySelector('span.invisible')).toBeNull()
@@ -134,9 +134,9 @@ describe('Layout - Bottom Navigation (estilo Instagram/Pinterest/Spotify)', () =
     expect(inicioLink?.className).not.toContain('bg-white/5')
     expect(inicioLink?.className).not.toContain('hover:bg-white')
     expect(inicioLink?.className).not.toContain('active:bg-white')
-    // Destaque vem da cor do texto (branco + semibold) e do ícone sólido
+    // Destaque vem da cor do texto (branco + negrito) e do ícone sólido
     expect(inicioLink?.className).toContain('text-white')
-    expect(inicioLink?.className).toContain('font-semibold')
+    expect(inicioLink?.className).toContain('font-bold')
     expect(inicioLink?.className).toContain('rounded-2xl')
 
     // Não há balãozinho/halo/camada de fundo separada (sem span .animate-dock-pill)
