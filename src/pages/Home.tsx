@@ -992,8 +992,8 @@ export default function Home() {
             <span className="shrink-0 relative mt-0.5" aria-hidden="true">
               <CuriangoLogo
                 size={40}
-                color="#FCA311"
-                eyeColor="#161616"
+                color="#FFC629"
+                eyeColor="#101217"
                 eyeRadius={3.4}
                 eyeHighlight
                 className="animate-copilot-bird"
@@ -1030,8 +1030,8 @@ export default function Home() {
             <span className="shrink-0 relative mt-0.5" aria-hidden="true">
               <CuriangoLogo
                 size={40}
-                color="#FCA311"
-                eyeColor="#161616"
+                color="#FFC629"
+                eyeColor="#101217"
                 eyeRadius={3.4}
                 eyeHighlight
                 className="animate-copilot-bird"
@@ -1046,7 +1046,7 @@ export default function Home() {
                 Desbloqueie o Copilot com o Premium — toque pra ver os planos
               </span>
             </span>
-            <span className="shrink-0 self-center text-[10px] font-bold px-2.5 py-1 rounded-full bg-action text-white">
+            <span className="shrink-0 self-center text-[10px] font-bold px-2.5 py-1 rounded-full bg-action text-on-action">
               Premium
             </span>
           </button>

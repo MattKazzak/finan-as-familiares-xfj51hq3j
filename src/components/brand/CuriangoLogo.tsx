@@ -8,7 +8,7 @@ export interface CuriangoLogoProps extends React.SVGProps<SVGSVGElement> {
    * Mantido por retrocompatibilidade: a nova silhueta agora é nativamente sólida/preenchida.
    */
   filled?: boolean
-  /** Cor do olho — padrão #FFFFFF (retrocompatível). Use var(--brand-ink) p/ olho azul-marinho. */
+  /** Cor do olho — padrão #FFFFFF (retrocompatível). Use var(--brand-ink) p/ olho preto de produto. */
   eyeColor?: string
   /** Raio do olho — padrão 2.25 (retrocompatível). Use 3.4 p/ olho expressivo. */
   eyeRadius?: number
@@ -21,7 +21,7 @@ export interface CuriangoLogoProps extends React.SVGProps<SVGSVGElement> {
  * Silhueta sólida e minimalista do pássaro Curiango virado para a esquerda,
  * com corpo arredondado, cauda longa e elegante afinando para a direita,
  * olho circular branco na cabeça e linha curva branca sugerindo a dobra da asa.
- * Cores padrão: var(--brand-ink) (#1D2535, azul-marinho do logo atual) ou currentColor, com suporte total a #FCA311.
+ * Cores padrão: var(--brand-ink) (#101217, preto de produto CDS v4.0) ou currentColor, com suporte total a #FFC629 (amarelo marca).
  */
 export const CuriangoLogo: React.FC<CuriangoLogoProps> = ({
   size = 28,
@@ -104,11 +104,11 @@ export interface CuriangoHeadLogoProps extends React.SVGProps<SVGSVGElement> {
  * CuriangoHeadLogo — Retrato da cabecinha do Curiango (16/10, pedido do Matheus):
  * recorte da cabeça do pássaro (bico + olho grande) para assinaturas compactas
  * onde o pássaro inteiro ficaria ilegível (ex.: card de insight da Home).
- * Olho grande em var(--brand-ink) (azul-marinho) sobre o corpo âmbar — expressivo e legível.
+ * Olho grande em var(--brand-ink) (preto de produto #101217) sobre o corpo amarelo #FFC629 — expressivo e legível.
  */
 export const CuriangoHeadLogo: React.FC<CuriangoHeadLogoProps> = ({
   size = 28,
-  color = '#FCA311',
+  color = '#FFC629',
   eyeColor = 'var(--brand-ink)',
   className = '',
   ...props
@@ -164,12 +164,12 @@ export const CuriangoChatBust: React.FC<CuriangoChatBustProps> = ({
       aria-hidden="true"
     >
       {/* Tufos de orelha (bacurau — ave noturna, identidade da marca) */}
-      <path d="M15 15 L19 4 L26 11 Z" fill="#FCA311" />
-      <path d="M49 15 L45 4 L38 11 Z" fill="#FCA311" />
+      <path d="M15 15 L19 4 L26 11 Z" fill="#FFC629" />
+      <path d="M49 15 L45 4 L38 11 Z" fill="#FFC629" />
       {/* Busto (corpo espremido atrás da cabeça) */}
-      <ellipse cx="32" cy="60" rx="18" ry="12" fill="#FCA311" />
+      <ellipse cx="32" cy="60" rx="18" ry="12" fill="#FFC629" />
       {/* Cabeça redonda */}
-      <circle cx="32" cy="32" r="24" fill="#FCA311" />
+      <circle cx="32" cy="32" r="24" fill="#FFC629" />
       {/* Bochechas rosadas (kawaii) */}
       <circle cx="16.5" cy="37" r="3.4" fill="#FFD9A6" />
       <circle cx="47.5" cy="37" r="3.4" fill="#FFD9A6" />
@@ -179,7 +179,7 @@ export const CuriangoChatBust: React.FC<CuriangoChatBustProps> = ({
       <circle cx="24.6" cy="27.4" r="1.5" fill="#FFFFFF" />
       <circle cx="42.6" cy="27.4" r="1.5" fill="#FFFFFF" />
       {/* Pálpebras — piscar DUPLO nos 2 olhos (assinatura da marca, 4,8s) */}
-      <circle cx="23" cy="29" r="5.6" fill="#FCA311" opacity="0">
+      <circle cx="23" cy="29" r="5.6" fill="#FFC629" opacity="0">
         <animate
           attributeName="opacity"
           values="0;0;1;1;0;0;1;1;0;0"
@@ -188,7 +188,7 @@ export const CuriangoChatBust: React.FC<CuriangoChatBustProps> = ({
           repeatCount="indefinite"
         />
       </circle>
-      <circle cx="41" cy="29" r="5.6" fill="#FCA311" opacity="0">
+      <circle cx="41" cy="29" r="5.6" fill="#FFC629" opacity="0">
         <animate
           attributeName="opacity"
           values="0;0;1;1;0;0;1;1;0;0"
@@ -198,7 +198,7 @@ export const CuriangoChatBust: React.FC<CuriangoChatBustProps> = ({
         />
       </circle>
       {/* Bico aberto sorrindo (rindo) */}
-      <path d="M26 36.5 L38 36.5 L32 41.5 Z" fill="#E08A00" />
+      <path d="M26 36.5 L38 36.5 L32 41.5 Z" fill="var(--brand-press, #E8B01D)" />
       <path d="M28.5 41.5 L35.5 41.5 L32 45 Z" fill="var(--brand-ink)" />
     </svg>
   )

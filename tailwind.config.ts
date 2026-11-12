@@ -33,23 +33,22 @@ export default {
           /* 0s a 3.5s (0% a 18.4%): ciclo de respiração sutil (amplitude máxima de escala 1.03 = 3%) */
           '0%': {
             transform: 'scale(1)',
-            boxShadow: '0 10px 30px -10px rgba(20, 33, 61, 0.18), 0 0 0 0 rgba(252, 163, 17, 0)',
+            boxShadow: '0 10px 30px -10px rgba(0, 0, 0, 0.35), 0 0 0 0 rgba(255, 198, 41, 0)',
           },
           '9.2%': {
             /* ~1.75s: pico da respiração sutil (escala 1.03 = +3%, sombra âmbar translúcida e discreta) */
             transform: 'scale(1.03)',
-            boxShadow:
-              '0 12px 30px -8px rgba(20, 33, 61, 0.22), 0 0 0 4px rgba(252, 163, 17, 0.12)',
+            boxShadow: '0 12px 30px -8px rgba(0, 0, 0, 0.4), 0 0 0 4px rgba(255, 198, 41, 0.12)',
           },
           '18.4%': {
             /* ~3.5s: retorno suave ao repouso */
             transform: 'scale(1)',
-            boxShadow: '0 10px 30px -10px rgba(20, 33, 61, 0.18), 0 0 0 0 rgba(252, 163, 17, 0)',
+            boxShadow: '0 10px 30px -10px rgba(0, 0, 0, 0.35), 0 0 0 0 rgba(255, 198, 41, 0)',
           },
           /* 18.4% até 100% (~15.5s de repouso silencioso antes do próximo ciclo discreto) */
           '100%': {
             transform: 'scale(1)',
-            boxShadow: '0 10px 30px -10px rgba(20, 33, 61, 0.18), 0 0 0 0 rgba(252, 163, 17, 0)',
+            boxShadow: '0 10px 30px -10px rgba(0, 0, 0, 0.35), 0 0 0 0 rgba(255, 198, 41, 0)',
           },
         },
       },
@@ -74,21 +73,22 @@ export default {
           DEFAULT: 'hsl(var(--secondary))',
           foreground: 'hsl(var(--secondary-foreground))',
         },
+        // CDS v4.0 — marca = amarelo #FFC629 (âmbar #FCA311 e azul #2F5BEA eliminados)
         brand: {
-          DEFAULT: '#161616',
-          dark: '#101010',
-          light: '#202020',
-          amber: '#FCA311',
-          gray: '#2A2A2A',
+          DEFAULT: '#101217',
+          dark: '#101217',
+          light: '#1E2129',
+          amber: '#FFC629',
+          gray: '#262A33',
         },
         buckets: {
-          essentials: '#161616',
-          lifestyle: '#FCA311',
-          goals: '#34B88A',
+          essentials: '#101217',
+          lifestyle: '#3B7DD8',
+          goals: '#2E9E6B',
         },
         finance: {
-          income: '#34B88A',
-          expense: '#E5677D',
+          income: '#2E9E6B',
+          expense: '#D64545',
         },
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',
@@ -127,9 +127,10 @@ export default {
           4: 'hsl(var(--chart-4))',
           5: 'hsl(var(--chart-5))',
         },
-        // CDS v2.0 / v3.0 — ponte de utilitários para os tokens de src/main.css
+        // CDS v4.0 — ponte de utilitários para os tokens de src/main.css
         // Em dark total, `text-ink` precisa de alto contraste (#ffffff via --ink-text),
-        // enquanto `bg-ink` permanece o preto neutro #161616 canônico oficial do Curiangoo.
+        // enquanto `bg-ink` permanece o preto de produto #101217 oficial CDS v4.0.
+        // `on-action` é OBRIGATÓRIO sobre amarelo: texto/ícone #101217, nunca branco.
         ink: {
           DEFAULT: 'var(--ink)',
           text: 'var(--ink-text, #ffffff)',
@@ -139,7 +140,9 @@ export default {
         action: {
           DEFAULT: 'var(--action)',
           hover: 'var(--action-hover)',
+          press: 'var(--action-press)',
           subtle: 'var(--action-subtle)',
+          on: 'var(--on-action)',
         },
         line: {
           DEFAULT: 'var(--line)',
@@ -148,6 +151,7 @@ export default {
         surface: {
           DEFAULT: 'var(--surface)',
           2: 'var(--surface-2)',
+          3: 'var(--surface-3)',
         },
         bg: 'var(--bg)',
         body: 'var(--text)',
@@ -164,6 +168,10 @@ export default {
         warning: {
           DEFAULT: 'var(--warning)',
           subtle: 'var(--warning-subtle)',
+        },
+        info: {
+          DEFAULT: 'var(--info)',
+          subtle: 'var(--info-subtle)',
         },
         data: {
           1: 'var(--data-1)',
