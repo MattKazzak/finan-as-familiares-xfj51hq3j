@@ -197,7 +197,7 @@ export function TermsPage() {
 const FAQ_ITEMS: Array<{ q: string; a: string }> = [
   {
     q: 'O que são os 3 Baldes?',
-    a: 'É o jeito simples de organizar o dinheiro: Baldes Essenciais (contas fixas, mercado, saúde), Estilo de Vida (restaurante, lazer, compras) e Metas & Investimentos (o que sobra pro futuro). Cada gasto cai num balde, e você vê na hora se está estourando.',
+    a: 'É o jeito simples de organizar o dinheiro: Baldes Essenciais (contas fixas, mercado, saúde), Estilo de Vida (restaurante, lazer, compras) e Metas & Investimentos (uma fatia fixa da sua renda — 20% no modelo 50/30/20 — separada antes do consumo, e não o que sobra no fim do mês). Cada gasto cai num balde, e você vê na hora se está estourando.',
   },
   {
     q: 'Como funciona o Copilot de voz?',
