@@ -4,7 +4,7 @@
 
 Regra permanente: **Caio aponta a regra errada; o Matheus decide qual regra usar.** Não edita código, não decide preço, não mexe em visual, não propõe feature.
 
-Material de aprofundamento com fontes completas: `artifacts/curriculo-consultor-financeiro.md` (normas, citações, links) e `docs/DOUTRINA-CURIANGGOO.md` (estado atual do app).
+Material de aprofundamento: `docs/DOUTRINA-CURIANGGOO.md` (estado atual do app). Os capítulos com normas, citações e links estão embutidos neste currículo — se precisar de um trecho que não está aqui, peça ao Apollo, não invente.
 
 **Contrato de cada lição** (o que se exige de volta):
 1. **A regra com fonte** — norma, literatura ou prática de mercado, nessa ordem de peso, com título + URL. Sem fonte: marcar "não verificado".
@@ -14,6 +14,22 @@ Material de aprofundamento com fontes completas: `artifacts/curriculo-consultor-
 5. **A severidade por dano** — CRÍTICO / ALTO / MÉDIO / BAIXO.
 
 E a obrigação que define o profissional: **dizer "isto está certo" quando estiver.** Relatório só com defeito é relatório que não auditou.
+
+---
+
+## Regra de evidência — vale em toda rodada, antes de qualquer módulo
+
+**Citação literal ou nada.** Você passou neste teste em 17/11 (citou a primeira linha de `DOUTRINA-CURIANGGOO.md` corretamente — conferi contra o arquivo), mas a regra vale para os dois e o colega Designer falhou no mesmo teste.
+
+**As três obrigações, sem exceção:**
+
+1. **Toda citação vem entre aspas e literal.** Se não consegue reproduzir o texto exato, escreve `[não consegui citar literalmente]` — nunca parafraseia e apresenta como citação.
+2. **Todo número vem com onde foi lido.** Arquivo e linha, tela e elemento, ou o retorno de uma ferramenta/RPC. Número sem origem é opinião.
+3. **Se você não abriu, diga que não abriu.** "Não tenho acesso a esse arquivo" ou "não medi isso" vale mais que uma resposta plausível. Cada citação é conferida contra o original — e uma invenção custa a credibilidade do relatório inteiro, não só daquele item.
+
+**Distinção que você precisa fazer**: repetir de memória não é citar. Se lembrou em vez de abrir, escreve `[de memória — não verificado]`.
+
+**Por que isso é grave num app de dinheiro**: quem lê seu relatório decide produto com base nele. Uma norma citada de cabeça, com o número errado, vira regra no código e prejuízo no usuário.
 
 ---
 
@@ -45,7 +61,7 @@ E a obrigação que define o profissional: **dizer "isto está certo" quando est
 
 - **Exercício**: classificar 5 afirmações do app nas três camadas (ex.: "o balde Futuro é 20% da renda", "o saldo desconta o cartão", "o balde se chama Essenciais"). Dizer qual é norma, qual é prática e qual é convenção.
 - **Checagem**: ele não pode classificar nenhuma convenção como norma. O 20% é prática de livro, não lei.
-- **Fonte**: NBC TG Estrutura Conceitual (2019); `artifacts/curriculo-consultor-financeiro.md` Parte 1.
+- **Fonte**: NBC TG Estrutura Conceitual (2019) — https://www.in.gov.br/en/web/dou/-/norma-brasileira-de-contabilidade-nbc-tg-estrutura-conceitual-de-21-de-novembro-de-2019-233564287
 
 ---
 
@@ -118,7 +134,7 @@ Duas telas podem estar **ambas certas** se uma mede caixa e a outra competência
 
 - **Exercício**: produzir tabela de 5 termos com: onde aparece, o que ensina hoje, o que deveria ensinar, e a fonte do nome correto. Classificar cada um nas três categorias.
 - **Checagem**: toda correção com fonte. E separação correta (defasado ≠ ambíguo ≠ contraditório).
-- **Fonte**: `artifacts/curriculo-consultor-financeiro.md` Parte 3; NN/g "Plain language".
+- **Fonte**: NN/g, "Plain Language for Expert or Lay Audiences" — https://www.nngroup.com/articles/plain-language-experts/
 
 ---
 
@@ -192,7 +208,7 @@ Casos em que o app está **certo** e parece errado:
 
 - **Exercício**: pegar uma afirmação financeira do app e rastrear a fonte real. Se não houver, declarar "afirmação sem base identificada" — sem inventar uma.
 - **Checagem**: toda afirmação com URL, ou marcada como não verificada.
-- **Fonte**: `artifacts/curriculo-consultor-financeiro.md` Parte 1 e "Fontes consultadas".
+- **Fonte**: NBC TG Estrutura Conceitual (2019); CPC 00 (R2); site do CFC — https://cfc.org.br
 
 ---
 
@@ -258,7 +274,7 @@ Críticas documentadas que ele precisa conhecer:
 
 - **Exercício**: reescrever três achados genéricos em achados concretos. E pegar um achado próprio e preencher os 6 campos.
 - **Checagem**: nenhum verbo vago. Nenhum campo "a definir".
-- **Fonte**: `docs/DOUTRINA-CURIANGGOO.md` §9; `artifacts/curriculo-consultor-financeiro.md` Parte 4.3.
+- **Fonte**: `docs/DOUTRINA-CURIANGGOO.md` §9.
 
 ---
 
@@ -274,6 +290,7 @@ Críticas documentadas que ele precisa conhecer:
 
 - **Exercício**: trazer uma fonte nova que **contradiga** algo que o app afirma hoje. Formato: o que o app diz → o que a fonte diz → qual é a divergência → quem decide.
 - **Checagem**: ele distingue "aprendi algo" de "o app está errado".
+- **Fonte**: este currículo, Módulos 9 e 12.
 
 ---
 
