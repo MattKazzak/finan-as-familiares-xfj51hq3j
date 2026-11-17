@@ -1,6 +1,6 @@
 # DOUTRINA DO CURIANGGOO — documento de referência para agentes
 
-Documento de referência para o revisor de doutrina financeira (Caio) e qualquer agente que precise auditar o app. Versão do app no momento da escrita: **v0.0.684** (ref `109a53d`, 16/11/2026).
+Versão do app: **v0.0.700** (ref `1f7f4e6`, 17/11/2026).
 
 > **Sobre este repositório**: é um espelho do código do projeto no Skip. **Ele fica atrás.** Em 16/11/2026 o espelho estava 4 dias defasado: `app-version.ts` dizia 0.0.658 quando o real era 0.682, e `transactions.ts` ainda não tinha o filtro `includeProjected` — um auditor que confiou no espelho reportou 3 bugs já corrigidos. **Sempre peça a versão exata ao Apollo antes de reportar bug em arquivo que possa estar velho.**
 
@@ -10,9 +10,9 @@ Documento de referência para o revisor de doutrina financeira (Caio) e qualquer
 
 SaaS de finanças pessoais **familiares**, mobile-first, PWA. Método dos 3 Baldes, multi-família (até 5 membros), Copilot de voz em português. Preço: R$ 19,90/mês ou R$ 149,90/ano.
 
-**Missão educativa** (ordem do dono): o app tem que ensinar finanças pessoais. O usuário-alvo é amador. Toda tela ensina algo. Educação financeira é critério de decisão de UX.
+**Missão educativa** (ordem do dono): o app tem que ensinar finanças pessoais. O usuário-alvo é amador. Toda tela ensina algo.
 
-**Não é** consultoria de investimento, não recomenda compra/venda, não é regulado pela CVM ou pelo Bacen. É um caderno inteligente de contas.
+**Não é** consultoria de investimento, não recomenda compra/venda, não é regulado pela CVM ou pelo Bacen.
 
 ---
 
@@ -23,17 +23,27 @@ SaaS de finanças pessoais **familiares**, mobile-first, PWA. Método dos 3 Bald
 | Quando o gasto entra na conta? | **Regime de caixa** — quando o dinheiro se move |
 | Compra no cartão é despesa quando? | **Na data da compra** |
 
-**A combinação é um regime MISTO, intencional.** Dinheiro, pix e débito entram em caixa. Crédito entra em competência. É o padrão de mercado (Mobills, YNAB, Copilot Money).
+**Regime MISTO, intencional.** Dinheiro, pix e débito entram em caixa. Crédito entra em competência. É o padrão de mercado (Mobills, YNAB, Copilot Money).
 
-**Consequência obrigatória**: o "Saldo Total da Família" **não é o saldo da conta bancária**. Ele já desconta compras no crédito ainda não pagas. Se a tela apresenta esse número sem rotular o que ele é, o usuário compara com o extrato e conclui que o app erra. **Achado CRÍTICO aberto — nº 1.**
+### A consequência, resolvida em 17/11
 
-**Proteção contra contagem dupla**: o importador de OFX/PDF marca a linha de pagamento de fatura como **não-despesa** (`isNonExpense`). Detectores: `pagamentodefatura`, `pagamentorecebido`, `pagamentoefetuado`, `pagtodefatura`, `quitacaodefatura`, `pagamentocartao`, `pagtoantecipado`, `pagamentotitulo`, `pagamentominimo`, `pagamentoparcial`. Sem isso, a compra contaria duas vezes.
+O "Saldo Total da Família" **não é o saldo bancário**: já desconta compras no cartão que o banco ainda não debitou. **A partir de v0.0.700 o app explica isso no próprio card**, com três números:
+
+```
+Saldo Total da Família ........ R$ 14.518,40   ← já descontando o cartão
+Já inclui no cartão ........... R$ 10.524,50   ← compras no crédito (todas, histórico)
+Na conta ...................... R$ 25.042,90   ← saldo consolidado + cartão
+```
+
+Fórmula: `na_conta = saldo_consolidado + total_credit_cents`. O bloco só renderiza quando há crédito (`creditOpenCents > 0`) — em família sem cartão não aparece ruído.
+
+**Fonte**: RPC `get_family_totals` ganhou o campo `total_credit_cents` (migração `family_totals_credit_split`). Nada é inventado: os três números derivam do mesmo conjunto de lançamentos (`status <> 'projected'`).
+
+**Proteção contra contagem dupla**: o importador OFX/PDF marca pagamento de fatura como **não-despesa** (`isNonExpense`).
 
 ---
 
 ## 3. Regra de domínio: a cadeia de classificação
-
-O sistema é uma **taxonomia de três níveis com herança**:
 
 ```
 subcategoria  →  categoria  →  balde
@@ -41,47 +51,47 @@ Aluguel & Condomínio  →  Moradia  →  Essenciais
 ```
 
 - O usuário (e a IA) escolhem **subcategoria**, no máximo **categoria**.
-- O **balde nunca é escolhido** — é herdado da categoria. `transactions` não tem coluna `budget_bucket`; o elo vive em `transaction_categories.budget_bucket`.
-- **Receitas não têm balde** (`budget_bucket` NULL), por definição.
+- O **balde nunca é escolhido** — é herdado. `transactions` não tem `budget_bucket`; o elo vive em `transaction_categories.budget_bucket`.
+- **Receitas não têm balde** (`budget_bucket` NULL).
 
-### Onde cada elo é decidido — ATENÇÃO, esta lista foi corrigida
+### Onde cada elo é decidido
 
 | Elo | Fonte de verdade |
 |---|---|
-| Árvore que **semeia** a família | **Migração SQL** `server_onboarding_plan_rpc` / `onboarding_subcategories_catalog_116` (RPC `activate_family_onboarding_plan`); fallback em `CANONICAL_CATEGORIES` |
+| Árvore que **semeia** a família | **Migração SQL** (RPC `activate_family_onboarding_plan`); fallback `CANONICAL_CATEGORIES` |
 | Percentuais dos baldes | `src/types/budget-presets.ts` |
-| O que a UI deixa o usuário mudar | `src/components/categories/*` |
+| O que a UI deixa mudar | `src/components/categories/*` |
 | Sementes das edge functions | `supabase/functions/_shared/brazilian-seeds.ts` |
 
-> ⚠️ **`src/services/onboarding.ts` NÃO é a fonte da árvore.** `STANDARDIZED_CATEGORIES_TREE` é **legado**: existe teste (`src/services/__tests__/catalog-consistency.test.ts:114`) que proíbe expressamente seu uso como fonte de semeadura. As duas árvores já divergem em 5 categorias (Saúde, Dívidas, Restaurantes, Lazer, Compras). Auditar código morto é falso positivo. *(Correção apontada pelo Caio em 16/11, verificada e aceita.)*
+> ⚠️ **`src/services/onboarding.ts` NÃO é a fonte da árvore.** `STANDARDIZED_CATEGORIES_TREE` é **legado**: existe teste (`catalog-consistency.test.ts:114`) que proíbe seu uso como semente. As duas árvores divergem em 5 categorias. *(Correção apontada pelo Caio, aceita.)*
 
-**Contagem real no banco (Família Demo)**: **19 categorias** (15 despesa + 4 receita) e **117 subcategorias**. Se outra fonte disser 118, conte duas vezes a mesma.
+**Contagem real no banco (Família Demo)**: **19 categorias** (15 despesa + 4 receita) e **117 subcategorias**.
 
 ---
 
-## 4. Os 3 Baldes
+## 4. Os 3 Baldes — nomes padronizados
 
-| Modelo | Essenciais | Estilo de Vida | Futuro |
+**O primeiro balde se chama "Essenciais" em TODO o app** (padronizado em 17/11/2026, v0.0.700). Antes a Home, o onboarding e o tour diziam "Necessidades" enquanto Orçamentos, FAQ e categorias diziam "Essenciais" — duas palavras para o mesmo balde. Se você encontrar "Necessidades" em alguma tela, é bug.
+
+| Modelo | Essenciais | Estilo de Vida | Futuro & Metas |
 |---|---|---|---|
 | **50/30/20** (padrão) | 50% | 30% | 20% |
-| 60/25/15 | 60% | 25% | 15% |
+| **60/25/15** | 60% | 25% | 15% |
 | 70/20/10 | 70% | 20% | 10% |
 
-**Origem**: 50/30/20 foi popularizada por Elizabeth Warren em *All Your Worth* (2005). É **boa prática de divulgação, não norma contábil, nem consenso acadêmico**.
+**Origem**: 50/30/20 popularizada por Elizabeth Warren em *All Your Worth* (2005). **Boa prática de divulgação, não norma contábil, nem consenso acadêmico.**
 
-**Doutrina do balde Futuro = PAGUE-SE PRIMEIRO.** Fatia fixa de renda, separada antes do consumo. **Não é** "o que sobra no fim do mês". As duas doutrinas são incompatíveis. O FAQ dizia "o que sobra pro futuro" — corrigido em v0.0.684.
+**Doutrina do balde Futuro = PAGUE-SE PRIMEIRO.** Fatia fixa de renda, separada antes do consumo. **Não é** "o que sobra no fim do mês". O FAQ dizia o contrário — corrigido em v0.0.684.
 
-> ⚠️ **CONTRADIÇÃO ABERTA (nº 2)**: o RPC vigente aceita **`50_30_20 | 60_25_15 | 70_20_10`**. Qualquer outro valor cai no `ELSE` e é **reescrito para 50/30/20 em silêncio**. `budget-presets.ts` oferece **60/20/20** — uma família que escolher esse modelo no diálogo de orçamento perde a escolha e cai em 50/30/20 sem aviso. Em R$ 8.500, Essenciais vai de R$ 5.100 para R$ 4.250 (−R$ 850). *Achado do Caio, confirmado no corpo da função.*
+> ✅ **RESOLVIDO (16/11, v0.0.694)**: existiam **duas** definições do modelo de 60% (60/20/20 na UI × 60/25/15 no RPC), e o RPC **reescrevia 60/20/20 para 50/30/20 em silêncio** (provado com begin/rollback: R$ 8.500 → Essenciais de 5.100 caía para 4.250). Decisão do dono: **60/25/15**. Preset, tipos, teste, diálogo e categorias unificados; migração `normalize_budget_model_60_25_15` + CHECK `families_budget_model_check` (banco rejeita 60_20_20). Bundle com zero refs.
 
 ---
 
-## 5. Lei de responsabilidade: o que é de quem
+## 5. Lei de responsabilidade
 
 - **Matheus (dono)**: decide **qual** regra o app usa. Preço, feature, visual, rumo.
 - **Caio (revisor de doutrina)**: diz se a regra está **certa**, com fonte. Não decide produto.
-- **Apollo (engenharia)**: implementa, prova e publica. Diz se é viável e o custo.
-
-"O que o app deveria fazer?" é do Matheus. "O que está fazendo errado?" é do Caio.
+- **Apollo (engenharia)**: implementa, prova e publica.
 
 ---
 
@@ -92,42 +102,42 @@ Aluguel & Condomínio  →  Moradia  →  Essenciais
 3. **Boa prática de mercado** consolidada (com nome e origem).
 4. **Convenção de produto**.
 
-Nunca apresentar nível 3 ou 4 como nível 1. Toda afirmação de norma, número, data ou estudo vem com **título + URL**. Sem fonte → marcar "não verificado".
+Toda afirmação de norma, número, data ou estudo vem com **título + URL**. Sem fonte → marcar "não verificado".
 
 ---
 
-## 7. Achados abertos (estado em 16/11/2026)
+## 7. Achados abertos (estado em 17/11/2026)
 
 | # | Achado | Severidade | Quem decide |
 |---|---|---|---|
-| 1 | "Saldo Total da Família" não é saldo de banco e não diz o que é | CRÍTICO | Matheus |
-| 2 | `60_20_20` existe na UI mas o RPC só aceita `60_25_15` → reescrita silenciosa para 50/30/20 | CRÍTICO | Matheus |
-| 3 | `CategoryEditorPopover.tsx:159` fixa 50/30/20 e escreve "acima da meta de 50%" numa família em 60/25/15 | ALTO | Apollo |
-| 4 | `ApplyBudgetModelDialog.tsx:56` abre sempre em 50/30/20, ignorando o modelo da família | MÉDIO | Apollo |
-| 5 | Home e Orçamentos divergem por design (tx sem categoria) e não avisam | MÉDIO | Matheus |
+| 1 | `ApplyBudgetModelDialog` já abre no modelo da família, mas o fluxo de reaplicar preset não avisa que vai **recalcular todos os tetos** | MÉDIO | Matheus |
+| 2 | Home e Orçamentos divergem por design (tx sem categoria) e não avisam | MÉDIO | Matheus |
+| 3 | ~~Saldo não explicava o cartão~~ | CRÍTICO | **CORRIGIDO v0.0.700** |
+| 4 | ~~60/20/20 × 60/25/15~~ | CRÍTICO | **CORRIGIDO v0.0.694** |
+| 5 | ~~Editor de categoria fixava 50/30/20~~ | ALTO | **CORRIGIDO v0.0.691** |
 | 6 | ~~FAQ dizia "o que sobra pro futuro"~~ | ALTO | **CORRIGIDO v0.0.684** |
-| 7 | ~~Doc apontava `onboarding.ts` como fonte da árvore (é legado)~~ | — | **CORRIGIDO** |
+| 7 | ~~"Necessidades" × "Essenciais"~~ | MÉDIO | **CORRIGIDO v0.0.700** |
 
 ---
 
 ## 8. Dataset de auditoria (Família Demo)
 
 - **id**: `ec2a79d9-8e69-4cb7-82b6-2dbf6bfb89c6`
-- 161 transações · 3 metas · 4 investimentos · renda mensal R$ 8.500,00 · modelo 50/30/20
-- **Números de referência provados (16/11/2026, status `projected` excluído)**:
-  - **Caixa & Contas** (card do Patrimônio): **R$ 14.518,40**
-  - Investimentos (quantidade × preço atual): **R$ 27.335,20**
-  - Crédito dos últimos 30 dias ainda não debitado: **R$ 2.572,10**
-  - Saldo correspondente no extrato do banco: **R$ 17.090,50**
-  - Total de despesas no crédito: R$ 10.524,50 em 60 lançamentos
+- Login: `demo@curiangoo.com` · 161 transações · 3 metas · 4 investimentos · renda R$ 8.500,00 · modelo 50/30/20
+- **Números de referência provados (17/11/2026, `status <> 'projected'`)**:
+  - Receitas totais: **R$ 51.496,00**
+  - Despesas totais: **R$ 36.977,60** (das quais **R$ 10.524,50** no cartão de crédito)
+  - Saldo consolidado (o que o app mostra): **R$ 14.518,40**
+  - Na conta (consolidado + cartão): **R$ 25.042,90**
+  - Despesas pagas de fato (pix/dinheiro/débito): R$ 26.453,10
 
-**Acesso ao banco**: agentes não recebem credencial. Pedir o número ao Apollo, que extrai e entrega.
+**Acesso ao banco**: agentes não recebem credencial. Pedir o número ao Apollo.
 
 ---
 
 ## 9. Anti AI Slop — regras do relatório
 
-Todo achado tem os quatro campos, nessa ordem:
+Todo achado tem os quatro campos:
 
 1. **Regra** — o que deveria acontecer, com fonte.
 2. **Evidência** — tela, número, data, versão do app.
@@ -136,7 +146,7 @@ Todo achado tem os quatro campos, nessa ordem:
 
 Severidade por **dano ao usuário**: CRÍTICO (duas telas respondem diferente à mesma pergunta, ou o app esconde um negativo) · ALTO (número certo, texto ensina errado) · MÉDIO (escolha não rotulada) · BAIXO (clareza).
 
-Proibido: "considere melhorar", "seria interessante", "recomenda-se revisar". Proibido propor feature. Obrigatório dizer "isto está certo" quando estiver.
+Proibido: "considere melhorar", "seria interessante". Proibido propor feature. Obrigatório dizer "isto está certo" quando estiver.
 
 ---
 
@@ -144,8 +154,18 @@ Proibido: "considere melhorar", "seria interessante", "recomenda-se revisar". Pr
 
 | Reportado | Por que era falso |
 |---|---|
-| Patrimônio soma `projected` | O espelho não tinha o commit de 16/11; o código real exclui por padrão (`includeProjected` opt-in) |
-| Patrimônio esconde negativo com `Math.max(0, …)` | Corrigido em 16/11; o `Math.max` restante é só da barra de distribuição visual, que não desenha negativo |
+| Patrimônio soma `projected` | Espelho sem o commit de 16/11; o código real exclui por padrão |
+| Patrimônio esconde negativo com `Math.max(0, …)` | Corrigido em 16/11; o `Math.max` restante é só da barra visual |
 | `onboarding.ts` é a fonte da árvore | É legado; a fonte é a migração SQL |
 
-**Lição**: antes de reportar, confirmar a versão do arquivo com o Apollo. O espelho engana.
+**Lição**: antes de reportar, confirmar a versão do arquivo. O espelho engana.
+
+---
+
+## 11. Erros do próprio Apollo (registrados por honestidade)
+
+| Erro | Correção |
+|---|---|
+| Disse que "Na conta" era R$ 17.090,50 | Errado: somou só o crédito de 30 dias. O certo é R$ 25.042,90 (crédito do histórico inteiro) |
+| Disse que o app usava "Essenciais" em todo lugar | Falso: Home, onboarding e tour diziam "Necessidades" — corrigido em v0.0.700 |
+| Referenciou `onboarding.ts` como fonte da árvore | É legado; corrigido neste documento |
