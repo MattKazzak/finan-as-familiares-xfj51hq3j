@@ -1,6 +1,6 @@
 # DOUTRINA DO CURIANGGOO — documento de referência para agentes
 
-Versão do app: **v0.0.700** (ref `1f7f4e6`, 17/11/2026).
+Versão do app: **v0.0.704** (ref `3cfe3ac`, 17/11/2026).
 
 > **Sobre este repositório**: é um espelho do código do projeto no Skip. **Ele fica atrás.** Em 16/11/2026 o espelho estava 4 dias defasado: `app-version.ts` dizia 0.0.658 quando o real era 0.682, e `transactions.ts` ainda não tinha o filtro `includeProjected` — um auditor que confiou no espelho reportou 3 bugs já corrigidos. **Sempre peça a versão exata ao Apollo antes de reportar bug em arquivo que possa estar velho.**
 
@@ -27,7 +27,7 @@ SaaS de finanças pessoais **familiares**, mobile-first, PWA. Método dos 3 Bald
 
 ### A consequência, resolvida em 17/11
 
-O "Saldo Total da Família" **não é o saldo bancário**: já desconta compras no cartão que o banco ainda não debitou. **A partir de v0.0.700 o app explica isso no próprio card**, com três números:
+O "Saldo Total da Família" **não é o saldo bancário**: já desconta compras no cartão que o banco ainda não debitou. **A partir de v0.0.698 o app explica isso no próprio card**, com três números:
 
 ```
 Saldo Total da Família ........ R$ 14.518,40   ← já descontando o cartão
@@ -35,9 +35,9 @@ Já inclui no cartão ........... R$ 10.524,50   ← compras no crédito (todas,
 Na conta ...................... R$ 25.042,90   ← saldo consolidado + cartão
 ```
 
-Fórmula: `na_conta = saldo_consolidado + total_credit_cents`. O bloco só renderiza quando há crédito (`creditOpenCents > 0`) — em família sem cartão não aparece ruído.
+Fórmula: `na_conta = saldo_consolidado + total_credit_cents`. O bloco só renderiza quando há crédito (`creditOpenCents > 0`).
 
-**Fonte**: RPC `get_family_totals` ganhou o campo `total_credit_cents` (migração `family_totals_credit_split`). Nada é inventado: os três números derivam do mesmo conjunto de lançamentos (`status <> 'projected'`).
+**Fonte**: RPC `get_family_totals` ganhou o campo `total_credit_cents` (migração `family_totals_credit_split`).
 
 **Proteção contra contagem dupla**: o importador OFX/PDF marca pagamento de fatura como **não-despesa** (`isNonExpense`).
 
@@ -63,7 +63,7 @@ Aluguel & Condomínio  →  Moradia  →  Essenciais
 | O que a UI deixa mudar | `src/components/categories/*` |
 | Sementes das edge functions | `supabase/functions/_shared/brazilian-seeds.ts` |
 
-> ⚠️ **`src/services/onboarding.ts` NÃO é a fonte da árvore.** `STANDARDIZED_CATEGORIES_TREE` é **legado**: existe teste (`catalog-consistency.test.ts:114`) que proíbe seu uso como semente. As duas árvores divergem em 5 categorias. *(Correção apontada pelo Caio, aceita.)*
+> ⚠️ **`src/services/onboarding.ts` NÃO é a fonte da árvore.** `STANDARDIZED_CATEGORIES_TREE` é **legado**: existe teste (`catalog-consistency.test.ts:114`) que proíbe seu uso como semente. *(Correção apontada pelo Caio, aceita.)*
 
 **Contagem real no banco (Família Demo)**: **19 categorias** (15 despesa + 4 receita) e **117 subcategorias**.
 
@@ -71,7 +71,7 @@ Aluguel & Condomínio  →  Moradia  →  Essenciais
 
 ## 4. Os 3 Baldes — nomes padronizados
 
-**O primeiro balde se chama "Essenciais" em TODO o app** (padronizado em 17/11/2026, v0.0.700). Antes a Home, o onboarding e o tour diziam "Necessidades" enquanto Orçamentos, FAQ e categorias diziam "Essenciais" — duas palavras para o mesmo balde. Se você encontrar "Necessidades" em alguma tela, é bug.
+**O primeiro balde se chama "Essenciais" em TODO o app** (v0.0.700). Antes a Home, o onboarding e o tour diziam "Necessidades" enquanto Orçamentos, FAQ e categorias diziam "Essenciais". Se encontrar "Necessidades" numa tela, é bug.
 
 | Modelo | Essenciais | Estilo de Vida | Futuro & Metas |
 |---|---|---|---|
@@ -79,11 +79,11 @@ Aluguel & Condomínio  →  Moradia  →  Essenciais
 | **60/25/15** | 60% | 25% | 15% |
 | 70/20/10 | 70% | 20% | 10% |
 
-**Origem**: 50/30/20 popularizada por Elizabeth Warren em *All Your Worth* (2005). **Boa prática de divulgação, não norma contábil, nem consenso acadêmico.**
+**Origem**: 50/30/20 popularizada por Elizabeth Warren em *All Your Worth* (2005). **Boa prática de divulgação, não norma contábil.**
 
-**Doutrina do balde Futuro = PAGUE-SE PRIMEIRO.** Fatia fixa de renda, separada antes do consumo. **Não é** "o que sobra no fim do mês". O FAQ dizia o contrário — corrigido em v0.0.684.
+**Doutrina do balde Futuro = PAGUE-SE PRIMEIRO.** Fatia fixa de renda, separada antes do consumo. **Não é** "o que sobra". O FAQ dizia o contrário — corrigido em v0.0.684.
 
-> ✅ **RESOLVIDO (16/11, v0.0.694)**: existiam **duas** definições do modelo de 60% (60/20/20 na UI × 60/25/15 no RPC), e o RPC **reescrevia 60/20/20 para 50/30/20 em silêncio** (provado com begin/rollback: R$ 8.500 → Essenciais de 5.100 caía para 4.250). Decisão do dono: **60/25/15**. Preset, tipos, teste, diálogo e categorias unificados; migração `normalize_budget_model_60_25_15` + CHECK `families_budget_model_check` (banco rejeita 60_20_20). Bundle com zero refs.
+> ✅ **RESOLVIDO v0.0.694**: duas definições do modelo de 60% (60/20/20 na UI × 60/25/15 no RPC) e o RPC **reescrevia 60/20/20 para 50/30/20 em silêncio**. Decisão do dono: **60/25/15**. Migração `normalize_budget_model_60_25_15` + CHECK `families_budget_model_check`.
 
 ---
 
@@ -102,21 +102,32 @@ Aluguel & Condomínio  →  Moradia  →  Essenciais
 3. **Boa prática de mercado** consolidada (com nome e origem).
 4. **Convenção de produto**.
 
-Toda afirmação de norma, número, data ou estudo vem com **título + URL**. Sem fonte → marcar "não verificado".
+Toda afirmação de norma, número, data ou estudo vem com **título + URL**. Sem fonte → "não verificado".
 
 ---
 
-## 7. Achados abertos (estado em 17/11/2026)
+## 7. Achados — estado em 17/11/2026
 
-| # | Achado | Severidade | Quem decide |
+**Nenhum achado aberto.**
+
+| # | Achado | Severidade | Estado |
 |---|---|---|---|
-| 1 | `ApplyBudgetModelDialog` já abre no modelo da família, mas o fluxo de reaplicar preset não avisa que vai **recalcular todos os tetos** | MÉDIO | Matheus |
-| 2 | Home e Orçamentos divergem por design (tx sem categoria) e não avisam | MÉDIO | Matheus |
-| 3 | ~~Saldo não explicava o cartão~~ | CRÍTICO | **CORRIGIDO v0.0.700** |
-| 4 | ~~60/20/20 × 60/25/15~~ | CRÍTICO | **CORRIGIDO v0.0.694** |
-| 5 | ~~Editor de categoria fixava 50/30/20~~ | ALTO | **CORRIGIDO v0.0.691** |
-| 6 | ~~FAQ dizia "o que sobra pro futuro"~~ | ALTO | **CORRIGIDO v0.0.684** |
-| 7 | ~~"Necessidades" × "Essenciais"~~ | MÉDIO | **CORRIGIDO v0.0.700** |
+| 1 | Saldo não explicava o cartão | CRÍTICO | CORRIGIDO v0.0.698 |
+| 2 | 60/20/20 × 60/25/15 (reescrita silenciosa) | CRÍTICO | CORRIGIDO v0.0.694 |
+| 3 | Editor de categoria fixava 50/30/20 | ALTO | CORRIGIDO v0.0.691 |
+| 4 | FAQ dizia "o que sobra pro futuro" | ALTO | CORRIGIDO v0.0.684 |
+| 5 | "Necessidades" × "Essenciais" | MÉDIO | CORRIGIDO v0.0.700 |
+| 6 | Aplicar modelo sobrescrevia tetos em silêncio | ALTO | CORRIGIDO v0.0.704 |
+| 7 | Home × Orçamentos divergiam em tx sem categoria | MÉDIO | CORRIGIDO v0.0.703 |
+
+### Como os dois últimos foram fechados
+
+**#6 — Aplicar modelo (v0.0.704)**: o passo 3 do `ApplyBudgetModelDialog` agora mostra, com número, **quais tetos vão mudar**: `categoria · R$ atual → R$ novo`, ordenado pela maior diferença. Recebe `currentLimitsByCatId` do `WalletModals` (mesma precedência do Orçamentos: override do mês vence teto padrão; teto de subcategoria é somado quando existe). Sem esse dado (ex.: Perfil), o diálogo não inventa diff — apenas não mostra a lista.
+
+**#7 — Sem categoria (v0.0.703)**: categoria é opcional em Nova Transação. Esses lançamentos não pertencem a nenhuma linha de categoria, então ficavam **fora** de `totalSpent` e o Orçamentos somava menos que a Home. Agora:
+- `uncategorizedSpentCents` entra em `totalSpent` (o mês fecha igual nas duas telas — Demo: **R$ 6.394,60** nas duas);
+- aparece uma linha âmbar **"Sem categoria"** com o valor e atalho para o Extrato, só quando maior que zero;
+- a Home já mostrava em "Outros" — as duas telas passaram a responder a mesma pergunta com o mesmo número.
 
 ---
 
@@ -126,10 +137,10 @@ Toda afirmação de norma, número, data ou estudo vem com **título + URL**. Se
 - Login: `demo@curiangoo.com` · 161 transações · 3 metas · 4 investimentos · renda R$ 8.500,00 · modelo 50/30/20
 - **Números de referência provados (17/11/2026, `status <> 'projected'`)**:
   - Receitas totais: **R$ 51.496,00**
-  - Despesas totais: **R$ 36.977,60** (das quais **R$ 10.524,50** no cartão de crédito)
+  - Despesas totais: **R$ 36.977,60** (das quais **R$ 10.524,50** no cartão)
   - Saldo consolidado (o que o app mostra): **R$ 14.518,40**
   - Na conta (consolidado + cartão): **R$ 25.042,90**
-  - Despesas pagas de fato (pix/dinheiro/débito): R$ 26.453,10
+  - Novembro/2026: despesas **R$ 6.394,60** (mesmo número na Home e em Orçamentos)
 
 **Acesso ao banco**: agentes não recebem credencial. Pedir o número ao Apollo.
 
@@ -166,6 +177,7 @@ Proibido: "considere melhorar", "seria interessante". Proibido propor feature. O
 
 | Erro | Correção |
 |---|---|
-| Disse que "Na conta" era R$ 17.090,50 | Errado: somou só o crédito de 30 dias. O certo é R$ 25.042,90 (crédito do histórico inteiro) |
+| Disse que "Na conta" era R$ 17.090,50 | Errado: somou só o crédito de 30 dias. O certo é R$ 25.042,90 (histórico inteiro) |
 | Disse que o app usava "Essenciais" em todo lugar | Falso: Home, onboarding e tour diziam "Necessidades" — corrigido em v0.0.700 |
 | Referenciou `onboarding.ts` como fonte da árvore | É legado; corrigido neste documento |
+| Publicou v0.0.703 sem o bloco JSX do aviso de sobrescrita | O patch reportou sucesso mas só a declaração entrou. Pegou por grep no bundle servido. Corrigido em v0.0.704 |
